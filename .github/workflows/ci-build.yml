@@ -64,7 +64,7 @@ jobs:
         reports: coverage/*/coverage.cobertura.xml
         targetdir: coverage/coveragereport
         reporttypes: MarkdownSummaryGithub
-        license: ${{secrets.REPORT_GENERATOR_LICENSE}}}
+        license: '${{ secrets.REPORT_GENERATOR_LICENSE }}'
 
     - name: 'Append code coverage report to step summary'
       run: cat coverage/coveragereport/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
