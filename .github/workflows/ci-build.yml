@@ -48,13 +48,26 @@ jobs:
         paths: TestResults/**/tests.xml
       if: always()
 
+    - name: Upload test summary
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-summary
+        path: test-summary.md
+      if: always()
+
+    - name: 'Append test summary to step summary'
+      run: cat test-summary.md >> $GITHUB_STEP_SUMMARY
+      if: always()
+
     - name: 'Create code coverage summary'
       uses: irongut/CodeCoverageSummary@v1.3.0
       with:
-        filename: 'CoverageResults/*/coverage.cobertura.xml'
+        filename: 'CoverageResults/**/coverage.cobertura.xml'
         badge: true
         format: 'markdown'
+        indicators: true
         output: 'both'
+        thresholds: '50 75'
 
     - name: 'Add code coverage summary to pull request'
       uses: marocchino/sticky-pull-request-comment@v2.9.0
