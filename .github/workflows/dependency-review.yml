@@ -1,12 +1,6 @@
 name: 'Dependency Review'
 
 on:
-  push:
-    branches:
-      - 'main'
-      - 'release/**'
-    paths-ignore:
-      - 'docs/**'
   pull_request:
     branches:
       - 'main'
