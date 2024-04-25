@@ -1,0 +1,71 @@
+name: CI Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'main'
+      - 'release/**'
+    paths-ignore:
+      - 'docs/**'
+  pull_request:
+    branches:
+      - 'main'
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_GENERATE_ASPNET_CERTIFICATE: false
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 'Checkout repository'
+      uses: actions/checkout@v4
+ 
+    - name: 'Setup .NET SDK'
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+        dotnet-quality: 'ga'
+
+    - name: 'Restore external dependencies'
+      run: dotnet restore
+
+    - name: 'Build repository'
+      run: dotnet build --configuration Release --no-restore
+
+    - name: 'Test and produce code coverage data'
+      run: dotnet test --nobuild --no-restore --collect:"XPlat Code Coverage" --results-directory coverage
+
+    - name: 'Create code coverage summary'
+      uses: irongut/CodeCoverageSummary@v1
+      if: github.event_name == 'pull_request'
+      with:
+        filename: 'coverage/*/coverage.cobertura.xml'
+        badge: false
+        format: 'markdown'
+        output: 'both'
+
+    - name: 'Add code coverage summary to pull request''
+      uses: marocchino/sticky-pull-request-comment@v2
+      if: github.event_name == 'pull_request'
+      with:
+        recreate: true
+        path: code-coverage-results.md
+
+    - name: 'Create code coverage full report'
+      uses: danielpalme/ReportGenerator-GitHub-Action@v5
+      with:
+        reports: coverage/*/coverage.cobertura.xml
+        targetdir: coverage/coveragereport
+        reporttypes: MarkdownSummaryGithub
+        license: ${{secrets.REPORT_GENERATOR_LICENSE}}}
+
+    - name: 'Append code coverage report to step summary'
+      run: cat coverage/coveragereport/SummaryGithub.md >> $GITHUB_STEP_SUMMARY

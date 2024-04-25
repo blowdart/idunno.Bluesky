@@ -1,0 +1,45 @@
+<Project>
+  <Import Project="..\Directory.Build.props" />
+
+  <PropertyGroup>
+    <CIBuild Condition="'$(CIBuild)' == ''">false</CIBuild>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageProjectUrl>https://github.com/blowdart/idunno.Authentication</PackageProjectUrl>
+    <!-- The SPDX name for the source license. See https://spdx.org/licenses/. -->
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageIconFullPath>$(MSBuildThisFileDirectory)icon.png</PackageIconFullPath>
+
+    <PackageReadMeFile>readme.md</PackageReadMeFile>
+    <PackageReadMeFullPath>$(MSBuildProjectDirectory)/../../readme.md</PackageReadMeFullPath>
+
+    <NuspecBasePath>$(MSBuildProjectDirectory)</NuspecBasePath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisMode>All</AnalysisMode>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' != 'CodeQL'">
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(Configuration)' != 'CodeQL'">
+    <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.1.1" PrivateAssets="All" />
+    <!-- <PackageReference Include="Nerdbank.GitVersioning" Version="3.6.133" PrivateAssets="All" /> -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(PackageIconFullPath)" Pack="true" PackagePath="\"/>
+    <None Include="$(PackageReadMeFullPath)" Pack="true" PackagePath="\"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\.editorconfig" Link=".editorconfig" />
+  </ItemGroup>
+</Project>
