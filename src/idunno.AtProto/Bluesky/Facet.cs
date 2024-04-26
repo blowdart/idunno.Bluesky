@@ -10,7 +10,7 @@ namespace idunno.AtProto.Bluesky
     // https://docs.bsky.app/docs/advanced-guides/post-richtext
 
     /// <summary>
-    /// Represents a facet for a <see cref="Post"/> or <see cref="Feed.Post"/>.
+    /// Represents a facet for a <see cref="NewBlueskyPost"/> or <see cref="Feed.Post"/>.
     /// A facet is a piece of text that has been annotated with additional information.
     /// </summary>
     public class Facet
@@ -46,7 +46,7 @@ namespace idunno.AtProto.Bluesky
         /// Creates a new instance of a <see cref="Facet"/> for a link.
         /// </summary>
         /// <param name="text">The text the facet applies to.</param>
-        /// <param name="startPosition">The start position in a <see cref="Post"/> the facet will begin at.</param>
+        /// <param name="startPosition">The start position in a <see cref="NewBlueskyPost"/> the facet will begin at.</param>
         /// <param name="uri">The URI the link refers to.</param>
         public Facet(string text, long startPosition, Uri uri) : this(text, startPosition)
         {
@@ -57,7 +57,7 @@ namespace idunno.AtProto.Bluesky
         /// Creates a new instance of a <see cref="Facet"/> for a mention.
         /// </summary>
         /// <param name="text">The text the facet applies to.</param>
-        /// <param name="startPosition">The start position in a <see cref="Post"/> the facet will begin at.</param>
+        /// <param name="startPosition">The start position in a <see cref="NewBlueskyPost"/> the facet will begin at.</param>
         /// <param name="did">The <see cref="Did"/> of the actor being mentioned.</param>
 
         public Facet(string text, long startPosition, Did did) : this(text, startPosition)
@@ -69,7 +69,7 @@ namespace idunno.AtProto.Bluesky
         /// Creates a new instance of a <see cref="Facet"/> for a hashtag.
         /// </summary>
         /// <param name="text">The text the facet applies to.</param>
-        /// <param name="startPosition">The start position in a <see cref="Post"/> the facet will begin at.</param>
+        /// <param name="startPosition">The start position in a <see cref="NewBlueskyPost"/> the facet will begin at.</param>
         /// <param name="hashtag">The hashtag the text refers to.</param>
 
         public Facet(string text, long startPosition, string hashtag) : this(text, startPosition)
@@ -91,10 +91,10 @@ namespace idunno.AtProto.Bluesky
         internal string Text { get; }
 
         /// <summary>
-        /// The range in the <see cref="Post"/> the facet will apply to.
+        /// The range in the <see cref="NewBlueskyPost"/> the facet will apply to.
         /// </summary>
         /// <remarks>
-        /// A byte range is applied over the UTF8 encoding of the <see cref="Post"/> text.
+        /// A byte range is applied over the UTF8 encoding of the <see cref="NewBlueskyPost"/> text.
         /// </remarks>
         [JsonInclude]
         [JsonRequired]

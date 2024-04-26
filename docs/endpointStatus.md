@@ -24,9 +24,9 @@ For example, `BlueskyAgent.CreatePost()` is a specialized method for creating a 
 | | [app.bsky.feed.getPosts](https://docs.bsky.app/docs/api/app-bsky-feed-get-posts) | `BlueskyAgent.Posts()` | ✅ |
 |  | [app.bsky.feed.getTimeline](https://docs.bsky.app/docs/api/app-bsky-feed-get-timeline) | `BlueskyAgent.GetTimeline()` | ✅    |
 | | [app.bsky.feed.searchPosts](https://docs.bsky.app/docs/api/app-bsky-feed-search-posts) | `BlueskyAgent.SearchPosts()` | ✅    |
-| Notifications | [app.bsky.notification.getUnreadCount](https://docs.bsky.app/docs/api/app-bsky-notification-get-unread-count) | `BlueskyAgent.GetUnreadCount()` | ✅ |
+| Notifications | [app.bsky.notification.getUnreadCount](https://docs.bsky.app/docs/api/app-bsky-notification-get-unread-count) | `BlueskyAgent.GetNotificationUnreadCount()` | ✅ |
 |  | [app.bsky.notification.listNotifications](https://docs.bsky.app/docs/api/app-bsky-notification-list-notifications) | `BlueskyAgent.ListNotifications()` | ✅ |
-|  | [app.bsky.notification.updateSeen](https://docs.bsky.app/docs/api/app-bsky-notification-update-seen) | `BlueskyAgent.UpdateSeen()` | ✅ |
+|  | [app.bsky.notification.updateSeen](https://docs.bsky.app/docs/api/app-bsky-notification-update-seen) | `BlueskyAgent.UpdateNotificationSeenAt()` | ✅ |
 
 ## AT Protocol Endpoints
 | Group        | Endpoint                                                     | Class / Method                | Status |
@@ -41,6 +41,7 @@ For example, `BlueskyAgent.CreatePost()` is a specialized method for creating a 
 | |  | &nbsp;&nbsp;*BlueskyAgent.UndoLike()* | ✅ |
 | |  | &nbsp;&nbsp;*BlueskyAgent.UndoRepost()* | ✅ |
 | | [com.atproto.repo.describeRepo](https://docs.bsky.app/docs/api/com-atproto-repo-describe-repo) | `AtProtoAgent.DescribeRepo()` | ✅ |
+| | [com.atproto.repo.getRecord](https://docs.bsky.app/docs/api/com-atproto-repo-get-record) | `AtProtoAgent.GetRecord()` | ✅ |
 | **Server**   | [com.atproto.server.describeServer](https://docs.bsky.app/docs/api/com-atproto-server-describe-server) | `AtProtoAgent.DescribeServer()` | ✅      |
 |              | [com.atproto.server.createSession](https://docs.bsky.app/docs/api/com-atproto-server-create-session) | `AtProtoAgent.Login()`        | ✅      |
 |              | [com.atproto.server.deleteSession](https://docs.bsky.app/docs/api/com-atproto-server-delete-session) | `AtProtoAgent.Logout()`       | ✅      |

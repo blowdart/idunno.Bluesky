@@ -46,8 +46,16 @@ jobs:
       uses: test-summary/action@v2.3
       with:
         paths: TestResults/**/tests.xml
+        output: test-summary.md
         show: "fail, skip"
       if: always()
+
+    - name: 'Add test summary to pull request'
+      uses: marocchino/sticky-pull-request-comment@v2.9.0
+      with:
+        recreate: true
+        path: test-summary.md
+      if: github.event_name == 'pull_request'
 
     - name: 'Create code coverage summary'
       uses: irongut/CodeCoverageSummary@v1.3.0
@@ -58,13 +66,14 @@ jobs:
         indicators: true
         output: 'both'
         thresholds: '50 75'
+      if: always()
 
     - name: 'Add code coverage summary to pull request'
       uses: marocchino/sticky-pull-request-comment@v2.9.0
-      if: github.event_name == 'pull_request'
       with:
         recreate: true
         path: code-coverage-results.md
+      if: github.event_name == 'pull_request'
 
     - name: 'Create code coverage report'
       uses: danielpalme/ReportGenerator-GitHub-Action@5.2.5

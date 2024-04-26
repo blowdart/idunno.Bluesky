@@ -21,11 +21,11 @@ namespace idunno.AtProto.Repo
         public CreateRecordRequest(
             string collection,
             Did creatorDecentralizedIdentifier,
-            AtProtoRecord record)
+            NewAtProtoRecord record)
         {
             Collection = collection;
             Repo = creatorDecentralizedIdentifier;
-            this.record = record;
+            Record = record;
         }
 
         /// <summary>
@@ -76,6 +76,6 @@ namespace idunno.AtProto.Repo
         /// Gets or sets the record to be created.
         /// </summary>
         [JsonRequired]
-        public AtProtoRecord record { get; set; }
+        public NewAtProtoRecord Record { get; set; }
     }
 }

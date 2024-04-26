@@ -22,7 +22,7 @@ namespace idunno.AtProto.Directory
         /// </returns>
         public static async Task<HttpResult<DidDocument>> ResolveDid(Did did, Uri directoryServer, HttpClientHandler? httpClientHandler, CancellationToken cancellationToken)
         {
-            AtProtoRequest<DidDocument> request = new();
+            AtProtoHttpClient<DidDocument> request = new();
 
             return await request.Get(
                 directoryServer,

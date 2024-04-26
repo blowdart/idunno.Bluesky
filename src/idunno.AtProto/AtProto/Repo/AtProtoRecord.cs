@@ -6,48 +6,34 @@ using System.Text.Json.Serialization;
 namespace idunno.AtProto.Repo
 {
     /// <summary>
-    /// An abstract class defining common properties for an AT Proto record
+    /// An record defining common properties for an AT Proto record
     /// </summary>
-    public abstract class AtProtoRecord
+    public class AtProtoRecord
     {
         /// <summary>
-        /// Creates a new instance of at AT PROTO record.
+        /// Creates a new instance of at AT Proto record.
         /// </summary>
         /// <param name="type">The type of the record to be created.</param>
-        internal AtProtoRecord(string type)
+        [JsonConstructor]
+        public AtProtoRecord(AtUri uri, AtCid cid)
         {
-            Type = type;
+            Uri = uri;
+            Cid = cid;
         }
 
-        /// <summary>
-        /// Gets the record type of this instance.
-        /// </summary>
-        /// <value>
-        /// The record type of this instance.
-        /// </value>
-        /// <remarks>
-        /// This is the type discriminator in JSON, not the .NET class type.
-        /// </remarks>
-        [JsonPropertyName("$type")]
         [JsonInclude]
-        public string Type { get; protected set; }
+        public AtUri Uri { get; protected set; }
 
-        /// <summary>
-        /// Gets the <see cref="DateTimeOffset"/> the record was created at.
-        /// </summary>
-        /// <value>
-        /// The <see cref="DateTimeOffset"/> the record was created at.
-        /// </value>
         [JsonInclude]
-        public DateTimeOffset CreatedAt { get; protected set; } = DateTimeOffset.Now;
+        public AtCid Cid { get; protected set; }
 
+        [JsonInclude]
         /// <summary>
-        /// Gets a collection of property name and values written during serialization or added to the dictionary during deserialization.
+        /// Gets the <see cref="AtProtoRecordValue"/> for this record.
         /// </summary>
         /// <value>
-        /// A collection of property name and values written during serialization or added to the dictionary during deserialization.
+        /// The <see cref="AtProtoRecordValue"/> for this record.
         /// </value>
-        [JsonExtensionData]
-        public IDictionary<string, object> Values { get; } = new Dictionary<string, object>();
+        public AtProtoRecordValue? Value { get; protected set; }
     }
 }

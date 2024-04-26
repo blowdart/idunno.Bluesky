@@ -8,7 +8,7 @@ namespace idunno.AtProto.Bluesky.Feed
     public record Timeline
     {
         [JsonInclude]
-        public IReadOnlyList<FeedView> Feed { get; internal set; } = new List<FeedView>();
+        public IReadOnlyCollection<FeedView> Feed { get; internal set; } = new List<FeedView>();
 
         [JsonInclude]
         public string? Cursor { get; internal set; }

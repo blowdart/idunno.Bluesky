@@ -10,7 +10,7 @@ namespace idunno.AtProto.Bluesky
     /// <summary>
     /// A class representing the data needed to create a new Bluesky Post
     /// </summary>
-    public class Post : AtProtoRecord
+    public class NewBlueskyPost : NewAtProtoRecord
     {
         private const string TextKey = @"text";
 
@@ -21,12 +21,12 @@ namespace idunno.AtProto.Bluesky
         private readonly Encoding _utf8 = new UTF8Encoding();
 
         /// <summary>
-        /// Creates a new instance of a <see cref="Post"/>.
+        /// Creates a new instance of a <see cref="NewBlueskyPost"/>.
         /// </summary>
         /// <param name="text">The text for the post.</param>
-        /// <exception cref="ArgumentException">Thrown if the <paramref name="text"/> for a <see cref="Post"/> is too long.</exception>
+        /// <exception cref="ArgumentException">Thrown if the <paramref name="text"/> for a <see cref="NewBlueskyPost"/> is too long.</exception>
         /// <exception cref="ArgumentNullException">Thrown if the <paramref name="text"/> is null or empty.</exception>
-        public Post(string text) : base(CollectionType.Post)
+        public NewBlueskyPost(string text) : base(CollectionType.Post)
         {
             if (string.IsNullOrEmpty(text))
             {
@@ -42,11 +42,11 @@ namespace idunno.AtProto.Bluesky
         }
 
         /// <summary>
-        /// Creates a new instance of a <see cref="Post"/>.
+        /// Creates a new instance of a <see cref="NewBlueskyPost"/>.
         /// </summary>
         /// <param name="text">The text for the post.</param>
         /// <param name="languages">The languages for the post.</param>
-        public Post(string text, string[] languages) : this(text)
+        public NewBlueskyPost(string text, string[] languages) : this(text)
         {
             if (languages is not null && languages.Length > 0)
             {
@@ -55,11 +55,11 @@ namespace idunno.AtProto.Bluesky
         }
 
         /// <summary>
-        /// Creates a new instance of a <see cref="Post"/>.
+        /// Creates a new instance of a <see cref="NewBlueskyPost"/>.
         /// </summary>
         /// <param name="text">The text for the post.</param>
         /// <param name="language">The language for the post.</param>
-        public Post(string text, string language) : this(text)
+        public NewBlueskyPost(string text, string language) : this(text)
         {
             if (!string.IsNullOrEmpty(language))
             {
@@ -68,14 +68,14 @@ namespace idunno.AtProto.Bluesky
         }
 
         /// <summary>
-        /// Appends the specified <see cref="Facet"/> to a <see cref="Post"/>.
+        /// Appends the specified <see cref="Facet"/> to a <see cref="NewBlueskyPost"/>.
         /// </summary>
-        /// <param name="post">The <see cref="Post" /> to append the facet to.</param>
+        /// <param name="post">The <see cref="NewBlueskyPost" /> to append the facet to.</param>
         /// <param name="facet">The <see cref="Facet"/> to append.</param>
-        /// <returns>A <see cref="Post"/> with the <paramref name="facet"/> appended.</returns>
-        /// <exception cref="ArgumentException">Thrown if the <paramref name="text"/> for a <see cref="Post"/> is too long.</exception>
+        /// <returns>A <see cref="NewBlueskyPost"/> with the <paramref name="facet"/> appended.</returns>
+        /// <exception cref="ArgumentException">Thrown if the <paramref name="text"/> for a <see cref="NewBlueskyPost"/> is too long.</exception>
         /// <exception cref="ArgumentNullException"> Thrown if the supplied post or facet is null.</exception>
-        public static Post operator +(Post post, Facet facet)
+        public static NewBlueskyPost operator +(NewBlueskyPost post, Facet facet)
         {
             ArgumentNullException.ThrowIfNull(post);
             ArgumentNullException.ThrowIfNull(facet);
@@ -100,25 +100,25 @@ namespace idunno.AtProto.Bluesky
         }
 
         /// <summary>
-        /// Appends the specified <see cref="Facet"/> to a <see cref="Post"/>.
+        /// Appends the specified <see cref="Facet"/> to a <see cref="NewBlueskyPost"/>.
         /// </summary>
-        /// <param name="post">The <see cref="Post" /> to append the facet to.</param>
+        /// <param name="post">The <see cref="NewBlueskyPost" /> to append the facet to.</param>
         /// <param name="facet">The <see cref="Facet"/> to append.</param>
-        /// <returns>A <see cref="Post"/> with the <paramref name="facet"/> appended.</returns>
-        public static Post Add(Post post, Facet facet)
+        /// <returns>A <see cref="NewBlueskyPost"/> with the <paramref name="facet"/> appended.</returns>
+        public static NewBlueskyPost Add(NewBlueskyPost post, Facet facet)
         {
             return post + facet;
         }
 
         /// <summary>
-        /// Appends the specified <see cref="string"/> to a <see cref="Post"/>.
+        /// Appends the specified <see cref="string"/> to a <see cref="NewBlueskyPost"/>.
         /// </summary>
-        /// <param name="post">The <see cref="Post" /> to append the facet to.</param>
+        /// <param name="post">The <see cref="NewBlueskyPost" /> to append the facet to.</param>
         /// <param name="s">The text to append.</param>
-        /// <returns>A <see cref="Post"/> with the <paramref name="s"/> appended.</returns>
-        /// <exception cref="ArgumentException">Thrown if the <paramref name="s"/> for a <see cref="Post"/> is too long.</exception>
+        /// <returns>A <see cref="NewBlueskyPost"/> with the <paramref name="s"/> appended.</returns>
+        /// <exception cref="ArgumentException">Thrown if the <paramref name="s"/> for a <see cref="NewBlueskyPost"/> is too long.</exception>
         /// <exception cref="ArgumentNullException"> Thrown if the supplied post or text is null.</exception>
-        public static Post operator +(Post post, string s)
+        public static NewBlueskyPost operator +(NewBlueskyPost post, string s)
         {
             ArgumentNullException.ThrowIfNull(post);
             ArgumentNullException.ThrowIfNull(s);
@@ -134,25 +134,25 @@ namespace idunno.AtProto.Bluesky
         }
 
         /// <summary>
-        /// Appends the specified <see cref="string"/> to a <see cref="Post"/>.
+        /// Appends the specified <see cref="string"/> to a <see cref="NewBlueskyPost"/>.
         /// </summary>
-        /// <param name="post">The <see cref="Post" /> to append the facet to.</param>
+        /// <param name="post">The <see cref="NewBlueskyPost" /> to append the facet to.</param>
         /// <param name="s">The text to append.</param>
-        /// <returns>A <see cref="Post"/> with the <paramref name="s"/> appended.</returns>
-        public static Post Add(Post post, string s)
+        /// <returns>A <see cref="NewBlueskyPost"/> with the <paramref name="s"/> appended.</returns>
+        public static NewBlueskyPost Add(NewBlueskyPost post, string s)
         {
             return post + s;
         }
 
         /// <summary>
-        /// Appends the specified <see cref="char"/> to a <see cref="Post"/>.
+        /// Appends the specified <see cref="char"/> to a <see cref="NewBlueskyPost"/>.
         /// </summary>
-        /// <param name="post">The <see cref="Post" /> to append the facet to.</param>
+        /// <param name="post">The <see cref="NewBlueskyPost" /> to append the facet to.</param>
         /// <param name="c">The <see cref="char"/> to append.</param>
-        /// <returns>A <see cref="Post"/> with the <paramref name="c"/> appended.</returns>
-        /// <exception cref="ArgumentException">Thrown if the <paramref name="c"/> for a <see cref="Post"/> is too long.</exception>
+        /// <returns>A <see cref="NewBlueskyPost"/> with the <paramref name="c"/> appended.</returns>
+        /// <exception cref="ArgumentException">Thrown if the <paramref name="c"/> for a <see cref="NewBlueskyPost"/> is too long.</exception>
         /// <exception cref="ArgumentNullException"> Thrown if the supplied post is null.</exception>
-        public static Post operator +(Post post, char c)
+        public static NewBlueskyPost operator +(NewBlueskyPost post, char c)
         {
             ArgumentNullException.ThrowIfNull(post);
 
@@ -167,18 +167,18 @@ namespace idunno.AtProto.Bluesky
         }
 
         /// <summary>
-        /// Appends the specified <see cref="char"/> to a <see cref="Post"/>.
+        /// Appends the specified <see cref="char"/> to a <see cref="NewBlueskyPost"/>.
         /// </summary>
-        /// <param name="post">The <see cref="Post" /> to append the facet to.</param>
+        /// <param name="post">The <see cref="NewBlueskyPost" /> to append the facet to.</param>
         /// <param name="c">The <see cref="char"/> to append.</param>
-        /// <returns>A <see cref="Post"/> with the <paramref name="c"/> appended.</returns>
-        public static Post Add(Post post, char c)
+        /// <returns>A <see cref="NewBlueskyPost"/> with the <paramref name="c"/> appended.</returns>
+        public static NewBlueskyPost Add(NewBlueskyPost post, char c)
         {
             return post + c;
         }
 
         /// <summary>
-        /// Gets the maximum length of a <see cref="Post"/>.
+        /// Gets the maximum length of a <see cref="NewBlueskyPost"/>.
         /// </summary>
         [JsonIgnore]
         public static int MaximumPostLength
@@ -190,7 +190,7 @@ namespace idunno.AtProto.Bluesky
         }
 
         /// <summary>
-        /// Gets the length of the <see cref="Post"/> text in UTF8 bytes.
+        /// Gets the length of the <see cref="NewBlueskyPost"/> text in UTF8 bytes.
         /// </summary>
         [JsonIgnore]
         public long LengthAsUTF8
@@ -202,10 +202,10 @@ namespace idunno.AtProto.Bluesky
         }
 
         /// <summary>
-        /// Gets or sets the text for the <see cref="Post"/>.
+        /// Gets or sets the text for the <see cref="NewBlueskyPost"/>.
         /// </summary>
         /// <value>
-        /// The text for the <see cref="Post"/>.
+        /// The text for the <see cref="NewBlueskyPost"/>.
         /// </value>
         /// <exception cref="ArgumentNullException">Thrown on set if the value is null or empty.</exception>
         [JsonIgnore]
@@ -243,10 +243,10 @@ namespace idunno.AtProto.Bluesky
         }
 
         /// <summary>
-        /// Gets or sets the languages for the <see cref="Post"/>.
+        /// Gets or sets the languages for the <see cref="NewBlueskyPost"/>.
         /// </summary>
         /// <value>
-        /// The optional languages for the <see cref="Post"/>.
+        /// The optional languages for the <see cref="NewBlueskyPost"/>.
         /// </value>
         [JsonIgnore]
         public IList<string>? Languages
@@ -287,10 +287,10 @@ namespace idunno.AtProto.Bluesky
         }
 
         /// <summary>
-        /// Gets or sets the facets for the <see cref="Post"/>.
+        /// Gets or sets the facets for the <see cref="NewBlueskyPost"/>.
         /// </summary>
         /// <value>
-        /// The optional facets for the <see cref="Post"/>.
+        /// The optional facets for the <see cref="NewBlueskyPost"/>.
         /// </value>
         [JsonIgnore]
         public IList<Facet>? Facets

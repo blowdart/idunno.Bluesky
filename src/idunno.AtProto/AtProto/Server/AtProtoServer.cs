@@ -36,7 +36,7 @@ namespace idunno.AtProto
         /// <exception cref="ResponseParseException">Thrown when the response from the service cannot be parsed or does not pass validation.</exception>
         public static async Task<HttpResult<ServerDescription>> DescribeServer(Uri service, HttpClientHandler? httpClientHandler, CancellationToken cancellationToken)
         {
-            AtProtoRequest<ServerDescription> request = new();
+            AtProtoHttpClient<ServerDescription> request = new();
 
             HttpResult<ServerDescription> result = await request.Get(service, DescribeEndpoint, httpClientHandler, cancellationToken).ConfigureAwait(false);
 
@@ -63,7 +63,7 @@ namespace idunno.AtProto
         /// <exception cref="ResponseParseException">Thrown when the response from the service cannot be parsed or does not pass validation.</exception>
         public static async Task<HttpResult<Session>> CreateSession(Credentials credentials, Uri service, HttpClientHandler? httpClientHandler, CancellationToken cancellationToken)
         {
-            AtProtoRequest<Session> request = new();
+            AtProtoHttpClient<Session> request = new();
 
             return await request.Post(service, CreateSessionEndpoint, credentials, httpClientHandler, cancellationToken).ConfigureAwait(false);
         }
@@ -80,7 +80,7 @@ namespace idunno.AtProto
         {
             // delete-session works on the refresh token, not the access token.
 
-            AtProtoRequest<EmptyResponse> request = new();
+            AtProtoHttpClient<EmptyResponse> request = new();
 
             return await request.Post(service, DeleteSessionEndpoint, null, refreshToken, httpClientHandler, cancellationToken).ConfigureAwait(false);
         }
@@ -95,7 +95,7 @@ namespace idunno.AtProto
         /// <exception cref="ResponseParseException">Thrown when the response from the service cannot be parsed or does not pass validation.</exception>
         public static async Task<HttpResult<Session>> RefreshSession(string refreshToken, Uri service, HttpClientHandler? httpClientHandler, CancellationToken cancellationToken)
         {
-            AtProtoRequest<Session> request = new();
+            AtProtoHttpClient<Session> request = new();
 
             return await request.Post(service, RefreshSessionEndpoint, requestBody: null, refreshToken, httpClientHandler, cancellationToken).ConfigureAwait(false);
         }

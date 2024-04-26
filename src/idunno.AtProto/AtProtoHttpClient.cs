@@ -11,7 +11,7 @@ using idunno.AtProto.Server;
 
 namespace idunno.AtProto
 {
-    public class AtProtoRequest<TResult> where TResult : class
+    public class AtProtoHttpClient<TResult> where TResult : class
     {
         private static readonly object s_syncLock = new ();
         private static HttpClient? s_httpClient;

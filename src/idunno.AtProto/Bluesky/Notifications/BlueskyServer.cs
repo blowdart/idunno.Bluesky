@@ -28,7 +28,7 @@ namespace idunno.AtProto.Bluesky
         /// <param name="httpClientHandler">An <see cref="HttpClientHandler"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>An <see cref="HttpResult{T}"/> wrapping an integer indicating the unread notification count.</returns>
-        public static async Task<HttpResult<int>> GetUnreadCount(
+        public static async Task<HttpResult<int>> GetNotificationUnreadCount(
             DateTimeOffset? seenAt,
             Uri service,
             string accessToken,
@@ -38,13 +38,13 @@ namespace idunno.AtProto.Bluesky
             string queryString = string.Empty;
             if (seenAt is not null)
             {
-                queryString = $"?{seenAt.Value.UtcDateTime.ToString("o", CultureInfo.InvariantCulture)}";
+                queryString = $"{seenAt.Value.UtcDateTime.ToString("o", CultureInfo.InvariantCulture)}";
             }
 
-            AtProtoRequest<UnreadCountResult> request = new();
+            AtProtoHttpClient<UnreadCountResult> request = new();
             HttpResult<UnreadCountResult> result = await request.Get(
                 service,
-                $"{GetUnreadEndpoint}{queryString}",
+                $"{GetUnreadEndpoint}?{queryString}",
                 accessToken,
                 httpClientHandler,
                 cancellationToken).ConfigureAwait(false);
@@ -113,10 +113,10 @@ namespace idunno.AtProto.Bluesky
                 queryString.Remove(queryString.Length - 1, 1);
             }
 
-            AtProtoRequest<NotificationsView> request = new();
+            AtProtoHttpClient<NotificationsView> request = new();
             return await request.Get(
                 service,
-                $"{ListNotificationsEndpoint}{queryString}",
+                $"{ListNotificationsEndpoint}?{queryString}",
                 accessToken,
                 httpClientHandler,
                 cancellationToken).ConfigureAwait(false);
@@ -131,7 +131,7 @@ namespace idunno.AtProto.Bluesky
         /// <param name="httpClientHandler">An <see cref="HttpClientHandler"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>An <see cref="HttpResult{T}"/> wrapping an empty response.</returns>
-        public static async Task<HttpResult<EmptyResponse>> UpdateSeen(
+        public static async Task<HttpResult<EmptyResponse>> UpdateNotificationSeenAt(
             DateTimeOffset seenAt,
             Uri service,
             string accessToken,
@@ -140,7 +140,7 @@ namespace idunno.AtProto.Bluesky
         {
             UpdateSeenRequest body = new() { SeenAt = seenAt };
 
-            AtProtoRequest<EmptyResponse> request = new();
+            AtProtoHttpClient<EmptyResponse> request = new();
             return await request.Post(
                 service,
                 $"{UpdateSeenEndpoint}?seenAt={seenAt.UtcDateTime.ToString("o", CultureInfo.InvariantCulture)}",

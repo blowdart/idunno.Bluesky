@@ -6,7 +6,7 @@ using idunno.AtProto.Repo;
 
 namespace idunno.AtProto.Bluesky
 {
-    internal sealed class PostLikeRecord : AtProtoRecord
+    internal sealed class PostLikeRecord : NewAtProtoRecord
     {
         public PostLikeRecord(AtIdentifier repo) : base(CollectionType.Like)
         {

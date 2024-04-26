@@ -6,7 +6,7 @@ using idunno.AtProto.Repo;
 
 namespace idunno.AtProto.Bluesky
 {
-    internal sealed class PostRepostRecord : AtProtoRecord
+    internal sealed class PostRepostRecord : NewAtProtoRecord
     {
         public PostRepostRecord(AtIdentifier repo) : base(CollectionType.Repost)
         {

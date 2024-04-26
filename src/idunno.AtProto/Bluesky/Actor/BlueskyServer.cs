@@ -39,7 +39,7 @@ namespace idunno.AtProto.Bluesky
             HttpClientHandler? httpClientHandler,
             CancellationToken cancellationToken = default)
         {
-            AtProtoRequest<ActorProfile> request = new();
+            AtProtoHttpClient<ActorProfile> request = new();
 
             return await request.Get(
                 service,
@@ -67,7 +67,7 @@ namespace idunno.AtProto.Bluesky
         {
             string identifiersAsQueryString = string.Join("&", identifiers.Select(atId => $"actors={Uri.EscapeDataString(atId.ToString())}"));
 
-            AtProtoRequest<FeedProfiles> request = new();
+            AtProtoHttpClient<FeedProfiles> request = new();
 
             HttpResult<FeedProfiles> result = await request.Get(
                 service,
@@ -131,7 +131,7 @@ namespace idunno.AtProto.Bluesky
                 queryString.Remove(queryString.Length - 1, 1);
             }
 
-            AtProtoRequest<ActorSuggestions> request = new();
+            AtProtoHttpClient<ActorSuggestions> request = new();
 
             return await request.Get(
                 service,
@@ -180,7 +180,7 @@ namespace idunno.AtProto.Bluesky
                 queryString.Remove(queryString.Length - 1, 1);
             }
 
-            AtProtoRequest<ActorSearchResults> request = new();
+            AtProtoHttpClient<ActorSearchResults> request = new();
 
             return await request.Get(
                 service,

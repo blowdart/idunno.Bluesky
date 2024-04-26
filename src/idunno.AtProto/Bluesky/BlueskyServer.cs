@@ -13,7 +13,7 @@ namespace idunno.AtProto.Bluesky
         /// <summary>
         /// Creates a Bluesky post record on the specified <paramref name="service"/> and returns the <see cref="RecordResponse"/> for the request.
         /// </summary>
-        /// <param name="post">The <see cref="Post"/> record to create.</param>
+        /// <param name="post">The <see cref="NewBlueskyPost"/> record to create.</param>
         /// <param name="creator">The <see cref="Did"/> of the record creator.</param>
         /// <param name="service">The service to create the record on.</param>
         /// <param name="accessToken">The access token to use to authenticate against the <paramref name="service"/>.</param>
@@ -21,7 +21,7 @@ namespace idunno.AtProto.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>A <see cref="StrongReference"/> for the new post record.</returns>
         public static async Task<HttpResult<StrongReference>> CreatePost(
-            Post post,
+            NewBlueskyPost post,
             Did creator,
             Uri service,
             string accessToken,

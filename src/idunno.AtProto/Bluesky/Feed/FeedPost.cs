@@ -45,7 +45,11 @@ namespace idunno.AtProto.Bluesky.Feed
         [JsonRequired]
         public DateTime IndexedAt { get; internal set; }
 
-        // TODO: view, labels, threadgate
+        [JsonInclude]
+        [JsonRequired]
+        public IReadOnlyList<Label>? Labels { get; internal set; } = new List<Label>();
+
+        // TODO: viewer,  threadgate
 
     }
 }

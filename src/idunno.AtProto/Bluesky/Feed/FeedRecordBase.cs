@@ -5,9 +5,10 @@ using System.Text.Json.Serialization;
 
 namespace idunno.AtProto.Bluesky.Feed
 {
-    [JsonDerivedType(typeof(FeedPostRecord), typeDiscriminator: CollectionType.Post)]
-    [JsonDerivedType(typeof(FeedLikeRecord), typeDiscriminator: CollectionType.Like)]
     [JsonDerivedType(typeof(FeedFollowRecord), typeDiscriminator: CollectionType.Follow)]
+    [JsonDerivedType(typeof(FeedLikeRecord), typeDiscriminator: CollectionType.Like)]
+    [JsonDerivedType(typeof(FeedPostRecord), typeDiscriminator: CollectionType.Post)]
+    [JsonDerivedType(typeof(FeedRepostRecord), typeDiscriminator: CollectionType.Repost)]
     public abstract record FeedRecordBase
     {
         [JsonInclude]

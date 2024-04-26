@@ -300,13 +300,13 @@ namespace idunno.AtProto
         /// <summary>
         /// Creates a new post on Bluesky with the specified <paramref name="text"/>.
         /// </summary>
-        /// <param name="post">The <see cref="Bluesky.Post"/> to create.</param>
+        /// <param name="post">The <see cref="Bluesky.NewBlueskyPost"/> to create.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>
         /// An <see cref="HttpResult"/> a <see cref="StrongReference"/> from the specified <paramref name="service"/>,
         /// or any error details returned by the service.
         /// </returns>
-        public async Task<HttpResult<StrongReference>> CreatePost(Bluesky.Post post, CancellationToken cancellationToken = default)
+        public async Task<HttpResult<StrongReference>> CreatePost(NewBlueskyPost post, CancellationToken cancellationToken = default)
         {
             return await CreatePost(post, DefaultService, cancellationToken).ConfigureAwait(false);
         }
@@ -323,7 +323,7 @@ namespace idunno.AtProto
         /// </returns>
         public async Task<HttpResult<StrongReference>> CreatePost(string text, Uri service, CancellationToken cancellationToken = default)
         {
-            return await CreatePost(new Bluesky.Post(text), service, cancellationToken).ConfigureAwait(false);
+            return await CreatePost(new NewBlueskyPost(text), service, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -337,7 +337,7 @@ namespace idunno.AtProto
         /// or any error details returned by the service.
         /// </returns>
         /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current <see cref="Session"/> is not authenticated.</exception>
-        public async Task<HttpResult<StrongReference>> CreatePost(Bluesky.Post post, Uri service, CancellationToken cancellationToken = default)
+        public async Task<HttpResult<StrongReference>> CreatePost(Bluesky.NewBlueskyPost post, Uri service, CancellationToken cancellationToken = default)
         {
             if (Session == null || string.IsNullOrEmpty(Session.AccessJwt))
             {
@@ -862,9 +862,9 @@ namespace idunno.AtProto
         /// <param name="service">The service to retrieve the unread count from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>An <see cref="HttpResult{T}"/> wrapping an integer indicating the unread notification count.</returns>
-        public async Task<HttpResult<int>> GetUnreadCount(Uri service, CancellationToken cancellationToken = default)
+        public async Task<HttpResult<int>> GetNotificationUnreadCount(Uri service, CancellationToken cancellationToken = default)
         {
-            return await GetUnreadCount(null, service, cancellationToken).ConfigureAwait(false);
+            return await GetNotificationUnreadCount(null, service, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -873,9 +873,9 @@ namespace idunno.AtProto
         /// <param name="seenAt">An optional <see cref="DateTimeOffset"/> indicating when notifications were last checked.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>An <see cref="HttpResult{T}"/> wrapping an integer indicating the unread notification count.</returns>
-        public async Task<HttpResult<int>> GetUnreadCount(DateTimeOffset? seenAt = null, CancellationToken cancellationToken = default)
+        public async Task<HttpResult<int>> GetNotificationUnreadCount(DateTimeOffset? seenAt = null, CancellationToken cancellationToken = default)
         {
-            return await GetUnreadCount(seenAt, DefaultService, cancellationToken).ConfigureAwait(false);
+            return await GetNotificationUnreadCount(seenAt, DefaultService, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -885,29 +885,34 @@ namespace idunno.AtProto
         /// <param name="service">The service to retrieve the unread count from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>An <see cref="HttpResult{T}"/> wrapping an integer indicating the unread notification count.</returns>
-        public async Task<HttpResult<int>> GetUnreadCount(DateTimeOffset? seenAt, Uri service, CancellationToken cancellationToken = default)
+        public async Task<HttpResult<int>> GetNotificationUnreadCount(DateTimeOffset? seenAt, Uri service, CancellationToken cancellationToken = default)
         {
             if (Session == null)
             {
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            return await BlueskyServer.GetUnreadCount(seenAt, service, Session.AccessJwt, HttpClientHandler, cancellationToken).ConfigureAwait(false);
+            return await BlueskyServer.GetNotificationUnreadCount(seenAt, service, Session.AccessJwt, HttpClientHandler, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Gets the notifications for the requesting account.
         /// </summary>
-        /// <param name="cursor">An optional cursor. See https://atproto.com/specs/xrpc#cursors-and-pagination.</param>
-        /// <param name="seenAt">The date and time notifications were last checked.</param>
+        /// <returns>An <see cref="HttpResult{T}"/> wrapping a view over the notifications for the account.</returns>
+        public async Task<HttpResult<NotificationsView>> ListNotifications()
+        {
+            return await ListNotifications(null, null, null, DefaultService, default).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Gets the notifications for the requesting account.
+        /// </summary>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>An <see cref="HttpResult{T}"/> wrapping a view over the notifications for the account.</returns>
         public async Task<HttpResult<NotificationsView>> ListNotifications(
-            string? cursor = null,
-            DateTimeOffset? seenAt = null,
             CancellationToken cancellationToken = default)
         {
-            return await ListNotifications(null, cursor, seenAt, DefaultService, cancellationToken).ConfigureAwait(false);
+            return await ListNotifications(null, null, null, DefaultService, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -919,9 +924,9 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>An <see cref="HttpResult{T}"/> wrapping a view over the notifications for the account.</returns>
         public async Task<HttpResult<NotificationsView>> ListNotifications(
-            int? limit,
-            string? cursor,
-            DateTimeOffset? seenAt,
+            int? limit = null,
+            string? cursor = null,
+            DateTimeOffset? seenAt = null,
             CancellationToken cancellationToken = default)
         {
             return await ListNotifications(limit, cursor, seenAt, DefaultService, cancellationToken).ConfigureAwait(false);
@@ -954,13 +959,22 @@ namespace idunno.AtProto
         /// <summary>
         /// Updates the date and time notifications were last seen for the current user.
         /// </summary>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>An <see cref="HttpResult{T}"/> wrapping an integer indicating the unread notification count.</returns>
+        public async Task<HttpResult<EmptyResponse>> UpdateNotificationSeenAt( CancellationToken cancellationToken = default)
+        {
+            return await UpdateNotificationSeenAt(DateTimeOffset.UtcNow, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Updates the date and time notifications were last seen for the current user.
+        /// </summary>
         /// <param name="seenAt">An optional <see cref="DateTimeOffset"/> indicating when notifications were last checked.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>An <see cref="HttpResult{T}"/> wrapping an integer indicating the unread notification count.</returns>
-        public async Task<HttpResult<EmptyResponse>> UpdateSeen(DateTimeOffset seenAt, CancellationToken cancellationToken = default)
+        public async Task<HttpResult<EmptyResponse>> UpdateNotificationSeenAt(DateTimeOffset seenAt, CancellationToken cancellationToken = default)
         {
-
-            return await UpdateSeen(seenAt, DefaultService, cancellationToken).ConfigureAwait(false);
+            return await UpdateNotificationSeenAt(seenAt, DefaultService, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -970,14 +984,14 @@ namespace idunno.AtProto
         /// <param name="service">The service to retrieve the unread count from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>An <see cref="HttpResult{T}"/> wrapping an integer indicating the unread notification count.</returns>
-        public async Task<HttpResult<EmptyResponse>> UpdateSeen(DateTimeOffset seenAt, Uri service, CancellationToken cancellationToken = default)
+        public async Task<HttpResult<EmptyResponse>> UpdateNotificationSeenAt(DateTimeOffset seenAt, Uri service, CancellationToken cancellationToken = default)
         {
             if (Session == null)
             {
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            return await BlueskyServer.UpdateSeen(seenAt, service, Session.AccessJwt, HttpClientHandler, cancellationToken).ConfigureAwait(false);
+            return await BlueskyServer.UpdateNotificationSeenAt(seenAt, service, Session.AccessJwt, HttpClientHandler, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>

@@ -12,11 +12,11 @@ namespace idunno.AtProto.Bluesky.Notifications
     public enum NotificationReason
     {
         Unknown = 0,
-        Like,
-        Repost,
         Follow,
+        Like,
         Mention,
-        Reply,
-        Quote
+        Quote,
+        Repost,
+        Reply
     }
 }

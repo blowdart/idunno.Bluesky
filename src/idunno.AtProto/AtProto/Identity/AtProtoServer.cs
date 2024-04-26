@@ -28,7 +28,7 @@ namespace idunno.AtProto
         /// </returns>
         public static async Task<HttpResult<Did>> ResolveHandle(string handle, Uri service, string? accessToken, HttpClientHandler? httpClientHandler, CancellationToken cancellationToken)
         {
-            AtProtoRequest<ResolveHandleResult> request = new();
+            AtProtoHttpClient<ResolveHandleResult> request = new();
 
             HttpResult<ResolveHandleResult> resolveHandleResult = await request.Get(
                 service,

@@ -82,7 +82,7 @@ namespace idunno.AtProto
         /// and will use the specified <paramref name="httpClientHandler"/> when HttpClients are created to make requests.
         /// </summary>
         /// <param name="httpClientHandler">An <see cref="HttpClientHandler"/> to use when making requests.</param>
-        public AtProtoAgent(HttpClientHandler httpClientHandler) : this(httpClientHandler, true)
+        public AtProtoAgent(HttpClientHandler? httpClientHandler) : this(httpClientHandler, true)
         {
         }
 
@@ -91,7 +91,7 @@ namespace idunno.AtProto
         /// and will use the specified <paramref name="httpClientHandler"/> when HttpClients are created to make requests.
         /// </summary>
         /// <param name="httpClientHandler">An <see cref="HttpClientHandler"/> to use when making requests.</param>
-        public AtProtoAgent(HttpClientHandler httpClientHandler, bool enableTokenRefresh = true) : this(enableTokenRefresh)
+        public AtProtoAgent(HttpClientHandler? httpClientHandler, bool enableTokenRefresh = true) : this(enableTokenRefresh)
         {
             HttpClientHandler = httpClientHandler;
         }
@@ -102,7 +102,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="service">The service to connect to if no service is specified.</param>
         /// <param name="httpClientHandler">An <see cref="HttpClientHandler"/> to use when making requests.</param>
-        public AtProtoAgent(Uri service, HttpClientHandler httpClientHandler) : this(service, httpClientHandler, true)
+        public AtProtoAgent(Uri service, HttpClientHandler? httpClientHandler) : this(service, httpClientHandler, true)
         {
         }
 
@@ -112,7 +112,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="service">The service to connect to if no service is specified.</param>
         /// <param name="httpClientHandler">An <see cref="HttpClientHandler"/> to use when making requests.</param>
-        public AtProtoAgent(Uri service, HttpClientHandler httpClientHandler, bool enableTokenRefresh = true) : this(enableTokenRefresh)
+        public AtProtoAgent(Uri service, HttpClientHandler? httpClientHandler, bool enableTokenRefresh = true) : this(enableTokenRefresh)
         {
             DefaultService = service;
             HttpClientHandler = httpClientHandler;
@@ -437,7 +437,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>A <see cref="StrongReference"/> containing the Did and Cid of the newly created record, wrapped in an <see cref="HttpResult{T}"/></returns>
         /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
-        public async Task<HttpResult<StrongReference>> CreateRecord(AtProtoRecord record, string collection, CancellationToken cancellationToken = default)
+        public async Task<HttpResult<StrongReference>> CreateRecord(NewAtProtoRecord record, string collection, CancellationToken cancellationToken = default)
         {
             if (Session == null || string.IsNullOrEmpty(Session.AccessJwt))
             {
@@ -456,7 +456,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>A <see cref="StrongReference"/> containing the Did and Cid of the newly created record, wrapped in an <see cref="HttpResult{T}"/></returns>
         /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
-        public async Task<HttpResult<StrongReference>> CreateRecord(AtProtoRecord record, string collection, Did creator, CancellationToken cancellationToken = default)
+        public async Task<HttpResult<StrongReference>> CreateRecord(NewAtProtoRecord record, string collection, Did creator, CancellationToken cancellationToken = default)
         {
             return await CreateRecord(record, collection, creator, DefaultService, cancellationToken).ConfigureAwait(false);
         }
@@ -471,7 +471,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>A <see cref="StrongReference"/> containing the Did and Cid of the newly created record, wrapped in an <see cref="HttpResult{T}"/>.</returns>
         /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
-        public async Task<HttpResult<StrongReference>> CreateRecord(AtProtoRecord record, string collection, Did creator, Uri service, CancellationToken cancellationToken = default)
+        public async Task<HttpResult<StrongReference>> CreateRecord(NewAtProtoRecord record, string collection, Did creator, Uri service, CancellationToken cancellationToken = default)
         {
             string? accessJwt;
             if (Session == null || string.IsNullOrEmpty(Session.AccessJwt))
@@ -596,6 +596,73 @@ namespace idunno.AtProto
             }
 
             return await AtProtoServer.DescribeRepo(atIdentifier, service, accessJwt, HttpClientHandler, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Gets the record specified by the identifying parameters.
+        /// </summary>
+        /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the record from.</param>
+        /// <param name="collection">The NSID of the collection the record should be deleted from.</param>
+        /// <param name="rkey">The record key, identifying the record to be deleted.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>An <see cref="HttpResult{T}"/> wrapping a <see cref="AtProtoRecord"/>. The HttpResult status code indicates the success or failure of the operation.</returns>
+        public async Task<HttpResult<AtProtoRecord>> GetRecord(
+            AtIdentifier repo,
+            string collection,
+            string rkey,
+            CancellationToken cancellationToken = default)
+        {
+            return await GetRecord(repo, collection, rkey, null, DefaultService, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Gets the record specified by the identifying parameters.
+        /// </summary>
+        /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the record from.</param>
+        /// <param name="collection">The NSID of the collection the record should be deleted from.</param>
+        /// <param name="rkey">The record key, identifying the record to be deleted.</param>
+        /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>An <see cref="HttpResult{T}"/> wrapping a <see cref="AtProtoRecord"/>. The HttpResult status code indicates the success or failure of the operation.</returns>
+        public async Task<HttpResult<AtProtoRecord>> GetRecord(
+            AtIdentifier repo,
+            string collection,
+            string rkey,
+            AtCid? cid,
+            CancellationToken cancellationToken = default)
+        {
+            return await GetRecord(repo, collection, rkey, cid, DefaultService, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Gets the record specified by the identifying parameters.
+        /// </summary>
+        /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the record from.</param>
+        /// <param name="collection">The NSID of the collection the record should be deleted from.</param>
+        /// <param name="rkey">The record key, identifying the record to be deleted.</param>
+        /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
+        /// <param name="service">The service to retrieve the record from.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>An <see cref="HttpResult{T}"/> wrapping a <see cref="AtProtoRecord"/>. The HttpResult status code indicates the success or failure of the operation.</returns>
+        public async Task<HttpResult<AtProtoRecord>> GetRecord(
+            AtIdentifier repo,
+            string collection,
+            string rkey,
+            AtCid? cid,
+            Uri service,
+            CancellationToken cancellationToken = default)
+        {
+            string? accessJwt;
+            if (Session == null || string.IsNullOrEmpty(Session.AccessJwt))
+            {
+                throw new AuthenticatedSessionRequiredException();
+            }
+            else
+            {
+                accessJwt = Session.AccessJwt;
+            }
+
+            return await AtProtoServer.GetRecord(repo, collection, rkey, cid, service, accessJwt, HttpClientHandler, cancellationToken).ConfigureAwait(false);
         }
 
         private void StartTokenRefreshTimer()

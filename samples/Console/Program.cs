@@ -15,8 +15,8 @@ internal class Program
 {
     private static async Task<int> Main()
     {
-        string? username = Environment.GetEnvironmentVariable("_BlueSkyUserName");
-        string? password = Environment.GetEnvironmentVariable("_BlueSkyPassword");
+        string? username = Environment.GetEnvironmentVariable("_BlueskyUserName");
+        string? password = Environment.GetEnvironmentVariable("_BlueskyPassword");
 
         if (username is null || password is null)
         {
@@ -34,8 +34,25 @@ internal class Program
             UseDefaultCredentials = false,
         };
 
+        //https://bsky.app/profile/blowdart.me/post/3kqwecgayrk2s
+
         using (var httpClientHandler = new HttpClientHandler { Proxy = proxy })
         {
+
+            using (BlueskyAgent recordAgent = new(httpClientHandler: httpClientHandler))
+            {
+                HttpResult<bool> loginResult = await recordAgent.Login(username, password);
+                if (!loginResult.Succeeded || recordAgent.Session is null)
+                {
+                    Console.WriteLine("login failed");
+                }
+
+                AtUri atUri = await recordAgent.BuildAtUriFromBlueskyWebUri(new Uri("https://bsky.app/profile/blowdart.me/post/3kqwecgayrk2s")).ConfigureAwait(false);
+
+                HttpResult<FeedPost> individualPostRecord = await recordAgent.GetPost(atUri);
+                HttpResult<ThreadView> postThread = await recordAgent.GetPostThread(atUri);
+            }
+
             using (BlueskyAgent agent = new(httpClientHandler: httpClientHandler))
             {
 
@@ -99,7 +116,7 @@ internal class Program
 
                     DateTimeOffset notificationCheckDateTime = DateTimeOffset.UtcNow;
 
-                    HttpResult<int> unreadCount = await agent.GetUnreadCount(notificationCheckDateTime);
+                    HttpResult<int> unreadCount = await agent.GetNotificationUnreadCount(notificationCheckDateTime);
 
                     Console.WriteLine($"You have {unreadCount.Result} notification{(unreadCount.Result != 1 ? "s" : "")}.");
 
@@ -108,7 +125,7 @@ internal class Program
                         HttpResult<NotificationsView> notifications = await agent.ListNotifications();
                     }
 
-                    HttpResult<EmptyResponse> updateSeen = await agent.UpdateSeen(notificationCheckDateTime);
+                    HttpResult<EmptyResponse> updateSeen = await agent.UpdateNotificationSeenAt(notificationCheckDateTime);
 
                     HttpResult<RepoDescription> repoDescription = await agent.DescribeRepo(new Handle("blowdart.me"));
 
@@ -209,6 +226,10 @@ internal class Program
 
                     Console.WriteLine($"Post created with\n\tCID {simplePostResult.Result.Cid}\n\tURI {simplePostResult.Result.Uri}\n\trkey {simplePostResult.Result.Uri.RKey}");
 
+                    Console.WriteLine("Getting the record for the newly created post");
+
+                    HttpResult<AtProtoRecord> record = await agent.GetRecord(agent.Session.Did, CollectionType.Post, simplePostResult.Result.Uri.RKey);
+
                     Console.WriteLine("Liking own post.");
 
                     HttpResult<StrongReference> likeResult = await agent.LikePost(simplePostResult.Result);
@@ -287,7 +308,7 @@ internal class Program
                         Console.WriteLine($"\tFollows: {getActorProfileResult.Result.FollowsCount}");
                     }
 
-                    var post = new Post("Hello ", "en-US");
+                    var post = new NewBlueskyPost("Hello ", "en-US");
                     post += new Facet("@blowdart.me", post.LengthAsUTF8, handleResolutionResult.Result);
                     post += ' ';
                     post += new Facet("#itWorks", post.LengthAsUTF8, "itWorks");

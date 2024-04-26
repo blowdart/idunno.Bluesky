@@ -6,10 +6,10 @@ using idunno.AtProto.Repo;
 
 namespace idunno.AtProto.Bluesky.Feed
 {
-    public record FeedLikeRecord : FeedRecordBase
+    public record FeedRepostRecord : FeedRecordBase
     {
         [JsonConstructor]
-        public FeedLikeRecord(StrongReference subject, DateTimeOffset createdAt)
+        public FeedRepostRecord(StrongReference subject, DateTimeOffset createdAt)
         {
             Subject = subject;
             CreatedAt = createdAt;

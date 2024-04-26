@@ -69,7 +69,7 @@ namespace idunno.AtProto.Bluesky
                 queryString.Remove(queryString.Length - 1, 1);
             }
 
-            AtProtoRequest<Timeline> request = new();
+            AtProtoHttpClient<Timeline> request = new();
 
             return await request.Get(
                 service,
@@ -121,7 +121,7 @@ namespace idunno.AtProto.Bluesky
                 queryString.Remove(queryString.Length - 1, 1);
             }
 
-            AtProtoRequest<PostSearchResults> request = new();
+            AtProtoHttpClient<PostSearchResults> request = new();
 
             return await request.Get(
                 service,
@@ -169,7 +169,7 @@ namespace idunno.AtProto.Bluesky
 
             string queryString = string.Join("&", queryUris.Select(uri => $"uris={uri}"));
 
-            AtProtoRequest<FeedPosts> request = new();
+            AtProtoHttpClient<FeedPosts> request = new();
 
             HttpResult<FeedPosts> result = await request.Get(
                 service,
@@ -239,7 +239,7 @@ namespace idunno.AtProto.Bluesky
                 queryString.Remove(queryString.Length - 1, 1);
             }
 
-            AtProtoRequest<ThreadView> request = new();
+            AtProtoHttpClient<ThreadView> request = new();
 
             return await request.Get(
                 service,
