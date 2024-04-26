@@ -43,20 +43,10 @@ jobs:
       run: dotnet test --no-build --no-restore --collect:"XPlat Code Coverage" --results-directory ./CoverageResults --logger "junit;LogFilePath=../../TestResults/tests.xml"
 
     - name: Create test summary
-      uses: test-summary/action@v2
+      uses: test-summary/action@v2.3
       with:
         paths: TestResults/**/tests.xml
-      if: always()
-
-    - name: Upload test summary
-      uses: actions/upload-artifact@v3
-      with:
-        name: test-summary
-        path: test-summary.md
-      if: always()
-
-    - name: 'Append test summary to step summary'
-      run: cat test-summary.md >> $GITHUB_STEP_SUMMARY
+        show: "fail, skip"
       if: always()
 
     - name: 'Create code coverage summary'
@@ -84,6 +74,8 @@ jobs:
         reporttypes: MarkdownSummaryGithub
         title: 'Code Coverage'
         license: '${{ secrets.REPORT_GENERATOR_LICENSE }}'
+      if: always()
 
     - name: 'Append code coverage report to step summary'
       run: cat CoverageResults/CoverageReport/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
+      if: always()
