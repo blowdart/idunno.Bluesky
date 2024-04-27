@@ -323,6 +323,8 @@ namespace idunno.AtProto
         /// </returns>
         public async Task<HttpResult<StrongReference>> CreatePost(string text, Uri service, CancellationToken cancellationToken = default)
         {
+            ArgumentNullException.ThrowIfNullOrEmpty(text, nameof(text));
+
             return await CreatePost(new NewBlueskyPost(text), service, cancellationToken).ConfigureAwait(false);
         }
 
@@ -465,6 +467,33 @@ namespace idunno.AtProto
             }
 
             return await DeletePost(subject.Uri.Repo, subject.Uri.RKey, swapRecord, swapCommit, service, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>Deletes a record, identified by the repo, collection and rkey from the specified service.</summary>
+        /// <param name="uri">The <see cref="AtUri"/> of the record to be deleted.</param>
+        /// <param name="swapRecord">Specified if the operation should compare and swap with the previous record by cid.</param>
+        /// <param name="swapCommit">Specified if the operation should compare and swap with the previous commit by cid.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>A flag indicating if the record was successfully deleted, wrapped in an <see cref="HttpResult{T}"/>.</returns>
+        public async Task<HttpResult<bool>> DeletePost(
+            AtUri uri,
+            AtCid? swapRecord = null,
+            AtCid? swapCommit = null,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(uri);
+
+            if (uri.Repo is null || uri.RKey is null)
+            {
+                throw new ArgumentException("uri does not contain a repo or an rkey.", nameof(uri));
+            }
+
+            if (Session == null || Session.Did is null)
+            {
+                throw new AuthenticatedSessionRequiredException();
+            }
+
+            return await DeletePost(uri.Repo, uri.RKey, swapRecord, swapCommit, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>Deletes a record, identified by the repo, collection and rkey from the specified service.</summary>

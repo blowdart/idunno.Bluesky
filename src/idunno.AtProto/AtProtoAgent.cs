@@ -182,12 +182,6 @@ namespace idunno.AtProto
                     _timer.Dispose();
                     _timer = null;
                 }
-
-                if (HttpClientHandler is not null)
-                {
-                    HttpClientHandler.Dispose();
-                    HttpClientHandler = null;
-                }
             }
 
             _disposed = true;
