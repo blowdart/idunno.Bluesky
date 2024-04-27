@@ -46,7 +46,6 @@ jobs:
       uses: test-summary/action@v2.3
       with:
         paths: TestResults/**/tests.xml
-        output: test-summary.md
         show: "fail, skip"
       if: always()
 
