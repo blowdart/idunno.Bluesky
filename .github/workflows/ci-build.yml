@@ -75,7 +75,7 @@ jobs:
       if: github.event_name == 'pull_request'
 
     - name: 'Create code coverage report'
-      uses: danielpalme/ReportGenerator-GitHub-Action@5.2.5
+      uses: danielpalme/ReportGenerator-GitHub-Action@5.3.8
       with:
         reports: CoverageResults/*/coverage.cobertura.xml
         targetdir: CoverageResults/CoverageReport
