@@ -1,0 +1,36 @@
+{
+    "did": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
+    "didDoc": {
+        "@context": [
+            "https://www.w3.org/ns/did/v1",
+            "https://w3id.org/security/multikey/v1",
+            "https://w3id.org/security/suites/secp256k1-2019/v1"
+        ],
+        "id": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
+        "alsoKnownAs": [
+            "at://handle.example.org"
+        ],
+        "verificationMethod": [
+            {
+                "id": "did:plc:ec72yg6n2sydzjvtovvdlxrk#atproto",
+                "type": "Multikey",
+                "controller": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
+                "publicKeyMultibase": "zQ3shT4muFMGSXXfsKmztWsuQ8nnB4XfQWvFQYNedbkFxjYyx"
+            }
+        ],
+        "service": [
+            {
+                "id": "#atproto_pds",
+                "type": "AtprotoPersonalDataServer",
+                "serviceEndpoint": "https://chaga.us-west.host.bsky.network"
+            }
+        ]
+    },
+    "handle": "handle.example.org",
+    "email": "email@example.org",
+    "emailConfirmed": true,
+    "emailAuthFactor": false,
+    "accessJwt": "accessJwt",
+    "refreshJwt": "accessJwt",
+    "active": true
+}

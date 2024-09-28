@@ -11,6 +11,7 @@ namespace idunno.AtProto
     /// <remarks>
     /// https://github.com/multiformats/cid
     /// </remarks>
+    [JsonConverter(typeof(Json.AtCidConverter))]
     public sealed class AtCid
     {
         /// <summary>

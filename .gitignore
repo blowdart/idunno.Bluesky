@@ -361,3 +361,10 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Test and Code Coverage output folders
+CoverageResults
+TestResults
+
+# .NET SDK templating engine
+TemplateEngineHost

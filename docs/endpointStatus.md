@@ -1,4 +1,4 @@
-# Endpoint Implementation Status
+# API Endpoint Implementation Status
 
 A Class and Method shown in *italics* indicate classes and specialized methods wrapping the more generic AT Protocol method listed above them. 
 
@@ -15,16 +15,16 @@ For example, `BlueskyAgent.CreatePost()` is a specialized method for creating a 
 | **Feed** | [app.bsky.feed.getActorFeeds](https://docs.bsky.app/docs/api/app-bsky-feed-get-actor-feeds) |  |  |
 |  | [app.bsky.feed.getActorLikes](https://docs.bsky.app/docs/api/app-bsky-feed-get-actor-likes) |  |  |
 |  | [app.bsky.feed.getAuthorFeed](https://docs.bsky.app/docs/api/app-bsky-feed-get-author-feed) |  |  |
-|  | [app.bsky.feed.getFeedGenerator](https://docs.bsky.app/docs/api/app-bsky-feed-get-feed-generator) |  |  |
+|  | [app.bsky.feed.getFeedGenerator](https://docs.bsky.app/docs/api/app-bsky-feed-get-feed-generator) | `BlueskyAgent.GetFeedGenerator`() | ✅ |
 | | [app.bsky.feed.getFeedGenerators](https://docs.bsky.app/docs/api/app-bsky-feed-get-feed-generators) | | |
-| | [app.bsky.feed.getFeed](https://docs.bsky.app/docs/api/app-bsky-feed-get-feed) | | |
+| | [app.bsky.feed.getFeed](https://docs.bsky.app/docs/api/app-bsky-feed-get-feed) | `BlueskyAgent.GetFeed()` | ✅ |
 | | [app.bsky.feed.getLikes](https://docs.bsky.app/docs/api/app-bsky-feed-get-likes) | | |
 | | [app.bsky.feed.GetListFeed](https://docs.bsky.app/docs/api/app-bsky-feed-get-list-feed) | | |
 | | [app.bsky.getPostThread](https://docs.bsky.app/docs/api/app-bsky-feed-get-post-thread) | `BlueskyAgent.GetPostThread()` | ✅ |
 | | [app.bsky.feed.getPosts](https://docs.bsky.app/docs/api/app-bsky-feed-get-posts) | `BlueskyAgent.Posts()` | ✅ |
 |  | [app.bsky.feed.getTimeline](https://docs.bsky.app/docs/api/app-bsky-feed-get-timeline) | `BlueskyAgent.GetTimeline()` | ✅    |
 | | [app.bsky.feed.searchPosts](https://docs.bsky.app/docs/api/app-bsky-feed-search-posts) | `BlueskyAgent.SearchPosts()` | ✅    |
-| Notifications | [app.bsky.notification.getUnreadCount](https://docs.bsky.app/docs/api/app-bsky-notification-get-unread-count) | `BlueskyAgent.GetNotificationUnreadCount()` | ✅ |
+| **Notifications** | [app.bsky.notification.getUnreadCount](https://docs.bsky.app/docs/api/app-bsky-notification-get-unread-count) | `BlueskyAgent.GetNotificationUnreadCount()` | ✅ |
 |  | [app.bsky.notification.listNotifications](https://docs.bsky.app/docs/api/app-bsky-notification-list-notifications) | `BlueskyAgent.ListNotifications()` | ✅ |
 |  | [app.bsky.notification.updateSeen](https://docs.bsky.app/docs/api/app-bsky-notification-update-seen) | `BlueskyAgent.UpdateNotificationSeenAt()` | ✅ |
 
@@ -42,7 +42,10 @@ For example, `BlueskyAgent.CreatePost()` is a specialized method for creating a 
 | |  | &nbsp;&nbsp;*BlueskyAgent.UndoRepost()* | ✅ |
 | | [com.atproto.repo.describeRepo](https://docs.bsky.app/docs/api/com-atproto-repo-describe-repo) | `AtProtoAgent.DescribeRepo()` | ✅ |
 | | [com.atproto.repo.getRecord](https://docs.bsky.app/docs/api/com-atproto-repo-get-record) | `AtProtoAgent.GetRecord()` | ✅ |
+| | [com.atproto.repo.listRecords](https://docs.bsky.app/docs/api/com-atproto-repo-list-records) | `AtProtoAgent.ListRecords()` | ✅ |
+| | [com.atproto.repo.uploadBlob](https://docs.bsky.app/docs/api/com-atproto-repo-upload-blob) | `AtProtoAgent.UploadBlob()` | ✅ |
 | **Server**   | [com.atproto.server.describeServer](https://docs.bsky.app/docs/api/com-atproto-server-describe-server) | `AtProtoAgent.DescribeServer()` | ✅      |
 |              | [com.atproto.server.createSession](https://docs.bsky.app/docs/api/com-atproto-server-create-session) | `AtProtoAgent.Login()`        | ✅      |
 |              | [com.atproto.server.deleteSession](https://docs.bsky.app/docs/api/com-atproto-server-delete-session) | `AtProtoAgent.Logout()`       | ✅      |
+|              | [com.atproto.server.getSession](https://docs.bsky.app/docs/api/com-atproto-server-get-session) | `AtProtoAgent.GetSession()`       | ✅      |
 |              | [com.atproto.server.refreshSession](https://docs.bsky.app/docs/api/com-atproto-server-refresh-session) | `AtProtoAgent.RefreshSession()` | ✅      |

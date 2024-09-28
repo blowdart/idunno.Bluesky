@@ -1,0 +1,12 @@
+{
+    "collection": "app.bsky.feed.repost",
+    "repo": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
+    "record": {
+        "subject": {
+            "uri": "at://did:plc:ec72yg6n2sydzjvtovvdlxrk/app.bsky.feed.post/3kshfgtzd4z2y",
+            "cid": "bafyreigmprniffep5oehc4ih6jwbdfevyst3mitugjikwhy5wgbtzotvpy"
+        },
+        "createdAt": "2024-05-14T14:31:12.760Z",
+        "$type": "app.bsky.feed.repost"
+    }
+}

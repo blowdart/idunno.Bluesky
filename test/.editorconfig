@@ -1,0 +1,4 @@
+root = false
+
+[.cs]
+spelling_checkable_types = identifiers,comments

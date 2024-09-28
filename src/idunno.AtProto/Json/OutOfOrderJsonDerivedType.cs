@@ -9,9 +9,9 @@ namespace idunno.AtProto.Json
 {
     // Adjusted from https://github.com/dotnet/runtime/issues/72604 while we wait for .NET 8 to EOL.
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface, AllowMultiple = true, Inherited = false)]
-    public sealed class OutOfOrderJsonDerivedTypeAttribute : Attribute
+    public sealed class PolymorphicJsonDerivedTypeAttribute : Attribute
     {
-        public OutOfOrderJsonDerivedTypeAttribute(Type derivedType, string typeDiscriminator)
+        public PolymorphicJsonDerivedTypeAttribute(Type derivedType, string typeDiscriminator)
         {
             DerivedType = derivedType;
             TypeDiscriminator = typeDiscriminator;
@@ -22,13 +22,31 @@ namespace idunno.AtProto.Json
         public string TypeDiscriminator { get; }
     }
 
+    public sealed class PolymorphicJsonConverterAttribute : JsonConverterAttribute
+    {
+        public PolymorphicJsonConverterAttribute(string discriminatorPropertyName = "$type")
+        {
+            ArgumentNullException.ThrowIfNullOrEmpty(discriminatorPropertyName, nameof(discriminatorPropertyName));
+
+            DiscriminatorPropertyName = discriminatorPropertyName;
+        }
+
+        public string DiscriminatorPropertyName { get; }
+
+        public Type? DefaultType { get; set; }
+
+        public Type? UndefinedType { get; set; }
+
+        public Type? UnknownType { get; set; }
+}
+
     public sealed class PolymorphicJsonConverterFactory : JsonConverterFactory
     {
         public override bool CanConvert(Type typeToConvert)
         {
             ArgumentNullException.ThrowIfNull(typeToConvert);
 
-            return typeToConvert.IsAbstract && typeToConvert.GetCustomAttributes<OutOfOrderJsonDerivedTypeAttribute>().Any();
+            return typeToConvert.IsAbstract && typeToConvert.GetCustomAttributes<PolymorphicJsonDerivedTypeAttribute>().Any();
         }
 
         public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
@@ -53,7 +71,8 @@ namespace idunno.AtProto.Json
             ArgumentNullException.ThrowIfNull(options);
 
             _discriminatorPropertyName = options.PropertyNamingPolicy?.ConvertName("$type") ?? "$type";
-            foreach (OutOfOrderJsonDerivedTypeAttribute subtype in typeof(T).GetCustomAttributes<OutOfOrderJsonDerivedTypeAttribute>())
+
+            foreach (PolymorphicJsonDerivedTypeAttribute subtype in typeof(T).GetCustomAttributes<PolymorphicJsonDerivedTypeAttribute>())
             {
                 _discriminatorToSubtype.Add(subtype.TypeDiscriminator, subtype.DerivedType);
             }

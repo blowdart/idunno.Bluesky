@@ -2,18 +2,15 @@
 
 # top-most EditorConfig file
 root = true
-spelling_exclusion_path = .\exclusion.dic
-spelling_checkable_types = strings,identifiers,comments
-spelling_error_severity = information
 
-# Default settings:
-# A newline ending every file
-# Use 4 spaces as indentation
 [*]
 insert_final_newline = true
 indent_style = space
 indent_size = 4
 trim_trailing_whitespace = true
+spelling_exclusion_path = .\exclusion.dic
+spelling_checkable_types = strings,identifiers,comments
+spelling_error_severity = information
 
 # Generated code
 [*{_AssemblyInfo.cs,.notsupported.cs,AsmOffsets.cs}]
@@ -158,6 +155,10 @@ csharp_space_between_square_brackets = false
 file_header_template = Copyright (c) Barry Dorrans. All rights reserved.\nLicensed under the MIT License.
 
 # C++ Files
+
+# CA1303: Do not pass literals as localized parameters
+dotnet_diagnostic.CA1303.severity = suggestion
+
 [*.{cpp,h,in}]
 curly_bracket_next_line = true
 indent_brace_style = Allman

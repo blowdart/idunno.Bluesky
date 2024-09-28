@@ -1,0 +1,17 @@
+{
+    "collection": "app.bsky.feed.post",
+    "repo": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
+    "validate": true,
+    "record": {
+        "$type": "app.bsky.feed.post",
+        "text": "And this should be a quote post",
+        "embed": {
+            "$type": "app.bsky.embed.record",
+            "record": {
+                "uri": "at://did:plc:ec72yg6n2sydzjvtovvdlxrk/app.bsky.feed.post/3kshlbmv7hr27",
+                "cid": "bafyreih4kd6i2wvzziyruhncgflcrl6osmzqqj7rma5qw6v33howyk2a7i"
+            }
+        },
+        "createdAt": "2024-05-14T16:15:27.5248027+00:00"
+    }
+}

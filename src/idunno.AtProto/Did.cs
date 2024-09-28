@@ -1,8 +1,8 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace idunno.AtProto
 {
@@ -13,32 +13,49 @@ namespace idunno.AtProto
     /// 
     /// </summary>
     /// <remarks>
-    /// See https://atproto.com/specs/did for further details.
+    /// <para>See https://atproto.com/specs/did for further details on how ATProto uses DIDs.</para>
     /// </remarks>
-    public sealed class Did : AtIdentifier
+    [JsonConverter(typeof(Json.DidConverter))]
+    public sealed class Did : AtIdentifier, IEquatable<Did>
     {
         private const string DidPrefix = "did:";
 
-        /// <summary>
-        /// Creates a new instance of <see cref="Did"/> using the specified <paramref name="value"/> as the identifier.
-        /// </summary>
-        /// <param name="value"></param>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null or empty.</exception>
-        /// <exception cref="ArgumentException">Thrown if <paramref name="value"/> does not begin with "did:".</exception>
-        [JsonConstructor]
-        public Did(string value)
+        private const int MaximumLength = 2048;
+
+        private static readonly Regex s_validationRegex =
+            new (@"^did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]$", RegexOptions.CultureInvariant, new TimeSpan(0, 0, 0, 2, 5));
+
+        private Did(string s, bool validate)
         {
-            if (string.IsNullOrEmpty(value))
-            {
-                throw new ArgumentNullException(nameof(value));
-            }
+            ArgumentException.ThrowIfNullOrWhiteSpace(s);
 
-            if (!value.StartsWith(DidPrefix, StringComparison.InvariantCulture))
-            {
-                throw new ArgumentException($"\"{value}\" is not a valid DID", (nameof(value)));
-            }
+            Value = string.Empty;
+            Method = string.Empty;
 
-            Value = value;
+            if (validate)
+            {
+                if (Parse(s, true, out Did? _))
+                {
+                    string[] segments = s.Split(':');
+                    Value = s;
+                    Method = segments[1];
+                }
+            }
+            else
+            {
+                Value = s;
+            }
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="Did"/> using the specified <paramref name="s"/> as the identifier.
+        /// </summary>
+        /// <param name="s"></param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="s"/> is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="s"/> does not pass validation.</exception>
+        [JsonConstructor]
+        public Did(string s) : this(s, true)
+        {
         }
 
         /// <summary>
@@ -48,6 +65,63 @@ namespace idunno.AtProto
         public string Value { get; }
 
         /// <summary>
+        /// Gets the method of this <see cref="Did" />.
+        /// </summary>
+        /// <remarks><para>AT Proto currently supports two methods, web and plc.</para></remarks>
+        [JsonIgnore]
+        public string Method { get; }
+
+        /// <summary>
+        /// Returns the hash code for this <see cref="Did"/>.
+        /// </summary>
+        /// <returns>The hash code for this <see cref="Did"/>.</returns>
+        public override int GetHashCode() => (Method, Value).GetHashCode();
+
+        /// <summary>
+        /// Indicates where an object is equal to this <see cref="Did"/>."/>
+        /// </summary>
+        /// <param name="obj">An object to compare to this <see cref="Did"/>.</param>
+        /// <returns>
+        /// true if this <see cref="Did"/> and the specified <paramref name="obj"/>> refer to the same object,
+        /// this Did and the specified obj are both the same type of object and those objects are equal,
+        /// or if this Did and the specified obj are both null, otherwise, false.
+        /// </returns>
+        public override bool Equals(object? obj) => Equals(obj as Did);
+
+        /// <summary>
+        /// Indicates where this <see cref="Did"/> equals another."/>
+        /// </summary>
+        /// <param name="other">A <see cref="Did"/> or null to compare to this <see cref="Did"/>.</param>
+        /// <returns>
+        /// true if this <see cref="Did"/> and the specified <paramref name="other"/>> refer to the same object,
+        /// this Did and the specified obj are both the same type of object and those objects are equal,
+        /// or if this Did and the specified obj are both null, otherwise, false.
+        /// </returns>
+        public bool Equals(Did? other)
+        {
+            if (other is null)
+            {
+                return false;
+            }
+
+            // Optimization for a common success case.
+            if (Object.ReferenceEquals(this, other))
+            {
+                return true;
+            }
+
+            // If run-time types are not exactly the same, return false.
+            if (GetType() != other.GetType())
+            {
+                return false;
+            }
+
+            // Return true if the fields match.
+            return (string.Equals(Value, other.Value, StringComparison.Ordinal) &&
+                    string.Equals(Method, other.Method, StringComparison.Ordinal));
+        }
+
+        /// <summary>
         /// Converts the DID to its equivalent string representation.
         /// </summary>
         /// <returns>The string representation of the value of this instance.</returns>
@@ -55,6 +129,36 @@ namespace idunno.AtProto
         {
             return Value;
         }
+
+        /// <summary>
+        /// Determines whether two specified <see cref="Did"/>s the same value."/>
+        /// </summary>
+        /// <param name="lhs">The first <see cref="Did"/> to compare, or null.</param>
+        /// <param name="rhs">The second <see cref="Did"/> to compare, or null.</param>
+        /// <returns>true if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, false.</returns>
+        public static bool operator ==(Did? lhs, Did? rhs)
+        {
+            if (lhs is null)
+            {
+                if (rhs is null)
+                {
+                    return true;
+                }
+
+                // Only the left side is null.
+                return false;
+            }
+            // Equals handles case of null on right side.
+            return lhs.Equals(rhs);
+        }
+
+        /// <summary>
+        /// Determines whether two specified <see cref="Did"/>s dot not have same value."/>
+        /// </summary>
+        /// <param name="lhs">The first <see cref="Did"/> to compare, or null.</param>
+        /// <param name="rhs">The second <see cref="Did"/> to compare, or null.</param>
+        /// <returns>true if the value of <paramref name="lhs"/> is different to the value of <paramref name="rhs" />; otherwise, false.</returns>
+        public static bool operator !=(Did? lhs, Did? rhs) => !(lhs == rhs);
 
         /// <summary>
         /// Converts the string representation of an identifier to its <see cref="Did"/> equivalent.
@@ -68,19 +172,67 @@ namespace idunno.AtProto
         /// supplied in result will be overwritten.
         /// </param>
         /// <returns>true if s was converted successfully; otherwise, false.</returns>
-        public static bool TryParse(string value, out Did? did)
+        public static bool TryParse(string s, out Did? result)
         {
-            if (string.IsNullOrEmpty(value) ||
-                !value.StartsWith(DidPrefix, StringComparison.InvariantCulture))
+            return Parse(s, false, out result);
+        }
+
+        private static bool Parse(string s, bool throwOnError, out Did? result)
+        {
+            if (string.IsNullOrWhiteSpace(s))
             {
-                did = default;
-                return false;
+                if (throwOnError)
+                {
+                    ArgumentNullException.ThrowIfNullOrWhiteSpace(nameof(s));
+                }
+                else
+                {
+                    result = null;
+                    return false;
+                }
             }
-            else
+
+            if (s.Length > MaximumLength)
             {
-                did = new Did(value);
-                return true;
+                if (throwOnError)
+                {
+                    throw new ArgumentException($"\"{s}\" length is greater than {MaximumLength}.", nameof(s));
+                }
+                else
+                {
+                    result = null;
+                    return false;
+                }
             }
+
+            if (!s.StartsWith(DidPrefix, StringComparison.InvariantCulture))
+            {
+                if (throwOnError)
+                {
+                    throw new ArgumentException($"\"{s}\" is not a valid DID", nameof(s));
+                }
+                else
+                {
+                    result = null;
+                    return false;
+                }
+            }
+
+            if (!s_validationRegex.Match(s).Success)
+            {
+                if (throwOnError)
+                {
+                    throw new ArgumentException($"\"{s}\" is not a valid DID", nameof(s));
+                }
+                else
+                {
+                    result = null;
+                    return false;
+                }
+            }
+
+            result = new Did(s, false);
+            return true;
         }
     }
 }

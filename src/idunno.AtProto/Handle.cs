@@ -14,7 +14,8 @@ namespace idunno.AtProto
     /// <remarks>
     /// See https://atproto.com/specs/handle for further details.
     /// </remarks>
-    public class Handle : AtIdentifier
+    [JsonConverter(typeof(Json.HandleConverter))]
+    public class Handle : AtIdentifier, IEquatable<Handle>
     {
         private const int MaximumLength = 253;
 
@@ -23,27 +24,14 @@ namespace idunno.AtProto
             RegexOptions.None,
             TimeSpan.FromMilliseconds(100));
 
-        private static readonly IReadOnlyList<string> s_invalidTLDs =
-            new List<string>()
-            {
-                ".alt",
-                ".arpa",
-                ".example",
-                ".internal",
-                ".invalid",
-                ".local",
-                ".localhost",
-                ".onion"
-            };
-
-        private Handle(string s, bool parse)
+        private Handle(string s, bool validate)
         {
             Value = string.Empty;
 
             // Normalize
             s = s.ToLowerInvariant();
 
-            if (parse)
+            if (validate)
             {
                 if (Parse(s, true, out Handle? _))
                 {
@@ -72,13 +60,22 @@ namespace idunno.AtProto
         /// <value>
         /// The special handle value that can be used by APIs to indicate that there is no bi-directionally valid handle for a given DID.
         /// </value>
-        public static Handle InvalidHandle { get; } = new Handle("handle.invalid", false);
+        [JsonIgnore]
+        public static Handle Invalid { get; } = new Handle("handle.invalid", false);
 
         /// <summary>
         /// Gets the normalized value of the handle.
         /// </summary>
         [JsonPropertyName("handle")]
         public string Value { get; }
+
+        public bool IsValid
+        {
+            get
+            {
+                return !Equals(Handle.Invalid);
+            }
+        }
 
         /// <summary>
         /// Converts the Handle to its equivalent string representation.
@@ -88,6 +85,51 @@ namespace idunno.AtProto
         {
             return Value;
         }
+
+        public override int GetHashCode() => Value.GetHashCode(StringComparison.OrdinalIgnoreCase);
+
+        public override bool Equals(object? obj) => Equals(obj as Handle);
+
+        public bool Equals(Handle? other)
+        {
+            if (other is null)
+            {
+                return false;
+            }
+
+            // Optimization for a common success case.
+            if (Object.ReferenceEquals(this, other))
+            {
+                return true;
+            }
+
+            // If run-time types are not exactly the same, return false.
+            if (GetType() != other.GetType())
+            {
+                return false;
+            }
+
+            // Return true if the fields match.
+            return (string.Equals(Value, other.Value, StringComparison.OrdinalIgnoreCase));
+        }
+
+        public static bool operator ==(Handle? lhs, Handle? rhs)
+        {
+            if (lhs is null)
+            {
+                if (rhs is null)
+                {
+                    return true;
+                }
+
+                // Only the left side is null.
+                return false;
+            }
+            // Equals handles case of null on right side.
+            return lhs.Equals(rhs);
+        }
+
+        public static bool operator !=(Handle? lhs, Handle? rhs) => !(lhs == rhs);
 
         /// <summary>
         /// Converts the string representation of an identifier to its <see cref="Handle"/> equivalent.
@@ -112,7 +154,7 @@ namespace idunno.AtProto
             {
                 if (throwOnError)
                 {
-                    throw new ArgumentNullException(nameof(s));
+                    ArgumentException.ThrowIfNullOrWhiteSpace(s);
                 }
                 else
                 {
@@ -159,21 +201,6 @@ namespace idunno.AtProto
                     return false;
                 }
             }
-
-            string tld = s.Substring(s.LastIndexOf('.'));
-            if (s_invalidTLDs.Contains(tld))
-            {
-                if (throwOnError)
-                {
-                    throw new ArgumentException($"\"{tld}\" is a disallowed TLD.", nameof(s));
-                }
-                else
-                {
-                    handle = null;
-                    return false;
-                }
-            }
-
 
             if (!s_validate.IsMatch(s))
             {

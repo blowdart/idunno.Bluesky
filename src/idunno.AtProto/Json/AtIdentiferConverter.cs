@@ -12,7 +12,7 @@ namespace idunno.AtProto.Json
     internal class AtIdentifierConverter : JsonConverter<AtIdentifier>
     {
         /// <summary>
-        /// Reads and converts JSON to a CID.
+        /// Reads and converts JSON to an <see cref="AtIdentifier"/>/
         /// </summary>
         /// <param name="reader">The reader.</param>
         /// <param name="typeToConvert">The type to convert.</param>

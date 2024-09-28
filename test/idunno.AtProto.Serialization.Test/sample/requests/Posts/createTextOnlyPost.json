@@ -1,0 +1,12 @@
+{
+    "collection": "app.bsky.feed.post",
+    "repo": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
+    "record": {
+        "text": "PostText",
+        "langs": [
+            "en"
+        ],
+        "createdAt": "2024-05-13T10:12:10.867Z",
+        "$type": "app.bsky.feed.post"
+    }
+}

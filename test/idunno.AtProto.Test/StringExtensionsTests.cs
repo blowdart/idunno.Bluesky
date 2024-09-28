@@ -16,7 +16,7 @@ namespace idunno.AtProto.Test
         [InlineData("eee", 'a', 0)]
         [InlineData("pep", 'p', 2)]
         [InlineData("", 'p', 0)]
-        public void OccurenceCountShouldReturnTheCorrectNumberOfCharOccurences(string toSearch, char toSearchFor, int count)
+        public void OccurrenceCountShouldReturnTheCorrectNumberOfCharOccurrences(string toSearch, char toSearchFor, int count)
         {
             Assert.Equal(count, StringExtensions.OccurrenceCount(toSearch, toSearchFor));
         }
@@ -31,9 +31,39 @@ namespace idunno.AtProto.Test
         [InlineData("eee", "ee", 1)]
         [InlineData("eeee", "ee", 2)]
         [InlineData("eeeee", "ee", 2)]
-        public void OccurenceCountShouldReturnTheCorrectNumberOfStringOccurences(string toSearch, string toSearchFor, int count)
+        public void OccurrenceCountShouldReturnTheCorrectNumberOfStringOccurrences(string toSearch, string toSearchFor, int count)
         {
             Assert.Equal(count, StringExtensions.OccurrenceCount(toSearch, toSearchFor));
+        }
+
+        [Theory]
+        [InlineData("a")]
+        [InlineData("A")]
+        [InlineData("z")]
+        [InlineData("Z")]
+        [InlineData("az")]
+        [InlineData("AZ")]
+        [InlineData("za")]
+        [InlineData("ZA")]
+        [InlineData("")]
+        public void IsOnlyAsciiLettersShouldReturnTrueWhenStringConsistsOfOnlyAsciiLetters(string s)
+        {
+            Assert.True(s.IsOnlyAsciiLetters());
+        }
+
+        [Theory]
+        [InlineData("1")]
+        [InlineData("11")]
+        [InlineData("a1")]
+        [InlineData("1a")]
+        [InlineData("a1a")]
+        [InlineData("Z1")]
+        [InlineData("1Z")]
+        [InlineData("a1Z")]
+        [InlineData("a-z")]
+        public void IsOnlyAsciiLettersShouldReturnFalseWhenStringDoesNotConsistOfOnlyAsciiLetters(string s)
+        {
+            Assert.False(s.IsOnlyAsciiLetters());
         }
     }
 }

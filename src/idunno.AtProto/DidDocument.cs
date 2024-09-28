@@ -6,10 +6,10 @@ using System.Text.Json.Serialization;
 namespace idunno.AtProto
 {
     /// <summary>
-    /// A set of data describing the <see cref="DID"/> subject.
+    /// A set of data describing the <see cref="Did"/> subject.
     /// </summary>
     /// <remarks>
-    /// See https://www.w3.org/TR/did-core/#dfn-did-documents for details.
+    /// <para>See https://www.w3.org/TR/did-core/#dfn-did-documents for details.</para>
     /// </remarks>
     public sealed record DidDocument
     {
@@ -22,18 +22,24 @@ namespace idunno.AtProto
             Id = id;
         }
 
+        /// <summary>
+        /// The context of the current <see cref="DidDocument"/>
+        /// </summary>
+        /// <remarks>
+        /// <para>A context is used to map terms to IRIs. Terms are case sensitive and most valid strings that are not reserved JSON-LD keywords can be used as a term.</para>
+        /// </remarks>
         [JsonInclude]
         [JsonPropertyName("@context")]
         public IReadOnlyList<string> Context { get; internal set; } = new List<string>();
 
         /// <summary>
-        /// Gets or sets the <see cref="DID"/> for the subject of the <see cref="DidDocument"/>.
+        /// Gets or sets the <see cref="Did"/> for the subject of the <see cref="DidDocument"/>.
         /// </summary>
         /// <value>
-        /// The <see cref="DID"/> for the subject of the <see cref="DidDocument"/>.
+        /// The <see cref="Did"/> for the subject of the <see cref="DidDocument"/>.
         /// </value>
         /// <remarks>
-        ///See https://www.w3.org/TR/did-core/#did-subject for details.
+        /// <para>See https://www.w3.org/TR/did-core/#did-subject for details.</para>
         /// </remarks>
         public Did Id { get; set; }
 
@@ -44,7 +50,7 @@ namespace idunno.AtProto
         /// A list of alternative identifiers for the subject of this <see cref="DidDocument"/>
         /// </value>
         /// <remarks>
-        ///See https://www.w3.org/TR/did-core/#also-known-as for details.
+        /// <para>See https://www.w3.org/TR/did-core/#also-known-as for details.</para>
         /// </remarks>
         [JsonInclude]
         public IReadOnlyList<string>? AlsoKnownAs { get; internal set; } = new List<string>();
@@ -57,7 +63,7 @@ namespace idunno.AtProto
         /// A list of verification methods for the <see cref="Did"/> subject or associated parties.
         /// </values>
         ///<remarks>
-        /// See https://www.w3.org/TR/did-core/#verification-methods for details.
+        /// <para>See https://www.w3.org/TR/did-core/#verification-methods for details.</para>
         /// </remarks>
         [JsonInclude]
         [JsonPropertyName("verificationMethod")]
@@ -67,14 +73,14 @@ namespace idunno.AtProto
         /// Gets or sets ways of communicating with the <see cref="Did"/> subject or associated entities
         /// </summary>
         /// <value>
-        /// A list of <see cref="Service"/>s which express of communicating with the <see cref="Did"/> subject or associated entities
+        /// A list of <see cref="DidDocService"/>s which express of communicating with the <see cref="Did"/> subject or associated entities
         /// </value>
         /// <remarks>
-        /// See https://www.w3.org/TR/did-core/#services for details.
+        /// <para>See https://www.w3.org/TR/did-core/#services for details.</para>
         /// </remarks>
         [JsonInclude]
         [JsonPropertyName("service")]
-        public IReadOnlyList<Service>? Services { get; internal set; } = new List<Service>();
+        public IReadOnlyList<DidDocService>? Services { get; internal set; } = new List<DidDocService>();
     }
 
     /// <summary>
@@ -84,16 +90,16 @@ namespace idunno.AtProto
     /// cryptographic private key.
     /// </summary>
     ///<remarks>
-    /// See https://www.w3.org/TR/did-core/#verification-methods for details.
+    /// <para>See https://www.w3.org/TR/did-core/#verification-methods for details.</para>
     /// </remarks>
     public record VerificationMethod
     {
         /// <summary>
         /// Creates a new instance of <see cref="VerificationMethod"/> with the specified parameters.
         /// </summary>
-        /// <param name="id">The <see cref="Did"/ for the <see cref="VerificationMethod"/>.</param>
+        /// <param name="id">The <see cref="Did"/> for the <see cref="VerificationMethod"/>.</param>
         /// <param name="type">The type of the <see cref="VerificationMethod"/>.</param>
-        /// <param name="controller">The <see cref="Did"/ of the controller for the <see cref="VerificationMethod"/>.</param>
+        /// <param name="controller">The <see cref="Did"/> of the controller for the <see cref="VerificationMethod"/>.</param>
         [JsonConstructor]
         public VerificationMethod(Uri id, string type, Did controller)
         {
@@ -113,9 +119,9 @@ namespace idunno.AtProto
         /// <summary>
         /// Gets or sets the type of the <see cref="VerificationMethod"/>.
         /// </summary>
-        /// <remarks>
-        ///The type of the <see cref="VerificationMethod"/>.
-        /// </remarks>
+        /// <value>
+        /// The type of the <see cref="VerificationMethod"/>.
+        /// </value>
         public string Type { get; set; }
 
         /// <summary>
@@ -148,11 +154,11 @@ namespace idunno.AtProto
     /// A record containing ways of communicating with the DID subject or associated entities.
     /// </summary>
     /// <remarks>
-    /// See https://www.w3.org/TR/did-core/#services for details.
+    /// <para>See https://www.w3.org/TR/did-core/#services for details.</para>
     /// </remarks>
-    public record Service
+    public record DidDocService
     {
-        public Service(string id, string type, Uri serviceEndpoint)
+        internal DidDocService(string id, string type, Uri serviceEndpoint)
         {
             Id = id;
             Type = type;

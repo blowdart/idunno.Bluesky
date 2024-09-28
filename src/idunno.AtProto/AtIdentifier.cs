@@ -1,11 +1,14 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json.Serialization;
+
 namespace idunno.AtProto
 {
     /// <summary>
     /// Base class for <see cref="Did"/> and <see cref="Handle"/> implementations.
     /// </summary>
+    [JsonConverter(typeof(Json.AtIdentifierConverter))]
     public abstract class AtIdentifier
     {
         /// <summary>

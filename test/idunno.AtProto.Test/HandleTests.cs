@@ -2,8 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
-
 using Xunit;
 
 namespace idunno.AtProto.Test
@@ -14,19 +12,98 @@ namespace idunno.AtProto.Test
         [Fact]
         public void InvalidHandleShouldReturnInvalidDotHandle()
         {
-            Assert.Equal("handle.invalid", Handle.InvalidHandle.ToString());
+            Assert.Equal("handle.invalid", Handle.Invalid.ToString());
         }
 
         [Theory]
         [InlineData("jay.bsky.social")]
-        [InlineData("8.cn")]
         [InlineData("name.t--t")] //  not a real TLD, but syntax ok
-        [InlineData("XX.LCS.MIT.EDU")]
-        [InlineData("a.co")]
         [InlineData("xn--notarealidn.com")]
-        [InlineData("xn--fiqa61au8b7zsevnm8ak20mc4a87e.xn--fiqs8s")]
-        [InlineData("xn--ls8h.test")]
         [InlineData("example.t")] //  not a real TLD, but syntax ok
+
+        // Test cases from https://github.com/bluesky-social/atproto/blob/main/interop-test-files/syntax/handle_syntax_valid.txt
+        [InlineData("A.ISI.EDU")]
+        [InlineData("XX.LCS.MIT.EDU")]
+        [InlineData("SRI-NIC.ARPA")]
+        [InlineData("john.test")]
+        [InlineData("jan.test")]
+        [InlineData("a234567890123456789.test")]
+        [InlineData("john2.test")]
+        [InlineData("john-john.test")]
+        [InlineData("john.bsky.app")]
+        [InlineData("jo.hn")]
+        [InlineData("a.co")]
+        [InlineData("a.org")]
+        [InlineData("joh.n")]
+        [InlineData("j0.h0")]
+        [InlineData("jaymome-johnber123456.test")]
+        [InlineData("jay.mome-johnber123456.test")]
+        [InlineData("john.test.bsky.app")]
+
+        // max over all handle: 'shoooort' + '.loooooooooooooooooooooooooong'.repeat(8) + '.test'
+        [InlineData("shoooort.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.test")]
+
+        // max segment: 'short.' + 'o'.repeat(63) + '.test'
+        [InlineData("short.ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo.test")]
+
+        // NOTE: this probably isn't ever going to be a real domain, but my read of the RFC is that it would be possible
+        [InlineData("john.t")]
+
+        // allows punycode handles
+        // 💩.test
+        [InlineData("xn--ls8h.test")]
+        // bücher.tld
+        [InlineData("xn--bcher-kva.tld")]
+        [InlineData("xn--3jk.com")]
+        [InlineData("xn--w3d.com")]
+        [InlineData("xn--vqb.com")]
+        [InlineData("xn--ppd.com")]
+        [InlineData("xn--cs9a.com")]
+        [InlineData("xn--8r9a.com")]
+        [InlineData("xn--cfd.com")]
+        [InlineData("xn--5jk.com")]
+        [InlineData("xn--2lb.com")]
+
+        // allows onion (Tor) handles
+        [InlineData("expyuzz4wqqyqhjn.onion")]
+        [InlineData("friend.expyuzz4wqqyqhjn.onion")]
+        [InlineData("g2zyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion")]
+        [InlineData("friend.g2zyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion")]
+        [InlineData("2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion")]
+        [InlineData("friend.2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion")]
+
+        // correctly validates corner cases (modern vs. old RFCs)
+        [InlineData("12345.test")]
+        [InlineData("8.cn")]
+        [InlineData("4chan.org")]
+        [InlineData("4chan.o-g")]
+        [InlineData("blah.4chan.org")]
+        [InlineData("thing.a01")]
+        [InlineData("120.0.0.1.com")]
+        [InlineData("0john.test")]
+        [InlineData("9sta--ck.com")]
+        [InlineData("99stack.com")]
+        [InlineData("0ohn.test")]
+        [InlineData("john.t--t")]
+        [InlineData("thing.0aa.thing")]
+
+        // examples from stackoverflow
+        [InlineData("stack.com")]
+        [InlineData("sta-ck.com")]
+        [InlineData("sta---ck.com")]
+        [InlineData("sta--ck9.com")]
+        [InlineData("stack99.com")]
+        [InlineData("sta99ck.com")]
+        [InlineData("google.com.uk")]
+        [InlineData("google.co.in")]
+        [InlineData("google.com")]
+        [InlineData("maselkowski.pl")]
+        [InlineData("m.maselkowski.pl")]
+        [InlineData("xn--masekowski-d0b.pl")]
+        [InlineData("xn--fiqa61au8b7zsevnm8ak20mc4a87e.xn--fiqs8s")]
+        [InlineData("xn--stackoverflow.com")]
+        [InlineData("stackoverflow.xn--com")]
+        [InlineData("stackoverflow.co.uk")]
         public void SyntacticallyValidHandlesShouldConstructWithoutErrorsWithANormalizedValue(string value)
         {
             Handle actual = new(value);
@@ -56,36 +133,15 @@ namespace idunno.AtProto.Test
             Assert.Equal(expectedMessage, exception.Message);
         }
 
-        [Theory]
-        [InlineData("test.alt")]
-        [InlineData("test.arpa")]
-        [InlineData("test.example")]
-        [InlineData("test.internal")]
-        [InlineData("test.invalid")]
-        [InlineData("test.local")]
-        [InlineData("test.localhost")]
-        [InlineData("test.onion")]
-        public void InvalidTldHandlesShouldNotConstruct(string value)
-        {
-            ArgumentException exception = Assert.Throws<ArgumentException>(() =>
-            {
-                _ = new Handle(value);
-            });
-
-            string tld = value.Substring(value.LastIndexOf('.')+1);
-
-            Assert.Equal($"\".{tld}\" is a disallowed TLD. (Parameter 's')", exception.Message);
-        }
-
         [Fact]
         public void EmptyOrWhiteSpaceHandlesShouldThrowArgumentNullException()
         {
-            ArgumentNullException emptyException = Assert.Throws<ArgumentNullException>(() =>
+            ArgumentException emptyException = Assert.Throws<ArgumentException>(() =>
             {
                 _ = new Handle("");
             });
 
-            ArgumentNullException whiteSpaceException = Assert.Throws<ArgumentNullException>(() =>
+            ArgumentException whiteSpaceException = Assert.Throws<ArgumentException>(() =>
             {
                 _ = new Handle(" ");
             });
@@ -93,14 +149,93 @@ namespace idunno.AtProto.Test
 
         [Theory]
         [InlineData("jay.bsky.social")]
-        [InlineData("8.cn")]
         [InlineData("name.t--t")] //  not a real TLD, but syntax ok
-        [InlineData("XX.LCS.MIT.EDU")]
-        [InlineData("a.co")]
         [InlineData("xn--notarealidn.com")]
-        [InlineData("xn--fiqa61au8b7zsevnm8ak20mc4a87e.xn--fiqs8s")]
-        [InlineData("xn--ls8h.test")]
         [InlineData("example.t")] //  not a real TLD, but syntax ok
+
+        // Test cases from https://github.com/bluesky-social/atproto/blob/main/interop-test-files/syntax/handle_syntax_valid.txt
+        [InlineData("A.ISI.EDU")]
+        [InlineData("XX.LCS.MIT.EDU")]
+        [InlineData("SRI-NIC.ARPA")]
+        [InlineData("john.test")]
+        [InlineData("jan.test")]
+        [InlineData("a234567890123456789.test")]
+        [InlineData("john2.test")]
+        [InlineData("john-john.test")]
+        [InlineData("john.bsky.app")]
+        [InlineData("jo.hn")]
+        [InlineData("a.co")]
+        [InlineData("a.org")]
+        [InlineData("joh.n")]
+        [InlineData("j0.h0")]
+        [InlineData("jaymome-johnber123456.test")]
+        [InlineData("jay.mome-johnber123456.test")]
+        [InlineData("john.test.bsky.app")]
+
+        // max over all handle: 'shoooort' + '.loooooooooooooooooooooooooong'.repeat(8) + '.test'
+        [InlineData("shoooort.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.test")]
+
+        // max segment: 'short.' + 'o'.repeat(63) + '.test'
+        [InlineData("short.ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo.test")]
+
+        // NOTE: this probably isn't ever going to be a real domain, but my read of the RFC is that it would be possible
+        [InlineData("john.t")]
+
+        // allows punycode handles
+        // 💩.test
+        [InlineData("xn--ls8h.test")]
+        // bücher.tld
+        [InlineData("xn--bcher-kva.tld")]
+        [InlineData("xn--3jk.com")]
+        [InlineData("xn--w3d.com")]
+        [InlineData("xn--vqb.com")]
+        [InlineData("xn--ppd.com")]
+        [InlineData("xn--cs9a.com")]
+        [InlineData("xn--8r9a.com")]
+        [InlineData("xn--cfd.com")]
+        [InlineData("xn--5jk.com")]
+        [InlineData("xn--2lb.com")]
+
+        // allows onion (Tor) handles
+        [InlineData("expyuzz4wqqyqhjn.onion")]
+        [InlineData("friend.expyuzz4wqqyqhjn.onion")]
+        [InlineData("g2zyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion")]
+        [InlineData("friend.g2zyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion")]
+        [InlineData("2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion")]
+        [InlineData("friend.2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion")]
+
+        // correctly validates corner cases (modern vs. old RFCs)
+        [InlineData("12345.test")]
+        [InlineData("8.cn")]
+        [InlineData("4chan.org")]
+        [InlineData("4chan.o-g")]
+        [InlineData("blah.4chan.org")]
+        [InlineData("thing.a01")]
+        [InlineData("120.0.0.1.com")]
+        [InlineData("0john.test")]
+        [InlineData("9sta--ck.com")]
+        [InlineData("99stack.com")]
+        [InlineData("0ohn.test")]
+        [InlineData("john.t--t")]
+        [InlineData("thing.0aa.thing")]
+
+        // examples from stackoverflow
+        [InlineData("stack.com")]
+        [InlineData("sta-ck.com")]
+        [InlineData("sta---ck.com")]
+        [InlineData("sta--ck9.com")]
+        [InlineData("stack99.com")]
+        [InlineData("sta99ck.com")]
+        [InlineData("google.com.uk")]
+        [InlineData("google.co.in")]
+        [InlineData("google.com")]
+        [InlineData("maselkowski.pl")]
+        [InlineData("m.maselkowski.pl")]
+        [InlineData("xn--masekowski-d0b.pl")]
+        [InlineData("xn--fiqa61au8b7zsevnm8ak20mc4a87e.xn--fiqs8s")]
+        [InlineData("xn--stackoverflow.com")]
+        [InlineData("stackoverflow.xn--com")]
+        [InlineData("stackoverflow.co.uk")]
         public void SyntacticallyValidHandlesTryParseShouldReturnTrueAndHandleWithNormalizedValue(string value)
         {
             Assert.True(Handle.TryParse(value, out Handle? actual));
@@ -109,17 +244,69 @@ namespace idunno.AtProto.Test
         }
 
         [Theory]
-        [InlineData("jo@hn.test")]
         [InlineData("💩.test")]
-        [InlineData("john..test")]
         [InlineData("xn--bcher -.tld")]
-        [InlineData("john.0")]
-        [InlineData("cn.8")]
-        [InlineData("www.masełkowski.pl.com")]
-        [InlineData("org")]
         [InlineData("name.org.")]
         [InlineData(".name.org")]
         [InlineData(".name.org.")]
+
+        // Test cases from https://github.com/bluesky-social/atproto/blob/main/interop-test-files/syntax/handle_syntax_invalid.txt
+        [InlineData("did:thing.test")]
+        [InlineData("did:thing")]
+        [InlineData("john-test")]
+        [InlineData("john.0")]
+        [InlineData("john-")]
+        [InlineData("xn--bcher-.tld")]
+        [InlineData("john..test")]
+        [InlineData("jo_hn.test")]
+        [InlineData("-john.test")]
+        [InlineData(".john.test")]
+        [InlineData("jo!hn.test")]
+        [InlineData("jo%hn.test")]
+        [InlineData("jo&hn.test")]
+        [InlineData("jo@hn.test")]
+        [InlineData("jo*hn.test")]
+        [InlineData("jo|hn.test")]
+        [InlineData("jo:hn.test")]
+        [InlineData("jo/hn.test")]
+        [InlineData("john💩.test")]
+        [InlineData("bücher.test")]
+        [InlineData("john .test")]
+        [InlineData("john.test.")]
+        [InlineData("john")]
+        [InlineData("john.")]
+        [InlineData(".john")]
+        [InlineData(" john.test")]
+        [InlineData("joh -.test")]
+        [InlineData("john.-est")]
+        [InlineData("john.tes-")]
+
+        // max over all handle: 'shoooort' + '.loooooooooooooooooooooooooong'.repeat(9) + '.test'
+        [InlineData("shoooort.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.loooooooooooooooooooooooooong.test")]
+
+        // max segment: 'short.' + 'o'.repeat(64) + '.test'
+        [InlineData("short.oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo.test")]
+
+        // throws on "dotless" TLD handles
+        [InlineData("org")]
+        [InlineData("ai")]
+        [InlineData("gg")]
+        [InlineData("io")]
+
+        // correctly validates corner cases (modern vs. old RFCs)
+        [InlineData("cn.8")]
+        [InlineData("thing.0aa")]
+
+        // does not allow IP addresses as handles
+        [InlineData("127.0.0.1")]
+        [InlineData("192.168.0.142")]
+        [InlineData("fe80::7325:8a97:c100:94b")]
+        [InlineData("2600:3c03::f03c:9100:feb0:af1f")]
+
+        // examples from stackoverflow
+        [InlineData("-notvalid.at-all")]
+        [InlineData("- thing.com")]
+        [InlineData("www.masełkowski.pl.com")]
         public void SyntacticallyInvalidHandlesTryParseShouldReturnFalseAndNullHandle(string value)
         {
             Assert.False(Handle.TryParse(value, out Handle? actual));
@@ -148,21 +335,6 @@ namespace idunno.AtProto.Test
             Assert.Null(handle);
         }
 
-        [Theory]
-        [InlineData("test.alt")]
-        [InlineData("test.arpa")]
-        [InlineData("test.example")]
-        [InlineData("test.internal")]
-        [InlineData("test.invalid")]
-        [InlineData("test.local")]
-        [InlineData("test.localhost")]
-        [InlineData("test.onion")]
-        public void InvalidTldHandlesShouldFailTryParse(string value)
-        {
-            Assert.False(Handle.TryParse(value, out Handle? handle));
-            Assert.Null(handle);
-        }
-
         [Fact]
         public void EmptyOrWhiteSpaceHandlesShouldFailTryParse()
         {
@@ -171,6 +343,17 @@ namespace idunno.AtProto.Test
 
             Assert.False(Handle.TryParse(" ", out handle));
             Assert.Null(handle);
+        }
+
+        [Fact]
+        public void EqualityTestIgnoresCase()
+        {
+            Handle lhs = new("jay.bsky.social");
+            Handle rhs = new("jay.BsKy.SoCiAl");
+
+            Assert.True(lhs.Equals(rhs));
+
+            Assert.True(lhs == rhs);
         }
     }
 }

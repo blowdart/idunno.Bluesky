@@ -21,6 +21,5 @@ namespace idunno.AtProto
         {
             await task.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         }
-
     }
 }
