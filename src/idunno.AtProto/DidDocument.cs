@@ -14,12 +14,45 @@ namespace idunno.AtProto
     public sealed record DidDocument
     {
         /// <summary>
-        /// Creates a new instance of <see cref="DidDocument"/> for the specified <paramref name="id"/>.
+        /// Creates a new instance of <see cref="DidDocument"/>.
         /// </summary>
-        /// <param name="id">The <see cref="Did"/> of the document subject.</param>
-        public DidDocument(Did id)
+        /// <param name="id">The <see cref="Did"/> of the subject for the <see cref="DidDocument"/>.</param>
+        /// <param name="context">The context of for the <see cref="DidDocument"/>.</param>
+        /// <param name="alsoKnownAs">One or more alternative identifiers for the subject of the <see cref="DidDocument"/>.</param>
+        /// <param name="verificationMethods">A list of verification methods for the <paramref name="id">subject</paramref> or associated parties.</param>
+        /// <param name="services">Ways of communicating with the <paramref name="id">subject</paramref> or associated entities</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="id"/> is null.</exception>
+        [JsonConstructor]
+        internal DidDocument(
+            Did id,
+            IReadOnlyList<string>? context,
+            IReadOnlyList<string>? alsoKnownAs,
+            IReadOnlyList<VerificationMethod>? verificationMethods,
+            IReadOnlyList<DidDocService>? services)
         {
+            ArgumentNullException.ThrowIfNull(id);
+
             Id = id;
+
+            if (context is not null)
+            {
+                Context = context;
+            }
+
+            if (alsoKnownAs is not null)
+            {
+                AlsoKnownAs = alsoKnownAs;
+            }
+
+            if (verificationMethods is not null)
+            {
+                VerificationMethods = verificationMethods;
+            }
+
+            if (services is not null)
+            {
+                Services = services;
+            }
         }
 
         /// <summary>
@@ -33,54 +66,44 @@ namespace idunno.AtProto
         public IReadOnlyList<string> Context { get; internal set; } = new List<string>();
 
         /// <summary>
-        /// Gets or sets the <see cref="Did"/> for the subject of the <see cref="DidDocument"/>.
+        /// Gets the <see cref="Did"/> for the subject of the <see cref="DidDocument"/>.
         /// </summary>
-        /// <value>
-        /// The <see cref="Did"/> for the subject of the <see cref="DidDocument"/>.
-        /// </value>
         /// <remarks>
         /// <para>See https://www.w3.org/TR/did-core/#did-subject for details.</para>
         /// </remarks>
-        public Did Id { get; set; }
+        [JsonInclude]
+        [JsonRequired]
+        public Did Id { get; init; }
 
         /// <summary>
-        /// Gets or sets one or more alternative identifiers for the subject of this <see cref="DidDocument"/>.
+        /// Gets any alternative identifiers for the subject of this <see cref="DidDocument"/>.
         /// </summary>
-        /// <value>
-        /// A list of alternative identifiers for the subject of this <see cref="DidDocument"/>
-        /// </value>
         /// <remarks>
         /// <para>See https://www.w3.org/TR/did-core/#also-known-as for details.</para>
         /// </remarks>
         [JsonInclude]
-        public IReadOnlyList<string>? AlsoKnownAs { get; internal set; } = new List<string>();
+        public IReadOnlyList<string>? AlsoKnownAs { get; init; } = new List<string>();
 
         /// <summary>
-        /// Gets or sets verification methods, such as cryptographic public keys, which can be used to authenticate or authorize
+        /// Gets verification methods, such as cryptographic public keys, which can be used to authenticate or authorize
         /// interactions with the <see cref="Did"/> subject or associated parties.
         /// </summary>
-        /// <values>
-        /// A list of verification methods for the <see cref="Did"/> subject or associated parties.
-        /// </values>
         ///<remarks>
         /// <para>See https://www.w3.org/TR/did-core/#verification-methods for details.</para>
         /// </remarks>
         [JsonInclude]
         [JsonPropertyName("verificationMethod")]
-        public IReadOnlyList<VerificationMethod>? VerificationMethods { get; internal set; } = new List<VerificationMethod>();
+        public IReadOnlyList<VerificationMethod>? VerificationMethods { get; init; } = new List<VerificationMethod>();
 
         /// <summary>
-        /// Gets or sets ways of communicating with the <see cref="Did"/> subject or associated entities
+        /// Gets ways of communicating with the <see cref="Did"/> subject or associated entities
         /// </summary>
-        /// <value>
-        /// A list of <see cref="DidDocService"/>s which express of communicating with the <see cref="Did"/> subject or associated entities
-        /// </value>
         /// <remarks>
         /// <para>See https://www.w3.org/TR/did-core/#services for details.</para>
         /// </remarks>
         [JsonInclude]
         [JsonPropertyName("service")]
-        public IReadOnlyList<DidDocService>? Services { get; internal set; } = new List<DidDocService>();
+        public IReadOnlyList<DidDocService>? Services { get; init; } = new List<DidDocService>();
     }
 
     /// <summary>
@@ -101,7 +124,7 @@ namespace idunno.AtProto
         /// <param name="type">The type of the <see cref="VerificationMethod"/>.</param>
         /// <param name="controller">The <see cref="Did"/> of the controller for the <see cref="VerificationMethod"/>.</param>
         [JsonConstructor]
-        public VerificationMethod(Uri id, string type, Did controller)
+        internal VerificationMethod(Uri id, string type, Did controller)
         {
             Id = id;
             Type = type;
@@ -109,39 +132,27 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Gets or sets the ID for this <see cref="VerificationMethod"/>.
+        /// Gets the ID for this <see cref="VerificationMethod"/>.
         /// </summary>
-        /// <value>
-        /// The ID for this <see cref="VerificationMethod"/>.
-        /// </value>
-        public Uri Id { get; set; }
+        public Uri Id { get; init; }
 
         /// <summary>
-        /// Gets or sets the type of the <see cref="VerificationMethod"/>.
+        /// Gets the type of the <see cref="VerificationMethod"/>.
         /// </summary>
-        /// <value>
-        /// The type of the <see cref="VerificationMethod"/>.
-        /// </value>
-        public string Type { get; set; }
+        public string Type { get; init; }
 
         /// <summary>
-        /// Gets or sets the <see cref="Did"/> for the controller of this <see cref="VerificationMethod"/>.
+        /// Gets the <see cref="Did"/> for the controller of this <see cref="VerificationMethod"/>.
         /// </summary>
-        /// <value>
-        /// The <see cref="Did"/> for the controller of this <see cref="VerificationMethod"/>.
-        /// </value>
-        public Did Controller { get; set; }
+        public Did Controller { get; init; }
 
         /// <summary>
-        /// Gets or sets an optional string representation of a multibase encoded public key for this <see cref="VerificationMethod"/>.
+        /// Gets an optional string representation of a multibase encoded public key for this <see cref="VerificationMethod"/>.
         /// </summary>
-        /// <value>
-        /// An optional string representation of a multibase encoded public key for this <see cref="VerificationMethod"/>.
-        /// </value>
-        public string? PublicKeyMultibase { get; set; }
+        public string? PublicKeyMultibase { get; init; }
 
         /// <summary>
-        /// Gets or sets an optional dictionary of additional properties for this <see cref="VerificationMethod"/>.
+        /// Gets an optional dictionary of additional properties for this <see cref="VerificationMethod"/>.
         /// </summary>
         /// <value>
         /// An optional dictionary of additional properties for this <see cref="VerificationMethod"/>.
@@ -158,6 +169,7 @@ namespace idunno.AtProto
     /// </remarks>
     public record DidDocService
     {
+        [JsonConstructor]
         internal DidDocService(string id, string type, Uri serviceEndpoint)
         {
             Id = id;
@@ -166,23 +178,18 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Gets or sets the Id for this service.
+        /// Gets the Id for this service.
         /// </summary>
-        /// <value>The Id for this service.</value>
-        public string Id { get; set; }
+        public string Id { get; init; }
 
         /// <summary>
-        /// Gets or sets the service type.
+        /// Gets or the service type.
         /// </summary>
-        /// <value>The service type.</value>
-        public string Type { get; set; }
+        public string Type { get; init; }
 
         /// <summary>
-        /// Gets or sets the endpoint for this service.
+        /// Gets the endpoint for this service.
         /// </summary>
-        /// <value>
-        /// The endpoint for this service.
-        /// </value>
-        public Uri ServiceEndpoint { get; set; }
+        public Uri ServiceEndpoint { get; init; }
     }
 }

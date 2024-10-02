@@ -11,13 +11,21 @@ namespace idunno.AtProto.Server
     public sealed record ServerDescription
     {
         /// <summary>
-        /// Creates a new instance of <see cref="ServerDescription"/> with the specified <paramref name="did"/>.
+        /// Creates a new instance of <see cref="ServerDescription"/>.
         /// </summary>
         /// <param name="did">The DID of the server whose description this belongs to.</param>
+        /// <param name="contact">A contact for the server.</param>
         [JsonConstructor]
-        public ServerDescription(Did did)
+        internal ServerDescription(Did did, Contact? contact)
         {
+            ArgumentNullException.ThrowIfNull(did);
+
             Did = did;
+
+            if (contact is not null && !string.IsNullOrEmpty(contact.Email))
+            {
+                Contact = contact;
+            }
         }
 
         /// <summary>
@@ -75,7 +83,6 @@ namespace idunno.AtProto.Server
         /// </value>
         [JsonInclude]
         public Contact? Contact { get; internal set; }
-
     }
 
     /// <summary>
@@ -108,12 +115,27 @@ namespace idunno.AtProto.Server
     public sealed record Contact
     {
         /// <summary>
+        /// Creates a new instance of <see cref="Contact"/>
+        /// </summary>
+        /// <param name="email">The email address for the contact.</param>
+        [JsonConstructor]
+        public Contact(string email)
+        {
+            Email = email;
+        }
+
+        /// <summary>
         /// Gets the email address associated with the server.
         /// </summary>
         /// <value>
         /// The email address associated with the server.
         /// </value>
         [JsonInclude]
-        public string? Email { get; internal set; }
+        public string Email { get; internal set; }
+
+        /// <summary>
+        /// Provides a string representation of this Contact.
+        /// </summary>
+        public override string ToString() => Email;
     }
 }

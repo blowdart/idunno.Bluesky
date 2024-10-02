@@ -12,7 +12,7 @@ namespace idunno.AtProto.Json
     internal class AtUriConverter : JsonConverter<AtUri>
     {
         /// <summary>
-        /// Reads and converts JSON to a DID.
+        /// Reads and converts JSON to an <see cref="AtUri"/>.
         /// </summary>
         /// <param name="reader">The reader.</param>
         /// <param name="typeToConvert">The type to convert.</param>
@@ -52,7 +52,7 @@ namespace idunno.AtProto.Json
         /// Writes the specified <see cref="AtUri"></see> as JSON.
         /// </summary>
         /// <param name="writer">The writer to write to.</param>
-        /// <param name="handle">The <see cref="Did"/> to convert to JSON.</param>
+        /// <param name="atUri">The <see cref="Did"/> to convert to JSON.</param>
         /// <param name="options">An object that specifies serialization options to use.</param>
         public override void Write(Utf8JsonWriter writer, AtUri atUri, JsonSerializerOptions options)
         {

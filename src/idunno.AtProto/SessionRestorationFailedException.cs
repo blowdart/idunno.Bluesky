@@ -5,6 +5,9 @@ using System.Net;
 
 namespace idunno.AtProto
 {
+    /// <summary>
+    /// Thrown when the Session restoration process fails.
+    /// </summary>
     public class SessionRestorationFailedException : Exception
     {
         /// <summary>
@@ -26,7 +29,14 @@ namespace idunno.AtProto
         /// <param name="inner">The exception that is the cause of the current exception</param>
         public SessionRestorationFailedException(string message, Exception inner) : base(message, inner) { }
 
+        /// <summary>
+        /// The <see cref="HttpStatusCode"/> returned by the API call.
+        /// </summary>
         public HttpStatusCode StatusCode { get; set; }
+
+        /// <summary>
+        /// The <see cref="AtErrorDetail"/> returned by the API call, if any.
+        /// </summary>
 
         public AtErrorDetail? Error { get; set; }
     }

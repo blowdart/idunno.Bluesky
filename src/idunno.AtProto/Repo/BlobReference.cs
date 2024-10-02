@@ -26,6 +26,6 @@ namespace idunno.AtProto.Repo
         /// <value>The link to the blob.</value>
         [JsonInclude]
         [JsonPropertyName("$link")]
-        public string Link { get; internal set; }
+        public string Link { get; init; }
     }
 }

@@ -26,17 +26,29 @@ namespace idunno.AtProto.Repo
             Size = size;
         }
 
+        /// <summary>
+        /// The json type data for a blob object
+        /// </summary>
         [JsonInclude]
         [JsonPropertyName("$type")]
         public string Type { get; internal set; } = "blob";
 
+        /// <summary>
+        /// The reference to the blob.
+        /// </summary>
         [JsonInclude]
         [JsonPropertyName("ref")]
         public BlobReference Reference { get; internal set;}
 
+        /// <summary>
+        /// The MIME type for the blob.
+        /// </summary>
         [JsonInclude]
         public string MimeType { get; internal set;}
 
+        /// <summary>
+        /// The size of the blob, in bytes.
+        /// </summary>
         [JsonInclude]
         public int Size { get; internal set;}
     }

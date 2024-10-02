@@ -12,7 +12,7 @@ namespace idunno.AtProto.Json
     internal class HandleConverter : JsonConverter<Handle>
     {
         /// <summary>
-        /// Reads and converts JSON to a Handle
+        /// Reads and converts JSON to a <see cref="Handle"/>.
         /// </summary>
         /// <param name="reader">The reader.</param>
         /// <param name="typeToConvert">The type to convert.</param>

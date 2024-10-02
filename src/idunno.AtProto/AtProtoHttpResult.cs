@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 
 namespace idunno.AtProto
@@ -10,7 +11,7 @@ namespace idunno.AtProto
     /// and any error details returned by the API.
     /// </summary>
     /// <typeparam name="TResult">The type the results should be deserialized into.</typeparam>
-    public record AtProtoHttpResult<TResult>
+    public class AtProtoHttpResult<TResult>
     {
         internal AtProtoHttpResult()
         {
@@ -40,6 +41,7 @@ namespace idunno.AtProto
         /// <summary>
         /// The extended error information, if any, if the request was unsuccessful.
         /// </summary>
+        /// 
         public AtErrorDetail? AtErrorDetail {get; internal set; }
 
         /// <summary>
@@ -59,27 +61,15 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// True if <paramref name="r"/> is not null, the http status code is OK, and the request had a result, otherwise false.
+        /// A flag indicating if the https request returned a status code of OK and a result is present.
         /// </summary>
-        /// <param name="r">The <see cref="AtProtoHttpResult{TResult}"/> to check.</param>
-        public static implicit operator bool(AtProtoHttpResult<TResult> r)
+        [MemberNotNullWhen(true, nameof(Result))]
+        public bool SucceededWithResult
         {
-            return
-                r is not null &&
-                r.StatusCode == HttpStatusCode.OK &&
-                r.Result is not null;
-        }
-
-        /// <summary>
-        /// Converts this instance to a boolean, indicating the success or failure of the request that generated this instance.
-        /// </summary>
-        /// <returns>
-        /// True if this <see cref="AtProtoHttpResult{TResult}" /> is not null, the http status code returned by the API call is OK,
-        /// and the request had a result, otherwise false.
-        /// </returns>
-        public bool ToBoolean()
-        {
-            return (bool)this;
+            get
+            {
+                return Succeeded && Result is not null;
+            }
         }
     }
 }

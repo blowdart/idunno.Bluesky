@@ -1,9 +1,11 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-
 namespace idunno.AtProto
 {
+    /// <summary>
+    /// Configurable properties to use when creating a new instance of <see cref="AtProtoAgent"/>.
+    /// </summary>
     public class AtProtoAgentOptions : AgentOptions
     {
         /// <summary>

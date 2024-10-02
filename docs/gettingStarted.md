@@ -24,7 +24,8 @@ using (BlueskyAgent agent = new ())
 
 All the supported Bluesky operations are contained in the `BlueskyAgent` class, which takes care of session management for you.
 
-Most requests to Bluesky are made over [HTTP](https://docs.bsky.app/docs/category/http-reference) and the results are wrapped up in an `HttpResult` instance, which contains any successful result returned, along with the `200 - Ok` status code, or an HTTP status code indicating an error, and, optionally, some error details. More detailed information on error handling can be found in [Error Handling](#errorHandling)
+Most requests to Bluesky are made over [HTTP](https://docs.bsky.app/docs/category/http-reference) and the results are wrapped up in an `HttpResult` instance,
+which contains the HTTP status code returned by the API, and any result or error returned. More information on error handling can be found in [Error Handling](#errorHandling)
 
 ## <a name="connecting">Connecting to Bluesky</a>
 
@@ -33,8 +34,8 @@ As you can see from the [Hello World](#gettingStarted) example connecting to Blu
 ```c#
 using (BlueskyAgent agent = new ())
 {
-    HttpResult<bool> loginResult =  await agent.Login(username, password);
-    if (loginResult && agent.Session is not null)
+    var loginResult =  await agent.Login(username, password);
+    if (loginResult.Succeeded && agent.Session is not null)
     {
         // Do your Bluesky thing
     }
@@ -49,9 +50,9 @@ The first login attempt will fail with an `AuthFactorTokenRequired` error, at wh
 and call `Login` again, this time with the username, password and the sign-in code.
 
 ```c#
-HttpResult<bool> loginResult = await agent.Login(username, password);
+var loginResult = await agent.Login(username, password);
 
-if (!loginResult &&
+if (!loginResult.Succeeded &&
     string.Equals(
         loginResult.Error.Error!, 
         "AuthFactorTokenRequired", 
@@ -101,7 +102,7 @@ using (var proxyClient = new HttpClient(handler: proxyClientHandler, disposeHand
 {
     BlueskyAgent agent = new (proxyClient)
     {
-        HttpResult<Did> did = await agent.ResolveHandle("blowdart.me");
+        var did = await agent.ResolveHandle("blowdart.me");
     }
 }
 ```
@@ -115,7 +116,7 @@ var options = new BlueskyAgentOptions() { EnableBackgroundTokenRefresh = false }
 
 using (BlueskyAgent agent = new (options)
 {   
-    HttpResult<Did> did = await agent.ResolveHandle("blowdart.me");
+    var did = await agent.ResolveHandle("blowdart.me");
 }
 ```
 
@@ -127,7 +128,7 @@ The success or fail possibilities are wrapped together in an `HttpResult<T>` tha
 
 For example, a login call returns an `AtProtoHttpResult<bool>`. To check the operation succeeded you would
 
-1. Check the that the `AtProtoHttpResult<T>` is true, which indicates the underlying request returned a `200 - Ok` status code, and a result is available.
+1. Check the that the `SucceededWithResult` property is true, which indicates the underlying request returned a `HttpStatusCode.OK` status code, and a result is available.
 2. If it's `true`, you can use the `Result` property and continue on your way.
    If it's `false` you can use the `StatusCode` property to examine the HTTP status code returned by the API and, if the API has given a detailed error response, you can use the `Error` property to view any extended error information returned, which may have an `Error` and a `Message` set.
 1. If the `StatusCode` properly is `HttpStatusCode.OK` then the API call succeeded but no result was returned, which shouldn't happen.
@@ -136,9 +137,9 @@ When calling an API you should use the following pattern to check for errors.
 
 ```c#
 // Make an API call to get the timeline for the current user.
-HttpResult<Timeline> timelineResult = await agent.GetTimeline();
+var timelineResult = await agent.GetTimeline();
 
-if (timelineResult)
+if (timelineResult.SucceededWithResult)
 {
     // Everything was successful, continue on with your code
 }
@@ -150,7 +151,12 @@ else
 }
 ```
 
-The`AtProtoHttpResult<T>` `StatusCode` property exposes the HTTP status code the API endpoint returned. If the `StatusCode` is not `Succeeded` then an HTTP error occurred during the API fall.
+The `SuccedeedWithResult` property on the `AtProtoHttpResult<T>` class is a convenience property that checks if the
+`StatusCode` is `HttpStatusCode.OK` and the `Result` is not `null`. There is also a `Succeeded` property which just checks the `StatusCode` for
+the few APIs that don't return a result.
+
+The`AtProtoHttpResult<T>` `StatusCode` property exposes the HTTP status code the API endpoint returned.
+If the `StatusCode` is not `Succeeded` then an HTTP error occurred during the API call.
 Further error information returned from the API may be present in the `Error` property.
 
 ## <a name="atURIs">AT URIs</a>

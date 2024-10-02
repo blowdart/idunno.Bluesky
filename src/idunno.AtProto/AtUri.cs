@@ -12,8 +12,8 @@ namespace idunno.AtProto
     /// Provides an object representation of an AT uniform resource identifier (AT URI) and easy access to the parts of the AT URI.
     /// </summary>
     /// <remarks>
-    /// See https://atproto.com/specs/at-uri-scheme
-    /// For Bluesky at-uri = at://{repo (did)}/{collection}/{rkey}
+    /// <para>See https://atproto.com/specs/at-uri-scheme</para>
+    /// <para>For Bluesky a valid form is at-uri = at://{repo (did)}/{collection}/{rkey}</para>
     /// </remarks>
     [JsonConverter(typeof(Json.AtUriConverter))]
     public sealed class AtUri : IEquatable<AtUri>
@@ -102,9 +102,6 @@ namespace idunno.AtProto
         /// <summary>
         /// Returns the collection segment of the AT URI or null if the URI does not contain one.
         /// </summary>
-        /// <remarks>
-        /// The collection segment of the AT URI or null if the URI does not contain one
-        /// </remarks>
         [JsonIgnore]
         public string? Collection
         {
@@ -126,9 +123,6 @@ namespace idunno.AtProto
         /// <summary>
         /// Returns the record key of the AT URI or null if the URI does not contain one.
         /// </summary>
-        /// <remarks>
-        /// The record key segment of the AT URI or null if the URI does not contain one
-        /// </remarks>
         [JsonIgnore]
         public string? Rkey
         {
@@ -147,10 +141,33 @@ namespace idunno.AtProto
             }
         }
 
+        /// <summary>
+        /// Returns the hash code for this <see cref="AtUri"/>.
+        /// </summary>
+        /// <returns>The hash code for this <see cref="AtUri"/>.</returns>
+
         public override int GetHashCode() => (Scheme, Authority, AbsolutePath).GetHashCode();
 
+        /// <summary>
+        /// Indicates where an object is equal to this <see cref="AtUri"/>."/>
+        /// </summary>
+        /// <param name="obj">An object to compare to this <see cref="AtUri"/>.</param>
+        /// <returns>
+        /// true if this <see cref="AtUri"/> and the specified <paramref name="obj"/>> refer to the same object,
+        /// this AtUri and the specified obj are both the same type of object and those objects are equal,
+        /// or if this AtUri and the specified obj are both null, otherwise, false.
+        /// </returns>
         public override bool Equals(object? obj) => Equals(obj as AtUri);
 
+        /// <summary>
+        /// Indicates where this <see cref="AtUri"/> equals another."/>
+        /// </summary>
+        /// <param name="other">A <see cref="AtUri"/> or null to compare to this <see cref="AtUri"/>.</param>
+        /// <returns>
+        /// true if this <see cref="AtUri"/> and the specified <paramref name="other"/>> refer to the same object,
+        /// this AtUri and the specified obj are both the same type of object and those objects are equal,
+        /// or if this AtUri and the specified obj are both null, otherwise, false.
+        /// </returns>
         public bool Equals(AtUri? other)
         {
             if (other is null)
@@ -173,6 +190,12 @@ namespace idunno.AtProto
                    string.Equals(AbsolutePath, other.AbsolutePath, StringComparison.Ordinal);
         }
 
+        /// <summary>
+        /// Determines whether two specified <see cref="AtUri"/>s the same value."/>
+        /// </summary>
+        /// <param name="lhs">The first <see cref="AtUri"/> to compare, or null.</param>
+        /// <param name="rhs">The second <see cref="AtUri"/> to compare, or null.</param>
+        /// <returns>true if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, false.</returns>
         public static bool operator ==(AtUri? lhs, AtUri? rhs)
         {
             if (lhs is null)
@@ -188,6 +211,12 @@ namespace idunno.AtProto
             return lhs.Equals(rhs);
         }
 
+        /// <summary>
+        /// Determines whether two specified <see cref="AtUri"/>s dot not have same value."/>
+        /// </summary>
+        /// <param name="lhs">The first <see cref="AtUri"/> to compare, or null.</param>
+        /// <param name="rhs">The second <see cref="AtUri"/> to compare, or null.</param>
+        /// <returns>true if the value of <paramref name="lhs"/> is different to the value of <paramref name="rhs" />; otherwise, false.</returns>
         public static bool operator !=(AtUri? lhs, AtUri? rhs) => !(lhs == rhs);
 
         /// <summary>
@@ -222,28 +251,28 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="s">A string containing the id to convert.</param>
         /// <param name="result">
-        /// When this method returns contains the <see cref="Handle"/> equivalent of the
+        /// When this method returns contains the <see cref="AtUri"/> equivalent of the
         /// string contained in s, or null if the conversion failed. The conversion fails if the <paramref name="s"/> parameter
         /// is null or empty, or is not of the current format. This parameter is passed uninitialized; any value originally
         /// supplied in result will be overwritten.
         /// </param>
         /// <returns>true if s was converted successfully; otherwise, false.</returns>
-        public static bool TryParse(string s, out AtUri? atUri)
+        public static bool TryParse(string s, out AtUri? result)
         {
             if (string.IsNullOrEmpty(s))
             {
-                atUri = null;
+                result = null;
                 return false;
             }
 
-            return Parse(s, false, out atUri);
+            return Parse(s, false, out result);
         }
 
-        private static bool Parse(string s, bool throwOnError, out AtUri? atUri)
+        private static bool Parse(string s, bool throwOnError, out AtUri? result)
         {
             // Validation comes from https://github.com/bluesky-social/atproto/blob/290a7e67b8e6417b00352cc1d54bac006c2f6f93/packages/syntax/src/aturi_validation.ts#L99
 
-            atUri = null;
+            result = null;
 
             if (!s.StartsWith(ProtocolAndSeparator, StringComparison.InvariantCulture))
             {
@@ -379,8 +408,8 @@ namespace idunno.AtProto
             if (regexValidationResult.Groups.ContainsKey("collection") &&
                 !string.IsNullOrEmpty(regexValidationResult.Groups["collection"].Value))
             {
-                bool result = Nsid.TryParse(regexValidationResult.Groups["collection"].Value, out Nsid? _);
-                if (!result)
+                bool nsidParseResult = Nsid.TryParse(regexValidationResult.Groups["collection"].Value, out Nsid? _);
+                if (!nsidParseResult)
                 {
                     if (throwOnError)
                     {
@@ -433,11 +462,11 @@ namespace idunno.AtProto
                 absolutePath = remainingStringToParse[firstSlashPosition..];
             }
 
-            atUri = new AtUri(scheme, authority, absolutePath);
+            var tempResult = new AtUri(scheme, authority, absolutePath);
 
-            if (atUri.Rkey is not null)
+            if (tempResult.Rkey is not null)
             {
-                string rkey = atUri.Rkey;
+                string rkey = tempResult.Rkey;
 
                 if (rkey.Length > 512 || rkey.Length < 1)
                 {
@@ -447,7 +476,7 @@ namespace idunno.AtProto
                     }
                     else
                     {
-                        atUri = null;
+                        result = null;
                         return false;
                     }
                 }
@@ -460,7 +489,7 @@ namespace idunno.AtProto
                     }
                     else
                     {
-                        atUri = null;
+                        result = null;
                         return false;
                     }
                 }
@@ -473,11 +502,13 @@ namespace idunno.AtProto
                     }
                     else
                     {
-                        atUri = null;
+                        result = null;
                         return false;
                     }
                 }
             }
+
+            result = tempResult;
 
             return true;
         }

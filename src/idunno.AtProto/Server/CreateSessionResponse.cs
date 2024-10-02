@@ -5,11 +5,14 @@ using System.Text.Json.Serialization;
 
 namespace idunno.AtProto.Server
 {
+    /// <summary>
+    /// The results of a CreateSession API call.
+    /// </summary>
     [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Skip)]
-    public sealed record CreateSessionResponse
+    public sealed record CreateSessionResponse : BaseSessionResponse
     {
         [JsonConstructor]
-        public CreateSessionResponse(
+        internal CreateSessionResponse(
             string accessJwt,
             string refreshJwt,
             Handle handle,
@@ -19,13 +22,10 @@ namespace idunno.AtProto.Server
             bool? emailConfirmed = null,
             bool? emailAuthFactor = null,
             bool? active = null,
-            AccountStatus? status = null)
+            AccountStatus? status = null) : base(handle, did, didDoc, active, status)
         {
             AccessJwt = accessJwt;
             RefreshJwt = refreshJwt;
-            Handle = handle;
-            Did = did;
-            DidDoc = didDoc;
             Email = email;
             EmailConfirmed = emailConfirmed;
             EmailAuthFactor = emailAuthFactor;
@@ -33,28 +33,31 @@ namespace idunno.AtProto.Server
             Status = status;
         }
 
+        /// <summary>
+        /// The Access JWT for the newly created session.
+        /// </summary>
         [JsonRequired]
         public string AccessJwt { get; init; }
 
+        /// <summary>
+        /// The Refresh JWT for the newly created session.
+        /// </summary>
         [JsonRequired]
         public string RefreshJwt { get; init; }
 
-        [JsonRequired]
-        public Handle Handle { get; init; }
-
-        [JsonRequired]
-        public Did Did { get; init; }
-
-        public DidDocument? DidDoc { get; init; }
-
+        /// <summary>
+        /// The email associated with <see cref="Handle">Handle</see> the newly created session belongs to.
+        /// </summary>
         public string? Email { get; init; }
 
+        /// <summary>
+        /// A flag indicating whether the <see cref="Email"/> is confirmed or not.
+        /// </summary>
         public bool? EmailConfirmed { get; init; }
 
+        /// <summary>
+        /// A flag indicating whether the newly created session required an email based authentication token.
+        /// </summary>
         public bool? EmailAuthFactor { get; init; }
-
-        public bool? Active { get; init; }
-
-        public AccountStatus? Status { get; init; }
     }
 }

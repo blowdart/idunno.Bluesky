@@ -5,7 +5,7 @@ namespace idunno.AtProto
 {
     /// <summary>
     /// The exception that is thrown when a request is made which requires authentication but the
-    /// current <see cref="Session"/> is unauthenticated.
+    /// <see cref="Agent"/> is unauthenticated.
     /// </summary>
     [Serializable]
     public class AuthenticatedSessionRequiredException : Exception

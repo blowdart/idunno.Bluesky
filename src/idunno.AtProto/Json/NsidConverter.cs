@@ -12,7 +12,7 @@ namespace idunno.AtProto.Json
     internal class NsidConverter : JsonConverter<Nsid>
     {
         /// <summary>
-        /// Reads and converts JSON to a CID.
+        /// Reads and converts JSON to an <see cref="Nsid"/>
         /// </summary>
         /// <param name="reader">The reader.</param>
         /// <param name="typeToConvert">The type to convert.</param>
@@ -49,10 +49,10 @@ namespace idunno.AtProto.Json
         }
 
         /// <summary>
-        /// Writes the specified <see cref="AtCid"></see> as JSON.
+        /// Writes the specified <see cref="Nsid" /> as JSON.
         /// </summary>
         /// <param name="writer">The writer to write to.</param>
-        /// <param name="handle">The <see cref="AtCid"/> to convert to JSON.</param>
+        /// <param name="nsid">The <see cref="AtCid"/> to convert to JSON.</param>
         /// <param name="options">An object that specifies serialization options to use.</param>
         public override void Write(Utf8JsonWriter writer, Nsid nsid, JsonSerializerOptions options)
         {

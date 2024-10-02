@@ -28,7 +28,7 @@ namespace idunno.AtProto.Repo
         /// The <see cref="AtUri"/> for the subject.
         /// </value>
         [JsonInclude]
-        public AtUri Uri { get; internal set; }
+        public AtUri Uri { get; init; }
 
         /// <summary>
         /// Gets the <see cref="AtCid"/> for the subject.
@@ -37,8 +37,11 @@ namespace idunno.AtProto.Repo
         /// The <see cref="AtCid"/> for the subject.
         /// </value>
         [JsonInclude]
-        public AtCid Cid { get; internal set; }
+        public AtCid Cid { get; init; }
 
+        /// <summary>
+        /// Returns a string representation of this instance.
+        /// </summary>
         public override string ToString() => $"{Uri}#{Cid}";
     }
 }

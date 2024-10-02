@@ -12,7 +12,7 @@ namespace idunno.AtProto
     /// Handles are a less-permanent identifier for accounts, when compared to <see cref="Did" />s.
     /// </summary>
     /// <remarks>
-    /// See https://atproto.com/specs/handle for further details.
+    /// <para>See https://atproto.com/specs/handle for further details.</para>
     /// </remarks>
     [JsonConverter(typeof(Json.HandleConverter))]
     public class Handle : AtIdentifier, IEquatable<Handle>
@@ -69,6 +69,9 @@ namespace idunno.AtProto
         [JsonPropertyName("handle")]
         public string Value { get; }
 
+        /// <summary>
+        /// Returns a flag indicating if the handle is or is not equal to the reserved <see cref="Invalid"/> handle.
+        /// </summary>
         public bool IsValid
         {
             get
@@ -86,10 +89,33 @@ namespace idunno.AtProto
             return Value;
         }
 
+        /// <summary>
+        /// Returns the hash code for this <see cref="Handle"/>.
+        /// </summary>
+        /// <returns>The hash code for this <see cref="Handle"/>.</returns>
+
         public override int GetHashCode() => Value.GetHashCode(StringComparison.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// Indicates where an object is equal to this <see cref="Handle"/>."/>
+        /// </summary>
+        /// <param name="obj">An object to compare to this <see cref="Handle"/>.</param>
+        /// <returns>
+        /// true if this <see cref="Handle"/> and the specified <paramref name="obj"/>> refer to the same object,
+        /// this Handle and the specified obj are both the same type of object and those objects are equal,
+        /// or if this Handle and the specified obj are both null, otherwise, false.
+        /// </returns>
         public override bool Equals(object? obj) => Equals(obj as Handle);
 
+        /// <summary>
+        /// Indicates where this <see cref="Handle"/> equals another."/>
+        /// </summary>
+        /// <param name="other">A <see cref="Handle"/> or null to compare to this <see cref="Handle"/>.</param>
+        /// <returns>
+        /// true if this <see cref="Handle"/> and the specified <paramref name="other"/>> refer to the same object,
+        /// this Handle and the specified obj are both the same type of object and those objects are equal,
+        /// or if this Handle and the specified obj are both null, otherwise, false.
+        /// </returns>
         public bool Equals(Handle? other)
         {
             if (other is null)
@@ -113,6 +139,12 @@ namespace idunno.AtProto
             return (string.Equals(Value, other.Value, StringComparison.OrdinalIgnoreCase));
         }
 
+        /// <summary>
+        /// Determines whether two specified <see cref="Handle"/>s the same value."/>
+        /// </summary>
+        /// <param name="lhs">The first <see cref="Handle"/> to compare, or null.</param>
+        /// <param name="rhs">The second <see cref="Handle"/> to compare, or null.</param>
+        /// <returns>true if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, false.</returns>
         public static bool operator ==(Handle? lhs, Handle? rhs)
         {
             if (lhs is null)
@@ -129,6 +161,12 @@ namespace idunno.AtProto
             return lhs.Equals(rhs);
         }
 
+        /// <summary>
+        /// Determines whether two specified <see cref="Handle"/>s dot not have same value."/>
+        /// </summary>
+        /// <param name="lhs">The first <see cref="Handle"/> to compare, or null.</param>
+        /// <param name="rhs">The second <see cref="Handle"/> to compare, or null.</param>
+        /// <returns>true if the value of <paramref name="lhs"/> is different to the value of <paramref name="rhs" />; otherwise, false.</returns>
         public static bool operator !=(Handle? lhs, Handle? rhs) => !(lhs == rhs);
 
         /// <summary>
@@ -143,12 +181,12 @@ namespace idunno.AtProto
         /// supplied in result will be overwritten.
         /// </param>
         /// <returns>true if s was converted successfully; otherwise, false.</returns>
-        public static bool TryParse(string s, out Handle? handle)
+        public static bool TryParse(string s, out Handle? result)
         {
-            return Parse(s, false, out handle);
+            return Parse(s, false, out result);
         }
 
-        private static bool Parse(string s, bool throwOnError, out Handle? handle)
+        private static bool Parse(string s, bool throwOnError, out Handle? result)
         {
             if (string.IsNullOrWhiteSpace(s))
             {
@@ -158,7 +196,7 @@ namespace idunno.AtProto
                 }
                 else
                 {
-                    handle = null;
+                    result = null;
                     return false;
                 }
             }
@@ -171,7 +209,7 @@ namespace idunno.AtProto
                 }
                 else
                 {
-                    handle = null;
+                    result = null;
                     return false;
                 }
             }
@@ -184,7 +222,7 @@ namespace idunno.AtProto
                 }
                 else
                 {
-                    handle = null;
+                    result = null;
                     return false;
                 }
             }
@@ -197,7 +235,7 @@ namespace idunno.AtProto
                 }
                 else
                 {
-                    handle = null;
+                    result = null;
                     return false;
                 }
             }
@@ -210,12 +248,12 @@ namespace idunno.AtProto
                 }
                 else
                 {
-                    handle = null;
+                    result = null;
                     return false;
                 }
             }
 
-            handle = new Handle(s, false);
+            result = new Handle(s, false);
             return true;
         }
     }

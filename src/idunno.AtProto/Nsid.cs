@@ -53,22 +53,22 @@ namespace idunno.AtProto
         {
         }
 
-        [JsonIgnore]
         /// <summary>
         /// Gets the NSID authority for this instance.
         /// </summary>
         /// <value>
         /// The NSID authority for this instance.
         /// </value>
+        [JsonIgnore]
         public string Authority => string.Join('.', _value.Split('.')[..^1].Reverse());
 
-        [JsonIgnore]
         /// <summary>
         /// Gets the NSID name for this instance.
         /// </summary>
         /// <value>
         /// The NSID name for this instance.
         /// </value>
+        [JsonIgnore]
         public string Name => _value.Split('.')[^1];
 
         /// <summary>
@@ -89,15 +89,15 @@ namespace idunno.AtProto
         /// supplied in result will be overwritten.
         /// </param>
         /// <returns>true if s was converted successfully; otherwise, false.</returns>
-        public static bool TryParse(string s, out Nsid? nsid)
+        public static bool TryParse(string s, out Nsid? result)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(s);
-            return Parse(s, false, out nsid);
+            return Parse(s, false, out result);
         }
 
-        private static bool Parse(string s, bool throwOnError, out Nsid? nsid)
+        private static bool Parse(string s, bool throwOnError, out Nsid? result)
         {
-            nsid = null;
+            result = null;
 
             if (string.IsNullOrWhiteSpace(s))
             {
@@ -229,7 +229,7 @@ namespace idunno.AtProto
                 }
             }
 
-            nsid = new Nsid(s, false);
+            result = new Nsid(s, false);
             return true;
         }
     }

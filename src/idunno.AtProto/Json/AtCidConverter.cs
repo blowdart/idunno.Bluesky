@@ -12,7 +12,7 @@ namespace idunno.AtProto.Json
     internal class AtCidConverter : JsonConverter<AtCid>
     {
         /// <summary>
-        /// Reads and converts JSON to a NSID.
+        /// Reads and converts JSON to an <see cref="AtCid"/>.
         /// </summary>
         /// <param name="reader">The reader.</param>
         /// <param name="typeToConvert">The type to convert.</param>
@@ -34,7 +34,7 @@ namespace idunno.AtProto.Json
             }
             catch (ArgumentNullException e)
             {
-                throw new JsonException("Could not value to an AtCid", e);
+                throw new JsonException("Could not convert value to an AtCid", e);
             }
 
             return atCid;
@@ -44,11 +44,11 @@ namespace idunno.AtProto.Json
         /// Writes the specified <see cref="AtCid"></see> as JSON.
         /// </summary>
         /// <param name="writer">The writer to write to.</param>
-        /// <param name="handle">The <see cref="AtCid"/> to convert to JSON.</param>
+        /// <param name="cid">The <see cref="AtCid"/> to convert to JSON.</param>
         /// <param name="options">An object that specifies serialization options to use.</param>
-        public override void Write(Utf8JsonWriter writer, AtCid did, JsonSerializerOptions options)
+        public override void Write(Utf8JsonWriter writer, AtCid cid, JsonSerializerOptions options)
         {
-            writer.WriteStringValue(did.Value);
+            writer.WriteStringValue(cid.Value);
         }
     }
 }

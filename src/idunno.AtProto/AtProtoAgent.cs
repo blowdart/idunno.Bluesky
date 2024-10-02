@@ -631,7 +631,7 @@ namespace idunno.AtProto
                 }
             }
 
-            AtProtoHttpResult<RefreshSessionResult> refreshSessionResult =
+            AtProtoHttpResult<RefreshSessionResponse> refreshSessionResult =
                 await AtProtoServer.RefreshSession(refreshJwt, service, HttpClient, cancellationToken).ConfigureAwait(false);
 
             if (!refreshSessionResult.Succeeded || refreshSessionResult.Result is null || refreshSessionResult.Result.AccessJwt is null || refreshSessionResult.Result.RefreshJwt is null)
@@ -692,7 +692,7 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if the <paramref name="accessJwt"/> is null or empty.</exception>
         /// <exception cref="InvalidSessionException">Thrown if the current session does not have enough information to call refresh itself.</exception>
-        public async Task<AtProtoHttpResult<GetSessionResult>> GetSession(string accessJwt, Uri? service = null, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<GetSessionResponse>> GetSession(string accessJwt, Uri? service = null, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNullOrEmpty(accessJwt);
 
@@ -725,7 +725,7 @@ namespace idunno.AtProto
             // Try the access token first if there is one.
             if (!string.IsNullOrEmpty(accessJwt) && GetTimeToJwtTokenExpiry(accessJwt) > new TimeSpan(0, 5, 0))
             {
-                AtProtoHttpResult<GetSessionResult> getSessionResult = await GetSession(accessJwt, service, cancellationToken).ConfigureAwait(false);
+                AtProtoHttpResult<GetSessionResponse> getSessionResult = await GetSession(accessJwt, service, cancellationToken).ConfigureAwait(false);
                 if (getSessionResult.Succeeded && getSessionResult.Result is not null)
                 {
                     restoredSession = new Session(service, getSessionResult.Result)
@@ -739,7 +739,7 @@ namespace idunno.AtProto
             // If that failed, try refreshing the session to get a new token, then try again.
             if (restoredSession is null && !cancellationToken.IsCancellationRequested)
             {
-                AtProtoHttpResult<RefreshSessionResult> refreshSessionResult =
+                AtProtoHttpResult<RefreshSessionResponse> refreshSessionResult =
                         await AtProtoServer.RefreshSession(refreshJwt, service, HttpClient, cancellationToken).ConfigureAwait(false);
 
                 if (refreshSessionResult.Succeeded && refreshSessionResult.Result is not null)
@@ -749,7 +749,7 @@ namespace idunno.AtProto
                         throw new SecurityTokenValidationException("The issued access token could not be validated.");
                     }
 
-                    AtProtoHttpResult<GetSessionResult> getSessionResult = await GetSession(refreshSessionResult.Result.AccessJwt, service, cancellationToken).ConfigureAwait(false);
+                    AtProtoHttpResult<GetSessionResponse> getSessionResult = await GetSession(refreshSessionResult.Result.AccessJwt, service, cancellationToken).ConfigureAwait(false);
                     if (getSessionResult.Succeeded && getSessionResult.Result is not null)
                     {
                         wereTokensRefreshed = true;
@@ -871,7 +871,7 @@ namespace idunno.AtProto
             }
             else
             {
-                Logger.CreateRecordFailed(_logger, result.StatusCode, collection, result.AtErrorDetail.Error, result.AtErrorDetail.Message, Service);
+                Logger.CreateRecordFailed(_logger, result.StatusCode, collection, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message, Service);
             }
 
             return result;
@@ -1000,7 +1000,7 @@ namespace idunno.AtProto
             }
             else
             {
-                Logger.DeleteRecordFailed(_logger, response.StatusCode, response.AtErrorDetail.Error, response.AtErrorDetail.Message, repo, collection, rkey, Service);
+                Logger.DeleteRecordFailed(_logger, response.StatusCode, response.AtErrorDetail?.Error, response.AtErrorDetail?.Message, repo, collection, rkey, Service);
             }
 
             AtProtoHttpResult<bool> booleanResponse = new()
@@ -1062,7 +1062,7 @@ namespace idunno.AtProto
 
             if (!result.Succeeded)
             {
-                Logger.GetRecordFailed(_logger, result.StatusCode, repo, collection, rkey, result.AtErrorDetail.Error, result.AtErrorDetail.Message, service);
+                Logger.GetRecordFailed(_logger, result.StatusCode, repo, collection, rkey, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message, service);
             }
             else if (result.Result is null)
             {
@@ -1111,9 +1111,9 @@ namespace idunno.AtProto
         public async Task<AtProtoHttpResult<AtProtoRecordList<T>>> ListRecords<T>(
             AtIdentifier repo,
             string collection,
-            int? limit,
-            string? cursor,
-            bool reverse,
+            int? limit = 50,
+            string? cursor = null,
+            bool reverse = false,
             Uri? service = null,
             CancellationToken cancellationToken = default) where T : AtProtoRecord
         {
@@ -1137,7 +1137,7 @@ namespace idunno.AtProto
 
             if (!result.Succeeded)
             {
-                Logger.ListRecordsFailed(_logger, result.StatusCode, repo, collection, result.AtErrorDetail.Error, result.AtErrorDetail.Message, service);
+                Logger.ListRecordsFailed(_logger, result.StatusCode, repo, collection, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message, service);
             }
             else if (result.Result is null)
             {

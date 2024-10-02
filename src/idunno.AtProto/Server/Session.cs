@@ -25,7 +25,7 @@ namespace idunno.AtProto.Server
             Service = service;
         }
 
-        internal Session(Uri service, GetSessionResult getSessionResult)
+        internal Session(Uri service, GetSessionResponse getSessionResult)
         {
             Did = getSessionResult.Did;
             Handle = getSessionResult.Handle;

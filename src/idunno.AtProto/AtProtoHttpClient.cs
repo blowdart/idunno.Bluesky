@@ -11,6 +11,10 @@ using idunno.AtProto.Json;
 
 namespace idunno.AtProto
 {
+    /// <summary>
+    /// A helper class to perform HTTP requests against an AT Proto service.
+    /// </summary>
+    /// <typeparam name="TResult">The type of class to use when deserializing results from an AT Proto API call.</typeparam>
     public class AtProtoHttpClient<TResult> where TResult : class
     {
         /// <summary>
@@ -34,12 +38,11 @@ namespace idunno.AtProto
         /// <summary>
         /// Performs a GET request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
         /// </summary>
-        /// <typeparam name="TResult">The type of class to deserialize the results into.</typeparam>
         /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>An <see cref="HttpResult"/> wrapping the <typeparamref name="TResult"/>.</returns>
+        /// <returns>The task object representing the asynchronous operation.</returns>
         public async Task<AtProtoHttpResult<TResult>> Get(Uri service, string endpoint, HttpClient httpClient, CancellationToken cancellationToken = default)
         {
             return await Get(service, endpoint, null, httpClient, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -48,14 +51,13 @@ namespace idunno.AtProto
         /// <summary>
         /// Performs a GET request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
         /// </summary>
-        /// <typeparam name="TResult">The type of class to deserialize the results into.</typeparam>
         /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
         /// <param name="accessToken">An optional access token to send in the HTTP Authorization header to the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>An <see cref="HttpResult"/> wrapping the <typeparamref name="TResult"/>.</returns>
+        /// <returns>The task object representing the asynchronous operation.</returns>
         public async Task<AtProtoHttpResult<TResult>> Get(
             Uri service,
             string endpoint,
@@ -124,7 +126,6 @@ namespace idunno.AtProto
         /// <summary>
         /// Performs a POST request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
         /// </summary>
-        /// <typeparam name="TResult">The type of class to deserialize the results into.</typeparam>
         /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
         /// <param name="requestBody">An optional object to serialize to JSON and send as the request body.</param>
@@ -132,7 +133,7 @@ namespace idunno.AtProto
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>An <see cref="HttpResult"/> wrapping the <typeparamref name="TResult"/>.</returns>
+        /// <returns>The task object representing the asynchronous operation.</returns>
         public async Task<AtProtoHttpResult<TResult>> Post(
             Uri service,
             string endpoint,
@@ -148,7 +149,6 @@ namespace idunno.AtProto
         /// <summary>
         /// Performs a POST request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
         /// </summary>
-        /// <typeparam name="TResult">The type of class to deserialize the results into.</typeparam>
         /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
         /// <param name="requestBody">An optional object to serialize to JSON and send as the request body.</param>
@@ -157,7 +157,7 @@ namespace idunno.AtProto
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>An <see cref="HttpResult"/> wrapping the <typeparamref name="TResult"/>.</returns>
+        /// <returns>The task object representing the asynchronous operation.</returns>
         public async Task<AtProtoHttpResult<TResult>> Post(
             Uri service,
             string endpoint,
@@ -243,11 +243,8 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Performs a POST request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
-        /// The POST request is a raw request of the <see cref="requestBody"/> and no mime types are automatically set, and
-        /// no JSON serialization is performed.
+        /// Creates a blob record on the supplied <paramref name="service"/> against the specified <paramref name="endpoint"/>.
         /// </summary>
-        /// <typeparam name="TResult">The type of class to deserialize the results into.</typeparam>
         /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
         /// <param name="blob">The blob to send as the request body.</param>
@@ -256,7 +253,7 @@ namespace idunno.AtProto
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>An <see cref="HttpResult"/> wrapping the <typeparamref name="TResult"/>.</returns>
+        /// <returns>The task object representing the asynchronous operation.</returns>
         public async Task<AtProtoHttpResult<TResult>> PostBlob(
             Uri service,
             string endpoint,

@@ -233,8 +233,6 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<AtProtoRecordList<T>> request = new();
-
             if (limit is not null &&
                (limit < 1 || limit > 100))
             {
@@ -258,13 +256,30 @@ namespace idunno.AtProto
                 queryString += "&reverse=true";
             }
 
-            return await request.Get(
+            // We need to create an intermediate class to handle the deserialization of the response,
+            // because trying to deserialize directly into a class that implements ICollection is
+            // just too painful.
+            AtProtoHttpClient<InternalPagedRecordList<T>> internalClient = new();
+            AtProtoHttpResult<InternalPagedRecordList<T>> internalResult = await internalClient.Get(
                 service,
                 $"{ListRecordsEndpoint}?{queryString}",
                 accessToken,
                 httpClient,
                 jsonSerializerOptions,
                 cancellationToken).ConfigureAwait(false);
+
+            // Extract the results and put them into an AtProtoRecordList instance.
+            AtProtoRecordList<T> recordList;
+            if (internalResult)
+            {
+                recordList = new AtProtoRecordList<T>(internalResult.Result!.Records, internalResult.Result.Cursor);
+            }
+            else
+            {
+                recordList = new AtProtoRecordList<T>(new List<T>(), null);
+            }
+
+            return new AtProtoHttpResult<AtProtoRecordList<T>>(internalResult.StatusCode, recordList, internalResult.AtErrorDetail);
         }
 
         /// <summary>
@@ -322,6 +337,25 @@ namespace idunno.AtProto
             AtProtoHttpResult<Blob?> flattenedResult = new(result.StatusCode, result?.Result?.blob, result?.AtErrorDetail);
 
             return flattenedResult;
+        }
+
+        record InternalPagedRecordList<T>
+        {
+            public InternalPagedRecordList(IList<T> records, string? cursor)
+            {
+                Records = records;
+                Cursor = cursor;
+            }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public IList<T> Records { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public string? Cursor { get; set; }
         }
     }
 }

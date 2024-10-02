@@ -103,11 +103,11 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ResponseParseException">Thrown when the response from the service cannot be parsed or does not pass validation.</exception>
-        public static async Task<AtProtoHttpResult<RefreshSessionResult>> RefreshSession(string refreshToken, Uri service, HttpClient httpClient, CancellationToken cancellationToken = default)
+        public static async Task<AtProtoHttpResult<RefreshSessionResponse>> RefreshSession(string refreshToken, Uri service, HttpClient httpClient, CancellationToken cancellationToken = default)
         {
-            AtProtoHttpClient<RefreshSessionResult> request = new();
+            AtProtoHttpClient<RefreshSessionResponse> request = new();
 
-            AtProtoHttpResult<RefreshSessionResult> result = await request.Post(
+            AtProtoHttpResult<RefreshSessionResponse> result = await request.Post(
                 service,
                 RefreshSessionEndpoint,
                 requestBody: null,
@@ -127,9 +127,9 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ResponseParseException">Thrown when the response from the service cannot be parsed or does not pass validation.</exception>
-        public static async Task<AtProtoHttpResult<GetSessionResult>> GetSession(string accessToken, Uri service, HttpClient httpClient, CancellationToken cancellationToken = default)
+        public static async Task<AtProtoHttpResult<GetSessionResponse>> GetSession(string accessToken, Uri service, HttpClient httpClient, CancellationToken cancellationToken = default)
         {
-            AtProtoHttpClient<GetSessionResult> request = new();
+            AtProtoHttpClient<GetSessionResponse> request = new();
 
             return await request.Get(service, GetSessionEndpoint, accessToken, httpClient: httpClient, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
