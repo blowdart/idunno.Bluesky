@@ -177,7 +177,7 @@ namespace idunno.AtProto
             return Parse(s, false, out result);
         }
 
-        private static bool Parse(string s, bool throwOnError, out Did? result)
+        internal static bool Parse(string s, bool throwOnError, out Did? result)
         {
             if (string.IsNullOrWhiteSpace(s))
             {

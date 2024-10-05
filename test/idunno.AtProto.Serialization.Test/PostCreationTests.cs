@@ -10,9 +10,6 @@ namespace idunno.AtProto.Serialization.Test
     [ExcludeFromCodeCoverage]
     public class PostCreationTests
     {
-        [Fact]
-        public void Test()
-        {
-        }
+
     }
 }

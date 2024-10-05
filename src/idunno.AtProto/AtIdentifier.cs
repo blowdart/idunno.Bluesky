@@ -12,6 +12,25 @@ namespace idunno.AtProto
     public abstract class AtIdentifier
     {
         /// <summary>
+        /// Creates a new instance of an <see cref="AtIdentifier"/> from the specified string.
+        /// </summary>
+        /// <param name="s">The string to create an <see cref="AtIdentifier"/> from.</param>
+        /// <returns>An <see cref="AtIdentifier" /> from the specified string</returns>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="s"/> is not valid for an <see cref="AtIdentifier"/>.</exception>
+        public static AtIdentifier Create(string s)
+        {
+            ArgumentNullException.ThrowIfNullOrEmpty(s);
+
+
+            if (!TryParse(s, out AtIdentifier? returnValue) || returnValue is null)
+            {
+                throw new ArgumentException("{s} is not a valid AtIdentifier", nameof(s));
+            }
+
+            return returnValue;
+        }
+
+        /// <summary>
         /// Converts the string representation of an identifier to its <see cref="Did"/> or <see cref="Handle"/> equivalent.
         /// A return value indicates whether the operation succeeded.
         /// </summary>

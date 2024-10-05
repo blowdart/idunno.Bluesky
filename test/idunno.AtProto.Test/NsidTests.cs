@@ -89,10 +89,10 @@ namespace idunno.AtProto.Test
         [InlineData("com.example.foo.* blah")]
         public void InstantiatingANewNsidWithAnInvalidStringShouldThrowInvalidNsidException(string s)
         {
-            Assert.Throws<NsidFormatException>(() =>
+            Assert.Throws<NsidFormatException>((Action)(() =>
             {
                 _ = new Nsid(s);
-            });
+            }));
         }
 
         [Theory]
@@ -104,6 +104,24 @@ namespace idunno.AtProto.Test
             Assert.NotNull(nsid);
             Assert.Equal(authority, nsid.Authority);
             Assert.Equal(name, nsid.Name);
+        }
+
+        [Fact]
+        public void EqualityReturnsTrueWhenContentsAreTheSame()
+        {
+            Nsid lhs = new ("com.example.fooBar");
+            Nsid rhs = new ("com.example.fooBar");
+
+            Assert.Equal(lhs, rhs);
+        }
+
+        [Fact]
+        public void EqualityReturnsFalseWhenContentsAreDifferent()
+        {
+            Nsid lhs = new("com.example.fooBarBaz");
+            Nsid rhs = new("com.example.fooBar");
+
+            Assert.NotEqual(lhs, rhs);
         }
     }
 }

@@ -16,17 +16,33 @@ namespace idunno.AtProto.Test
         [InlineData("at://did:plc:identifier", "did:plc:identifier", null, null)]
         [InlineData("at://did:plc:ec72yg6n2sydzjvtovvdlxrk/app.bsky.feed.post/3koaf5bu5kq27", "did:plc:ec72yg6n2sydzjvtovvdlxrk", "app.bsky.feed.post", "3koaf5bu5kq27")]
         [InlineData("at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.actor.profile/self", "did:plc:hfgp6pj3akhqxntgqwramlbg", "app.bsky.actor.profile", "self")]
-        public void ValidAtUriShouldExtractSemanticPropertiesCorrectly(string value, string? repo, string? collection, string? rkey)
+        public void ValidAtUriShouldExtractSemanticPropertiesCorrectly(string value, string repo, string? collection, string? rkey)
         {
+            Nsid? collectionAsNsid = null;
+            RecordKey? rkeyAsRecordKey = null;
+
+            Assert.True(AtIdentifier.TryParse(repo, out AtIdentifier? repoAsAtIdentifier));
+            Assert.NotNull(repoAsAtIdentifier);
+
+            if (collection is not null)
+            {
+                collectionAsNsid = new(collection);
+            }
+
+            if (rkey is not null)
+            {
+                rkeyAsRecordKey = new(rkey);
+            }
+
             var atUri = new AtUri(value);
 
             Assert.NotNull(atUri);
 
             Assert.NotNull(atUri.Repo);
-            Assert.Equal(repo, atUri.Repo.ToString());
+            Assert.Equal(repoAsAtIdentifier, atUri.Repo);
 
-            Assert.Equal(collection, atUri.Collection);
-            Assert.Equal(rkey, atUri.Rkey);
+            Assert.Equal(collectionAsNsid, atUri.Collection);
+            Assert.Equal(rkeyAsRecordKey, atUri.RecordKey);
         }
 
         [Theory]

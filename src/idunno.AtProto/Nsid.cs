@@ -10,7 +10,7 @@ namespace idunno.AtProto
     /// A class representing a namespace identifier.
     /// </summary>
     /// <remarks>
-    /// See https://atproto.com/specs/nsid for details.
+    /// <para>See https://atproto.com/specs/nsid for details.</para>
     /// </remarks>
     [JsonConverter(typeof(Json.NsidConverter))]
     public class Nsid
@@ -95,7 +95,57 @@ namespace idunno.AtProto
             return Parse(s, false, out result);
         }
 
-        private static bool Parse(string s, bool throwOnError, out Nsid? result)
+        /// <summary>
+        /// Returns the hash code for this <see cref="Nsid"/>.
+        /// </summary>
+        /// <returns>The hash code for this <see cref="Nsid"/>.</returns>
+        public override int GetHashCode() => _value.GetHashCode(StringComparison.Ordinal);
+
+        /// <summary>
+        /// Indicates where an object is equal to this <see cref="Nsid"/>."/>
+        /// </summary>
+        /// <param name="obj">An object to compare to this <see cref="Nsid"/>.</param>
+        /// <returns>
+        /// true if this <see cref="Nsid"/> and the specified <paramref name="obj"/>> refer to the same object,
+        /// this Nsid and the specified obj are both the same type of object and those objects are equal,
+        /// or if this Nsid and the specified obj are both null, otherwise, false.
+        /// </returns>
+        public override bool Equals(object? obj) => Equals(obj as Nsid);
+
+        /// <summary>
+        /// Indicates where this <see cref="Nsid"/> equals another."/>
+        /// </summary>
+        /// <param name="other">A <see cref="Nsid"/> or null to compare to this <see cref="Nsid"/>.</param>
+        /// <returns>
+        /// true if this <see cref="Nsid"/> and the specified <paramref name="other"/>> refer to the same object,
+        /// this Nsid and the specified obj are both the same type of object and those objects are equal,
+        /// or if this Nsid and the specified obj are both null, otherwise, false.
+        /// </returns>
+        public bool Equals(Nsid? other)
+        {
+            if (other is null)
+            {
+                return false;
+            }
+
+            // Optimization for a common success case.
+            if (Object.ReferenceEquals(this, other))
+            {
+                return true;
+            }
+
+            // If run-time types are not exactly the same, return false.
+            if (GetType() != other.GetType())
+            {
+                return false;
+            }
+
+            // Return true if the fields match.
+            return (string.Equals(Name, other.Name, StringComparison.Ordinal) &&
+                string.Equals(Authority, other.Authority, StringComparison.Ordinal));
+        }
+
+        internal static bool Parse(string s, bool throwOnError, out Nsid? result)
         {
             result = null;
 

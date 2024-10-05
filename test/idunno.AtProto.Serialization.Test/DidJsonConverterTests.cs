@@ -27,6 +27,22 @@ namespace idunno.AtProto.Serialization.Test
         }
 
         [Theory]
+        [InlineData("did:web:discover.bsky.app")]
+        [InlineData("did:plc:z72i7hdynmk6r22z27h6tvur")]
+        public void ValidDidDeserializesCorrectly(string did)
+        {
+            Did expected = new(did);
+
+            string json = $"{{\"did\":\"{did}\"}}";
+
+            AtDidExample? actual = JsonSerializer.Deserialize<AtDidExample>(json, options: _jsonSerializerOptions);
+
+            Assert.NotNull(actual);
+
+            Assert.Equal(expected.Value, actual.Did.Value);
+        }
+
+        [Theory]
         [InlineData("{\"did\": 0}")]
         [InlineData("{\"did\":}")]
         [InlineData("{\"did\":\"\"}")]

@@ -28,6 +28,24 @@ namespace idunno.AtProto.Serialization.Test
         }
 
         [Theory]
+        [InlineData("a.b.c")]
+        [InlineData("m.xn--masekowski-d0b.pl")]
+        [InlineData("one.two.three")]
+        [InlineData("one.two.three.four-and.FiVe")]
+        public void ValidNsidDeserializesCorrectly(string nsid)
+        {
+            Nsid expected = new(nsid);
+
+            string json = $"{{\"nsid\":\"{nsid}\"}}";
+
+            NsidExample? actual = JsonSerializer.Deserialize<NsidExample>(json, options: _jsonSerializerOptions);
+
+            Assert.NotNull(actual);
+
+            Assert.Equal(expected, actual.Nsid);
+        }
+
+        [Theory]
         [InlineData("{\"nsid\": 0}")]
         [InlineData("{\"nsid\": }")]
         [InlineData("{\"nsid\":\"\"}")]

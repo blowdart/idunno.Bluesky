@@ -42,7 +42,7 @@ namespace idunno.AtProto.Json
             }
             catch (RecordKeyFormatException e)
             {
-                throw new JsonException("Invalid rkey format.", e);
+                throw new JsonException("Invalid rKey format.", e);
             }
 
             return atUri;

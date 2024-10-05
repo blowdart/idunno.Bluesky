@@ -10,7 +10,7 @@ namespace idunno.AtProto.Auth
     /// A class for exposing metadata about an authorization server retrieved from an OpenID Connect discovery point.
     /// </summary>
     /// <remarks>
-    /// <para><see href="https://openid.net/specs/openid-connect-discovery-1_0.html"></see>OpenID Connect Discovery 1.0 specification</para>.
+    /// <para><see href="https://openid.net/specs/openid-connect-discovery-1_0.html">OpenID Connect Discovery 1.0</see> specification.</para>
     /// </remarks>
     internal record AuthorizationMetadata
     {

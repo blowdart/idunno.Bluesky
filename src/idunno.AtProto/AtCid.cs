@@ -9,7 +9,7 @@ namespace idunno.AtProto
     /// Provides an object representation of an Content Identifier (CID).
     /// </summary>
     /// <remarks>
-    /// https://github.com/multiformats/cid
+    /// <para>See https://github.com/multiformats/cid for specification.</para>
     /// </remarks>
     [JsonConverter(typeof(Json.AtCidConverter))]
     public sealed class AtCid

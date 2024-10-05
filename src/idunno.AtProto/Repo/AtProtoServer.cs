@@ -20,7 +20,6 @@ namespace idunno.AtProto
 
         // https://docs.bsky.app/docs/api/com-atproto-repo-describe-repo
         internal const string DescribeRepoEndpoint = "xrpc/com.atproto.repo.describeRepo";
-
         // https://docs.bsky.app/docs/api/com-atproto-repo-get-record
         internal const string GetRecordEndpoint = "/xrpc/com.atproto.repo.getRecord";
 
@@ -44,7 +43,7 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         public static async Task<AtProtoHttpResult<StrongReference>> CreateRecord(
             AtProtoRecordValue record,
-            string collection,
+            Nsid collection,
             Did creator,
             Uri service,
             string accessToken,
@@ -53,7 +52,7 @@ namespace idunno.AtProto
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(record);
-            ArgumentNullException.ThrowIfNullOrEmpty(collection);
+            ArgumentNullException.ThrowIfNull(collection);
             ArgumentNullException.ThrowIfNull(creator);
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(accessToken);
@@ -74,7 +73,7 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Deletes an atproto record, specified by its rkey, from specified repo/collection.
+        /// Deletes an atproto record, specified by its rKey, from specified repo/collection.
         /// </summary>
         /// <param name="repo">The handle or Did of the repo to delete from. Typically this is the Did of the account that created the record.</param>
         /// <param name="collection">The NSID of the collection the record should be deleted from.</param>
@@ -89,8 +88,8 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         public static async Task<AtProtoHttpResult<EmptyResponse>> DeleteRecord(
             AtIdentifier repo,
-            string collection,
-            string rKey,
+            Nsid collection,
+            RecordKey rKey,
             AtCid? swapRecord,
             AtCid? swapCommit,
             Uri service,
@@ -100,8 +99,8 @@ namespace idunno.AtProto
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(repo);
-            ArgumentNullException.ThrowIfNullOrEmpty(collection);
-            ArgumentNullException.ThrowIfNullOrEmpty(rKey);
+            ArgumentNullException.ThrowIfNull(collection);
+            ArgumentNullException.ThrowIfNull(rKey);
             ArgumentNullException.ThrowIfNull(accessToken);
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
@@ -168,8 +167,8 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         public static async Task<AtProtoHttpResult<T>> GetRecord<T>(
             AtIdentifier repo,
-            string collection,
-            string rKey,
+            Nsid collection,
+            RecordKey rKey,
             AtCid? cid,
             Uri service,
             string? accessToken,
@@ -178,8 +177,8 @@ namespace idunno.AtProto
             CancellationToken cancellationToken = default) where T: AtProtoRecord
         {
             ArgumentNullException.ThrowIfNull(repo);
-            ArgumentNullException.ThrowIfNullOrEmpty(collection);
-            ArgumentNullException.ThrowIfNullOrEmpty(rKey);
+            ArgumentNullException.ThrowIfNull(collection);
+            ArgumentNullException.ThrowIfNull(rKey);
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -218,7 +217,7 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         public static async Task<AtProtoHttpResult<AtProtoRecordList<T>>> ListRecords<T>(
             AtIdentifier repo,
-            string collection,
+            Nsid collection,
             int? limit,
             string? cursor,
             bool reverse,
@@ -229,7 +228,7 @@ namespace idunno.AtProto
             CancellationToken cancellationToken = default) where T : AtProtoRecord
         {
             ArgumentNullException.ThrowIfNull(repo);
-            ArgumentNullException.ThrowIfNullOrEmpty(collection);
+            ArgumentNullException.ThrowIfNull(collection);
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -270,7 +269,7 @@ namespace idunno.AtProto
 
             // Extract the results and put them into an AtProtoRecordList instance.
             AtProtoRecordList<T> recordList;
-            if (internalResult)
+            if (internalResult.SucceededWithResult)
             {
                 recordList = new AtProtoRecordList<T>(internalResult.Result!.Records, internalResult.Result.Cursor);
             }

@@ -19,7 +19,7 @@ namespace idunno.AtProto.Repo
         /// <param name="collections">Any collection NSIDs the repo may contain.</param>
         /// <param name="handleIsCorrect">A flag indicating indicating if handle is currently valid (resolves bi-directionally)</param>
         [JsonConstructor]
-        internal RepoDescription(Handle handle, Did did, DidDocument didDoc, IReadOnlyCollection<Nsid> collections, bool handleIsCorrect)
+        internal RepoDescription(Handle handle, Did did, DidDocument didDoc, IReadOnlyCollection<RecordKey> collections, bool handleIsCorrect)
         {
             Handle = handle;
             Did = did;
@@ -58,7 +58,7 @@ namespace idunno.AtProto.Repo
         /// <value>A collection of NSIDs for the collections present in the repo.</value>
         [JsonInclude]
         [JsonRequired]
-        public IReadOnlyCollection<Nsid> Collections { get; init; }
+        public IReadOnlyCollection<RecordKey> Collections { get; init; }
 
         /// <summary>
         /// Gets a flag indicating if the repo handle is currently valid (resolves bi-directionally).

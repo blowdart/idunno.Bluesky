@@ -7,17 +7,10 @@ namespace idunno.AtProto.Repo
 {
     internal sealed record DeleteRecordRequest
     {
-        internal DeleteRecordRequest(AtIdentifier repo, Nsid collection, string rKey)
+        internal DeleteRecordRequest(AtIdentifier repo, Nsid collection, RecordKey rKey)
         {
             Repo = repo;
             Collection = collection;
-            Rkey = rKey;
-        }
-
-        internal DeleteRecordRequest(AtIdentifier repo, string collection, string rKey)
-        {
-            Repo = repo;
-            Collection = new Nsid(collection);
             Rkey = rKey;
         }
 
@@ -30,7 +23,7 @@ namespace idunno.AtProto.Repo
         public Nsid Collection { get; internal set; }
 
         [JsonInclude]
-        public string Rkey { get; internal set; }
+        public RecordKey Rkey { get; internal set; }
 
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

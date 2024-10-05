@@ -98,13 +98,13 @@ namespace idunno.AtProto
 
         // Repo Operations logging
         [LoggerMessage(90, LogLevel.Debug, "CreateRecord succeeded, created {uri} {cid} in {collection} on {service}")]
-        internal static partial void CreateRecordSucceeded(ILogger logger, AtUri uri, AtCid cid, string collection, Uri service);
+        internal static partial void CreateRecordSucceeded(ILogger logger, AtUri uri, AtCid cid, Nsid collection, Uri service);
 
         [LoggerMessage(91, LogLevel.Error, "CreateRecord on {service} succeeded but the result was null")]
         internal static partial void CreateRecordSucceededButNullResult(ILogger logger, Uri service);
 
         [LoggerMessage(92, LogLevel.Error, "CreateRecord into {collection} failed with status code {status}, {error} {message} on {service}")]
-        internal static partial void CreateRecordFailed(ILogger logger, HttpStatusCode status, string collection, string? error, string? message, Uri service);
+        internal static partial void CreateRecordFailed(ILogger logger, HttpStatusCode status, Nsid collection, string? error, string? message, Uri service);
 
         [LoggerMessage(93, LogLevel.Error, "CreatedRecord failed as current session is not authenticated.")]
         internal static partial void CreateRecordFailedAsSessionIsAnonymous(ILogger logger);
@@ -112,29 +112,29 @@ namespace idunno.AtProto
         [LoggerMessage(100, LogLevel.Error, "DeleteRecord failed as current session is not authenticated.")]
         internal static partial void DeleteRecordFailedAsSessionIsAnonymous(ILogger logger);
 
-        [LoggerMessage(101, LogLevel.Debug, "DeleteRecord succeeded, deleted {repo} {collection} {rkey} on {service}.")]
-        internal static partial void DeleteRecordSucceeded(ILogger logger, AtIdentifier repo, string collection, string rkey, Uri service);
+        [LoggerMessage(101, LogLevel.Debug, "DeleteRecord succeeded, deleted {repo} {collection} {rKey} on {service}.")]
+        internal static partial void DeleteRecordSucceeded(ILogger logger, AtIdentifier repo, Nsid collection, RecordKey rKey, Uri service);
 
-        [LoggerMessage(102, LogLevel.Error, "DeleteRecord failed with {statusCode} / {error} {message} against {repo} {collection} {rkey} on {service}.")]
-        internal static partial void DeleteRecordFailed(ILogger logger, HttpStatusCode statusCode, string? error, string? message, AtIdentifier repo, string collection, string rkey, Uri service);
+        [LoggerMessage(102, LogLevel.Error, "DeleteRecord failed with {statusCode} / {error} {message} against {repo} {collection} {rKey} on {service}.")]
+        internal static partial void DeleteRecordFailed(ILogger logger, HttpStatusCode statusCode, string? error, string? message, AtIdentifier repo, Nsid collection, RecordKey rKey, Uri service);
 
-        [LoggerMessage(110, LogLevel.Debug, "GetRecord {repo} {collection} {rkey} on {service}.")]
-        internal static partial void GetRecordCalled(ILogger logger, AtIdentifier repo, string collection, string rkey, Uri service);
+        [LoggerMessage(110, LogLevel.Debug, "GetRecord {repo} {collection} {rKey} on {service}.")]
+        internal static partial void GetRecordCalled(ILogger logger, AtIdentifier repo, Nsid collection, RecordKey rKey, Uri service);
 
-        [LoggerMessage(111, LogLevel.Error, "GetRecord failed with with {statusCode} / {error} {message} against {repo} {collection} {rkey} on {service}.")]
-        internal static partial void GetRecordFailed(ILogger logger, HttpStatusCode statusCode, AtIdentifier repo, string collection, string rkey, string? error, string? message, Uri service);
+        [LoggerMessage(111, LogLevel.Error, "GetRecord failed with with {statusCode} / {error} {message} against {repo} {collection} {rKey} on {service}.")]
+        internal static partial void GetRecordFailed(ILogger logger, HttpStatusCode statusCode, AtIdentifier repo, Nsid collection, RecordKey rKey, string? error, string? message, Uri service);
 
-        [LoggerMessage(112, LogLevel.Error, "GetRecord succeeded but returned a null record against {repo} {collection} {rkey} on {service}.")]
-        internal static partial void GetRecordSucceededButReturnedNullResult(ILogger logger, AtIdentifier repo, string collection, string rkey, Uri service);
+        [LoggerMessage(112, LogLevel.Error, "GetRecord succeeded but returned a null record against {repo} {collection} {rKey} on {service}.")]
+        internal static partial void GetRecordSucceededButReturnedNullResult(ILogger logger, AtIdentifier repo, Nsid collection, RecordKey rKey, Uri service);
 
         [LoggerMessage(120, LogLevel.Debug, "ListRecords {repo} {collection} on {service}.")]
-        internal static partial void ListRecordsCalled(ILogger logger, AtIdentifier repo, string collection,  Uri service);
+        internal static partial void ListRecordsCalled(ILogger logger, AtIdentifier repo, Nsid collection, Uri service);
 
         [LoggerMessage(121, LogLevel.Error, "ListRecords failed with with {statusCode} / {error} {message} against {repo} {collection} on {service}.")]
-        internal static partial void ListRecordsFailed(ILogger logger, HttpStatusCode statusCode, AtIdentifier repo, string collection, string? error, string? message, Uri service);
+        internal static partial void ListRecordsFailed(ILogger logger, HttpStatusCode statusCode, AtIdentifier repo, Nsid collection, string? error, string? message, Uri service);
 
         [LoggerMessage(122, LogLevel.Error, "ListRecords succeeded but returned a null result against {repo} {collection} on {service}.")]
-        internal static partial void ListRecordsSucceededButReturnedNullResult(ILogger logger, AtIdentifier repo, string collection, Uri service);
+        internal static partial void ListRecordsSucceededButReturnedNullResult(ILogger logger, AtIdentifier repo, Nsid collection, Uri service);
 
         [LoggerMessage(130, LogLevel.Error, "UploadBlob to {service} failed as current session is not authenticated.")]
         internal static partial void UploadBlobFailedAsSessionIsAnonymous(ILogger logger, Uri service);

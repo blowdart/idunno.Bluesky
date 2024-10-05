@@ -29,6 +29,25 @@ namespace idunno.AtProto.Serialization.Test
         }
 
         [Theory]
+        [InlineData("jay.bsky.social")]
+        [InlineData("name.t--t")] //  not a real TLD, but syntax ok
+        [InlineData("xn--notarealidn.com")]
+        [InlineData("example.t")] //  not a real TLD, but syntax ok
+        [InlineData("xn--ls8h.test")]
+        public void ValidHandleDeserializesCorrectly(string handle)
+        {
+            Handle expected = new(handle);
+
+            string json = $"{{\"handle\":\"{handle}\"}}";
+
+            AtHandleExample? actual = JsonSerializer.Deserialize<AtHandleExample>(json, options: _jsonSerializerOptions);
+
+            Assert.NotNull(actual);
+
+            Assert.Equal(expected, actual.Handle);
+        }
+
+        [Theory]
         [InlineData("{\"handle\": 0}")]
         [InlineData("{\"handle\": }")]
         [InlineData("{\"handle\":\"\"}")]

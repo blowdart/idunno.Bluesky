@@ -823,10 +823,10 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
-        public async Task<AtProtoHttpResult<StrongReference>> CreateRecord(AtProtoRecordValue record, string collection, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<StrongReference>> CreateRecord(AtProtoRecordValue record, Nsid collection, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(record);
-            ArgumentNullException.ThrowIfNullOrEmpty(collection);
+            ArgumentNullException.ThrowIfNull(collection);
 
             if (!IsAuthenticated)
             {
@@ -847,10 +847,10 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
-        public async Task<AtProtoHttpResult<StrongReference>> CreateRecord(AtProtoRecordValue record, string collection, Did creator, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<StrongReference>> CreateRecord(AtProtoRecordValue record, Nsid collection, Did creator, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(record);
-            ArgumentNullException.ThrowIfNullOrEmpty(collection);
+            ArgumentNullException.ThrowIfNull(collection);
             ArgumentNullException.ThrowIfNull(creator);
 
             if (!IsAuthenticated)
@@ -859,7 +859,14 @@ namespace idunno.AtProto
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            AtProtoHttpResult<StrongReference> result = await AtProtoServer.CreateRecord(record, collection, creator, Service, AccessToken!, HttpClient, cancellationToken: cancellationToken).ConfigureAwait(false);
+            AtProtoHttpResult<StrongReference> result = await AtProtoServer.CreateRecord(
+                record,
+                collection,
+                creator,
+                Service,
+                AccessToken!,
+                HttpClient,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (result.Succeeded && result.Result is not null)
             {
@@ -877,23 +884,23 @@ namespace idunno.AtProto
             return result;
         }
 
-        /// <summary>Deletes a record, identified by the repo, collection and rkey from the specified service.</summary>
+        /// <summary>Deletes a record, identified by the repo, collection and rKey from the specified service.</summary>
         /// <param name="collection">The collection the record should be deleted from.</param>
-        /// <param name="rkey">The record key, identifying the record to be deleted.</param>
+        /// <param name="rKey">The record key, identifying the record to be deleted.</param>
         /// <param name="swapRecord">Specified if the operation should compare and swap with the previous record by cid.</param>
         /// <param name="swapCommit">Specified if the operation should compare and swap with the previous commit by cid.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not an authenticated session.</exception>
         public async Task<AtProtoHttpResult<bool>> DeleteRecord(
-            string collection,
-            string rkey,
+            Nsid collection,
+            RecordKey rKey,
             AtCid? swapRecord = null,
             AtCid? swapCommit = null,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(collection);
-            ArgumentNullException.ThrowIfNullOrEmpty(rkey);
+            ArgumentNullException.ThrowIfNull(collection);
+            ArgumentNullException.ThrowIfNull(rKey);
 
             if (!IsAuthenticated)
             {
@@ -901,10 +908,10 @@ namespace idunno.AtProto
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            return await DeleteRecord(CurrentSession!.Did, collection, rkey, swapRecord, swapCommit, cancellationToken).ConfigureAwait(false);
+            return await DeleteRecord(CurrentSession!.Did, collection, rKey, swapRecord, swapCommit, cancellationToken).ConfigureAwait(false);
         }
 
-        /// <summary>Deletes a record, identified by the repo, collection and rkey from the specified service.</summary>
+        /// <summary>Deletes a record, identified by the repo, collection and rKey from the specified service.</summary>
         /// <param name="strongReference">The <see cref="StrongReference"/> to the record to be deleted.</param>
         /// <param name="swapRecord">Specified if the operation should compare and swap with the previous record by cid.</param>
         /// <param name="swapCommit">Specified if the operation should compare and swap with the previous commit by cid.</param>
@@ -929,14 +936,14 @@ namespace idunno.AtProto
                 throw new ArgumentException("strongReference.Uri must have a repo", nameof(strongReference));
             }
 
-            if (string.IsNullOrEmpty(strongReference.Uri.Collection))
+            if (strongReference.Uri.Collection is null)
             {
                 throw new ArgumentException("strongReference.Uri must have a collection", nameof(strongReference));
             }
 
-            if (string.IsNullOrEmpty(strongReference.Uri.Rkey))
+            if (strongReference.Uri.RecordKey is null)
             {
-                throw new ArgumentException("strongReference.Uri must have an rkey", nameof(strongReference));
+                throw new ArgumentException("strongReference.Uri must have an rKey", nameof(strongReference));
             }
 
             if (!IsAuthenticated)
@@ -948,33 +955,33 @@ namespace idunno.AtProto
             return await DeleteRecord(
                 strongReference.Uri.Repo,
                 strongReference.Uri.Collection,
-                strongReference.Uri.Rkey,
+                strongReference.Uri.RecordKey,
                 swapRecord,
                 swapCommit,
                 cancellationToken).ConfigureAwait(false);
         }
 
-        /// <summary>Deletes a record, identified by the repo, collection and rkey from the specified service.</summary>
+        /// <summary>Deletes a record, identified by the repo, collection and rKey from the specified service.</summary>
         /// <param name="repo">The handle or Did of the repo to delete from. Typically this is the Did of the account that created the record.</param>
         /// <param name="collection">The collection the record should be deleted from.</param>
-        /// <param name="rkey">The record key, identifying the record to be deleted.</param>
+        /// <param name="rKey">The record key, identifying the record to be deleted.</param>
         /// <param name="swapRecord">Specified if the operation should compare and swap with the previous record by cid.</param>
         /// <param name="swapCommit">Specified if the operation should compare and swap with the previous commit by cid.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not an authenticated session.</exception>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="repo"/> is null, or <paramref name="collection"/> or <paramref name="rkey"/> are null or empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="repo"/> is null, or <paramref name="collection"/> or <paramref name="rKey"/> are null or empty.</exception>
         public async Task<AtProtoHttpResult<bool>> DeleteRecord(
             AtIdentifier repo,
-            string collection,
-            string rkey,
+            Nsid collection,
+            RecordKey rKey,
             AtCid? swapRecord = null,
             AtCid? swapCommit = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(repo);
-            ArgumentNullException.ThrowIfNullOrEmpty(collection);
-            ArgumentNullException.ThrowIfNullOrEmpty(rkey);
+            ArgumentNullException.ThrowIfNull(collection);
+            ArgumentNullException.ThrowIfNull(rKey);
 
             if (!IsAuthenticated)
             {
@@ -986,7 +993,7 @@ namespace idunno.AtProto
                 await AtProtoServer.DeleteRecord(
                     repo,
                     collection,
-                    rkey,
+                    rKey,
                     swapRecord,
                     swapCommit,
                     Service,
@@ -996,11 +1003,11 @@ namespace idunno.AtProto
 
             if (response.Succeeded)
             {
-                Logger.DeleteRecordSucceeded(_logger, repo, collection, rkey, Service);
+                Logger.DeleteRecordSucceeded(_logger, repo, collection, rKey, Service);
             }
             else
             {
-                Logger.DeleteRecordFailed(_logger, response.StatusCode, response.AtErrorDetail?.Error, response.AtErrorDetail?.Message, repo, collection, rkey, Service);
+                Logger.DeleteRecordFailed(_logger, response.StatusCode, response.AtErrorDetail?.Error, response.AtErrorDetail?.Message, repo, collection, rKey, Service);
             }
 
             AtProtoHttpResult<bool> booleanResponse = new()
@@ -1035,8 +1042,8 @@ namespace idunno.AtProto
         /// </summary>
         /// <typeparam name="T">The type of record to get.</typeparam>
         /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the record from.</param>
-        /// <param name="collection">The NSID of the collection the record should be deleted from.</param>
-        /// <param name="rkey">The record key, identifying the record to be deleted.</param>
+        /// <param name="collection">The NSID of the collection the record should be retrieved from.</param>
+        /// <param name="rKey">The record key, identifying the record to be retrieved.</param>
         /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
         /// <param name="service">The service to retrieve the record from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -1044,29 +1051,30 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="repo"/> or <paramref name="collection"/> is null or empty.</exception>
         public async Task<AtProtoHttpResult<T>> GetRecord<T>(
             AtIdentifier repo,
-            string collection,
-            string rkey,
+            Nsid collection,
+            RecordKey rKey,
             AtCid? cid = null,
             Uri? service = null,
             CancellationToken cancellationToken = default) where T: AtProtoRecord
         {
             ArgumentNullException.ThrowIfNull(repo);
-            ArgumentNullException.ThrowIfNullOrEmpty(collection);
+            ArgumentNullException.ThrowIfNull(collection);
+            ArgumentNullException.ThrowIfNull(rKey);
 
             service ??= Service;
 
-            Logger.GetRecordCalled(_logger, repo, collection, rkey, service);
+            Logger.GetRecordCalled(_logger, repo, collection, rKey, service);
 
             AtProtoHttpResult<T> result =
-                await AtProtoServer.GetRecord<T>(repo, collection, rkey, cid, service, AccessToken, HttpClient, cancellationToken: cancellationToken).ConfigureAwait(false);
+                await AtProtoServer.GetRecord<T>(repo, collection, rKey, cid, service, AccessToken, HttpClient, cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (!result.Succeeded)
             {
-                Logger.GetRecordFailed(_logger, result.StatusCode, repo, collection, rkey, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message, service);
+                Logger.GetRecordFailed(_logger, result.StatusCode, repo, collection, rKey, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message, service);
             }
             else if (result.Result is null)
             {
-                Logger.GetRecordSucceededButReturnedNullResult(_logger, repo, collection, rkey, service);
+                Logger.GetRecordSucceededButReturnedNullResult(_logger, repo, collection, rKey, service);
             }
 
             return result;
@@ -1084,14 +1092,14 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="collection"/> is null or empty.</exception>
         public async Task<AtProtoHttpResult<AtProtoRecordList<T>>> ListRecords<T>(
-            string collection,
+            Nsid collection,
             int? limit = 50,
             string? cursor = null,
             bool reverse = false,
             Uri? service = null,
             CancellationToken cancellationToken = default) where T: AtProtoRecord
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(collection);
+            ArgumentNullException.ThrowIfNull(collection);
 
             return await ListRecords<T>(CurrentSession!.Did, collection, limit, cursor, reverse, service, cancellationToken).ConfigureAwait(false);
         }
@@ -1110,7 +1118,7 @@ namespace idunno.AtProto
         /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not an authenticated session.</exception>
         public async Task<AtProtoHttpResult<AtProtoRecordList<T>>> ListRecords<T>(
             AtIdentifier repo,
-            string collection,
+            Nsid collection,
             int? limit = 50,
             string? cursor = null,
             bool reverse = false,
@@ -1118,7 +1126,7 @@ namespace idunno.AtProto
             CancellationToken cancellationToken = default) where T : AtProtoRecord
         {
             ArgumentNullException.ThrowIfNull(repo);
-            ArgumentNullException.ThrowIfNullOrEmpty(collection);
+            ArgumentNullException.ThrowIfNull(collection);
 
             service ??= Service;
 

@@ -1,6 +1,6 @@
 # idunno.Bluesky
 
-A .NET 8 class library for the [atproto protocol](https://docs.bsky.app/docs/api/at-protocol-xrpc-api) and APIs for the Bluesky social network.
+A .NET 8 class library for the [AT Protocol](https://docs.bsky.app/docs/api/at-protocol-xrpc-api) and APIs for the [Bluesky social network](https://bsky.social/).
 
 ## Current Build Status
 
@@ -18,7 +18,7 @@ HttpResult<bool> loginResult = await agent.Login(username, password);
 if (loginResult)
 {
     HttpResult<CreateRecordResponse> response = await agent.CreatePost("Hello World");
-    if (response)
+    if (response.Succeeded)
     {
     }
 }
@@ -30,15 +30,16 @@ The [API status page](docs/endpointStatus.md) shows what is currently implemente
 
 ## License
 
-`idunno.Bluesky` is available under the MIT license, see the [LICENSE](LICENSE) file for more information.
+`idunno.Bluesky` and `idunno.AtProto` are available under the MIT license, see the [LICENSE](LICENSE) file for more information.
 
 ## External dependencies
 
 * [Microsoft.Extensions.Logging](https://learn.microsoft.com/en-us/dotnet/core/extensions/logging) - used to provide log messages.
 * [Microsoft.IdentityModel.Tokens](https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet) - used to extract the expiry date and time of the JWT tokens issued by Bluesky.
 * [DnsClient](https://dnsclient.michaco.net/) - used in Handle to DID resolution.
+* [Macross.Json.Extensions](https://github.com/Macross-Software/core/tree/develop/ClassLibraries/Macross.Json.Extensions) - used to enable better JSON deserialization of enums.
 
-## External libraries and utilities used during builds
+## Build tools
 
 * [NerdBank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning) - used for version stamping assemblies and packages.
 * [DotNet.ReproducibleBuilds](https://github.com/dotnet/reproducible-builds) - used to easily set .NET reproducible build settings.

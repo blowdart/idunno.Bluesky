@@ -7,30 +7,30 @@ using System.Text.Json.Serialization;
 namespace idunno.AtProto.Json
 {
     /// <summary>
-    /// Converts a NSID to or from JSON.
+    /// Converts a RecordKey to or from JSON.
     /// </summary>
-    internal class NsidConverter : JsonConverter<Nsid>
+    internal class RecordKeyConverter : JsonConverter<RecordKey>
     {
         /// <summary>
-        /// Reads and converts JSON to an <see cref="Nsid"/>
+        /// Reads and converts JSON to an <see cref="RecordKey"/>
         /// </summary>
         /// <param name="reader">The reader.</param>
         /// <param name="typeToConvert">The type to convert.</param>
         /// <param name="options">An object that specifies serialization options to use.</param>
         /// <returns>A <see cref="RecordKey"/> created from the JSON.</returns>
         /// <exception cref="JsonException">Thrown if the JSON to be converted is not a string token.</exception>
-        public override Nsid? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public override RecordKey? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if (reader.TokenType != JsonTokenType.String)
             {
                 throw new JsonException();
             }
 
-            Nsid? nsid;
+            RecordKey? rKey;
 
             try
             {
-                nsid = new Nsid(reader.GetString()!);
+                rKey = new RecordKey(reader.GetString()!);
             }
             catch (ArgumentNullException e)
             {
@@ -38,14 +38,14 @@ namespace idunno.AtProto.Json
             }
             catch (ArgumentException e)
             {
-                throw new JsonException("Value is not a valid NSID.", e);
+                throw new JsonException("Value is not a valid RecordKet.", e);
             }
             catch (NsidFormatException e)
             {
-                throw new JsonException("Value is not a valid NSID.", e);
+                throw new JsonException("Value is not a valid RecordKet.", e);
             }
 
-            return nsid;
+            return rKey;
         }
 
         /// <summary>
@@ -54,7 +54,7 @@ namespace idunno.AtProto.Json
         /// <param name="writer">The writer to write to.</param>
         /// <param name="nsid">The <see cref="AtCid"/> to convert to JSON.</param>
         /// <param name="options">An object that specifies serialization options to use.</param>
-        public override void Write(Utf8JsonWriter writer, Nsid nsid, JsonSerializerOptions options)
+        public override void Write(Utf8JsonWriter writer, RecordKey nsid, JsonSerializerOptions options)
         {
             writer.WriteStringValue(nsid.ToString());
         }

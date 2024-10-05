@@ -11,7 +11,7 @@ namespace idunno.AtProto.Test
     public class HttpResultTests
     {
         [Fact]
-        public void SucceededReturnsTrueWhenStatusCodeIsOK()
+        public void SucceededReturnsTrueWhenStatusCodeIsOKAndResultIsPresent()
         {
             var httpResult = new AtProtoHttpResult<string>
             {
@@ -23,6 +23,21 @@ namespace idunno.AtProto.Test
 
             Assert.True(result);
         }
+
+        [Fact]
+        public void SucceededReturnsTrueWhenStatusCodeIsOKAndResultIsNull()
+        {
+            var httpResult = new AtProtoHttpResult<string>
+            {
+                StatusCode = HttpStatusCode.OK,
+                Result = null
+            };
+
+            bool result = httpResult.Succeeded;
+
+            Assert.True(result);
+        }
+
 
         [Fact]
         public void SucceededReturnsFalseWhenStatusCodeIsNotOK()
@@ -39,7 +54,7 @@ namespace idunno.AtProto.Test
         }
 
         [Fact]
-        public void BoolConvertReturnsTrueWhenStatusCodeIsOKAndResultIsNotNull()
+        public void SucceededWithResultReturnsTrueWhenStatusCodeIsOKAndAResultIsPresent()
         {
             var httpResult = new AtProtoHttpResult<string>
             {
@@ -47,27 +62,13 @@ namespace idunno.AtProto.Test
                 Result = "test"
             };
 
-            bool result = httpResult;
+            bool result = httpResult.SucceededWithResult;
 
             Assert.True(result);
         }
 
         [Fact]
-        public void BoolConvertReturnsFalseWhenStatusCodeIsOKAndResultIsNotNull()
-        {
-            var httpResult = new AtProtoHttpResult<string>
-            {
-                StatusCode = HttpStatusCode.Forbidden,
-                Result = "test"
-            };
-
-            bool result = httpResult;
-
-            Assert.False(result);
-        }
-
-        [Fact]
-        public void BoolConvertReturnsTrueWhenStatusCodeIsOKAndResultIsNull()
+        public void SucceededWithResultReturnsFalseWhenStatusCodeIsOKAndButResultIsNull()
         {
             var httpResult = new AtProtoHttpResult<string>
             {
@@ -75,21 +76,7 @@ namespace idunno.AtProto.Test
                 Result = null
             };
 
-            bool result = httpResult;
-
-            Assert.False(result);
-        }
-
-        [Fact]
-        public void BoolConvertReturnsTrueWhenStatusCodeIsNotOkAndResultIsNull()
-        {
-            var httpResult = new AtProtoHttpResult<string>
-            {
-                StatusCode = HttpStatusCode.Forbidden,
-                Result = null
-            };
-
-            bool result = httpResult;
+            bool result = httpResult.SucceededWithResult;
 
             Assert.False(result);
         }

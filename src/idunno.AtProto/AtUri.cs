@@ -1,7 +1,8 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+﻿    // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Globalization;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -28,14 +29,13 @@ namespace idunno.AtProto
         private static readonly Regex s_asciiRegex =
             new(@"^[a-zA-Z0-9._~:@!$&')(*+,;=%/-]*$", RegexOptions.Compiled | RegexOptions.CultureInvariant, new TimeSpan(0, 0, 0, 5, 0));
 
-        private static readonly Regex s_recordKeyValidationRegex =
-            new(@"^[a-zA-Z0-9_~.:-]{1,512}$", RegexOptions.Compiled | RegexOptions.CultureInvariant, new TimeSpan(0, 0, 0, 5, 0));
-
-        private AtUri(string scheme, string authority, string? path)
+        private AtUri(string scheme, AtIdentifier? authority, string? path, Nsid? collection, RecordKey? rKey)
         {
             Scheme = scheme;
             Authority = authority;
             AbsolutePath = path;
+            Collection = collection;
+            RecordKey = rKey;
         }
 
         /// <summary>
@@ -52,94 +52,49 @@ namespace idunno.AtProto
                 Scheme = atUri!.Scheme;
                 Authority = atUri!.Authority;
                 AbsolutePath = atUri!.AbsolutePath;
+                Collection = atUri!.Collection;
+                RecordKey = atUri!.RecordKey;
             }
         }
 
         /// <summary>
-        /// Gets the scheme name for the AT URI represented by this instance.
+        /// Gets the scheme name for this <see cref="AtUri"/>.
         ///
-        /// This will always be "at" for a valid AT URI.
+        /// This will always be "at" for a valid AtUri.
         /// </summary>
-        /// <value>The scheme component for the AT URI represented by this instance, converted to lower case.</value>
+        /// <value>The normalized scheme component for this <see cref="AtUri"/>.</value>
         public string Scheme { get; internal set; } = string.Empty;
 
         /// <summary>
-        /// Gets authority component of the AT URI represented by this instance.
+        /// Gets the <see cref="AtIdentifier"/> from this <see cref="AtUri"/> if the AtUri contains a authority, otherwise null.
         /// </summary>
-        /// <value>The authority component of the AT URI represented by this instance.</value>
-        public string Authority { get; internal set; } = string.Empty;
+        public AtIdentifier? Authority { get; internal set; }
 
         /// <summary>
-        /// Gets the absolute path for the AT URI represented by this instance.
+        /// Gets the absolute path for this <see cref="AtUri"/>, if it contains an absolute path, otherwise null.
         /// </summary>
-        /// <value>
-        /// The absolute path to the resource.
-        /// </value>
         public string? AbsolutePath { get; internal set; }
 
         /// <summary>
-        /// Gets either the <see cref="Did"/> or <see cref="Handle"/> from the AT URI if the URI contains one,
-        /// otherwise returns null.
+        /// Gets the <see cref="AtIdentifier"/> from this <see cref="AtUri"/> if the AtUri contains a repo, otherwise null.
         /// </summary>
-        /// <value>
-        /// The <see cref="AtIdentifier"/> of the URI or null if the URI does not contain one.
-        /// </value>
         [JsonIgnore]
         public AtIdentifier? Repo
         {
-            get
-            {
-                if (string.IsNullOrEmpty(Authority))
-                {
-                    return null;
-                }
-
-                _ = AtIdentifier.TryParse(Authority, out AtIdentifier? atIdentifier);
-                return atIdentifier;
-            }
+            get => Authority;
         }
 
         /// <summary>
-        /// Returns the collection segment of the AT URI or null if the URI does not contain one.
+        /// Returns the collection segment of the <see cref="AtUri"/> or null if the <see cref="AtUri"/> does not contain a collection.
         /// </summary>
         [JsonIgnore]
-        public string? Collection
-        {
-            get
-            {
-                if (AbsolutePath is not null && AbsolutePath.Contains('/', StringComparison.InvariantCulture) && Repo is not null)
-                {
-                    string[] pathSegments = AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-                    if (pathSegments.Length >= 1)
-                    {
-                        return pathSegments[0];
-                    }
-                }
-
-                return null;
-            }
-        }
+        public Nsid? Collection { get; internal set; }
 
         /// <summary>
         /// Returns the record key of the AT URI or null if the URI does not contain one.
         /// </summary>
         [JsonIgnore]
-        public string? Rkey
-        {
-            get
-            {
-                if (AbsolutePath is not null && AbsolutePath.Contains('/', StringComparison.InvariantCulture) && Repo is not null && !string.IsNullOrEmpty(Collection))
-                {
-                    string[] pathSegments = AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-                    if (pathSegments.Length >= 2)
-                    {
-                        return pathSegments[1];
-                    }
-                }
-
-                return null;
-            }
-        }
+        public RecordKey? RecordKey { get; internal set; }
 
         /// <summary>
         /// Returns the hash code for this <see cref="AtUri"/>.
@@ -185,8 +140,20 @@ namespace idunno.AtProto
                 return false;
             }
 
+            if (Authority is null && other.Authority is not null)
+            {
+                return false;
+            }
+            else if (Authority is not null && other.Authority is null)
+            {
+                return false;
+            }
+            else if (!Authority!.Equals(other.Authority))
+            {
+                return false;
+            }
+
             return string.Equals(Scheme, other.Scheme, StringComparison.Ordinal) &&
-                   string.Equals(Authority, other.Authority, StringComparison.Ordinal) &&
                    string.Equals(AbsolutePath, other.AbsolutePath, StringComparison.Ordinal);
         }
 
@@ -232,7 +199,7 @@ namespace idunno.AtProto
                 atUriBuilder.Append(CultureInfo.InvariantCulture, $"{Scheme}://");
             }
 
-            if (!string.IsNullOrEmpty(Authority))
+            if (Authority is not null)
             {
                 atUriBuilder.Append(CultureInfo.InvariantCulture, $"{Authority}");
             }
@@ -405,15 +372,14 @@ namespace idunno.AtProto
                 }
             }
 
-            if (regexValidationResult.Groups.ContainsKey("collection") &&
-                !string.IsNullOrEmpty(regexValidationResult.Groups["collection"].Value))
+            if (regexValidationResult.Groups.ContainsKey("collection") && !string.IsNullOrEmpty(regexValidationResult.Groups["collection"].Value))
             {
                 bool nsidParseResult = Nsid.TryParse(regexValidationResult.Groups["collection"].Value, out Nsid? _);
                 if (!nsidParseResult)
                 {
                     if (throwOnError)
                     {
-                        throw new AtUriFormatException($"ATURI collection path segment, {regexValidationResult.Groups["collection"].Value}, must be a valid NSID.");
+                        throw new AtUriFormatException($"Collection segment, {regexValidationResult.Groups["collection"].Value}, must be a valid NSID.");
                     }
                     else
                     {
@@ -426,7 +392,7 @@ namespace idunno.AtProto
             {
                 if (throwOnError)
                 {
-                    throw new AtUriFormatException($"AT URI is too long.");
+                    throw new AtUriFormatException($"{s} is too long.");
                 }
                 else
                 {
@@ -435,8 +401,10 @@ namespace idunno.AtProto
             }
 
             string scheme = @"at";
-            string authority;
+            AtIdentifier? authority;
             string? absolutePath = null;
+            Nsid? collection = null;
+            RecordKey? recordKey = null;
 
             remainingStringToParse = remainingStringToParse[ProtocolAndSeparator.Length..];
 
@@ -446,69 +414,75 @@ namespace idunno.AtProto
                 {
                     if (throwOnError)
                     {
-                        throw new AtUriFormatException($"{nameof(s)} contains no authority or path.");
+                        throw new AtUriFormatException($"{s} contains no authority or path.");
                     }
                     else
                     {
                         return false;
                     }
                 }
-                authority = remainingStringToParse;
+
+                if (!AtIdentifier.TryParse(remainingStringToParse, out authority))
+                {
+                    if (throwOnError)
+                    {
+                        throw new AtUriFormatException($"{s} does not have a valid authority.");
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
             }
             else
             {
                 int firstSlashPosition = remainingStringToParse.IndexOf('/', StringComparison.InvariantCulture);
-                authority = remainingStringToParse[..firstSlashPosition];
                 absolutePath = remainingStringToParse[firstSlashPosition..];
+
+                if (!AtIdentifier.TryParse(remainingStringToParse[..firstSlashPosition], out authority))
+                {
+                    if (throwOnError)
+                    {
+                        throw new AtUriFormatException($"{s} does not have a valid authority.");
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                }
             }
 
-            var tempResult = new AtUri(scheme, authority, absolutePath);
-
-            if (tempResult.Rkey is not null)
+            if (absolutePath is not null && absolutePath.Contains('/', StringComparison.InvariantCulture))
             {
-                string rkey = tempResult.Rkey;
+                string[] pathSegments = absolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
 
-                if (rkey.Length > 512 || rkey.Length < 1)
+                if (pathSegments.Length > 2)
                 {
-                    if (throwOnError)
+                    throw new AtUriFormatException("{s} has too many segments");
+                }
+
+                if (pathSegments.Length >= 1)
+                {
+                    bool isSegmentValidNsid = Nsid.Parse(pathSegments[0], throwOnError, out collection);
+
+                    if (!isSegmentValidNsid)
                     {
-                        throw new RecordKeyFormatException("Record key length must be between 1 and 512 characters");
-                    }
-                    else
-                    {
-                        result = null;
                         return false;
                     }
                 }
 
-                if (!s_recordKeyValidationRegex.Match(rkey).Success)
+                if (pathSegments.Length == 2)
                 {
-                    if (throwOnError)
-                    {
-                        throw new RecordKeyFormatException("Record key syntax is invalid.");
-                    }
-                    else
-                    {
-                        result = null;
-                        return false;
-                    }
-                }
+                    bool isSegmentValidRecordKey = RecordKey.Parse(pathSegments[1], throwOnError, out recordKey);
 
-                if (rkey == "." || rkey == "..")
-                {
-                    if (throwOnError)
+                    if (!isSegmentValidRecordKey)
                     {
-                        throw new RecordKeyFormatException("Record key cannot be \".\" or \"..\".");
-                    }
-                    else
-                    {
-                        result = null;
                         return false;
                     }
                 }
             }
 
-            result = tempResult;
+            result = new AtUri(scheme, authority, absolutePath, collection, recordKey);
 
             return true;
         }
