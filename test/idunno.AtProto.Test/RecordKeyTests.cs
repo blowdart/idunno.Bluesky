@@ -70,5 +70,19 @@ namespace idunno.AtProto.Test
             Assert.Equal(value, convertedRecordKey.ToString());
             Assert.Equal(value, convertedRecordKey.Value);
         }
+
+        [Fact]
+        public void EqualityWorks()
+        {
+            const string value = "example.com";
+
+            RecordKey lhs = new(value);
+            RecordKey rhs = new(value);
+
+            Assert.NotNull(lhs);
+            Assert.NotNull(rhs);
+            Assert.Equal(lhs, rhs);
+            Assert.True(lhs.Equals(rhs));
+        }
     }
 }

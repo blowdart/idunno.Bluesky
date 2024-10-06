@@ -96,8 +96,8 @@ namespace idunno.AtProto.Test
         }
 
         [Theory]
-        [InlineData("com.example.fooBar", "example.com", "fooBar")]
-        [InlineData("net.users.bob.ping", "bob.users.net", "ping")]
+        [InlineData("com.example.fooBar", "com.example", "fooBar")]
+        [InlineData("net.users.bob.ping", "net.users.bob", "ping")]
         public void NsidPropertiesShouldReturnExpectedValues(string nsidString, string authority, string name)
         {
             Assert.True(Nsid.TryParse(nsidString, out Nsid? nsid));

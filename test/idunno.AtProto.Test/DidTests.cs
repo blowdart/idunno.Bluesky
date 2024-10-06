@@ -158,6 +158,23 @@ namespace idunno.AtProto.Test
 
             Assert.NotNull(did);
             Assert.Equal(value, did.Value);
+
+            AtIdentifier did2 = Did.CreateFrom(value);
+            Assert.NotNull(did2);
+            Assert.Equal(value, did2.Value);
+            Assert.Equal(did, did2);
+        }
+
+        [Fact]
+        public void EqualityWorks()
+        {
+            Did lhs = new("did:method:val");
+            Did rhs = new("did:method:val");
+
+            Assert.NotNull(lhs);
+            Assert.NotNull(rhs);
+            Assert.Equal(lhs, rhs);
+            Assert.True(lhs.Equals(rhs));
         }
     }
 }

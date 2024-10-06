@@ -10,14 +10,14 @@ namespace idunno.AtProto.Test
     [ExcludeFromCodeCoverage]
     public class AtCidTests
     {
+        const string ValidCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
         [Fact]
         public void ValidAtCidValuesConstructCorrectly()
         {
-            const string cidAsString = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+            AtCid atCid = new(ValidCid);
 
-            AtCid atCid = new(cidAsString);
-
-            Assert.Equal(cidAsString, atCid.Value);
+            Assert.Equal(ValidCid, atCid.Value);
         }
 
         [Fact]
@@ -29,23 +29,31 @@ namespace idunno.AtProto.Test
         [Fact]
         public void ImplicitConversionFromValidStringWorks()
         {
-            const string cidAsString = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
-
-            AtCid atCid = cidAsString;
+            AtCid atCid = ValidCid;
 
             Assert.NotNull(atCid);
-            Assert.Equal(cidAsString, atCid.Value);
+            Assert.Equal(ValidCid, atCid.Value);
         }
 
         [Fact]
         public void ExplicitConversionFromValidStringWorks()
         {
-            const string cidAsString = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
-
-            AtCid atCid = (AtCid)cidAsString;
+            AtCid atCid = (AtCid)ValidCid;
 
             Assert.NotNull(atCid);
-            Assert.Equal(cidAsString, atCid.Value);
+            Assert.Equal(ValidCid, atCid.Value);
+        }
+
+        [Fact]
+        public void EqualityWorks()
+        {
+            AtCid lhs = (AtCid)ValidCid;
+            AtCid rhs = new(ValidCid);
+
+            Assert.NotNull(lhs);
+            Assert.NotNull(rhs);
+            Assert.Equal(lhs, rhs);
+            Assert.True(lhs.Equals(rhs));
         }
     }
 }

@@ -14,7 +14,7 @@ namespace idunno.AtProto
     /// <para>See https://atproto.com/specs/nsid for details.</para>
     /// </remarks>
     [JsonConverter(typeof(Json.NsidConverter))]
-    public class Nsid
+    public class Nsid : IEquatable<Nsid>
     {
         private readonly string _value;
 

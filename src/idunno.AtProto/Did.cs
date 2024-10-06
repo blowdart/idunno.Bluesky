@@ -21,6 +21,8 @@ namespace idunno.AtProto
     {
         private const string DidPrefix = "did:";
 
+        private const string InvalidMethod = "INVALID";
+
         private const int MaximumLength = 2048;
 
         private static readonly Regex s_validationRegex =
@@ -30,21 +32,23 @@ namespace idunno.AtProto
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(s);
 
-            Value = string.Empty;
-            Method = string.Empty;
-
             if (validate)
             {
-                if (Parse(s, true, out Did? _))
+                if (Parse(s, validate, out Did? did))
                 {
-                    string[] segments = s.Split(':');
                     Value = s;
-                    Method = segments[1];
+                    Method = did!.Method;
+                }
+                else
+                {
+                    Value = string.Empty;
+                    Method = InvalidMethod;
                 }
             }
             else
             {
                 Value = s;
+                Method = GetMethodFromString(s);
             }
         }
 
@@ -63,20 +67,20 @@ namespace idunno.AtProto
         /// Gets the value of the DID.
         /// </summary>
         [JsonPropertyName("did")]
-        public string Value { get; }
+        public override string Value { get; } = string.Empty;
 
         /// <summary>
         /// Gets the method of this <see cref="Did" />.
         /// </summary>
         /// <remarks><para>AT Proto currently supports two methods, web and plc.</para></remarks>
         [JsonIgnore]
-        public string Method { get; }
+        public string Method { get; } = string.Empty;
 
         /// <summary>
         /// Returns the hash code for this <see cref="Did"/>.
         /// </summary>
         /// <returns>The hash code for this <see cref="Did"/>.</returns>
-        public override int GetHashCode() => (Method, Value).GetHashCode();
+        public override int GetHashCode() => Value.GetHashCode(StringComparison.Ordinal);
 
         /// <summary>
         /// Indicates where an object is equal to this <see cref="Did"/>."/>
@@ -126,10 +130,7 @@ namespace idunno.AtProto
         /// Converts the DID to its equivalent string representation.
         /// </summary>
         /// <returns>The string representation of the value of this instance.</returns>
-        public override string ToString()
-        {
-            return Value;
-        }
+        public override string ToString() => Value;
 
         /// <summary>
         /// Creates a Did from the specified string.
@@ -144,7 +145,6 @@ namespace idunno.AtProto
         /// <param name="s">The string to convert.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Did FromString(string s) => s;
-
 
         /// <summary>
         /// Determines whether two specified <see cref="Did"/>s the same value."/>
@@ -249,6 +249,20 @@ namespace idunno.AtProto
 
             result = new Did(s, false);
             return true;
+        }
+
+        private static string GetMethodFromString(string s)
+        {
+            string[] segments = s.Split(':');
+
+            if (segments.Length == 2)
+            {
+                return segments[1];
+            }
+            else
+            {
+                return "INVALID";
+            }
         }
     }
 }

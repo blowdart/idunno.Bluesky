@@ -66,6 +66,20 @@ namespace idunno.AtProto
         /// Converts the <see cref="AtIdentifier"/> to its equivalent string representation.
         /// </summary>
         /// <returns>The string representation of the value of this instance.</returns>
-        public abstract override string ToString();
+        public override string ToString() => Value;
+
+        /// <summary>
+        /// Returns the hash code for this <see cref="AtIdentifier"/>.
+        /// </summary>
+        /// <returns>The hash code for this <see cref="AtIdentifier"/>.</returns>
+        public override int GetHashCode() => Value.GetHashCode(StringComparison.Ordinal);
+
+        /// <summary>
+        /// Gets the underlying value of the <see cref="AtIdentifier"/>/.
+        /// </summary>
+        public abstract string Value
+        {
+            get;
+        }
     }
 }

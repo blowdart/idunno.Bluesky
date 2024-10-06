@@ -11,7 +11,7 @@ namespace idunno.AtProto
     /// A reference to an individual record withing a collection in an atproto repository.
     /// </summary>
     [JsonConverter(typeof(Json.RecordKeyConverter))]
-    public class RecordKey
+    public class RecordKey : IEquatable<RecordKey>
     {
         private static readonly Regex s_recordKeyValidationRegex =
             new(@"^[a-zA-Z0-9_~.:-]{1,512}$", RegexOptions.Compiled | RegexOptions.CultureInvariant, new TimeSpan(0, 0, 0, 5, 0));

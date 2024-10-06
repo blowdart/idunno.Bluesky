@@ -68,7 +68,7 @@ namespace idunno.AtProto
         /// Gets the normalized value of the handle.
         /// </summary>
         [JsonPropertyName("handle")]
-        public string Value { get; }
+        public override string Value { get; }
 
         /// <summary>
         /// Returns a flag indicating if the handle is or is not equal to the reserved <see cref="Invalid"/> handle.
@@ -85,10 +85,7 @@ namespace idunno.AtProto
         /// Converts the Handle to its equivalent string representation.
         /// </summary>
         /// <returns>The string representation of the value of this instance.</returns>
-        public override string ToString()
-        {
-            return Value;
-        }
+        public override string ToString() => Value;
 
         /// <summary>
         /// Creates a <see cref="Handle"/> from the specified string.

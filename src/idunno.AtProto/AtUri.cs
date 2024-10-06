@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Globalization;
-using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;

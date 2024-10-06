@@ -205,5 +205,17 @@ namespace idunno.AtProto.Test
             Assert.False(actualParseResult);
             Assert.Null(actualUri);
         }
+
+        [Fact]
+        public void EqualityWorks()
+        {
+            AtUri lhs = new("at://did:plc:identifier/test.idunno.lexiconType/rkey");
+            AtUri rhs = new("at://did:plc:identifier/test.idunno.lexiconType/rkey");
+
+            Assert.NotNull(lhs);
+            Assert.NotNull(rhs);
+            Assert.Equal(lhs, rhs);
+            Assert.True(lhs.Equals(rhs));
+        }
     }
 }
