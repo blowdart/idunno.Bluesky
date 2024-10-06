@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
@@ -129,6 +130,21 @@ namespace idunno.AtProto
         {
             return Value;
         }
+
+        /// <summary>
+        /// Creates a Did from the specified string.
+        /// </summary>
+        /// <param name="s">The string to convert.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator Did(string s) => new(s);
+
+        /// <summary>
+        /// Creates a Did from the specified string.
+        /// </summary>
+        /// <param name="s">The string to convert.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Did FromString(string s) => s;
+
 
         /// <summary>
         /// Determines whether two specified <see cref="Did"/>s the same value."/>

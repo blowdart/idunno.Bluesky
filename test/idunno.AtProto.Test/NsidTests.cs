@@ -123,5 +123,21 @@ namespace idunno.AtProto.Test
 
             Assert.NotEqual(lhs, rhs);
         }
+
+        [Fact]
+        public void ValidStringsCanBeImplicitlyConverted()
+        {
+            const string domainAuthority = "com.example";
+            const string name = "foobar";
+
+            string value = $"{domainAuthority}.{name}";
+
+            Nsid convertedNsid = value;
+
+            Assert.NotNull(convertedNsid);
+            Assert.Equal(value, convertedNsid.ToString());
+            Assert.Equal(domainAuthority, convertedNsid.Authority);
+            Assert.Equal(name, convertedNsid.Name);
+        }
     }
 }

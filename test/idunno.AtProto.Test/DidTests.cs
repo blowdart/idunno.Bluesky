@@ -137,5 +137,27 @@ namespace idunno.AtProto.Test
             Assert.False(parseResult);
             Assert.Null(result);
         }
+
+        [Fact]
+        public void ImplicitConversionFromValidStringWorks()
+        {
+            const string value = "did:method:val";
+
+            Did did = value;
+
+            Assert.NotNull(did);
+            Assert.Equal(value, did.Value);
+        }
+
+        [Fact]
+        public void ExplicitConversionFromValidStringWorks()
+        {
+            const string value = "did:method:val";
+
+            Did did = (Did)value;
+
+            Assert.NotNull(did);
+            Assert.Equal(value, did.Value);
+        }
     }
 }

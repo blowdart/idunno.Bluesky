@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
@@ -88,6 +89,20 @@ namespace idunno.AtProto
         {
             return Value;
         }
+
+        /// <summary>
+        /// Creates a <see cref="Handle"/> from the specified string.
+        /// </summary>
+        /// <param name="s">The string to convert.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator Handle(string s) => new(s);
+
+        /// <summary>
+        /// Creates a <see cref="Handle"/> from the specified string.
+        /// </summary>
+        /// <param name="s">The string to convert.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Handle FromString(string s) => s;
 
         /// <summary>
         /// Returns the hash code for this <see cref="Handle"/>.

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
@@ -60,7 +61,7 @@ namespace idunno.AtProto
         /// The NSID authority for this instance.
         /// </value>
         [JsonIgnore]
-        public string Authority => string.Join('.', _value.Split('.')[..^1].Reverse());
+        public string Authority => string.Join('.', _value.Split('.')[..^1]);
 
         /// <summary>
         /// Gets the NSID name for this instance.
@@ -76,6 +77,20 @@ namespace idunno.AtProto
         /// </summary>
         /// <returns>a string representation of the <see cref="Nsid"/> current instance.</returns>
         public override string ToString() => _value;
+
+        /// <summary>
+        /// Creates an <see cref="Nsid"/> from the specified string.
+        /// </summary>
+        /// <param name="s">The string to convert.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator Nsid(string s) => new(s);
+
+        /// <summary>
+        /// Creates an <see cref="Nsid"/> from the specified string.
+        /// </summary>
+        /// <param name="s">The string to convert.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Nsid FromString(string s) => s;
 
         /// <summary>
         /// Converts the string representation of an identifier to its <see cref="Nsid"/> equivalent.

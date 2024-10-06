@@ -59,5 +59,16 @@ namespace idunno.AtProto.Test
             }));
         }
 
+        [Fact]
+        public void ValidStringsCanBeImplicitlyConverted()
+        {
+            const string value = "example.com";
+
+            RecordKey convertedRecordKey = value;
+
+            Assert.NotNull(convertedRecordKey);
+            Assert.Equal(value, convertedRecordKey.ToString());
+            Assert.Equal(value, convertedRecordKey.Value);
+        }
     }
 }

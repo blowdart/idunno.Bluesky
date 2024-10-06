@@ -17,10 +17,9 @@ namespace idunno.AtProto
         /// <param name="s">The string to create an <see cref="AtIdentifier"/> from.</param>
         /// <returns>An <see cref="AtIdentifier" /> from the specified string</returns>
         /// <exception cref="ArgumentException">Thrown if <paramref name="s"/> is not valid for an <see cref="AtIdentifier"/>.</exception>
-        public static AtIdentifier Create(string s)
+        public static AtIdentifier CreateFrom(string s)
         {
             ArgumentNullException.ThrowIfNullOrEmpty(s);
-
 
             if (!TryParse(s, out AtIdentifier? returnValue) || returnValue is null)
             {
@@ -64,7 +63,7 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Converts the AtIdentifier to its equivalent string representation.
+        /// Converts the <see cref="AtIdentifier"/> to its equivalent string representation.
         /// </summary>
         /// <returns>The string representation of the value of this instance.</returns>
         public abstract override string ToString();

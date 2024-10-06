@@ -25,5 +25,27 @@ namespace idunno.AtProto.Test
         {
             Assert.Throws<ArgumentNullException>(() => new AtCid(string.Empty));
         }
+
+        [Fact]
+        public void ImplicitConversionFromValidStringWorks()
+        {
+            const string cidAsString = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+            AtCid atCid = cidAsString;
+
+            Assert.NotNull(atCid);
+            Assert.Equal(cidAsString, atCid.Value);
+        }
+
+        [Fact]
+        public void ExplicitConversionFromValidStringWorks()
+        {
+            const string cidAsString = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+            AtCid atCid = (AtCid)cidAsString;
+
+            Assert.NotNull(atCid);
+            Assert.Equal(cidAsString, atCid.Value);
+        }
     }
 }

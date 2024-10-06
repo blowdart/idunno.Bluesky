@@ -355,5 +355,27 @@ namespace idunno.AtProto.Test
 
             Assert.True(lhs == rhs);
         }
+
+        [Fact]
+        public void ImplicitConversionFromValidStringWorks()
+        {
+            const string value = "jay.bsky.social";
+
+            Handle handle = value;
+
+            Assert.NotNull(handle);
+            Assert.Equal(value, handle.Value);
+        }
+
+        [Fact]
+        public void ExplicitConversionFromValidStringWorks()
+        {
+            const string value = "jay.bsky.social";
+
+            Handle handle = (Handle)value;
+
+            Assert.NotNull(handle);
+            Assert.Equal(value, handle.Value);
+        }
     }
 }

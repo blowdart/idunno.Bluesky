@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
 namespace idunno.AtProto
@@ -47,5 +48,20 @@ namespace idunno.AtProto
         {
             return Value;
         }
+
+        /// <summary>
+        /// Creates a <see cref="AtCid"/> from the specified string.
+        /// </summary>
+        /// <param name="s">The string to convert.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator AtCid(string s) => new(s);
+
+        /// <summary>
+        /// Creates a <see cref="AtCid"/> from the specified string.
+        /// </summary>
+        /// <param name="s">The string to convert.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static AtCid FromString(string s) => s;
+
     }
 }
