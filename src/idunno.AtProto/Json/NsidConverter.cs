@@ -52,7 +52,7 @@ namespace idunno.AtProto.Json
         /// Writes the specified <see cref="RecordKey" /> as JSON.
         /// </summary>
         /// <param name="writer">The writer to write to.</param>
-        /// <param name="nsid">The <see cref="AtCid"/> to convert to JSON.</param>
+        /// <param name="nsid">The <see cref="Cid"/> to convert to JSON.</param>
         /// <param name="options">An object that specifies serialization options to use.</param>
         public override void Write(Utf8JsonWriter writer, Nsid nsid, JsonSerializerOptions options)
         {

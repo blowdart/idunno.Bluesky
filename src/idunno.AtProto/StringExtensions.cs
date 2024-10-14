@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Globalization;
+
 namespace idunno.AtProto
 {
     internal static class StringExtensions
@@ -42,7 +44,7 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Returns a flag indicating whether the string only consists of ASCII letters.
+        /// Gets a flag indicating whether the string only consists of ASCII letters.
         /// </summary>
         /// <param name="s">The string to check.</param>
         /// <returns>True if the string only consists of ASCII letters, otherwise false.</returns>

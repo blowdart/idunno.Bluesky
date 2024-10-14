@@ -390,8 +390,8 @@ namespace idunno.AtProto
                 if (userDid is null || cancellationToken.IsCancellationRequested)
                 {
                     return new AtProtoHttpResult<bool>(
-                        HttpStatusCode.NotFound,
                         false,
+                        HttpStatusCode.NotFound,
                         new AtErrorDetail() { Error = "HandleNotResolvable", Message = "Handle could not be resolved to a DID." });
                 }
 
@@ -405,8 +405,8 @@ namespace idunno.AtProto
                 if (pds is null || cancellationToken.IsCancellationRequested)
                 {
                     return new AtProtoHttpResult<bool>(
-                        HttpStatusCode.NotFound,
                         false,
+                        HttpStatusCode.NotFound,
                         new AtErrorDetail() { Error = "PdsNotResolvable", Message = $"Could not resolve a PDS for {userDid}." });
                 }
 
@@ -895,8 +895,8 @@ namespace idunno.AtProto
         public async Task<AtProtoHttpResult<bool>> DeleteRecord(
             Nsid collection,
             RecordKey rKey,
-            AtCid? swapRecord = null,
-            AtCid? swapCommit = null,
+            Cid? swapRecord = null,
+            Cid? swapCommit = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(collection);
@@ -920,8 +920,8 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="strongReference"/> is null, </exception>
         public async Task<AtProtoHttpResult<bool>> DeleteRecord(
             StrongReference strongReference,
-            AtCid? swapRecord = null,
-            AtCid? swapCommit = null,
+            Cid? swapRecord = null,
+            Cid? swapCommit = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
@@ -975,8 +975,8 @@ namespace idunno.AtProto
             AtIdentifier repo,
             Nsid collection,
             RecordKey rKey,
-            AtCid? swapRecord = null,
-            AtCid? swapCommit = null,
+            Cid? swapRecord = null,
+            Cid? swapCommit = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(repo);
@@ -1041,6 +1041,42 @@ namespace idunno.AtProto
         /// Gets the record specified by the identifying parameters.
         /// </summary>
         /// <typeparam name="T">The type of record to get.</typeparam>
+        /// <param name="uri">The <see cref="AtUri"/> of the record to retrieve.</param>
+        /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
+        /// <param name="service">The service to retrieve the record from.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="repo"/> or <paramref name="collection"/> is null or empty.</exception>
+        public async Task<AtProtoHttpResult<T>> GetRecord<T>(
+            AtUri uri,
+            Cid? cid = null,
+            Uri? service = null,
+            CancellationToken cancellationToken = default) where T : AtProtoRecord
+        {
+            ArgumentNullException.ThrowIfNull(uri);
+
+            if (uri.Repo is null)
+            {
+                throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
+            }
+
+            if (uri.Collection is null)
+            {
+                throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+            }
+
+            if (uri.RecordKey is null)
+            {
+                throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+            }
+
+            return await GetRecord<T>(uri.Repo, uri.Collection, uri.RecordKey, cid, service, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Gets the record specified by the identifying parameters.
+        /// </summary>
+        /// <typeparam name="T">The type of record to get.</typeparam>
         /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the record from.</param>
         /// <param name="collection">The NSID of the collection the record should be retrieved from.</param>
         /// <param name="rKey">The record key, identifying the record to be retrieved.</param>
@@ -1053,7 +1089,7 @@ namespace idunno.AtProto
             AtIdentifier repo,
             Nsid collection,
             RecordKey rKey,
-            AtCid? cid = null,
+            Cid? cid = null,
             Uri? service = null,
             CancellationToken cancellationToken = default) where T: AtProtoRecord
         {

@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Net;
-using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
 
 namespace idunno.AtProto
@@ -98,7 +97,7 @@ namespace idunno.AtProto
 
         // Repo Operations logging
         [LoggerMessage(90, LogLevel.Debug, "CreateRecord succeeded, created {uri} {cid} in {collection} on {service}")]
-        internal static partial void CreateRecordSucceeded(ILogger logger, AtUri uri, AtCid cid, Nsid collection, Uri service);
+        internal static partial void CreateRecordSucceeded(ILogger logger, AtUri uri, Cid cid, Nsid collection, Uri service);
 
         [LoggerMessage(91, LogLevel.Error, "CreateRecord on {service} succeeded but the result was null")]
         internal static partial void CreateRecordSucceededButNullResult(ILogger logger, Uri service);

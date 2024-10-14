@@ -41,7 +41,7 @@ namespace idunno.AtProto.Json
         /// Writes the specified <see cref="AtIdentifier"></see> as JSON.
         /// </summary>
         /// <param name="writer">The writer to write to.</param>
-        /// <param name="atIdentifier">The <see cref="AtCid"/> to convert to JSON.</param>
+        /// <param name="atIdentifier">The <see cref="Cid"/> to convert to JSON.</param>
         /// <param name="options">An object that specifies serialization options to use.</param>
         public override void Write(Utf8JsonWriter writer, AtIdentifier atIdentifier, JsonSerializerOptions options)
         {

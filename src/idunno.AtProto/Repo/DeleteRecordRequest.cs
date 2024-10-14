@@ -27,10 +27,10 @@ namespace idunno.AtProto.Repo
 
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public AtCid? SwapRecord { get; internal set; }
+        public Cid? SwapRecord { get; internal set; }
 
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public AtCid? SwapCommit { get; internal set; }
+        public Cid? SwapCommit { get; internal set; }
     }
 }

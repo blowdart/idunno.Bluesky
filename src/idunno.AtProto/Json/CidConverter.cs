@@ -9,44 +9,44 @@ namespace idunno.AtProto.Json
     /// <summary>
     /// Converts an AT CID to or from JSON.
     /// </summary>
-    internal class AtCidConverter : JsonConverter<AtCid>
+    internal class CidConverter : JsonConverter<Cid>
     {
         /// <summary>
-        /// Reads and converts JSON to an <see cref="AtCid"/>.
+        /// Reads and converts JSON to an <see cref="Cid"/>.
         /// </summary>
         /// <param name="reader">The reader.</param>
         /// <param name="typeToConvert">The type to convert.</param>
         /// <param name="options">An object that specifies serialization options to use.</param>
-        /// <returns>A <see cref="AtCid"/> created from the JSON.</returns>
+        /// <returns>A <see cref="Cid"/> created from the JSON.</returns>
         /// <exception cref="JsonException">Thrown if the JSON to be converted is not a string token.</exception>
-        public override AtCid? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public override Cid? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if (reader.TokenType != JsonTokenType.String)
             {
                 throw new JsonException();
             }
 
-            AtCid? atCid;
+            Cid? cid;
 
             try
             {
-                atCid = new AtCid(reader.GetString()!);
+                cid = new Cid(reader.GetString()!);
             }
             catch (ArgumentNullException e)
             {
-                throw new JsonException("Could not convert value to an AtCid", e);
+                throw new JsonException("Could not convert value to an Cid", e);
             }
 
-            return atCid;
+            return cid;
         }
 
         /// <summary>
-        /// Writes the specified <see cref="AtCid"></see> as JSON.
+        /// Writes the specified <see cref="Cid"></see> as JSON.
         /// </summary>
         /// <param name="writer">The writer to write to.</param>
-        /// <param name="cid">The <see cref="AtCid"/> to convert to JSON.</param>
+        /// <param name="cid">The <see cref="Cid"/> to convert to JSON.</param>
         /// <param name="options">An object that specifies serialization options to use.</param>
-        public override void Write(Utf8JsonWriter writer, AtCid cid, JsonSerializerOptions options)
+        public override void Write(Utf8JsonWriter writer, Cid cid, JsonSerializerOptions options)
         {
             writer.WriteStringValue(cid.Value);
         }

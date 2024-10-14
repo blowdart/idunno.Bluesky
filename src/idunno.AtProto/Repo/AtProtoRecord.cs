@@ -9,31 +9,17 @@ namespace idunno.AtProto.Repo
     /// <summary>
     /// Properties for an AT Proto record that has been retrieved from a repository.
     /// </summary>
-    public record AtProtoRecord
+    public record AtProtoRecord : AtProtoReferencedObject
     {
         /// <summary>
         /// Creates a new instance of at AT Proto record.
         /// </summary>
         /// <param name="uri">The <see cref="AtUri"/> of the record.</param>
-        /// <param name="cid">The <see cref="AtCid"/> of the record.</param>
+        /// <param name="cid">The <see cref="Cid"/> of the record.</param>
         [JsonConstructor]
-        public AtProtoRecord(AtUri uri, AtCid cid)
+        public AtProtoRecord(AtUri uri, Cid cid) : base(uri, cid)
         {
-            Uri = uri;
-            Cid = cid;
         }
-
-        /// <summary>
-        /// Gets the <see cref="AtUri"/> of the record.
-        /// </summary>
-        [JsonInclude]
-        public AtUri Uri { get; init; }
-
-        /// <summary>
-        /// Gets the Content Identifier (<see cref="AtCid"/>) of the record.
-        /// </summary>
-        [JsonInclude]
-        public AtCid Cid { get; init; }
 
         /// <summary>
         /// Gets the value of the record.
@@ -46,17 +32,5 @@ namespace idunno.AtProto.Repo
         /// </summary>
         [JsonExtensionData]
         public IDictionary<string, JsonElement>? ExtensionData { get; set; } = new Dictionary<string, JsonElement>();
-
-        /// <summary>
-        /// Gets a <see cref="StrongReference"/> for the record.
-        /// </summary>
-        [JsonIgnore]
-        public StrongReference StrongReference
-        {
-            get
-            {
-                return new StrongReference(Uri, Cid);
-            }
-        }
     }
 }

@@ -3,7 +3,7 @@
 
 namespace idunno.AtProto.Repo
 {
-    internal record BlobResult(Blob blob)
+    internal record CreateBlobResponse(Blob blob)
     {
     }
 }

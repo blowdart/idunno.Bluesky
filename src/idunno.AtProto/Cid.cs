@@ -3,7 +3,6 @@
 
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
-using System.Xml.Linq;
 
 namespace idunno.AtProto
 {
@@ -13,16 +12,16 @@ namespace idunno.AtProto
     /// <remarks>
     /// <para>See https://github.com/multiformats/cid for specification.</para>
     /// </remarks>
-    [JsonConverter(typeof(Json.AtCidConverter))]
-    public sealed class AtCid : IEquatable<AtCid>
+    [JsonConverter(typeof(Json.CidConverter))]
+    public sealed class Cid : IEquatable<Cid>
     {
         /// <summary>
-        /// Creates a new instance of a <see cref="AtCid"/> class using the specified parameters.
+        /// Creates a new instance of a <see cref="Cid"/> class using the specified parameters.
         /// </summary>
-        /// <param name="value">The value of the CID</param>
+        /// <param name="value">The value of the content identifier.</param>
         /// <exception cref="ArgumentNullException">Thrown if the provided value is null or empty.</exception>
         [JsonConstructor]
-        public AtCid(string value)
+        public Cid(string value)
         {
             if (string.IsNullOrEmpty(value))
             {
@@ -33,11 +32,8 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Gets the value of the CID.
+        /// Gets the value of the Content Identifier.
         /// </summary>
-        /// <value>
-        ///The Content Identifier.
-        /// </value>
         [JsonPropertyName("cid")]
         public string Value { get; }
 
@@ -51,46 +47,45 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Creates a <see cref="AtCid"/> from the specified string.
+        /// Creates a <see cref="Cid"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static implicit operator AtCid(string s) => new(s);
+        public static implicit operator Cid(string s) => new(s);
 
         /// <summary>
-        /// Creates a <see cref="AtCid"/> from the specified string.
+        /// Creates a <see cref="Cid"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static AtCid FromString(string s) => s;
+        public static Cid FromString(string s) => s;
 
         /// <summary>
-        /// Returns the hash code for this <see cref="AtCid"/>.
+        /// Returns the hash code for this <see cref="Cid"/>.
         /// </summary>
-        /// <returns>The hash code for this <see cref="AtCid"/>.</returns>
         public override int GetHashCode() => Value.GetHashCode(StringComparison.Ordinal);
 
         /// <summary>
-        /// Indicates where an object is equal to this <see cref="AtCid"/>."/>
+        /// Indicates where an object is equal to this <see cref="Cid"/>."/>
         /// </summary>
-        /// <param name="obj">An object to compare to this <see cref="AtCid"/>.</param>
+        /// <param name="obj">An object to compare to this <see cref="Cid"/>.</param>
         /// <returns>
-        /// true if this <see cref="AtCid"/> and the specified <paramref name="obj"/>> refer to the same object,
+        /// true if this <see cref="Cid"/> and the specified <paramref name="obj"/>> refer to the same object,
         /// this AtCid and the specified obj are both the same type of object and those objects are equal,
         /// or if this AtCid and the specified obj are both null, otherwise, false.
         /// </returns>
-        public override bool Equals(object? obj) => Equals(obj as AtCid);
+        public override bool Equals(object? obj) => Equals(obj as Cid);
 
         /// <summary>
-        /// Indicates where this <see cref="AtCid"/> equals another."/>
+        /// Indicates where this <see cref="Cid"/> equals another."/>
         /// </summary>
-        /// <param name="other">A <see cref="AtCid"/> or null to compare to this <see cref="AtCid"/>.</param>
+        /// <param name="other">A <see cref="Cid"/> or null to compare to this <see cref="Cid"/>.</param>
         /// <returns>
-        /// true if this <see cref="AtCid"/> and the specified <paramref name="other"/>> refer to the same object,
+        /// true if this <see cref="Cid"/> and the specified <paramref name="other"/>> refer to the same object,
         /// this AtCidAtCid and the specified obj are both the same type of object and those objects are equal,
         /// or if this Nsid and the specified obj are both null, otherwise, false.
         /// </returns>
-        public bool Equals(AtCid? other)
+        public bool Equals(Cid? other)
         {
             if (other is null)
             {

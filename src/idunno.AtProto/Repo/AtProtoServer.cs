@@ -90,8 +90,8 @@ namespace idunno.AtProto
             AtIdentifier repo,
             Nsid collection,
             RecordKey rKey,
-            AtCid? swapRecord,
-            AtCid? swapCommit,
+            Cid? swapRecord,
+            Cid? swapCommit,
             Uri service,
             string accessToken,
             HttpClient httpClient,
@@ -144,11 +144,11 @@ namespace idunno.AtProto
 
             return await request.Get(
                 service,
-                $"{DescribeRepoEndpoint}?repo={repo}",
+                $"{DescribeRepoEndpoint}?repo={Uri.EscapeDataString(repo.ToString())}",
                 accessToken,
                 httpClient,
-                jsonSerializerOptions,
-                cancellationToken).ConfigureAwait(false);
+                jsonSerializerOptions: jsonSerializerOptions,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -169,7 +169,7 @@ namespace idunno.AtProto
             AtIdentifier repo,
             Nsid collection,
             RecordKey rKey,
-            AtCid? cid,
+            Cid? cid,
             Uri service,
             string? accessToken,
             HttpClient httpClient,
@@ -184,11 +184,11 @@ namespace idunno.AtProto
 
             AtProtoHttpClient<T> request = new();
 
-            string queryString = $"repo={repo}&collection={collection}&rkey={rKey}";
+            string queryString = $"repo={Uri.EscapeDataString(repo.ToString())}&collection={Uri.EscapeDataString(collection.ToString())}&rkey={Uri.EscapeDataString(rKey.ToString())}";
 
             if (cid is not null)
             {
-                queryString += $"&cid={cid}";
+                queryString += $"&cid={Uri.EscapeDataString(cid.ToString())}";
             }
 
             return await request.Get(
@@ -196,8 +196,8 @@ namespace idunno.AtProto
                 $"{GetRecordEndpoint}?{queryString}",
                 accessToken,
                 httpClient,
-                jsonSerializerOptions,
-                cancellationToken).ConfigureAwait(false);
+                jsonSerializerOptions: jsonSerializerOptions,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -238,7 +238,7 @@ namespace idunno.AtProto
                 throw new ArgumentOutOfRangeException(nameof(limit), "{limit} must be between 1 and 100.");
             }
 
-            string queryString = $"repo={repo}&collection={collection}";
+            string queryString = $"repo={Uri.EscapeDataString(repo.ToString())}&collection={Uri.EscapeDataString(collection.ToString())}";
 
             if (limit is not null)
             {
@@ -247,7 +247,7 @@ namespace idunno.AtProto
 
             if (cursor is not null)
             {
-                queryString += $"&cursor={cursor}";
+                queryString += $"&cursor={Uri.EscapeDataString(cursor.ToString())}";
             }
 
             if (reverse)
@@ -258,27 +258,27 @@ namespace idunno.AtProto
             // We need to create an intermediate class to handle the deserialization of the response,
             // because trying to deserialize directly into a class that implements ICollection is
             // just too painful.
-            AtProtoHttpClient<InternalPagedRecordList<T>> internalClient = new();
-            AtProtoHttpResult<InternalPagedRecordList<T>> internalResult = await internalClient.Get(
+            AtProtoHttpClient<ListRecordsResponse<T>> request = new();
+            AtProtoHttpResult<ListRecordsResponse<T>> response = await request.Get(
                 service,
                 $"{ListRecordsEndpoint}?{queryString}",
                 accessToken,
                 httpClient,
-                jsonSerializerOptions,
-                cancellationToken).ConfigureAwait(false);
+                jsonSerializerOptions: jsonSerializerOptions,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            // Extract the results and put them into an AtProtoRecordList instance.
+            // Flatten the results and into an AtProtoRecordList instance.
             AtProtoRecordList<T> recordList;
-            if (internalResult.SucceededWithResult)
+            if (response.SucceededWithResult)
             {
-                recordList = new AtProtoRecordList<T>(internalResult.Result!.Records, internalResult.Result.Cursor);
+                recordList = new AtProtoRecordList<T>(response.Result!.Records, response.Result.Cursor);
             }
             else
             {
                 recordList = new AtProtoRecordList<T>(new List<T>(), null);
             }
 
-            return new AtProtoHttpResult<AtProtoRecordList<T>>(internalResult.StatusCode, recordList, internalResult.AtErrorDetail);
+            return new AtProtoHttpResult<AtProtoRecordList<T>>(recordList, response.StatusCode, response.AtErrorDetail);
         }
 
         /// <summary>
@@ -328,33 +328,14 @@ namespace idunno.AtProto
                 new NameValueHeaderValue("Content-Type", mimeType)
             };
 
-            AtProtoHttpClient<BlobResult> request = new();
+            AtProtoHttpClient<CreateBlobResponse> request = new();
 
-            AtProtoHttpResult<BlobResult> result =
+            AtProtoHttpResult<CreateBlobResponse> result =
                 await request.PostBlob(service, UploadBlobEndpoint, blob, requestHeaders, accessToken, httpClient, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
 
-            AtProtoHttpResult<Blob?> flattenedResult = new(result.StatusCode, result?.Result?.blob, result?.AtErrorDetail);
+            AtProtoHttpResult<Blob?> flattenedResult = new(result?.Result?.blob, result!.StatusCode, result?.AtErrorDetail);
 
             return flattenedResult;
-        }
-
-        record InternalPagedRecordList<T>
-        {
-            public InternalPagedRecordList(IList<T> records, string? cursor)
-            {
-                Records = records;
-                Cursor = cursor;
-            }
-
-            /// <summary>
-            /// 
-            /// </summary>
-            public IList<T> Records { get; set; }
-
-            /// <summary>
-            /// 
-            /// </summary>
-            public string? Cursor { get; set; }
         }
     }
 }

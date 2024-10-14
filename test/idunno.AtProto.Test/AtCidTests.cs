@@ -15,7 +15,7 @@ namespace idunno.AtProto.Test
         [Fact]
         public void ValidAtCidValuesConstructCorrectly()
         {
-            AtCid atCid = new(ValidCid);
+            Cid atCid = new(ValidCid);
 
             Assert.Equal(ValidCid, atCid.Value);
         }
@@ -23,13 +23,13 @@ namespace idunno.AtProto.Test
         [Fact]
         public void EmptyValueConstructionShouldThrow()
         {
-            Assert.Throws<ArgumentNullException>(() => new AtCid(string.Empty));
+            Assert.Throws<ArgumentNullException>(() => new Cid(string.Empty));
         }
 
         [Fact]
         public void ImplicitConversionFromValidStringWorks()
         {
-            AtCid atCid = ValidCid;
+            Cid atCid = ValidCid;
 
             Assert.NotNull(atCid);
             Assert.Equal(ValidCid, atCid.Value);
@@ -38,7 +38,7 @@ namespace idunno.AtProto.Test
         [Fact]
         public void ExplicitConversionFromValidStringWorks()
         {
-            AtCid atCid = (AtCid)ValidCid;
+            Cid atCid = (Cid)ValidCid;
 
             Assert.NotNull(atCid);
             Assert.Equal(ValidCid, atCid.Value);
@@ -47,8 +47,8 @@ namespace idunno.AtProto.Test
         [Fact]
         public void EqualityWorks()
         {
-            AtCid lhs = (AtCid)ValidCid;
-            AtCid rhs = new(ValidCid);
+            Cid lhs = (Cid)ValidCid;
+            Cid rhs = new(ValidCid);
 
             Assert.NotNull(lhs);
             Assert.NotNull(rhs);

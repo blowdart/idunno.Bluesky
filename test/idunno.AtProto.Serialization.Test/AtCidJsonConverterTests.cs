@@ -19,7 +19,7 @@ namespace idunno.AtProto.Serialization.Test
             const string cidAsString = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
             const string expected = $"{{\"cid\":\"{cidAsString}\"}}";
 
-            AtCidExample atCidExample = new(new AtCid(cidAsString));
+            AtCidExample atCidExample = new(new Cid(cidAsString));
 
             string actual = JsonSerializer.Serialize(atCidExample, options: _jsonSerializerOptions);
 
@@ -32,7 +32,7 @@ namespace idunno.AtProto.Serialization.Test
             const string cidAsString = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
             const string cidAsJson = $"{{\"cid\":\"{cidAsString}\"}}";
 
-            AtCid expected = new (cidAsString);
+            Cid expected = new (cidAsString);
 
             AtCidExample? actual = JsonSerializer.Deserialize<AtCidExample>(cidAsJson, options: _jsonSerializerOptions);
 
@@ -55,9 +55,9 @@ namespace idunno.AtProto.Serialization.Test
 
         class AtCidExample
         {
-            public AtCidExample(AtCid cid) => Cid = cid;
+            public AtCidExample(Cid cid) => Cid = cid;
 
-            public AtCid Cid { get; }
+            public Cid Cid { get; }
         }
     }
 }

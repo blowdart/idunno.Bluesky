@@ -23,12 +23,17 @@ namespace idunno.AtProto
         /// <param name="statusCode">The underlying HTTP status code returned by the API call.</param>
         /// <param name="result">The resulting object of type <typeparamref name="TResult"/> returned by the API call, if any.</param>
         /// <param name="atErrorDetail">The <see cref="AtErrorDetail"/> returned by the API call, if any.</param>
-        public AtProtoHttpResult(HttpStatusCode statusCode, TResult? result, AtErrorDetail? atErrorDetail = null)
+        public AtProtoHttpResult(TResult? result, HttpStatusCode statusCode, AtErrorDetail? atErrorDetail = null)
         {
-            StatusCode = statusCode;
             Result = result;
+            StatusCode = statusCode;
             AtErrorDetail = atErrorDetail;
         }
+
+        /// <summary>
+        ///The result of an HttpRequest, if the request has was successful.
+        /// </summary>
+        public TResult? Result { get; internal set; }
 
         /// <summary>
         /// Gets the <see cref="HttpStatusCode" /> associated with the response to an AT Proto or Bluesky API request.
@@ -43,11 +48,6 @@ namespace idunno.AtProto
         /// </summary>
         /// 
         public AtErrorDetail? AtErrorDetail {get; internal set; }
-
-        /// <summary>
-        ///The result of an HttpRequest, if the request has was successful.
-        /// </summary>
-        public TResult? Result { get; internal set; }
 
         /// <summary>
         /// A flag indicating if the https request returned a status code of OK.

@@ -1,13 +1,12 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Globalization;
 using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-
-using idunno.AtProto.Json;
 
 namespace idunno.AtProto
 {
@@ -22,21 +21,13 @@ namespace idunno.AtProto
         /// </summary>
         public static readonly JsonSerializerOptions DefaultJsonSerializerOptions = new()
         {
-            Converters =
-            {
-                new AtIdentifierConverter(),
-                new AtUriConverter(),
-                new AtCidConverter(),
-                new DidConverter(),
-                new HandleConverter(),
-                new NsidConverter()
-            },
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            AllowOutOfOrderMetadataProperties = true
         };
 
         /// <summary>
-        /// Performs a GET request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
+        /// Performs an unauthenticated GET request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
         /// </summary>
         /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
@@ -45,7 +36,14 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         public async Task<AtProtoHttpResult<TResult>> Get(Uri service, string endpoint, HttpClient httpClient, CancellationToken cancellationToken = default)
         {
-            return await Get(service, endpoint, null, httpClient, cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await Get(
+                service: service,
+                endpoint: endpoint,
+                accessToken: null,
+                httpClient: httpClient,
+                subscribedLabelers : null,
+                jsonSerializerOptions : null,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -55,6 +53,7 @@ namespace idunno.AtProto
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
         /// <param name="accessToken">An optional access token to send in the HTTP Authorization header to the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -63,6 +62,7 @@ namespace idunno.AtProto
             string endpoint,
             string? accessToken,
             HttpClient httpClient,
+            IEnumerable<Did>? subscribedLabelers = null,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
         {
@@ -70,7 +70,20 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(endpoint);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            jsonSerializerOptions ??= DefaultJsonSerializerOptions;
+            if (jsonSerializerOptions is null)
+            {
+                jsonSerializerOptions = DefaultJsonSerializerOptions;
+            }
+            else
+            {
+                if (!jsonSerializerOptions.AllowOutOfOrderMetadataProperties)
+                {
+                    jsonSerializerOptions = new JsonSerializerOptions(jsonSerializerOptions)
+                    {
+                        AllowOutOfOrderMetadataProperties = true
+                    };
+                }
+            }
 
             using (var getMessage = new HttpRequestMessage(HttpMethod.Get, new Uri(service, endpoint)))
             {
@@ -80,6 +93,21 @@ namespace idunno.AtProto
                 if (accessToken is not null)
                 {
                     getMessage.AddBearerToken(accessToken);
+                }
+
+                // Labelers
+                if (subscribedLabelers is not null)
+                {
+                    List<string> labelerDidsAsString = new();
+                    foreach(Did did in subscribedLabelers)
+                    {
+                        labelerDidsAsString.Add(did);
+                    }
+
+                    if (labelerDidsAsString.Count != 0)
+                    {
+                        getMessage.Headers.Add("atproto-accept-labelers", labelerDidsAsString);
+                    }
                 }
 
                 using HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(getMessage, cancellationToken).ConfigureAwait(false);

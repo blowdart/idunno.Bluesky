@@ -41,7 +41,7 @@ namespace idunno.AtProto.Repo
         public bool Validate { get; set; } = true;
 
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public AtCid? SwapCID { get; set; }
+        public Cid? SwapCID { get; set; }
 
         [JsonRequired]
         public AtProtoRecordValue Record { get; set; }

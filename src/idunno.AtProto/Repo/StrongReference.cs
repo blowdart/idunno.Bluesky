@@ -14,8 +14,8 @@ namespace idunno.AtProto.Repo
         /// Creates a new <see cref="StrongReference"/> with the specified AT URI and CID.
         /// </summary>
         /// <param name="uri">The <see cref="AtUri"/> for the new subject.</param>
-        /// <param name="cid">The <see cref="AtCid"/> for the new subject</param>
-        public StrongReference(AtUri uri, AtCid cid)
+        /// <param name="cid">The <see cref="AtProto.Cid"/> for the new subject</param>
+        public StrongReference(AtUri uri, Cid cid)
         {
             Uri = uri;
             Cid = cid;
@@ -31,13 +31,13 @@ namespace idunno.AtProto.Repo
         public AtUri Uri { get; init; }
 
         /// <summary>
-        /// Gets the <see cref="AtCid"/> for the subject.
+        /// Gets the <see cref="AtProto.Cid"/> for the subject.
         /// </summary>
         /// <value>
-        /// The <see cref="AtCid"/> for the subject.
+        /// The <see cref="AtProto.Cid"/> for the subject.
         /// </value>
         [JsonInclude]
-        public AtCid Cid { get; init; }
+        public Cid Cid { get; init; }
 
         /// <summary>
         /// Returns a string representation of this instance.

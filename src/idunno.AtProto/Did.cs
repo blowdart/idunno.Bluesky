@@ -146,6 +146,18 @@ namespace idunno.AtProto
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Did FromString(string s) => s;
 
+        public static implicit operator string(Did d)
+        {
+            if (d is null)
+            {
+                return string.Empty;
+            }
+            else
+            {
+                return d.ToString();
+            }
+        }
+
         /// <summary>
         /// Determines whether two specified <see cref="Did"/>s the same value."/>
         /// </summary>
@@ -255,7 +267,7 @@ namespace idunno.AtProto
         {
             string[] segments = s.Split(':');
 
-            if (segments.Length == 2)
+            if (segments.Length == 3)
             {
                 return segments[1];
             }
