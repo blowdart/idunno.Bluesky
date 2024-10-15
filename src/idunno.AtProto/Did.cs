@@ -211,7 +211,7 @@ namespace idunno.AtProto
             {
                 if (throwOnError)
                 {
-                    ArgumentNullException.ThrowIfNullOrWhiteSpace(nameof(s));
+                    ArgumentNullException.ThrowIfNullOrWhiteSpace(s);
                 }
                 else
                 {

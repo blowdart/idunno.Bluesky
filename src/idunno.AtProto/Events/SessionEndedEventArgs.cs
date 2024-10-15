@@ -11,8 +11,9 @@ namespace idunno.AtProto.Events
         /// <summary>
         /// Creates a new instance of <see cref="SessionEndedEventArgs"/>.
         /// </summary>
-        /// <param name="did">The <see cref="Did"/> the session was created for.</param>
+        /// <param name="did">The <see cref="AtProto.Did"/> the session was created for.</param>
         /// <param name="service">The <see cref="Uri"/> of the service the session was created on.</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="did"/> or <paramref name="service"/> are null.</exception>
         public SessionEndedEventArgs(Did did, Uri service)
         {
             ArgumentNullException.ThrowIfNull(did);
@@ -23,15 +24,13 @@ namespace idunno.AtProto.Events
         }
 
         /// <summary>
-        /// Gets the <see cref="Did"/> the session was created for.
+        /// Gets the <see cref="AtProto.Did"/> the session was created for.
         /// </summary>
-        /// <value>The <see cref="Did"/> the session was created for.</value>
         public Did Did { get; }
 
         /// <summary>
         /// Gets the <see cref="Uri"/> of the service the session was created on.
         /// </summary>
-        /// <value>The <see cref="Uri"/> of the service the session was created on.</value>
         public Uri Service { get; }
     }
 }

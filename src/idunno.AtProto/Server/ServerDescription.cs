@@ -31,9 +31,6 @@ namespace idunno.AtProto.Server
         /// <summary>
         /// Gets the DID of this server.
         /// </summary>
-        /// <value>
-        /// The DID of this server.
-        /// </value>
         [JsonInclude]
         [JsonRequired]
         public Did Did { get; internal set; }
@@ -41,27 +38,18 @@ namespace idunno.AtProto.Server
         /// <summary>
         /// Gets a flag indicating whether the server needs an invite code.
         /// </summary>
-        /// <value>
-        /// A flag indicating whether the server needs an invite code.
-        /// </value>
         [JsonInclude]
         public bool InviteCodeRequired { get; internal set; }
 
         /// <summary>
         /// Gets a flag indicating whether the server will perform verification on phone numbers.
         /// </summary>
-        /// <value>
-        /// A flag indicating whether the server will perform verification on phone numbers.
-        /// </value>
         [JsonInclude]
         public bool PhoneVerificationRequired { get; internal set; }
 
         /// <summary>
         /// Gets a list of one or more domains that users can create handles with on this server.
         /// </summary>
-        /// <value>
-        /// A list of one or more domains that users can create handles with on this server.
-        /// </value>
         [JsonInclude]
         [JsonRequired]
         public IReadOnlyList<string> AvailableUserDomains { get; internal set; } = new List<string>();
@@ -69,18 +57,12 @@ namespace idunno.AtProto.Server
         /// <summary>
         /// Gets any links the server provides with its description.
         /// </summary>
-        /// <value>
-        /// Any links the server provides with its description.
-        /// </value>
         [JsonInclude]
         public Links? Links { get; internal set; }
 
         /// <summary>
         /// Gets any contact information the server provides with its description.
         /// </summary>
-        /// <value>
-        /// Any contact information the server provides with its description.
-        /// </value>
         [JsonInclude]
         public Contact? Contact { get; internal set; }
     }
@@ -93,18 +75,12 @@ namespace idunno.AtProto.Server
         /// <summary>
         /// Gets a URI to the server's privacy policy.
         /// </summary>
-        /// <value>
-        /// A URI to the server's privacy policy.
-        /// </value>
         [JsonInclude]
         public Uri? PrivacyPolicy { get; internal set; }
 
         /// <summary>
         /// Gets a URI to the server's terms of service.
         /// </summary>
-        /// <value>
-        /// A URI to the server's terms of service.
-        /// </value>
         [JsonInclude]
         public Uri? TermsOfService { get; internal set; }
     }
@@ -127,9 +103,6 @@ namespace idunno.AtProto.Server
         /// <summary>
         /// Gets the email address associated with the server.
         /// </summary>
-        /// <value>
-        /// The email address associated with the server.
-        /// </value>
         [JsonInclude]
         public string Email { get; internal set; }
 

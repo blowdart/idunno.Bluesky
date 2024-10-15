@@ -24,18 +24,12 @@ namespace idunno.AtProto.Repo
         /// <summary>
         /// Gets the <see cref="AtUri"/> for the subject.
         /// </summary>
-        /// <value>
-        /// The <see cref="AtUri"/> for the subject.
-        /// </value>
         [JsonInclude]
         public AtUri Uri { get; init; }
 
         /// <summary>
         /// Gets the <see cref="AtProto.Cid"/> for the subject.
         /// </summary>
-        /// <value>
-        /// The <see cref="AtProto.Cid"/> for the subject.
-        /// </value>
         [JsonInclude]
         public Cid Cid { get; init; }
 

@@ -1,7 +1,6 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Text.Json;
 using idunno.AtProto.Server;
 
 namespace idunno.AtProto
@@ -33,9 +32,13 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ResponseParseException">Thrown when the response from the service cannot be parsed or does not pass validation.</exception>
         public static async Task<AtProtoHttpResult<ServerDescription>> DescribeServer(Uri service, HttpClient httpClient, CancellationToken cancellationToken = default)
         {
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(httpClient);
+
             AtProtoHttpClient<ServerDescription> request = new();
 
             AtProtoHttpResult<ServerDescription> result = await request.Get(service, DescribeEndpoint, httpClient, cancellationToken).ConfigureAwait(false);
@@ -60,9 +63,14 @@ namespace idunno.AtProto
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ResponseParseException">Thrown when the response from the service cannot be parsed or does not pass validation.</exception>
-        public static async Task<AtProtoHttpResult<CreateSessionResponse>> CreateSession(Credentials credentials, Uri service, HttpClient httpClient, CancellationToken cancellationToken = default)
+        /// <exception cref="ArgumentNullException">Throw if <paramref name="credentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        public static async Task<AtProtoHttpResult<CreateSessionResponse>> CreateSession(
+            Credentials credentials, Uri service, HttpClient httpClient, CancellationToken cancellationToken = default)
         {
+            ArgumentNullException.ThrowIfNull(credentials);
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(httpClient);
+
             AtProtoHttpClient<CreateSessionResponse> request = new();
 
             AtProtoHttpResult<CreateSessionResponse> result = await request.Post(
@@ -84,10 +92,13 @@ namespace idunno.AtProto
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ResponseParseException">Thrown when the response from the service cannot be parsed or does not pass validation.</exception>
+        /// <remarks><para>Delete session requires the refresh token, not the access token.</para></remarks>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="refreshToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<EmptyResponse>> DeleteSession(string refreshToken, Uri service, HttpClient httpClient, CancellationToken cancellationToken = default)
         {
-            // delete-session works on the refresh token, not the access token.
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(refreshToken);
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(httpClient);
 
             AtProtoHttpClient<EmptyResponse> request = new();
 
@@ -102,9 +113,13 @@ namespace idunno.AtProto
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ResponseParseException">Thrown when the response from the service cannot be parsed or does not pass validation.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="refreshToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<RefreshSessionResponse>> RefreshSession(string refreshToken, Uri service, HttpClient httpClient, CancellationToken cancellationToken = default)
         {
+            ArgumentNullException.ThrowIfNullOrEmpty(refreshToken);
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(httpClient);
+
             AtProtoHttpClient<RefreshSessionResponse> request = new();
 
             AtProtoHttpResult<RefreshSessionResponse> result = await request.Post(
@@ -126,9 +141,13 @@ namespace idunno.AtProto
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ResponseParseException">Thrown when the response from the service cannot be parsed or does not pass validation.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accessToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<GetSessionResponse>> GetSession(string accessToken, Uri service, HttpClient httpClient, CancellationToken cancellationToken = default)
         {
+            ArgumentNullException.ThrowIfNullOrEmpty(accessToken);
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(httpClient);
+
             AtProtoHttpClient<GetSessionResponse> request = new();
 
             return await request.Get(service, GetSessionEndpoint, accessToken, httpClient: httpClient, cancellationToken: cancellationToken).ConfigureAwait(false);

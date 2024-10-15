@@ -41,6 +41,10 @@ namespace idunno.AtProto
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown if <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="service"/>,
+        /// <paramref name="accessToken"/>, or <paramref name="httpClient"/> is null.
+        /// </exception>
         public static async Task<AtProtoHttpResult<StrongReference>> CreateRecord(
             AtProtoRecordValue record,
             Nsid collection,
@@ -86,6 +90,10 @@ namespace idunno.AtProto
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown if <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="rKey"/>, <paramref name="service"/>,
+        /// <paramref name="accessToken"/>, or <paramref name="httpClient"/> is null.
+        /// </exception>
         public static async Task<AtProtoHttpResult<EmptyResponse>> DeleteRecord(
             AtIdentifier repo,
             Nsid collection,
@@ -128,6 +136,9 @@ namespace idunno.AtProto
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown if <paramref name="repo"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// </exception>
         public static async Task<AtProtoHttpResult<RepoDescription>> DescribeRepo(
             AtIdentifier repo,
             Uri service,
@@ -165,6 +176,9 @@ namespace idunno.AtProto
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown if <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="rKey"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// </exception>
         public static async Task<AtProtoHttpResult<T>> GetRecord<T>(
             AtIdentifier repo,
             Nsid collection,
@@ -215,6 +229,10 @@ namespace idunno.AtProto
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown if <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is not &gt;0 and &lt;=100.</exception>
         public static async Task<AtProtoHttpResult<AtProtoRecordList<T>>> ListRecords<T>(
             AtIdentifier repo,
             Nsid collection,
@@ -298,6 +316,9 @@ namespace idunno.AtProto
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">
+        /// Thrown if <paramref name="blob"/> is empty or the <paramref name="mimeType"/> is empty or not in the type/subtype.
+        /// </exception>
         public static async Task<AtProtoHttpResult<Blob?>> UploadBlob(
             byte[] blob,
             string mimeType,

@@ -8,7 +8,6 @@ namespace idunno.AtProto.Repo
     internal sealed record CreateRecordRequest
     {
         // https://docs.bsky.app/docs/api/com-atproto-repo-create-record
-
         public CreateRecordRequest(
             Nsid collection,
             Did creatorDecentralizedIdentifier,

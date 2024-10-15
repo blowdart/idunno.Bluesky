@@ -16,6 +16,7 @@ namespace idunno.AtProto.Events
         /// <param name="handle">The <see cref="Handle"/> the session was created for.</param>
         /// <param name="accessJwt">The access token for the session.</param>
         /// <param name="refreshJwt">The refresh token for the session.</param>
+        /// <exception cref="ArgumentNullException">Thrown if any of the parameters are null</exception>
         public SessionCreatedEventArgs(Did did, Uri service, Handle handle, string accessJwt, string refreshJwt)
         {
             ArgumentNullException.ThrowIfNull(did);
@@ -34,35 +35,26 @@ namespace idunno.AtProto.Events
         /// <summary>
         /// Gets the <see cref="Did"/> the session was created for.
         /// </summary>
-        /// <value>The <see cref="Did"/> the session was created for.</value>
         public Did Did { get; }
 
         /// <summary>
         /// Gets the <see cref="Uri"/> of the service the session was created on.
         /// </summary>
-        /// <value>The <see cref="Uri"/> of the service the session was created on.</value>
         public Uri Service { get; }
 
         /// <summary>
         /// Gets the <see cref="Handle"/> the session was created for.
         /// </summary>
-        /// <value>The <see cref="Handle"/> the session was created for.</value>
         public Handle Handle { get; }
 
         /// <summary>
         /// Gets a string representation of the access token for the session.
         /// </summary>
-        /// <value>
-        /// A string representation of the access token for the session.
-        /// </value>
         public string AccessJwt { get; }
 
         /// <summary>
         /// Gets a string representation of the refresh token for the session.
         /// </summary>
-        /// <value>
-        /// A string representation of the refresh token for the session.
-        /// </value>
         public string RefreshJwt { get; }
 
     }

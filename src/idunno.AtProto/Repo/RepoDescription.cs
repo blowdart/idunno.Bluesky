@@ -31,7 +31,6 @@ namespace idunno.AtProto.Repo
         /// <summary>
         /// Gets the <see cref="Handle" /> the repo owned by.
         /// </summary>
-        /// <value>The handle the repo is owned by.</value>
         [JsonInclude]
         [JsonRequired]
         public Handle Handle { get; init; }
@@ -39,7 +38,6 @@ namespace idunno.AtProto.Repo
         /// <summary>
         /// Gets the <see cref="Did"/> for the repo.
         /// </summary>
-        /// <value>The <see cref="Did"/> for the repo.</value>
         [JsonInclude]
         [JsonRequired]
         public Did Did { get; init; }
@@ -47,7 +45,6 @@ namespace idunno.AtProto.Repo
         /// <summary>
         /// Gets the <see cref="DidDocument"/> for the repo.
         /// </summary>
-        /// <value>The <see cref="DidDocument"/> for the repo.</value>
         [JsonInclude]
         [JsonRequired]
         public DidDocument DidDoc { get; init; }
@@ -55,7 +52,6 @@ namespace idunno.AtProto.Repo
         /// <summary>
         /// Gets a collection of NSIDs for the collections present in the repo.
         /// </summary>
-        /// <value>A collection of NSIDs for the collections present in the repo.</value>
         [JsonInclude]
         [JsonRequired]
         public IReadOnlyCollection<RecordKey> Collections { get; init; }
@@ -63,7 +59,6 @@ namespace idunno.AtProto.Repo
         /// <summary>
         /// Gets a flag indicating if the repo handle is currently valid (resolves bi-directionally).
         /// </summary>
-        /// <value>A flag indicating if the repo handle is currently valid (resolves bi-directionally).</value>
         [JsonInclude]
         [JsonRequired]
         public bool HandleIsCorrect { get; init; }

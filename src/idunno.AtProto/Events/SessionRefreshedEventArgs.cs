@@ -11,10 +11,11 @@ namespace idunno.AtProto.Events
         /// <summary>
         /// Creates a new instance of <see cref="SessionRefreshedEventArgs"/>
         /// </summary>
-        /// <param name="did">The <see cref="Did"/> the session was created for.</param>
+        /// <param name="did">The <see cref="AtProto.Did"/> the session was created for.</param>
         /// <param name="service">The <see cref="Uri"/> of the service the session was created on.</param>
         /// <param name="accessJwt">The access token for the session.</param>
         /// <param name="refreshJwt">The refresh token for the session.</param>
+        /// <exception cref="ArgumentNullException">Thrown if any of the parameters are null.</exception>
         public SessionRefreshedEventArgs(Did did, Uri service, string accessJwt, string refreshJwt)
         {
             ArgumentNullException.ThrowIfNull(did);
@@ -30,32 +31,23 @@ namespace idunno.AtProto.Events
         }
 
         /// <summary>
-        /// Gets the <see cref="Did"/> the session was created for.
+        /// Gets the <see cref="AtProto.Did"/> the session was created for.
         /// </summary>
-        /// <value>The <see cref="Did"/> the session was created for.</value>
         public Did Did { get; }
 
         /// <summary>
         /// Gets the <see cref="Uri"/> of the service the session was created on.
         /// </summary>
-        /// <value>The <see cref="Uri"/> of the service the session was created on.</value>
         public Uri Service { get; }
 
         /// <summary>
         /// Gets a string representation of the access token for the session.
         /// </summary>
-        /// <value>
-        /// A string representation of the access token for the session.
-        /// </value>
         public string AccessJwt { get; }
 
         /// <summary>
         /// Gets a string representation of the refresh token for the session.
         /// </summary>
-        /// <value>
-        /// A string representation of the refresh token for the session.
-        /// </value>
         public string RefreshJwt { get; }
-
     }
 }

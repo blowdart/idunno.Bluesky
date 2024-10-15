@@ -1,7 +1,6 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Reflection.Metadata.Ecma335;
 using System.Text.Json.Serialization;
 
 namespace idunno.AtProto.Repo
