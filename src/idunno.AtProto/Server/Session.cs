@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace idunno.AtProto.Server
 {
     /// <summary>
@@ -10,6 +12,8 @@ namespace idunno.AtProto.Server
     {
         internal Session(Uri service, CreateSessionResponse createSessionResult)
         {
+            Service = service;
+
             AccessJwt = createSessionResult.AccessJwt;
             RefreshJwt = createSessionResult.RefreshJwt;
             Handle = createSessionResult.Handle;
@@ -21,108 +25,116 @@ namespace idunno.AtProto.Server
             EmailAuthFactor = createSessionResult.EmailAuthFactor;
             IsAccountActive = createSessionResult.Active;
             AccountStatus = createSessionResult.Status;
-
-            Service = service;
         }
 
-        internal Session(Uri service, GetSessionResponse getSessionResult)
+        internal Session(Uri service, GetSessionResponse getSessionResponse)
         {
-            Did = getSessionResult.Did;
-            Handle = getSessionResult.Handle;
-
-            Email = getSessionResult.Email;
-            EmailConfirmed = getSessionResult.EmailConfirmed;
-            EmailAuthFactor = getSessionResult.EmailAuthFactor;
-            DidDoc = getSessionResult.DidDoc;
-            IsAccountActive = getSessionResult.Active;
-            AccountStatus = getSessionResult.Status;
-
             Service = service;
+
+            Did = getSessionResponse.Did;
+            Handle = getSessionResponse.Handle;
+
+            Email = getSessionResponse.Email;
+            EmailConfirmed = getSessionResponse.EmailConfirmed;
+            EmailAuthFactor = getSessionResponse.EmailAuthFactor;
+            DidDoc = getSessionResponse.DidDoc;
+            IsAccountActive = getSessionResponse.Active;
+            AccountStatus = getSessionResponse.Status;
+        }
+
+        internal Session(Uri service, GetSessionResponse getSessionResponse, string? accessToken, string? refreshToken) : this(service, getSessionResponse)
+        {
+            UpdateAccessTokens(accessToken, refreshToken);
         }
 
         /// <summary>
-        /// Gets the access token for the user whose authentication produced this Session instance.
+        /// Gets the access token for the actor whose authentication produced this Session instance.
         /// </summary>
         /// <remarks>
-        /// <para>The access token is attached automatically to every Bluesky API call that requires authentication.</para>
+        /// <para>The access token is attached automatically to every API call through an agent that requires authentication.</para>
         /// </remarks>
-        public string? AccessJwt { get; internal set; }
+        public string? AccessJwt { get; private set; }
 
         /// <summary>
-        /// Gets the refresh token for the user whose authentication produced this Session instance.
+        /// Gets the refresh token for the actor whose authentication produced this Session instance.
         /// </summary>
         /// <remarks>
         /// <para>The refresh token is used to exchange an expiring access token for a new access token.</para>
         /// </remarks>
-        public string? RefreshJwt { get; internal set; }
+        public string? RefreshJwt { get; private set; }
 
         /// <summary>
-        /// Gets the <see cref="Did"/> of the user whose authentication produced this Session instance.
+        /// Gets the <see cref="Did"/> of the actor whose authentication produced this Session instance.
         /// </summary>
-        public Did Did { get; internal set; }
+        public Did Did { get; init; }
 
         /// <summary>
-        /// Gets the <see cref="Handle"/> of the user whose authentication produced this Session instance.
+        /// Gets the <see cref="Handle"/> of the actor whose authentication produced this Session instance.
         /// </summary>
-        public Handle Handle { get; internal set; }
+        public Handle Handle { get; init; }
 
         /// <summary>
-        /// Gets the <see cref="DidDoc " /> of the user whose authentication produced this Session instance.
+        /// Gets the <see cref="DidDoc " /> of the actor whose authentication produced this Session instance.
         /// </summary>
         /// <remarks>
         /// <para>A DID document actus as a profile for its subject, containing metadata about the subject such
         /// as signing keys and service endpoints to where the subject's data is stored.</para>
         /// </remarks>
-        public DidDocument? DidDoc { get; internal set; }
+        public DidDocument? DidDoc { get; init; }
 
         /// <summary>
-        /// Gets the email of the user whose authentication produced this Session instance.
+        /// Gets the email of the actor whose authentication produced this Session instance.
         /// </summary>
-        public string? Email { get; internal set; }
+        public string? Email { get; init; }
 
         /// <summary>
         /// Gets a flag indicating if the <see cref="Email"/> has been confirmed.
         /// </summary>
-        public bool? EmailConfirmed { get; internal set; }
+        public bool? EmailConfirmed { get; init; }
 
         /// <summary>
-        /// Gets a flag indicating whether the user used an email authentication factor during login.
+        /// Gets a flag indicating whether the actor used an email authentication factor during login.
         /// </summary>
-        public bool? EmailAuthFactor { get; internal set; }
+        public bool? EmailAuthFactor { get; init; }
 
         /// <summary>
-        /// Gets a flag indicating whether the account is active or not.
+        /// Gets a flag indicating whether the actor's account is active or not.
         /// </summary>
-        public bool? IsAccountActive { get; internal set; }
+        public bool? IsAccountActive { get; init; }
 
         /// <summary>
-        /// Indicates a possible reason for why the account is not active.
+        /// Indicates a possible reason for why the actor's account is not active.
         /// If <see cref="IsAccountActive"/> is false and no status is supplied, then the host makes no claim
         /// for why the repository is no longer being hosted.
         /// </summary>
-        public AccountStatus? AccountStatus { get; internal set; } 
+        public AccountStatus? AccountStatus { get; init; } 
 
         /// <summary>
         /// Gets the URI of the service that the <see cref="Session"/> instance was created on.
         /// </summary>
-        public Uri? Service { get; internal set; }
+        public Uri? Service { get; init; }
 
         /// <summary>
-        /// Gets the URI of the Personal Data Server (PDS) of the user whose authentication produced this Session instance.
+        /// Returns a flag indicating whether this session has an access token.
         /// </summary>
-        public Uri? PersonalDataServer
+        [MemberNotNullWhen(true, nameof(AccessJwt))]
+        public bool HasAccessToken
         {
             get
             {
-                if (DidDoc is null ||
-                    DidDoc.Services is null ||
-                    !DidDoc.Services.Where(s => s.Id == @"#atproto_pds").Any())
-                {
-                    return null;
-                }
-
-                return DidDoc.Services.Where(s => s.Id == @"#atproto_pds").First().ServiceEndpoint;
+                return !string.IsNullOrWhiteSpace(AccessJwt);
             }
+        }
+
+        /// <summary>
+        /// Updates this session's access tokens.
+        /// </summary>
+        /// <param name="accessJwt">The new access token to use.</param>
+        /// <param name="refreshJwt">The new refresh token to use.</param>
+        internal void UpdateAccessTokens(string? accessJwt, string? refreshJwt)
+        {
+            AccessJwt = accessJwt;
+            RefreshJwt = refreshJwt;
         }
     }
 }

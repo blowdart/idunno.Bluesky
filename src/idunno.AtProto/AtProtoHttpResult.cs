@@ -23,11 +23,13 @@ namespace idunno.AtProto
         /// <param name="statusCode">The underlying HTTP status code returned by the API call.</param>
         /// <param name="result">The resulting object of type <typeparamref name="TResult"/> returned by the API call, if any.</param>
         /// <param name="atErrorDetail">The <see cref="AtErrorDetail"/> returned by the API call, if any.</param>
-        public AtProtoHttpResult(TResult? result, HttpStatusCode statusCode, AtErrorDetail? atErrorDetail = null)
+        /// <param name="rateLimit">The API rate limit for the current user, if the response included one.</param>
+        public AtProtoHttpResult(TResult? result, HttpStatusCode statusCode, AtErrorDetail? atErrorDetail = null, RateLimit? rateLimit = null)
         {
             Result = result;
             StatusCode = statusCode;
             AtErrorDetail = atErrorDetail;
+            RateLimit = rateLimit;
         }
 
         /// <summary>
@@ -71,5 +73,10 @@ namespace idunno.AtProto
                 return Succeeded && Result is not null;
             }
         }
+
+        /// <summary>
+        /// The api rate limit, if the api returned one, otherwise null.
+        /// </summary>
+        public RateLimit? RateLimit { get; init; }
     }
 }

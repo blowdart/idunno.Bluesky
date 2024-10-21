@@ -13,7 +13,13 @@ namespace idunno.AtProto
     public abstract class Agent : IDisposable
     {
         private static readonly string s_defaultAgent = "idunno.AtProto/" + typeof(Agent).Assembly.GetName().Version;
-        private static readonly HttpClient s_sharedClient = new();
+
+        // Keep this enabled as after the great join wave of Oct 16th some PDSs now always return
+        // gziped content even if the client doesn't ask for it in with the Content-Encoding header.
+        private static readonly HttpClientHandler s_httpClientHandler = new() { AutomaticDecompression = DecompressionMethods.All };
+
+        private static readonly HttpClient s_sharedClient = new(s_httpClientHandler);
+
         private volatile bool _disposed;
 
         /// <summary>
@@ -22,7 +28,6 @@ namespace idunno.AtProto
         static Agent()
         {
             // Configure the shared client with opinionated defaults.
-
             s_sharedClient.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrHigher;
             s_sharedClient.DefaultRequestVersion = HttpVersion.Version20;
             s_sharedClient.DefaultRequestHeaders.UserAgent.ParseAdd(s_defaultAgent);

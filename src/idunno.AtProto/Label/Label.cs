@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
+using idunno.AtProto.Repo;
 
 namespace idunno.AtProto
 {
@@ -15,7 +16,7 @@ namespace idunno.AtProto
     /// </remarks>
     [SuppressMessage("Usage", "CA1054:Uri parameters should not be strings", Justification = "The label uri can be either an at uri or a did.")]
     [SuppressMessage("Usage", "CA1056:Uri properties should not be strings", Justification = "The label uri can be either an at uri or a did.")]
-    public sealed record Label
+    public sealed record Label : AtProtoObject
     {
         /// <summary>
         /// Creates a new instance of <see cref="Label"/>.

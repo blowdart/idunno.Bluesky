@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Globalization;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Text;
@@ -41,8 +41,8 @@ namespace idunno.AtProto
                 endpoint: endpoint,
                 accessToken: null,
                 httpClient: httpClient,
-                subscribedLabelers : null,
-                jsonSerializerOptions : null,
+                subscribedLabelers: null,
+                jsonSerializerOptions: null,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -85,152 +85,17 @@ namespace idunno.AtProto
                 }
             }
 
-            using (var getMessage = new HttpRequestMessage(HttpMethod.Get, new Uri(service, endpoint)))
+            using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, new Uri(service, endpoint)))
             {
-                getMessage.Headers.Accept.Clear();
-                getMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(MediaTypeNames.Application.Json));
+                ConfigureRequest(httpRequestMessage, httpClient, accessToken, subscribedLabelers);
 
-                if (accessToken is not null)
+                try
                 {
-                    getMessage.AddBearerToken(accessToken);
-                }
-
-                // Labelers
-                if (subscribedLabelers is not null)
-                {
-                    List<string> labelerDidsAsString = new();
-                    foreach(Did did in subscribedLabelers)
-                    {
-                        labelerDidsAsString.Add(did);
-                    }
-
-                    if (labelerDidsAsString.Count != 0)
-                    {
-                        getMessage.Headers.Add("atproto-accept-labelers", labelerDidsAsString);
-                    }
-                }
-
-                using HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(getMessage, cancellationToken).ConfigureAwait(false);
-                AtProtoHttpResult<TResult> result = new()
-                {
-                    StatusCode = httpResponseMessage.StatusCode
-                };
-
-                if (httpResponseMessage.IsSuccessStatusCode)
-                {
-                    if (typeof(TResult) != typeof(EmptyResponse))
-                    {
-                        string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
-                        result.Result = JsonSerializer.Deserialize<TResult>(
-                            responseContent,
-                            jsonSerializerOptions);
-                    }
-                }
-                else
-                {
-                    string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
-                    AtErrorDetail? atErrorDetail = JsonSerializer.Deserialize<AtErrorDetail>(
-                        responseContent,
-                        jsonSerializerOptions);
-
-                    if (atErrorDetail is null)
-                    {
-                        result.AtErrorDetail = new AtErrorDetail();
-                    }
-                    else
-                    {
-                        result.AtErrorDetail = atErrorDetail;
-                    }
-
-                    result.AtErrorDetail.Instance = getMessage.RequestUri;
-                    result.AtErrorDetail.HttpMethod = getMessage.Method;
-                }
-                return result;
-            }
-        }
-
-        /// <summary>
-        /// Performs a POST request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
-        /// </summary>
-        /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
-        /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
-        /// <param name="requestBody">An optional object to serialize to JSON and send as the request body.</param>
-        /// <param name="accessToken">The access token to send in the HTTP Authorization header to the <paramref name="service"/>.</param>
-        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
-        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>The task object representing the asynchronous operation.</returns>
-        public async Task<AtProtoHttpResult<TResult>> Post(
-            Uri service,
-            string endpoint,
-            object? requestBody,
-            string? accessToken,
-            HttpClient httpClient,
-            JsonSerializerOptions? jsonSerializerOptions = null,
-            CancellationToken cancellationToken = default)
-        {
-            return await Post(service, endpoint, requestBody, null, accessToken, httpClient, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Performs a POST request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
-        /// </summary>
-        /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
-        /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
-        /// <param name="requestBody">An optional object to serialize to JSON and send as the request body.</param>
-        /// <param name="accessToken">The access token to send in the HTTP Authorization header to the <paramref name="service"/>.</param>
-        /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
-        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
-        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>The task object representing the asynchronous operation.</returns>
-        public async Task<AtProtoHttpResult<TResult>> Post(
-            Uri service,
-            string endpoint,
-            object? requestBody,
-            IReadOnlyCollection<NameValueHeaderValue>? requestHeaders,
-            string? accessToken,
-            HttpClient httpClient,
-            JsonSerializerOptions? jsonSerializerOptions = null,
-            CancellationToken cancellationToken = default)
-        {
-            ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNullOrEmpty(endpoint);
-            ArgumentNullException.ThrowIfNull(httpClient);
-
-            jsonSerializerOptions ??= DefaultJsonSerializerOptions;
-
-            using (var postMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(service, endpoint)))
-            {
-                postMessage.Headers.Accept.Clear();
-                postMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(MediaTypeNames.Application.Json));
-
-                if (accessToken is not null)
-                {
-                    postMessage.AddBearerToken(accessToken);
-                }
-
-                if (requestHeaders is not null)
-                {
-                    foreach (NameValueHeaderValue header in requestHeaders)
-                    {
-                        postMessage.Headers.TryAddWithoutValidation(header.Name, header.Value);
-                    }
-                }
-
-                if (requestBody is not null)
-                {
-                    string content = JsonSerializer.Serialize(requestBody, jsonSerializerOptions);
-                    postMessage.Content = new StringContent(content, Encoding.UTF8, MediaTypeNames.Application.Json);
-                }
-
-                using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(postMessage, cancellationToken).ConfigureAwait(false))
-                {
+                    using HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false);
                     AtProtoHttpResult<TResult> result = new()
                     {
-                        StatusCode = httpResponseMessage.StatusCode
+                        StatusCode = httpResponseMessage.StatusCode,
+                        RateLimit = ExtractRateLimit(httpResponseMessage.Headers)
                     };
 
                     if (httpResponseMessage.IsSuccessStatusCode)
@@ -246,26 +111,124 @@ namespace idunno.AtProto
                     }
                     else
                     {
-                        string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
-                        AtErrorDetail? atErrorDetail = JsonSerializer.Deserialize<AtErrorDetail>(
-                            responseContent,
-                            jsonSerializerOptions);
-
-                        if (atErrorDetail is null)
-                        {
-                            result.AtErrorDetail = new AtErrorDetail();
-                        }
-                        else
-                        {
-                            result.AtErrorDetail = atErrorDetail;
-                        }
-
-                        result.AtErrorDetail.Instance = postMessage.RequestUri;
-                        result.AtErrorDetail.HttpMethod = postMessage.Method;
+                        result.AtErrorDetail = await BuildErrorDetail(httpRequestMessage, httpResponseMessage, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
                     }
 
                     return result;
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    return new AtProtoHttpResult<TResult>(null, System.Net.HttpStatusCode.OK, null);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Performs a POST request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
+        /// </summary>
+        /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
+        /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
+        /// <param name="requestBody">An optional object to serialize to JSON and send as the request body.</param>
+        /// <param name="accessToken">The access token to send in the HTTP Authorization header to the <paramref name="service"/>.</param>
+        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
+        /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
+        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        public async Task<AtProtoHttpResult<TResult>> Post(
+            Uri service,
+            string endpoint,
+            object? requestBody,
+            string? accessToken,
+            HttpClient httpClient,
+            IEnumerable<Did>? subscribedLabelers = null,
+            JsonSerializerOptions? jsonSerializerOptions = null,
+            CancellationToken cancellationToken = default)
+        {
+            return await Post(service, endpoint, requestBody, null, accessToken, httpClient, subscribedLabelers, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Performs a POST request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
+        /// </summary>
+        /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
+        /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
+        /// <param name="requestBody">An optional object to serialize to JSON and send as the request body.</param>
+        /// <param name="accessToken">The access token to send in the HTTP Authorization header to the <paramref name="service"/>.</param>
+        /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
+        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
+        /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
+        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        public async Task<AtProtoHttpResult<TResult>> Post(
+            Uri service,
+            string endpoint,
+            object? requestBody,
+            IReadOnlyCollection<NameValueHeaderValue>? requestHeaders,
+            string? accessToken,
+            HttpClient httpClient,
+            IEnumerable<Did>? subscribedLabelers = null,
+            JsonSerializerOptions? jsonSerializerOptions = null,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNullOrEmpty(endpoint);
+            ArgumentNullException.ThrowIfNull(httpClient);
+
+            jsonSerializerOptions ??= DefaultJsonSerializerOptions;
+
+            using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(service, endpoint)))
+            {
+                ConfigureRequest(httpRequestMessage, httpClient, accessToken, subscribedLabelers);
+
+                if (requestHeaders is not null)
+                {
+                    foreach (NameValueHeaderValue header in requestHeaders)
+                    {
+                        httpRequestMessage.Headers.TryAddWithoutValidation(header.Name, header.Value);
+                    }
+                }
+
+                if (requestBody is not null)
+                {
+                    string content = JsonSerializer.Serialize(requestBody, jsonSerializerOptions);
+                    httpRequestMessage.Content = new StringContent(content, Encoding.UTF8, MediaTypeNames.Application.Json);
+                }
+
+                try
+                {
+
+                    using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false))
+                    {
+                        AtProtoHttpResult<TResult> result = new()
+                        {
+                            StatusCode = httpResponseMessage.StatusCode,
+                            RateLimit = ExtractRateLimit(httpResponseMessage.Headers)
+                        };
+
+                        if (httpResponseMessage.IsSuccessStatusCode)
+                        {
+                            if (typeof(TResult) != typeof(EmptyResponse))
+                            {
+                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+                                result.Result = JsonSerializer.Deserialize<TResult>(
+                                    responseContent,
+                                    jsonSerializerOptions);
+                            }
+                        }
+                        else
+                        {
+                            result.AtErrorDetail = await BuildErrorDetail(httpRequestMessage, httpResponseMessage, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
+                        }
+
+                        return result;
+                    }
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    return new AtProtoHttpResult<TResult>(null, System.Net.HttpStatusCode.OK, null);
                 }
             }
         }
@@ -306,68 +269,178 @@ namespace idunno.AtProto
 
             jsonSerializerOptions ??= DefaultJsonSerializerOptions;
 
-            using (var postMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(service, endpoint)))
+            using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(service, endpoint)))
             {
-                postMessage.Headers.Accept.Clear();
-                postMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(MediaTypeNames.Application.Json));
+                ConfigureRequest(httpRequestMessage, httpClient, accessToken);
 
-                if (accessToken is not null)
-                {
-                    postMessage.AddBearerToken(accessToken);
-                }
-
-                postMessage.Content = new ByteArrayContent(blob);
+                httpRequestMessage.Content = new ByteArrayContent(blob);
 
                 if (contentHeaders is not null)
                 {
                     foreach (NameValueHeaderValue header in contentHeaders)
                     {
-                        postMessage.Content.Headers.Add(header.Name, header.Value);
+                        httpRequestMessage.Content.Headers.Add(header.Name, header.Value);
                     }
                 }
 
-                using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(postMessage, cancellationToken).ConfigureAwait(false))
+                try
                 {
-                    AtProtoHttpResult<TResult> result = new()
+                    using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false))
                     {
-                        StatusCode = httpResponseMessage.StatusCode
-                    };
-
-                    if (httpResponseMessage.IsSuccessStatusCode)
-                    {
-                        if (typeof(TResult) != typeof(EmptyResponse))
+                        AtProtoHttpResult<TResult> result = new()
                         {
-                            string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                            StatusCode = httpResponseMessage.StatusCode,
+                            RateLimit = ExtractRateLimit(httpResponseMessage.Headers)
+                        };
 
-                            result.Result = JsonSerializer.Deserialize<TResult>(
-                                responseContent,
-                                jsonSerializerOptions);
-                        }
-                    }
-                    else
-                    {
-                        string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
-                        AtErrorDetail? atErrorDetail = JsonSerializer.Deserialize<AtErrorDetail>(
-                            responseContent,
-                            jsonSerializerOptions);
-
-                        if (atErrorDetail is null)
+                        if (httpResponseMessage.IsSuccessStatusCode)
                         {
-                            result.AtErrorDetail = new AtErrorDetail();
+                            if (typeof(TResult) != typeof(EmptyResponse))
+                            {
+                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+                                result.Result = JsonSerializer.Deserialize<TResult>(
+                                    responseContent,
+                                    jsonSerializerOptions);
+                            }
                         }
                         else
                         {
-                            result.AtErrorDetail = atErrorDetail;
+                            result.AtErrorDetail = await BuildErrorDetail(httpRequestMessage, httpResponseMessage, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
                         }
 
-                        result.AtErrorDetail.Instance = postMessage.RequestUri;
-                        result.AtErrorDetail.HttpMethod = postMessage.Method;
+                        return result;
                     }
-
-                    return result;
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    return new AtProtoHttpResult<TResult>(null, System.Net.HttpStatusCode.OK, null);
                 }
             }
+        }
+
+        private static async Task<AtErrorDetail> BuildErrorDetail(
+            HttpRequestMessage request,
+            HttpResponseMessage responseMessage,
+            JsonSerializerOptions jsonSerializerOptions,
+            CancellationToken cancellationToken = default)
+        {
+            AtErrorDetail? errorDetail = new()
+            {
+                Instance = request.RequestUri,
+                HttpMethod = request.Method
+            };
+
+            if (responseMessage.Content.Headers.ContentType is not null &&
+                responseMessage.Content.Headers.ContentType.MediaType is not null &&
+                responseMessage.Content.Headers.ContentType.MediaType.Equals(MediaTypeNames.Application.Json, StringComparison.OrdinalIgnoreCase))
+            {
+                string responseContent = await responseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+                if (responseContent is not null && responseContent.Length > 0)
+                {
+                    try
+                    {
+                        AtErrorDetail? responseAtErrorDetail = JsonSerializer.Deserialize<AtErrorDetail>(
+                            responseContent,
+                            jsonSerializerOptions);
+
+                        if (responseAtErrorDetail is not null)
+                        {
+                            errorDetail = responseAtErrorDetail;
+                        }
+                    }
+                    catch (NotSupportedException) { }
+                    catch (JsonException) { }
+                    catch (ArgumentNullException) { }
+                }
+            }
+
+            return errorDetail;
+        }
+
+        private static void ConfigureRequest(HttpRequestMessage httpRequestMessage, HttpClient httpClient, string? accessToken, IEnumerable<Did>? subscribedLabelers = null)
+        {
+            // Because we're using HttpRequestMessage.SendAsync none of the useful default configuration on the httpClient comes through.
+            // So copy the ones we care most about into the request message.
+
+            httpRequestMessage.Version = httpClient.DefaultRequestVersion;
+            httpRequestMessage.VersionPolicy = httpClient.DefaultVersionPolicy;
+
+            foreach (KeyValuePair<string, IEnumerable<string>> header in httpClient.DefaultRequestHeaders)
+            {
+                httpRequestMessage.Headers.Add(header.Key, header.Value);
+            }
+
+            // Force the request to be json.
+            httpRequestMessage.Headers.Accept.Clear();
+            httpRequestMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(MediaTypeNames.Application.Json));
+
+            if (accessToken is not null)
+            {
+                httpRequestMessage.AddBearerToken(accessToken);
+            }
+
+            if (subscribedLabelers is not null)
+            {
+                List<string> labelerIdentifiers = new();
+                foreach (Did did in subscribedLabelers)
+                {
+                    labelerIdentifiers.Add(did);
+                }
+
+                if (labelerIdentifiers.Count != 0)
+                {
+                    httpRequestMessage.Headers.Add("atproto-accept-labelers", labelerIdentifiers);
+                }
+            }
+        }
+
+        private static RateLimit? ExtractRateLimit(HttpResponseHeaders responseHeaders)
+        {
+            if (!responseHeaders.TryGetValues("ratelimit-limit", out IEnumerable<string>? limitHeaderValues) ||
+                !responseHeaders.TryGetValues("ratelimit-remaining", out IEnumerable<string>? remainingValues) ||
+                !responseHeaders.TryGetValues("ratelimit-reset", out IEnumerable<string>? resetValues) ||
+                !responseHeaders.TryGetValues("ratelimit-policy", out IEnumerable<string>? limitPolicyValues))
+            {
+                return null;
+            }
+
+            string? limitHeaderValue = limitHeaderValues.FirstOrDefault();
+            string? remainingHeaderValue = remainingValues.FirstOrDefault();
+            string? resetHeaderValue = resetValues.FirstOrDefault();
+            string? policyHeaderValue = limitPolicyValues.FirstOrDefault();
+
+            if (limitHeaderValue is null ||
+                remainingHeaderValue is null ||
+                resetHeaderValue is null ||
+                string.IsNullOrEmpty(policyHeaderValue))
+            {
+                return null;
+            }
+
+            if(!int.TryParse(limitHeaderValue, out int limit) || 
+               !int.TryParse(remainingHeaderValue, out int remaining) ||
+               !long.TryParse(resetHeaderValue, out long reset))
+            {
+                return null;
+            }
+
+            if (!policyHeaderValue.Contains(";w=", StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            string[] policyParts = policyHeaderValue.Split(";w=");
+
+            if (policyParts.Length != 2 ||
+                !int.TryParse(policyParts[0], out int readLimit) ||
+                !int.TryParse(policyParts[1], out int writeLimit))
+            {
+                return null;
+            }
+
+            return new RateLimit(limit, remaining, reset, readLimit, writeLimit);
         }
     }
 }

@@ -1,11 +1,9 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Globalization;
-
 namespace idunno.AtProto
 {
-    internal static class StringExtensions
+    internal static class InternalStringExtensions
     {
         /// <summary>
         /// Counts the number of times the character <paramref name="c"/> appears in <paramref name="s"/>.

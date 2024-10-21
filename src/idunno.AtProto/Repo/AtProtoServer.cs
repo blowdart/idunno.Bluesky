@@ -72,8 +72,8 @@ namespace idunno.AtProto
                 createRecordRequest,
                 accessToken,
                 httpClient,
-                jsonSerializerOptions,
-                cancellationToken).ConfigureAwait(false);
+                jsonSerializerOptions: jsonSerializerOptions,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -123,8 +123,8 @@ namespace idunno.AtProto
                 deleteRecordRequest,
                 accessToken,
                 httpClient,
-                jsonSerializerOptions,
-                cancellationToken).ConfigureAwait(false);
+                jsonSerializerOptions : jsonSerializerOptions,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         /// <summary>
         /// Gets information about an account and repository, including the list of collections.
@@ -233,7 +233,7 @@ namespace idunno.AtProto
         /// Thrown if <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is not &gt;0 and &lt;=100.</exception>
-        public static async Task<AtProtoHttpResult<AtProtoRecordList<T>>> ListRecords<T>(
+        public static async Task<AtProtoHttpResult<AtProtoObjectList<T>>> ListRecords<T>(
             AtIdentifier repo,
             Nsid collection,
             int? limit,
@@ -286,17 +286,17 @@ namespace idunno.AtProto
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             // Flatten the results and into an AtProtoRecordList instance.
-            AtProtoRecordList<T> recordList;
+            AtProtoObjectList<T> recordList;
             if (response.SucceededWithResult)
             {
-                recordList = new AtProtoRecordList<T>(response.Result!.Records, response.Result.Cursor);
+                recordList = new AtProtoObjectList<T>(response.Result!.Records, response.Result.Cursor);
             }
             else
             {
-                recordList = new AtProtoRecordList<T>(new List<T>(), null);
+                recordList = new AtProtoObjectList<T>(new List<T>(), null);
             }
 
-            return new AtProtoHttpResult<AtProtoRecordList<T>>(recordList, response.StatusCode, response.AtErrorDetail);
+            return new AtProtoHttpResult<AtProtoObjectList<T>>(recordList, response.StatusCode, response.AtErrorDetail, response.RateLimit);
         }
 
         /// <summary>
@@ -354,7 +354,7 @@ namespace idunno.AtProto
             AtProtoHttpResult<CreateBlobResponse> result =
                 await request.PostBlob(service, UploadBlobEndpoint, blob, requestHeaders, accessToken, httpClient, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
 
-            AtProtoHttpResult<Blob?> flattenedResult = new(result?.Result?.blob, result!.StatusCode, result?.AtErrorDetail);
+            AtProtoHttpResult<Blob?> flattenedResult = new(result?.Result?.blob, result!.StatusCode, result?.AtErrorDetail, result?.RateLimit);
 
             return flattenedResult;
         }

@@ -14,16 +14,16 @@ namespace idunno.AtProto.Server
         /// <summary>
         /// The account has been taken down.
         /// </summary>
-        Takendown = 1,
+        Takendown,
 
         /// <summary>
         /// The account his been suspended.
         /// </summary>
-        Suspended = 2,
+        Suspended,
 
         /// <summary>
         /// The account deactivated.
         /// </summary>
-        Deactivated = 3
+        Deactivated
     }
 }
