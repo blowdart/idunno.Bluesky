@@ -60,7 +60,7 @@ namespace idunno.AtProto
         {
             get
             {
-                return $"{Remaining} of {Limit}. Resets at {Reset.ToLocalTime().ToString("HH:mm:ss", CultureInfo.InvariantCulture)}";
+                return $"{Remaining} of {Limit}. Resets at {Reset.ToLocalTime().ToString("T", CultureInfo.CurrentCulture)}";
             }
         }
     }
