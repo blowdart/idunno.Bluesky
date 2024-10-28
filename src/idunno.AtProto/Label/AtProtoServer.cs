@@ -28,7 +28,7 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="uriPatterns" /> is null</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown <paramref name="uriPatterns"/> is empty or if <paramref name="limit"/> is &lt;1 or &gt;250.</exception>
-        public static async Task<AtProtoHttpResult<AtProtoObjectList<Label>>> QueryLabels(
+        public static async Task<AtProtoHttpResult<AtProtoObjectReadOnlyCollection<Label>>> QueryLabels(
             IEnumerable<string> uriPatterns,
             IEnumerable<Did>? sources,
             int? limit,
@@ -84,12 +84,12 @@ namespace idunno.AtProto
 
             if (response.SucceededWithResult)
             {
-                return new AtProtoHttpResult<AtProtoObjectList<Label>>(
-                    new AtProtoObjectList<Label>(response.Result.Labels, cursor), response.StatusCode, response.AtErrorDetail, response.RateLimit);
+                return new AtProtoHttpResult<AtProtoObjectReadOnlyCollection<Label>>(
+                    new AtProtoObjectReadOnlyCollection<Label>(response.Result.Labels, cursor), response.StatusCode, response.AtErrorDetail, response.RateLimit);
             }
             else
             {
-                return new AtProtoHttpResult<AtProtoObjectList<Label>>(null, response.StatusCode, response.AtErrorDetail, response.RateLimit);
+                return new AtProtoHttpResult<AtProtoObjectReadOnlyCollection<Label>>(null, response.StatusCode, response.AtErrorDetail, response.RateLimit);
             }
         }
     }

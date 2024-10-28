@@ -1,7 +1,9 @@
-﻿    // Copyright (c) Barry Dorrans. All rights reserved.
+﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -28,7 +30,7 @@ namespace idunno.AtProto
         private static readonly Regex s_asciiRegex =
             new(@"^[a-zA-Z0-9._~:@!$&')(*+,;=%/-]*$", RegexOptions.Compiled | RegexOptions.CultureInvariant, new TimeSpan(0, 0, 0, 5, 0));
 
-        private AtUri(string scheme, AtIdentifier? authority, string? path, Nsid? collection, RecordKey? rKey)
+        private AtUri(string scheme, AtIdentifier authority, string? path, Nsid? collection, RecordKey? rKey)
         {
             Scheme = scheme;
             Authority = authority;
@@ -49,10 +51,14 @@ namespace idunno.AtProto
             if (Parse(s, true, out AtUri? atUri))
             {
                 Scheme = atUri!.Scheme;
-                Authority = atUri!.Authority;
-                AbsolutePath = atUri!.AbsolutePath;
-                Collection = atUri!.Collection;
-                RecordKey = atUri!.RecordKey;
+                Authority = atUri.Authority;
+                AbsolutePath = atUri.AbsolutePath;
+                Collection = atUri.Collection;
+                RecordKey = atUri.RecordKey;
+            }
+            else
+            {
+                throw new ArgumentException($"{s} is not a valid AT Uri", nameof(s));
             }
         }
 
@@ -65,9 +71,9 @@ namespace idunno.AtProto
         public string Scheme { get; internal set; } = string.Empty;
 
         /// <summary>
-        /// Gets the <see cref="AtIdentifier"/> from this <see cref="AtUri"/> if the AtUri contains a authority, otherwise null.
+        /// Gets the <see cref="AtIdentifier"/> from this <see cref="AtUri"/>.
         /// </summary>
-        public AtIdentifier? Authority { get; internal set; }
+        public AtIdentifier Authority { get; internal set; }
 
         /// <summary>
         /// Gets the absolute path for this <see cref="AtUri"/>, if it contains an absolute path, otherwise null.
@@ -75,13 +81,10 @@ namespace idunno.AtProto
         public string? AbsolutePath { get; internal set; }
 
         /// <summary>
-        /// Gets the <see cref="AtIdentifier"/> from this <see cref="AtUri"/> if the AtUri contains a repo, otherwise null.
+        /// Gets the <see cref="AtIdentifier"/> from this <see cref="AtUri"/> if the AtUri contains a repo (authority).
         /// </summary>
         [JsonIgnore]
-        public AtIdentifier? Repo
-        {
-            get => Authority;
-        }
+        public AtIdentifier Repo => Authority;
 
         /// <summary>
         /// Returns the collection segment of the <see cref="AtUri"/> or null if the <see cref="AtUri"/> does not contain a collection.
@@ -212,6 +215,20 @@ namespace idunno.AtProto
         }
 
         /// <summary>
+        /// Creates a <see cref="AtUri"/> from the specified string.
+        /// </summary>
+        /// <param name="s">The string to convert.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator AtUri(string s) => new(s);
+
+        /// <summary>
+        /// Creates a <see cref="AtUri"/> from the specified string.
+        /// </summary>
+        /// <param name="s">The string to convert.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static AtUri FromString(string s) => s;
+
+        /// <summary>
         /// Converts the string representation of an identifier to its <see cref="AtUri"/> equivalent.
         /// A return value indicates whether the operation succeeded.
         /// </summary>
@@ -223,7 +240,7 @@ namespace idunno.AtProto
         /// supplied in result will be overwritten.
         /// </param>
         /// <returns>true if s was converted successfully; otherwise, false.</returns>
-        public static bool TryParse(string s, out AtUri? result)
+        public static bool TryParse(string s, [NotNullWhen(true)] out AtUri? result)
         {
             if (string.IsNullOrEmpty(s))
             {
@@ -363,7 +380,7 @@ namespace idunno.AtProto
             {
                 if (throwOnError)
                 {
-                    throw new AtUriFormatException($"\"{s}\" is not a valid AT URI.");
+                    throw new AtUriFormatException($"{s} is not a valid AT URI.");
                 }
                 else
                 {
@@ -457,7 +474,7 @@ namespace idunno.AtProto
 
                 if (pathSegments.Length > 2)
                 {
-                    throw new AtUriFormatException("{s} has too many segments");
+                    throw new AtUriFormatException($"{s} has too many segments");
                 }
 
                 if (pathSegments.Length >= 1)
@@ -478,6 +495,18 @@ namespace idunno.AtProto
                     {
                         return false;
                     }
+                }
+            }
+
+            if (authority is null)
+            {
+                if (throwOnError)
+                {
+                    throw new AtUriFormatException($"{s} has no authority.");
+                }
+                else
+                {
+                    return false;
                 }
             }
 

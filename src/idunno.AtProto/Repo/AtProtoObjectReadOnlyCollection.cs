@@ -9,32 +9,32 @@ namespace idunno.AtProto.Repo
     /// A list of <typeparamref name="T"/> <see cref="AtProtoObject"/>s, with an optional cursor for pagination.
     /// </summary>
     /// <typeparam name="T">The type of <see cref="AtProtoObject"/>s the list contains.</typeparam>
-    public class AtProtoObjectList<T> : ReadOnlyCollection <T> where T : AtProtoObject
+    public class AtProtoObjectReadOnlyCollection<T> : ReadOnlyCollection <T> where T : AtProtoObject
     {
         /// <summary>
-        /// Creates a new instance of <see cref="AtProtoObjectList{T}"/>
+        /// Creates a new instance of <see cref="AtProtoObjectReadOnlyCollection{T}"/>
         /// </summary>
-        /// <param name="list">The list to create this instance of <see cref="AtProtoObjectList{T}"/> from.</param>
+        /// <param name="list">The list to create this instance of <see cref="AtProtoObjectReadOnlyCollection{T}"/> from.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
-        public AtProtoObjectList(IList<T> list, string? cursor = null) : base(list)
+        public AtProtoObjectReadOnlyCollection(IList<T> list, string? cursor = null) : base(list)
         {
             Cursor = cursor;
         }
 
         /// <summary>
-        /// Creates a new instance of <see cref="AtProtoObjectList{T}"/>
+        /// Creates a new instance of <see cref="AtProtoObjectReadOnlyCollection{T}"/>
         /// </summary>
-        /// <param name="collection">A collection of <typeparamref name="T"/> to create this instance of <see cref="AtProtoObjectList{T}"/> from.</param>
+        /// <param name="collection">A collection of <typeparamref name="T"/> to create this instance of <see cref="AtProtoObjectReadOnlyCollection{T}"/> from.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
-        public AtProtoObjectList(IEnumerable<T> collection, string? cursor = null) : this(new List<T>(collection), cursor)
+        public AtProtoObjectReadOnlyCollection(IEnumerable<T> collection, string? cursor = null) : this(new List<T>(collection), cursor)
         {
         }
 
         /// <summary>
-        /// Creates a new instance of <see cref="AtProtoObjectList{T}"/> with an empty list.
+        /// Creates a new instance of <see cref="AtProtoObjectReadOnlyCollection{T}"/> with an empty list.
         /// </summary>
         /// <param name="cursor">An optional cursor for pagination.</param>
-        public AtProtoObjectList(string? cursor = null) : this(new List<T>(), cursor)
+        public AtProtoObjectReadOnlyCollection(string? cursor = null) : this(new List<T>(), cursor)
         {
         }
 

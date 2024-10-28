@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace idunno.AtProto
@@ -41,7 +42,7 @@ namespace idunno.AtProto
         /// supplied in result will be overwritten.
         /// </param>
         /// <returns>true if s was converted successfully; otherwise, false.</returns>
-        public static bool TryParse(string s, out AtIdentifier? result)
+        public static bool TryParse(string s, [NotNullWhen(true)] out AtIdentifier? result)
         {
             if (!string.IsNullOrEmpty(s))
             {
@@ -67,6 +68,12 @@ namespace idunno.AtProto
         /// </summary>
         /// <returns>The string representation of the value of this instance.</returns>
         public override string ToString() => Value;
+
+        /// <summary>
+        /// Implicitly converts <see cref="AtIdentifier"/> to its equivalent string representation.
+        /// </summary>
+        /// <param name="atIdentifier">The <see cref="AtIdentifier"/> to convert to a string.</param>
+        public static implicit operator string?(AtIdentifier atIdentifier) => atIdentifier?.ToString() ?? null;
 
         /// <summary>
         /// Returns the hash code for this <see cref="AtIdentifier"/>.

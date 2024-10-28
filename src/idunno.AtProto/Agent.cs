@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Mime;
@@ -14,11 +15,8 @@ namespace idunno.AtProto
     {
         private static readonly string s_defaultAgent = "idunno.AtProto/" + typeof(Agent).Assembly.GetName().Version;
 
-        // Keep this enabled as after the great join wave of Oct 16th some PDSs now always return
-        // gziped content even if the client doesn't ask for it in with the Content-Encoding header.
         private static readonly HttpClientHandler s_httpClientHandler = new() { AutomaticDecompression = DecompressionMethods.All };
-
-        private static readonly HttpClient s_sharedClient = new(s_httpClientHandler);
+        private static readonly HttpClient s_sharedClient= new(s_httpClientHandler, disposeHandler: true);
 
         private volatile bool _disposed;
 
@@ -83,6 +81,103 @@ namespace idunno.AtProto
         {
             Dispose(true);
             GC.SuppressFinalize(this);
+        }
+
+        [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Handler lifetime is delegated to the HttpClient")]
+        [SuppressMessage("Reliability", "CA5399:Enable HttpClient certificate revocation list check", Justification = "Fiddler and other dev time proxies don't support CRLs in their generated certificates, so this should be off by default.")]
+        private static HttpClient CreateHttpClient(Uri? proxyUri=null, string? httpUserAgent=null)
+        {
+            HttpClientHandler? httpClientHandler;
+            if (proxyUri is not null)
+            {
+                httpClientHandler = new HttpClientHandler
+                {
+                    Proxy = new WebProxy
+                    {
+                        Address = proxyUri,
+                        BypassProxyOnLocal = true,
+                        UseDefaultCredentials = true
+                    },
+                    UseProxy = true,
+                    CheckCertificateRevocationList = false,
+
+                    AutomaticDecompression = DecompressionMethods.All,
+                };
+            }
+            else
+            {
+                httpClientHandler = new HttpClientHandler
+                {
+                    AutomaticDecompression = DecompressionMethods.All,
+                };
+            }   
+
+            HttpClient httpClient = new(handler: httpClientHandler, disposeHandler: true)
+            {
+                DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrHigher,
+                DefaultRequestVersion = HttpVersion.Version20,
+            };
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(httpUserAgent ?? s_defaultAgent);
+
+            return httpClient;
+        }
+
+        /// <summary>
+        /// Creates an HttpClient with an opinionated configuration, using the <paramref name="proxyUri"/> and <paramref name="httpUserAgent"/>.
+        /// </summary>
+        /// <param name="httpUserAgent">The HTTP User Agent to use in all requests.</param>
+        /// <returns>An HttpClient configured with the <paramref name="httpUserAgent"/>.</returns>
+        /// <exception cref="ArgumentNullException">Throw <paramref name="httpUserAgent"/> is null.</exception>
+        /// <remarks>
+        ///</remarks>
+        public static HttpClient CreateConfiguredHttpClient(string httpUserAgent)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(httpUserAgent);
+
+            return CreateHttpClient(httpUserAgent: httpUserAgent);
+        }
+
+        /// <summary>
+        /// Creates an HttpClient with an opinionated configuration, using the <paramref name="proxyUri"/> and <paramref name="httpUserAgent"/>.
+        /// </summary>
+        /// <param name="proxyUri">The <paramref name="proxyUri"/> of the proxy client to use in all requests.</param>
+        /// <returns>An HttpClient configured with the <paramref name="proxyUri"/> and <paramref name="httpUserAgent"/>.</returns>
+        /// <exception cref="ArgumentNullException">Throw if <paramref name="proxyUri"/> is null.</exception>
+        /// <remarks>
+        ///<para>
+        /// The created <see cref="HttpClient"/> will be configured with supported compression algorithms enabled and to use HTTP2.0.
+        /// The client will be configured to use <paramref name="proxyUri"/> if specified. If a proxy URI is specified the client will also be configured
+        /// to disable CRL checks.
+        ///</para>
+        ///</remarks>
+        public static HttpClient CreateConfiguredHttpClient(Uri proxyUri)
+        {
+            ArgumentNullException.ThrowIfNull(proxyUri);
+
+            return CreateHttpClient(proxyUri: proxyUri);
+        }
+
+        /// <summary>
+        /// Creates an HttpClient with an opinionated configuration, using the <paramref name="proxyUri"/> and <paramref name="httpUserAgent"/>.
+        /// </summary>
+        /// <param name="proxyUri">The <paramref name="proxyUri"/> of the proxy client to use in all requests.</param>
+        /// <param name="httpUserAgent">The HTTP User Agent to use in all requests.</param>
+        /// <returns>An HttpClient configured with the <paramref name="proxyUri"/> and <paramref name="httpUserAgent"/>.</returns>
+        /// <exception cref="ArgumentNullException">Throw if <paramref name="proxyUri"/> or <paramref name="httpUserAgent"/> is null.</exception>
+        /// <remarks>
+        ///<para>
+        /// The created <see cref="HttpClient"/> will be configured with supported compression algorithms enabled and to use HTTP2.0.
+        /// The client will be configured to use <paramref name="proxyUri"/> if specified. If a proxy URI is specified the client will also be configured
+        /// to disable CRL checks.
+        /// If a <paramref name="httpUserAgent"/> is specified the client will be configured to use it with all requests.
+        ///</para>
+        ///</remarks>
+        public static HttpClient CreateConfiguredHttpClient(Uri proxyUri, string httpUserAgent)
+        {
+            ArgumentNullException.ThrowIfNull(proxyUri);
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(httpUserAgent);
+
+            return CreateHttpClient(proxyUri: proxyUri, httpUserAgent: httpUserAgent);
         }
     }
 }

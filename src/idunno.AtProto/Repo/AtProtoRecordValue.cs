@@ -11,6 +11,9 @@ namespace idunno.AtProto.Repo
     /// </summary>
     public record AtProtoRecordValue
     {
+        [JsonConstructor]
+        public AtProtoRecordValue() { }
+
         /// <summary>
         /// A list of keys and element data that do not map to any strongly typed properties.
         /// </summary>

@@ -46,9 +46,9 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="service">The URI of the AtProto service to connect to.</param>
         /// <param name="httpClient">An optional <see cref="HttpClient"/> to use when making requests.</param>
-        /// <param name="options"><see cref="AtProtoAgentOptions"/> for the use in the creation of this instance of <see cref="AtProtoAgent"/>.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use when creating loggers.</param>
-        public AtProtoAgent(Uri service, HttpClient? httpClient = null, AtProtoAgentOptions? options = null, ILoggerFactory? loggerFactory = default) : base(httpClient)
+        /// <param name="options"><see cref="AtProtoAgentOptions"/> for the use in the creation of this instance of <see cref="AtProtoAgent"/>.</param>
+        public AtProtoAgent(Uri service, HttpClient? httpClient = null, ILoggerFactory? loggerFactory = default, AtProtoAgentOptions ? options = null) : base(httpClient)
         {
             ArgumentNullException.ThrowIfNull(service);
 
@@ -1189,7 +1189,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="collection"/> is null or empty.</exception>
-        public async Task<AtProtoHttpResult<AtProtoObjectList<T>>> ListRecords<T>(
+        public async Task<AtProtoHttpResult<AtProtoObjectReadOnlyCollection<T>>> ListRecords<T>(
             Nsid collection,
             int? limit = 50,
             string? cursor = null,
@@ -1215,7 +1215,7 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="repo"/> or <paramref name="collection"/> is null.</exception>
         /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not an authenticated session.</exception>
-        public async Task<AtProtoHttpResult<AtProtoObjectList<T>>> ListRecords<T>(
+        public async Task<AtProtoHttpResult<AtProtoObjectReadOnlyCollection<T>>> ListRecords<T>(
             AtIdentifier repo,
             Nsid collection,
             int? limit = 50,
@@ -1231,7 +1231,7 @@ namespace idunno.AtProto
 
             Logger.ListRecordsCalled(_logger, repo, collection, service);
 
-            AtProtoHttpResult<AtProtoObjectList<T>> result = await AtProtoServer.ListRecords<T>(
+            AtProtoHttpResult<AtProtoObjectReadOnlyCollection<T>> result = await AtProtoServer.ListRecords<T>(
                 repo,
                 collection,
                 limit,
@@ -1303,7 +1303,7 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="uriPatterns"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="uriPatterns"/> does not contain any patterns, or if <paramref name="limit"/> &lt;1 or &gt;250.</exception>
-        public async Task<AtProtoHttpResult<AtProtoObjectList<Label>>> QueryLabels(
+        public async Task<AtProtoHttpResult<AtProtoObjectReadOnlyCollection<Label>>> QueryLabels(
             IEnumerable<string> uriPatterns,
             IEnumerable<Did>? sources,
             int? limit,

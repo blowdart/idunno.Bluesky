@@ -233,7 +233,7 @@ namespace idunno.AtProto
         /// Thrown if <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is not &gt;0 and &lt;=100.</exception>
-        public static async Task<AtProtoHttpResult<AtProtoObjectList<T>>> ListRecords<T>(
+        public static async Task<AtProtoHttpResult<AtProtoObjectReadOnlyCollection<T>>> ListRecords<T>(
             AtIdentifier repo,
             Nsid collection,
             int? limit,
@@ -286,17 +286,17 @@ namespace idunno.AtProto
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             // Flatten the results and into an AtProtoRecordList instance.
-            AtProtoObjectList<T> recordList;
+            AtProtoObjectReadOnlyCollection<T> recordList;
             if (response.SucceededWithResult)
             {
-                recordList = new AtProtoObjectList<T>(response.Result!.Records, response.Result.Cursor);
+                recordList = new AtProtoObjectReadOnlyCollection<T>(response.Result!.Records, response.Result.Cursor);
             }
             else
             {
-                recordList = new AtProtoObjectList<T>(new List<T>(), null);
+                recordList = new AtProtoObjectReadOnlyCollection<T>(new List<T>(), null);
             }
 
-            return new AtProtoHttpResult<AtProtoObjectList<T>>(recordList, response.StatusCode, response.AtErrorDetail, response.RateLimit);
+            return new AtProtoHttpResult<AtProtoObjectReadOnlyCollection<T>>(recordList, response.StatusCode, response.AtErrorDetail, response.RateLimit);
         }
 
         /// <summary>

@@ -71,8 +71,8 @@ namespace idunno.AtProto
         /// <param name="obj">An object to compare to this <see cref="Cid"/>.</param>
         /// <returns>
         /// true if this <see cref="Cid"/> and the specified <paramref name="obj"/>> refer to the same object,
-        /// this AtCid and the specified obj are both the same type of object and those objects are equal,
-        /// or if this AtCid and the specified obj are both null, otherwise, false.
+        /// this Cid and the specified obj are both the same type of object and those objects are equal,
+        /// or if this Cid and the specified obj are both null, otherwise, false.
         /// </returns>
         public override bool Equals(object? obj) => Equals(obj as Cid);
 
@@ -81,9 +81,9 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="other">A <see cref="Cid"/> or null to compare to this <see cref="Cid"/>.</param>
         /// <returns>
-        /// true if this <see cref="Cid"/> and the specified <paramref name="other"/>> refer to the same object,
-        /// this AtCidAtCid and the specified obj are both the same type of object and those objects are equal,
-        /// or if this Nsid and the specified obj are both null, otherwise, false.
+        /// true if this <see cref="Cid"/> and the specified <paramref name="other"/> refer to the same object,
+        /// this Cid and the specified obj are both the same type of object and those objects are equal,
+        /// or if this Cid and the specified obj are both null, otherwise, false.
         /// </returns>
         public bool Equals(Cid? other)
         {

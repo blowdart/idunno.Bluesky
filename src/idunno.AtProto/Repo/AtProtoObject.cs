@@ -5,7 +5,7 @@
 namespace idunno.AtProto.Repo
 {
     /// <summary>
-    /// A base class for AT Proto objects.
+    /// A base record for AT Proto objects.
     /// </summary>
     public abstract record AtProtoObject
     {
