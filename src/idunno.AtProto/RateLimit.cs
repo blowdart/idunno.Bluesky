@@ -1,6 +1,9 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
+using System.Globalization;
+
 namespace idunno.AtProto
 {
     /// <summary>
@@ -9,6 +12,7 @@ namespace idunno.AtProto
     /// <remarks>
     /// <para>Further information can be the <see href="https://docs.bsky.app/docs/advanced-guides/rate-limits">Bluesky Rate Limit documentation</see>.</para>
     /// </remarks>
+    [DebuggerDisplay("{DebuggerDisplay,nq}")]
     public sealed record RateLimit
     {
         internal RateLimit(int limit, int remaining, long reset, string policy)
@@ -50,11 +54,21 @@ namespace idunno.AtProto
         /// Gets the rate limiting policy.
         /// </summary>
         public RateLimitPolicy? Policy { get; init; }
+
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private string DebuggerDisplay
+        {
+            get
+            {
+                return $"{Remaining} of {Limit}. Resets at {Reset.ToLocalTime().ToString("HH:mm:ss", CultureInfo.InvariantCulture)}";
+            }
+        }
     }
 
     /// <summary>
     /// The details of a rate limit policy.
     /// </summary>
+    [DebuggerDisplay("{DebuggerDisplay,nq}")]
     public sealed record RateLimitPolicy
     {
         internal RateLimitPolicy(string policy)
@@ -97,5 +111,14 @@ namespace idunno.AtProto
         /// The maximum number of writes in a limitation period.
         /// </summary>
         public int Write { get; init; }
+
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private string DebuggerDisplay
+        {
+            get
+            {
+                return $"Read: {Read} / Write: {Write}";
+            }
+        }
     }
 }
