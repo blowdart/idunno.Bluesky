@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -16,11 +17,14 @@ namespace idunno.AtProto
     [JsonConverter(typeof(Json.NsidConverter))]
     public class Nsid : IEquatable<Nsid>
     {
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private readonly string _value;
 
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private static readonly Regex s_validationRegex =
             new(@"^[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(\.[a-zA-Z]([a-zA-Z]{0,61}[a-zA-Z])?)$", RegexOptions.Compiled | RegexOptions.CultureInvariant, new TimeSpan(0, 0, 0, 5, 0));
 
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private static readonly Regex s_characters =
             new("^[a-zA-Z0-9.-]*$", RegexOptions.Compiled | RegexOptions.CultureInvariant, new TimeSpan(0, 0, 0, 0, 5));
 

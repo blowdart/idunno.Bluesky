@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using idunno.AtProto.Repo;
@@ -16,6 +17,7 @@ namespace idunno.AtProto
     /// </remarks>
     [SuppressMessage("Usage", "CA1054:Uri parameters should not be strings", Justification = "The label uri can be either an at uri or a did.")]
     [SuppressMessage("Usage", "CA1056:Uri properties should not be strings", Justification = "The label uri can be either an at uri or a did.")]
+    [DebuggerDisplay("{DebuggerDisplay,nq}")]
     public sealed record Label : AtProtoObject
     {
         /// <summary>
@@ -110,5 +112,8 @@ namespace idunno.AtProto
         /// </summary>
         [JsonPropertyName("sig")]
         public IEnumerable<byte> Signature { get; init; }
+
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private string DebuggerDisplay => '{' + Value + '}';
     }
 }

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
@@ -20,12 +21,16 @@ namespace idunno.AtProto
     [JsonConverter(typeof(Json.DidConverter))]
     public sealed class Did : AtIdentifier, IEquatable<Did>
     {
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private const string DidPrefix = "did:";
 
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private const string InvalidMethod = "INVALID";
 
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private const int MaximumLength = 2048;
 
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private static readonly Regex s_validationRegex =
             new (@"^did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]$", RegexOptions.CultureInvariant, new TimeSpan(0, 0, 0, 2, 5));
 

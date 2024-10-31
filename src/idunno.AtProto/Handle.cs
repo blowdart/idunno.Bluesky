@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
@@ -19,8 +20,10 @@ namespace idunno.AtProto
     [JsonConverter(typeof(Json.HandleConverter))]
     public class Handle : AtIdentifier, IEquatable<Handle>
     {
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private const int MaximumLength = 253;
 
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private static readonly Regex s_validate = new(
             @"^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$",
             RegexOptions.None,

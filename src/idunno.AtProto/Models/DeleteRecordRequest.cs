@@ -3,7 +3,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.AtProto.Repo
+namespace idunno.AtProto.Models
 {
     internal sealed record DeleteRecordRequest
     {

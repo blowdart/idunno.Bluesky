@@ -60,7 +60,7 @@ namespace idunno.AtProto
         {
             get
             {
-                return $"{Remaining} of {Limit}. Resets at {Reset.ToLocalTime().ToString("T", CultureInfo.CurrentCulture)}";
+                return $"{{{Remaining} of {Limit}. Resets at {Reset.ToLocalTime().ToString("T", CultureInfo.CurrentCulture)}}}";
             }
         }
     }
@@ -117,7 +117,7 @@ namespace idunno.AtProto
         {
             get
             {
-                return $"Read: {Read} / Write: {Write}";
+                return $"{{Read: {Read} / Write: {Write}}}";
             }
         }
     }

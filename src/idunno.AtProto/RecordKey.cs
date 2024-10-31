@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -13,6 +14,7 @@ namespace idunno.AtProto
     [JsonConverter(typeof(Json.RecordKeyConverter))]
     public class RecordKey : IEquatable<RecordKey>
     {
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private static readonly Regex s_recordKeyValidationRegex =
             new(@"^[a-zA-Z0-9_~.:-]{1,512}$", RegexOptions.Compiled | RegexOptions.CultureInvariant, new TimeSpan(0, 0, 0, 5, 0));
 

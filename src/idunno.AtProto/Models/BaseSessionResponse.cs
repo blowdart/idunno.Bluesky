@@ -2,8 +2,9 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
+using idunno.AtProto.Server;
 
-namespace idunno.AtProto.Server
+namespace idunno.AtProto.Models
 {
     /// <summary>
     /// A base class for properties common to the response from every session API.

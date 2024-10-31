@@ -2,8 +2,9 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Text.Json.Serialization;
+using idunno.AtProto.Server;
 
-namespace idunno.AtProto.Server
+namespace idunno.AtProto.Models
 {
     /// <summary>
     /// The results of a RefreshSession API call.

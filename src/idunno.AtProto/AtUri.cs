@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
@@ -18,15 +19,19 @@ namespace idunno.AtProto
     /// <para>For Bluesky a valid form is at-uri = at://{repo (did)}/{collection}/{rkey}</para>
     /// </remarks>
     [JsonConverter(typeof(Json.AtUriConverter))]
+    [DebuggerDisplay("{DebuggerDisplay,nq}")]
     public sealed class AtUri : IEquatable<AtUri>
     {
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private const string ProtocolAndSeparator = "at://";
 
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private static readonly Regex s_validationRegex =
-            new (@"^at:\/\/(?<authority>[a-zA-Z0-9._:%-]+)(\/(?<collection>[a-zA-Z0-9-.]+)(\/(?<rkey>[a-zA-Z0-9._~:@!$&%')(*+,;=-]+))?)?(#(?<fragment>\/[a-zA-Z0-9._~:@!$&%')(*+,;=\-[\]/\\]*))?$",
+            new(@"^at:\/\/(?<authority>[a-zA-Z0-9._:%-]+)(\/(?<collection>[a-zA-Z0-9-.]+)(\/(?<rkey>[a-zA-Z0-9._~:@!$&%')(*+,;=-]+))?)?(#(?<fragment>\/[a-zA-Z0-9._~:@!$&%')(*+,;=\-[\]/\\]*))?$",
                 RegexOptions.Compiled | RegexOptions.CultureInvariant,
                 new TimeSpan(0, 0, 0, 5, 0));
 
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private static readonly Regex s_asciiRegex =
             new(@"^[a-zA-Z0-9._~:@!$&')(*+,;=%/-]*$", RegexOptions.Compiled | RegexOptions.CultureInvariant, new TimeSpan(0, 0, 0, 5, 0));
 
@@ -102,7 +107,6 @@ namespace idunno.AtProto
         /// Returns the hash code for this <see cref="AtUri"/>.
         /// </summary>
         /// <returns>The hash code for this <see cref="AtUri"/>.</returns>
-
         public override int GetHashCode() => (Scheme, Authority, AbsolutePath).GetHashCode();
 
         /// <summary>
@@ -282,7 +286,7 @@ namespace idunno.AtProto
             }
 
             if (s.OccurrenceCount('#') > 0)
-                {
+            {
                 if (throwOnError)
                 {
                     throw new AtUriFormatException($"AT URIs cannot contain a fragment.");
@@ -514,5 +518,8 @@ namespace idunno.AtProto
 
             return true;
         }
+
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private string DebuggerDisplay => '{' + ToString() + "}";
     }
 }

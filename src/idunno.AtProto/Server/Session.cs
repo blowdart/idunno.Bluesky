@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using idunno.AtProto.Models;
 
 namespace idunno.AtProto.Server
 {

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using idunno.AtProto.Models;
 using idunno.AtProto.Server;
 
 namespace idunno.AtProto

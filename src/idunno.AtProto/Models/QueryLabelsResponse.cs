@@ -3,7 +3,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.AtProto.LabelModels
+namespace idunno.AtProto.Models
 {
     internal record QueryLabelsResponse
     {

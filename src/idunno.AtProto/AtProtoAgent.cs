@@ -18,6 +18,7 @@ using Blob = idunno.AtProto.Repo.Blob;
 
 using idunno.DidPlcDirectory;
 using System.Diagnostics.CodeAnalysis;
+using idunno.AtProto.Models;
 
 namespace idunno.AtProto
 {
@@ -37,9 +38,9 @@ namespace idunno.AtProto
 
         private readonly ILogger<AtProtoAgent> _logger;
 
-        private Session? _currentSession;
+        private readonly Uri _initialServiceUri;
 
-        private Uri _initialServiceUri;
+        private Session? _currentSession;
 
         /// <summary>
         /// Creates a new instance of <see cref="AtProtoAgent"/>

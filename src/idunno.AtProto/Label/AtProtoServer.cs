@@ -1,10 +1,10 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-
 using System.Globalization;
 using System.Text;
-using idunno.AtProto.LabelModels;
+
+using idunno.AtProto.Models;
 using idunno.AtProto.Repo;
 
 namespace idunno.AtProto

@@ -2,8 +2,9 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
+using idunno.AtProto.Repo;
 
-namespace idunno.AtProto.Repo
+namespace idunno.AtProto.Models
 {
     internal sealed record CreateRecordRequest
     {

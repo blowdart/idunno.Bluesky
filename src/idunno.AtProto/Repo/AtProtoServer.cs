@@ -3,6 +3,7 @@
 
 using System.Net.Http.Headers;
 using System.Text.Json;
+using idunno.AtProto.Models;
 using idunno.AtProto.Repo;
 
 namespace idunno.AtProto
