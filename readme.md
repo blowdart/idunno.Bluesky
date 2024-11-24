@@ -4,9 +4,9 @@ A .NET 8 class library for the [AT Protocol](https://docs.bsky.app/docs/api/at-p
 
 ## Current Build Status
 
-[![Build Status](https://github.com/blowdart/idunno.Bluesky/actions/workflows/ci-build.yml/badge.svg)](https://github.com/blowdart/idunno.Bluesky/actions/workflows/ci-build.yml)
+![Build Status](https://github.com/blowdart/idunno.Bluesky/actions/workflow/ci-build.yml/badge.svg?branch=main)
 
-[![Test Results](https://camo.githubusercontent.com/9f508f166f15790248d7986f09e96076b994a0eddb0293c810ed3bbcccdb3ac0/68747470733a2f2f7376672e746573742d73756d6d6172792e636f6d2f64617368626f6172642e7376673f703d31313826663d3026733d30)](https://github.com/blowdart/idunno.Bluesky/actions/workflows/ci-build.yml)
+![Test Results](https://camo.githubusercontent.com/093a129b50ddc14f2e036c983168963591aa1d67eed31f2ae6e364f012f7dc97/68747470733a2f2f7376672e746573742d73756d6d6172792e636f6d2f64617368626f6172642e7376673f703d36343526663d3026733d30)
 
 ## Getting Started
 
