@@ -14,7 +14,7 @@
     <PackageIconFullPath>$(MSBuildThisFileDirectory)icon.png</PackageIconFullPath>
 
     <PackageReadMeFile>readme.md</PackageReadMeFile>
-    <PackageReadMeFullPath>$(MSBuildProjectDirectory)/../../readme.md</PackageReadMeFullPath>
+    <PackageReadMeFullPath>$(MSBuildProjectDirectory)\..\..\readme.md</PackageReadMeFullPath>
 
     <NuspecBasePath>$(MSBuildProjectDirectory)</NuspecBasePath>
   </PropertyGroup>
