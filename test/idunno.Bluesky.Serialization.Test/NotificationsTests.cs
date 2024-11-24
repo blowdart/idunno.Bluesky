@@ -16,7 +16,7 @@ namespace idunno.Bluesky.Serialization.Test
         [Fact]
         public void EmptyListNotificationsResponseDeserializationsFromJson()
         {
-            string jsonString = File.ReadAllText(@"json\empty_listNotificationsResponse.json");
+            string jsonString = File.ReadAllText(Path.Combine("json", "empty_listNotificationsResponse.json"));
 
             ListNotificationsResponse? notification = JsonSerializer.Deserialize<ListNotificationsResponse>(jsonString, _jsonSerializerOptions);
 
@@ -31,7 +31,7 @@ namespace idunno.Bluesky.Serialization.Test
         [Fact]
         public void ListNotificationsResponseDeserializationsFromJson()
         {
-            string jsonString = File.ReadAllText(@"json\listNotificationsResponse.json");
+            string jsonString = File.ReadAllText(Path.Combine("json", "listNotificationsResponse.json"));
 
             ListNotificationsResponse? notification = JsonSerializer.Deserialize<ListNotificationsResponse>(jsonString, _jsonSerializerOptions);
 

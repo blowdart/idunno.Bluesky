@@ -17,9 +17,4 @@
     <None Include="..\.editorconfig" Link=".editorconfig" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="System.CommandLine" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
-  </ItemGroup>
-
 </Project>

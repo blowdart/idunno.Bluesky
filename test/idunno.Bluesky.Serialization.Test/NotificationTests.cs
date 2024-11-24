@@ -15,7 +15,7 @@ namespace idunno.Bluesky.Serialization.Test
         [Fact]
         public void NotificationDeserializationsFromJson()
         {
-            string jsonString = File.ReadAllText(@"json\notification.json");
+            string jsonString = File.ReadAllText(Path.Combine("json", "notification.json"));
 
             Notification? notification = JsonSerializer.Deserialize<Notification>(jsonString, _jsonSerializerOptions);
 

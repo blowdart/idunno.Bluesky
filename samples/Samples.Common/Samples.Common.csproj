@@ -10,4 +10,9 @@
     <ProjectReference Include="..\..\src\idunno.AtProto\idunno.AtProto.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+  </ItemGroup>  
+
 </Project>
