@@ -13,7 +13,9 @@ on:
 
 permissions:
   contents: read
+  issues: read
   pull-requests: write
+  checks: write
 
 env:
   DOTNET_NOLOGO: true
