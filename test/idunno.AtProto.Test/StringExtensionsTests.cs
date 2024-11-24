@@ -18,7 +18,7 @@ namespace idunno.AtProto.Test
         [InlineData("", 'p', 0)]
         public void OccurrenceCountShouldReturnTheCorrectNumberOfCharOccurrences(string toSearch, char toSearchFor, int count)
         {
-            Assert.Equal(count, StringExtensions.OccurrenceCount(toSearch, toSearchFor));
+            Assert.Equal(count, InternalStringExtensions.OccurrenceCount(toSearch, toSearchFor));
         }
 
         [Theory]
@@ -33,7 +33,7 @@ namespace idunno.AtProto.Test
         [InlineData("eeeee", "ee", 2)]
         public void OccurrenceCountShouldReturnTheCorrectNumberOfStringOccurrences(string toSearch, string toSearchFor, int count)
         {
-            Assert.Equal(count, StringExtensions.OccurrenceCount(toSearch, toSearchFor));
+            Assert.Equal(count, InternalStringExtensions.OccurrenceCount(toSearch, toSearchFor));
         }
 
         [Theory]

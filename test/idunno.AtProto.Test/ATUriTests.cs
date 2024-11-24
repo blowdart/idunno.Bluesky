@@ -217,5 +217,19 @@ namespace idunno.AtProto.Test
             Assert.Equal(lhs, rhs);
             Assert.True(lhs.Equals(rhs));
         }
+
+        [Fact]
+        public void ImplicitConversionFromValidStringWorks()
+        {
+            string atUriString = "at://did:plc:identifier/test.idunno.lexiconType/rkey";
+
+            AtUri atUri = (AtUri)atUriString;
+
+            Assert.NotNull(atUri);
+
+            Assert.Equal("did:plc:identifier", atUri.Authority);
+            Assert.Equal("test.idunno.lexiconType", atUri.Collection);
+            Assert.Equal("rkey", atUri.RecordKey);
+        }
     }
 }

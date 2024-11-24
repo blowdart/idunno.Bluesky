@@ -20,8 +20,7 @@ From there, you would perform the `.Succeded` check and work your way through th
 Each type of notification, `Follow`, `Like`, `Mention`, `Quote`, `Reply`, and `Repost` having varying types of information used to supplement the notification with appropriate information.
 
 ```c#
-foreach (
-    Notification notification in notifications.Result!.Notifications)
+foreach (Notification notification in notifications.Result!.Notifications)
 {
     // As in the timeline example we first look at how
     // the author should be displayed, using their display
@@ -159,21 +158,24 @@ HttpResult<NotificationsView> notifications =
 
 The first call to `ListNotifications()` uses the `limit` parameter to control how many notifications are returned from the API.
 
-Then the code loops until either the the call to `ListNotifications()` returns no records, or fails.
+Then the code loops until either the the call to `ListNotifications()` returns an empty cursor, or it fails.
 
 ```c#
-while (notifications && 
-       notifications.Result.Notifications.Count != 0)
+if (notifications.Succeeded && notifications.Result.Count != 0)
 {
-    // Do whatever needs to be done on the page
-    // of notifications.
+    do
+    {
+        // Do whatever needs to be done on the page
+        // of notifications.
 
-    // Get the next page
-    notifications = 
-        await agent.ListNotifications(
-            limit: 5, 
-            cursor: notifications.Result.Cursor));
-    }
+        // Get the next page
+        notifications = 
+            await agent.ListNotifications(
+                limit: 5, 
+                cursor: notifications.Result.Cursor));
+
+    } while (notificationsListResult.Succeeded &&
+             !string.IsNullOrEmpty(notificationsListResult.Result.Cursor))
 }
 ```
 

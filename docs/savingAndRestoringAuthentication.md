@@ -46,25 +46,25 @@ The DID and service may not be available if the session refresh fails.
 
 ## Restoring or recreating a session.
 
-To restore a session from a refresh token (or an access token if you still have a valid one call RestoreSession(). This takes the user's DID,
+To restore a session from a refresh token (or an access token if you still have a valid one call `ResumeSession()`. This takes the user's DID,
 the access token (or null if you don't have one), the refresh token, and the URI of the service that issued the tokens.
 
 ```c#
 
-bool restoreResult = await restoredFromAccessToken.RestoreSession(
+bool resumeResult = await agent.ResumeSession(
     persistedLoginState.Did,
     persistedLoginState.AccessToken,
     persistedLoginState.RefreshToken,
     persistedLoginState.Service,
     cancellationToken);
 
-    if (!restoreResult)
+    if (!resumeResult.Succeeded)
     {
         Console.WriteLine($"Restore failed.");
     }
 ```
 
-If the restoration is successful the agent will be populated with the current access and refresh tokens and the session will be valid for authenticated
+If the resume is successful the agent will be populated with the current access and refresh tokens and the session will be valid for authenticated
 calls.If the tokens were refreshed during restoration (which happens if you have a refresh token, but no access token, or the access token is expired)
 the `SessionRefreshed` event will be raised.
 

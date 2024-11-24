@@ -118,7 +118,7 @@ namespace idunno.AtProto
         /// this AtUri and the specified obj are both the same type of object and those objects are equal,
         /// or if this AtUri and the specified obj are both null, otherwise, false.
         /// </returns>
-        public override bool Equals(object? obj) => Equals(obj as AtUri);
+        public override bool Equals([NotNullWhen(true)] object? obj) => Equals(obj as AtUri);
 
         /// <summary>
         /// Indicates where this <see cref="AtUri"/> equals another."/>
@@ -129,7 +129,7 @@ namespace idunno.AtProto
         /// this AtUri and the specified obj are both the same type of object and those objects are equal,
         /// or if this AtUri and the specified obj are both null, otherwise, false.
         /// </returns>
-        public bool Equals(AtUri? other)
+        public bool Equals([NotNullWhen(true)] AtUri? other)
         {
             if (other is null)
             {

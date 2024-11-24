@@ -2,14 +2,13 @@
 // Licensed under the MIT License.
 
 using System.CommandLine;
-using System.CommandLine.Builder;
-using System.CommandLine.Help;
 using System.CommandLine.Parsing;
-using System.Net;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Server;
+using Microsoft.Extensions.Logging;
+using Samples.Common;
 
 namespace Samples.AtProto
 {
@@ -20,98 +19,30 @@ namespace Samples.AtProto
             // Necessary to render emojis.
             Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-            var handleOption = new Option<string>(
-                name: "--handle",
-                description: "The handle to use when authenticating to the PDS.",
-                getDefaultValue: () => Environment.GetEnvironmentVariable("_BlueskyUserName")!);
-
-            var passwordOption = new Option<string>(
-                name: "--password",
-                description: "The password to use when authenticating to the PDS.",
-                getDefaultValue: () => Environment.GetEnvironmentVariable("_BlueskyPassword")!);
-
-            var authCodeOption = new Option<string?>(
-                name: "--authCode",
-                description: "The authorization code for the account to used when authenticating to the PDS");
-
-            var proxyOption = new Option<Uri?>(
-                name: "--proxy",
-                description: "The URI of a web proxy to use.")
-            {
-                ArgumentHelpName = "Uri"
-            };
-
-            var rootCommand = new RootCommand("Perform various AT Proto operations.")
-            {
-                handleOption,
-                passwordOption,
-                authCodeOption,
-                proxyOption,
-            };
-
-            Parser parser = new CommandLineBuilder(rootCommand)
-                .UseDefaults()
-                .UseHelp(ctx =>
-                {
-                    ctx.HelpBuilder.CustomizeSymbol(handleOption,
-                        firstColumnText: "--userName <string>",
-                        secondColumnText: "The username to use when authenticating to Bluesky.\n" +
-                                        "If a username is not specified the username will be\n" +
-                                        "read from the _BlueskyUserName environment variable.");
-                    ctx.HelpBuilder.CustomizeSymbol(passwordOption,
-                        firstColumnText: "--password <string>",
-                        secondColumnText: "The password to use when authenticating to Bluesky.\n" +
-                                        "If a password is not specified the password will be\n" +
-                                        "read from the _BlueskyPassword environment variable.");
-                })
-            .Build();
-
-            int returnCode = 0;
-
-            rootCommand.SetHandler(async (context) =>
-            {
-                CancellationToken cancellationToken = context.GetCancellationToken();
-
-                returnCode = await PerformOperations(
-                    context.ParseResult.GetValueForOption(handleOption),
-                    context.ParseResult.GetValueForOption(passwordOption),
-                    context.ParseResult.GetValueForOption(authCodeOption),
-                    context.ParseResult.GetValueForOption(proxyOption),
-                    cancellationToken);
-            });
-
+            var parser = Helpers.ConfigureCommandLine(PerformOperations);
             await parser.InvokeAsync(args);
 
-            return returnCode;
+            return 0;
         }
 
-        static async Task<int> PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
+        static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNullOrEmpty(handle);
             ArgumentNullException.ThrowIfNullOrEmpty(password);
 
-            // Route through Fiddler Everywhere
-            proxyUri = new Uri("http://localhost:8866");
+            // Uncomment the next line to route all requests through Fiddler Everywhere
+            // proxyUri = new Uri("http://localhost:8866");
 
-            HttpClient? httpClient = null;
+            // Uncomment the next line to route all requests  through Fiddler Classic
+            // proxyUri = new Uri("http://localhost:8888");
 
-            if (proxyUri is not null)
-            {
-                var proxyClientHandler = new HttpClientHandler
-                {
-                    Proxy = new WebProxy
-                    {
-                        Address = proxyUri,
-                        BypassProxyOnLocal = true,
-                        UseDefaultCredentials = true
-                    },
-                    UseProxy = true,
-                    CheckCertificateRevocationList = false
-                };
+            // Get an HttpClient configured to use a proxy, if proxyUri is not null.
+            using (HttpClient? httpClient = Helpers.CreateOptionalHttpClient(proxyUri))
 
-                httpClient = new HttpClient(handler: proxyClientHandler, disposeHandler: true);
-            }
+            // Change the log level in the ConfigureConsoleLogging() to enable logging
+            using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(null))
 
+            // Create a new AtProtoAgent
             using (var agent = new AtProtoAgent(new Uri("https://bsky.social"), httpClient))
             {
                 AtProtoHttpResult<ServerDescription> blueskyServerDescription = await agent.DescribeServer(new Uri("https://bsky.social"), cancellationToken);
@@ -122,7 +53,7 @@ namespace Samples.AtProto
                 if (did is null)
                 {
                     Console.WriteLine("Could not resolve DID");
-                    return 1;
+                    return;
                 }
 
                 var pds = await agent.ResolvePds(did, cancellationToken);
@@ -130,22 +61,22 @@ namespace Samples.AtProto
                 if (pds is null)
                 {
                     Console.WriteLine($"Could not resolve PDS for {did}.");
-                    return 2;
+                    return;
                 }
 
                 AtProtoHttpResult<ServerDescription> pdsDescriptionResult = await agent.DescribeServer(pds, cancellationToken);
-                if (pdsDescriptionResult.SucceededWithResult)
+                if (pdsDescriptionResult.Succeeded)
                 {
                     DescribeServer(pdsDescriptionResult.Result!);
                 }
                 else
                 {
                     Console.WriteLine($"Could get server description.");
-                    return 3;
+                    return;
                 }
 
                 var repoDescriptionResult = await agent.DescribeRepo(did, cancellationToken: cancellationToken);
-                if (repoDescriptionResult.SucceededWithResult)
+                if (repoDescriptionResult.Succeeded)
                 {
                     Console.WriteLine("Anonymous repo description:");
                     DescribeRepo(repoDescriptionResult.Result);
@@ -160,18 +91,21 @@ namespace Samples.AtProto
                     service : pds,
                     cancellationToken: cancellationToken);
 
-                if (listRecordsResult.SucceededWithResult)
+                if (listRecordsResult.Succeeded)
                 {
                     foreach (var record in listRecordsResult.Result)
                     {
                         Console.WriteLine($"AT URI : {record.Uri}");
                         Console.WriteLine($"CID    : {record.Cid}");
 
-                        if (record.Value is not null)
+                        if (record.Value is not null && record.Value.ExtensionData is not null)
                         {
-                            Console.WriteLine($"Value  :");
-                            Console.WriteLine($"* Type : {record.Value.Type}");
-                            Console.WriteLine($"* Date : {record.Value.CreatedAt.LocalDateTime}");
+                            Console.WriteLine($"Values  :");
+
+                            foreach (var jsonKeyValue in record.Value.ExtensionData)
+                            {
+                                Console.WriteLine($"  {jsonKeyValue.Key} : {jsonKeyValue.Value}");
+                            }
                         }
                     }
                 }
@@ -188,8 +122,6 @@ namespace Samples.AtProto
                         Console.WriteLine("Login requires an authentication code.");
                         Console.WriteLine("Check your email and use --authCode to specify the authentication code.");
                         Console.ForegroundColor = oldColor;
-
-                        return 3;
                     }
                     else
                     {
@@ -205,8 +137,6 @@ namespace Samples.AtProto
 
                             Console.WriteLine($"Server returned {loggedIn.AtErrorDetail.Error} / {loggedIn.AtErrorDetail.Message}");
                             Console.ForegroundColor = oldColor;
-
-                            return 4;
                         }
                     }
                 }
@@ -214,12 +144,10 @@ namespace Samples.AtProto
                 await agent.Logout(cancellationToken);
             }
 
-            httpClient?.Dispose();
-
-            return 0;
+            return;
         }
 
-        public static void DescribeServer(ServerDescription serverDescription)
+        static void DescribeServer(ServerDescription serverDescription)
         {
             Console.WriteLine($"Server DID   : {serverDescription.Did}");
 
@@ -267,7 +195,7 @@ namespace Samples.AtProto
             Console.WriteLine();
         }
 
-        public static void DescribeRepo(RepoDescription repoDescription)
+        static void DescribeRepo(RepoDescription repoDescription)
         {
             Console.WriteLine($"Repo        : {repoDescription.Did}");
             Console.WriteLine($"Handle      : {repoDescription.Handle}");

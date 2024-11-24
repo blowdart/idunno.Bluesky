@@ -1,0 +1,24 @@
+{
+    "name": "idunno.Bluesky",
+    "image": "mcr.microsoft.com/devcontainers/dotnet:8.0",
+
+    "postCreateCommand": "dotnet restore",
+
+    // Configure tool-specific properties.
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-dotnettools.csdevkit",
+                "ms-dotnettools.csharp",
+                "ms-vscode-remote.remote-containers",
+                "streetsidesoftware.code-spell-checker",
+                "EditorConfig.EditorConfig",
+                "VisualStudioExptTeam.vscodeintellicode",
+                "VisualStudioExptTeam.intellicode-api-usage-examples",
+                "ms-dotnettools.vscodeintellicode-csharp",
+                "DavidAnson.vscode-markdownlint",
+                "shardulm94.trailing-spaces"
+            ]
+        }
+    }
+}

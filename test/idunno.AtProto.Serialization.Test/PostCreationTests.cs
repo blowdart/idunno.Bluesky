@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-using Xunit;
 
 
 namespace idunno.AtProto.Serialization.Test

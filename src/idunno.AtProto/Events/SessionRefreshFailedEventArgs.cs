@@ -15,7 +15,7 @@ namespace idunno.AtProto.Events
         /// </summary>
         /// <param name="sessionErrors">Any session configuration problems that caused the failure.</param>
         /// <param name="service">The <see cref="Uri"/> of the service that returned the error, if an error was returned from the API.</param>
-        /// <param name="did">The <see cref="AtProto.Did"/> of the user whose api call caused an error, if an error was from the API.</param>
+        /// <param name="did">The <see cref="Did"/> of the user whose api call caused an error, if an error was from the API.</param>
         /// <param name="statusCode">The <see cref="HttpStatusCode"/> returned from the API, if an error was from the API.</param>
         /// <param name="error">The <see cref="AtErrorDetail" /> returned from the API, if any.</param>
         public SessionRefreshFailedEventArgs(

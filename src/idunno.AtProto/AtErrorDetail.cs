@@ -8,7 +8,8 @@ namespace idunno.AtProto
     /// <summary>
     /// Represents a detailed error response from an atproto endpoint.
     /// </summary>
-    public sealed record AtErrorDetail
+    [Serializable]
+    public sealed class AtErrorDetail
     {
         /// <summary>
         /// The title of the error returned from an API call.

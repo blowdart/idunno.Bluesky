@@ -2,3 +2,4 @@ root = false
 
 [.cs]
 spelling_checkable_types = identifiers,comments
+spelling_exclusion_path = .\exclusion.dic

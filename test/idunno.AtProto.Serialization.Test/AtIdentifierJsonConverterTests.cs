@@ -3,7 +3,6 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using Xunit;
 
 namespace idunno.AtProto.Serialization.Test
 {

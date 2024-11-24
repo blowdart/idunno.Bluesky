@@ -44,7 +44,7 @@ namespace idunno.AtProto
 
             AtProtoHttpResult<ServerDescription> result = await request.Get(service, DescribeEndpoint, httpClient, cancellationToken).ConfigureAwait(false);
 
-            if (result.Succeeded && result.Result is not null)
+            if (result.Succeeded)
             {
                 if (result.Result.AvailableUserDomains is null ||
                     result.Result.AvailableUserDomains.Count == 0)

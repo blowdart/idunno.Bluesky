@@ -16,6 +16,8 @@ The status page for `idunno.AtProto`'s [current and planned APIs](endpointStatus
     * [Disabling token refresh](gettingStarted.md#disablingTokenRefresh)
 * [Reading your timeline](timeline.md#timeline)
 * [Error handling](timeline.md#errorHandling)
+* [Logging](logging.md)
+    * [Configuring logging](logging.md#configuring)
 * [AT URIs](timeline.md#atURIs)
 * [Checking notifications](notifications.md#checkingNotifications)
 * [Cursors and pagination](notifications.md#cursorsPagination)
@@ -23,6 +25,6 @@ The status page for `idunno.AtProto`'s [current and planned APIs](endpointStatus
     * [Creating a post](posting.md#creatingAPost)
     * [Deleting a post](posting.md#deletingAPost)
     * [Getting a post from its AT URI](posting.md#gettingAPost)
-
-## 
-
+* [Labels](labels.md)
+    * [Getting a user's labeler subscriptions](labels.md#labelSubscriptions)
+    * [Reacting to labels](labels.md#labelReacting)]

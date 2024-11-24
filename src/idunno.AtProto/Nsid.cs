@@ -160,9 +160,37 @@ namespace idunno.AtProto
             }
 
             // Return true if the fields match.
-            return (string.Equals(Name, other.Name, StringComparison.Ordinal) &&
-                string.Equals(Authority, other.Authority, StringComparison.Ordinal));
+            return string.Equals(Name, other.Name, StringComparison.Ordinal) && string.Equals(Authority, other.Authority, StringComparison.Ordinal);
         }
+
+        /// <summary>
+        /// Determines whether two specified <see cref="Nsid"/>s the same value."/>
+        /// </summary>
+        /// <param name="lhs">The first <see cref="Nsid"/> to compare, or null.</param>
+        /// <param name="rhs">The second <see cref="Nsid"/> to compare, or null.</param>
+        /// <returns>true if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, false.</returns>
+        public static bool operator ==(Nsid? lhs, Nsid? rhs)
+        {
+            if (lhs is null)
+            {
+                if (rhs is null)
+                {
+                    return true;
+                }
+
+                return false;
+            }
+
+            return lhs.Equals(rhs);
+        }
+
+        /// <summary>
+        /// Determines whether two specified <see cref="Nsid"/>s dot not have same value."/>
+        /// </summary>
+        /// <param name="lhs">The first <see cref="Nsid"/> to compare, or null.</param>
+        /// <param name="rhs">The second <see cref="Nsid"/> to compare, or null.</param>
+        /// <returns>true if the value of <paramref name="lhs"/> is different to the value of <paramref name="rhs" />; otherwise, false.</returns>
+        public static bool operator !=(Nsid? lhs, Nsid? rhs) => !(lhs == rhs);
 
         internal static bool Parse(string s, bool throwOnError, out Nsid? result)
         {

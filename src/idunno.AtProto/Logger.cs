@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Net;
+using idunno.AtProto.Repo;
 using Microsoft.Extensions.Logging;
 
 namespace idunno.AtProto
@@ -37,6 +38,12 @@ namespace idunno.AtProto
 
         [LoggerMessage(22, LogLevel.Information, "Background token refresh fired")]
         internal static partial void BackgroundTokenRefreshFired(ILogger logger);
+
+        [LoggerMessage(23, LogLevel.Error, "StartTokenRefreshTime() called but token refresh is disabled")]
+        internal static partial void TokenRefreshTimerStartCalledButRefreshDisabled (ILogger logger);
+
+        [LoggerMessage(24, LogLevel.Error, "RefreshToken API call threw")]
+        internal static partial void TokenRefreshApiThrew(ILogger logger, Exception e);
 
         // Restore Session logging
         [LoggerMessage(30, LogLevel.Debug, "RestoreSession called for {did} on {service}")]
@@ -102,7 +109,7 @@ namespace idunno.AtProto
         [LoggerMessage(91, LogLevel.Error, "CreateRecord on {service} succeeded but the result was null")]
         internal static partial void CreateRecordSucceededButNullResult(ILogger logger, Uri service);
 
-        [LoggerMessage(92, LogLevel.Error, "CreateRecord into {collection} failed with status code {status}, {error} {message} on {service}")]
+        [LoggerMessage(92, LogLevel.Error, "CreateRecord into {collection} failed with status code {status}, \"{error}\" \"{message}\" on {service}")]
         internal static partial void CreateRecordFailed(ILogger logger, HttpStatusCode status, Nsid collection, string? error, string? message, Uri service);
 
         [LoggerMessage(93, LogLevel.Error, "CreatedRecord failed as current session is not authenticated.")]
@@ -111,8 +118,8 @@ namespace idunno.AtProto
         [LoggerMessage(100, LogLevel.Error, "DeleteRecord failed as current session is not authenticated.")]
         internal static partial void DeleteRecordFailedAsSessionIsAnonymous(ILogger logger);
 
-        [LoggerMessage(101, LogLevel.Debug, "DeleteRecord succeeded, deleted {repo} {collection} {rKey} on {service}.")]
-        internal static partial void DeleteRecordSucceeded(ILogger logger, AtIdentifier repo, Nsid collection, RecordKey rKey, Uri service);
+        [LoggerMessage(101, LogLevel.Debug, "DeleteRecord succeeded, deleted {repo} {collection} {rKey} on {service}. Commit: {commit}")]
+        internal static partial void DeleteRecordSucceeded(ILogger logger, AtIdentifier repo, Nsid collection, RecordKey rKey, Uri service, Commit commit);
 
         [LoggerMessage(102, LogLevel.Error, "DeleteRecord failed with {statusCode} / {error} {message} against {repo} {collection} {rKey} on {service}.")]
         internal static partial void DeleteRecordFailed(ILogger logger, HttpStatusCode statusCode, string? error, string? message, AtIdentifier repo, Nsid collection, RecordKey rKey, Uri service);
@@ -120,7 +127,7 @@ namespace idunno.AtProto
         [LoggerMessage(110, LogLevel.Debug, "GetRecord {repo} {collection} {rKey} on {service}.")]
         internal static partial void GetRecordCalled(ILogger logger, AtIdentifier repo, Nsid collection, RecordKey rKey, Uri service);
 
-        [LoggerMessage(111, LogLevel.Error, "GetRecord failed with with {statusCode} / {error} {message} against {repo} {collection} {rKey} on {service}.")]
+        [LoggerMessage(111, LogLevel.Error, "GetRecord failed with with {statusCode}, \"{error}\" \"{message}\" against {repo} {collection} {rKey} on {service}.")]
         internal static partial void GetRecordFailed(ILogger logger, HttpStatusCode statusCode, AtIdentifier repo, Nsid collection, RecordKey rKey, string? error, string? message, Uri service);
 
         [LoggerMessage(112, LogLevel.Error, "GetRecord succeeded but returned a null record against {repo} {collection} {rKey} on {service}.")]
@@ -129,7 +136,7 @@ namespace idunno.AtProto
         [LoggerMessage(120, LogLevel.Debug, "ListRecords {repo} {collection} on {service}.")]
         internal static partial void ListRecordsCalled(ILogger logger, AtIdentifier repo, Nsid collection, Uri service);
 
-        [LoggerMessage(121, LogLevel.Error, "ListRecords failed with with {statusCode} / {error} {message} against {repo} {collection} on {service}.")]
+        [LoggerMessage(121, LogLevel.Error, "ListRecords failed with with {statusCode}, \"{error}\" \"{message}\" against {repo} {collection} on {service}.")]
         internal static partial void ListRecordsFailed(ILogger logger, HttpStatusCode statusCode, AtIdentifier repo, Nsid collection, string? error, string? message, Uri service);
 
         [LoggerMessage(122, LogLevel.Error, "ListRecords succeeded but returned a null result against {repo} {collection} on {service}.")]
@@ -138,13 +145,34 @@ namespace idunno.AtProto
         [LoggerMessage(130, LogLevel.Error, "UploadBlob to {service} failed as current session is not authenticated.")]
         internal static partial void UploadBlobFailedAsSessionIsAnonymous(ILogger logger, Uri service);
 
-        [LoggerMessage(131, LogLevel.Error, "UploadBlob to {service} failed as blob is empty.")]
-        internal static partial void UploadBlobFailedAsSessionIsEmpty(ILogger logger, Uri service);
+        [LoggerMessage(131, LogLevel.Error, "UploadBlob to {service} failed as blob is length is zero.")]
+        internal static partial void UploadBlobFailedAsBlobLengthIsZero(ILogger logger, Uri service);
 
         [LoggerMessage(140, LogLevel.Information, "SetTokens called for {did} on {service}")]
         internal static partial void UpdateTokensCalled(ILogger logger, Did did, Uri service);
 
         [LoggerMessage(141, LogLevel.Error, "SetTokens for {did} on {service} was passed invalid tokens")]
         internal static partial void UpdateTokensGivenInvalidTokens(ILogger logger, Did did, Uri service);
+
+        [LoggerMessage(150, LogLevel.Debug, "ApplyWrites succeeded, commit id {cid}, revision {revision}  on {service}")]
+        internal static partial void ApplyWritesSucceeded(ILogger logger, Cid cid, string revision, Uri service);
+
+        [LoggerMessage(151, LogLevel.Error, "ApplyWrites failed as current session is not authenticated.")]
+        internal static partial void ApplyWritesFailedAsSessionIsAnonymous(ILogger logger);
+
+        [LoggerMessage(152, LogLevel.Error, "ApplyWrites failed with status code {statusCode}, Error:\"{error}\" Message:\"{message}\" on {service}.")]
+        internal static partial void ApplyWritesApiCallFailed(ILogger logger, HttpStatusCode statusCode, string? error, string? message, Uri service);
+
+        [LoggerMessage(160, LogLevel.Debug, "Put succeeded, updated or created {uri} {cid} in {collection} on {service}")]
+        internal static partial void PutRecordSucceeded(ILogger logger, AtUri uri, Cid cid, Nsid collection, Uri service);
+
+        [LoggerMessage(161, LogLevel.Error, "PutRecord on {service} succeeded but the result was null")]
+        internal static partial void PutRecordSucceededButNullResult(ILogger logger, Uri service);
+
+        [LoggerMessage(162, LogLevel.Error, "PutRecord into {collection} with {recordKey}, failed with status code {status}, \"{error}\" \"{message}\" on {service}")]
+        internal static partial void PutRecordFailed(ILogger logger, HttpStatusCode status, Nsid collection, RecordKey recordKey, string? error, string? message, Uri service);
+
+        [LoggerMessage(163, LogLevel.Error, "PutRecord failed as current session is not authenticated.")]
+        internal static partial void PutRecordFailedAsSessionIsAnonymous(ILogger logger);
     }
 }

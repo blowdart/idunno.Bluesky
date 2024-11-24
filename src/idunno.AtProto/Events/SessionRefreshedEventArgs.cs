@@ -11,7 +11,7 @@ namespace idunno.AtProto.Events
         /// <summary>
         /// Creates a new instance of <see cref="SessionRefreshedEventArgs"/>
         /// </summary>
-        /// <param name="did">The <see cref="AtProto.Did"/> the session was created for.</param>
+        /// <param name="did">The <see cref="Did"/> the session was created for.</param>
         /// <param name="service">The <see cref="Uri"/> of the service the session was created on.</param>
         /// <param name="accessJwt">The access token for the session.</param>
         /// <param name="refreshJwt">The refresh token for the session.</param>

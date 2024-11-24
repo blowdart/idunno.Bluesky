@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using idunno.AtProto.Models;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace idunno.AtProto.Server
 {
@@ -11,6 +12,10 @@ namespace idunno.AtProto.Server
     /// </summary>
     public sealed record Session
     {
+        private readonly object _syncRoot = new ();
+
+        private string? _accessJwt;
+
         internal Session(Uri service, CreateSessionResponse createSessionResult)
         {
             Service = service;
@@ -54,7 +59,24 @@ namespace idunno.AtProto.Server
         /// <remarks>
         /// <para>The access token is attached automatically to every API call through an agent that requires authentication.</para>
         /// </remarks>
-        public string? AccessJwt { get; private set; }
+        public string? AccessJwt
+        {
+            get
+            {
+                return _accessJwt;
+            }
+
+            private set
+            {
+                _accessJwt = value;
+                AccessJwtExpiresOn = GetJwtExpiry(value);
+            }
+        }
+
+        /// <summary>
+        /// Gets the <see cref="DateTime"/> the access token expires on, if an access token is present.
+        /// </summary>
+        public DateTime? AccessJwtExpiresOn { get; private set; }
 
         /// <summary>
         /// Gets the refresh token for the actor whose authentication produced this Session instance.
@@ -119,6 +141,7 @@ namespace idunno.AtProto.Server
         /// Returns a flag indicating whether this session has an access token.
         /// </summary>
         [MemberNotNullWhen(true, nameof(AccessJwt))]
+        [MemberNotNullWhen(true, nameof(AccessJwtExpiresOn))]
         public bool HasAccessToken
         {
             get
@@ -127,15 +150,24 @@ namespace idunno.AtProto.Server
             }
         }
 
-        /// <summary>
-        /// Updates this session's access tokens.
-        /// </summary>
-        /// <param name="accessJwt">The new access token to use.</param>
-        /// <param name="refreshJwt">The new refresh token to use.</param>
         internal void UpdateAccessTokens(string? accessJwt, string? refreshJwt)
         {
-            AccessJwt = accessJwt;
-            RefreshJwt = refreshJwt;
+            lock (_syncRoot)
+            {
+                AccessJwt = accessJwt;
+                RefreshJwt = refreshJwt;
+            }
+        }
+
+        private static DateTime? GetJwtExpiry(string? jwt)
+        {
+            if (string.IsNullOrEmpty(jwt))
+            {
+                return null;
+            }
+
+            JsonWebToken token = new(jwt);
+            return token.ValidTo;
         }
     }
 }

@@ -1,4 +1,4 @@
-# Logging
+# <a name="logging">Logging</a>
 
 The Bluesky agent provides logging through the standard [.NET logging interface](https://learn.microsoft.com/en-us/dotnet/core/extensions/logging?tabs=command-line).
 
@@ -12,7 +12,7 @@ As the standard `ILoggerFactory` interface is used when creating an agent either
 GenericHost can be used to inject a logger factory into the agent, or you can create a logger factory and pass it to the agent, for applications such
 as console applications.
 
-## Logging in a console application
+## <a name="configuring">Configuring logging</a>
 
 The following code illustrates using the console logger to log messages from an AtProtoAgent.
 

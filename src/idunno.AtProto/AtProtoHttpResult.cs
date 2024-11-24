@@ -52,25 +52,14 @@ namespace idunno.AtProto
         public AtErrorDetail? AtErrorDetail {get; internal set; }
 
         /// <summary>
-        /// A flag indicating if the https request returned a status code of OK.
+        /// A flag indicating if the https request returned a status code of OK and a result is present.
         /// </summary>
+        [MemberNotNullWhen(true, nameof(Result))]
         public bool Succeeded
         {
             get
             {
-                return StatusCode == HttpStatusCode.OK;
-            }
-        }
-
-        /// <summary>
-        /// A flag indicating if the https request returned a status code of OK and a result is present.
-        /// </summary>
-        [MemberNotNullWhen(true, nameof(Result))]
-        public bool SucceededWithResult
-        {
-            get
-            {
-                return Succeeded && Result is not null;
+                return StatusCode == HttpStatusCode.OK && Result is not null;
             }
         }
 

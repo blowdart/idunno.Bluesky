@@ -12,6 +12,7 @@ namespace idunno.AtProto.Models
     [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Skip)]
     public sealed record RefreshSessionResponse : BaseSessionResponse
     {
+        [JsonConstructor]
         internal RefreshSessionResponse(string accessJwt, string refreshJwt, Handle handle, Did did, DidDocument? didDoc, bool? active, AccountStatus? status)
             : base(handle, did, didDoc, active, status)
         {

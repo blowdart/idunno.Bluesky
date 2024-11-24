@@ -80,36 +80,41 @@ should be performed against that PDS. The `AtProtoAgent` `Login` method does thi
 
 ### <a name="usingAProxy">Using a proxy server<a>
 
-The agent constructors can take an `HttpClient` that you can use to configure a proxy for each request the agent makes.
-For example, to use Fiddler as a proxy you would initialize the agent using the following code.
+The agent constructors can take an `HttpClient` if you want to customize agent headers or other http properties.
+This can be useful if you want to use a proxy server. The agent classes contain a helper method,
+`CreateConfiguredHttpClient()` which will create an HttpClient configured to use a proxy server,
+and/or set a custom user agent string. You can then pass this HttpClient to the agent constructor.
+
+Note that if you specify a proxy URI the HttpClient returned will be configured to not check Certificate Revocation lists as typically the
+HTTPS certificates created by proxy servers like Fiddler or Burp Suite don't have CRL endpoints.
 
 ```c#
-var proxy = new WebProxy
-{
-    Address = new Uri("http://localhost:8866"),
-    BypassProxyOnLocal = true,
-    UseDefaultCredentials = true
-};
 
-var proxyClientHandler = new HttpClientHandler
+HttpClient httpClient = Agent.CreateHttpClientForProxy("http://localhost:8866", "mydotnetclient/1.0");
+BlueskyAgent agent = new (httpClient)
 {
-    Proxy = proxy,
-    UseProxy = true,
-    ServerCertificateCustomValidationCallback =  HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-};
+    // And now this instance of agent will use your handler.
+}
+```
 
-using (var proxyClient = new HttpClient(handler: proxyClientHandler, disposeHandler: true))
+If you are creating your own HttpClient instance you will need to ensure the handler you create uses has compression support enabled.
+
+```c#
+HttpClientHandler handler = new ()
 {
-    BlueskyAgent agent = new (proxyClient)
-    {
-        var did = await agent.ResolveHandle("blowdart.me");
-    }
+    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+};
+HttpClient httpClient = new (handler);
+
+BlueskyAgent agent = new (httpClient)
+{
+    // And now this instance of agent will use your handler.
 }
 ```
 
 ### <a name="disablingTokenRefresh">Disabling token refresh</a>
 
-If you want to disable automatic token refresh you can do that by the `EnableTokenRefresh` property in options to false.
+If you want to disable automatic token refresh in an agent you can do that by the `EnableTokenRefresh` property in options to false.
 
 ```c#
 var options = new BlueskyAgentOptions() { EnableBackgroundTokenRefresh = false };
@@ -128,7 +133,7 @@ The success or fail possibilities are wrapped together in an `HttpResult<T>` tha
 
 For example, a login call returns an `AtProtoHttpResult<bool>`. To check the operation succeeded you would
 
-1. Check the that the `SucceededWithResult` property is true, which indicates the underlying request returned a `HttpStatusCode.OK` status code, and a result is available.
+1. Check the that the `Succeeded` property is true, which indicates the underlying request returned a `HttpStatusCode.OK` status code, and a result is available.
 2. If it's `true`, you can use the `Result` property and continue on your way.
    If it's `false` you can use the `StatusCode` property to examine the HTTP status code returned by the API and, if the API has given a detailed error response, you can use the `Error` property to view any extended error information returned, which may have an `Error` and a `Message` set.
 1. If the `StatusCode` properly is `HttpStatusCode.OK` then the API call succeeded but no result was returned, which shouldn't happen.
@@ -139,7 +144,7 @@ When calling an API you should use the following pattern to check for errors.
 // Make an API call to get the timeline for the current user.
 var timelineResult = await agent.GetTimeline();
 
-if (timelineResult.SucceededWithResult)
+if (timelineResult.Succeeded)
 {
     // Everything was successful, continue on with your code
 }
@@ -151,9 +156,8 @@ else
 }
 ```
 
-The `SuccedeedWithResult` property on the `AtProtoHttpResult<T>` class is a convenience property that checks if the
-`StatusCode` is `HttpStatusCode.OK` and the `Result` is not `null`. There is also a `Succeeded` property which just checks the `StatusCode` for
-the few APIs that don't return a result.
+The `Succedeed` property on the `AtProtoHttpResult<T>` class is a convenience property that checks if the
+`StatusCode` property is `HttpStatusCode.OK` and the `Result` property is not `null`.
 
 The`AtProtoHttpResult<T>` `StatusCode` property exposes the HTTP status code the API endpoint returned.
 If the `StatusCode` is not `Succeeded` then an HTTP error occurred during the API call.

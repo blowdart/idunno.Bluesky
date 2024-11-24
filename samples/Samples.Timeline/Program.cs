@@ -1,120 +1,258 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.CommandLine;
+using System.CommandLine.Parsing;
+using Microsoft.Extensions.Logging;
+
 using idunno.AtProto;
-using idunno.AtProto.Bluesky.Feed;
-using System.Net;
+using idunno.Bluesky;
+using idunno.Bluesky.Actor;
+using idunno.Bluesky.Feed;
 
-// Necessary to render emojis.
-Console.OutputEncoding = System.Text.Encoding.UTF8;
+using Samples.Common;
+using System.Globalization;
+using System.Text;
+using idunno.AtProto.Labels;
+using idunno.Bluesky.Graph;
 
-string? username;
-string? password;
-Uri? proxyUri = null;
-
-if (args.Length == 3)
+namespace Samples.Timeline
 {
-    username = args[0];
-    password = args[1];
-    proxyUri = new Uri(args[2]);
-}
-else if (args.Length == 2)
-{
-    username = args[0];
-    password = args[1];
-}
-else if (args.Length == 1)
-{
-    username = Environment.GetEnvironmentVariable("_BlueskyUserName");
-    password = Environment.GetEnvironmentVariable("_BlueskyPassword");
-    proxyUri = new Uri(args[0]);
-}
-else if (args.Length == 0)
-{
-    username = Environment.GetEnvironmentVariable("_BlueskyUserName");
-    password = Environment.GetEnvironmentVariable("_BlueskyPassword");
-}
-else
-{
-    Console.WriteLine("Usage: Timeline <blueskyUsername> <blueskyPassword> (<proxyuri>)");
-    Console.WriteLine();
-    Console.WriteLine("Or use the _BlueskyUserName and _BlueskyPassword environment variables to provide credentials and use Timeline (<proxyuri>)");
-    return;
-}
-
-if (username is null || password is null)
-{
-    Console.ForegroundColor = ConsoleColor.Red;
-    Console.WriteLine($"Set _BlueSkyUserName and _BlueSkyPassword environment variables before running.");
-    return;
-}
-
-using (HttpClientHandler handler = new())
-{
-    if (proxyUri is not null)
+    public sealed class Program
     {
-        handler.Proxy = new WebProxy
+        static async Task<int> Main(string[] args)
         {
-            Address = proxyUri,
-            BypassProxyOnLocal = false,
-            UseDefaultCredentials = false,
-        };
-    }
+            // Necessary to render emojis.
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-    using (BlueskyAgent agent = new(handler))
-    {
-        HttpResult<bool> loginResult = await agent.Login(username, password);
+            var parser = Helpers.ConfigureCommandLine(PerformOperations);
+            await parser.InvokeAsync(args);
 
-        if (loginResult.Succeeded && agent.Session is not null)
+            return 0;
+        }
+
+        static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
         {
-            HttpResult<Timeline> timelineResult = await agent.GetTimeline();
+            ArgumentNullException.ThrowIfNullOrEmpty(handle);
+            ArgumentNullException.ThrowIfNullOrEmpty(password);
 
-            if (timelineResult.Succeeded && timelineResult.Result is not null)
+            // Uncomment the next line to route all requests through Fiddler Everywhere
+            proxyUri = new Uri("http://localhost:8866");
+
+            // Uncomment the next line to route all requests  through Fiddler Classic
+            // proxyUri = new Uri("http://localhost:8888");
+
+            // Get an HttpClient configured to use a proxy, if proxyUri is not null.
+            using (HttpClient? httpClient = Helpers.CreateOptionalHttpClient(proxyUri))
+
+            // Change the log level in the ConfigureConsoleLogging() to enable logging
+            using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
+
+            // Create a new BlueSkyAgent
+            using (var agent = new BlueskyAgent(httpClient: httpClient, loggerFactory: loggerFactory))
             {
-                Console.WriteLine($"Timeline: {timelineResult.Result.Feed.Count} post{(timelineResult.Result.Feed.Count != 1 ? "s" : "")}.\n");
+                // Test code goes here.
 
-                foreach (FeedView feedView in timelineResult.Result.Feed)
+                // Delete if your test code does not require authentication
+                // START-AUTHENTICATION
+                var loginResult = await agent.Login(handle, password, authCode, cancellationToken: cancellationToken);
+                if (!loginResult.Succeeded)
                 {
-                    string? author = feedView.Post.Author.Handle.ToString();
-                    if (feedView.Post.Author.DisplayName is not null && feedView.Post.Author.DisplayName.Length > 0)
+                    if (loginResult.AtErrorDetail is not null &&
+                        string.Equals(loginResult.AtErrorDetail.Error!, "AuthFactorTokenRequired", StringComparison.OrdinalIgnoreCase))
                     {
-                        author = feedView.Post.Author.DisplayName;
-                    }
+                        ConsoleColor oldColor = Console.ForegroundColor;
 
-                    Console.WriteLine($"{feedView.Post.Record.Text} - {author} {feedView.Post.Author.Handle}/{feedView.Post.Author.Did}.");
-                    Console.WriteLine($"  Created At: {feedView.Post.Record.CreatedAt}");
-                    Console.WriteLine($"  {feedView.Post.LikeCount} like{(feedView.Post.LikeCount != 1 ? "s" : "")} {feedView.Post.RepostCount} repost{(feedView.Post.RepostCount != 1 ? "s" : "")}.");
-                    Console.WriteLine($"  AtUri={feedView.Post.Uri}\n  Cid={feedView.Post.Cid}.\n\n");
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("Login requires an authentication code.");
+                        Console.WriteLine("Check your email and use --authCode to specify the authentication code.");
+                        Console.ForegroundColor = oldColor;
+
+                        return;
+                    }
+                    else
+                    {
+                        ConsoleColor oldColor = Console.ForegroundColor;
+
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("Login failed.");
+                        Console.ForegroundColor = oldColor;
+
+                        if (loginResult.AtErrorDetail is not null)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Red;
+
+                            Console.WriteLine($"Server returned {loginResult.AtErrorDetail.Error} / {loginResult.AtErrorDetail.Message}");
+                            Console.ForegroundColor = oldColor;
+
+                            return;
+                        }
+                    }
                 }
-            }
-            else if (timelineResult.Succeeded && timelineResult.Result is null)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("getTimelineResult succeeded but a session was not created.");
-            }
-            else
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"getTimelineResult failed: {timelineResult.StatusCode}");
-                if (timelineResult.Error is not null)
+                // END-AUTHENTICATION
+
+                Preferences preferences = new();
+                var preferencesResult = await agent.GetPreferences(cancellationToken: cancellationToken);
+                if (preferencesResult.Succeeded)
                 {
-                    Console.WriteLine($"\t{timelineResult.Error.Error} {timelineResult.Error.Message}");
+                    preferences = preferencesResult.Result;
+                }
+
+                // Change this to adjust how many timeline entries will be displayed before exiting.
+                const int maximumNumberOfEntries = 250;
+
+                // Change this to adjust how many entries are returned in each API call
+                int? pageSize = 50;
+
+                int page = 1;
+                int postCounter = 0;
+
+                AtProtoHttpResult<idunno.Bluesky.Feed.Timeline> timelineResult =
+                    await agent.GetTimeline(
+                        limit: pageSize,
+                        subscribedLabelers: preferences.SubscribedLabelers,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                if (timelineResult.Succeeded && timelineResult.Result.Count != 0)
+                {
+                    do
+                    {
+                        if (!string.IsNullOrEmpty(timelineResult.Result.Cursor))
+                        {
+                            Console.WriteLine($"\n📄 Page {page}\n");
+                        }
+
+                        foreach (FeedViewPost timelineView in timelineResult.Result)
+                        {
+                            postCounter++;
+                            if (postCounter == maximumNumberOfEntries)
+                            {
+                                break;
+                            }
+
+                            Console.WriteLine($"Entry Type : {timelineView.Post.Record.GetType()}");
+
+                            if (!string.IsNullOrEmpty(timelineView.Post.Record.Text))
+                            {
+                                Console.WriteLine($"{timelineView.Post.Record.Text}");
+                            }
+
+                            Console.WriteLine($"  From {@timelineView.Post.Author} {GetLabels(timelineView.Post.Author)}");
+                            Console.WriteLine($"  Posted at: {timelineView.Post.Record.CreatedAt.ToLocalTime():G}");
+                            Console.WriteLine($"  {timelineView.Post.LikeCount} like{(timelineView.Post.LikeCount != 1 ? "s" : "")} {timelineView.Post.RepostCount} repost{(timelineView.Post.RepostCount != 1 ? "s" : "")}.");
+                            Console.WriteLine($"  AtUri: {timelineView.Post.Uri}");
+                            Console.WriteLine($"  Cid:   {timelineView.Post.Cid}");
+
+                            string postLabels = GetLabels(timelineView.Post);
+                            if (!string.IsNullOrEmpty(postLabels))
+                            {
+                                Console.WriteLine($"  {postLabels}");
+                            }
+
+                            if (timelineView.Reason is ReasonRepost repost)
+                            {
+                                Console.WriteLine($"  ♲ Reposted by {repost.By}");
+                            }
+
+                            // The post we're looking at was a reply to another post,
+                            // So let's display some information from that post.
+                            if (timelineView.Reply is not null)
+                            {
+                                switch (timelineView.Reply.Parent)
+                                {
+                                    case null:
+                                        break;
+
+                                    case NotFoundPost:
+                                        Console.WriteLine("  🗑  In reply to a now deleted post.");
+                                        break;
+
+                                    case BlockedPost:
+                                        Console.WriteLine("  🚫  In reply to a blocked post.");
+                                        break;
+
+                                    case PostView postView:
+                                        Console.WriteLine($"  ⤷ In reply to {postView.Uri}");
+                                        if (!string.IsNullOrEmpty(postView.Record.Text))
+                                        {
+                                            Console.WriteLine($"    {postView.Record.Text}");
+                                        }
+
+                                        string replyPostLabels = GetLabels(postView);
+                                        if (!string.IsNullOrEmpty(replyPostLabels))
+                                        {
+                                            Console.WriteLine($"    {replyPostLabels}");
+                                        }
+
+                                        Console.WriteLine($"    From {@postView.Author} {GetLabels(postView.Author)}");
+                                        Console.WriteLine($"    Posted at: {postView.Record.CreatedAt.ToLocalTime():G}");
+                                        break;
+
+                                    default:
+                                        Console.WriteLine("  ⤷ In reply to something I don't understand how to render.");
+                                        break;
+                                }
+                            }
+                            Console.WriteLine();
+                        }
+
+                        page++;
+
+                        if (!string.IsNullOrEmpty(timelineResult.Result.Cursor))
+                        {
+                            timelineResult = await agent.GetTimeline(
+                                limit: pageSize,
+                                cursor: timelineResult.Result.Cursor,
+                                subscribedLabelers: preferences.SubscribedLabelers,
+                                cancellationToken: cancellationToken).ConfigureAwait(false);
+                        }
+                    } while (postCounter <= maximumNumberOfEntries && timelineResult.Succeeded && !string.IsNullOrEmpty(timelineResult.Result.Cursor));
                 }
             }
         }
-        else if (loginResult.Succeeded)
+
+        static string GetLabels(ProfileViewBasic author)
         {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("Login succeeded but a session was not created.");
-        }
-        else
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"Login failed: {loginResult.StatusCode}");
-            if (loginResult.Error is not null)
+            if (author is null)
             {
-                Console.WriteLine($"\t{loginResult.Error.Error} {loginResult.Error.Message}");
+                return string.Empty;
             }
+
+            StringBuilder labelBuilder = new();
+
+            foreach (Label label in author.Labels)
+            {
+                labelBuilder.Append(CultureInfo.InvariantCulture, $"[{label.Value}] ");
+            }
+
+            if (labelBuilder.Length != 0)
+            {
+                labelBuilder.Length--;
+            }
+
+            return labelBuilder.ToString();
+        }
+
+        static string GetLabels(PostView postView)
+        {
+            if (postView is null)
+            {
+                return string.Empty;
+            }
+
+            StringBuilder labelBuilder = new();
+
+            foreach (Label label in postView.Labels)
+            {
+                labelBuilder.Append(CultureInfo.InvariantCulture, $"[{label.Value}] ");
+            }
+
+            if (labelBuilder.Length != 0)
+            {
+                labelBuilder.Length--;
+            }
+
+            return labelBuilder.ToString();
         }
     }
 }

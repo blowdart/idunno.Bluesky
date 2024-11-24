@@ -25,7 +25,7 @@ namespace idunno.AtProto.Repo
         /// Gets the value of the record.
         /// </summary>
         [JsonInclude]
-        public AtProtoRecordValue? Value { get; init; }
+        public virtual AtProtoRecordValue? Value { get; init; }
 
         /// <summary>
         /// A list of keys and element data that do not map to any strongly typed properties.

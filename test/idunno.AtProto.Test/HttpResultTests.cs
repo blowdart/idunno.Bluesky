@@ -25,7 +25,7 @@ namespace idunno.AtProto.Test
         }
 
         [Fact]
-        public void SucceededReturnsTrueWhenStatusCodeIsOKAndResultIsNull()
+        public void SucceededReturnsFalseWhenStatusCodeIsOKAndResultIsNull()
         {
             var httpResult = new AtProtoHttpResult<string>
             {
@@ -35,7 +35,7 @@ namespace idunno.AtProto.Test
 
             bool result = httpResult.Succeeded;
 
-            Assert.True(result);
+            Assert.False(result);
         }
 
 
@@ -62,7 +62,7 @@ namespace idunno.AtProto.Test
                 Result = "test"
             };
 
-            bool result = httpResult.SucceededWithResult;
+            bool result = httpResult.Succeeded;
 
             Assert.True(result);
         }
@@ -76,7 +76,7 @@ namespace idunno.AtProto.Test
                 Result = null
             };
 
-            bool result = httpResult.SucceededWithResult;
+            bool result = httpResult.Succeeded;
 
             Assert.False(result);
         }

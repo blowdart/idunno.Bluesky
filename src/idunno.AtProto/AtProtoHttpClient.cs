@@ -347,7 +347,8 @@ namespace idunno.AtProto
 
                         if (responseAtErrorDetail is not null)
                         {
-                            errorDetail = responseAtErrorDetail;
+                            errorDetail.Error = responseAtErrorDetail.Error;
+                            errorDetail.Message = responseAtErrorDetail.Message;
                         }
                     }
                     catch (NotSupportedException) { }

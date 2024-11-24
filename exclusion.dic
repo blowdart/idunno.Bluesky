@@ -16,6 +16,7 @@ Nsid
 Nsids
 uris
 threadgate
+postgate
 richtext
 defs
 bsky
@@ -29,4 +30,11 @@ atprotosharp
 xunit
 oauth
 openid
-﻿Takendown
+Takendown
+cbor
+curatelist
+modlist
+referencelist
+starterpack
+gziped
+did:plc:ar7c4by46qjdydhdevvrndac

@@ -1,0 +1,7 @@
+root = false
+
+[.cs]
+dotnet_diagnostic.CS1591.severity = warning
+
+[*.designer.cs]
+dotnet_diagnostic.CS1591.severity = none

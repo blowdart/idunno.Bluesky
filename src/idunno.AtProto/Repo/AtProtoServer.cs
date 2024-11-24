@@ -3,8 +3,10 @@
 
 using System.Net.Http.Headers;
 using System.Text.Json;
+
 using idunno.AtProto.Models;
 using idunno.AtProto.Repo;
+using idunno.AtProto.Repo.Models;
 
 namespace idunno.AtProto
 {
@@ -13,14 +15,21 @@ namespace idunno.AtProto
     /// </summary>
     public static partial class AtProtoServer
     {
+        // https://docs.bsky.app/docs/api/com-atproto-repo-apply-writes
+        internal const string ApplyWritesEndpoint = "/xrpc/com.atproto.repo.applyWrites";
+
         // https://docs.bsky.app/docs/api/com-atproto-repo-create-record
         internal const string CreateRecordEndpoint = "/xrpc/com.atproto.repo.createRecord";
 
         // https://docs.bsky.app/docs/api/com-atproto-repo-delete-record
         internal const string DeleteRecordEndpoint = "/xrpc/com.atproto.repo.deleteRecord";
 
+        // https://docs.bsky.app/docs/api/com-atproto-repo-put-record
+        internal const string PutRecordEndpoint = "/xrpc/com.atproto.repo.putRecord";
+
         // https://docs.bsky.app/docs/api/com-atproto-repo-describe-repo
         internal const string DescribeRepoEndpoint = "xrpc/com.atproto.repo.describeRepo";
+
         // https://docs.bsky.app/docs/api/com-atproto-repo-get-record
         internal const string GetRecordEndpoint = "/xrpc/com.atproto.repo.getRecord";
 
@@ -31,11 +40,20 @@ namespace idunno.AtProto
         internal const string UploadBlobEndpoint = "/xrpc/com.atproto.repo.uploadBlob";
 
         /// <summary>
-        /// Creates an atproto record in the specified collection.
+        /// Apply a batch transaction of repository creates, updates, and deletes. Requires authentication.
         /// </summary>
-        /// <param name="record">The record to be created.</param>
-        /// <param name="collection">The NSID of collection the record should be created in.</param>
-        /// <param name="creator">The <see cref="Did"/> of the creating actor.</param>
+        /// <param name="writeRequests"></param>
+        /// <param name="repo"></param>
+        /// <param name="validate">
+        ///     Flag indicating what level of validation the api should perform.
+        ///     If false skips lexicon schema validation of record data across all operations.
+        ///     If true requires validation
+        ///     if null validates only for known lexicons.
+        ///</param>
+        /// <param name="cid">
+        ///   Optional commit ID. If provided, the entire operation will fail if the current repo commit CID does not match this value.
+        ///   Used to prevent conflicting repo mutations.
+        ///</param>
         /// <param name="service">The service to create the record on.</param>
         /// <param name="accessToken">An access token for the specified service.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
@@ -43,13 +61,77 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
+        /// Thrown if <paramref name="writeRequests"/>, <paramref name="repo"/>, <paramref name="service"/>,
+        /// <paramref name="accessToken"/>, or <paramref name="httpClient"/> is null.
+        /// </exception>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="writeRequests"/> is an empty collection.</exception>
+        public static async Task<AtProtoHttpResult<ApplyWritesResponse>> ApplyWrites(
+            ICollection<ApplyWritesRequestValueBase> writes,
+            Did repo,
+            bool? validate,
+            Cid? cid,
+            Uri service,
+            string accessToken,
+            HttpClient httpClient,
+            JsonSerializerOptions? jsonSerializerOptions = null,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(writes);
+            ArgumentNullException.ThrowIfNull(repo);
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(httpClient);
+
+            if (writes.Count == 0)
+            {
+                throw new ArgumentException("cannot be an empty collection.", nameof(writes));
+            }
+
+            ApplyWritesRequest request = new(repo, validate, writes, cid);
+
+            AtProtoHttpClient<ApplyWritesResponse> client = new();
+            return await client.Post(
+                service,
+                ApplyWritesEndpoint,
+                request,
+                accessToken,
+                httpClient,
+                jsonSerializerOptions: jsonSerializerOptions,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Creates an atproto record in the specified collection. Requires authentication.
+        /// </summary>
+        /// <param name="recordJson"><para>A json representation of record to be created.</para></param>
+        /// <param name="collection"><para>The NSID of collection the record should be created in.</para></param>
+        /// <param name="creator"><para>The <see cref="Did"/> of the creating actor.</para></param>
+        /// <param name="rKey"><para>The record key, if any, of the record to be created.</para></param>
+        /// <param name="validate">
+        ///   <para>Flag indicating what validation will be performed, if any.</para>
+        ///   <para>A value of <keyword>true</keyword> requires lexicon schema validation of record data.</para>
+        ///   <para>A value of <keyword>false</keyword> will skip Lexicon schema validation of record data.</para>
+        ///   <para>A value of <keyword>null</keyword> to validate record data only for known lexicons.</para>
+        ///   <para>Defaults to <keyword>true</keyword>.</para>
+        /// </param>
+        /// <param name="swapCommit"><para>The <see cref="Cid"/>, if any, to compare and swap with.</para></param>
+        /// <param name="service"><para>The service to create the record on.</para></param>
+        /// <param name="accessToken"><para>An access token for the specified service.</para></param>
+        /// <param name="httpClient"><para>An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</para></param>
+        /// <param name="jsonSerializerOptions"><para><see cref="JsonSerializerOptions"/> to apply during deserialization.</para></param>
+        /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">
         /// Thrown if <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="service"/>,
         /// <paramref name="accessToken"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
-        public static async Task<AtProtoHttpResult<StrongReference>> CreateRecord(
-            AtProtoRecordValue record,
+        public static async Task<AtProtoHttpResult<CreateRecordResponse>> CreateRecord(
+            object record,
             Nsid collection,
             Did creator,
+            RecordKey? rKey,
+            bool? validate,
+            Cid? swapCommit,
             Uri service,
             string accessToken,
             HttpClient httpClient,
@@ -63,14 +145,13 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(accessToken);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            CreateRecordRequest createRecordRequest = new(collection, creator, record);
+            CreateRecordRequest request = new(record, collection, creator, validate, rKey, swapCommit);
+            AtProtoHttpClient<CreateRecordResponse> client = new();
 
-            AtProtoHttpClient<StrongReference> request = new();
-
-            return await request.Post(
+            return await client.Post(
                 service,
                 CreateRecordEndpoint,
-                createRecordRequest,
+                request,
                 accessToken,
                 httpClient,
                 jsonSerializerOptions: jsonSerializerOptions,
@@ -78,7 +159,7 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Deletes an atproto record, specified by its rKey, from specified repo/collection.
+        /// Deletes an atproto record, specified by its rKey, from specified repo/collection. Requires authentication.
         /// </summary>
         /// <param name="repo">The handle or Did of the repo to delete from. Typically this is the Did of the account that created the record.</param>
         /// <param name="collection">The NSID of the collection the record should be deleted from.</param>
@@ -95,7 +176,7 @@ namespace idunno.AtProto
         /// Thrown if <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="rKey"/>, <paramref name="service"/>,
         /// <paramref name="accessToken"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
-        public static async Task<AtProtoHttpResult<EmptyResponse>> DeleteRecord(
+        public static async Task<AtProtoHttpResult<Commit>> DeleteRecord(
             AtIdentifier repo,
             Nsid collection,
             RecordKey rKey,
@@ -116,9 +197,8 @@ namespace idunno.AtProto
 
             DeleteRecordRequest deleteRecordRequest = new(repo, collection, rKey) { SwapRecord = swapRecord, SwapCommit = swapCommit };
 
-            AtProtoHttpClient<EmptyResponse> request = new();
-
-            return await request.Post(
+            AtProtoHttpClient<DeleteRecordResponse> client = new();
+            AtProtoHttpResult<DeleteRecordResponse> response =  await client.Post(
                 service,
                 DeleteRecordEndpoint,
                 deleteRecordRequest,
@@ -126,45 +206,87 @@ namespace idunno.AtProto
                 httpClient,
                 jsonSerializerOptions : jsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (response.Succeeded)
+            {
+                return new AtProtoHttpResult<Commit>(
+                    response.Result.Commit,
+                    response.StatusCode,
+                    response.AtErrorDetail,
+                    response.RateLimit);
+            }
+            else
+            {
+                return new AtProtoHttpResult<Commit>(
+                    null,
+                    response.StatusCode,
+                    response.AtErrorDetail,
+                    response.RateLimit);
+            }
         }
+
         /// <summary>
-        /// Gets information about an account and repository, including the list of collections.
+        /// Updates or creates an atproto record in the specified collection. Requires authentication.
         /// </summary>
-        /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve information for.</param>
-        /// <param name="service">The service to delete the record from.</param>
-        /// <param name="accessToken">An access token for the specified service.</param>
-        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <param name="recordJson"><para>A json representation of record to be created.</para></param>
+        /// <param name="collection"><para>The NSID of collection the record should be created in.</para></param>
+        /// <param name="creator"><para>The <see cref="Did"/> of the creating actor.</para></param>
+        /// <param name="rKey"><para>The record key, if any, of the record to be created.</para></param>
+        /// <param name="validate">
+        ///   <para>Flag indicating what validation will be performed, if any.</para>
+        ///   <para>A value of <keyword>true</keyword> requires lexicon schema validation of record data.</para>
+        ///   <para>A value of <keyword>false</keyword> will skip Lexicon schema validation of record data.</para>
+        ///   <para>A value of <keyword>null</keyword> to validate record data only for known lexicons.</para>
+        ///   <para>Defaults to <keyword>true</keyword>.</para>
+        /// </param>
+        /// <param name="swapCommit"><para>The <see cref="Cid"/>, if any, to compare and swap with.</para></param>
+        /// <param name="service"><para>The service to create the record on.</para></param>
+        /// <param name="accessToken"><para>An access token for the specified service.</para></param>
+        /// <param name="httpClient"><para>An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</para></param>
+        /// <param name="jsonSerializerOptions"><para><see cref="JsonSerializerOptions"/> to apply during deserialization.</para></param>
+        /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown if <paramref name="repo"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown if <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="rKey"/>, <paramref name="service"/>,
+        /// <paramref name="accessToken"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
-        public static async Task<AtProtoHttpResult<RepoDescription>> DescribeRepo(
-            AtIdentifier repo,
+        public static async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord(
+            object record,
+            Nsid collection,
+            Did creator,
+            RecordKey rKey,
+            bool? validate,
+            Cid? swapCommit,
             Uri service,
-            string? accessToken,
+            string accessToken,
             HttpClient httpClient,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNull(repo);
+            ArgumentNullException.ThrowIfNull(record);
+            ArgumentNullException.ThrowIfNull(collection);
+            ArgumentNullException.ThrowIfNull(creator);
+            ArgumentNullException.ThrowIfNull(rKey);
             ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(accessToken);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<RepoDescription> request = new();
+            PutRecordRequest request = new(record, collection, creator, rKey, validate, swapCommit);
+            AtProtoHttpClient<PutRecordResponse> client = new();
 
-            return await request.Get(
+            return await client.Post(
                 service,
-                $"{DescribeRepoEndpoint}?repo={Uri.EscapeDataString(repo.ToString())}",
+                PutRecordEndpoint,
+                request,
                 accessToken,
                 httpClient,
                 jsonSerializerOptions: jsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
+
         /// <summary>
-        /// Gets the record specified by the identifying parameters.
+        /// Gets the record specified by the identifying parameters. May require authentication.
         /// </summary>
         /// <typeparam name="T">The type of record to get.</typeparam>
         /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the record from.</param>
@@ -189,7 +311,7 @@ namespace idunno.AtProto
             string? accessToken,
             HttpClient httpClient,
             JsonSerializerOptions? jsonSerializerOptions = null,
-            CancellationToken cancellationToken = default) where T: AtProtoRecord
+            CancellationToken cancellationToken = default) where T: class
         {
             ArgumentNullException.ThrowIfNull(repo);
             ArgumentNullException.ThrowIfNull(collection);
@@ -197,7 +319,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<T> request = new();
+            AtProtoHttpClient<T> client = new();
 
             string queryString = $"repo={Uri.EscapeDataString(repo.ToString())}&collection={Uri.EscapeDataString(collection.ToString())}&rkey={Uri.EscapeDataString(rKey.ToString())}";
 
@@ -206,7 +328,7 @@ namespace idunno.AtProto
                 queryString += $"&cid={Uri.EscapeDataString(cid.ToString())}";
             }
 
-            return await request.Get(
+            return await client.Get(
                 service,
                 $"{GetRecordEndpoint}?{queryString}",
                 accessToken,
@@ -216,7 +338,7 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Gets a page of records in the specified <paramref name="collection"/>.
+        /// Gets a page of records in the specified <paramref name="collection"/>. May requires authentication.
         /// </summary>
         /// <typeparam name="T">The type of records to get.</typeparam>
         /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the records from.</param>
@@ -234,7 +356,7 @@ namespace idunno.AtProto
         /// Thrown if <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is not &gt;0 and &lt;=100.</exception>
-        public static async Task<AtProtoHttpResult<AtProtoObjectReadOnlyCollection<T>>> ListRecords<T>(
+        public static async Task<AtProtoHttpResult<PagedReadOnlyCollection<T>>> ListRecords<T>(
             AtIdentifier repo,
             Nsid collection,
             int? limit,
@@ -277,8 +399,8 @@ namespace idunno.AtProto
             // We need to create an intermediate class to handle the deserialization of the response,
             // because trying to deserialize directly into a class that implements ICollection is
             // just too painful.
-            AtProtoHttpClient<ListRecordsResponse<T>> request = new();
-            AtProtoHttpResult<ListRecordsResponse<T>> response = await request.Get(
+            AtProtoHttpClient<ListRecordsResponse<T>> client = new();
+            AtProtoHttpResult<ListRecordsResponse<T>> response = await client.Get(
                 service,
                 $"{ListRecordsEndpoint}?{queryString}",
                 accessToken,
@@ -287,21 +409,21 @@ namespace idunno.AtProto
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             // Flatten the results and into an AtProtoRecordList instance.
-            AtProtoObjectReadOnlyCollection<T> recordList;
-            if (response.SucceededWithResult)
+            PagedReadOnlyCollection<T> recordList;
+            if (response.Succeeded)
             {
-                recordList = new AtProtoObjectReadOnlyCollection<T>(response.Result!.Records, response.Result.Cursor);
+                recordList = new PagedReadOnlyCollection<T>(response.Result!.Records, response.Result.Cursor);
             }
             else
             {
-                recordList = new AtProtoObjectReadOnlyCollection<T>(new List<T>(), null);
+                recordList = new PagedReadOnlyCollection<T>(new List<T>(), null);
             }
 
-            return new AtProtoHttpResult<AtProtoObjectReadOnlyCollection<T>>(recordList, response.StatusCode, response.AtErrorDetail, response.RateLimit);
+            return new AtProtoHttpResult<PagedReadOnlyCollection<T>>(recordList, response.StatusCode, response.AtErrorDetail, response.RateLimit);
         }
 
         /// <summary>
-        /// Upload a new blob, to be referenced from a repository record.
+        /// Upload a new blob, to be referenced from a repository record.Requires authentication.
         /// </summary>
         /// <remarks>
         /// <para>
@@ -320,7 +442,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentException">
         /// Thrown if <paramref name="blob"/> is empty or the <paramref name="mimeType"/> is empty or not in the type/subtype.
         /// </exception>
-        public static async Task<AtProtoHttpResult<Blob?>> UploadBlob(
+        public static async Task<AtProtoHttpResult<Blob>> UploadBlob(
             byte[] blob,
             string mimeType,
             Uri service,
@@ -350,14 +472,64 @@ namespace idunno.AtProto
                 new NameValueHeaderValue("Content-Type", mimeType)
             };
 
-            AtProtoHttpClient<CreateBlobResponse> request = new();
+            AtProtoHttpClient<CreateBlobResponse> client = new();
 
-            AtProtoHttpResult<CreateBlobResponse> result =
-                await request.PostBlob(service, UploadBlobEndpoint, blob, requestHeaders, accessToken, httpClient, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
+            AtProtoHttpResult<CreateBlobResponse> response =
+                await client.PostBlob(service, UploadBlobEndpoint, blob, requestHeaders, accessToken, httpClient, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
 
-            AtProtoHttpResult<Blob?> flattenedResult = new(result?.Result?.blob, result!.StatusCode, result?.AtErrorDetail, result?.RateLimit);
-
-            return flattenedResult;
+            if (response.Succeeded)
+            {
+                return new AtProtoHttpResult<Blob>(
+                    response.Result.Blob,
+                    response.StatusCode,
+                    response.AtErrorDetail,
+                    response.RateLimit);
+            }
+            else
+            {
+                return new AtProtoHttpResult<Blob>(
+                    null,
+                    response.StatusCode,
+                    response.AtErrorDetail,
+                    response.RateLimit);
+            }
         }
+
+        /// <summary>
+        /// Gets information about an account and repository, including the list of collections.
+        /// </summary>
+        /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve information for.</param>
+        /// <param name="service">The service to delete the record from.</param>
+        /// <param name="accessToken">An access token for the specified service.</param>
+        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown if <paramref name="repo"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// </exception>
+        public static async Task<AtProtoHttpResult<RepoDescription>> DescribeRepo(
+            AtIdentifier repo,
+            Uri service,
+            string? accessToken,
+            HttpClient httpClient,
+            JsonSerializerOptions? jsonSerializerOptions = null,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(repo);
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(httpClient);
+
+            AtProtoHttpClient<RepoDescription> request = new();
+
+            return await request.Get(
+                service,
+                $"{DescribeRepoEndpoint}?repo={Uri.EscapeDataString(repo.ToString())}",
+                accessToken,
+                httpClient,
+                jsonSerializerOptions: jsonSerializerOptions,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
     }
 }

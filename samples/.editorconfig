@@ -1,0 +1,12 @@
+root = false
+
+[*.cs]
+
+# CA1303: Do not pass literals as localized parameters
+dotnet_diagnostic.CA1303.severity = none
+
+# IDE0210: Convert to top-level statements
+dotnet_diagnostic.IDE0210.severity = none
+
+# IDE0008: Use explicit type
+dotnet_diagnostic.IDE0008.severity = silent

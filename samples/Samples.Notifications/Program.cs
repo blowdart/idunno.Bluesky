@@ -1,193 +1,324 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Net;
+using System.CommandLine;
+using System.CommandLine.Parsing;
+using System.Globalization;
+using System.Text;
+
+using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
-using idunno.AtProto.Bluesky.Feed;
-using idunno.AtProto.Bluesky.Notifications;
+using idunno.Bluesky;
+using idunno.Bluesky.Actor;
+using idunno.Bluesky.Feed;
+using idunno.Bluesky.Notifications;
 
-// Necessary to render emojis.
-Console.OutputEncoding = System.Text.Encoding.UTF8;
+using Samples.Common;
+using idunno.AtProto.Labels;
 
-string? username;
-string? password;
-Uri? proxyUri = null;
-
-if (args.Length == 3)
+namespace Samples.Notifications
 {
-    username = args[0];
-    password = args[1];
-    proxyUri = new Uri(args[2]);
-}
-else if (args.Length == 2)
-{
-    username = args[0];
-    password = args[1];
-}
-else if (args.Length == 1)
-{
-    username = Environment.GetEnvironmentVariable("_BlueskyUserName");
-    password = Environment.GetEnvironmentVariable("_BlueskyPassword");
-    proxyUri = new Uri(args[0]);
-}
-else if (args.Length == 0)
-{
-    username = Environment.GetEnvironmentVariable("_BlueskyUserName");
-    password = Environment.GetEnvironmentVariable("_BlueskyPassword");
-}
-else
-{
-    Console.WriteLine("Usage: Notifications <blueskyUsername> <blueskyPassword> (<proxyuri>)");
-    Console.WriteLine();
-    Console.WriteLine("Or use the _BlueskyUserName and _BlueskyPassword environment variables to provide credentials and use Notifications (<proxyuri>)");
-    return;
-}
-
-if (username is null || password is null)
-{
-    Console.ForegroundColor = ConsoleColor.Red;
-    Console.WriteLine($"Set _BlueSkyUserName and _BlueSkyPassword environment variables before running.");
-    return;
-}
-
-using (HttpClientHandler handler = new())
-{
-    if (proxyUri is not null)
+    public sealed class Program
     {
-        handler.Proxy = new WebProxy
+
+        static async Task<int> Main(string[] args)
         {
-            Address = proxyUri,
-            BypassProxyOnLocal = false,
-            UseDefaultCredentials = false,
-        };
-    }
+            // Necessary to render emojis.
+            Console.OutputEncoding = Encoding.UTF8;
 
-    using (BlueskyAgent agent = new(handler))
-    {
-        HttpResult<bool> loginResult = await agent.Login(username, password);
+            var parser = Helpers.ConfigureCommandLine(PerformOperations);
+            await parser.InvokeAsync(args);
 
-        if (loginResult.Succeeded && agent.Session is not null)
+            return 0;
+
+        }
+
+        static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
         {
-            DateTimeOffset notificationCheckDateTime = DateTimeOffset.UtcNow;
+            ArgumentNullException.ThrowIfNullOrEmpty(handle);
+            ArgumentNullException.ThrowIfNullOrEmpty(password);
 
-            HttpResult<int> unreadCount = await agent.GetNotificationUnreadCount();
-            if (unreadCount.Succeeded)
+            // Uncomment the next line to route all requests through Fiddler Everywhere
+            proxyUri = new Uri("http://localhost:8866");
+
+            // Uncomment the next line to route all requests  through Fiddler Classic
+            // proxyUri = new Uri("http://localhost:8888");
+
+            // Get an HttpClient configured to use a proxy, if proxyUri is not null.
+            using (HttpClient? httpClient = Helpers.CreateOptionalHttpClient(proxyUri))
+
+            // Change the log level in the ConfigureConsoleLogging() to enable logging
+            using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
+
+            using (var agent = new BlueskyAgent(httpClient: httpClient, loggerFactory: loggerFactory))
             {
-                Console.WriteLine($"You have {unreadCount.Result} unread notification{(unreadCount.Result != 1 ? "s" : "")}.");
-            }
-            else
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"getTimelineResult failed: {unreadCount.StatusCode}");
-                return;
-            }
-
-            if (unreadCount.Result > 0)
-            {
-                int page = 1;
-                bool done = false;
-
-                HttpResult<NotificationsView> notifications = await agent.ListNotifications(5).ConfigureAwait(false);
-
-                while (notifications.Succeeded && !done)
+                var loginResult = await agent.Login(handle, password, authCode, cancellationToken: cancellationToken);
+                if (!loginResult.Succeeded)
                 {
-                    Console.WriteLine($"\n📄 Page {page}\n");
-
-                    foreach (Notification notification in notifications.Result!.Notifications)
+                    if (loginResult.AtErrorDetail is not null &&
+                        string.Equals(loginResult.AtErrorDetail.Error!, "AuthFactorTokenRequired", StringComparison.OrdinalIgnoreCase))
                     {
+                        ConsoleColor oldColor = Console.ForegroundColor;
 
-                        string? author = notification.Author.Handle.ToString();
-                        if (notification.Author.DisplayName is not null && notification.Author.DisplayName.Length > 0)
-                        {
-                            author = notification.Author.DisplayName;
-                        }
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("Login requires an authentication code.");
+                        Console.WriteLine("Check your email and use --authCode to specify the authentication code.");
+                        Console.ForegroundColor = oldColor;
 
-                        switch (notification.Reason)
-                        {
-                            case NotificationReason.Follow:
-                                Console.WriteLine($"👥 {author} followed you.");
-                                break;
-
-                            case NotificationReason.Like:
-                                Console.WriteLine($"❤️ {author} liked your post at {notification.Record.CreatedAt}.");
-                                HttpResult<FeedPost> likedPost = await agent.GetPost(notification.ReasonSubject!).ConfigureAwait(false);
-
-                                if (likedPost.Result is not null)
-                                {
-                                    Console.WriteLine($"  {likedPost.Result.Record.Text}");
-                                }
-                                else
-                                {
-                                    Console.WriteLine($"  🗑️ Liked post was deleted.");
-                                }
-                                break;
-
-                            case NotificationReason.Mention:
-                                Console.WriteLine($"📟 {author} mentioned you at {notification.Record.CreatedAt}.");
-                                var mentionRecord = (FeedPostRecord)notification.Record;
-                                Console.WriteLine($"  {mentionRecord.Text}.");
-                                break;
-
-                            case NotificationReason.Quote:
-                                Console.WriteLine($"🗨️ {author} quoted your post at {notification.Record.CreatedAt}.");
-                                var quoteRecord = (FeedPostRecord)notification.Record;
-                                Console.WriteLine($"  {quoteRecord.Text}.");
-                                break;
-
-                            case NotificationReason.Reply:
-                                Console.WriteLine($"🗣️ {author} replied to your post at {notification.Record.CreatedAt}.");
-                                var replyRecord = (FeedPostRecord)notification.Record;
-                                Console.WriteLine($"  {replyRecord.Text}.");
-                                break;
-
-                            case NotificationReason.Repost:
-                                Console.WriteLine($"♻️ {author} reposted your post at {notification.Record.CreatedAt}.");
-                                HttpResult<FeedPost> repostedPost = await agent.GetPost(notification.ReasonSubject!).ConfigureAwait(false);
-                                if (repostedPost.Result is not null)
-                                {
-                                    Console.WriteLine($"  {repostedPost.Result.Record.Text}");
-                                }
-                                else
-                                {
-                                    Console.WriteLine($"  🗑️ Reposted post was deleted.");
-                                }
-                                break;
-
-                            default:
-                                Console.WriteLine($"{author} did something unknown to trigger a notification.");
-                                break;
-                        }
-                    }
-
-                    if (notifications.Result!.Cursor is null)
-                    {
-                        done = true;
+                        return;
                     }
                     else
                     {
-                        // Get the next page
-                        notifications = await agent.ListNotifications(limit: 5, cursor: notifications.Result.Cursor).ConfigureAwait(false);
-                        page++;
+                        ConsoleColor oldColor = Console.ForegroundColor;
+
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("Login failed.");
+                        Console.ForegroundColor = oldColor;
+
+                        if (loginResult.AtErrorDetail is not null)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Red;
+
+                            Console.WriteLine($"Server returned {loginResult.AtErrorDetail.Error} / {loginResult.AtErrorDetail.Message}");
+                            Console.ForegroundColor = oldColor;
+
+                            return;
+                        }
                     }
+                }
+
+                Preferences preferences = new();
+                var preferencesResult = await agent.GetPreferences(cancellationToken: cancellationToken);
+                if (preferencesResult.Succeeded)
+                {
+                    preferences = preferencesResult.Result;
+                }
+
+                DateTimeOffset notificationCheckDateTime = DateTimeOffset.UtcNow;
+
+                AtProtoHttpResult<int> unreadCount = await agent.GetNotificationUnreadCount(cancellationToken: cancellationToken);
+                if (unreadCount.Succeeded)
+                {
+                    Console.WriteLine($"You have {unreadCount.Result} unread notification{(unreadCount.Result != 1 ? "s" : "")}.");
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"getTimelineResult failed: {unreadCount.StatusCode}");
+                    return;
+                }
+
+                const int pageSize = 10;
+
+                AtProtoHttpResult<NotificationCollection> notificationsListResult =
+                    await agent.ListNotifications(
+                        limit: pageSize,
+                        subscribedLabelers: preferences.SubscribedLabelers,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                if (notificationsListResult.Succeeded && notificationsListResult.Result.Count != 0)
+                {
+                    do
+                    {
+                        foreach (Notification notification in notificationsListResult.Result)
+                        {
+                            if (!notification.IsRead)
+                            {
+                                Console.Write("\u001b[1m");
+                            }
+
+                            switch (notification.Reason)
+                            {
+                                case NotificationReason.Follow:
+                                    Console.WriteLine($"🕵 {notification.Author} followed you.");
+                                    PrintLabels(notification.Author);
+                                    break;
+
+                                case NotificationReason.Like:
+                                    {
+                                        if (notification.Record is PostRecord likeRecord)
+                                        {
+                                            if (notification.Author.Did != agent.Session!.Did)
+                                            {
+                                                Console.WriteLine($"❤️ {notification.Author} liked your post at {notification.Record.CreatedAt.LocalDateTime}.");
+                                                PrintLabels(notification.Author);
+                                            }
+                                            else
+                                            {
+                                                Console.WriteLine($"❤️ You liked your own post at {notification.Record.CreatedAt.LocalDateTime}.");
+                                            }
+                                            Console.WriteLine($"   {likeRecord.Text}");
+                                        }
+                                    }
+                                    break;
+
+                                case NotificationReason.Mention:
+                                    {
+                                        if (notification.Record is PostRecord mentionRecord)
+                                        {
+                                            if (notification.Author.Did != agent.Session!.Did)
+                                            {
+                                                Console.WriteLine($"📟 {notification.Author} mentioned you at {notification.Record.CreatedAt.LocalDateTime}.");
+                                                PrintLabels(notification.Author);
+                                            }
+                                            else
+                                            {
+                                                Console.WriteLine($"📟 You mentioned yourself at {notification.Record.CreatedAt.LocalDateTime}.");
+                                            }
+                                            Console.WriteLine($"   {mentionRecord.Text}");
+                                        }
+                                    }
+                                    break;
+
+                                case NotificationReason.Quote:
+                                    {
+                                        if (notification.Record is PostRecord quoteRecord)
+                                        {
+                                            if (notification.Author.Did != agent.Session!.Did)
+                                            {
+                                                Console.WriteLine($"🗨️ {notification.Author} quoted your post at {notification.Record.CreatedAt.LocalDateTime}.");
+                                                PrintLabels(notification.Author);
+                                            }
+                                            else
+                                            {
+                                                Console.WriteLine($"🗨️ You quoted your post at {notification.Record.CreatedAt.LocalDateTime}.");
+                                            }
+                                            Console.WriteLine($"   \"{quoteRecord.Text}\"");
+
+                                            if (notification.ReasonSubject is not null)
+                                            {
+                                                AtProtoHttpResult<PostView> getPostViewResult =
+                                                    await agent.GetPostView(notification.ReasonSubject, cancellationToken: cancellationToken).ConfigureAwait(false);
+                                                if (getPostViewResult.Succeeded)
+                                                {
+                                                    // The post that was liked hasn't been deleted.
+                                                    if (!string.IsNullOrEmpty(getPostViewResult.Result.Record.Text))
+                                                    {
+                                                        Console.WriteLine($"\u001b[3m     {getPostViewResult.Result.Record.Text}\u001b[23m");
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    Console.WriteLine("      🛈 Quoted post was deleted.");
+                                                }
+                                            }
+                                            else
+                                            {
+                                                Console.WriteLine("      🛈 Quoted post was deleted.");
+                                            }
+                                        }
+                                    }
+                                    break;
+
+                                case NotificationReason.Reply:
+                                    {
+                                        if (notification.Record is PostRecord replyRecord)
+                                        {
+                                            if (replyRecord.Reply is not null && replyRecord.Reply.Parent is not null)
+                                            {
+                                                string parentPostOwner = "your";
+
+                                                AtProtoHttpResult<PostView> inReplyToFeedPost =
+                                                    await agent.GetPostView(replyRecord.Reply.Parent.Uri, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                                                if (inReplyToFeedPost.Succeeded)
+                                                {
+                                                    if (inReplyToFeedPost.Result.Author.Did != agent.Session!.Did)
+                                                    {
+                                                        parentPostOwner = $"{inReplyToFeedPost.Result.Author}'s";
+                                                    }
+                                                }
+                                                Console.WriteLine($"↳ {notification.Author} replied to {parentPostOwner} post at {notification.Record.CreatedAt.LocalDateTime}.");
+                                                if (notification.Author.Did != agent.Session!.Did)
+                                                {
+                                                    PrintLabels(notification.Author);
+                                                }
+                                                Console.WriteLine($"   {replyRecord.Text}");
+                                            }
+                                        }
+                                    }
+                                    break;
+
+                                case NotificationReason.Repost:
+                                    {
+                                        if (notification.ReasonSubject is not null)
+                                        {
+                                            AtProtoHttpResult<PostView> repostView =
+                                                await agent.GetPostView(notification.ReasonSubject!, cancellationToken: cancellationToken).ConfigureAwait(false);
+                                            if (repostView.Succeeded)
+                                            {
+
+                                                Console.WriteLine($"♲ {notification.Author} reposted your post at {notification.Record.CreatedAt.LocalDateTime}.");
+                                                if (notification.Author.Did != agent.Session!.Did)
+                                                {
+                                                    PrintLabels(notification.Author);
+                                                }
+                                                Console.WriteLine($"   {repostView.Result.Record.Text}");
+                                            }
+                                        }
+                                    }
+                                    break;
+
+                                default:
+                                    Console.WriteLine($"{notification.Author} did something unknown to trigger a notification at {notification.Record.CreatedAt.LocalDateTime}.");
+                                    if (notification.Author.Did != agent.Session!.Did)
+                                    {
+                                        PrintLabels(notification.Author);
+                                    }
+                                    break;
+                            }
+
+                            if (!notification.IsRead)
+                            {
+                                Console.Write("\u001b[22m");
+                            }
+                        }
+
+                        // Get the next page
+                        notificationsListResult = await agent.ListNotifications(
+                            limit: pageSize,
+                            cursor: notificationsListResult.Result.Cursor,
+                            subscribedLabelers: preferences.SubscribedLabelers,
+                            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                    } while (notificationsListResult.Succeeded && !string.IsNullOrEmpty(notificationsListResult.Result.Cursor));
+
+                    await agent.UpdateNotificationSeenAt(notificationCheckDateTime, cancellationToken: cancellationToken).ConfigureAwait(false);
                 }
             }
 
-            HttpResult<EmptyResponse> updateSeen = await agent.UpdateNotificationSeenAt(notificationCheckDateTime);
+            return;
         }
-        else if (loginResult.Succeeded)
+
+        static void PrintLabels(ProfileViewBasic author)
         {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("Login succeeded but a session was not created.");
-        }
-        else
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"Login failed: {loginResult.StatusCode}");
-            if (loginResult.Error is not null)
+            if (author is null)
             {
-                Console.WriteLine($"\t{loginResult.Error.Error} {loginResult.Error.Message}");
+                return;
             }
+
+            StringBuilder labelBuilder = new();
+
+            foreach (Label label in author.Labels)
+            {
+                labelBuilder.Append(CultureInfo.InvariantCulture, $"[{label.Value}] ");
+            }
+
+            if (labelBuilder.Length > 0)
+            {
+                labelBuilder.Length--;
+            }
+
+            string labelsAsString = labelBuilder.ToString();
+
+            if (!string.IsNullOrWhiteSpace(labelsAsString))
+            {
+                Console.WriteLine($"   {labelsAsString}");
+            }
+
+            return;
         }
+
     }
 }
