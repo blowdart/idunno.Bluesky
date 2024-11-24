@@ -41,13 +41,13 @@ jobs:
     - name: 'Build repository'
       run: dotnet build --configuration Debug --no-restore
 
-    - name: 'Test and produce code coverage data'
-      run: dotnet test --no-build --no-restore --collect:"XPlat Code Coverage" --results-directory ./coverageResults --logger "junit;LogFilePath=../../testResults/tests.xml"
+    - name: 'Run Tests'
+      run: dotnet test --no-build --no-restore --collect:"XPlat Code Coverage" --logger junit
 
-    - name: Create test summary
+    - name: 'Create test summary'
       uses: test-summary/action@v2.4
       with:
-        paths: testResults/**/tests.xml
+        paths: test/**/TestResults.xml
         show: "fail, skip"
       if: always()
 
@@ -56,6 +56,6 @@ jobs:
       with:
         name: testResults
         path: |
-          testResults/tests.xml
-          coverageResults/*/coverage.cobertura.xml
+          test/**/TestResults.xml
+          test/**/coverage.cobertura.xml
       if: always()
