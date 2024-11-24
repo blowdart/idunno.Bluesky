@@ -54,15 +54,15 @@ jobs:
         show: "fail, skip"
       if: always()
 
-    - name: 'Generate Coverage Reports' # This is because one report is produced per project, and we want one result for all of them.
+    - name: 'Generate Coverage Reports'
       uses: danielpalme/ReportGenerator-GitHub-Action@5.4.1
       with:
-        reports: "test/**/coverage.cobertura.xml" # REQUIRED # The coverage reports that should be parsed (separated by semicolon). Globbing is supported.
-        targetdir: "${{ github.workspace }}" # REQUIRED # The directory where the generated report should be saved.
-        reporttypes: "Cobertura" # The output formats and scope (separated by semicolon) Values: Badges, Clover, Cobertura, CsvSummary, Html, Html_Dark, Html_Light, Html_BlueRed, HtmlChart, HtmlInline, HtmlInline_AzurePipelines, HtmlInline_AzurePipelines_Dark, HtmlInline_AzurePipelines_Light, HtmlSummary, JsonSummary, Latex, LatexSummary, lcov, MarkdownSummary, MarkdownSummaryGithub, MarkdownDeltaSummary, MHtml, PngChart, SonarQube, TeamCitySummary, TextSummary, TextDeltaSummary, Xml, XmlSummary
-        verbosity: "Info" # The verbosity level of the log messages. Values: Verbose, Info, Warning, Error, Off
-        title: "Code Coverage" # Optional title.
-        tag: "${{ github.run_number }}_${{ github.run_id }}" # Optional tag or build version.
+        reports: "test/**/coverage.cobertura.xml"
+        targetdir: "${{ github.workspace }}"
+        reporttypes: "Cobertura" 
+        verbosity: "Info" 
+        title: "Code Coverage" 
+        tag: "${{ github.run_number }}_${{ github.run_id }}"
         toolpath: "reportgeneratortool"
         license: ${{ secrets.REPORT_GENERATOR_LICENSE }}
 
@@ -97,11 +97,11 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: test-results
-        path: "${{ github.workspace }}/**/TestResults/**/TestResults.xml"
+        path: "test/**/TestResults.xml"
         retention-days: 5
 
     - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2.18.0
       if: always()
       with:
-        trx_files: "${{ github.workspace }}/**/TestResults/**/TestResults.xml"
+        files: "test/**/TestResults.xml"
