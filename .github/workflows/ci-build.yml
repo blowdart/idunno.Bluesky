@@ -55,13 +55,29 @@ jobs:
           src/**/idunno.*.xml
         retention-days: 5
 
+    - name: Upload Build Output
+      uses: actions/upload-artifact@v4
+      id: build-output-upload-step
+      with:
+        name: build-output
+        path: |
+          src/**/*.*
+          test/**/*.*
+          *.sln
+        retention-days: 1
+
   test:
     name: Test
     needs: build
     runs-on: ubuntu-latest
     steps:
+    - name: 'Download build output'
+      uses: actions/download-artifact@v4
+      with:
+        name:  build-output
+
     - name: 'Run Tests'
-      run: dotnet test --collect:"XPlat Code Coverage" --logger junit
+      run: dotnet test --no-build --no-restore --collect:"XPlat Code Coverage" --logger junit
 
     - name: 'Create test summary'
       uses: test-summary/action@v2.4
