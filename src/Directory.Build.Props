@@ -2,10 +2,6 @@
   <Import Project="..\Directory.Build.props" />
 
   <PropertyGroup>
-    <CIBuild Condition="'$(CIBuild)' == ''">false</CIBuild>
-  </PropertyGroup>
-
-  <PropertyGroup>
     <PackageProjectUrl>https://github.com/blowdart/idunno.Authentication</PackageProjectUrl>
     <!-- The SPDX name for the source license. See https://spdx.org/licenses/. -->
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -24,7 +20,7 @@
 
   <PropertyGroup Condition="'$(Configuration)' != 'CodeQL'">
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>

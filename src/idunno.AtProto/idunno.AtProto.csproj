@@ -38,13 +38,13 @@
     <PackageReference Include="DnsClient" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(Configuration)' != 'CodeQL'">
+  <ItemGroup>
     <PackageReference Include="DotNet.ReproducibleBuilds" PrivateAssets="All" />
-    <PackageReference Include="Nerdbank.GitVersioning" PrivateAssets="All" />
     <PackageReference Include="DotNetAnalyzers.DocumentationAnalyzers" PrivateAssets="All" />
   </ItemGroup>
 
-  <PropertyGroup Condition="'$(Configuration)' != 'CodeQL'">
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-  </PropertyGroup>
+  <ItemGroup Condition="'$(Configuration)' != 'CodeQL'">
+    <PackageReference Include="Nerdbank.GitVersioning" PrivateAssets="All" />
+  </ItemGroup>
+
 </Project>
