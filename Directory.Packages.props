@@ -5,8 +5,8 @@
   <ItemGroup>
     <PackageVersion Include="System.Text.Json" Version="9.0.0" />
 
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
     <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.2.1" />
 
     <PackageVersion Include="DnsClient" Version="1.8.0" />
