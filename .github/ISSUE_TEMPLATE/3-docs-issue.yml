@@ -1,0 +1,45 @@
+name: Documentation Issue
+description: Suggest documentation enhancements
+type: 'documentation'
+labels: ["documentation"]
+body:
+- type: checkboxes
+  attributes:
+    label: Starting point
+    description: Please ensure you've completed all of the following.
+    options:
+      - label: I have read the [Contributing Guidelines](https://github.com/blowdart/idunno.Bluesky/blob/main/CONTRIBUTING.md) for this project.
+        required: true
+      - label: I have searched the [issue tracker](https://www.github.com/blowdart/idunno.Bluesky/issues) for a bug report that matches the one I want to file, and can't find a match.
+        required: true 
+- type: dropdown
+  attributes:
+    label: What type of documentation issue is it?
+    multiple: true
+    options:
+      - Class/record documentation ([XMLDocs](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/xmldoc/)
+      - Narrative docs
+      - Sample Code
+      - Other (specify below)
+  validations:
+    required: true
+- type: dropdown
+  attributes:
+    label: Is the documentation missing or incorrect?
+    multiple: true
+    options:
+      - Missing
+      - Incorrect
+      - Other (specify below)
+- type: textarea
+  attributes:
+    label: Problem Description
+    description: Please add a description of the documentation problem you have.
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: Additional Information
+    description: Add any other context about the documentation problem here.
+  validations:
+    required: false

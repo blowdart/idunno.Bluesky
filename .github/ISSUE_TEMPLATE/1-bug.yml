@@ -1,0 +1,65 @@
+name: Bug Report
+description: Report a bug
+type: 'bug'
+labels: ["bug"]
+body:
+- type: checkboxes
+  attributes:
+    label: Starting point
+    description: Please ensure you've completed all of the following.
+    options:
+      - label: I have read the [Contributing Guidelines](https://github.com/blowdart/idunno.Bluesky/blob/main/CONTRIBUTING.md) for this project.
+        required: true
+      - label: I have searched the [issue tracker](https://www.github.com/blowdart/idunno.Bluesky/issues) for a bug report that matches the one I want to file, and can't find a match.
+        required: true
+- type: input
+  attributes:
+    label: Version
+    description: |
+      What version of idunno.Bluesky are you using?
+
+      Note: Please only report issues for current version of the libaries
+    placeholder: 0.1.0
+  validations:
+    required: true
+- type: dropdown
+  attributes:
+    label: What operating system(s) are you using?
+    multiple: true
+    options:
+      - Windows
+      - macOS
+      - Ubuntu
+      - Other Linux
+      - Other (specify below)
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: Expected Behavior
+    description: A clear and concise description of what you expected to happen.
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: Actual Behavior
+    description: A clear description of what actually happens.
+  validations:
+    required: true
+- type: input
+  attributes:
+    label: Test Case Gist URL
+    description: If you can reproduce the issue in a standalone test case, publish it as a [GitHub gist](https://gist.github.com) and put the gist URL here. This is **the best way** to ensure this issue is triaged quickly.
+    placeholder: https://gist.github.com/...
+- type: textarea
+  attributes:
+    label: Bluesky API
+    description: If your problem is how the libraries handle a particular Bluesky API please tell us which API the problem refers to.
+- type: textarea
+  attributes:
+    label: API Response bugs
+    description: If your problem is how the libraries are handling a response from a Bluesky API please add a capture of the response from the API where possible.
+- type: textarea
+  attributes:
+    label: Additional Information
+    description: If your problem needs further explanation, or if the issue you're seeing cannot be reproduced in a gist, please add more information here.

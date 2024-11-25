@@ -1,0 +1,38 @@
+name: Feature Request
+description: Suggest an idea
+type: 'enhancement'
+labels: ["enhancement"]
+body:
+- type: checkboxes
+  attributes:
+    label: Starting point
+    description: Please ensure you've completed all of the following.
+    options:
+      - label: I have read the [Contributing Guidelines](https://github.com/blowdart/idunno.Bluesky/blob/main/CONTRIBUTING.md) for this project.
+        required: true
+      - label: I have searched the [issue tracker](https://www.github.com/blowdart/idunno.Bluesky/issues) for a bug report that matches the one I want to file, and can't find a match.
+        required: true  
+- type: textarea
+  attributes:
+    label: Problem Description
+    description: Please add a description of the problem you are seeking to solve.
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: Proposed Solution
+    description: Describe the solution you'd like to see.
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: Alternatives Considered
+    description: If you have consider any alternatives please describe them.
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: Additional Information
+    description: Add any other context about the problem here.
+  validations:
+    required: false

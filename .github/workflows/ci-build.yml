@@ -24,8 +24,8 @@ env:
 
 jobs:
   build:
+    name: Build
     runs-on: ubuntu-latest
-
     steps:
     - name: 'Checkout repository'
       uses: actions/checkout@v4
@@ -44,8 +44,24 @@ jobs:
     - name: 'Build repository'
       run: dotnet build --configuration Debug --no-restore
 
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-packages
+        path: |
+          src/**/idunno.*.nupkg
+          src/**/idunno.*.dll
+          src/**/idunno.*.deps.json
+          src/**/idunno.*.xml
+        retention-days: 5
+
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
     - name: 'Run Tests'
-      run: dotnet test --no-build --no-restore --collect:"XPlat Code Coverage" --logger junit
+      run: dotnet test --collect:"XPlat Code Coverage" --logger junit
 
     - name: 'Create test summary'
       uses: test-summary/action@v2.4
@@ -93,15 +109,15 @@ jobs:
         recreate: true
         path: code-coverage-results.md
 
-    - name: Upload Test Result Files
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-results
-        path: "test/**/TestResults.xml"
-        retention-days: 5
-
     - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2.18.0
       if: always()
       with:
         files: "test/**/TestResults.xml"
+
+    - name: Upload Test Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: "test/**/TestResults.xml"
+        retention-days: 5
