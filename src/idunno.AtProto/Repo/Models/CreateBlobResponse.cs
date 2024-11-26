@@ -1,15 +1,12 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-
-// Copyright (c) Barry Dorrans. All rights reserved.
-// Licensed under the MIT License.
-
-using idunno.AtProto.Repo;
+using System.Diagnostics.CodeAnalysis;
 
 namespace idunno.AtProto.Repo.Models
 {
-    internal record CreateBlobResponse(Blob Blob)
+    [SuppressMessage("Performance", "CA1812", Justification = "Using during CreateBlob.")]
+    internal sealed record CreateBlobResponse(Blob Blob)
     {
     }
 }

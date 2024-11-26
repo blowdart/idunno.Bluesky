@@ -224,10 +224,29 @@ namespace idunno.Bluesky
     /// </summary>
     public static class EmbeddedRecordTypeDiscriminators
     {
+        /// <summary>
+        /// The json type discriminator for an embedded record.
+        /// </summary>
         public const string Record = "app.bsky.embed.record";
+
+        /// <summary>
+        /// The json type discriminator for an embedded record with media attachments
+        /// </summary>
         public const string RecordWithMedia = "app.bsky.embed.recordWithMedia";
+
+        /// <summary>
+        /// The json type discriminator for embedded images.
+        /// </summary>
         public const string Images = "app.bsky.embed.images";
+
+        /// <summary>
+        /// The json type discriminator for embedded external references.
+        /// </summary>
         public const string External = "app.bsky.embed.external";
+
+        /// <summary>
+        /// The json type discriminator for embedded video.
+        /// </summary>
         public const string Video = "app.bsky.embed.video";
     }
 

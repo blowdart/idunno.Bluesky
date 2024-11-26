@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -9,7 +10,8 @@ namespace idunno.AtProto.Json
     /// <summary>
     /// Converts a DID to or from JSON.
     /// </summary>
-    internal class DidConverter : JsonConverter<Did>
+    [SuppressMessage("Performance", "CA1812", Justification = "Applied by attribute in Did class.")]
+    internal sealed class DidConverter : JsonConverter<Did>
     {
         /// <summary>
         /// Reads and converts JSON to a <see cref="Did"/>>.

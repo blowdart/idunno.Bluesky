@@ -31,6 +31,10 @@ namespace idunno.AtProto.Repo
         [JsonRequired]
         public string Rev { get; init; }
 
+        /// <summary>
+        /// Provides a string representation of this instance.
+        /// </summary>
+        /// <returns>A string representation of this instance.</returns>
         public override string ToString()
         {
             return $"{Cid}/{Rev}";

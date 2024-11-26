@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Web;
 using idunno.AtProto;
 
@@ -9,7 +10,8 @@ namespace idunno.DidPlcDirectory
     /// <summary>
     /// Provides a class for sending requests to and receiving responses from an directory service, identified by its service URI.
     /// </summary>
-    internal class DirectoryServer
+    [SuppressMessage("Performance", "CA1812", Justification = "Used in DID resolution.")]
+    internal sealed class DirectoryServer
     {
         // https://web.plc.directory/api/redoc#operation/ResolveDid
 

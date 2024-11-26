@@ -33,13 +33,13 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Gets <see cref="ProfileViewDetailed"/>s for the specified <paramref name="actor"/>s.
+        /// Gets <see cref="ProfileViewDetailed"/>s for the specified <paramref name="actors"/>.
         /// </summary>
-        /// <param name="actor">The actor to retrieve the <see cref="ProfileViewDetailed"/> for.</param>
+        /// <param name="actors">A collection of <see cref="AtIdentifier"/>s of the actors to return <see cref="ProfileViewDetailed"/>s for.</param>
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actors"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="actors"/> is an empty collection or if it contains &gt;25 handles.</exception>
         public async Task<AtProtoHttpResult<IReadOnlyCollection<ProfileViewDetailed>>> GetProfiles(
             IEnumerable<AtIdentifier> actors,
@@ -111,7 +111,6 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is &lt;=0 or &gt;100.</exception>
         /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>> GetSuggestions(

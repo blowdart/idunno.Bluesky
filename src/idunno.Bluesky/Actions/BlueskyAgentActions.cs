@@ -9,7 +9,6 @@ using idunno.Bluesky.Actions.Model;
 using idunno.Bluesky.Embed;
 using idunno.AtProto.Repo.Models;
 using idunno.Bluesky.Feed.Gates;
-using System.Threading;
 
 namespace idunno.Bluesky
 {
@@ -18,7 +17,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// Creates a follow record in the authenticated user's repo for the specified <paramref name="handle"/>.
         /// </summary>
-        /// <param name="did">The <see cref="handle"/> of the actor to follow.</param>
+        /// <param name="handle">The <see cref="Handle"/> of the actor to follow.</param>
         /// <param name="cancellationToken"></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="handle"/> is null.</exception>
@@ -361,7 +360,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Creates a Bluesky post record on the specified <paramref name="service"/>.
+        /// Creates a Bluesky post record.
         /// </summary>
         /// <param name="text">The text of the post record to create.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
@@ -400,7 +399,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Creates a Bluesky post record on the specified <paramref name="service"/>.
+        /// Creates a Bluesky post record.
         /// </summary>
         /// <param name="text">The text of the post record to create.</param>
         /// <param name="image">The image to attach to the post.</param>
@@ -451,7 +450,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Creates a Bluesky post record on the specified <paramref name="service"/>.
+        /// Creates a Bluesky post record.
         /// </summary>
         /// <param name="text">The text of the post record to create.</param>
         /// <param name="images">Any images to attach to the post.</param>
@@ -521,7 +520,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Creates a Bluesky post record from the specified <paramref name="postBuilder"/>on the specified <paramref name="service"/>.
+        /// Creates a Bluesky post record from the specified <paramref name="postBuilder"/>.
         /// </summary>
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to use to create the record.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -601,8 +600,8 @@ namespace idunno.Bluesky
         /// <param name="strongReference">The <see cref="StrongReference"/> of the post to delete.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="strongReference"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
+        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeletePost(StrongReference strongReference, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
@@ -622,9 +621,9 @@ namespace idunno.Bluesky
         /// <param name="text">The text for the new reply</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="parent"/>, <paramref name="text"/> or <paramref name="image"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">if <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/> or <paramref name="text"/> is nul.</exception>
+        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> ReplyTo(StrongReference parent, string text, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(text);
@@ -746,11 +745,10 @@ namespace idunno.Bluesky
         /// Creates a repost record for the specified <paramref name="post"/> in the current user's repo.
         /// </summary>
         /// <param name="post">A <see cref="StrongReference"/> to the post to be reposted.</param>
-        /// <param name="cancellationToken"></param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="parent"/> or <paramref name="text"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
+        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Repost(StrongReference post, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(post);
@@ -811,8 +809,8 @@ namespace idunno.Bluesky
         /// <param name="strongReference">The <see cref="StrongReference"/> of the repost record to delete.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="strongReference"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
+        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteRepost(StrongReference strongReference, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
@@ -828,11 +826,10 @@ namespace idunno.Bluesky
         /// <summary>
         /// Creates a like record in the current user's repo for the record pointed to by the <paramref name="strongReference"/>.
         /// </summary>
-        /// <param name="post">A <see cref="StrongReference"/> to the record to be liked.</param>
-        /// <param name="cancellationToken"></param>
+        /// <param name="strongReference">A <see cref="StrongReference"/> to the record to be liked.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="parent"/> or <paramref name="text"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
         /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Like(StrongReference strongReference, CancellationToken cancellationToken = default)
         {
@@ -906,13 +903,13 @@ namespace idunno.Bluesky
         /// <summary>
         /// Creates a post record, with the supplied <paramref name="text"/>, quoting the post identified by <see cref="StrongReference"/>.
         /// </summary>
-        /// <param name="post">A <see cref="StrongReference"/> to the post to be quoted.</param>
+        /// <param name="strongReference">A <see cref="StrongReference"/> to the post to be quoted.</param>
         /// <param name="text">The text for the new post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="strongReference"</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">if the text length is longer than the maximum permitted.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
+        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is longer than the maximum permitted.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Quote(StrongReference strongReference, string text, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
@@ -1020,7 +1017,7 @@ namespace idunno.Bluesky
                 CreatedAt = DateTimeOffset.UtcNow
             };
 
-            ApplyWritesCreate applyWritesCreate = new(CollectionNsid.Post, new RecordKey(TimestampIdentifier.Generate()), postRecord);
+            ApplyWritesCreate applyWritesCreate = new(CollectionNsid.Post, TimestampIdentifier.Generate(), postRecord);
 
             AtProtoHttpResult<ApplyWritesResponse> result = await ApplyWrites(
                 new List<ApplyWritesRequestValueBase>()
@@ -1168,7 +1165,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// Performs a reverse lookup on a DID and returns its handle.
         /// </summary>
-        /// <param name="Did">The <see cref="Did"/> to lookup.</param>
+        /// <param name="did">The <see cref="Did"/> to lookup.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="did"/> is null.</exception>

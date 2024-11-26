@@ -11,6 +11,9 @@ namespace idunno.AtProto.Repo
     /// </summary>
     public record AtProtoRecordValue
     {
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoRecordValue"/>
+        /// </summary>
         [JsonConstructor]
         public AtProtoRecordValue() { }
 

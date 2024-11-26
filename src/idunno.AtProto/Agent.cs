@@ -123,7 +123,7 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Creates an HttpClient with an opinionated configuration, using the <paramref name="proxyUri"/> and <paramref name="httpUserAgent"/>.
+        /// Creates an HttpClient with an opinionated configuration, using the specified <paramref name="httpUserAgent"/>.
         /// </summary>
         /// <param name="httpUserAgent">The HTTP User Agent to use in all requests.</param>
         /// <returns>An HttpClient configured with the <paramref name="httpUserAgent"/>.</returns>
@@ -138,10 +138,10 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Creates an HttpClient with an opinionated configuration, using the <paramref name="proxyUri"/> and <paramref name="httpUserAgent"/>.
+        /// Creates an HttpClient with an opinionated configuration, using the <paramref name="proxyUri"/>.
         /// </summary>
         /// <param name="proxyUri">The <paramref name="proxyUri"/> of the proxy client to use in all requests.</param>
-        /// <returns>An HttpClient configured with the <paramref name="proxyUri"/> and <paramref name="httpUserAgent"/>.</returns>
+        /// <returns>An HttpClient configured with the <paramref name="proxyUri"/>.</returns>
         /// <exception cref="ArgumentNullException">Throw if <paramref name="proxyUri"/> is null.</exception>
         /// <remarks>
         ///<para>

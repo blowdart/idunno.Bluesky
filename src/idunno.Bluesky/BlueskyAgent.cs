@@ -20,6 +20,7 @@ namespace idunno.Bluesky
         /// Creates a new instance of <see cref="BlueskyAgent"/>.
         /// </summary>
         /// <param name="httpClient">An optional <see cref="HttpClient"/> to use when making requests.</param>
+        /// <param name="loggerFactory">The logger factory to use for logging messages, if any.</param>
         /// <param name="options"><see cref="BlueskyAgentOptions"/> for the use in the creation of this instance of <see cref="BlueskyAgent"/>.</param>
         public BlueskyAgent(HttpClient? httpClient = null, ILoggerFactory? loggerFactory = default, BlueskyAgentOptions ? options = null) :
             base (DefaultServiceUris.BlueskyApiUri, httpClient, loggerFactory, options)
@@ -81,6 +82,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets the notifications for the requesting account.
         /// </summary>
+        /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
@@ -120,10 +122,9 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Updates the date and time notifications were last seen on the specified <paramref name="service"/> for the current user.
+        /// Updates the date and time notifications were last seen for the current user.
         /// </summary>
         /// <param name="seenAt">An optional <see cref="DateTimeOffset"/> indicating when notifications were last checked.</param>
-        /// <param name="service">The service to retrieve the unread count from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
@@ -147,7 +148,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>An AT URI corresponding to the resource the Bluesky web client URI.</returns>
         /// <remarks>
-        /// <para>This method makes outgoing web requests to resolve the handle in a Bluesky URI to a <see cref="DID"/>.</para>
+        /// <para>This method makes outgoing web requests to resolve the handle in a Bluesky URI to a <see cref="AtProto.Did"/>.</para>
         /// </remarks>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> is in an unexpected format.</exception>
@@ -206,7 +207,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Generates an Bluesky Web URI from the specified <paramref name="AtUri" />, if the AT URI is in the app.bsky.feed.post collection.
+        /// Generates an Bluesky Web URI from the specified <paramref name="atUri" />, if the AT URI is in the app.bsky.feed.post collection.
         /// This Uri is very dependent on the Bluesky web client and its format is subject to change.
         /// </summary>
         /// <param name="atUri">The <see cref="AtUri"/> to generate a web URI for.</param>

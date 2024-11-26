@@ -3,10 +3,13 @@
 
 namespace idunno.Bluesky.Actor
 {
+    /// <summary>
+    /// Encapsulates a user's muted words preference.
+    /// </summary>
     public record MutedWordPreferences : Preference
     {
         /// <summary>
-        /// Creates a new instance of <see cref="MutedWordPreferences"/> from the <paramref name="items"/>
+        /// Creates a new instance of <see cref="MutedWordPreferences"/> from the provided <paramref name="items"/>
         /// </summary>
         /// <param name="items">A list of <see cref="MutedWord"/>s.</param>
         public MutedWordPreferences(IReadOnlyList<MutedWord> items)

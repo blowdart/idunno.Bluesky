@@ -42,7 +42,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Apply a batch transaction of repository creates, updates, and deletes. Requires authentication.
         /// </summary>
-        /// <param name="writeRequests"></param>
+        /// <param name="writes"></param>
         /// <param name="repo"></param>
         /// <param name="validate">
         ///     Flag indicating what level of validation the api should perform.
@@ -61,10 +61,10 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown if <paramref name="writeRequests"/>, <paramref name="repo"/>, <paramref name="service"/>,
+        /// Thrown if <paramref name="writes"/>, <paramref name="repo"/>, <paramref name="service"/>,
         /// <paramref name="accessToken"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
-        /// <exception cref="ArgumentException">Thrown if <paramref name="writeRequests"/> is an empty collection.</exception>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="writes"/> is an empty collection.</exception>
         public static async Task<AtProtoHttpResult<ApplyWritesResponse>> ApplyWrites(
             ICollection<ApplyWritesRequestValueBase> writes,
             Did repo,
@@ -103,7 +103,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Creates an atproto record in the specified collection. Requires authentication.
         /// </summary>
-        /// <param name="recordJson"><para>A json representation of record to be created.</para></param>
+        /// <param name="record"><para>A json representation of record to be created.</para></param>
         /// <param name="collection"><para>The NSID of collection the record should be created in.</para></param>
         /// <param name="creator"><para>The <see cref="Did"/> of the creating actor.</para></param>
         /// <param name="rKey"><para>The record key, if any, of the record to be created.</para></param>
@@ -228,7 +228,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Updates or creates an atproto record in the specified collection. Requires authentication.
         /// </summary>
-        /// <param name="recordJson"><para>A json representation of record to be created.</para></param>
+        /// <param name="record"><para>A json representation of record to be created.</para></param>
         /// <param name="collection"><para>The NSID of collection the record should be created in.</para></param>
         /// <param name="creator"><para>The <see cref="Did"/> of the creating actor.</para></param>
         /// <param name="rKey"><para>The record key, if any, of the record to be created.</para></param>

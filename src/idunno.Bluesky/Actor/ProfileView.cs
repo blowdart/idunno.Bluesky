@@ -8,6 +8,9 @@ using idunno.AtProto.Labels;
 
 namespace idunno.Bluesky.Actor
 {
+    /// <summary>
+    /// Encapsulates a view over a user profile.
+    /// </summary>
     public record ProfileView : ProfileViewBasic
     {
         /// <summary>

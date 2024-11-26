@@ -6,7 +6,7 @@
 
 namespace idunno.AtProto
 {
-    internal class Base32Encoding
+    internal static class Base32Encoding
     {
         public static byte[] ToBytes(string s)
         {

@@ -5,6 +5,9 @@ using System.Text.Json.Serialization;
 
 namespace idunno.AtProto.Repo.Models
 {
+    /// <summary>
+    /// Base record for transactions for the applyWrites API.
+    /// </summary>
     [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = false, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]
     [JsonDerivedType(typeof(ApplyWritesCreate), typeDiscriminator: "com.atproto.repo.applyWrites#create")]
     [JsonDerivedType(typeof(ApplyWritesUpdate), typeDiscriminator: "com.atproto.repo.applyWrites#update")]

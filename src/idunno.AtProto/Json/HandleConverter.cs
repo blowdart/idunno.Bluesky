@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -9,7 +10,8 @@ namespace idunno.AtProto.Json
     /// <summary>
     /// Converts a Handle to or from JSON.
     /// </summary>
-    internal class HandleConverter : JsonConverter<Handle>
+    [SuppressMessage("Performance", "CA1812", Justification = "Applied by attribute in Handle class.")]
+    internal sealed class HandleConverter : JsonConverter<Handle>
     {
         /// <summary>
         /// Reads and converts JSON to a <see cref="Handle"/>.

@@ -152,6 +152,10 @@ namespace idunno.AtProto
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Did FromString(string s) => s;
 
+        /// <summary>
+        /// Converts the specified did to a string.
+        /// </summary>
+        /// <param name="d">The Did to convert.</param>
         public static implicit operator string(Did d)
         {
             if (d is null)

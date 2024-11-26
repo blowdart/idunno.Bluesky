@@ -6,19 +6,32 @@ using idunno.AtProto.Repo;
 
 namespace idunno.Bluesky.Embed
 {
+    /// <summary>
+    /// Represents an embedded record in a post for external media.
+    /// </summary>
     public record EmbeddedExternal : EmbeddedMediaBase
     {
+        /// <summary>
+        /// Creates a new instance of <see cref="EmbeddedMediaBase"/>
+        /// </summary>
+        /// <param name="external">The properties for the embedded media.</param>
         [JsonConstructor]
         public EmbeddedExternal(ExternalProperties external)
         {
             External = external;
         }
 
+        /// <summary>
+        /// Gets the properties for the embedded media.
+        /// </summary>
         [JsonInclude]
         [JsonRequired]
         public ExternalProperties External { get; init; }
     }
 
+    /// <summary>
+    /// The properties for an embedded external media record.
+    /// </summary>
     public record ExternalProperties
     {
         /// <summary>

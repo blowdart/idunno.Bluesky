@@ -20,9 +20,9 @@ namespace idunno.AtProto
         /// <param name="sources">Optional list of label sources (DIDs) to filter on.</param>
         /// <param name="limit">Number of results to return. Should be between 1 and 250.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
+        /// <param name="service">The service to create fine the labels on.</param>
         /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="uriPatterns" /> is null</exception>

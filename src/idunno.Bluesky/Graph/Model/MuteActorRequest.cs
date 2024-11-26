@@ -7,7 +7,7 @@ using idunno.AtProto;
 
 namespace idunno.Bluesky.Graph.Model
 {
-    internal record MuteActorRequest
+    internal sealed record MuteActorRequest
     {
         public MuteActorRequest(AtIdentifier actor)
         {

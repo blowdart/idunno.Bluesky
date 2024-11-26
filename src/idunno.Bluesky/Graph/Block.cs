@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using idunno.AtProto;
 
@@ -13,6 +14,7 @@ namespace idunno.Bluesky.Graph
     /// <remarks>
     ///<para>NOTE: blocks are public in Bluesky.</para>
     /// </remarks>
+    [SuppressMessage("Performance", "CA1812", Justification = "Used in creating a block or reading the blocks")]
     internal sealed record Block : BlueskyRecord
     {
         /// <summary>

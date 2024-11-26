@@ -35,13 +35,4 @@
     <ProjectReference Include="..\idunno.AtProto\idunno.AtProto.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="DotNet.ReproducibleBuilds" PrivateAssets="All" />
-    <PackageReference Include="DotNetAnalyzers.DocumentationAnalyzers" PrivateAssets="All" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(Configuration)' != 'CodeQL'">
-    <PackageReference Include="Nerdbank.GitVersioning" PrivateAssets="All" />
-  </ItemGroup>
-
 </Project>

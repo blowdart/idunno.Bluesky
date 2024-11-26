@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 namespace idunno.AtProto.Repo.Models
 {
     /// <summary>
-    /// Encapsulates the information needed to make a creat record request.
+    /// Encapsulates the information needed to make a create record request.
     /// </summary>
     public sealed record CreateRecordRequest
     {
@@ -21,6 +21,7 @@ namespace idunno.AtProto.Repo.Models
         /// <param name="validate">Gets a flag indicating what validation will be performed, if any.</param>
         /// <param name="rKey">The record key, if any, of the record to be created.</param>
         /// <param name="swapCommit">The <see cref="Cid"/>, if any, to compare and swap with.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="record"/>, <paramref name="collection"/> or <paramref name="repo"/> is null.</exception>
         public CreateRecordRequest(
             object record,
             Nsid collection,

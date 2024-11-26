@@ -5,10 +5,11 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Configurations>Debug;Release;CodeQL</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DnsClient" />
+    <PackageReference Include="DnsClient" Version="1.8.0"/>
   </ItemGroup>
 
   <ItemGroup>

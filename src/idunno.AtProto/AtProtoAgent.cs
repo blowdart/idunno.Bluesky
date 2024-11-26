@@ -777,7 +777,7 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Resumes a session on the <paramref name="service"/> from either the <paramref name="accessJwt"/> or the <paramref name="refreshJwt"/>.
+        /// Resumes a session on the <paramref name="service"/> from the <paramref name="refreshJwt"/>.
         /// </summary>
         /// <param name="did">The <see cref="Did"/> the tokens are associated with.</param>
         /// <param name="refreshJwt">The refresh token to restore the session for.</param>
@@ -978,6 +978,7 @@ namespace idunno.AtProto
         ///   <para>A value of <keyword>null</keyword> to validate record data only for known lexicons.</para>
         ///   <para>Defaults to <keyword>true</keyword>.</para>
         /// </param>
+        /// <param name="swapCommit"><para>Compare and swap with the previous commit by CID.</para></param>
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns><para>The task object representing the asynchronous operation.</para></returns>
         /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="record"/>, <paramref name="collection"/> or <paramref name="creator"/> is null.</para></exception>
@@ -1193,6 +1194,7 @@ namespace idunno.AtProto
         ///   <para>A value of <keyword>null</keyword> to validate record data only for known lexicons.</para>
         ///   <para>Defaults to <keyword>true</keyword>.</para>
         /// </param>
+        /// <param name="swapCommit"><para>Compare and swap with the previous commit by CID.</para></param>
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns><para>The task object representing the asynchronous operation.</para></returns>
         /// <exception cref="ArgumentNullException">
@@ -1274,7 +1276,7 @@ namespace idunno.AtProto
         /// <param name="service">The service to retrieve the record from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/> or <paramref name="collection"/> is null or empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an incorrect format.</exception>
         public async Task<AtProtoHttpResult<T>> GetRecord<T>(
             AtUri uri,

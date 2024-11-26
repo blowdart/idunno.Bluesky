@@ -28,4 +28,14 @@
     <None Include="$(MSBuildThisFileDirectory)..\readme.md" Pack="true" PackagePath="\"/>
   </ItemGroup>
 
+
+  <ItemGroup>
+    <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.25" PrivateAssets="All" />
+    <PackageReference Include="DotNetAnalyzers.DocumentationAnalyzers" Version="1.0.0-beta.59" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)' != 'CodeQL'">
+    <PackageReference Include="Nerdbank.GitVersioning" Version="3.6.146" PrivateAssets="All" />
+  </ItemGroup>
+  
 </Project>

@@ -68,13 +68,13 @@ namespace idunno.Bluesky.Feed
         }
 
         /// <summary>
-        /// The <see cref="AtUri"/> for the post.</param>
+        /// The <see cref="AtUri"/> for the post.
         /// </summary>
         [JsonRequired]
         public AtUri Uri { get; init; }
 
         /// <summary>
-        /// The <see cref="Cid">content identifier</see> for the post.</param>
+        /// The <see cref="Cid">content identifier</see> for the post.
         /// </summary>
         [JsonRequired]
         public Cid Cid { get; init; }

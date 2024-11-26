@@ -7,10 +7,17 @@ using System.Security.Cryptography;
 
 namespace idunno.AtProto
 {
+    /// <summary>
+    /// Utility class for Timestamp Identifiers (TID)
+    /// </summary>
     public static class TimestampIdentifier
     {
+        /// <summary>
+        /// Generates a new timestamp identifier.
+        /// </summary>
+        /// <returns>A new timestamp identifier.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Bluesky normalizes to lower case.")]
-        public static string Generate()
+        public static RecordKey Generate()
         {
             // https://atproto.com/specs/record-key
 

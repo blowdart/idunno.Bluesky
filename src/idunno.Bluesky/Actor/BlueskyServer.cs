@@ -1,16 +1,17 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System;
 using System.Collections.ObjectModel;
-using System.Security.Cryptography.X509Certificates;
+
 using idunno.AtProto;
-using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Actor.Model;
 
 namespace idunno.Bluesky
 {
+    /// <summary>
+    /// Provides direct access to various Bluesky APIs.
+    /// </summary>
     public static partial class BlueskyServer
     {
         // https://docs.bsky.app/docs/api/app-bsky-actor-get-profile
@@ -38,14 +39,13 @@ namespace idunno.Bluesky
         /// actor's relationship to the requested account.
         /// </summary>
         /// <param name="actor">The handle or DID of the account to fetch profile of.</param>
-        /// <param name="uris">List of post <see cref="AtUri" /> to return hydrated views for.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/>, <paramref name="service"/> or <see cref="httpClient"/> are null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<ProfileViewDetailed>> GetProfile(
             AtIdentifier actor,
             Uri service,
@@ -75,14 +75,13 @@ namespace idunno.Bluesky
         /// actor's relationship to the requested account.
         /// </summary>
         /// <param name="actors">The handle or DID of the accounts to fetch profiles for.</param>
-        /// <param name="uris">List of post <see cref="AtUri" /> to return hydrated views for.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/>, <paramref name="service"/> or <see cref="httpClient"/> are null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actors"/>, <paramref name="service"/> or <paramref name="httpClient" /> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="actors"/> is an empty collection or if it contains &gt;25 handles.</exception>
         public static async Task<AtProtoHttpResult<IReadOnlyCollection<ProfileViewDetailed>>> GetProfiles(
             IEnumerable<AtIdentifier> actors,
@@ -93,6 +92,8 @@ namespace idunno.Bluesky
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(actors);
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(httpClient);
 
             var actorList = new List<AtIdentifier>(actors);
 
@@ -103,9 +104,6 @@ namespace idunno.Bluesky
             }
 
             string queryString = string.Join("&", actorList.Select(uri => $"actors={Uri.EscapeDataString(uri.ToString())}"));
-
-            ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(httpClient);
 
             AtProtoHttpClient<GetProfilesResponse> request = new();
             AtProtoHttpResult<GetProfilesResponse> response =  await request.Get(
@@ -143,7 +141,7 @@ namespace idunno.Bluesky
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="service"/>,<paramref name="accessToken"/> or <see cref="httpClient"/> are null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="service"/>,<paramref name="accessToken"/> or <paramref name="httpClient"/> are null.</exception>
         public static async Task<AtProtoHttpResult<Preferences>> GetPreferences(
             bool includeBlueskyModerationLabeler,
             Uri service,

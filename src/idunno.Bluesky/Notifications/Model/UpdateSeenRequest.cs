@@ -3,7 +3,7 @@
 
 namespace idunno.Bluesky.Notifications.Model
 {
-    internal record UpdateSeenRequest
+    internal sealed record UpdateSeenRequest
     {
         public DateTimeOffset SeenAt { get; set; }
     }

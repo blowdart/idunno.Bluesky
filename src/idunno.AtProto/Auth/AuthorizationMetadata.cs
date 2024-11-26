@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -12,7 +13,8 @@ namespace idunno.AtProto.Auth
     /// <remarks>
     /// <para><see href="https://openid.net/specs/openid-connect-discovery-1_0.html">OpenID Connect Discovery 1.0</see> specification.</para>
     /// </remarks>
-    internal record AuthorizationMetadata
+    [SuppressMessage("Performance", "CA1812", Justification = "Used in OIDC discovery.")]
+    internal sealed record AuthorizationMetadata
     {
         /// <summary>
         /// URI using the HTTPS scheme with no query or fragment components that the provider asserts as its Issuer Identifier.

@@ -1,13 +1,15 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 
 namespace idunno.Bluesky.Feed.Model
 {
-    internal record GetLikesResponse
+    [SuppressMessage("Performance", "CA1812", Justification = "Used in GetLikes.")]
+    internal sealed record GetLikesResponse
     {
         [JsonConstructor]
         public GetLikesResponse(AtUri uri, Cid? cid, ICollection<Like> likes, string? cursor)

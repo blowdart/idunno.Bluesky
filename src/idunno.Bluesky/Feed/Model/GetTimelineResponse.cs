@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace idunno.Bluesky.Feed.Model
 {
+    [SuppressMessage("Performance", "CA1812", Justification = "Used in GetTimeLine.")]
     internal sealed record GetTimelineResponse
     {
         [JsonConstructor]

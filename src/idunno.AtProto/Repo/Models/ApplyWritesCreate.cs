@@ -21,6 +21,9 @@ namespace idunno.AtProto.Repo.Models
             Value = value;
         }
 
+        /// <summary>
+        /// Gets the value of the record for the create operation.
+        /// </summary>
         [JsonInclude]
         [JsonRequired]
         public object Value { get; init; }

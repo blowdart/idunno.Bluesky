@@ -75,7 +75,6 @@ namespace idunno.Bluesky.RichText
         /// <param name="text">The text to wrap the hashtag around, if any. If not specified the <paramref name="uri"/> will be used..</param>
         /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">If <paramref name="text"/> is longer than the maximum allowed.</exception>
-        /// <remarks>
         public Link(string uri, string text) : base(text)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(uri);

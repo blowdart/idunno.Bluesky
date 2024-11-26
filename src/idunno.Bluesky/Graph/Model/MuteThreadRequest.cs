@@ -7,7 +7,7 @@ using idunno.AtProto;
 
 namespace idunno.Bluesky.Graph.Model
 {
-    internal record MuteThreadRequest
+    internal sealed record MuteThreadRequest
     {
         public MuteThreadRequest(AtUri root)
         {

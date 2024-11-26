@@ -3,12 +3,16 @@
 
 namespace idunno.AtProto.Repo.Models
 {
+    /// <summary>
+    /// Encapsulates a delete operation for the repo.applyWrites api
+    /// </summary>
     public sealed record ApplyWritesDelete : ApplyWritesRequestValueBase
     {
         /// <summary>
-        /// Encapsulates a delete operation for the repo.applyWrites api
+        /// Creates a new instance of <see cref="ApplyWritesDelete"/>.
         /// </summary>
-
+        /// <param name="collection">The collection to delete the record from.</param>
+        /// <param name="rkey">The <see cref="RecordKey"/> of the record to be deleted.</param>
         public ApplyWritesDelete(Nsid collection, RecordKey rkey) : base(collection, rkey)
         {
         }

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -9,7 +10,8 @@ namespace idunno.AtProto.Json
     /// <summary>
     /// Converts an AT Identifier to or from JSON.
     /// </summary>
-    internal class AtIdentifierConverter : JsonConverter<AtIdentifier>
+    [SuppressMessage("Performance", "CA1812", Justification = "Applied by attribute in AtIdentifier class.")]
+    internal sealed class AtIdentifierConverter : JsonConverter<AtIdentifier>
     {
         /// <summary>
         /// Reads and converts JSON to an <see cref="AtIdentifier"/>/

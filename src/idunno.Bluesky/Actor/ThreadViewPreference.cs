@@ -10,6 +10,11 @@ namespace idunno.Bluesky.Actor
     /// </summary>
     public record ThreadViewPreference : Preference
     {
+        /// <summary>
+        /// Creates a new instance of <see cref="ThreadViewPreference"/>.
+        /// </summary>
+        /// <param name="sortingMode">The user's preferred sorting mode for threads.</param>
+        /// <param name="prioritizeFollowedUsers">Flag indicating whether to show followed users at the top of all replies.</param>
         [JsonConstructor]
         public ThreadViewPreference(ThreadSortingMode sortingMode, bool prioritizeFollowedUsers)
         {

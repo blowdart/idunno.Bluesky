@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 namespace idunno.Bluesky.Embed
 {
     /// <summary>
-    /// Represents a view over an external link in a post.
+    /// Represents a view over an <see cref="EmbeddedExternal"/> record.
     /// </summary>
     public sealed record EmbeddedExternalView : EmbeddedView
     {
@@ -21,13 +21,16 @@ namespace idunno.Bluesky.Embed
         }
 
         /// <summary>
-        /// Gets the external <see cref="Uri"/>.
+        /// Gets the properties for this instance.
         /// </summary>
         [JsonInclude]
         [JsonRequired]
         public EmbeddedExternalViewProperties External { get; init; }
     }
 
+    /// <summary>
+    /// The view properties on a view over an <see cref="EmbeddedExternal"/> record.
+    /// </summary>
     public record EmbeddedExternalViewProperties
     {
         /// <summary>

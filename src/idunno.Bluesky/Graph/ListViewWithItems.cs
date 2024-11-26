@@ -11,7 +11,7 @@ namespace idunno.Bluesky.Graph
         /// <summary>
         /// Creates a new instance of <see cref="ListViewWithItems"/>.
         /// </summary>
-        /// <param name="list">A <see cref="ListView"> of the list whose items will be in the collection.</param>
+        /// <param name="list">A <see cref="ListView" /> of the list whose items will be in the collection.</param>
         /// <param name="items">A collection of <see cref="ListItemView"/>s of items in the list.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
         public ListViewWithItems(ListView list, ICollection<ListItemView> items, string? cursor) : base(items, cursor)
@@ -20,7 +20,7 @@ namespace idunno.Bluesky.Graph
         }
 
         /// <summary>
-        /// A <see cref="ListView"> of the list whose items are in the collection.
+        /// A <see cref="ListView" /> of the list whose items are in the collection.
         /// </summary>
         public ListView List { get; init; }
     }

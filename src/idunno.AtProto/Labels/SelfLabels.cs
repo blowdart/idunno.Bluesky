@@ -13,7 +13,7 @@ namespace idunno.AtProto.Labels
         /// <summary>
         /// Creates a new instance of <see cref="SelfLabels"/>.
         /// </summary>
-        /// <param name="labels">The collection of labels applied to the record.</param>
+        /// <param name="values">The collection of labels applied to the record.</param>
         [JsonConstructor]
         internal SelfLabels(IReadOnlyCollection<SelfLabel> values)
         {

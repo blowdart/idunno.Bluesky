@@ -6,9 +6,7 @@ using System.Text.Json.Serialization;
 namespace idunno.AtProto.Repo.Models
 {
     /// <summary>
-    /// Encapsulates data returned by the
-    /// <see cref="AtProtoServer.CreateRecord(object, Nsid, Did, Uri, string, HttpClient, System.Text.Json.JsonSerializerOptions?, CancellationToken)">CreateRecord</see>
-    /// API call.
+    /// Encapsulates data returned by the CreateRecord API call.
     /// </summary>
     [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Skip)]
     public sealed record CreateRecordResponse

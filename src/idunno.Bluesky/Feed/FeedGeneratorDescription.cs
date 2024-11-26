@@ -52,7 +52,7 @@ namespace idunno.Bluesky.Feed
         }
 
         /// <summary>
-        /// The <see cref="AtUri" for the feed./>
+        /// Gets the <see cref="AtUri" /> for the feed.
         /// </summary>
         [JsonInclude]
         public AtUri Uri { get; init; }

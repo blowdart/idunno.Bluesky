@@ -9,10 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="bean.png" />
-  </ItemGroup>
-
-  <ItemGroup>
     <EmbeddedResource Include="bean.png" />
     <EmbeddedResource Include="BlueskyLogo.jpg" />
     <EmbeddedResource Include="BlueskyLogoRotated180.jpg" />

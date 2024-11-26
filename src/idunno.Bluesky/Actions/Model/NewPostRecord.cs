@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
-using idunno.AtProto;
+
 using idunno.AtProto.Labels;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.RichText;
@@ -31,6 +31,26 @@ namespace idunno.Bluesky.Actions.Model
             ArgumentNullException.ThrowIfNull(postRecord);
         }
 
+        /// <summary>
+        /// Creates a new instance of <see cref="NewPostRecord"/>.
+        /// </summary>
+        /// <param name="text">The text for the post.</param>
+        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
+        /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
+        /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
+        /// <param name="embed">The embedded record for the post, if any.</param>
+        /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
+        /// <param name="tags">A collection of tags to apply to the post, if any.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created on.</param>
+        /// <exception cref="ArgumentException">
+        ///    Thrown when <paramref name="text"/> is null or empty and there is no <paramref name="embed"/> record or
+        ///    <paramref name="tags"/> contains an empty tag.
+        /// .</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        ///    Thrown when <paramref name="text"/> exceeds the maximum length or.
+        ///    <paramref name="tags"/> exceeds the maximum number of tags or has a value that exceeds the maximum tag length.
+        ///    
+        /// </exception>
         [JsonConstructor]
         public NewPostRecord(
             string? text,
@@ -94,39 +114,66 @@ namespace idunno.Bluesky.Actions.Model
             }
         }
 
+        /// <summary>
+        /// Gets the JSON record type for this instance.
+        /// </summary>
         [JsonInclude]
         [JsonPropertyName("$type")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Cannot be static as it won't be serialized.")]
         public string Type => RecordType.Post;
 
+        /// <summary>
+        /// Gets the text for the post, if any.
+        /// </summary>
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? Text { get; internal set; }
 
+        /// <summary>
+        /// Gets a list of <see cref="Facet"/>s for the post, if any.
+        /// </summary>
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public IList<Facet>? Facets { get; internal set; }
 
+        /// <summary>
+        /// The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.
+        /// </summary>
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public ReplyReferences? Reply { get; internal set; }
 
+        /// <summary>
+        /// Gets the embedded record for the post, if any.
+        /// </summary>
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public EmbeddedBase? Embed { get; internal set; }
 
+        /// <summary>
+        /// Gets the collection of language strings, if any, that the post is written in.
+        /// </summary>
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public IList<string>? Langs { get; internal set; } 
+        public IList<string>? Langs { get; internal set; }
 
+        /// <summary>
+        /// A collection of <see cref="SelfLabels"/> to apply to the post, if any.
+        /// </summary>
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public IReadOnlyCollection<SelfLabels>? Labels { get; internal set; }
 
+        /// <summary>
+        /// Gets the collection of tags to apply to the post, if any.
+        /// </summary>
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public IReadOnlyCollection<string>? Tags { get; internal set; }
 
+        /// <summary>
+        /// Gets the <see cref="DateTimeOffset"/> the post was created on.
+        /// </summary>
         [JsonInclude]
         public DateTimeOffset CreatedAt { get; internal set; }
     }
