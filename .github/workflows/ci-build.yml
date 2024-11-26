@@ -61,9 +61,13 @@ jobs:
       with:
         name: build-output
         path: |
+          samples/**/*.*
           src/**/*.*
           test/**/*.*
           *.sln
+          *.props
+          *.config
+          version.json
         retention-days: 1
 
   test:
