@@ -39,6 +39,7 @@ The [API status page](docs/endpointStatus.md) shows what is currently implemente
 * Open Graph embedded card attaching
 * GIF attaching
 * Direct messaging
+* Trimming support
 * Firehose support
 * Release builds with [SBOM generation](https://github.com/microsoft/sbom-tool/blob/main/docs/setting-up-github-actions.md), code signing and NuGet publishing
 * Docs accuracy after refactoring

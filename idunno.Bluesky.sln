@@ -24,6 +24,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C94F8041-688
 		src\.editorconfig = src\.editorconfig
 		src\Directory.Build.Props = src\Directory.Build.Props
 		src\icon.png = src\icon.png
+		src\idunno.Bluesky\PostBuilderException.cs = src\idunno.Bluesky\PostBuilderException.cs
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{B1A49FA3-07AB-4D78-BC16-FF7FB5857840}"
@@ -105,14 +106,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.TokenRefresh", "sam
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".devcontainer", ".devcontainer", "{C7F3DAB6-E503-4030-8107-536B42315BA0}"
 	ProjectSection(SolutionItems) = preProject
-		devcontainer.json = devcontainer.json
+		.devcontainer\devcontainer.json = .devcontainer\devcontainer.json
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ISSUE_TEMPLATE", "ISSUE_TEMPLATE", "{F8B3262D-C3F6-4734-93B9-9218A1178297}"
 	ProjectSection(SolutionItems) = preProject
 		.github\ISSUE_TEMPLATE\bug_report.md = .github\ISSUE_TEMPLATE\bug_report.md
-		.github\ISSUE_TEMPLATE\feature_request.md = .github\ISSUE_TEMPLATE\feature_request.md
 		.github\ISSUE_TEMPLATE\docs-issue.md = .github\ISSUE_TEMPLATE\docs-issue.md
+		.github\ISSUE_TEMPLATE\feature_request.md = .github\ISSUE_TEMPLATE\feature_request.md
 	EndProjectSection
 EndProject
 Global
