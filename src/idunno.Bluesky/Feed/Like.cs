@@ -10,6 +10,9 @@ using idunno.Bluesky.Actor;
 
 namespace idunno.Bluesky.Feed
 {
+    /// <summary>
+    /// Encapsulates a like record.
+    /// </summary>
     [SuppressMessage("Naming", "CA1716:Identifiers should not match keywords", Justification = "It's like in the Bluesky lexicon.")]
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
     public sealed record Like : AtProtoObject

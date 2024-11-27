@@ -2,14 +2,25 @@
 // Licensed under the MIT License.
 
 using System.Net;
+using System.Runtime.Serialization;
 
 namespace idunno.AtProto
 {
     /// <summary>
     /// Thrown when the Session restoration process fails.
     /// </summary>
+    [Serializable]
     public class SessionRestorationFailedException : Exception
     {
+        /// <summary>
+        /// Creates a new instance of the <see cref="SessionRestorationFailedException"/> class for serialization.
+        /// </summary>
+        /// <param name="info">The data needed to serialize or deserialize.</param>
+        /// <param name="context">the source and destination of serialized stream.</param>
+        protected SessionRestorationFailedException(SerializationInfo info, StreamingContext context) : base()
+        {
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="InvalidSessionException"/> class.
         /// </summary>

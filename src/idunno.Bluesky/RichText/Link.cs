@@ -17,16 +17,12 @@ namespace idunno.Bluesky.RichText
         public Link(string uri)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(uri);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(uri.Length, Maximum.LinkTextLengthInCharacters, nameof(uri));
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(uri.GetLengthInGraphemes(), Maximum.LinkTextLengthInGraphemes, nameof(uri));
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(uri.Length, Maximum.LinkTextLengthInCharacters);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(uri.GetLengthInGraphemes(), Maximum.LinkTextLengthInGraphemes);
 
             if (!Uri.TryCreate(uri, UriKind.Absolute, out Uri? createdUri))
             {
-                throw new ArgumentException("cannot be parsed as a Uri.", nameof(uri));
-            }
-            if (createdUri is null)
-            {
-                throw new ArgumentException("passed validation but returned a null uri.", nameof(uri));
+                throw new ArgumentException("cannot be parsed as a Uri.");
             }
 
             Uri = createdUri;
@@ -44,8 +40,8 @@ namespace idunno.Bluesky.RichText
             ArgumentNullException.ThrowIfNull(uri);
 
             string uriAsString = uri.ToString();
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(uriAsString.Length, Maximum.LinkTextLengthInCharacters, nameof(uri));
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(uriAsString.GetLengthInGraphemes(), Maximum.LinkTextLengthInGraphemes, nameof(uri));
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(uriAsString.Length, Maximum.LinkTextLengthInCharacters);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(uriAsString.GetLengthInGraphemes(), Maximum.LinkTextLengthInGraphemes);
 
             Uri = uri;
             Text = uriAsString;
@@ -62,8 +58,8 @@ namespace idunno.Bluesky.RichText
         {
             ArgumentNullException.ThrowIfNull(uri);
             ArgumentNullException.ThrowIfNull(text);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.LinkTextLengthInCharacters, nameof(text));
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetLengthInGraphemes(), Maximum.LinkTextLengthInGraphemes, nameof(text));
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.LinkTextLengthInCharacters);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetLengthInGraphemes(), Maximum.LinkTextLengthInGraphemes);
 
             Uri = uri;
         }
@@ -80,16 +76,12 @@ namespace idunno.Bluesky.RichText
             ArgumentNullException.ThrowIfNullOrWhiteSpace(uri);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(text);
 
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.LinkTextLengthInCharacters, nameof(text));
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetLengthInGraphemes(), Maximum.LinkTextLengthInGraphemes, nameof(text));
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.LinkTextLengthInCharacters);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetLengthInGraphemes(), Maximum.LinkTextLengthInGraphemes);
 
             if (!Uri.TryCreate(uri, UriKind.Absolute, out Uri? createdUri))
             {
-                throw new ArgumentException("cannot be parsed as a Uri.", nameof(uri));
-            }
-            if (createdUri is null)
-            {
-                throw new ArgumentException("passed validation but returned a null uri.", nameof(uri));
+                throw new ArgumentException("cannot be parsed as a Uri.");
             }
 
             Uri = createdUri;

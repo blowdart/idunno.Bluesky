@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.ComponentModel.Design;
 using System.Diagnostics.CodeAnalysis;
 
 using idunno.AtProto.Repo;
@@ -8,20 +9,21 @@ using idunno.Bluesky.Actions.Model;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.RichText;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.Bluesky
 {
-    // TODO: ThreadGate & PostGate, and the appropriate Post method
-
     /// <summary>
     /// A class to allow building of a Post record in a more friendly manner.
     /// </summary>
     public sealed class PostBuilder
     {
+        private readonly object _syncLock = new ();
+
         private readonly NewPostRecord _postRecord;
-        private readonly List<EmbeddedImage> _embeddedImages = new ();
+        private readonly List<EmbeddedImage> _embeddedImages = new();
         private List<ThreadGateRule>? _threadGateRules;
-        private List<PostGateRule>? _postGateRules ;
+        private List<PostGateRule>? _postGateRules;
         private bool _disableReplies;
         private bool _disableEmbedding;
 
@@ -89,16 +91,16 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="text">The text for the post.</param>
         /// <param name="languages">The languages for the post.</param>
+        /// <param name="images">An optional collection of <see cref="EmbeddedImage"/>s to attach to the post.</param>
         /// <exception cref="ArgumentNullException">if <paramref name="languages"/> is null</exception>
         /// <exception cref="ArgumentOutOfRangeException">if <paramref name="languages"/> contains no entries.</exception>
         public PostBuilder(string text, string[] languages, ICollection<EmbeddedImage>? images = null) : this(text, images)
         {
             ArgumentNullException.ThrowIfNull(languages);
-            ArgumentOutOfRangeException.ThrowIfZero(languages.Length, nameof(languages));
+            ArgumentOutOfRangeException.ThrowIfZero(languages.Length);
 
             _postRecord.Langs = languages;
         }
-
 
         /// <summary>
         /// Gets a flag indicating whether this instance has any record text.
@@ -113,7 +115,7 @@ namespace idunno.Bluesky
         {
             get
             {
-                lock (_postRecord)
+                lock (_syncLock)
                 {
                     return _postRecord.Text?.Length;
                 }
@@ -124,18 +126,21 @@ namespace idunno.Bluesky
         /// Gets the maximum capacity of characters allowed in the record text of this instance
         /// </summary>
         [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Matching StringBuilder property.")]
+        [SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static", Justification = "Matching StringBuilder property.")]
         public int MaxCapacity => Maximum.PostLengthInCharacters;
 
         /// <summary>
         /// Gets the maximum capacity of graphemes allowed in the record text of this instance
         /// </summary>
         [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Matching StringBuilder property.")]
+        [SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static", Justification = "Matching StringBuilder property.")]
         public int MaxCapacityGraphemes => Maximum.PostLengthInGraphemes;
 
         /// <summary>
         /// Gets the maximum capacity of images allowed in this instance
         /// </summary>
         [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Matching StringBuilder property.")]
+        [SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static", Justification = "Matching StringBuilder property.")]
         public int MaxImages => Maximum.ImagesInPost;
 
         /// <summary>
@@ -145,7 +150,7 @@ namespace idunno.Bluesky
         {
             get
             {
-                lock (_postRecord)
+                lock (_syncLock)
                 {
                     return _postRecord.Text;
                 }
@@ -178,7 +183,7 @@ namespace idunno.Bluesky
         {
             get
             {
-                lock (_postRecord)
+                lock (_syncLock)
                 {
                     if (_postRecord.Langs is null)
                     {
@@ -216,7 +221,7 @@ namespace idunno.Bluesky
         {
             get
             {
-                lock (_embeddedImages)
+                lock (_syncLock)
                 {
                     return new List<EmbeddedImage>(_embeddedImages).AsReadOnly();
                 }
@@ -237,7 +242,7 @@ namespace idunno.Bluesky
         {
             get
             {
-                lock (_postRecord)
+                lock (_syncLock)
                 {
                     return _postRecord.Reply;
                 }
@@ -245,23 +250,19 @@ namespace idunno.Bluesky
 
             set
             {
-                lock (_postRecord)
+                lock (_syncLock)
                 {
-                    if (_threadGateRules is not null || DisableReplies is true)
+                    if (_threadGateRules is not null || DisableReplies)
                     {
                         throw new ArgumentException("Cannot set InReplyTo if ThreadGateRules is not null.");
                     }
 
                     _postRecord.Reply = value;
 
-                    if (value is not null)
+                    if (value is not null && (_postRecord.Embed is EmbeddedRecord || _postRecord.Embed is EmbeddedRecordWithMedia))
                     {
-                        if (_postRecord.Embed is EmbeddedRecord || _postRecord.Embed is EmbeddedRecordWithMedia)
-                        {
-                            // Being a reply post excludes being a quote post.
-                            // Quote = null;
-                            _postRecord.Embed = null;
-                        }
+                        // Being a reply post excludes being a quote post.
+                        QuotePost = null;
                     }
                 }
             }
@@ -280,7 +281,7 @@ namespace idunno.Bluesky
         {
             get
             {
-                lock (_postRecord)
+                lock (_syncLock)
                 {
                     if (_postRecord.Embed is EmbeddedRecord embeddedRecord)
                     {
@@ -295,18 +296,17 @@ namespace idunno.Bluesky
 
             set
             {
-                lock (_postRecord)
+                lock (_syncLock)
                 {
                     if (value is null && _postRecord.Embed is null)
                     {
                         // Nothing to do
-                        return;
                     }
                     else if (value is null)
                     {
                         if (_postRecord.Embed is EmbeddedRecord || _postRecord.Embed is EmbeddedRecordWithMedia)
                         {
-                            /// We already have a quote record, so let's just delete it.
+                            // We already have a quote record, so let's just delete it.
                             _postRecord.Embed = null;
                         }
                         else
@@ -343,7 +343,7 @@ namespace idunno.Bluesky
 
             set
             {
-                lock (_postRecord)
+                lock (_syncLock)
                 {
                     if (InReplyTo is not null)
                     {
@@ -381,7 +381,7 @@ namespace idunno.Bluesky
 
             set
             {
-                lock (_postRecord)
+                lock (_syncLock)
                 {
                     if (InReplyTo is not null)
                     {
@@ -414,7 +414,7 @@ namespace idunno.Bluesky
 
             set
             {
-                lock (_postRecord)
+                lock (_syncLock)
                 {
                     _disableEmbedding = value;
 
@@ -425,13 +425,11 @@ namespace idunno.Bluesky
 
                         if (_postGateRules != null)
                         {
-                            foreach (PostGateRule rule in _postGateRules)
+                            foreach (var _ in from PostGateRule rule in _postGateRules
+                                              where rule is DisableEmbeddingRule
+                                              select new { })
                             {
-                                if (rule is DisableEmbeddingRule)
-                                {
-                                    needToAddToRules = false;
-                                    break;
-                                }
+                                needToAddToRules = false;
                             }
                         }
 
@@ -445,13 +443,11 @@ namespace idunno.Bluesky
                     {
                         if (_postGateRules != null)
                         {
-                            foreach (PostGateRule rule in _postGateRules)
+                            foreach (PostGateRule? rule in from PostGateRule rule in _postGateRules
+                                                 where rule is DisableEmbeddingRule
+                                                 select rule)
                             {
-                                if (rule is DisableEmbeddingRule)
-                                {
-                                    _postGateRules.Remove(rule);
-                                    break;
-                                }
+                                _postGateRules.Remove(rule);
                             }
 
                             if (_postGateRules.Count == 0)
@@ -484,7 +480,7 @@ namespace idunno.Bluesky
 
             set
             {
-                lock (_postRecord)
+                lock (_syncLock)
                 {
                     if (value is null)
                     {
@@ -499,13 +495,11 @@ namespace idunno.Bluesky
                         }
 
                         _postGateRules = new List<PostGateRule>(value);
-                        foreach (PostGateRule rule in _postGateRules)
+                        foreach (var _ in from PostGateRule rule in _postGateRules
+                                          where rule is DisableEmbeddingRule
+                                          select new { })
                         {
-                            if (rule is DisableEmbeddingRule)
-                            {
-                                _disableReplies = true;
-                                break;
-                            }
+                            _disableReplies = true;
                         }
                     }
                 }
@@ -525,7 +519,7 @@ namespace idunno.Bluesky
                 return this;
             }
 
-            lock (_postRecord)
+            lock (_syncLock)
             {
                 if (value.Length > MaxCapacity || value.GetLengthInGraphemes() > MaxCapacityGraphemes)
                 {
@@ -552,29 +546,38 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Adds a copy of the specified string to the record text of this instance.
+        /// Appends a <see cref="Mention"/> to the text and and facet features of this instance.
         /// </summary>
-        /// <param name="s">The string to append</param>
+        /// <param name="mention">The <see cref="Mention"/> to append.</param>
         /// <returns>A reference to this instance after the append operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> is null.</exception>
-        public static PostBuilder Add(PostBuilder postBuilder, string s)
+        /// <exception cref="ArgumentNullException">if <paramref name="mention"/> is null or its text is null or white space.</exception>
+        public PostBuilder Append(Mention mention)
         {
-            ArgumentNullException.ThrowIfNull(postBuilder);
+            ArgumentNullException.ThrowIfNull(mention);
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(mention.Text);
 
-            return postBuilder + s;
-        }
+            lock (_syncLock)
+            {
+                long startingPosition = 0;
+                if (_postRecord.Text is not null)
+                {
+                    startingPosition = _postRecord.Text.Length;
+                }
 
-        /// <summary>
-        /// Adds a copy of the specified string to the record text of this instance.
-        /// </summary>
-        /// <param name="s">The string to append</param>
-        /// <returns>A reference to this instance after the append operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> is null.</exception>
-        public static PostBuilder operator +(PostBuilder postBuilder, string s)
-        {
-            ArgumentNullException.ThrowIfNull(postBuilder);
+                _postRecord.Text += mention.Text;
 
-            return postBuilder.Append(s);
+                ByteSlice byteSlice = new(startingPosition, startingPosition + mention.Text.GetUtf8Length());
+                MentionFacetFeature mentionFacetFeature = new(mention.Did);
+                List<FacetFeature> features = new()
+                    {
+                        mentionFacetFeature
+                    };
+
+                _postRecord.Facets ??= new List<Facet>();
+                _postRecord.Facets.Add(new Facet(byteSlice, features));
+
+                return this;
+            }
         }
 
         /// <summary>
@@ -606,95 +609,6 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Adds a copy of the specified character to the record text of this instance.
-        /// </summary>
-        /// <param name="c">The string to append</param>
-        /// <returns>A reference to this instance after the append operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> is null.</exception>
-        public static PostBuilder Add(PostBuilder postBuilder, char c, int repeatCount = 1)
-        {
-            ArgumentNullException.ThrowIfNull(postBuilder);
-
-            return postBuilder.Append(c, repeatCount);
-        }
-
-        /// <summary>
-        /// Adds a copy of the specified string to the record text of this instance.
-        /// </summary>
-        /// <param name="c">The character to append</param>
-        /// <returns>A reference to this instance after the append operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> is null.</exception>
-        public static PostBuilder operator +(PostBuilder postBuilder, char c)
-        {
-            ArgumentNullException.ThrowIfNull(postBuilder);
-
-            return postBuilder.Append(c);
-        }
-
-        /// <summary>
-        /// Appends a <see cref="Mention"/> to the text and and facet features of this instance.
-        /// </summary>
-        /// <param name="mention">The <see cref="Mention"/> to append.</param>
-        /// <returns>A reference to this instance after the append operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="mention"/> is null or its text is null or white space.</exception>
-        public PostBuilder Append(Mention mention)
-        {
-            ArgumentNullException.ThrowIfNull(mention);
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(mention.Text);
-
-            lock (_postRecord)
-            {
-                long startingPosition = 0;
-                if (_postRecord.Text is not null)
-                {
-                    startingPosition = _postRecord.Text.Length;
-                }
-
-                _postRecord.Text += mention.Text;
-
-                ByteSlice byteSlice = new(startingPosition, startingPosition + mention.Text.GetUtf8Length());
-                MentionFacetFeature mentionFacetFeature = new(mention.Did);
-                List<FacetFeature> features = new()
-                    {
-                        mentionFacetFeature
-                    };
-
-                _postRecord.Facets ??= new List<Facet>();
-                _postRecord.Facets.Add(new Facet(byteSlice, features));
-
-                return this;
-            }
-        }
-
-        /// <summary>
-        /// Adds a <see cref="Mention"/> to the text and and facet features of this instance.
-        /// </summary>
-        /// <param name="mention">The <see cref="Mention"/> to add.</param>
-        /// <returns>A reference to this instance after the add operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> or <paramref name="mention"/> is null.</exception>
-        public static PostBuilder Add(PostBuilder postBuilder, Mention mention)
-        {
-            ArgumentNullException.ThrowIfNull(postBuilder);
-            ArgumentNullException.ThrowIfNull(mention);
-
-            return postBuilder.Append(mention);
-        }
-
-        /// <summary>
-        /// Adds a <see cref="Mention"/> to the text and facet features of this instance.
-        /// </summary>
-        /// <param name="mention">The <see cref="Mention"/> to add.</param>
-        /// <returns>A reference to this instance after the add operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> or <paramref name="mention"/> is null.</exception>
-        public static PostBuilder operator +(PostBuilder postBuilder, Mention mention)
-        {
-            ArgumentNullException.ThrowIfNull(postBuilder);
-            ArgumentNullException.ThrowIfNull(mention);
-
-            return postBuilder.Append(mention);
-        }
-
-        /// <summary>
         /// Appends a <see cref="HashTag"/> to the text and facet features of this instance.
         /// </summary>
         /// <param name="hashTag">The <see cref="HashTag"/> to append.</param>
@@ -705,7 +619,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(hashTag);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(hashTag.Text);
 
-            lock (_postRecord)
+            lock (_syncLock)
             {
                 long startingPosition = 0;
                 if (_postRecord.Text is not null)
@@ -728,33 +642,6 @@ namespace idunno.Bluesky
             }
         }
 
-        /// <summary>
-        /// Adds a <see cref="HashTag"/> to the text and facet features of this instance.
-        /// </summary>
-        /// <param name="hashTag">The <see cref="HashTag"/> to add.</param>
-        /// <returns>A reference to this instance after the add operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> or <paramref name="hashTag"/> is null.</exception>
-        public static PostBuilder Add(PostBuilder postBuilder, HashTag hashTag)
-        {
-            ArgumentNullException.ThrowIfNull(postBuilder);
-            ArgumentNullException.ThrowIfNull(hashTag);
-
-            return postBuilder.Append(hashTag);
-        }
-
-        /// <summary>
-        /// Adds a <see cref="HashTag"/> to the text and facet features of this instance.
-        /// </summary>
-        /// <param name="hashTag">The <see cref="HashTag"/> to add.</param>
-        /// <returns>A reference to this instance after the add operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> or <paramref name="hashTag"/> is null.</exception>
-        public static PostBuilder operator +(PostBuilder postBuilder, HashTag hashTag)
-        {
-            ArgumentNullException.ThrowIfNull(postBuilder);
-            ArgumentNullException.ThrowIfNull(hashTag);
-
-            return postBuilder.Append(hashTag);
-        }
 
         /// <summary>
         /// Appends a <see cref="Link"/> to the text and facet features of this instance.
@@ -767,7 +654,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(link);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(link.Text);
 
-            lock (_postRecord)
+            lock (_syncLock)
             {
                 long startingPosition = 0;
                 if (_postRecord.Text is not null)
@@ -791,8 +678,38 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Adds a <see cref="Link"/> to the text and facet features of this instance.
+        /// Adds a copy of the specified string to the record text to the specified <paramref name="postBuilder"/>.
         /// </summary>
+        /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the string to.</param>
+        /// <param name="s">The string to append</param>
+        /// <returns>A reference to this instance after the append operation has completed.</returns>
+        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> is null.</exception>
+        public static PostBuilder Add(PostBuilder postBuilder, string s)
+        {
+            ArgumentNullException.ThrowIfNull(postBuilder);
+
+            return postBuilder + s;
+        }
+
+        /// <summary>
+        /// Adds a copy of the specified character to the record text to the specified <paramref name="postBuilder"/>.
+        /// </summary>
+        /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the string to.</param>
+        /// <param name="c">The character to append</param>
+        /// <param name="repeatCount">The number of times to repeat the <paramref name="c" />.</param>
+        /// <returns>A reference to this instance after the append operation has completed.</returns>
+        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> is null.</exception>
+        public static PostBuilder Add(PostBuilder postBuilder, char c, int repeatCount = 1)
+        {
+            ArgumentNullException.ThrowIfNull(postBuilder);
+
+            return postBuilder.Append(c, repeatCount);
+        }
+
+        /// <summary>
+        /// Adds a <see cref="Link"/> to the text and facet features of the specified <paramref name="postBuilder"/>.
+        /// </summary>
+        /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the link to.</param>
         /// <param name="link">The <see cref="Link"/> to add.</param>
         /// <returns>A reference to this instance after the add operation has completed.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> or <paramref name="link"/> is null.</exception>
@@ -805,17 +722,33 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Adds a <see cref="HashTag"/> to the text and facet features of this instance.
+        /// Adds a <see cref="Mention"/> to the text and and facet features to the specified <paramref name="postBuilder"/>.
         /// </summary>
+        /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the mention to.</param>
+        /// <param name="mention">The <see cref="Mention"/> to add.</param>
+        /// <returns>A reference to this instance after the add operation has completed.</returns>
+        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> or <paramref name="mention"/> is null.</exception>
+        public static PostBuilder Add(PostBuilder postBuilder, Mention mention)
+        {
+            ArgumentNullException.ThrowIfNull(postBuilder);
+            ArgumentNullException.ThrowIfNull(mention);
+
+            return postBuilder.Append(mention);
+        }
+
+        /// <summary>
+        /// Adds a <see cref="HashTag"/> to the text and facet features to the specified <paramref name="postBuilder"/>.
+        /// </summary>
+        /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the hash tag to.</param>
         /// <param name="hashTag">The <see cref="HashTag"/> to add.</param>
         /// <returns>A reference to this instance after the add operation has completed.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> or <paramref name="hashTag"/> is null.</exception>
-        public static PostBuilder operator +(PostBuilder postBuilder, Link link)
+        public static PostBuilder Add(PostBuilder postBuilder, HashTag hashTag)
         {
             ArgumentNullException.ThrowIfNull(postBuilder);
-            ArgumentNullException.ThrowIfNull(link);
+            ArgumentNullException.ThrowIfNull(hashTag);
 
-            return postBuilder.Append(link);
+            return postBuilder.Append(hashTag);
         }
 
         /// <summary>
@@ -829,7 +762,7 @@ namespace idunno.Bluesky
         {
             ArgumentNullException.ThrowIfNull(image);
 
-            lock (_postRecord)
+            lock (_syncLock)
             {
                 if (_embeddedImages.Count == MaxImages)
                 {
@@ -842,8 +775,9 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Adds a <see cref="EmbeddedImage"/> to this instance.
+        /// Adds a <see cref="EmbeddedImage"/> to the specified <paramref name="postBuilder"/>.
         /// </summary>
+        /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the image to.</param>
         /// <param name="image">The <see cref="EmbeddedImage"/> to add.</param>
         /// <returns>A reference to this instance after the add operation has completed.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> or <paramref name="image"/> is null.</exception>
@@ -853,7 +787,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(postBuilder);
             ArgumentNullException.ThrowIfNull(image);
 
-            lock (postBuilder._postRecord)
+            lock (postBuilder._syncLock)
             {
                 if (postBuilder._embeddedImages.Count == postBuilder.MaxImages)
                 {
@@ -864,33 +798,18 @@ namespace idunno.Bluesky
                 return postBuilder;
             }
         }
-
-        /// <summary>
-        /// Adds a <see cref="EmbeddedImage"/> to this instance.
-        /// </summary>
-        /// <param name="image">The <see cref="EmbeddedImage"/> to add.</param>
-        /// <returns>A reference to this instance after the add operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> or <paramref name="image"/> is null.</exception>
-        public static PostBuilder operator +(PostBuilder postBuilder, EmbeddedImage image)
-        {
-            ArgumentNullException.ThrowIfNull(postBuilder);
-            ArgumentNullException.ThrowIfNull(image);
-
-            return Add(postBuilder, image);
-        }
-
         /// <summary>
         /// Adds a collection <see cref="EmbeddedImage"/>s to this instance.
         /// </summary>
         /// <param name="images">The collection of <see cref="EmbeddedImage"/> to append.</param>
         /// <returns>A reference to this instance after the append operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="image"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">if <paramref name="images"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">if adding the images in this instance is will result in an image count &gt;<see cref="MaxImages"/>.</exception>
         public PostBuilder Add(ICollection<EmbeddedImage> images)
         {
             ArgumentNullException.ThrowIfNull(images);
 
-            lock (_postRecord)
+            lock (_syncLock)
             {
                 if ((_embeddedImages.Count + images.Count) > MaxImages)
                 {
@@ -903,18 +822,19 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Adds a collection of <see cref="EmbeddedImage"/>s to this instance.
+        /// Adds a collection of <see cref="EmbeddedImage"/>s to the specified <paramref name="postBuilder" />.
         /// </summary>
+        /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the images to.</param>
         /// <param name="images">The collection of <see cref="EmbeddedImages"/> to add.</param>
         /// <returns>A reference to this instance after the add operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> or <paramref name="image"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> or <paramref name="images"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">if adding the images in this instance is will result in an image count &gt;<see cref="MaxImages"/>.</exception>
         public static PostBuilder Add(PostBuilder postBuilder, ICollection<EmbeddedImage> images)
         {
             ArgumentNullException.ThrowIfNull(postBuilder);
             ArgumentNullException.ThrowIfNull(images);
 
-            lock (postBuilder._postRecord)
+            lock (postBuilder._syncLock)
             {
                 if ((postBuilder._embeddedImages.Count + images.Count) > postBuilder.MaxImages)
                 {
@@ -927,8 +847,97 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Adds a collection of <see cref="EmbeddedImage"/>s to this instance.
+        /// Adds a copy of the specified string to the record text of the specified <paramref name="postBuilder" />.
         /// </summary>
+        /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the images to.</param>
+        /// <param name="s">The string to append</param>
+        /// <returns>A reference to this instance after the append operation has completed.</returns>
+        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> is null.</exception>
+        public static PostBuilder operator +(PostBuilder postBuilder, string s)
+        {
+            ArgumentNullException.ThrowIfNull(postBuilder);
+
+            return postBuilder.Append(s);
+        }
+
+        /// <summary>
+        /// Adds the specified character to the record text of the specified <paramref name="postBuilder" />.
+        /// </summary>
+        /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the images to.</param>
+        /// <param name="c">The character to append</param>
+        /// <returns>A reference to this instance after the append operation has completed.</returns>
+        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> is null.</exception>
+        public static PostBuilder operator +(PostBuilder postBuilder, char c)
+        {
+            ArgumentNullException.ThrowIfNull(postBuilder);
+
+            return postBuilder.Append(c);
+        }
+
+        /// <summary>
+        /// Adds a <see cref="Mention"/> to the text and facet features to the specified <paramref name="postBuilder" />.
+        /// </summary>
+        /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the mention to.</param>
+        /// <param name="mention">The <see cref="Mention"/> to add.</param>
+        /// <returns>A reference to this instance after the add operation has completed.</returns>
+        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> or <paramref name="mention"/> is null.</exception>
+        public static PostBuilder operator +(PostBuilder postBuilder, Mention mention)
+        {
+            ArgumentNullException.ThrowIfNull(postBuilder);
+            ArgumentNullException.ThrowIfNull(mention);
+
+            return postBuilder.Append(mention);
+        }
+
+        /// <summary>
+        /// Adds a <see cref="HashTag"/> to the text and facet features to the specified <paramref name="postBuilder" />.
+        /// </summary>
+        /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the hash tag to.</param>
+        /// <param name="hashTag">The <see cref="HashTag"/> to add.</param>
+        /// <returns>A reference to this instance after the add operation has completed.</returns>
+        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> or <paramref name="hashTag"/> is null.</exception>
+        public static PostBuilder operator +(PostBuilder postBuilder, HashTag hashTag)
+        {
+            ArgumentNullException.ThrowIfNull(postBuilder);
+            ArgumentNullException.ThrowIfNull(hashTag);
+
+            return postBuilder.Append(hashTag);
+        }
+
+        /// <summary>
+        /// Adds a <see cref="Link"/> to the text and facet features to the specified <paramref name="postBuilder" />.
+        /// </summary>
+        /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the link tag to.</param>
+        /// <param name="link">The <see cref="Link"/> to add.</param>
+        /// <returns>A reference to this instance after the add operation has completed.</returns>
+        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> or <paramref name="link"/> is null.</exception>
+        public static PostBuilder operator +(PostBuilder postBuilder, Link link)
+        {
+            ArgumentNullException.ThrowIfNull(postBuilder);
+            ArgumentNullException.ThrowIfNull(link);
+
+            return postBuilder.Append(link);
+        }
+
+        /// <summary>
+        /// Adds a <see cref="EmbeddedImage"/> to the specified <paramref name="postBuilder" />.
+        /// </summary>
+        /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the image to.</param>
+        /// <param name="image">The <see cref="EmbeddedImage"/> to add.</param>
+        /// <returns>A reference to this instance after the add operation has completed.</returns>
+        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> or <paramref name="image"/> is null.</exception>
+        public static PostBuilder operator +(PostBuilder postBuilder, EmbeddedImage image)
+        {
+            ArgumentNullException.ThrowIfNull(postBuilder);
+            ArgumentNullException.ThrowIfNull(image);
+
+            return Add(postBuilder, image);
+        }
+
+        /// <summary>
+        /// Adds a collection of <see cref="EmbeddedImage"/>s to the specified <paramref name="postBuilder" />.
+        /// </summary>
+        /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the images to.</param>
         /// <param name="images">The collection of <see cref="EmbeddedImage"/>s to add.</param>
         /// <returns>A reference to this instance after the add operation has completed.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> or <paramref name="images"/> is null.</exception>
@@ -946,7 +955,7 @@ namespace idunno.Bluesky
         /// <returns>A <see cref="NewPostRecord"/> whose value is the same as this instance.</returns>
         public NewPostRecord ToPostRecord()
         {
-            lock (_postRecord)
+            lock (_syncLock)
             {
                 if (!HasText)
                 {
@@ -965,19 +974,96 @@ namespace idunno.Bluesky
                         // Plain old post
                         _postRecord.Embed = new EmbeddedImages(_embeddedImages);
                     }
-                    else if (InReplyTo is not null && QuotePost is null)
-                    {
-                        // Reply post
-                        _postRecord.Embed = new EmbeddedImages(_embeddedImages);
-                    }
-                    else if (QuotePost is not null && InReplyTo is null)
+                    else if (QuotePost is not null)
                     {
                         // Quote post, so we need fix up the embedded record to include images.
                         _postRecord.Embed = new EmbeddedRecordWithMedia(QuotePost, new EmbeddedImages(_embeddedImages));
                     }
+                    else
+                    {
+                        // Reply post
+                        _postRecord.Embed = new EmbeddedImages(_embeddedImages);
+                    }
                 }
 
                 return new NewPostRecord(_postRecord);
+            }
+        }
+
+        /// <summary>
+        /// Determines whether two object instances are equal.
+        /// </summary>
+        /// <param name="obj">The object to compare with the current object.</param>
+        /// <returns><see langword="true"/> if the specified object is equal to the current object; otherwise, <see langword="false"/>.</returns>
+        public override bool Equals(object? obj) => obj is PostBuilder builder && EqualityComparer<NewPostRecord>.Default.Equals(_postRecord, builder._postRecord) && EqualityComparer<List<EmbeddedImage>>.Default.Equals(_embeddedImages, builder._embeddedImages) && EqualityComparer<List<ThreadGateRule>?>.Default.Equals(_threadGateRules, builder._threadGateRules) && EqualityComparer<List<PostGateRule>?>.Default.Equals(_postGateRules, builder._postGateRules) && _disableEmbedding == builder._disableEmbedding;
+
+        /// <summary>
+        /// Determines whether two specified <see cref="PostBuilder"/>s the same value."/>
+        /// </summary>
+        /// <param name="lhs">The first <see cref="PostBuilder"/> to compare, or null.</param>
+        /// <param name="rhs">The second <see cref="PostBuilder"/> to compare, or null.</param>
+        /// <returns>true if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, false.</returns>
+        public static bool operator ==(PostBuilder? lhs, PostBuilder? rhs)
+        {
+            if (lhs is null)
+            {
+                if (rhs is null)
+                {
+                    return true;
+                }
+
+                return false;
+            }
+
+            return lhs.Equals(rhs);
+        }
+
+        /// <summary>
+        /// Determines whether two specified <see cref="PostBuilder"/>s dot not have same value."/>
+        /// </summary>
+        /// <param name="lhs">The first <see cref="PostBuilder"/> to compare, or null.</param>
+        /// <param name="rhs">The second <see cref="PostBuilder"/> to compare, or null.</param>
+        /// <returns>true if the value of <paramref name="lhs"/> is different to the value of <paramref name="rhs" />; otherwise, false.</returns>
+        public static bool operator !=(PostBuilder? lhs, PostBuilder? rhs) => !(lhs == rhs);
+
+        /// <summary>
+        /// Gets a hash code for the current object.
+        /// </summary>
+        /// <returns>A hash code for the current object.</returns>
+        [SuppressMessage("Minor Bug", "S2328:\"GetHashCode\" should not reference mutable fields", Justification = "Locking and copying to avoid field changes whilst hash code is computed.")]
+        public override int GetHashCode()
+        {
+            List<EmbeddedImage>? embeddedImages = null;
+            List<ThreadGateRule>? threadGateRules = null;
+            List<PostGateRule>? postGateRules = null;
+
+            lock (_syncLock)
+            {
+                NewPostRecord postRecord = new (_postRecord);
+
+                if (_embeddedImages is not null)
+                {
+                    embeddedImages = new List<EmbeddedImage>(_embeddedImages);
+                }
+
+                if (_threadGateRules is not null)
+                {
+                    threadGateRules = new List<ThreadGateRule>(_threadGateRules);
+                }
+
+                if (_postGateRules is not null)
+                {
+                    postGateRules = new List<PostGateRule>(_postGateRules);
+                }
+
+                if (embeddedImages is null && threadGateRules is null && postGateRules is null)
+                {
+                    return postRecord.GetHashCode();
+                }
+                else
+                {
+                    return HashCode.Combine(postRecord, embeddedImages, threadGateRules, postGateRules);
+                }
             }
         }
     }

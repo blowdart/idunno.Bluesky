@@ -12,6 +12,9 @@ namespace idunno.Bluesky
     /// </summary>
     public record View
     {
+        /// <summary>
+        /// Creates a new instance of <see cref="View"/>.
+        /// </summary>
         public View() {}
 
         /// <summary>

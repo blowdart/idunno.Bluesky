@@ -10,11 +10,11 @@ namespace idunno.Bluesky.RichText
     /// </summary>
     public abstract record PostBuilderFacetFeature
     {
-        internal PostBuilderFacetFeature()
+        private protected PostBuilderFacetFeature()
         {
         }
 
-        internal PostBuilderFacetFeature(string text)
+        private protected PostBuilderFacetFeature(string text)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(text);
             Text = text;

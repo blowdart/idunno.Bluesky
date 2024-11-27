@@ -18,7 +18,7 @@ namespace idunno.AtProto
     /// <para>See https://atproto.com/specs/handle for further details.</para>
     /// </remarks>
     [JsonConverter(typeof(Json.HandleConverter))]
-    public class Handle : AtIdentifier, IEquatable<Handle>
+    public sealed class Handle : AtIdentifier, IEquatable<Handle>
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private const int MaximumLength = 253;

@@ -24,6 +24,8 @@ When creating a pull request please create an issue first, unless it's a simple 
 * Making your code changes
   * Create an issue for the changes you want to make.
   * Add or change the code you want to add or change. Please add tests for the code you are adding or changing.
+  * Build your code at the command line with `dotnet build`, this ensures all the code and documentation analyzers run.
+  * [Test](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-test)
   * [Commit](https://docs.github.com/en/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/about-commits)
     your changes to your branch, with a meaningful commit message.
   * [Rebase](https://docs.github.com/en/get-started/using-git/about-git-rebase)
@@ -37,4 +39,4 @@ When creating a pull request please create an issue first, unless it's a simple 
 
 Dependencies in the libraries should only be altered by maintainers.
 For security reasons, we will not accept PRs that alter our `DirectoryBuild.props` or `nuget.config` files.
-If you feel dependencies need upgrading file an issue.
+If you feel dependencies need upgrading please file an issue.

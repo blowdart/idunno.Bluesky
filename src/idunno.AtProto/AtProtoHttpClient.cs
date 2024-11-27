@@ -17,16 +17,6 @@ namespace idunno.AtProto
     public class AtProtoHttpClient<TResult> where TResult : class
     {
         /// <summary>
-        /// Gets the default <see cref="JsonSerializerOptions"/> to use when deserializing JSON.
-        /// </summary>
-        public static readonly JsonSerializerOptions DefaultJsonSerializerOptions = new()
-        {
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            AllowOutOfOrderMetadataProperties = true
-        };
-
-        /// <summary>
         /// Performs an unauthenticated GET request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
         /// </summary>
         /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
@@ -72,7 +62,7 @@ namespace idunno.AtProto
 
             if (jsonSerializerOptions is null)
             {
-                jsonSerializerOptions = DefaultJsonSerializerOptions;
+                jsonSerializerOptions = JsonSerializationDefaults.DefaultJsonSerializerOptions;
             }
             else
             {
@@ -176,7 +166,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNullOrEmpty(endpoint);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            jsonSerializerOptions ??= DefaultJsonSerializerOptions;
+            jsonSerializerOptions ??= JsonSerializationDefaults.DefaultJsonSerializerOptions;
 
             using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(service, endpoint)))
             {
@@ -267,7 +257,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNullOrEmpty(accessToken);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            jsonSerializerOptions ??= DefaultJsonSerializerOptions;
+            jsonSerializerOptions ??= JsonSerializationDefaults.DefaultJsonSerializerOptions;
 
             using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(service, endpoint)))
             {
@@ -319,6 +309,7 @@ namespace idunno.AtProto
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S108:Nested blocks of code should not be left empty", Justification = "Catching unexpected exceptions in error handling, so as to return as much as can be returned.")]
         private static async Task<AtErrorDetail> BuildErrorDetail(
             HttpRequestMessage request,
             HttpResponseMessage responseMessage,

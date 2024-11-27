@@ -44,13 +44,10 @@ namespace idunno.AtProto
 
             AtProtoHttpResult<ServerDescription> result = await request.Get(service, DescribeEndpoint, httpClient, cancellationToken).ConfigureAwait(false);
 
-            if (result.Succeeded)
+            if (result.Succeeded &&
+                (result.Result.AvailableUserDomains is null || result.Result.AvailableUserDomains.Count == 0))
             {
-                if (result.Result.AvailableUserDomains is null ||
-                    result.Result.AvailableUserDomains.Count == 0)
-                {
-                    throw new ResponseParseException("Response missing required availableUserDomains array.");
-                }
+                throw new ResponseParseException("Response missing required availableUserDomains array.");
             }
 
             return result;

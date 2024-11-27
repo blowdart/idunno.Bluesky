@@ -78,10 +78,10 @@ namespace idunno.Bluesky.Feed
         [JsonInclude]
         public ReplyReferences? Reply { get; init; }
 
-        [JsonInclude]
         /// <summary>
         /// An optional <see cref="EmbeddedBase" /> for embedded media information.
         /// </summary>
+        [JsonInclude]
         public EmbeddedBase? Embed { get; init; }
 
         /// <summary>

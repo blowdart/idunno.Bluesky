@@ -23,7 +23,7 @@ namespace idunno.Bluesky.RichText
         {
             ArgumentNullException.ThrowIfNull(index);
             ArgumentNullException.ThrowIfNull(features);
-            ArgumentOutOfRangeException.ThrowIfZero(features.Count, nameof(features));
+            ArgumentOutOfRangeException.ThrowIfZero(features.Count);
 
             Index = index;
             Features = features;

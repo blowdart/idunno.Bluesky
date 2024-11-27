@@ -21,8 +21,6 @@ using System.Diagnostics.CodeAnalysis;
 using idunno.AtProto.Models;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo.Models;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 
 namespace idunno.AtProto
 {
@@ -376,7 +374,7 @@ namespace idunno.AtProto
 
                 if (didDocument is not null && didDocument.Services is not null)
                 {
-                    pds = didDocument.Services!.Where(s => s.Id == @"#atproto_pds").FirstOrDefault()!.ServiceEndpoint;
+                    pds = didDocument.Services!.FirstOrDefault(s => s.Id == @"#atproto_pds")!.ServiceEndpoint;
                 }
             }
 
@@ -568,18 +566,18 @@ namespace idunno.AtProto
 
             if (Session is null)
             {
-                sessionErrorFlags &= SessionConfigurationErrorType.NullSession;
+                sessionErrorFlags |= SessionConfigurationErrorType.NullSession;
             }
             else
             {
                 if (Session.RefreshJwt is null)
                 {
-                    sessionErrorFlags &= SessionConfigurationErrorType.MissingRefreshToken;
+                    sessionErrorFlags |= SessionConfigurationErrorType.MissingRefreshToken;
                 }
 
                 if (Session.Service is null)
                 {
-                    sessionErrorFlags &= SessionConfigurationErrorType.MissingService;
+                    sessionErrorFlags |= SessionConfigurationErrorType.MissingService;
                 }
             }
 
@@ -1616,7 +1614,6 @@ namespace idunno.AtProto
                 SignatureValidator = (token, validationParameters) => new JsonWebToken(token)
             };
 
-            JsonWebToken token = new(jwt);
             JsonWebTokenHandler tokenHandler = new();
             TokenValidationResult validationResult = await tokenHandler.ValidateTokenAsync(jwt, validationParameters).ConfigureAwait(false);
 

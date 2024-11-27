@@ -12,14 +12,14 @@ namespace idunno.Bluesky
     public class PagedViewReadOnlyCollection<T> : ReadOnlyCollection <T> where T : View
     {
         /// <summary>
-        /// Creates a new instance of <see cref="AtProtoRecordList{T}"/> with an empty list and no cursor.
+        /// Creates a new instance of <see cref="PagedViewReadOnlyCollection{T}"/> with an empty list and no cursor.
         /// </summary>
         public PagedViewReadOnlyCollection() : this(new List<T>(), null)
         {
         }
 
         /// <summary>
-        /// Creates a new instance of <see cref="AtProtoRecordList{T}"/>.
+        /// Creates a new instance of <see cref="PagedViewReadOnlyCollection{T}"/>.
         /// </summary>
         /// <param name="list">The list to create this instance of <see cref="PagedViewReadOnlyCollection{T}"/> from.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
@@ -29,7 +29,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Creates a new instance of <see cref="AtProtoRecordList{T}"/>.
+        /// Creates a new instance of <see cref="PagedViewReadOnlyCollection{T}"/>.
         /// </summary>
         /// <param name="collection">A collection of <typeparamref name="T"/> to create this instance of <see cref="PagedViewReadOnlyCollection{T}"/> from.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>

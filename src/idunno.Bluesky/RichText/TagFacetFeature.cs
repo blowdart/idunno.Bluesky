@@ -19,8 +19,8 @@ namespace idunno.Bluesky.RichText
         public TagFacetFeature(string tag)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(tag);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, 640);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetLengthInGraphemes(), 64);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetLengthInGraphemes(), Maximum.TagLengthInGraphemes);
             Tag = tag;
         }
 

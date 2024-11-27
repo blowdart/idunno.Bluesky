@@ -223,7 +223,7 @@ namespace idunno.Bluesky
 
             return await CreateRecord(
                 followRecord,
-                CollectionNsid.Follow,
+                CollectionNsid.Block,
                 Did,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -356,7 +356,7 @@ namespace idunno.Bluesky
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            return await DeleteFollow(strongReference.Uri, cancellationToken).ConfigureAwait(false);
+            return await DeleteBlock(strongReference.Uri, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -673,15 +673,10 @@ namespace idunno.Bluesky
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            List<EmbeddedImage>? images = null;
-
-            if (image is not null)
+            List<EmbeddedImage> images = new()
             {
-                images = new List<EmbeddedImage>
-                {
-                    image
-                };
-            }
+                image
+            };
 
             return await ReplyTo(parent, text, images, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -978,11 +973,9 @@ namespace idunno.Bluesky
                 QuotePost = strongReference
             };
 
-            if (text is not null)
-            {
-                postBuilder.Text = text;
-                postBuilder.Languages = new List<string>(){ Thread.CurrentThread.CurrentUICulture.Name };
-            }
+            postBuilder.Text = text;
+            postBuilder.Languages = new List<string>(){ Thread.CurrentThread.CurrentUICulture.Name };
+
             if (images is not null)
             {
                 postBuilder.Add(images);

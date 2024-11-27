@@ -206,6 +206,11 @@ namespace idunno.Bluesky
         /// Indicates a block record.
         /// </summary>
         public const string Block = "app.bsky.graph.block";
+
+        /// <summary>
+        /// Indicates a profile record.
+        /// </summary>
+        public const string Profile = "app.bsky.actor.profile";
     }
 
     /// <summary>

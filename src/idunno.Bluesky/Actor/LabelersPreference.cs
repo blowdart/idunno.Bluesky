@@ -41,7 +41,7 @@ namespace idunno.Bluesky.Actor
         [JsonConstructor]
         public LabelerPreference(Did did)
         {
-            ArgumentNullException.ThrowIfNull(did, nameof(did));
+            ArgumentNullException.ThrowIfNull(did);
             Did = did;
         }
 

@@ -21,7 +21,7 @@ namespace idunno.Bluesky
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNull(actor, nameof(actor));
+            ArgumentNullException.ThrowIfNull(actor);
 
             return await BlueskyServer.GetProfile(
                 actor,
@@ -46,14 +46,14 @@ namespace idunno.Bluesky
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNull(actors, nameof(actors));
+            ArgumentNullException.ThrowIfNull(actors);
 
             var actorList = new List<AtIdentifier>(actors);
 
             if (actorList.Count == 0 || actorList.Count > 25)
             {
-                ArgumentOutOfRangeException.ThrowIfZero(actorList.Count, nameof(actors));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(actorList.Count, 25, nameof(actors));
+                ArgumentOutOfRangeException.ThrowIfZero(actorList.Count);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(actorList.Count, 25);
             }
 
             return await BlueskyServer.GetProfiles(
@@ -126,9 +126,9 @@ namespace idunno.Bluesky
 
             int limitValue = limit ?? 50;
 
-            ArgumentOutOfRangeException.ThrowIfNegative(limitValue, nameof(limit));
-            ArgumentOutOfRangeException.ThrowIfZero(limitValue, nameof(limit));
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100, nameof(limit));
+            ArgumentOutOfRangeException.ThrowIfNegative(limitValue);
+            ArgumentOutOfRangeException.ThrowIfZero(limitValue);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100);
 
             return await BlueskyServer.GetSuggestions(
                 limit,
@@ -164,9 +164,9 @@ namespace idunno.Bluesky
             {
                 int limitValue = (int)limit;
 
-                ArgumentOutOfRangeException.ThrowIfNegative(limitValue, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfZero(limitValue, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100, nameof(limit));
+                ArgumentOutOfRangeException.ThrowIfNegative(limitValue);
+                ArgumentOutOfRangeException.ThrowIfZero(limitValue);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100);
             }
 
             return await BlueskyServer.SearchActors(
@@ -202,9 +202,9 @@ namespace idunno.Bluesky
             {
                 int limitValue = (int)limit;
 
-                ArgumentOutOfRangeException.ThrowIfNegative(limitValue, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfZero(limitValue, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100, nameof(limit));
+                ArgumentOutOfRangeException.ThrowIfNegative(limitValue);
+                ArgumentOutOfRangeException.ThrowIfZero(limitValue);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100);
             }
 
             return await BlueskyServer.SearchActorsTypeahead(

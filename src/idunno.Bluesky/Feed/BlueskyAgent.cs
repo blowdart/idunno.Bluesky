@@ -14,10 +14,9 @@ namespace idunno.Bluesky
         /// Gets a description for the feed generator at <paramref name="generatorUri"/>.
         /// </summary>
         /// <param name="generatorUri">The <see cref="Uri"/> of the generator whose description should be retrieved.</param>
-        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="generatorUri"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="generatorUri"/> is null.</exception>
         public async Task<AtProtoHttpResult<FeedGeneratorDescription>> GetFeedGeneratorDescription(
             Uri generatorUri,
             CancellationToken cancellationToken = default)
@@ -152,13 +151,14 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Gets information about the specified <paramref name="feed"/> generators.
+        /// Gets information about the specified feed generators.
         /// </summary>
-        /// <param name="feed">The <see cref="AtUri"/> of the feed generators whose information should be retrieved.</param>
+        /// <param name="feeds">The <see cref="AtUri"/> of the feed generators whose information should be retrieved.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="feed"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="feeds"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="feeds"/> is empty.</exception>
         public async Task<AtProtoHttpResult<IReadOnlyCollection<GeneratorView>>> GetFeedGenerators(
             IEnumerable<AtUri> feeds,
             IEnumerable<Did>? subscribedLabelers = null,
@@ -245,7 +245,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="feed"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="list"/> is null.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>> GetListFeed(
             AtUri list,
             int? limit = null,
@@ -321,7 +321,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
         public async Task<AtProtoHttpResult<PostView>> GetPostView(
             StrongReference strongReference,
             IEnumerable<Did>? subscribedLabelers = null,
@@ -388,7 +388,7 @@ namespace idunno.Bluesky
         /// <param name="strongReference">The <see cref="StrongReference" /> of the post to return the <see cref="PostRecord"/> for.</param>
         /// <param name="cancellationToken"></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
         public async Task<AtProtoHttpResult<StrongReference>> GetPostParent(
             StrongReference strongReference,
             CancellationToken cancellationToken = default)
@@ -430,10 +430,10 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets a strong reference to root post for the specified Bluesky post.
         /// </summary>
-        /// <param name="uri">The <see cref="AtUri"/> of the post whose root <see cref="StrongReference"/> should be retrieved.</param>
+        /// <param name="strongReference">A <see cref="StrongReference"/> to the post whose root <see cref="StrongReference"/> should be retrieved.</param>
         /// <param name="cancellationToken"></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="strongReference"/> is null.</exception>
         public async Task<AtProtoHttpResult<StrongReference>> GetPostRoot(
             StrongReference strongReference,
             CancellationToken cancellationToken = default)
@@ -475,10 +475,10 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets the <see cref="ReplyReferences"/> for the specified Bluesky post, suitable for using when making a reply post.
         /// </summary>
-        /// <param name="uri">The <see cref="AtUri"/> of the post whose parent <see cref="ReplyReferences"/> should be retrieved.</param>
+        /// <param name="strongReference">A <see cref="StrongReference"/> to the post whose <see cref="ReplyReferences"/> should be retrieved.</param>
         /// <param name="cancellationToken"></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="strongReference"/> is null.</exception>
         public async Task<AtProtoHttpResult<ReplyReferences>> GetReplyReferences(
             StrongReference strongReference,
             CancellationToken cancellationToken = default)
@@ -527,7 +527,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri" /> is null.</exception>
-        public async Task<AtProtoHttpResult<Quotes>> GetQuotes(
+        public async Task<AtProtoHttpResult<QuotesCollection>> GetQuotes(
             AtUri uri,
             Cid? cid = null,
             int? limit = null,
@@ -556,14 +556,10 @@ namespace idunno.Bluesky
         /// <param name="cid">If supplied, filters to quotes of specific version (by <see cref="Cid">content identifier</see>) of the post record.</param>
         /// <param name="limit">The maximum number of posts to return.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
-        /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
-        /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
-        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> &lt;1 or &gt;100.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
         public async Task<AtProtoHttpResult<RepostedBy>> GetRepostedBy(
             AtUri uri,
             Cid? cid = null,
@@ -658,13 +654,10 @@ namespace idunno.Bluesky
         /// <param name="tags">Filter to posts with the given tag (hashtag), based on rich-text facet or tag field. Do not include the hash (#) prefix.</param>
         /// <param name="limit">The maximum number of post views to return</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
-        /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
-        /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
-        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="query" /> is null or whitespace</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="query" /> is null or whitespace</exception>
         public async Task<AtProtoHttpResult<SearchResults>> SearchPosts(
             string query,
             SearchOrder? searchOrder = null,
@@ -718,13 +711,10 @@ namespace idunno.Bluesky
         /// <param name="tags">Filter to posts with the given tag (hashtag), based on rich-text facet or tag field. Do not include the hash (#) prefix.</param>
         /// <param name="limit">The maximum number of post views to return</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
-        /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
-        /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
-        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="query" /> is null or whitespace</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="query" /> is null or whitespace</exception>
         public async Task<AtProtoHttpResult<SearchResults>> SearchPosts(
             string query,
             DateTimeOffset since ,
@@ -781,13 +771,10 @@ namespace idunno.Bluesky
         /// <param name="tags">Filter to posts with the given tag (hashtag), based on rich-text facet or tag field. Do not include the hash (#) prefix.</param>
         /// <param name="limit">The maximum number of post views to return</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
-        /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
-        /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
-        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="query" /> is null or whitespace</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="query" /> is null or whitespace</exception>
         public async Task<AtProtoHttpResult<SearchResults>> SearchPosts(
             string query,
             DateOnly since,

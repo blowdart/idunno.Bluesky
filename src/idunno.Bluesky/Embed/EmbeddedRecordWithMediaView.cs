@@ -13,6 +13,7 @@ namespace idunno.Bluesky.Embed
         /// <summary>
         /// Creates a new instance of <see cref="EmbeddedRecordWithMediaView"/>
         /// </summary>
+        /// <param name="record">A view over the record.</param>
         /// <param name="media">The embedded media for the embedded record.</param>
         [JsonConstructor]
         internal EmbeddedRecordWithMediaView(View record, EmbeddedView media) : base(record)

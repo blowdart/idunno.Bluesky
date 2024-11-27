@@ -19,7 +19,7 @@ namespace idunno.AtProto.Labels
         public SelfLabel(string value)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(value);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, 128, nameof(value));
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, 128);
 
             Value = value;
         }

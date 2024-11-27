@@ -4,6 +4,7 @@
 using System.Text.Json.Serialization;
 
 using idunno.AtProto.Repo;
+using idunno.Bluesky.Actor;
 using idunno.Bluesky.Feed;
 
 namespace idunno.Bluesky
@@ -17,7 +18,7 @@ namespace idunno.Bluesky
     [JsonDerivedType(typeof(FollowRecord), RecordType.Follow)]
     [JsonDerivedType(typeof(RepostRecord), RecordType.Repost)]
     [JsonDerivedType(typeof(LikeRecord), RecordType.Like)]
-    //TODO: StarterPack-Joined
+    [JsonDerivedType(typeof(Profile), RecordType.Profile)]
     public record BlueskyRecord : AtProtoRecordValue
     {
         /// <summary>

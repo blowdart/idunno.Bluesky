@@ -6,6 +6,7 @@ namespace idunno.Bluesky.Feed.Gates
     /// <summary>
     /// Thread gate rule specifying that replies are allowed from actors the post creator follows.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S2094:Classes should not be empty", Justification = "Needed to discriminate on json type discriminator")]
     public sealed record FollowingRule : ThreadGateRule
     {
     }

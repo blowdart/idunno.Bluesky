@@ -11,7 +11,7 @@ namespace idunno.DidPlcDirectory
     /// Provides a class for sending requests to and receiving responses from an directory service, identified by its service URI.
     /// </summary>
     [SuppressMessage("Performance", "CA1812", Justification = "Used in DID resolution.")]
-    internal sealed class DirectoryServer
+    internal static class DirectoryServer
     {
         // https://web.plc.directory/api/redoc#operation/ResolveDid
 

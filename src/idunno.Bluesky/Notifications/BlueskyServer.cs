@@ -29,6 +29,7 @@ namespace idunno.Bluesky
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<int>> GetNotificationUnreadCount(
             DateTimeOffset? seenAt,
             Uri service,
@@ -36,6 +37,10 @@ namespace idunno.Bluesky
             HttpClient httpClient,
             CancellationToken cancellationToken = default)
         {
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(httpClient);
+
             string queryString = string.Empty;
             if (seenAt is not null)
             {
@@ -67,10 +72,12 @@ namespace idunno.Bluesky
         /// <param name="cursor">An optional cursor. See https://atproto.com/specs/xrpc#cursors-and-pagination.</param>
         /// <param name="seenAt">The date and time notifications were last checked.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
-        /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
+        /// <param name="accessToken">The access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<Notifications.NotificationCollection>> ListNotifications(
             int? limit,
             string? cursor,
@@ -81,10 +88,14 @@ namespace idunno.Bluesky
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(httpClient);
+
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
             }
 
             StringBuilder queryString = new ();
@@ -146,6 +157,7 @@ namespace idunno.Bluesky
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="seenAt"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<EmptyResponse>> UpdateNotificationSeenAt(
             DateTimeOffset seenAt,
             Uri service,
@@ -153,6 +165,9 @@ namespace idunno.Bluesky
             HttpClient httpClient,
             CancellationToken cancellationToken = default)
         {
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(httpClient);
             ArgumentNullException.ThrowIfNull(seenAt);
 
             UpdateSeenRequest body = new() { SeenAt = seenAt };

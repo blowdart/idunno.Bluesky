@@ -18,7 +18,7 @@ namespace idunno.Bluesky.Feed.Gates
         /// </summary>
         /// <param name="post">The <see cref="AtUri"/> of the thread to be gated.</param>
         /// <param name="rules">The list of rules for replies to the specified <paramref name="post"/>.</param>
-        /// <param name="hiddenRepliesUris">A list of reply <see cref="AtUris"/> that will be hidden for <see cref="Post"/></param>
+        /// <param name="hiddenRepliesUris">A list of reply <see cref="AtUri"/>s that will be hidden for <see cref="Post"/></param>
         /// <exception cref="ArgumentNullException">if post is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///   if <paramref name="post"/> does not point to a post record,
@@ -37,13 +37,13 @@ namespace idunno.Bluesky.Feed.Gates
 
             if (rules is not null && rules.Count != 0)
             {
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(rules.Count, Maximum.ThreadGateRules, nameof(rules));
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(rules.Count, Maximum.ThreadGateRules);
             }
             Rules = rules;
 
             if (hiddenRepliesUris is not null && hiddenRepliesUris.Count != 0)
             {
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(hiddenRepliesUris.Count, Maximum.ThreadGateHiddenReplies, nameof(hiddenRepliesUris));
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(hiddenRepliesUris.Count, Maximum.ThreadGateHiddenReplies);
             }
             HiddenReplies = hiddenRepliesUris;
         }
@@ -54,7 +54,7 @@ namespace idunno.Bluesky.Feed.Gates
         /// <param name="post">The <see cref="AtUri"/> of the thread to be gated.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> when this record was created</param>
         /// <param name="allow">The list of rules for replies to the specified <paramref name="post"/>.</param>
-        /// <param name="hiddenReplies">A list of reply <see cref="AtUris"/> that will be hidden for <see cref="Post"/></param>
+        /// <param name="hiddenReplies">A list of reply <see cref="AtUri"/>s that will be hidden for <see cref="Post"/></param>
         /// <exception cref="ArgumentNullException">if <paramref name="createdAt"/> is null.</exception>
         [JsonConstructor]
         public ThreadGate(AtUri post, DateTimeOffset createdAt, ICollection<ThreadGateRule>? allow = null, ICollection<AtUri>? hiddenReplies = null) : this(post, allow, hiddenReplies)
@@ -94,7 +94,7 @@ namespace idunno.Bluesky.Feed.Gates
         public ICollection<ThreadGateRule>? Rules { get; init; }
 
         /// <summary>
-        /// Gets a list of reply <see cref="AtUris"/> that will be hidden for <see cref="Post"/>.
+        /// Gets a list of reply <see cref="AtUri"/>s that will be hidden for <see cref="Post"/>.
         /// </summary>
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

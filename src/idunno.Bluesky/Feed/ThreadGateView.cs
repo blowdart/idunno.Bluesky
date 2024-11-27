@@ -4,6 +4,7 @@
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
+using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.Graph;
 
 namespace idunno.Bluesky.Feed
@@ -22,11 +23,13 @@ namespace idunno.Bluesky.Feed
         /// </summary>
         /// <param name="uri">The <see cref="AtUri"/> of the thread gate.</param>
         /// <param name="cid">The <see cref="AtProto.Cid">content identifier</see> of the thread gate.</param>
+        /// <param name="record">The record for the <see cref="ThreadGate"/>.</param>
         /// <param name="lists">A collection of rules for the thread gate.</param>
         [JsonConstructor]
         public ThreadGateView(
             AtUri uri,
             Cid cid,
+            ThreadGate? record,
             IReadOnlyCollection<ListViewBasic>? lists)
         {
             ArgumentNullException.ThrowIfNull(uri);
@@ -43,6 +46,8 @@ namespace idunno.Bluesky.Feed
             {
                 Lists = new List<ListViewBasic>().AsReadOnly<ListViewBasic>();
             }
+
+            Record = record;
         }
 
         /// <summary>
@@ -55,7 +60,10 @@ namespace idunno.Bluesky.Feed
         /// </summary>
         public Cid Cid { get; init; }
 
-        // TODO: Record
+        /// <summary>
+        /// Gets the record for the <see cref="ThreadGate"/>.
+        /// </summary>
+        public ThreadGate? Record { get; init; }
 
         /// <summary>
         /// Gets the collection of rules for the thread gate.

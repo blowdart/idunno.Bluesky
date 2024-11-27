@@ -15,7 +15,7 @@ namespace idunno.AtProto
     /// <para>See https://atproto.com/specs/nsid for details.</para>
     /// </remarks>
     [JsonConverter(typeof(Json.NsidConverter))]
-    public class Nsid : IEquatable<Nsid>
+    public sealed class Nsid : IEquatable<Nsid>
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private readonly string _value;
@@ -310,18 +310,15 @@ namespace idunno.AtProto
                     }
                 }
 
-                if (i + 1 == labels.Length)
+                if (i + 1 == labels.Length && !label.IsOnlyAsciiLetters())
                 {
-                    if (!label.IsOnlyAsciiLetters())
+                    if (throwOnError)
                     {
-                        if (throwOnError)
-                        {
-                            throw new NsidFormatException($"NSID name part must be only letters.");
-                        }
-                        else
-                        {
-                            return false;
-                        }
+                        throw new NsidFormatException($"NSID name part must be only letters.");
+                    }
+                    else
+                    {
+                        return false;
                     }
                 }
             }

@@ -6,7 +6,7 @@ namespace idunno.AtProto
     /// <summary>
     /// Configurable properties to use when creating a new instance of <see cref="AtProtoAgent"/>.
     /// </summary>
-    public class AtProtoAgentOptions : AgentOptions
+    public class AtProtoAgentOptions
     {
         /// <summary>
         /// Specifies whether to enable background access token refresh.

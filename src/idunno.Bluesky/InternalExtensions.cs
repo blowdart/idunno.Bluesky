@@ -52,7 +52,6 @@ namespace idunno.Bluesky
                 return enumValue.ToString();
             }
 
-            //object[] attributes = field.GetCustomAttributes(typeof(DescriptionAttribute), false);
             if (Attribute.GetCustomAttribute(field, typeof(DescriptionAttribute)) is DescriptionAttribute attribute)
             {
                 return attribute.Description;

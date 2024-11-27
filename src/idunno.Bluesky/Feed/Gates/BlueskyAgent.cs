@@ -16,16 +16,16 @@ namespace idunno.Bluesky
         /// Creates a thread gate record in the current user's repository for the specified <paramref name="post"/>
         /// </summary>
         /// <param name="post">The <see cref="AtUri"/> of the thread to be gated.</param>
-        /// <param name="allow">The list of rules for replies to the specified <paramref name="post"/>.</param>
-        /// <param name="hiddenReplies">A list of reply <see cref="AtUris"/> that will be hidden for <see cref="Post"/></param>
+        /// <param name="rules">The list of rules for replies to the specified <paramref name="post"/>.</param>
+        /// <param name="hiddenReplies">A list of reply <see cref="AtUri"/>s that will be hidden for post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
-        ///   Thrown when <paramref name="post"/>has a null repo,  does not point to a post record or the current user does not own the record pointed to.
+        ///   Thrown when <paramref name="post"/>has a null repo, does not point to a post record or the current user does not own the record pointed to.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">
-        ///   Thrown when <paramref name="allow"/> or <paramref name="hiddenReplies"/> have more than the maximum number of entries.
+        ///   Thrown when <paramref name="rules"/> or <paramref name="hiddenReplies"/> have more than the maximum number of entries.
         /// </exception>
         /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> AddThreadGate(
@@ -58,12 +58,12 @@ namespace idunno.Bluesky
 
             if (rules is not null && rules.Count != 0)
             {
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(rules.Count, Maximum.ThreadGateRules, nameof(rules));
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(rules.Count, Maximum.ThreadGateRules);
             }
 
             if (hiddenReplies is not null && hiddenReplies.Count != 0)
             {
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(hiddenReplies.Count, Maximum.ThreadGateHiddenReplies, nameof(hiddenReplies));
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(hiddenReplies.Count, Maximum.ThreadGateHiddenReplies);
             }
 
             ThreadGate threadGate = new (post, rules, hiddenReplies);
@@ -246,12 +246,18 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Creates the specified <paramref name="postGate"/> record in the current user's repository.
+        /// Creates the specified <see cref="PostGate" /> record in the current user's repository.
         /// </summary>
-        /// <param name="threadGate">The <paramref name="threadGate"/> record to create.</param>
+        /// <param name="post">The <see cref="AtUri"/> of the post to create the gate against</param>
+        /// <param name="rules">The collection of <see cref="PostGateRule"/>s the gate will contain.</param>
+        /// <param name="detachedEmbeddingUris">The collection of <see cref="AtUri"/>s of posts that the post will detach from (removing itself as a quoted post).</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="threadGate"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> is not owned by the current user.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        ///   Thrown when <paramref name="rules"/> is empty or has larger than the maximum number of rules allowed, or
+        ///   when <paramref name="detachedEmbeddingUris"/> has larger than the number of uris allowed.</exception>
         /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> AddPostGate(
             AtUri post,
@@ -273,12 +279,12 @@ namespace idunno.Bluesky
 
             if (rules is not null && rules.Count != 0)
             {
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(rules.Count, Maximum.PostGateRules, nameof(rules));
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(rules.Count, Maximum.PostGateRules);
             }
 
             if (detachedEmbeddingUris is not null && detachedEmbeddingUris.Count != 0)
             {
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(detachedEmbeddingUris.Count, Maximum.PostGateDetachedEmbeddingPosts, nameof(detachedEmbeddingUris));
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(detachedEmbeddingUris.Count, Maximum.PostGateDetachedEmbeddingPosts);
             }
 
             return await AddPostGate(
@@ -292,10 +298,10 @@ namespace idunno.Bluesky
         /// <summary>
         /// Creates the specified <paramref name="postGate"/> record in the current user's repository.
         /// </summary>
-        /// <param name="threadGate">The <paramref name="threadGate"/> record to create.</param>
+        /// <param name="postGate">The <paramref name="postGate"/> record to create.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="threadGate"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postGate"/> is null.</exception>
         /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> AddPostGate(
             PostGate postGate,

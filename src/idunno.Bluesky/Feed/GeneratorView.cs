@@ -20,7 +20,7 @@ namespace idunno.Bluesky.Feed
     ///<para>See https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/feed/defs.json for definition.</para>
     /// </remarks>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public record GeneratorView : View
+    public sealed record GeneratorView : View
     {
         [JsonConstructor]
         internal GeneratorView(
@@ -115,44 +115,77 @@ namespace idunno.Bluesky.Feed
         [JsonIgnore]
         public StrongReference StrongReference => new(Uri, Cid);
 
+        /// <summary>
+        /// Gets the <see cref="Did"/> of the generator.
+        /// </summary>
         [JsonInclude]
         [JsonRequired]
         public Did Did { get; init; }
 
+        /// <summary>
+        /// Gets a <see cref="ProfileView"/> of the creator.
+        /// </summary>
         [JsonInclude]
         [JsonRequired]
         public ProfileView Creator { get; init; }
 
+        /// <summary>
+        /// Gets the display name of the generator.
+        /// </summary>
         [JsonInclude]
         [JsonRequired]
         public string DisplayName { get; init; }
 
+        /// <summary>
+        /// Gets the generator's description.
+        /// </summary>
         [JsonInclude]
         public string? Description { get; init; }
 
+        /// <summary>
+        /// Gets any facets to apply to the generator description.
+        /// </summary>
         [JsonInclude]
         [NotNull]
         public IReadOnlyList<Facet>? Facets { get; init; }
 
+        /// <summary>
+        /// Gets a <see cref="Uri"/> to an image to use as the generator's avatar.
+        /// </summary>
         [JsonInclude]
         [JsonPropertyName("avatar")]
         public Uri? AvatarUri { get; init; }
 
+        /// <summary>
+        /// Gets a count of the number of likes the generator has.
+        /// </summary>
         [JsonInclude]
         [NotNull]
         public int? LikeCount { get; init; }
 
+        /// <summary>
+        /// Gets a flag indicating whether the generator supports and accepts interactions.
+        /// </summary>
         [JsonInclude]
         [NotNull]
         public bool? AcceptsInteractions { get; init; }
 
+        /// <summary>
+        /// Gets a collection of labels applied to the generator, if any.
+        /// </summary>
         [JsonInclude]
         [NotNull]
         public IReadOnlyCollection<Label>? Labels { get; init; }
 
+        /// <summary>
+        /// Gets a <see cref="GeneratorViewerState"/> showing the relationship between the current user and the generator, if any.
+        /// </summary>
         [JsonInclude]
         public GeneratorViewerState? Viewer { get; init; }
 
+        /// <summary>
+        /// Gets the <see cref="DateTimeOffset"/> the generator was indexed on.
+        /// </summary>
         [JsonInclude]
         [JsonRequired]
         public DateTimeOffset IndexedAt { get; init; }

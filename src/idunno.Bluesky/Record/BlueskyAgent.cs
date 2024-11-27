@@ -16,7 +16,7 @@ namespace idunno.Bluesky
         /// <param name="strongReference">The <see cref="StrongReference" /> of the post to return the <see cref="PostRecord"/> for.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="strongReference"/> is null.</exception>
         public async Task<AtProtoHttpResult<PostRecord>> GetPostRecord(
             StrongReference strongReference,
             CancellationToken cancellationToken = default)

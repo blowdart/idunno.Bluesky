@@ -43,7 +43,7 @@ namespace idunno.AtProto.Json
                 throw new JsonException("Value is not a valid DID.", e);
             }
 
-            return reader.TokenType != JsonTokenType.String ? throw new JsonException() : new Did(reader.GetString()!);
+            return reader.TokenType != JsonTokenType.String ? throw new JsonException() : did;
         }
 
         /// <summary>

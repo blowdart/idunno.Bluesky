@@ -27,7 +27,6 @@ namespace idunno.Bluesky.Actor
         /// <param name="avatar">A <see cref="Uri"/> to the actor's avatar, if any.</param>
         /// <param name="associated">Properties associated with the actor.</param>
         /// <param name="viewer">Metadata about the current user's relationship to the actor.</param>
-        /// <param name="description">The actor's description from their profile.</param>
         /// <param name="labels">Labels applied to the actor.</param>
         /// <param name="createdAt">The date and time the actor was created.</param>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="did"/> or <paramref name="handle"/> are null.</exception>
@@ -139,7 +138,7 @@ namespace idunno.Bluesky.Actor
         }
 
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        protected string DebuggerDisplay
+        private string DebuggerDisplay
         {
             get
             {

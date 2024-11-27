@@ -12,6 +12,7 @@ namespace idunno.Bluesky.Feed.Gates
     [JsonDerivedType(typeof(MentionRule), typeDiscriminator: "app.bsky.feed.threadgate#mentionRule")]
     [JsonDerivedType(typeof(FollowingRule), typeDiscriminator: "app.bsky.feed.threadgate#followingRule")]
     [JsonDerivedType(typeof(ListRule), typeDiscriminator: "app.bsky.feed.threadgate#listRule")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S2094:Classes should not be empty", Justification = "Needed to discriminate on json type discriminator")]
     public record ThreadGateRule
     {
     }

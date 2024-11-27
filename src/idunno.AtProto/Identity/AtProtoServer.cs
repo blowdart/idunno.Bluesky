@@ -65,12 +65,9 @@ namespace idunno.AtProto
             {
                 foreach (TxtRecord? textRecord in dnsLookupResult.Answers.TxtRecords())
                 {
-                    foreach (string? text in textRecord.Text)
+                    foreach (string? text in textRecord.Text.Where(t => t.StartsWith(didTextRecordPrefix, StringComparison.InvariantCulture)))
                     {
-                        if (text.StartsWith(didTextRecordPrefix, StringComparison.InvariantCulture))
-                        {
-                            did = new Did(text.Substring(didTextRecordPrefix.Length));
-                        }
+                        did = new Did(text.Substring(didTextRecordPrefix.Length));
                     }
                 }
             }

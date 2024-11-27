@@ -73,14 +73,14 @@ namespace idunno.AtProto
         /// Gets the value of the DID.
         /// </summary>
         [JsonPropertyName("did")]
-        public override string Value { get; } = string.Empty;
+        public override string Value { get; }
 
         /// <summary>
         /// Gets the method of this <see cref="Did" />.
         /// </summary>
         /// <remarks><para>AT Proto currently supports two methods, web and plc.</para></remarks>
         [JsonIgnore]
-        public string Method { get; } = string.Empty;
+        public string Method { get; }
 
         /// <summary>
         /// Returns the hash code for this <see cref="Did"/>.

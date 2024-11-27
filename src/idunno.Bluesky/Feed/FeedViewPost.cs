@@ -5,6 +5,9 @@ using System.Text.Json.Serialization;
 
 namespace idunno.Bluesky.Feed
 {
+    /// <summary>
+    /// Represents the view over a post from a feed.
+    /// </summary>
     public sealed record FeedViewPost : View
     {
         [JsonConstructor]

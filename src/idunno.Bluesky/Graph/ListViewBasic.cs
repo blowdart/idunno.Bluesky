@@ -11,10 +11,8 @@ using idunno.AtProto.Repo;
 
 namespace idunno.Bluesky.Graph
 {
-    //TODO: Missing documentation in lexicon.
-
     /// <summary>
-    /// A basic view over a list.
+    /// Encapsulates a basic view over a list.
     /// </summary>
     /// <remarks><para>See https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/graph/defs.json</para></remarks>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
@@ -30,7 +28,7 @@ namespace idunno.Bluesky.Graph
         /// <param name="avatar">A <see cref="Uri"/> to the list's avatar, if any.</param>
         /// <param name="listItemCount">The number of items in the list.</param>
         /// <param name="labels">Labels applied to the list</param>
-        /// <param name="viewer"></param>
+        /// <param name="viewer">A view of the relationship between the view and the current user.</param>
         /// <param name="indexedAt">The date and time the list was last indexed at.</param>
         /// <exception cref="ArgumentNullException">Throws if <paramref name="uri"/> or <paramref name="cid"/> is null.</exception>
         [JsonConstructor]
@@ -128,6 +126,9 @@ namespace idunno.Bluesky.Graph
         [NotNull]
         public IReadOnlyCollection<Label> Labels { get; init; }
 
+        /// <summary>
+        /// Gets a view of the relationship between the view and the current user.
+        /// </summary>
         public ListViewerState? Viewer { get; init; }
 
         /// <summary>

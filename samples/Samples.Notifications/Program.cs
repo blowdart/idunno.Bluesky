@@ -16,6 +16,7 @@ using idunno.Bluesky.Notifications;
 
 using Samples.Common;
 using idunno.AtProto.Labels;
+using idunno.Bluesky.Graph;
 
 namespace Samples.Notifications
 {
@@ -257,6 +258,30 @@ namespace Samples.Notifications
                                                 Console.WriteLine($"   {repostView.Result.Record.Text}");
                                             }
                                         }
+                                    }
+                                    break;
+
+                                case NotificationReason.StarterPackJoined:
+                                    {
+                                        if (notification.ReasonSubject is not null)
+                                        {
+                                            AtProtoHttpResult<StarterPackView> starterPackResult =
+                                                await agent.GetStarterPack(notification.ReasonSubject, preferences.SubscribedLabelers, cancellationToken: cancellationToken);
+
+                                            if (starterPackResult.Succeeded)
+                                            {
+                                                Console.WriteLine($"💼 {notification.Author} joined using your starter pack {starterPackResult.Result.List.Name}.");
+                                            }
+                                            else
+                                            {
+                                                Console.WriteLine($"💼 {notification.Author} joined using your starter pack which no longer exists.");
+                                            }
+                                        }
+                                        else
+                                        {
+                                            Console.WriteLine($"💼 {notification.Author} joined using your starter pack.");
+                                        }
+                                        PrintLabels(notification.Author);
                                     }
                                     break;
 

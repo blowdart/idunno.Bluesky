@@ -46,7 +46,7 @@ namespace idunno.AtProto.Labels
             ArgumentNullException.ThrowIfNull(source);
             ArgumentNullException.ThrowIfNull(uri);
             ArgumentNullException.ThrowIfNullOrEmpty(value);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, 128, nameof(value));
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, 128);
 
             Version = version;
             Source = source;

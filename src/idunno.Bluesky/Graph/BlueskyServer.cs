@@ -82,7 +82,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
         public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>> GetBlocks(
             int? limit,
@@ -99,8 +99,8 @@ namespace idunno.Bluesky
 
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
             }
 
             StringBuilder queryStringBuilder = new();
@@ -176,8 +176,8 @@ namespace idunno.Bluesky
 
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
             }
 
             StringBuilder queryStringBuilder = new();
@@ -255,8 +255,8 @@ namespace idunno.Bluesky
 
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
             }
 
             StringBuilder queryStringBuilder = new();
@@ -335,8 +335,8 @@ namespace idunno.Bluesky
 
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
             }
 
             StringBuilder queryStringBuilder = new();
@@ -412,8 +412,8 @@ namespace idunno.Bluesky
 
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
             }
 
             StringBuilder queryStringBuilder = new();
@@ -484,8 +484,8 @@ namespace idunno.Bluesky
 
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
             }
 
             StringBuilder queryStringBuilder = new();
@@ -558,8 +558,8 @@ namespace idunno.Bluesky
 
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
             }
 
             StringBuilder queryStringBuilder = new();
@@ -635,8 +635,8 @@ namespace idunno.Bluesky
 
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
             }
 
             StringBuilder queryStringBuilder = new();
@@ -709,8 +709,8 @@ namespace idunno.Bluesky
 
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
             }
 
             StringBuilder queryStringBuilder = new();
@@ -909,8 +909,8 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            ArgumentOutOfRangeException.ThrowIfLessThan(uris.Count, 1, nameof(uris));
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(uris.Count, 25, nameof(uris));
+            ArgumentOutOfRangeException.ThrowIfLessThan(uris.Count, 1);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(uris.Count, 25);
 
             StringBuilder queryStringBuilder = new();
             foreach (AtUri uri in uris)
@@ -1060,7 +1060,7 @@ namespace idunno.Bluesky
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="rootUri"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<EmptyResponse>> MuteThread(
             AtUri rootUri,
             Uri service,
@@ -1162,7 +1162,7 @@ namespace idunno.Bluesky
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="rootUri"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<EmptyResponse>> UnmuteThread(
             AtUri rootUri,
             Uri service,

@@ -31,7 +31,7 @@ namespace idunno.AtProto.Json
             string? content = reader.GetString() ?? throw new JsonException();
             bool result = AtIdentifier.TryParse(content, out AtIdentifier? atIdentifier);
 
-            if (result == false || atIdentifier is null)
+            if (!result)
             {
                 throw new JsonException($"{content} cannot be parsed as an AtIdentifier");
             }

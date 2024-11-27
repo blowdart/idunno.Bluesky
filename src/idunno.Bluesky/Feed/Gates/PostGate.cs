@@ -35,13 +35,13 @@ namespace idunno.Bluesky.Feed.Gates
 
             if (rules is not null && rules.Count != 0)
             {
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(rules.Count, Maximum.PostGateRules, nameof(rules));
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(rules.Count, Maximum.PostGateRules);
             }
             Rules = rules;
 
             if (detachedEmbeddingUris is not null && detachedEmbeddingUris.Count != 0)
             {
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(detachedEmbeddingUris.Count, Maximum.PostGateDetachedEmbeddingPosts, nameof(detachedEmbeddingUris));
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(detachedEmbeddingUris.Count, Maximum.PostGateDetachedEmbeddingPosts);
             }
             DetachedEmbeddingUris = detachedEmbeddingUris;
 

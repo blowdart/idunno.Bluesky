@@ -99,8 +99,8 @@ namespace idunno.Bluesky
 
             if (actorList.Count == 0 || actorList.Count > 25)
             {
-                ArgumentOutOfRangeException.ThrowIfZero(actorList.Count, nameof(actors));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(actorList.Count, 25, nameof(actors));
+                ArgumentOutOfRangeException.ThrowIfZero(actorList.Count);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(actorList.Count, 25);
             }
 
             string queryString = string.Join("&", actorList.Select(uri => $"actors={Uri.EscapeDataString(uri.ToString())}"));
@@ -204,9 +204,9 @@ namespace idunno.Bluesky
 
             int limitValue = limit ?? 50;
 
-            ArgumentOutOfRangeException.ThrowIfNegative(limitValue, nameof(limit));
-            ArgumentOutOfRangeException.ThrowIfZero(limitValue, nameof(limit));
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100, nameof(limit));
+            ArgumentOutOfRangeException.ThrowIfNegative(limitValue);
+            ArgumentOutOfRangeException.ThrowIfZero(limitValue);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100);
 
             AtProtoHttpClient<GetSuggestionsResponse> request = new();
 
@@ -266,9 +266,9 @@ namespace idunno.Bluesky
 
             int limitValue = limit ?? 25;
 
-            ArgumentOutOfRangeException.ThrowIfNegative(limitValue, nameof(limit));
-            ArgumentOutOfRangeException.ThrowIfZero(limitValue, nameof(limit));
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100, nameof(limit));
+            ArgumentOutOfRangeException.ThrowIfNegative(limitValue);
+            ArgumentOutOfRangeException.ThrowIfZero(limitValue);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100);
 
             AtProtoHttpClient<SearchActorsResponse> request = new();
             AtProtoHttpResult<SearchActorsResponse> response = await request.Get(
@@ -325,9 +325,9 @@ namespace idunno.Bluesky
 
             int limitValue = limit ?? 10;
 
-            ArgumentOutOfRangeException.ThrowIfNegative(limitValue, nameof(limit));
-            ArgumentOutOfRangeException.ThrowIfZero(limitValue, nameof(limit));
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100, nameof(limit));
+            ArgumentOutOfRangeException.ThrowIfNegative(limitValue);
+            ArgumentOutOfRangeException.ThrowIfZero(limitValue);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100);
 
             AtProtoHttpClient<SearchActorsResponse> request = new();
             AtProtoHttpResult<SearchActorsResponse> response = await request.Get(

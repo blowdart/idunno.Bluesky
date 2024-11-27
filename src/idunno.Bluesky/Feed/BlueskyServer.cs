@@ -1,10 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System;
 using System.Globalization;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
 using idunno.AtProto;
@@ -70,7 +67,7 @@ namespace idunno.Bluesky
         /// Gets a description for the feed generator at <paramref name="generatorUri"/>.
         /// </summary>
         /// <param name="generatorUri">The <see cref="Uri"/> of the generator whose description should be retrieved.</param>
-        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="generatorUri"/> or <paramref name="httpClient"/> is null.</exception>
@@ -122,8 +119,8 @@ namespace idunno.Bluesky
 
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
             }
 
             StringBuilder queryStringBuilder = new();
@@ -196,8 +193,8 @@ namespace idunno.Bluesky
 
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
             }
 
             StringBuilder queryStringBuilder = new();
@@ -273,8 +270,8 @@ namespace idunno.Bluesky
 
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
             }
 
             StringBuilder queryStringBuilder = new();
@@ -369,7 +366,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="feed"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="feeds"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<IReadOnlyCollection<GeneratorView>>> GetFeedGenerators(
             IEnumerable<AtUri> feeds,
             Uri service,
@@ -383,7 +380,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(httpClient);
 
             List<AtUri> feedsList = new(feeds);
-            ArgumentOutOfRangeException.ThrowIfZero(feedsList.Count, nameof(feeds));
+            ArgumentOutOfRangeException.ThrowIfZero(feedsList.Count);
 
             StringBuilder queryStringBuilder = new();
             foreach (AtUri feed in feedsList)
@@ -451,9 +448,9 @@ namespace idunno.Bluesky
 
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
-            };
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            }
 
             StringBuilder queryStringBuilder = new();
             queryStringBuilder.Append(CultureInfo.InvariantCulture, $"feed={Uri.EscapeDataString(feed.ToString())}");
@@ -525,9 +522,9 @@ namespace idunno.Bluesky
 
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
-            };
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            }
 
             StringBuilder queryStringBuilder = new();
             queryStringBuilder.Append(CultureInfo.InvariantCulture, $"uri={Uri.EscapeDataString(uri.ToString())}");
@@ -602,9 +599,9 @@ namespace idunno.Bluesky
 
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
-            };
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
+            }
 
             StringBuilder queryStringBuilder = new();
             queryStringBuilder.Append(CultureInfo.InvariantCulture, $"list={Uri.EscapeDataString(list.ToString())}");
@@ -676,15 +673,15 @@ namespace idunno.Bluesky
 
             if (depth is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)depth, 0, nameof(depth));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)depth, 1000, nameof(depth));
-            };
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)depth, 0);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)depth, 1000);
+            }
 
             if (parentHeight is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)parentHeight, 0, nameof(parentHeight));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)parentHeight, 1000, nameof(parentHeight));
-            };
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)parentHeight, 0);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)parentHeight, 1000);
+            }
 
             StringBuilder queryStringBuilder = new();
             queryStringBuilder.Append(CultureInfo.InvariantCulture, $"uri={Uri.EscapeDataString(uri.ToString())}");
@@ -739,8 +736,8 @@ namespace idunno.Bluesky
 
             if (uriList.Count == 0 || uriList.Count > 25)
             {
-                ArgumentOutOfRangeException.ThrowIfZero(uriList.Count, nameof(uris));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(uriList.Count, 25, nameof(uris));
+                ArgumentOutOfRangeException.ThrowIfZero(uriList.Count);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(uriList.Count, 25);
             }
 
             string queryString = string.Join("&", uriList.Select(uri => $"uris={Uri.EscapeDataString(uri.ToString())}"));
@@ -765,9 +762,9 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Gets post view for the post, identified by <paramref name="uri" />.
+        /// Gets post view for the post, identified by <paramref name="strongReference" />.
         /// </summary>
-        /// <param name="uri">The post <see cref="AtUri" /> to return hydrated views for.</param>
+        /// <param name="strongReference">The <see cref="StrongReference"/> of the post to return hydrated views for.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
@@ -809,7 +806,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri" />, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> &lt;1 or &gt;100.</exception>
-        public static async Task<AtProtoHttpResult<Quotes>> GetQuotes(
+        public static async Task<AtProtoHttpResult<QuotesCollection>> GetQuotes(
             AtUri uri,
             Cid? cid,
             int? limit,
@@ -827,8 +824,8 @@ namespace idunno.Bluesky
 
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
             }
 
             StringBuilder queryStringBuilder = new();
@@ -859,16 +856,16 @@ namespace idunno.Bluesky
 
             if (response.Succeeded)
             {
-                return new AtProtoHttpResult<Quotes>(
-                    new Quotes(response.Result.Uri, response.Result.Cid, response.Result.Posts, response.Result.Cursor),
+                return new AtProtoHttpResult<QuotesCollection>(
+                    new QuotesCollection(response.Result.Uri, response.Result.Cid, response.Result.Posts, response.Result.Cursor),
                     response.StatusCode,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
             else
             {
-                return new AtProtoHttpResult<Quotes>(
-                    new Quotes(uri, cid),
+                return new AtProtoHttpResult<QuotesCollection>(
+                    new QuotesCollection(uri, cid),
                     response.StatusCode,
                     response.AtErrorDetail,
                     response.RateLimit);
@@ -907,8 +904,8 @@ namespace idunno.Bluesky
 
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
             }
 
             StringBuilder queryStringBuilder = new();
@@ -1033,8 +1030,8 @@ namespace idunno.Bluesky
 
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
             }
 
             StringBuilder queryStringBuilder = new();
@@ -1134,8 +1131,8 @@ namespace idunno.Bluesky
 
             if (limit is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1, nameof(limit));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100, nameof(limit));
+                ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
             }
 
             StringBuilder queryStringBuilder = new();

@@ -5,6 +5,9 @@ using System.Text.Json.Serialization;
 
 namespace idunno.Bluesky.RichText
 {
+    /// <summary>
+    /// The start and end value for a slice to apply a facet to.
+    /// </summary>
     public sealed record ByteSlice
     {
         /// <summary>
@@ -13,8 +16,8 @@ namespace idunno.Bluesky.RichText
         /// <param name="byteStart">The byte index at which the facet starts.</param>
         /// <param name="byteEnd">The byte index at which the facet ends.</param>
         /// <remarks>
-        /// <para><paramref name="ByteStart"/> is zero-indexed and inclusive.</para>
-        /// <para><paramref name="ByteEnd"/> is zero-indexed and exclusive.</para>
+        /// <para><paramref name="byteStart"/> is zero-indexed and inclusive.</para>
+        /// <para><paramref name="byteEnd"/> is zero-indexed and exclusive.</para>
         /// </remarks>
         [JsonConstructor]
         public ByteSlice(long byteStart, long byteEnd)

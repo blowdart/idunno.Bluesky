@@ -9,6 +9,9 @@ using idunno.AtProto.Repo;
 
 namespace idunno.Bluesky.Graph
 {
+    /// <summary>
+    /// Base record for relationship types between two actors.
+    /// </summary>
     [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
     [JsonDerivedType(typeof(Relationship), typeDiscriminator: "app.bsky.graph.defs#relationship")]
     [JsonDerivedType(typeof(NotFoundActor), typeDiscriminator: "app.bsky.graph.defs#notFoundActor")]

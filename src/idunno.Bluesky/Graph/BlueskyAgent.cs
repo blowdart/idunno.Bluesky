@@ -17,8 +17,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="uris"/> does not contain any <see cref="AtUri"/>s or has &gt; 25 <see cref="AtUri"/>s.</exception>
+        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>> GetBlocks(
             int? limit = null,
             string? cursor = null,
@@ -199,7 +198,6 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="limit">The maximum number of lists that should be return in a page.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
-        /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -230,7 +228,6 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="limit">The maximum number of lists that should be return in a page.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
-        /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -263,7 +260,6 @@ namespace idunno.Bluesky
         /// <param name="list">The <see cref="AtUri"/> of the list to get.</param>
         /// <param name="limit">The maximum number of lists that should be return in a page.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
-        /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -295,9 +291,6 @@ namespace idunno.Bluesky
         /// <param name="actor">The actor whose lists to enumerate.</param>
         /// <param name="limit">The maximum number of lists that should be return in a page.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
-        /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
-        /// <param name="accessToken">An access token to use to authenticate against the <paramref name="service"/>.</param>
-        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -360,7 +353,7 @@ namespace idunno.Bluesky
         /// <param name="others">A list of other accounts to be related back to <paramref name="actor"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/> or <paramref name="others"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> or <paramref name="others"/> is null.</exception>
         public async Task<AtProtoHttpResult<ActorRelationships>> GetRelationships(
             Did actor,
             ICollection<Did> others,
@@ -381,10 +374,11 @@ namespace idunno.Bluesky
         /// <summary>
         /// Enumerates public relationships between the current account, and a list of other accounts.
         /// </summary>
-        /// <param name="others">A list of other accounts to be related back to <paramref name="actor"/>.</param>
+        /// <param name="others">A list of other accounts to be related back to current actor.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/> or <paramref name="others"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="others"/> is null.</exception>
+        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ActorRelationships>> GetRelationships(
             ICollection<Did> others,
             CancellationToken cancellationToken = default)
@@ -412,7 +406,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null</exception>
         public async Task<AtProtoHttpResult<StarterPackView>> GetStarterPack(
             AtUri uri,
             IEnumerable<Did>? subscribedLabelers = null,
@@ -436,7 +430,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="uris"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uris"/> is null.</exception>
         public async Task<AtProtoHttpResult<IReadOnlyList<StarterPackViewBasic>>> GetStarterPacks(
             ICollection<AtUri> uris,
             IEnumerable<Did>? subscribedLabelers = null,
@@ -460,6 +454,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
         public async Task<AtProtoHttpResult<SuggestedActors>> GetSuggestedFollowsByActor(
             AtIdentifier actor,
             IEnumerable<Did>? subscribedLabelers = null,

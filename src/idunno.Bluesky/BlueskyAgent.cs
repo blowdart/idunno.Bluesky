@@ -25,12 +25,9 @@ namespace idunno.Bluesky
         public BlueskyAgent(HttpClient? httpClient = null, ILoggerFactory? loggerFactory = default, BlueskyAgentOptions ? options = null) :
             base (DefaultServiceUris.BlueskyApiUri, httpClient, loggerFactory, options)
         {
-            if (options is not null)
+            if (options is not null && options.PublicAppViewUri is not null)
             {
-                if (options.PublicAppViewUri is not null)
-                {
-                    ReadOnlyServiceUri = options.PublicAppViewUri;
-                }
+                ReadOnlyServiceUri = options.PublicAppViewUri;
             }
 
             loggerFactory ??= NullLoggerFactory.Instance;
@@ -157,38 +154,38 @@ namespace idunno.Bluesky
             // Bluesky web client URIs should be in the format
             // https://bsky.app/profile/<handle>/post/<rkey>/
 
-            ArgumentNullException.ThrowIfNull(uri, nameof(uri));
+            ArgumentNullException.ThrowIfNull(uri);
 
             if (uri.Scheme != "https")
             {
-                throw new ArgumentException("Scheme is not https.", nameof(uri));
+                throw new ArgumentException("Scheme is not https.");
             }
 
             if (uri.HostNameType != UriHostNameType.Dns || uri.Host != "bsky.app")
             {
-                throw new ArgumentException($"{uri.Host} is not a known Bluesky web host.", nameof(uri));
+                throw new ArgumentException($"{uri.Host} is not a known Bluesky web host.");
             }
 
             string[] pathComponents = uri.AbsolutePath.Split('/');
 
             if (pathComponents.Length != 5)
             {
-                throw new ArgumentException($"{uri.AbsolutePath} does not have four components.", nameof(uri));
+                throw new ArgumentException($"{uri.AbsolutePath} does not have four components.");
             }
 
             if (pathComponents[1] != "profile")
             {
-                throw new ArgumentException($"{uri.AbsolutePath} is not a profile path.", nameof(uri));
+                throw new ArgumentException($"{uri.AbsolutePath} is not a profile path.");
             }
 
             if (pathComponents[3] != "post")
             {
-                throw new ArgumentException($"{uri.AbsolutePath} is not a post path.", nameof(uri));
+                throw new ArgumentException($"{uri.AbsolutePath} is not a post path.");
             }
 
-            if (!Handle.TryParse(pathComponents[2], out Handle? handle) || handle is null)
+            if (!Handle.TryParse(pathComponents[2], out Handle? handle))
             {
-                throw new ArgumentException($"{pathComponents[1]} is not a valid handle.", nameof(uri));
+                throw new ArgumentException($"{pathComponents[1]} is not a valid handle.");
             }
 
             Did? did = await ResolveHandle(handle.ToString(), cancellationToken).ConfigureAwait(false) ?? throw new HandleResolutionException($"Handle resolution did not succeed.");
@@ -196,14 +193,14 @@ namespace idunno.Bluesky
 
             string rebuiltAtUri = $"at://{did}/app.bsky.feed.post/{rkey}";
 
-            bool parseResult = AtUri.TryParse(rebuiltAtUri, out AtUri? atUri);
-
-            if (!parseResult || atUri is null)
+            if (!AtUri.TryParse(rebuiltAtUri, out AtUri? atUri))
             {
                 throw new ArgumentException($"AtUri could not be created from {rebuiltAtUri}.", nameof(uri));
             }
-
-            return atUri;
+            else
+            {
+                return atUri;
+            }
         }
 
         /// <summary>

@@ -12,7 +12,7 @@ namespace idunno.AtProto
     /// A reference to an individual record withing a collection in an atproto repository.
     /// </summary>
     [JsonConverter(typeof(Json.RecordKeyConverter))]
-    public class RecordKey : IEquatable<RecordKey>
+    public sealed class RecordKey : IEquatable<RecordKey>
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private static readonly Regex s_recordKeyValidationRegex =

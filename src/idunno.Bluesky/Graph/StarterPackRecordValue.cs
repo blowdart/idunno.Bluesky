@@ -7,10 +7,20 @@ using idunno.AtProto;
 
 namespace idunno.Bluesky.Graph
 {
-    // TODO: Guessing at feeds property definition - https://github.com/bluesky-social/atproto/issues/2920
-
+    /// <summary>
+    ///  Encapsulates the Bluesky record for a starter pack.
+    /// </summary>
     public record StarterPackRecordValue : BlueskyRecord
     {
+        /// <summary>
+        /// Creates a new instance of <see cref="StarterPackRecordValue"/>.
+        /// </summary>
+        /// <param name="name">The name of the starter pack.</param>
+        /// <param name="description">The description of the starter pack.</param>
+        /// <param name="list">The <see cref="AtUri"/> of the starter pack.</param>
+        /// <param name="feeds">A collection of <see cref="AtUri"/>s for any feeds in the starter pack.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the starter pack was created on.</param>
+        /// <param name="updatedAt">The <see cref="DateTimeOffset"/> the starter pack was last updated.</param>
         [JsonConstructor]
         public StarterPackRecordValue(
             string name,
@@ -27,20 +37,35 @@ namespace idunno.Bluesky.Graph
             UpdatedAt = updatedAt;
         }
 
+        /// <summary>
+        /// Gets the name of the starter pack.
+        /// </summary>
         [JsonInclude]
         [JsonRequired]
         public string Name { get; set; }
 
+        /// <summary>
+        /// Gets the description of the starter pack
+        /// </summary>
         [JsonInclude]
         [JsonRequired]
         public string Description { get; init; }
 
+        /// <summary>
+        /// Gets the <see cref="AtUri"/> of the starter pack.
+        /// </summary>
         [JsonInclude]
         public AtUri List { get; set; }
 
+        /// <summary>
+        /// Gets a collection of <see cref="AtUri"/>s for any feeds in the starter pack.
+        /// </summary>
         [JsonInclude]
         public IReadOnlyList<AtUri> Feeds { get; init; }
 
+        /// <summary>
+        /// The <see cref="DateTimeOffset"/> the starter pack was last updated.
+        /// </summary>
         [JsonInclude]
         public DateTimeOffset? UpdatedAt { get; init; }
     }

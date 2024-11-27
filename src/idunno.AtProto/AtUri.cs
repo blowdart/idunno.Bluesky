@@ -337,7 +337,7 @@ namespace idunno.AtProto
 
             if (uriParts[2].StartsWith("did:", StringComparison.InvariantCultureIgnoreCase))
             {
-                if (!Did.TryParse(uriParts[2], out Did? did) || did is null)
+                if (!Did.TryParse(uriParts[2], out Did? did))
                 {
                     if (throwOnError)
                     {
@@ -351,7 +351,7 @@ namespace idunno.AtProto
             }
             else
             {
-                if (!Handle.TryParse(uriParts[2], out Handle? handle) || handle is null)
+                if (!Handle.TryParse(uriParts[2], out Handle? handle))
                 {
                     if (throwOnError)
                     {
@@ -499,18 +499,6 @@ namespace idunno.AtProto
                     {
                         return false;
                     }
-                }
-            }
-
-            if (authority is null)
-            {
-                if (throwOnError)
-                {
-                    throw new AtUriFormatException($"{s} has no authority.");
-                }
-                else
-                {
-                    return false;
                 }
             }
 

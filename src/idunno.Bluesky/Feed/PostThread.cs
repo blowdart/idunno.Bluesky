@@ -5,7 +5,10 @@ using System.Text.Json.Serialization;
 
 namespace idunno.Bluesky.Feed
 {
-    public record PostThread
+    /// <summary>
+    /// Encapsulates a thread of a post.
+    /// </summary>
+    public sealed record PostThread
     {
         [JsonConstructor]
         internal PostThread(PostViewBase thread, ThreadGateView? threadGate)
@@ -14,10 +17,16 @@ namespace idunno.Bluesky.Feed
             ThreadGate = threadGate;
         }
 
+        /// <summary>
+        /// Gets the <see cref="PostViewBase"/> of the thread.
+        /// </summary>
         [JsonInclude]
         [JsonRequired]
         public PostViewBase Thread { get; init; }
 
+        /// <summary>
+        /// Gets the thread gate applied to the thread, if any.
+        /// </summary>
         [JsonInclude]
         [JsonPropertyName("threadgate")]
         public ThreadGateView? ThreadGate { get; init; }

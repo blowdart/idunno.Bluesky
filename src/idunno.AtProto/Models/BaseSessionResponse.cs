@@ -11,7 +11,7 @@ namespace idunno.AtProto.Models
     /// </summary>
     public abstract record BaseSessionResponse
     {
-        internal BaseSessionResponse(Handle handle, Did did, DidDocument? didDoc, bool? active, AccountStatus? accountStatus)
+        private protected BaseSessionResponse(Handle handle, Did did, DidDocument? didDoc, bool? active, AccountStatus? accountStatus)
         {
             ArgumentNullException.ThrowIfNull(handle);
             ArgumentNullException.ThrowIfNull(did);

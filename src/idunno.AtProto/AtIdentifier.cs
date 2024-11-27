@@ -22,7 +22,7 @@ namespace idunno.AtProto
         {
             ArgumentNullException.ThrowIfNullOrEmpty(s);
 
-            if (!TryParse(s, out AtIdentifier? returnValue) || returnValue is null)
+            if (!TryParse(s, out AtIdentifier? returnValue))
             {
                 throw new ArgumentException("{s} is not a valid AtIdentifier", nameof(s));
             }
@@ -80,6 +80,13 @@ namespace idunno.AtProto
         /// </summary>
         /// <returns>The hash code for this <see cref="AtIdentifier"/>.</returns>
         public override int GetHashCode() => Value.GetHashCode(StringComparison.Ordinal);
+
+        /// <summary>
+        /// Determines whether the specified object is equal to the current object.
+        /// </summary>
+        /// <param name="obj">The object to compare with the current object.</param>
+        /// <returns><see langword="true"/> if the specified object is equal to the current object; otherwise, <see langword="false"/>.</returns>
+        public override bool Equals(object? obj) => obj is AtIdentifier identifier && Value == identifier.Value;
 
         /// <summary>
         /// Gets the underlying value of the <see cref="AtIdentifier"/>/.

@@ -18,13 +18,13 @@ namespace idunno.Bluesky.RichText
         public HashTag(string tag)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(tag);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters, nameof(tag));
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetLengthInGraphemes(), Maximum.TagLengthInGraphemes, nameof(tag));
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetLengthInGraphemes(), Maximum.TagLengthInGraphemes);
             Tag = tag;
 
             string tagAsHashTagText = $"#{tag}";
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(tagAsHashTagText.Length, Maximum.TagLengthInCharacters, nameof(tag));
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(tagAsHashTagText.GetLengthInGraphemes(), Maximum.TagLengthInGraphemes, nameof(tag));
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(tagAsHashTagText.Length, Maximum.TagLengthInCharacters);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(tagAsHashTagText.GetLengthInGraphemes(), Maximum.TagLengthInGraphemes);
             Text = tagAsHashTagText;
         }
 
@@ -42,10 +42,10 @@ namespace idunno.Bluesky.RichText
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(tag);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(text);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters, nameof(tag));
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetLengthInGraphemes(), Maximum.TagLengthInGraphemes, nameof(tag));
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.TagLengthInCharacters, nameof(text));
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetLengthInGraphemes(), 64, nameof(text));
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetLengthInGraphemes(), Maximum.TagLengthInGraphemes);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.TagLengthInCharacters);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetLengthInGraphemes(), Maximum.TagLengthInGraphemes);
             Tag = tag;
             Text = text;
         }
