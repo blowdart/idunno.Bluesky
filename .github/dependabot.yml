@@ -4,6 +4,9 @@ updates:
   directory: "/"
   schedule:
     interval: daily
+    ignore:
+      - dependency-name: "Microsoft.Extensions.Logging"
+        update-types: ["version-update:semver-major"]
   reviewers:
     - "blowdart"
 
