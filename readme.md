@@ -33,13 +33,13 @@ The [API status page](docs/endpointStatus.md) shows what is currently implemente
 
 ### Major
 
-* XmlDoc all the public classes
 * Logging in idunno.Bluesky
 * OAuth
 * Video uploading and attaching
 * Open Graph embedded card attaching
 * GIF attaching
 * Direct messaging
+* Firehose support
 * Release builds with [SBOM generation](https://github.com/microsoft/sbom-tool/blob/main/docs/setting-up-github-actions.md), code signing and NuGet publishing
 * Docs accuracy after refactoring
 * Docs site generation, including XMLDocs, markdown link checking and publishing
@@ -47,7 +47,6 @@ The [API status page](docs/endpointStatus.md) shows what is currently implemente
 ### Minor
 
 * Hide / unhide post
-* Notifications - starterpack-joined
 * Real cancellationToken support in samples
 * More serialization tests
 * Wider test coverage

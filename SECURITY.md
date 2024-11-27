@@ -8,7 +8,7 @@ If you believe you have found a security vulnerability in any this repository pl
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-Instead, to report a security issue, please use the GitHub Security Advisory ["Report a Vulnerability"](https://github.com/idunno.Bluesky/security/advisories/new) form.
+Instead, to report a security issue, please use the GitHub Security Advisory ["Report a Vulnerability"](https://github.com/blowdart/idunno.Bluesky/security/advisories/new) form.
 
 You should receive a response within 48 hours. If, for some reason, you do not please feel free to follow up via [email](https://idunno.org/#contact) to ensure I received your report.
 
