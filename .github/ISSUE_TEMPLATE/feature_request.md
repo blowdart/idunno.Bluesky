@@ -2,19 +2,33 @@
 name: Feature request
 about: Suggest an idea for this project
 title: ''
-labels: ''
+labels: 'enhancement'
 assignees: ''
 
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+<!-- Have you searched the existing issues to see if your feature has already been requested ? -->
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+# Feature Request
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+## Details
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+### Problem Description
+
+<!-- Please replace this line with a description of the problem you are seeking to solve. -->
+
+### Missing Bluesky API
+
+<!--If you are requesting support for a missing Bluesky API please replace this line with a link to the API page.-->
+
+### Proposed Solution
+
+<!--Please replace this line with a description of the solution you'd like to see.-->
+
+### Alternatives considered
+
+<!--Please replace this line with any alternatives you have considered.-->
+
+## Additional context
+
+<!--Add any other context or screenshots about the feature request here.-->

@@ -1,38 +1,59 @@
 ---
 name: Bug report
-about: Create a report to help us improve
+about: Report a bug
 title: ''
-labels: ''
+labels: bug,needs triage
 assignees: ''
-
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+<!-- Have you searched the existing issues to see if your bug is already reported? -->
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+# Bug report 
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+## Details
+### Describe the bug
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+<!--Please replace this line with a clear and concise description of the bug.-->
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
+### Expected behavior
 
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
+<!--Please replace this line with a clear and concise description of what you expected to happen.-->
 
-**Additional context**
-Add any other context about the problem here.
+### Actual behavior
+
+<!--Please replace this line with with a clear and concise description of what you expected to happen.-->
+
+## Helpful Extra information
+
+### What operating system(s) are you using?
+
+- [ ] Windows
+- [ ] macOS
+- [ ] Ubuntu
+- [ ] Other Linux
+- [ ] Other (specify below)
+
+### Reproduction code
+
+If you can reproduce the issue in a standalone test case, publish it as a [GitHub gist](https://gist.github.com) and put the gist URL below.
+This is **the best way** to ensure this issue is triaged quickly.
+
+Gist URL : https://gist.github.com/...
+
+### Bluesky API
+
+If your problem is how the libraries handle a particular Bluesky API please tell us which API the problem refers to.
+
+Bluesky API : 
+
+### API Response Parsing Bugs
+
+If your problem is how the libraries are handling a response from a Bluesky API please add a capture of the response from the API below, where possible.
+
+Only post the response headers and body, **do not upload saved traffic logs** as they may contain your Bluesky handle, password, or API tokens.
+
+[Using Fiddler Everywhere to capture traffic](https://docs.telerik.com/fiddler-everywhere/capture-traffic/capture-system-traffic)
+
+```
+<Paste here>
+```
