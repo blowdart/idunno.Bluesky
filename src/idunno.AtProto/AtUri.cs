@@ -333,7 +333,7 @@ namespace idunno.AtProto
 
             if (uriParts[2].StartsWith("did:", StringComparison.InvariantCultureIgnoreCase))
             {
-                if (!Did.TryParse(uriParts[2], out Did? did))
+                if (!Did.TryParse(uriParts[2], out Did? _))
                 {
                     if (throwOnError)
                     {
@@ -347,7 +347,7 @@ namespace idunno.AtProto
             }
             else
             {
-                if (!Handle.TryParse(uriParts[2], out Handle? handle))
+                if (!Handle.TryParse(uriParts[2], out Handle? _))
                 {
                     if (throwOnError)
                     {
