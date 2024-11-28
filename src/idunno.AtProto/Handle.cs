@@ -18,16 +18,13 @@ namespace idunno.AtProto
     /// <para>See https://atproto.com/specs/handle for further details.</para>
     /// </remarks>
     [JsonConverter(typeof(Json.HandleConverter))]
-    public sealed class Handle : AtIdentifier, IEquatable<Handle>
+    public sealed partial class Handle : AtIdentifier, IEquatable<Handle>
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private const int MaximumLength = 253;
 
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private static readonly Regex s_validate = new(
-            @"^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$",
-            RegexOptions.None,
-            TimeSpan.FromMilliseconds(100));
+        [GeneratedRegex(@"^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$", RegexOptions.None, 100)]
+        private static partial Regex s_validate();
 
         private Handle(string s, bool validate)
         {
@@ -256,7 +253,7 @@ namespace idunno.AtProto
                 }
             }
 
-            if (!s_validate.IsMatch(s))
+            if (!s_validate().IsMatch(s))
             {
                 if (throwOnError)
                 {
