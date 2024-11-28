@@ -1,4 +1,4 @@
-name: Comment on the pull request
+name: Add code coverage summary to PRs
 
 # Allows code coverage comments to be embedded in PRs if the build was ran on a fork.
 
