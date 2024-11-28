@@ -88,7 +88,7 @@ jobs:
     - name: 'Download build output'
       uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
-        name:  build-output
+        name: build-output
 
     - name: 'Run Tests'
       run: dotnet test --no-build --restore --collect:"XPlat Code Coverage" --logger junit
@@ -112,13 +112,6 @@ jobs:
         toolpath: "reportgeneratortool"
         license: ${{ secrets.REPORT_GENERATOR_LICENSE }}
 
-    - name: Upload Code Coverage Results
-      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
-      with:
-        name: coverage
-        path: ${{ github.workspace }}/Cobertura.xml
-        retention-days: 5
-
     - name: Publish Code Coverage Report
       uses: irongut/CodeCoverageSummary@51cc3a756ddcd398d447c044c02cb6aa83fdae95 # v1.3.0
       with:
@@ -132,12 +125,14 @@ jobs:
         output: both
         thresholds: "10 30"
 
-    - name: Add Code Coverage PR Comment
-      uses: marocchino/sticky-pull-request-comment@331f8f5b4215f0445d3c07b4967662a32a2d3e31 # v2.9.0
-      if: github.event_name == 'pull_request'
+    - name: Upload Code Coverage Results
+      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
       with:
-        recreate: true
-        path: code-coverage-results.md
+        name: coverage-results
+        path: |
+          ${{ github.workspace }}/Cobertura.xml
+          ${{ github.workspace }}/code-coverage-results.md
+        retention-days: 5
 
     - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action@170bf24d20d201b842d7a52403b73ed297e6645b # v2.18.0
