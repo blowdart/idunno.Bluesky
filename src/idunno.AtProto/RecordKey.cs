@@ -12,11 +12,10 @@ namespace idunno.AtProto
     /// A reference to an individual record withing a collection in an atproto repository.
     /// </summary>
     [JsonConverter(typeof(Json.RecordKeyConverter))]
-    public sealed class RecordKey : IEquatable<RecordKey>
+    public sealed partial class RecordKey : IEquatable<RecordKey>
     {
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private static readonly Regex s_recordKeyValidationRegex =
-            new(@"^[a-zA-Z0-9_~.:-]{1,512}$", RegexOptions.Compiled | RegexOptions.CultureInvariant, new TimeSpan(0, 0, 0, 5, 0));
+        [GeneratedRegex(@"^[a-zA-Z0-9_~.:-]{1,512}$", RegexOptions.CultureInvariant, 5000)]
+        private static partial Regex s_recordKeyValidationRegex();
 
         private RecordKey(string s, bool validate)
         {
@@ -185,7 +184,7 @@ namespace idunno.AtProto
                 }
             }
 
-            if (!s_recordKeyValidationRegex.Match(s).Success)
+            if (!s_recordKeyValidationRegex().IsMatch(s))
             {
                 if (throwOnError)
                 {

@@ -15,18 +15,16 @@ namespace idunno.AtProto
     /// <para>See https://atproto.com/specs/nsid for details.</para>
     /// </remarks>
     [JsonConverter(typeof(Json.NsidConverter))]
-    public sealed class Nsid : IEquatable<Nsid>
+    public sealed partial class Nsid : IEquatable<Nsid>
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private readonly string _value;
 
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private static readonly Regex s_validationRegex =
-            new(@"^[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(\.[a-zA-Z]([a-zA-Z]{0,61}[a-zA-Z])?)$", RegexOptions.Compiled | RegexOptions.CultureInvariant, new TimeSpan(0, 0, 0, 5, 0));
+        [GeneratedRegex(@"^[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(\.[a-zA-Z]([a-zA-Z]{0,61}[a-zA-Z])?)$", RegexOptions.CultureInvariant, 5000)]
+        private static partial Regex s_validationRegex();
 
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private static readonly Regex s_characters =
-            new("^[a-zA-Z0-9.-]*$", RegexOptions.Compiled | RegexOptions.CultureInvariant, new TimeSpan(0, 0, 0, 0, 5));
+        [GeneratedRegex("^[a-zA-Z0-9.-]*$", RegexOptions.Compiled | RegexOptions.CultureInvariant, 5000)]
+        private static partial Regex s_characters();
 
         private Nsid(string s, bool validate)
         {
@@ -208,7 +206,7 @@ namespace idunno.AtProto
                 }
             }
 
-            if (!s_validationRegex.Match(s).Success)
+            if (!s_validationRegex().IsMatch(s))
             {
                 if (throwOnError)
                 {
@@ -220,7 +218,7 @@ namespace idunno.AtProto
                 }
             }
 
-            if (!s_characters.Match(s).Success)
+            if (!s_characters().IsMatch(s))
             {
                 if (throwOnError)
                 {

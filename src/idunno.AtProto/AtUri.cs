@@ -20,20 +20,16 @@ namespace idunno.AtProto
     /// </remarks>
     [JsonConverter(typeof(Json.AtUriConverter))]
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public sealed class AtUri : IEquatable<AtUri>
+    public sealed partial class AtUri : IEquatable<AtUri>
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private const string ProtocolAndSeparator = "at://";
 
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private static readonly Regex s_validationRegex =
-            new(@"^at:\/\/(?<authority>[a-zA-Z0-9._:%-]+)(\/(?<collection>[a-zA-Z0-9-.]+)(\/(?<rkey>[a-zA-Z0-9._~:@!$&%')(*+,;=-]+))?)?(#(?<fragment>\/[a-zA-Z0-9._~:@!$&%')(*+,;=\-[\]/\\]*))?$",
-                RegexOptions.Compiled | RegexOptions.CultureInvariant,
-                new TimeSpan(0, 0, 0, 5, 0));
+        [GeneratedRegex(@"^at:\/\/(?<authority>[a-zA-Z0-9._:%-]+)(\/(?<collection>[a-zA-Z0-9-.]+)(\/(?<rkey>[a-zA-Z0-9._~:@!$&%')(*+,;=-]+))?)?(#(?<fragment>\/[a-zA-Z0-9._~:@!$&%')(*+,;=\-[\]/\\]*))?$", RegexOptions.CultureInvariant, 5000)]
+        private static partial Regex s_validationRegex();
 
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private static readonly Regex s_asciiRegex =
-            new(@"^[a-zA-Z0-9._~:@!$&')(*+,;=%/-]*$", RegexOptions.Compiled | RegexOptions.CultureInvariant, new TimeSpan(0, 0, 0, 5, 0));
+        [GeneratedRegex(@"^[a-zA-Z0-9._~:@!$&')(*+,;=%/-]*$", RegexOptions.CultureInvariant, 5000)]
+        private static partial Regex s_asciiRegex();
 
         private AtUri(string scheme, AtIdentifier authority, string? path, Nsid? collection, RecordKey? rKey)
         {
@@ -297,7 +293,7 @@ namespace idunno.AtProto
                 }
             }
 
-            if (!s_asciiRegex.Match(s).Success)
+            if (!s_asciiRegex().IsMatch(s))
             {
                 if (throwOnError)
                 {
@@ -378,7 +374,7 @@ namespace idunno.AtProto
                 }
             }
 
-            Match regexValidationResult = s_validationRegex.Match(s);
+            Match regexValidationResult = s_validationRegex().Match(s);
 
             if (!regexValidationResult.Success || regexValidationResult.Groups.Count == 0)
             {

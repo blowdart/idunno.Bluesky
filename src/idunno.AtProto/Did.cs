@@ -19,7 +19,7 @@ namespace idunno.AtProto
     /// <para>See https://atproto.com/specs/did for further details on how ATProto uses DIDs.</para>
     /// </remarks>
     [JsonConverter(typeof(Json.DidConverter))]
-    public sealed class Did : AtIdentifier, IEquatable<Did>
+    public sealed partial class Did : AtIdentifier, IEquatable<Did>
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private const string DidPrefix = "did:";
@@ -30,9 +30,8 @@ namespace idunno.AtProto
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private const int MaximumLength = 2048;
 
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private static readonly Regex s_validationRegex =
-            new (@"^did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]$", RegexOptions.CultureInvariant, new TimeSpan(0, 0, 0, 2, 5));
+        [GeneratedRegex(@"^did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]$", RegexOptions.CultureInvariant, 2500)]
+        private static partial Regex s_validationRegex();
 
         private Did(string s, bool validate)
         {
@@ -256,7 +255,7 @@ namespace idunno.AtProto
                 }
             }
 
-            if (!s_validationRegex.Match(s).Success)
+            if (!s_validationRegex().IsMatch(s))
             {
                 if (throwOnError)
                 {
