@@ -185,7 +185,7 @@ namespace idunno.Bluesky
 
             if (!Handle.TryParse(pathComponents[2], out Handle? handle))
             {
-                throw new ArgumentException($"{pathComponents[1]} is not a valid handle.");
+                throw new ArgumentException($"{pathComponents[2]} is not a valid handle.");
             }
 
             Did? did = await ResolveHandle(handle.ToString(), cancellationToken).ConfigureAwait(false) ?? throw new HandleResolutionException($"Handle resolution did not succeed.");
