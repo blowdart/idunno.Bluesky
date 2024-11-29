@@ -73,7 +73,7 @@ if (!loginResult.Succeeded &&
 Note that app passwords don't currently require authentication codes.
 
 Some users run their own Personal Data Servers, and/or have an [decentralized identifier](https://www.w3.org/TR/did-core/) (DID) that isn't part
-of the [directory](https://directory.plc) Bluesky runs. Whilst you can simply ask a user for their PDS location
+of the [directory](https://web.plc.directory/) Bluesky runs. Whilst you can simply ask a user for their PDS location
 you can also use the `ResolveHandle` method in the `AtProtoAgent` class to resolve a handle to a DID, and then use the
 `ResolveDIDDocument` method in the `DirectoryServer` to discover the location of their PDS. Once you have a user's PDS all write and delete operations
 should be performed against that PDS. The `AtProtoAgent` `Login` method does this behind the scenes so you don't have to.
@@ -165,7 +165,7 @@ Further error information returned from the API may be present in the `Error` pr
 
 ## <a name="atURIs">AT URIs</a>
 
-You may notice from the [timeline sample](#timeline) that `FeedView` has a `Uri` property. This is not an HTTPS URI, it is an [AT URI](https://atproto.com/specs/at-uri-scheme). 
+You may notice from the [timeline sample](timeline.md) that `FeedView` has a `Uri` property. This is not an HTTPS URI, it is an [AT URI](https://atproto.com/specs/at-uri-scheme). 
 
 An AT URI is a unique reference to an individual record on the network, and actions that work on records, such as liking a post, require the AT URI for the record they're acting on or for.
 
