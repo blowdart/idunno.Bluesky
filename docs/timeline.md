@@ -69,7 +69,7 @@ if (timelineResult.Succeeded && timelineResult.Result.Count != 0)
 }
 ```
 
-A full sample can be found in the [Timeline](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.TimeLine) project in the
+A full sample can be found in the [Timeline](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Timeline) project in the
 [samples](https://github.com/blowdart/idunno.Bluesky/tree/main/samples) directory.
 
 ## Reading feeds
