@@ -1,6 +1,6 @@
 # <a name="checkingNotifications">Checking your notifications</a>
 
-Like the [timeline sample](#timeline) notifications can be retrieved and iterated through, but Bluesky allows you to check your unread count first.
+Like the [timeline sample](timeline.md) notifications can be retrieved and iterated through, but Bluesky allows you to check your unread count first.
 
 ```c#
 HttpResult<int> unreadCount = await agent.GetNotificationUnreadCount();

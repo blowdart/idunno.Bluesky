@@ -59,7 +59,7 @@ Label values are interpreted by their definitions. Those definitions include the
 * blurs which may be content or media or none
 * severity which may be alert or inform or none
 * defaultSetting which may be hide or warn or ignore
-* adultOnly which is a boolean
+* adultOnly which is a Boolean
 
 A user chooses to hide, warn, or ignore each label from a labeler.
 

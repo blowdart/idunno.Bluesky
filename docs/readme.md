@@ -28,3 +28,4 @@ The status page for `idunno.AtProto`'s [current and planned APIs](endpointStatus
 * [Labels](labels.md)
     * [Getting a user's labeler subscriptions](labels.md#labelSubscriptions)
     * [Reacting to labels](labels.md#labelReacting)]
+* [Saving and restoring sessions](savingAndRestoringAuthentication.md)
