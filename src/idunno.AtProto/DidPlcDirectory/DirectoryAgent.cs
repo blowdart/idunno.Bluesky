@@ -10,10 +10,11 @@ namespace idunno.DidPlcDirectory
     /// <summary>
     /// An agent proving operations for DID directory services.
     /// </summary>
-    public class DirectoryAgent : Agent
+    public sealed class DirectoryAgent : Agent
     {
         internal static readonly Uri s_defaultDirectoryServer = new("https://plc.directory");
 
+        private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger<DirectoryAgent> _logger;
 
         /// <summary>
@@ -29,9 +30,8 @@ namespace idunno.DidPlcDirectory
                 PlcDirectory = options.PlcDirectoryUri;
             }
 
-            loggerFactory ??= NullLoggerFactory.Instance;
-
-            _logger = loggerFactory.CreateLogger<DirectoryAgent>();
+            _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+            _logger = _loggerFactory.CreateLogger<DirectoryAgent>();
         }
 
         /// <summary>
@@ -60,7 +60,7 @@ namespace idunno.DidPlcDirectory
 
             Logger.ResolveDidDocumentCalled(_logger, did, directory);
 
-            AtProtoHttpResult<DidDocument> result = await DirectoryServer.ResolveDidDocument(did, directory, HttpClient, cancellationToken).ConfigureAwait(false);
+            AtProtoHttpResult<DidDocument> result = await DirectoryServer.ResolveDidDocument(did, directory, HttpClient, _loggerFactory, cancellationToken).ConfigureAwait(false);
 
             if (!result.Succeeded)
             {

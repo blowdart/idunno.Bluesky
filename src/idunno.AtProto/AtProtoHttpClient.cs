@@ -1,12 +1,13 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.AtProto
 {
@@ -16,6 +17,18 @@ namespace idunno.AtProto
     /// <typeparam name="TResult">The type of class to use when deserializing results from an AT Proto API call.</typeparam>
     public class AtProtoHttpClient<TResult> where TResult : class
     {
+        private readonly ILogger<AtProtoHttpClient<TResult>> _logger;
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
+        /// </summary>
+        /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
+        public AtProtoHttpClient(ILoggerFactory? loggerFactory = null)
+        {
+            loggerFactory ??= NullLoggerFactory.Instance;
+            _logger = loggerFactory.CreateLogger<AtProtoHttpClient<TResult>>();
+        }
+
         /// <summary>
         /// Performs an unauthenticated GET request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
         /// </summary>
@@ -90,6 +103,8 @@ namespace idunno.AtProto
 
                     if (httpResponseMessage.IsSuccessStatusCode)
                     {
+                        Logger.AtProtoClientRequestSucceeded(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
+
                         if (typeof(TResult) != typeof(EmptyResponse))
                         {
                             string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -102,12 +117,18 @@ namespace idunno.AtProto
                     else
                     {
                         result.AtErrorDetail = await BuildErrorDetail(httpRequestMessage, httpResponseMessage, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
+
+                        Logger.AtProtoClientRequestFailed
+                                (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, httpResponseMessage.StatusCode, result.AtErrorDetail.Error, result.AtErrorDetail.Message);
                     }
 
                     return result;
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
+                    Logger.AtProtoClientRequestCancelled
+                        (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
+
                     return new AtProtoHttpResult<TResult>(null, System.Net.HttpStatusCode.OK, null);
                 }
             }
@@ -188,7 +209,6 @@ namespace idunno.AtProto
 
                 try
                 {
-
                     using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false))
                     {
                         AtProtoHttpResult<TResult> result = new()
@@ -199,6 +219,9 @@ namespace idunno.AtProto
 
                         if (httpResponseMessage.IsSuccessStatusCode)
                         {
+                            Logger.AtProtoClientRequestSucceeded
+                                (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
+
                             if (typeof(TResult) != typeof(EmptyResponse))
                             {
                                 string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -211,6 +234,10 @@ namespace idunno.AtProto
                         else
                         {
                             result.AtErrorDetail = await BuildErrorDetail(httpRequestMessage, httpResponseMessage, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
+
+                            Logger.AtProtoClientRequestFailed
+                                (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, httpResponseMessage.StatusCode, result.AtErrorDetail.Error, result.AtErrorDetail.Message);
+
                         }
 
                         return result;
@@ -218,6 +245,9 @@ namespace idunno.AtProto
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
+                    Logger.AtProtoClientRequestCancelled
+                        (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
+
                     return new AtProtoHttpResult<TResult>(null, System.Net.HttpStatusCode.OK, null);
                 }
             }
@@ -285,6 +315,9 @@ namespace idunno.AtProto
 
                         if (httpResponseMessage.IsSuccessStatusCode)
                         {
+                            Logger.AtProtoClientRequestSucceeded
+                                (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
+
                             if (typeof(TResult) != typeof(EmptyResponse))
                             {
                                 string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -297,6 +330,9 @@ namespace idunno.AtProto
                         else
                         {
                             result.AtErrorDetail = await BuildErrorDetail(httpRequestMessage, httpResponseMessage, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
+
+                            Logger.AtProtoClientRequestFailed
+                                (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, httpResponseMessage.StatusCode, result.AtErrorDetail.Error, result.AtErrorDetail.Message);
                         }
 
                         return result;
@@ -304,6 +340,9 @@ namespace idunno.AtProto
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
+                    Logger.AtProtoClientRequestCancelled
+                        (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
+
                     return new AtProtoHttpResult<TResult>(null, System.Net.HttpStatusCode.OK, null);
                 }
             }

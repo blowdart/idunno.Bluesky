@@ -7,6 +7,7 @@ using System.Text.Json;
 using idunno.AtProto.Models;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
+using Microsoft.Extensions.Logging;
 
 namespace idunno.AtProto
 {
@@ -57,6 +58,7 @@ namespace idunno.AtProto
         /// <param name="service">The service to create the record on.</param>
         /// <param name="accessToken">An access token for the specified service.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -73,6 +75,7 @@ namespace idunno.AtProto
             Uri service,
             string accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
         {
@@ -89,7 +92,7 @@ namespace idunno.AtProto
 
             ApplyWritesRequest request = new(repo, validate, writes, cid);
 
-            AtProtoHttpClient<ApplyWritesResponse> client = new();
+            AtProtoHttpClient<ApplyWritesResponse> client = new(loggerFactory);
             return await client.Post(
                 service,
                 ApplyWritesEndpoint,
@@ -118,6 +121,7 @@ namespace idunno.AtProto
         /// <param name="service"><para>The service to create the record on.</para></param>
         /// <param name="accessToken"><para>An access token for the specified service.</para></param>
         /// <param name="httpClient"><para>An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</para></param>
+        /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
         /// <param name="jsonSerializerOptions"><para><see cref="JsonSerializerOptions"/> to apply during deserialization.</para></param>
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -135,6 +139,7 @@ namespace idunno.AtProto
             Uri service,
             string accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
         {
@@ -146,7 +151,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(httpClient);
 
             CreateRecordRequest request = new(record, collection, creator, validate, rKey, swapCommit);
-            AtProtoHttpClient<CreateRecordResponse> client = new();
+            AtProtoHttpClient<CreateRecordResponse> client = new(loggerFactory);
 
             return await client.Post(
                 service,
@@ -169,6 +174,7 @@ namespace idunno.AtProto
         /// <param name="service">The service to delete the record from.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="accessToken">An access token for the specified service.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -185,6 +191,7 @@ namespace idunno.AtProto
             Uri service,
             string accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions=null,
             CancellationToken cancellationToken = default)
         {
@@ -197,7 +204,7 @@ namespace idunno.AtProto
 
             DeleteRecordRequest deleteRecordRequest = new(repo, collection, rKey) { SwapRecord = swapRecord, SwapCommit = swapCommit };
 
-            AtProtoHttpClient<DeleteRecordResponse> client = new();
+            AtProtoHttpClient<DeleteRecordResponse> client = new(loggerFactory);
             AtProtoHttpResult<DeleteRecordResponse> response =  await client.Post(
                 service,
                 DeleteRecordEndpoint,
@@ -243,6 +250,7 @@ namespace idunno.AtProto
         /// <param name="service"><para>The service to create the record on.</para></param>
         /// <param name="accessToken"><para>An access token for the specified service.</para></param>
         /// <param name="httpClient"><para>An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</para></param>
+        /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
         /// <param name="jsonSerializerOptions"><para><see cref="JsonSerializerOptions"/> to apply during deserialization.</para></param>
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -260,6 +268,7 @@ namespace idunno.AtProto
             Uri service,
             string accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
         {
@@ -272,7 +281,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(httpClient);
 
             PutRecordRequest request = new(record, collection, creator, rKey, validate, swapCommit);
-            AtProtoHttpClient<PutRecordResponse> client = new();
+            AtProtoHttpClient<PutRecordResponse> client = new(loggerFactory);
 
             return await client.Post(
                 service,
@@ -296,6 +305,7 @@ namespace idunno.AtProto
         /// <param name="service">The service to retrieve the record from.</param>
         /// <param name="accessToken">An access token for the specified service.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -310,6 +320,7 @@ namespace idunno.AtProto
             Uri service,
             string? accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default) where T: class
         {
@@ -319,7 +330,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<T> client = new();
+            AtProtoHttpClient<T> client = new(loggerFactory);
 
             string queryString = $"repo={Uri.EscapeDataString(repo.ToString())}&collection={Uri.EscapeDataString(collection.ToString())}&rkey={Uri.EscapeDataString(rKey.ToString())}";
 
@@ -349,6 +360,7 @@ namespace idunno.AtProto
         /// <param name="service">The service to retrieve the record from.</param>
         /// <param name="accessToken">An access token for the specified service.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -365,6 +377,7 @@ namespace idunno.AtProto
             Uri service,
             string? accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default) where T : AtProtoRecord
         {
@@ -399,7 +412,7 @@ namespace idunno.AtProto
             // We need to create an intermediate class to handle the deserialization of the response,
             // because trying to deserialize directly into a class that implements ICollection is
             // just too painful.
-            AtProtoHttpClient<ListRecordsResponse<T>> client = new();
+            AtProtoHttpClient<ListRecordsResponse<T>> client = new(loggerFactory);
             AtProtoHttpResult<ListRecordsResponse<T>> response = await client.Get(
                 service,
                 $"{ListRecordsEndpoint}?{queryString}",
@@ -436,6 +449,7 @@ namespace idunno.AtProto
         /// <param name="service">The service to upload the blob to.</param>
         /// <param name="accessToken">An access token for the specified service.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -448,6 +462,7 @@ namespace idunno.AtProto
             Uri service,
             string accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
         {
@@ -472,7 +487,7 @@ namespace idunno.AtProto
                 new NameValueHeaderValue("Content-Type", mimeType)
             };
 
-            AtProtoHttpClient<CreateBlobResponse> client = new();
+            AtProtoHttpClient<CreateBlobResponse> client = new(loggerFactory);
 
             AtProtoHttpResult<CreateBlobResponse> response =
                 await client.PostBlob(service, UploadBlobEndpoint, blob, requestHeaders, accessToken, httpClient, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
@@ -502,6 +517,7 @@ namespace idunno.AtProto
         /// <param name="service">The service to delete the record from.</param>
         /// <param name="accessToken">An access token for the specified service.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -513,6 +529,7 @@ namespace idunno.AtProto
             Uri service,
             string? accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
         {
@@ -520,7 +537,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<RepoDescription> request = new();
+            AtProtoHttpClient<RepoDescription> request = new(loggerFactory);
 
             return await request.Get(
                 service,
