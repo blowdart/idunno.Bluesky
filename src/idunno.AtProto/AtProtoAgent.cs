@@ -51,7 +51,7 @@ namespace idunno.AtProto
         /// <param name="httpClient">An optional <see cref="HttpClient"/> to use when making requests.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use when creating loggers.</param>
         /// <param name="options"><see cref="AtProtoAgentOptions"/> for the use in the creation of this instance of <see cref="AtProtoAgent"/>.</param>
-        public AtProtoAgent(Uri service, HttpClient? httpClient = null, ILoggerFactory? loggerFactory = default, AtProtoAgentOptions ? options = null) : base(httpClient)
+        public AtProtoAgent(Uri service, HttpClient? httpClient = null, ILoggerFactory? loggerFactory = default, AtProtoAgentOptions? options = null) : base(httpClient)
         {
             ArgumentNullException.ThrowIfNull(service);
 
@@ -63,8 +63,8 @@ namespace idunno.AtProto
                 _enableTokenRefresh = options.EnableBackgroundTokenRefresh;
             }
 
-            loggerFactory ??= NullLoggerFactory.Instance;
-            _logger = loggerFactory.CreateLogger<AtProtoAgent>();
+            LoggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+            _logger = LoggerFactory.CreateLogger<AtProtoAgent>();
 
             _directoryAgent = new DirectoryAgent(httpClient, loggerFactory: loggerFactory);
         }
@@ -172,6 +172,11 @@ namespace idunno.AtProto
                 }
             }
         }
+
+        /// <summary>
+        /// Gets a configured logger factory from which to create loggers.
+        /// </summary>
+        protected ILoggerFactory LoggerFactory { get; init; }
 
         /// <summary>
         /// Releases the unmanaged resources used by the <see cref="AtProtoAgent"/> and optionally disposes of the managed resources.
@@ -293,7 +298,11 @@ namespace idunno.AtProto
 
             Logger.ResolveHandleCalled(_logger, handle);
 
-            Did? result = await AtProtoServer.ResolveHandle(handle, HttpClient, cancellationToken: cancellationToken).ConfigureAwait(false);
+            Did? result = await AtProtoServer.ResolveHandle(
+                handle,
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (result is null)
             {
@@ -450,7 +459,7 @@ namespace idunno.AtProto
 
             if (service is null)
             {
-                Did? userDid = await ResolveHandle(credentials.Identifier, cancellationToken).ConfigureAwait(false);
+                Did? userDid = await ResolveHandle(credentials.Identifier, cancellationToken: cancellationToken).ConfigureAwait(false);
 
                 if (userDid is null || cancellationToken.IsCancellationRequested)
                 {
@@ -481,7 +490,13 @@ namespace idunno.AtProto
             StopTokenRefreshTimer();
 
             Logger.CreateSessionCalled(_logger, credentials.Identifier, service);
-            AtProtoHttpResult<CreateSessionResponse> createSessionResult = await AtProtoServer.CreateSession(credentials, service, HttpClient, cancellationToken).ConfigureAwait(false);
+            AtProtoHttpResult<CreateSessionResponse> createSessionResult =
+                await AtProtoServer.CreateSession(
+                    credentials,
+                    service,
+                    httpClient: HttpClient,
+                    loggerFactory: LoggerFactory,
+                    cancellationToken :cancellationToken).ConfigureAwait(false);
             Logger.CreateSessionReturned(_logger, createSessionResult.StatusCode);
 
             if (createSessionResult.Succeeded)
@@ -594,7 +609,7 @@ namespace idunno.AtProto
             Uri currentSessionService = Session!.Service!;
 
             AtProtoHttpResult<EmptyResponse> deleteSessionResult =
-                await AtProtoServer.DeleteSession(Session!.RefreshJwt!, currentSessionService, HttpClient, cancellationToken).ConfigureAwait(false);
+                await AtProtoServer.DeleteSession(Session!.RefreshJwt!, currentSessionService, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
 
             lock (_session_SyncLock)
             {
@@ -700,7 +715,7 @@ namespace idunno.AtProto
             AtProtoHttpResult<RefreshSessionResponse> refreshSessionResult;
             try
             {
-                refreshSessionResult = await AtProtoServer.RefreshSession(refreshJwt, service, HttpClient, cancellationToken).ConfigureAwait(false);
+                refreshSessionResult = await AtProtoServer.RefreshSession(refreshJwt, service, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -771,7 +786,7 @@ namespace idunno.AtProto
 
             service ??= Session!.Service!;
 
-            return await AtProtoServer.GetSession(accessJwt, service, HttpClient, cancellationToken).ConfigureAwait(false);
+            return await AtProtoServer.GetSession(accessJwt, service, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -828,7 +843,12 @@ namespace idunno.AtProto
             if (restoredSession is null && !cancellationToken.IsCancellationRequested)
             {
                 AtProtoHttpResult<RefreshSessionResponse> refreshSessionResult =
-                        await AtProtoServer.RefreshSession(refreshJwt, service, HttpClient, cancellationToken).ConfigureAwait(false);
+                        await AtProtoServer.RefreshSession(
+                            refreshJwt,
+                            service,
+                            httpClient: HttpClient,
+                            loggerFactory: LoggerFactory,
+                            cancellationToken: cancellationToken).ConfigureAwait(false);
 
                 if (refreshSessionResult.Succeeded)
                 {
@@ -896,7 +916,7 @@ namespace idunno.AtProto
         {
             server ??= Service;
 
-            return await AtProtoServer.DescribeServer(server, HttpClient, cancellationToken).ConfigureAwait(false);
+            return await AtProtoServer.DescribeServer(server, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -947,7 +967,8 @@ namespace idunno.AtProto
                 cid,
                 Service,
                 AccessToken,
-                HttpClient,
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (applyWritesResult.Succeeded)
@@ -1009,7 +1030,8 @@ namespace idunno.AtProto
                 swapCommit : swapCommit,
                 Service,
                 AccessToken,
-                HttpClient,
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (result.Succeeded)
@@ -1144,7 +1166,8 @@ namespace idunno.AtProto
                     swapCommit,
                     Service,
                     AccessToken,
-                    HttpClient,
+                    httpClient: HttpClient,
+                    loggerFactory: LoggerFactory,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)
@@ -1228,7 +1251,8 @@ namespace idunno.AtProto
                 swapCommit: swapCommit,
                 Service,
                 AccessToken,
-                HttpClient,
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (result.Succeeded)
@@ -1262,7 +1286,13 @@ namespace idunno.AtProto
 
             service ??= Service;
 
-            return await AtProtoServer.DescribeRepo(repo, service, AccessToken, HttpClient, cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await AtProtoServer.DescribeRepo(
+                repo,
+                service,
+                AccessToken,
+                httpClient: HttpClient,
+                loggerFactory : LoggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1331,7 +1361,16 @@ namespace idunno.AtProto
             Logger.GetRecordCalled(_logger, repo, collection, rKey, service);
 
             AtProtoHttpResult<T> result =
-                await AtProtoServer.GetRecord<T>(repo, collection, rKey, cid, service, AccessToken, HttpClient, cancellationToken: cancellationToken).ConfigureAwait(false);
+                await AtProtoServer.GetRecord<T>(
+                    repo,
+                    collection,
+                    rKey,
+                    cid,
+                    service,
+                    AccessToken,
+                    httpClient: HttpClient,
+                    loggerFactory: LoggerFactory,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (!result.Succeeded)
             {
@@ -1366,7 +1405,14 @@ namespace idunno.AtProto
         {
             ArgumentNullException.ThrowIfNull(collection);
 
-            return await ListRecords<T>(Session!.Did, collection, limit, cursor, reverse, service, cancellationToken).ConfigureAwait(false);
+            return await ListRecords<T>(
+                Session!.Did,
+                collection,
+                limit,
+                cursor,
+                reverse,
+                service,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1406,7 +1452,8 @@ namespace idunno.AtProto
                 reverse,
                 service,
                 AccessToken,
-                HttpClient,
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (!result.Succeeded)
@@ -1455,7 +1502,14 @@ namespace idunno.AtProto
                 throw new ArgumentException("blob length cannot be 0.", nameof(blob));
             }
 
-            return await AtProtoServer.UploadBlob(blob, mimeType, service, AccessToken!, HttpClient, cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await AtProtoServer.UploadBlob(
+                blob,
+                mimeType,
+                service,
+                AccessToken,
+                httpClient:  HttpClient,
+                loggerFactory: LoggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1492,7 +1546,16 @@ namespace idunno.AtProto
 
             service ??= Service;
 
-            return await AtProtoServer.QueryLabels(uriPatterns, sources, limit, cursor, service, AccessToken, HttpClient, cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await AtProtoServer.QueryLabels(
+                uriPatterns,
+                sources,
+                limit,
+                cursor,
+                service,
+                AccessToken,
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>

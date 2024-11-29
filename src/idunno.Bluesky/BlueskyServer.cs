@@ -3,7 +3,10 @@
 
 namespace idunno.Bluesky
 {
-    public partial class BlueskyServer
+    /// <summary>
+    /// API wrappers for BlueskyAPIs.
+    /// </summary>
+    public static partial class BlueskyServer
     {
     }
 }

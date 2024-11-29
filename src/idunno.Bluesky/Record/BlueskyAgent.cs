@@ -23,7 +23,13 @@ namespace idunno.Bluesky
         {
             ArgumentNullException.ThrowIfNull(strongReference);
 
-            return await BlueskyServer.GetPost(strongReference, AuthenticatedOrUnauthenticatedServiceUri, AccessToken, HttpClient, cancellationToken).ConfigureAwait(false);
+            return await BlueskyServer.GetPost(
+                strongReference,
+                AuthenticatedOrUnauthenticatedServiceUri,
+                AccessToken,
+                HttpClient,
+                loggerFactory: LoggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
     }
 }

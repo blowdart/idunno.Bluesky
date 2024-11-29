@@ -1,9 +1,11 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 using idunno.AtProto;
 using idunno.Bluesky.Actor;
@@ -12,7 +14,7 @@ using idunno.Bluesky.Graph.Model;
 
 namespace idunno.Bluesky
 {
-    public partial class BlueskyServer
+    public static partial class BlueskyServer
     {
         // https://docs.bsky.app/docs/api/app-bsky-feed-get-blocks
         private const string GetBlocksEndpoint = "/xrpc/app.bsky.graph.getBlocks";
@@ -79,6 +81,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the blocks from.</param>
         /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -90,6 +93,7 @@ namespace idunno.Bluesky
             Uri service,
             string accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
@@ -116,7 +120,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetBlocksResponse> client = new();
+            AtProtoHttpClient<GetBlocksResponse> client = new(loggerFactory);
             AtProtoHttpResult<GetBlocksResponse> response = await client.Get(
                 service,
                 $"{GetBlocksEndpoint}?{queryString}",
@@ -155,6 +159,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the followers from.</param>
         /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -167,6 +172,7 @@ namespace idunno.Bluesky
             Uri service,
             string? accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
@@ -195,7 +201,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetFollowersResponse> client = new();
+            AtProtoHttpClient<GetFollowersResponse> client = new(loggerFactory);
             AtProtoHttpResult<GetFollowersResponse> response = await client.Get(
                 service,
                 $"{GetFollowersEndpoint}?{queryString}",
@@ -234,6 +240,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the follows from.</param>
         /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -246,6 +253,7 @@ namespace idunno.Bluesky
             Uri service,
             string? accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
@@ -274,7 +282,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetFollowsResponse> client = new();
+            AtProtoHttpClient<GetFollowsResponse> client = new(loggerFactory);
             AtProtoHttpResult<GetFollowsResponse> response = await client.Get(
                 service,
                 $"{GetFollowsEndpoint}?{queryString}",
@@ -313,6 +321,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the known followers from.</param>
         /// <param name="accessToken">An access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -325,6 +334,7 @@ namespace idunno.Bluesky
             Uri service,
             string accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
@@ -354,7 +364,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetFollowersResponse> client = new();
+            AtProtoHttpClient<GetFollowersResponse> client = new(loggerFactory);
             AtProtoHttpResult<GetFollowersResponse> response = await client.Get(
                 service,
                 $"{GetKnownFollowersEndpoint}?{queryString}",
@@ -392,6 +402,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the list blocks from.</param>
         /// <param name="accessToken">An access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -403,6 +414,7 @@ namespace idunno.Bluesky
             Uri service,
             string accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
@@ -429,7 +441,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetListBlocksResponse> client = new();
+            AtProtoHttpClient<GetListBlocksResponse> client = new(loggerFactory);
             AtProtoHttpResult<GetListBlocksResponse> response = await client.Get(
                 service,
                 $"{GetListBlocksEndpoint}?{queryString}",
@@ -464,6 +476,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the list mutes from.</param>
         /// <param name="accessToken">An access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -475,6 +488,7 @@ namespace idunno.Bluesky
             Uri service,
             string accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
@@ -501,7 +515,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetListBlocksResponse> client = new();
+            AtProtoHttpClient<GetListBlocksResponse> client = new(loggerFactory);
             AtProtoHttpResult<GetListBlocksResponse> response = await client.Get(
                 service,
                 $"{GetListMutesEndpoint}?{queryString}",
@@ -537,6 +551,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the list from.</param>
         /// <param name="accessToken">An access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -549,6 +564,7 @@ namespace idunno.Bluesky
             Uri service,
             string? accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
@@ -578,7 +594,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetListResponse> client = new();
+            AtProtoHttpClient<GetListResponse> client = new(loggerFactory);
             AtProtoHttpResult<GetListResponse> response = await client.Get(
                 service,
                 $"{GetListEndpoint}?{queryString}",
@@ -614,6 +630,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the lists from.</param>
         /// <param name="accessToken">An access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -626,6 +643,7 @@ namespace idunno.Bluesky
             Uri service,
             string? accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
@@ -654,7 +672,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetListsResponse> client = new();
+            AtProtoHttpClient<GetListsResponse> client = new(loggerFactory);
             AtProtoHttpResult<GetListsResponse> response = await client.Get(
                 service,
                 $"{GetListsEndpoint}?{queryString}",
@@ -689,6 +707,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the mutes from.</param>
         /// <param name="accessToken">An access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -700,6 +719,7 @@ namespace idunno.Bluesky
             Uri service,
             string? accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
@@ -732,7 +752,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetMutesResponse> client = new();
+            AtProtoHttpClient<GetMutesResponse> client = new(loggerFactory);
             AtProtoHttpResult<GetMutesResponse> response = await client.Get(
                 service,
                 $"{GetMutesEndpoint}?{queryString}",
@@ -769,6 +789,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/>, <paramref name="others"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
@@ -779,6 +800,7 @@ namespace idunno.Bluesky
             Uri service,
             string? accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(actor);
@@ -799,7 +821,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetRelationshipsResponse> client = new();
+            AtProtoHttpClient<GetRelationshipsResponse> client = new(loggerFactory);
             AtProtoHttpResult<GetRelationshipsResponse> response = await client.Get(
                 service,
                 $"{GetRelationshipsEndpoint}?{queryString}",
@@ -842,6 +864,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessToken">An access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -851,6 +874,7 @@ namespace idunno.Bluesky
             Uri service,
             string? accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
@@ -858,7 +882,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<GetStarterPackResponse> client = new();
+            AtProtoHttpClient<GetStarterPackResponse> client = new(loggerFactory);
             AtProtoHttpResult<GetStarterPackResponse> response = await client.Get(
                 service,
                 $"{GetStarterPackEndpoint}?starterPack={Uri.EscapeDataString(uri.ToString())}",
@@ -892,6 +916,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the starter packs from.</param>
         /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -902,6 +927,7 @@ namespace idunno.Bluesky
             Uri service,
             string? accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
@@ -921,7 +947,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetStarterPacksResponse> client = new();
+            AtProtoHttpClient<GetStarterPacksResponse> client = new(loggerFactory);
             AtProtoHttpResult<GetStarterPacksResponse> response = await client.Get(
                 service,
                 $"{GetStarterPacksEndpoint}?{queryString}",
@@ -955,6 +981,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the follows from.</param>
         /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -964,6 +991,7 @@ namespace idunno.Bluesky
             Uri service,
             string? accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
@@ -971,7 +999,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<SuggestedActors> client = new();
+            AtProtoHttpClient<SuggestedActors> client = new(loggerFactory);
             AtProtoHttpResult<SuggestedActors> response = await client.Get(
                 service,
                 $"{GetSuggestedFollowsByActorEndpoint}?actor={Uri.EscapeDataString(actor.ToString())}",
@@ -990,6 +1018,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to create the mutes on.</param>
         /// <param name="accessToken">An access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="listUri"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
@@ -998,6 +1027,7 @@ namespace idunno.Bluesky
             Uri service,
             string accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(listUri);
@@ -1005,7 +1035,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(accessToken);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<EmptyResponse> client = new();
+            AtProtoHttpClient<EmptyResponse> client = new(loggerFactory);
             AtProtoHttpResult<EmptyResponse> response = await client.Post(
                 service,
                 $"{MuteActorListEndpoint}",
@@ -1024,6 +1054,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service cerate the mute on.</param>
         /// <param name="accessToken">An access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
@@ -1032,6 +1063,7 @@ namespace idunno.Bluesky
             Uri service,
             string accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(actor);
@@ -1039,7 +1071,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(accessToken);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<EmptyResponse> client = new();
+            AtProtoHttpClient<EmptyResponse> client = new(loggerFactory);
             AtProtoHttpResult<EmptyResponse> response = await client.Post(
                 service,
                 $"{MuteActorEndpoint}",
@@ -1058,6 +1090,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service cerate the mute on.</param>
         /// <param name="accessToken">An access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="rootUri"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
@@ -1066,6 +1099,7 @@ namespace idunno.Bluesky
             Uri service,
             string accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(rootUri);
@@ -1073,7 +1107,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(accessToken);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<EmptyResponse> client = new();
+            AtProtoHttpClient<EmptyResponse> client = new(loggerFactory);
             AtProtoHttpResult<EmptyResponse> response = await client.Post(
                 service,
                 $"{MuteThreadEndpoint}",
@@ -1092,6 +1126,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to remove the mutes from.</param>
         /// <param name="accessToken">An access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="listUri"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
@@ -1100,6 +1135,7 @@ namespace idunno.Bluesky
             Uri service,
             string accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(listUri);
@@ -1107,7 +1143,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(accessToken);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<EmptyResponse> client = new();
+            AtProtoHttpClient<EmptyResponse> client = new(loggerFactory);
             AtProtoHttpResult<EmptyResponse> response = await client.Post(
                 service,
                 $"{UnmuteActorListEndpoint}",
@@ -1126,6 +1162,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service remote the mute from.</param>
         /// <param name="accessToken">An access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
@@ -1134,6 +1171,7 @@ namespace idunno.Bluesky
             Uri service,
             string accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(actor);
@@ -1141,7 +1179,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(accessToken);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<EmptyResponse> client = new();
+            AtProtoHttpClient<EmptyResponse> client = new(loggerFactory);
             AtProtoHttpResult<EmptyResponse> response = await client.Post(
                 service,
                 $"{UnmuteActorEndpoint}",
@@ -1160,6 +1198,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service remove the mute from.</param>
         /// <param name="accessToken">An access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="rootUri"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
@@ -1168,6 +1207,7 @@ namespace idunno.Bluesky
             Uri service,
             string accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(rootUri);
@@ -1175,7 +1215,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(accessToken);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<EmptyResponse> client = new();
+            AtProtoHttpClient<EmptyResponse> client = new(loggerFactory);
             AtProtoHttpResult<EmptyResponse> response = await client.Post(
                 service,
                 $"{UnmuteThreadEndpoint}",

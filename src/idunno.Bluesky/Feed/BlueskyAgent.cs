@@ -25,8 +25,9 @@ namespace idunno.Bluesky
 
             return await BlueskyServer.GetFeedGeneratorDescription(
                 generatorUri,
-                HttpClient,
-                cancellationToken).ConfigureAwait(false);
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -54,8 +55,9 @@ namespace idunno.Bluesky
                 cursor,
                 Service,
                 AccessToken,
-                HttpClient,
-                subscribedLabelers,
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
+                subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -85,8 +87,9 @@ namespace idunno.Bluesky
                 cursor,
                 AuthenticatedOrUnauthenticatedServiceUri,
                 AccessToken,
-                HttpClient,
-                subscribedLabelers,
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
+                subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -121,8 +124,9 @@ namespace idunno.Bluesky
                 includePins,
                 AuthenticatedOrUnauthenticatedServiceUri,
                 AccessToken,
-                HttpClient,
-                subscribedLabelers,
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
+                subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -145,8 +149,9 @@ namespace idunno.Bluesky
                 feed,
                 AuthenticatedOrUnauthenticatedServiceUri,
                 AccessToken,
-                HttpClient,
-                subscribedLabelers,
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
+                subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -171,8 +176,9 @@ namespace idunno.Bluesky
                 feeds,
                 AuthenticatedOrUnauthenticatedServiceUri,
                 AccessToken,
-                HttpClient,
-                subscribedLabelers,
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
+                subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -201,8 +207,9 @@ namespace idunno.Bluesky
                 cursor,
                 AuthenticatedOrUnauthenticatedServiceUri,
                 AccessToken,
-                HttpClient,
-                subscribedLabelers,
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
+                subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -232,7 +239,8 @@ namespace idunno.Bluesky
                 cursor,
                 AuthenticatedOrUnauthenticatedServiceUri,
                 AccessToken,
-                HttpClient,
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -261,8 +269,9 @@ namespace idunno.Bluesky
                 cursor,
                 AuthenticatedOrUnauthenticatedServiceUri,
                 AccessToken,
-                HttpClient,
-                subscribedLabelers,
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
+                subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -291,8 +300,9 @@ namespace idunno.Bluesky
                 parentHeight,
                 AuthenticatedOrUnauthenticatedServiceUri,
                 AccessToken,
-                HttpClient,
-                subscribedLabelers,
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
+                subscribedLabelers: subscribedLabelers,
                 cancellationToken : cancellationToken).ConfigureAwait(false);
         }
 
@@ -311,7 +321,14 @@ namespace idunno.Bluesky
         {
             ArgumentNullException.ThrowIfNull(uris);
 
-            return await BlueskyServer.GetPosts(uris, AuthenticatedOrUnauthenticatedServiceUri, AccessToken, HttpClient, subscribedLabelers, cancellationToken).ConfigureAwait(false);
+            return await BlueskyServer.GetPosts(
+                uris,
+                AuthenticatedOrUnauthenticatedServiceUri,
+                AccessToken,
+                HttpClient,
+                loggerFactory: LoggerFactory,
+                subscribedLabelers: subscribedLabelers,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -544,9 +561,10 @@ namespace idunno.Bluesky
                 cursor,
                 AuthenticatedOrUnauthenticatedServiceUri,
                 AccessToken,
-                HttpClient,
-                subscribedLabelers,
-                cancellationToken).ConfigureAwait(false);
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
+                subscribedLabelers: subscribedLabelers,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -577,9 +595,10 @@ namespace idunno.Bluesky
                 cursor,
                 AuthenticatedOrUnauthenticatedServiceUri,
                 AccessToken,
-                HttpClient,
-                subscribedLabelers,
-                cancellationToken).ConfigureAwait(false);
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
+                subscribedLabelers: subscribedLabelers,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -602,6 +621,7 @@ namespace idunno.Bluesky
                 Service,
                 AccessToken,
                 HttpClient,
+                loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -635,6 +655,7 @@ namespace idunno.Bluesky
                 Service,
                 AccessToken,
                 HttpClient,
+                loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -692,6 +713,7 @@ namespace idunno.Bluesky
                 AuthenticatedOrUnauthenticatedServiceUri,
                 AccessToken,
                 HttpClient,
+                loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -752,6 +774,7 @@ namespace idunno.Bluesky
                 AuthenticatedOrUnauthenticatedServiceUri,
                 AccessToken,
                 HttpClient,
+                loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -812,6 +835,7 @@ namespace idunno.Bluesky
                 AuthenticatedOrUnauthenticatedServiceUri,
                 AccessToken,
                 HttpClient,
+                loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }

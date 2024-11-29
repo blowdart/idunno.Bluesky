@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Models;
+using Microsoft.Extensions.Logging;
 
 namespace idunno.AtProto
 {
@@ -23,6 +24,7 @@ namespace idunno.AtProto
         /// <param name="service">The service to create fine the labels on.</param>
         /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="uriPatterns" /> is null</exception>
@@ -35,6 +37,7 @@ namespace idunno.AtProto
             Uri service,
             string? accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uriPatterns);
@@ -71,7 +74,7 @@ namespace idunno.AtProto
                 queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor)}");
             }
 
-            AtProtoHttpClient<QueryLabelsResponse> request = new();
+            AtProtoHttpClient<QueryLabelsResponse> request = new(loggerFactory);
 
             AtProtoHttpResult<QueryLabelsResponse> response = await request.Get(
                 service,

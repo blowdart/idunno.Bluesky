@@ -174,5 +174,39 @@ namespace idunno.AtProto
 
         [LoggerMessage(163, LogLevel.Error, "PutRecord failed as current session is not authenticated.")]
         internal static partial void PutRecordFailedAsSessionIsAnonymous(ILogger logger);
+
+        // AtProtoClient logging
+        [LoggerMessage(200, LogLevel.Debug, "{method} request to {requestUri} succeeded.")]
+        internal static partial void AtProtoClientRequestSucceeded(ILogger logger, Uri requestUri, HttpMethod method);
+
+        [LoggerMessage(201, LogLevel.Error, "{Method} request to {requestUri} failed with status code {status}, \"{error}\" \"{message}\"")]
+        internal static partial void AtProtoClientRequestFailed(ILogger logger, Uri requestUri, HttpMethod method, HttpStatusCode status, string? error, string? message);
+
+        [LoggerMessage(202, LogLevel.Debug, "{method} request to {requestUri} cancelled.")]
+        internal static partial void AtProtoClientRequestCancelled(ILogger logger, Uri requestUri, HttpMethod method);
+
+        // AtProtoServer logging
+
+        // AtProtoServer Identity Logging
+        [LoggerMessage(500, LogLevel.Debug, "Resolving {handle} via DNS, looking for {txtRecord}")]
+        internal static partial void ResolvingHandleViaDNS(ILogger logger, Handle handle, string txtRecord);
+
+        [LoggerMessage(501, LogLevel.Debug,"Resolved {handle} via DNS to {did}")]
+        internal static partial void ResolvedHandleToDidViaDNS(ILogger logger, Handle handle, Did did);
+
+        [LoggerMessage(502, LogLevel.Debug, "Resolving {handle} via HTTP, requesting {uri}")]
+        internal static partial void ResolvingHandleViaHttp(ILogger logger, Handle handle, Uri uri);
+
+        [LoggerMessage(503, LogLevel.Debug, "HTTP resolution request for {handle} returned {response}")]
+        internal static partial void HttpHandleResolutionReturned(ILogger logger, Handle handle, string response);
+
+        [LoggerMessage(504, LogLevel.Debug, "Resolved {handle} via HTTP to {did}")]
+        internal static partial void ResolvedHandleToDidViaHttp(ILogger logger, Handle handle, Did did);
+
+        [LoggerMessage(505, LogLevel.Error, "HTTP request for {handle} from {Uri} did not parse as a DID")]
+        internal static partial void HttpHandleResolutionParseFailed(ILogger logger, Handle handle, Uri uri);
+
+        [LoggerMessage(506, LogLevel.Error, "HTTP request for {handle} to {Uri} failed with HTTP status code of {statusCode}")]
+        internal static partial void HttpHandleResolutionRequestFailed(ILogger logger, Handle handle, Uri uri, HttpStatusCode statusCode);
     }
 }

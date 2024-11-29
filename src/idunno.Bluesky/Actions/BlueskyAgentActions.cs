@@ -9,6 +9,7 @@ using idunno.Bluesky.Actions.Model;
 using idunno.Bluesky.Embed;
 using idunno.AtProto.Repo.Models;
 using idunno.Bluesky.Feed.Gates;
+using System.Security.Cryptography;
 
 namespace idunno.Bluesky
 {
@@ -32,6 +33,11 @@ namespace idunno.Bluesky
             }
 
             Did? didResolutionResult = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false);
+
+            if (didResolutionResult is null)
+            {
+                Logger.FollowFailedAsHandleCouldNotResolve(_logger, handle);
+            }
 
             if (didResolutionResult is null || cancellationToken.IsCancellationRequested)
             {
@@ -97,6 +103,12 @@ namespace idunno.Bluesky
 
             Did? didResolutionResult = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false);
 
+            if (didResolutionResult is null)
+            {
+                Logger.UnfollowFailedAsHandleCouldNotResolve(_logger, handle);
+            }
+
+
             if (didResolutionResult is null || cancellationToken.IsCancellationRequested)
             {
                 return new AtProtoHttpResult<Commit>(
@@ -130,6 +142,8 @@ namespace idunno.Bluesky
 
             if (!userProfileResult.Succeeded)
             {
+                Logger.UnfollowFailedAsHandleCouldNotGetUserProfile(_logger, did);
+
                 return new AtProtoHttpResult<Commit>(
                     null,
                     userProfileResult.StatusCode,
@@ -141,6 +155,8 @@ namespace idunno.Bluesky
 
             if (userProfileResult.Result.Viewer is null || userProfileResult.Result.Viewer.Following is null)
             {
+                Logger.UnfollowFailedAsHandleCouldNotGetUserIsNotFollowing(_logger, did);
+
                 return new AtProtoHttpResult<Commit>(
                     null,
                     HttpStatusCode.NotFound,
@@ -219,10 +235,10 @@ namespace idunno.Bluesky
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            NewFollowRecord followRecord = new(did);
+            NewBlockRecord blockRecord = new(did);
 
             return await CreateRecord(
-                followRecord,
+                blockRecord,
                 CollectionNsid.Block,
                 Did,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -253,6 +269,11 @@ namespace idunno.Bluesky
             }
 
             Did? didResolutionResult = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false);
+
+            if (didResolutionResult is null)
+            {
+                Logger.BlockFailedAsHandleCouldNotResolve(_logger, handle);
+            }
 
             if (didResolutionResult is null || cancellationToken.IsCancellationRequested)
             {
@@ -287,6 +308,8 @@ namespace idunno.Bluesky
 
             if (!userProfileResult.Succeeded)
             {
+                Logger.UnblockFailedAsHandleCouldNotGetUserProfile(_logger, did);
+
                 return new AtProtoHttpResult<Commit>(
                     null,
                     userProfileResult.StatusCode,
@@ -298,6 +321,8 @@ namespace idunno.Bluesky
 
             if (userProfileResult.Result.Viewer is null || userProfileResult.Result.Viewer.Blocking is null)
             {
+                Logger.UnblockFailedAsHandleCouldNotGetUserIsNotFollowing(_logger, did);
+
                 return new AtProtoHttpResult<Commit>(
                     null,
                     HttpStatusCode.NotFound,
@@ -305,7 +330,7 @@ namespace idunno.Bluesky
                     userProfileResult.RateLimit);
             }
 
-            return await DeleteFollow(userProfileResult.Result.Viewer.Blocking, cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await DeleteBlock(userProfileResult.Result.Viewer.Blocking, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -970,11 +995,10 @@ namespace idunno.Bluesky
 
             PostBuilder postBuilder = new()
             {
-                QuotePost = strongReference
+                QuotePost = strongReference,
+                Text = text,
+                Languages = new List<string>() { Thread.CurrentThread.CurrentUICulture.Name }
             };
-
-            postBuilder.Text = text;
-            postBuilder.Languages = new List<string>(){ Thread.CurrentThread.CurrentUICulture.Name };
 
             if (images is not null)
             {
@@ -1139,6 +1163,8 @@ namespace idunno.Bluesky
 
             if (uploadResult.Succeeded)
             {
+                Logger.ImageUploadSucceed(_logger, Did, uploadResult.Result.Reference.Link);
+
                 return new AtProtoHttpResult<EmbeddedImage>(
                     new EmbeddedImage(uploadResult.Result, altText, aspectRatio),
                     uploadResult.StatusCode,
@@ -1147,6 +1173,8 @@ namespace idunno.Bluesky
             }
             else
             {
+                Logger.ImageUploadFailed(_logger, uploadResult.StatusCode, Did, uploadResult.AtErrorDetail?.Error, uploadResult.AtErrorDetail?.Message);
+
                 return new AtProtoHttpResult<EmbeddedImage>(
                     null,
                     uploadResult.StatusCode,
@@ -1225,6 +1253,8 @@ namespace idunno.Bluesky
 
                 if (response.Succeeded)
                 {
+                    Logger.CreatePostWithGatesSucceeded(_logger, rKey, did);
+
                     CreateRecordResponse? createRecordResponse = null;
 
                     foreach (ApplyWritesResultBase result in response.Result.Results)
@@ -1240,6 +1270,7 @@ namespace idunno.Bluesky
                 }
                 else
                 {
+                    Logger.CreatePostWithGatesFailed(_logger, response.StatusCode, did, response.AtErrorDetail?.Error, response.AtErrorDetail?.Message);
                     return new AtProtoHttpResult<CreateRecordResponse>(null, response.StatusCode, response.AtErrorDetail, response.RateLimit);
                 }
             }

@@ -3,6 +3,9 @@
 
 using System.Globalization;
 using System.Text;
+
+using Microsoft.Extensions.Logging;
+
 using idunno.AtProto;
 using idunno.Bluesky.Notifications;
 using idunno.Bluesky.Notifications.Model;
@@ -27,6 +30,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessToken">The access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
@@ -35,6 +39,7 @@ namespace idunno.Bluesky
             Uri service,
             string accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(service);
@@ -47,7 +52,7 @@ namespace idunno.Bluesky
                 queryString = $"{seenAt.Value.UtcDateTime.ToString("o", CultureInfo.InvariantCulture)}";
             }
 
-            AtProtoHttpClient<UnreadCountResponse> request = new();
+            AtProtoHttpClient<UnreadCountResponse> request = new(loggerFactory);
             AtProtoHttpResult<UnreadCountResponse> response = await request.Get(
                 service,
                 $"{GetUnreadEndpoint}?{queryString}",
@@ -74,17 +79,19 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessToken">The access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
-        public static async Task<AtProtoHttpResult<Notifications.NotificationCollection>> ListNotifications(
+        public static async Task<AtProtoHttpResult<NotificationCollection>> ListNotifications(
             int? limit,
             string? cursor,
             DateTimeOffset? seenAt,
             Uri service,
             string accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
@@ -119,7 +126,7 @@ namespace idunno.Bluesky
                 queryString.Remove(queryString.Length - 1, 1);
             }
 
-            AtProtoHttpClient<ListNotificationsResponse> request = new();
+            AtProtoHttpClient<ListNotificationsResponse> request = new(loggerFactory);
             AtProtoHttpResult<ListNotificationsResponse> response = await request.Get(
                 service: service,
                 endpoint: $"{ListNotificationsEndpoint}?{queryString}",
@@ -155,6 +162,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessToken">The access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="seenAt"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
@@ -163,6 +171,7 @@ namespace idunno.Bluesky
             Uri service,
             string accessToken,
             HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(service);
@@ -172,7 +181,7 @@ namespace idunno.Bluesky
 
             UpdateSeenRequest body = new() { SeenAt = seenAt };
 
-            AtProtoHttpClient<EmptyResponse> request = new();
+            AtProtoHttpClient<EmptyResponse> request = new(loggerFactory);
             return await request.Post(
                 service,
                 $"{UpdateSeenEndpoint}",
