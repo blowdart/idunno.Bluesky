@@ -1009,14 +1009,42 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
+        /// Creates an Bluesky post record  quoting the post identified by <see cref="StrongReference"/> with just an image.
+        /// </summary>
+        /// <param name="strongReference">A <see cref="StrongReference"/> to the post to be quoted.</param>
+        /// <param name="image">The image to attach to the quote.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">if <paramref name="image"/> is null</exception>
+        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<CreateRecordResponse>> Quote(
+            StrongReference strongReference,
+            EmbeddedImage image,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(image);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticatedSessionRequiredException();
+            }
+
+            return await Quote(strongReference, new List<EmbeddedImage>() { image }, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
         /// Creates an Bluesky post record  quoting the post identified by <see cref="StrongReference"/>.
         /// </summary>
         /// <param name="strongReference">A <see cref="StrongReference"/> to the post to be quoted.</param>
+        /// <param name="images">Any images to attach to the post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="strongReference"/> is null</exception>
         /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Quote(StrongReference strongReference, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResponse>> Quote(
+            StrongReference strongReference,
+            ICollection<EmbeddedImage>? images = null,
+            CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
 
@@ -1025,7 +1053,12 @@ namespace idunno.Bluesky
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            // This is a special case, it cannot go through the normal post APIs, it must go through the repo.ApplyWrites() api.
+            if (images?.Count > Maximum.ImagesInPost)
+            {
+                throw new ArgumentException($"Cannot have more than {Maximum.ImagesInPost} images", nameof(images));
+            }
+
+            // This is a special case as there is no post text, it cannot go through the normal post APIs, it must go through the repo.ApplyWrites() api.
 
             NewPostRecord postRecord = new()
             {
@@ -1033,6 +1066,12 @@ namespace idunno.Bluesky
                 Text = string.Empty,
                 CreatedAt = DateTimeOffset.UtcNow
             };
+
+            if (images is not null)
+            {
+                postRecord.Embed =
+                    new EmbeddedRecordWithMedia(strongReference, new EmbeddedImages(images));
+            }
 
             ApplyWritesCreate applyWritesCreate = new(CollectionNsid.Post, TimestampIdentifier.Generate(), postRecord);
 

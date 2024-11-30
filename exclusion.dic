@@ -30,7 +30,6 @@ atprotosharp
 xunit
 oauth
 openid
-Takendown
 cbor
 curatelist
 modlist
@@ -38,4 +37,5 @@ referencelist
 starterpack
 gziped
 did:plc:ar7c4by46qjdydhdevvrndac
+qjdydhdevvrndac
 ratelimit

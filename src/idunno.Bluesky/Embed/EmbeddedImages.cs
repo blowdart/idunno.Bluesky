@@ -15,10 +15,11 @@ namespace idunno.Bluesky.Embed
         /// </summary>
         /// <param name="images">The images to embed in a post.</param>
         /// <exception cref="ArgumentNullException">Thrown when images is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when the images contains more than the maximum number of images for a post.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the images contains more than the maximum number of images for a post, or does not contain any images.</exception>
         public EmbeddedImages(ICollection<EmbeddedImage> images)
         {
             ArgumentNullException.ThrowIfNull(images);
+            ArgumentOutOfRangeException.ThrowIfLessThan(images.Count, 1);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(images.Count, Maximum.ImagesInPost);
 
             Images = images;

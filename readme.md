@@ -51,7 +51,6 @@ The [API status page](docs/endpointStatus.md) shows what is currently implemente
 * Real cancellationToken support in samples
 * More serialization tests
 * Wider test coverage
-* Blank quote posts via applyWrites#create
 
 ## License
 
