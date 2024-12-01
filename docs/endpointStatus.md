@@ -61,6 +61,7 @@
 | | [com.atproto.repo.describeRepo](https://docs.bsky.app/docs/api/com-atproto-repo-describe-repo) | `AtProtoAgent.DescribeRepo()` | ✔ |
 | | [com.atproto.repo.getRecord](https://docs.bsky.app/docs/api/com-atproto-repo-get-record) | `AtProtoAgent.GetRecord()` | ✔ |
 | | [com.atproto.repo.listRecords](https://docs.bsky.app/docs/api/com-atproto-repo-list-records) | `AtProtoAgent.ListRecords()` | ✔ |
+| | [com.atproto.repo.putRecord](https://docs.bsky.app/docs/api/com-atproto-repo-put-record) | `AtProtoAgent.PutRecord()` | ✔ |
 | | [com.atproto.repo.uploadBlob](https://docs.bsky.app/docs/api/com-atproto-repo-upload-blob) | `AtProtoAgent.UploadBlob()` | ✔ |
 | **Server** | [com.atproto.server.describeServer](https://docs.bsky.app/docs/api/com-atproto-server-describe-server) | `AtProtoAgent.DescribeServer()` | ✔ |
 | | [com.atproto.server.createSession](https://docs.bsky.app/docs/api/com-atproto-server-create-session) | `AtProtoAgent.Login()` | ✔ |
