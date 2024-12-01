@@ -36,7 +36,7 @@
 | | [app.bsky.graph.getList](https://docs.bsky.app/docs/api/app-bsky-graph-get-list) | `BlueskyAgent.GetList()` | ✔ |
 | | [app.bsky.graph.getLists](https://docs.bsky.app/docs/api/app-bsky-graph-get-lists) | `BlueskyAgent.GetLists()` | ✔ |
 | | [app.bsky.graph.getMutes](https://docs.bsky.app/docs/api/app-bsky-graph-get-mutes) | `BlueskyAgent.GetMutes()` | ✔ |
-| | [app.bsky.graph.getRelationships](https://docs.bsky.app/docs/api/app-bsky-graph-get-relationships) | ~~`BlueskyAgent.GetMutes()`~~ [*](https://github.com/bluesky-social/atproto/issues/2919) | ❌ |
+| | [app.bsky.graph.getRelationships](https://docs.bsky.app/docs/api/app-bsky-graph-get-relationships) | ~~`BlueskyAgent.GetRelationships()`~~ [*](https://github.com/bluesky-social/atproto/issues/2919) | ❌ |
 | | [app.bsky.graph.getStarterPack](https://docs.bsky.app/docs/api/app-bsky-graph-get-starter-pack) | `BlueskyAgent.GetStarterPack()` [*](https://github.com/bluesky-social/atproto/issues/2920) | ✔ |
 | | [app.bsky.graph.getStarterPacks](https://docs.bsky.app/docs/api/app-bsky-graph-get-starter-packs) | `BlueskyAgent.GetStarterPacks()` [*](https://github.com/bluesky-social/atproto/issues/2920) | ✔ |
 | | [app.bsky.graph.getSuggestedFollowsByActor](https://docs.bsky.app/docs/api/app-bsky-graph-get-suggested-follows-by-actor) | `BlueskyAgent.GetSuggestedFollowsByActor()` | ✔ |
@@ -53,9 +53,10 @@
 ## AT Protocol Endpoints
 | Group        | Endpoint                                                     | Class / Method                | Status |
 | ------------ | ------------------------------------------------------------ | ----------------------------- | ------ |
-| **Identity** | * _Uses DNS and .well-known endpoint resolution not the API_ | `AtProtoAgent.ResolveHandle()` | ✔ |
-| **Labels**  | [com.atproto.label.queryLabels](https://docs.bsky.app/docs/api/com-atproto-label-query-labels) | `AtProtoAgent.QueryLabels()` | ✔ |
-| **Repo**  | [com.atproto.repo.createRecord](https://docs.bsky.app/docs/api/com-atproto-repo-create-record) | `AtProtoAgent.CreateRecord()` | ✔ |
+| **Identity** | * _Uses DNS and .well-known endpoint resolution not the API  | `AtProtoAgent.ResolveHandle()` | ✔ |
+| **Labels**   | [com.atproto.label.queryLabels](https://docs.bsky.app/docs/api/com-atproto-label-query-labels) | `AtProtoAgent.QueryLabels()` | ✔ |
+| **Repo**     | [com.atproto.repo.applyWrites](https://docs.bsky.app/docs/api/com-atproto-repo-apply-writes) | `AtProtoAgent.ApplyWrites()` | ✔ |
+| | [com.atproto.repo.createRecord](https://docs.bsky.app/docs/api/com-atproto-repo-create-record) | `AtProtoAgent.CreateRecord()` | ✔ |
 | | [com.atproto.repo.deleteRecord](https://docs.bsky.app/docs/api/com-atproto-repo-delete-record) | `AtProtoAgent.DeleteRecord()` | ✔ |
 | | [com.atproto.repo.describeRepo](https://docs.bsky.app/docs/api/com-atproto-repo-describe-repo) | `AtProtoAgent.DescribeRepo()` | ✔ |
 | | [com.atproto.repo.getRecord](https://docs.bsky.app/docs/api/com-atproto-repo-get-record) | `AtProtoAgent.GetRecord()` | ✔ |
