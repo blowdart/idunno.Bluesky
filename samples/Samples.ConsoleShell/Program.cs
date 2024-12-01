@@ -3,17 +3,12 @@
 
 using System.CommandLine;
 using System.CommandLine.Parsing;
-using System.Diagnostics;
 
 using Microsoft.Extensions.Logging;
 
-using idunno.AtProto;
 using idunno.Bluesky;
-using idunno.Bluesky.Actor;
-using idunno.Bluesky.Feed;
 
 using Samples.Common;
-using idunno.Bluesky.Feed.Gates;
 
 namespace Samples.ConsoleShell
 {

@@ -126,7 +126,7 @@ using (BlueskyAgent agent = new (options)
 ```
 
 ## <a name="errorHandling">Error Handling</a>
-Every call through an agent returns an `AtProtoHttpResult<T>`. This approach, which you may recognise from ASP.NET, avoids the use of exceptions should the HTTP call fail,
+Every call through an agent returns an `AtProtoHttpResult<T>`. This approach, which you may recognize from ASP.NET, avoids the use of exceptions should the HTTP call fail,
 and also allows you to view any extra error information the Bluesky APIs may return.
 
 The success or fail possibilities are wrapped together in an `HttpResult<T>` that is returned by every API call.
@@ -163,13 +163,8 @@ The`AtProtoHttpResult<T>` `StatusCode` property exposes the HTTP status code the
 If the `StatusCode` is not `Succeeded` then an HTTP error occurred during the API call.
 Further error information returned from the API may be present in the `Error` property.
 
-## <a name="atURIs">AT URIs</a>
+---
 
-You may notice from the [timeline sample](timeline.md) that `FeedView` has a `Uri` property. This is not an HTTPS URI, it is an [AT URI](https://atproto.com/specs/at-uri-scheme). 
+## Chapters
 
-An AT URI is a unique reference to an individual record on the network, and actions that work on records, such as liking a post, require the AT URI for the record they're acting on or for.
-
-## Actors and profiles
-
-## Resolving a Handle to a DID
-
+[Table of Contents](contents.md) | [Common Terms](commonTerms.md) | [Timelines and Feeds](timeline.md) | [Checking notifications](notifications.md#checkingNotifications) | [Cursors and pagination](cursorsAndPagination.md) | [Posting](posting.md#posting) | [Thread Gates and Post Gates](threadGatesAndPostGates.md) | [Labels](labels.md) | [Saving and restoring sessions](savingAndRestoringAuthentication.md) | [Logging](logging.md)

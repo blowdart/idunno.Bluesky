@@ -9,7 +9,6 @@ using idunno.Bluesky.Actions.Model;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.RichText;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.Bluesky
 {
@@ -217,13 +216,26 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets a readonly list of the images for the post.
         /// </summary>
-        public IReadOnlyList<EmbeddedImage>? Images
+        public IReadOnlyList<EmbeddedImage> Images
         {
             get
             {
                 lock (_syncLock)
                 {
                     return new List<EmbeddedImage>(_embeddedImages).AsReadOnly();
+                }
+            }
+
+            private set
+            {
+                lock (_syncLock)
+                {
+                    _embeddedImages.Clear();
+
+                    if (value is not null)
+                    {
+                        _embeddedImages.AddRange(value);
+                    }
                 }
             }
         }
@@ -461,6 +473,41 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
+        /// Gets a flag indicating whether this instance has an embedded media record.
+        /// </summary>
+        [MemberNotNullWhen(true, nameof(Embed))]
+        public bool HasEmbed => Embed is not null;
+
+        /// <summary>
+        /// Gets or sets the embedded media for the post.
+        /// </summary>
+        public EmbeddedBase? Embed
+        {
+            get
+            {
+                return _postRecord.Embed;
+            }
+
+            set
+            {
+                lock (_syncLock)
+                {
+                    if (value is null)
+                    {
+                        _postRecord.Embed = null;
+                    }
+                    else
+                    {
+                        if (Images is not null)
+                        {
+                            _embeddedImages.Clear();
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Gets or sets post gate rules to apply to the post.
         /// </summary>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the number of rules being set is greater than the maximum allowed.</exception>
@@ -507,11 +554,22 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
+        /// Embeds the specified <see cref="EmbeddedBase" /> in the post.
+        /// </summary>
+        /// <param name="embeddedRecord">The record to embed.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="embeddedRecord"/> is null.</exception>
+        public void EmbedRecord(EmbeddedBase embeddedRecord)
+        {
+            ArgumentNullException.ThrowIfNull(embeddedRecord);
+            _postRecord.Embed = embeddedRecord;
+        }
+
+        /// <summary>
         /// Appends a copy of the specified string to the record text of this instance.
         /// </summary>
         /// <param name="value">The string to append</param>
         /// <returns>A reference to this instance after the append operation has completed.</returns>
-        /// <exception cref="ArgumentOutOfRangeException">Enlarging the the record text of this instance would exceed <see cref="MaxCapacity"/> or <see cref="MaxCapacityGraphemes"/>.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when enlarging the the record text of this instance would exceed <see cref="MaxCapacity"/> or <see cref="MaxCapacityGraphemes"/>.</exception>
         public PostBuilder Append(string? value)
         {
             if (string.IsNullOrEmpty(value))
@@ -641,7 +699,6 @@ namespace idunno.Bluesky
                 return this;
             }
         }
-
 
         /// <summary>
         /// Appends a <see cref="Link"/> to the text and facet features of this instance.
@@ -957,9 +1014,9 @@ namespace idunno.Bluesky
         {
             lock (_syncLock)
             {
-                if (!HasText)
+                if (!HasText && !HasImages && !HasEmbed)
                 {
-                    throw new PostBuilderException("Post text cannot be null or empty.");
+                    throw new PostBuilderException("Post text cannot be null or empty unless there are images or an embedded record.");
                 }
 
                 if (InReplyTo is not null && QuotePost is not null)

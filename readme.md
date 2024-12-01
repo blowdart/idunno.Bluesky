@@ -36,21 +36,24 @@ The [API status page](docs/endpointStatus.md) shows what is currently implemente
 * Logging in idunno.Bluesky
 * OAuth
 * Video uploading and attaching
-* Open Graph embedded card attaching
+* Facet detection in text posts and PostBuilder (if no facets manually added).
 * GIF attaching
 * Direct messaging
 * Trimming support
 * Firehose support
 * Release builds with [SBOM generation](https://github.com/microsoft/sbom-tool/blob/main/docs/setting-up-github-actions.md), code signing and NuGet publishing
-* Docs accuracy after refactoring
-* Docs site generation, including XMLDocs, markdown link checking and publishing
 
 ### Minor
 
 * Hide / unhide post
-* Real cancellationToken support in samples
-* More serialization tests
 * Wider test coverage
+* More deserialization tests with captured responses.
+
+### Documentation
+
+* Docs accuracy after refactoring
+* Docs site generation, including XMLDocs, markdown link checking and publishing
+* Real cancellationToken support in samples
 
 ## License
 
@@ -82,4 +85,5 @@ first property in the JSON object.
 ## Other .NET Bluesky libraries
 
 * [FishyFlip](https://github.com/drasticactions/FishyFlip)
+* [X.Bluesky](https://github.com/a-gubskiy/X.Bluesky)
 * [atprotosharp](https://github.com/taranasus/atprotosharp)

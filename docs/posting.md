@@ -16,17 +16,17 @@ if (postResult.Succeeded)
 }
 ```
 
-The result from creating a post contains. amongst other things, a strong reference to the new record. This `StrongReference` consists of an
-[AT URI](https://atproto.com/specs/at-uri-scheme) and a Content Identifier ([CID](https://github.com/multiformats/cid)).
+The result from creating a post contains. amongst other things, a strong reference to the new record. This `StrongReference` consists of an [AT URI](https://atproto.com/specs/at-uri-scheme) and a Content Identifier ([CID](https://github.com/multiformats/cid)). 
+
 An AT URI is a way to reference individual records in a specific repository (every Bluesky user has their own repository).
-A CID is a way to identify the contents of a record using a fingerprint hash.
-The AT URI, or a record's complete `StrongReference` are used as a parameters in methods which deal with existing Bluesky records,
-for example, liking or deleting a post.
+
+A CID is a way to identify the contents of a record using a fingerprint hash. 
+
+The AT URI, or a record's complete `StrongReference` are used as a parameters in methods which deal with existing Bluesky records, for example, liking or deleting a post.
 
 ### Setting the language on a post
 
-Setting the post's language helps custom feeds or other services filter and parse posts.
-You can set the posts language or languages using the language argument
+Setting the post's language helps custom feeds or other services filter and parse posts. You can set the posts language or languages using the language argument
 
 ```c#
 await agent.Post("G'day world!", language: "en-au");
@@ -49,16 +49,11 @@ await agent.Post("Hello world from the past.",
 
 If you don't provide `createdAt` the current date and time will be used.
 
-## <a name="understandingResult">Understanding the results from a post call</a>
+## <a name="understandingPostResults">Understanding the results from a post call</a>
 
-The `Post()` method creates a record in your Bluesky repo and returns an`AtProtoHttpResult<CreateRecordResponse>` This encapsulates
-the HTTP status code returned by the Bluesky API, the result of the operation, if the operation was successful, any error messages
-the api returned, and information on the current rate limits applied to you, which can be useful for making sure you don't flood the servers
-and get locked by a rate limiter.
+The `Post()` method creates a record in your Bluesky repo and returns an`AtProtoHttpResult<CreateRecordResponse>` This encapsulates the HTTP status code returned by the Bluesky API, the result of the operation, if the operation was successful, any error messages the API returned, and information on the current rate limits applied to you, which can be useful for making sure you don't flood the servers and get locked by a rate limiter.
 
-To check if the call was successful you can check the `Succeeded` property of the `HttpResult`, which will be `true` if the operation succeeded.
-If its false, the `StatusCode` property will contain the HTTP status code returned by the Bluesky API, and the `AtErrorDetail` property will contain
-any error information the API returned.
+To check if the call was successful you can check the `Succeeded` property of the `HttpResult`, which will be `true` if the operation succeeded. If its false, the `StatusCode` property will contain the HTTP status code returned by the Bluesky API, and the `AtErrorDetail` property will contain any error information the API returned.
 
 ```c#
 AtProtoHttpResult<CreateRecordResponse> postResult =  await agent.Post("Hello world!");
@@ -80,9 +75,8 @@ else
 ## <a name="deletingAPost">Deleting a post</a>
 
 "Hello world" isn't exactly the most engaging post, so now is a good time to look at how to delete posts.
-To delete a post you can use a post's AT URI, or a post's strong reference, pass it to `DeletePost()` and now the post is gone.
-For example, to delete the post you just made using the first code snippet above you would pass the an AT URI
-returned as part of the strong reference you got from creating the post, or the strong reference itself.
+
+To delete a post you can use a post's AT URI, or a post's strong reference, pass it to `DeletePost()` and now the post is gone. For example, to delete the post you just made using the first code snippet above you would pass the an AT URI returned as part of the strong reference you got from creating the post, or the strong reference itself.
 
 ```c#
 HttpResult<Commit> deleteResult = await agent.DeletePost(postResult.Result.StrongReference.Uri);
@@ -93,7 +87,7 @@ if (!deleteResult.Succeeded)
 }
 ```
 
-## Replying to a post
+## <a name="replyingToAPost">Replying to a post</a>
 
 To reply to a post, again, you need a post's `StrongReference`, which you pass into `ReplyTo()`.
 
@@ -114,7 +108,7 @@ var replyToReplyStrongReference =
 Reply to a post creates a new record, and it may surprise you to see that the `ReplyTo()`
 methods returns an `HttpResult<CreateRecordResponse>` just like creating a post does.
 
-## Liking, reposting and quote posting posts
+## <a name="likeRepostQuote">Liking, reposting and quote posting posts</a>
 
 To like a post, once again, you need a post's AT URI, or its `StrongReference`, which you then pass to `agent.Like()`.
 
@@ -143,31 +137,27 @@ HttpResult<StrongReference> quoteResult =
 HttpResult<bool> deleteResult = await agent.DeleteQuote(quoteResult.Result!);
 ```
 
-## Viewing your relationships with a post.
+## <a name="postRelationships">Getting your relationships with a post</a>
 
-You can see if you have liked or reposted by examining the view of the post you get from a feed. If you're
-not dealing with feeds you can get a `PostView` by calling `GetPostView()` with a `StrongReference` to the post. A `PostView`
+You can see if you have liked or reposted by examining the view of the post you get from a feed. If you're not dealing with feeds you can get a `PostView` by calling `GetPostView()` with a `StrongReference` to the post. A `PostView`
 contains an optional `Viewer` property, which is present should you have reposted, liked, pinned or muted the post, or if
 the post author has disabled replies to, or embedding of the post.
 
 If you liked a post then its `PostView.Viewer.Like` property will contain an AT Uri to your own like record, which you can use to unlike.
+
 If you reposted the post then `PostView.Viewer.Repost` will contain the AT Uri of your repost record, which you can use to delete the repost record. 
 
-
-## Making rich posts with the PostBuilder class
+## <a name="postBuilder">Making rich posts with a PostBuilder</a>
 
 [Rich Posts](https://docs.bsky.app/docs/advanced-guides/post-richtext), in Bluesky parlance, are posts which have facets. Facets are post features, three of which are currently supported, links, mentions, and hashtags. If you don't want to create these manually you can use the `PostBuilder` class. Each facet has its own class which you can add to the `PostBuilder`. Each of these classes a parameter specific to the facet type, DIDs for mentions, strings for hashtags and URIs for links. They also a text parameter, the text in a post you want the facet to apply to.
 
-While you can create facets manually, and attach the to a `PostRecord`and call down into the lower levels of the library to create a post record
-an easier option is provided, a `PostBuilder`.
+While you can create facets manually, and attach the to a `PostRecord`and call down into the lower levels of the library to create a post record an easier option is provided, a `PostBuilder`.
 
-`PostBuilder` works much like a `StringBuilder` does, you create an instance of it, and build your post bit by bit, adding/appending to the `PostBuilder`
-until you're ready to create a post from it, which you do by calling `agent.Post()` with the `PostBuilder`.
+`PostBuilder` works much like a `StringBuilder` does, you create an instance of it, and build your post bit by bit, adding/appending to the `PostBuilder` until you're ready to create a post from it, which you do by calling `agent.Post()` with the `PostBuilder`.
 
 ### Mentions
 
-To mention someone in a post you must know their DID, which you can get by resolving their handle.
-Then create a `Mention` instance and add it to your `PostBuilder`, then finally call agent.Post() with your 
+To mention someone in a post you must know their DID, which you can get by resolving their handle. Then create a `Mention` instance and add it to your `PostBuilder`, then finally call `agent.Post()` with your 
 
 ```c#
 string userToTagHandle = "userHandle.test";
@@ -211,8 +201,7 @@ PostBuilder hashtagBuilder = new PostBuilder("This will have a hashtag. ") + new
 var hashtagPostResult = await agent.Post(hashtagBuilder);
 ```
 
-Note that the `HashTag` does not being with the # character. If you include a hash character you end up with a double hashed tag,  for example,
-if you created a new instance with `new Hashtag("#test")` the hashtag Bluesky and other clients will open a page for `##test`.
+Note that the `HashTag` does not being with the # character. If you include a hash character you end up with a double hashed tag,  for example, if you created a new instance with `new Hashtag("#test")` the hashtag Bluesky and other clients will open a page for `##test`.
 
 Of course, you can chain everything together:
 
@@ -242,10 +231,9 @@ postBuilder.Append(hashTag);
 AtProtoHttpResult<CreateRecordResponse> facetedCreatePostResponse = await agent.Post(postBuilder, cancellationToken: cancellationToken);
 ```
 
-## Posting with images
+## <a name="images>"Posting with images</a>
 
-Creating a post with one or more images is a two step process, upload the image as a blob, then create a post with a reference to
-the newly created blob.
+Creating a post with one or more images is a two step process, upload the image as a blob, then create a post with a reference to the newly created blob.
 
 To upload an image you need the image as a byte array, which you can get by copying a stream to a memory stream, for example:
 
@@ -304,57 +292,47 @@ if (imageUploadResult.Succeeded)
 }
 ```
 
-## Thread Gates and Post Gates
+## <a name="openGraphCards">Embedding an external link (Open Graph cards)</a>
 
-### Thread Gates
+[OpenGraph](https://ogp.me/) is a standard that allows web pages to become a rich object in a social graph. Open Graph metadata allows you to embed a rich link card in a Bluesky post, which will look something like this:
 
-Thread gates allow the original author of a thread to control who can reply to the thread, allowing people mentioned in the root post
-to reply, people the author is following to reply, replies from actors in a list or allow no replies at all. A thread gate can have up to five
-rules, but allowing no replies is an exclusive rule, no other rules can be applied. A thread gate can also be used to hide replies in a thread.
+![An embedded link to Wikipedia's page on Baked Beans](./images/embeddedCard.png "An embedded Card")
 
-You can apply a thread gate to an existing using `AddThreadGate()`. This method requires the `AtUri` of the post to be gated,
-and, optionally a collection of gate rules and/or a collection of `AtUri`s of thread replies to be hidden.
-If you provide no rules then the post will not allow any replies at all.
-
-The following example demonstrates how to gate a thread so that replies are restricted to users the post author follows.
+To embed an external link with a card create an instance of `EmbeddedExternal` then attack it to a `PostBuilder` with the `Embed()` method.
 
 ```c#
-await agent.AddThreadGate(
-    postUri,
-    new List<ThreadGateRuleBase>()
-    {
-        new FollowingRule()
-    },
-    cancellationToken: cancellationToken);
+var embeddedExternal = new(pageUri, title, description, thumbnailBlob);
+var postBuilder = new PostBuilder("Embedded record test");
+postBuilder.EmbedRecord(embeddedExternal);
+
+var postResult = await agent.Post(postBuilder, cancellationToken: cancellationToken);
 ```
 
-The three types of thread gate rules are `FollowingRule`, `MentionRule` and `ListRule`. Note that adding, or updating a thread gate replaces any gate
-already in place. If you want to update rules or hidden posts first get any existing rule with `GetThreadGate()`, if that is successful update the returned
-`ThreadGate` class then apply it with with `UpdateThreadGate()`.
-
-You can use `GetPostThread()` to see a view over a thread, including replies.
-
-### Post Gates
-
-Post gates allow the post author to remove it from someone else's post quoting their post, and also to disable embedding on a post.
+If you don't want to use a `PostBuilder` you can use the appropriate `Post()` method
 
 ```c#
-await agent.AddPostGate(
-    postUri,
-    new List<PostGateRule>()
-    {
-        new DisableEmbeddingRule()
-    },
-    cancellationToken: cancellationToken);
+var postResult = agent.Post(externalCard: embeddedExternal, cancellationToken: cancellationToken);
 ```
 
-You can get a view of posts quoting a post with `GetQuotes()`.
+You can use libraries like [OpenGraph.net](https://github.com/ghorsey/OpenGraph-Net/) or [X.Web.MetaExtractor](https://www.nuget.org/packages/X.Web.MetaExtractor) to retrieve Open Graph properties from which you can construct a card. For example, using X.Web.MetaExtractor:
 
-You can also specify gates when creating a post:
-
-```c#
-await agent.Post("New gated post",
-    threadGateRules: new List<ThreadGateRule>() { new FollowingRule() },
-    postGateRules: new List<PostGateRule>() { new DisableEmbeddingRule() },
-    cancellationToken: cancellationToken);
 ```
+string targetUri = "https://en.wikipedia.org/wiki/Baked_beans";
+Uri page = new (targetUri);
+
+Extractor metadataExtractor = new ();
+var pageMetadata = await metadataExtractor.ExtractAsync(page);
+
+string? title = pageMetadata.Title;
+string? pageUri = pageMetadata.Url ?? targetUri;
+string? description = pageMetadata.Description;
+```
+The example in the [Embedded Card](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.EmbeddedCard) sample shows how to not only use X.Web.MetaExtractor to extract the metadata, but also how to retrieve a preview image and use it, if the metadata has an image property.
+
+Posts with an embedded card don't need any post text.
+
+---
+
+## Chapters
+
+[Table of Contents](contents.md) | [Common Terms](commonTerms.md) | [Timelines and Feeds](timeline.md) | [Checking notifications](notifications.md#checkingNotifications) | [Cursors and pagination](cursorsAndPagination.md) | [Posting](posting.md#posting) | [Thread Gates and Post Gates](threadGatesAndPostGates.md) | [Labels](labels.md) | [Saving and restoring sessions](savingAndRestoringAuthentication.md) | [Logging](logging.md)

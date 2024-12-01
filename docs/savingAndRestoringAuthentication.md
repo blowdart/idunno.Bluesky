@@ -5,7 +5,7 @@ credentials somewhere on disk. The Agent class provides a way to restore, or cre
 and the URI of the server that issued it. Events are provided so you can react to background token refresh operations and store the updated refresh
 token for the next time your application app starts.
 
-## Authentication Events
+## <a name="authenticationEvents">Authentication Events</a>
 
 An agent provides four authenticated related events that you can subscribe to:
 
@@ -44,7 +44,7 @@ You should update these your stored values in your handler for `SessionRefreshed
 Finally in the handlers for `SessionRefreshFailed` and `SessionEnded` events you should remove any stored values you have for the DID and the service.
 The DID and service may not be available if the session refresh fails.
 
-## Restoring or recreating a session.
+## <a name="restoringSessions">Restoring or recreating a session</a>
 
 To restore a session from a refresh token (or an access token if you still have a valid one call `ResumeSession()`. This takes the user's DID,
 the access token (or null if you don't have one), the refresh token, and the URI of the service that issued the tokens.
@@ -69,3 +69,9 @@ calls.If the tokens were refreshed during restoration (which happens if you have
 the `SessionRefreshed` event will be raised.
 
 Don't forget to save the new refresh token in wherever you are securely storing them.
+
+---
+
+## Chapters
+
+[Table of Contents](contents.md) | [Common Terms](commonTerms.md) | [Timelines and Feeds](timeline.md) | [Checking notifications](notifications.md#checkingNotifications) | [Cursors and pagination](cursorsAndPagination.md) | [Posting](posting.md#posting) | [Thread Gates and Post Gates](threadGatesAndPostGates.md) | [Labels](labels.md) | [Saving and restoring sessions](savingAndRestoringAuthentication.md) | [Logging](logging.md)

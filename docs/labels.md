@@ -65,3 +65,9 @@ A user chooses to hide, warn, or ignore each label from a labeler.
 
 For more information on labels, their values and how your application should react to them, see the
 [Bluesky moderation guide](https://docs.bsky.app/docs/advanced-guides/moderation).
+
+---
+
+## Chapters
+
+[Table of Contents](contents.md) | [Common Terms](commonTerms.md) | [Timelines and Feeds](timeline.md) | [Checking notifications](notifications.md#checkingNotifications) | [Cursors and pagination](cursorsAndPagination.md) | [Posting](posting.md#posting) | [Thread Gates and Post Gates](threadGatesAndPostGates.md) | [Labels](labels.md) | [Saving and restoring sessions](savingAndRestoringAuthentication.md) | [Logging](logging.md)
