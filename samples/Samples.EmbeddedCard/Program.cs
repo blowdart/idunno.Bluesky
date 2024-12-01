@@ -6,18 +6,15 @@ using System.CommandLine.Parsing;
 
 using Microsoft.Extensions.Logging;
 
+using X.Web.MetaExtractor;
+
 using idunno.Bluesky;
 
-using X.Web.MetaExtractor;
-using X.Web.MetaExtractor.ContentLoaders;
-using X.Web.MetaExtractor.LanguageDetectors;
-
-using Samples.Common;
-using X.Web.MetaExtractor.ContentLoaders.HttpClient;
 using idunno.AtProto;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
-using System.Diagnostics;
+
+using Samples.Common;
 
 namespace Samples.EmbeddedCard
 {
