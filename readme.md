@@ -39,13 +39,13 @@ The [API status page](docs/endpointStatus.md) shows what is currently implemente
 * Facet detection in text posts and PostBuilder (if no facets manually added).
 * GIF attaching
 * Direct messaging
+* Profile editing
 * Trimming support
 * Firehose support
 * Release builds with [SBOM generation](https://github.com/microsoft/sbom-tool/blob/main/docs/setting-up-github-actions.md), code signing and NuGet publishing
 
 ### Minor
 
-* Hide / unhide post
 * Wider test coverage
 * More deserialization tests with captured responses.
 
