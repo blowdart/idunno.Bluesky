@@ -13,7 +13,7 @@ The status page for `idunno.AtProto`'s [current and planned APIs](endpointStatus
     * [Connecting to Bluesky](gettingStarted.md#connecting)
         * [Using a proxy server](gettingStarted.md#usingAProxy)
         * [Disabling token refresh](gettingStarted.md#disablingTokenRefresh)
-    * [Error Handling](gettingStarted.md.#errorHandling)
+    * [Error Handling](gettingStarted.md#errorHandling)
 * [Common Terms](commonTerms.md)
     * [AT URIs, CIDs and Strong References](commonTerms.md#atUris)
     * [Records, Collections and NSIDs](commonTerms.md#records)
