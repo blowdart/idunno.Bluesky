@@ -24,7 +24,7 @@ When a `Uri` and `Cid` are combined together they make a `StrongReference` to an
 
 Records are stored in a repository. Each account gets its own repository (repo) on a PDS (personal data server), and are sorted into collections, according to their type, for example the Post collection or the Likes collection.
 
-Collections are identified by namespace identifiers ([NSID](https://atproto.com/specs/nsid)s), which make up part of the [AT-URI](#atURIs).
+Collections are identified by namespace identifiers ([NSID](https://atproto.com/specs/nsid)s), which make up part of the [AT-URI](commonTerms.md#atURIs).
 
 If we take an `AT URI` for example, `at://sinclairinat0r.com/app.bsky.feed.post/3l5ptjwzotx2h` this breaks down into
 * An authority of `sinclairinat0r.com`, which can also be takes as the repository name.

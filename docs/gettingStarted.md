@@ -25,11 +25,11 @@ using (BlueskyAgent agent = new ())
 All the supported Bluesky operations are contained in the `BlueskyAgent` class, which takes care of session management for you.
 
 Most requests to Bluesky are made over [HTTP](https://docs.bsky.app/docs/category/http-reference) and the results are wrapped up in an `HttpResult` instance,
-which contains the HTTP status code returned by the API, and any result or error returned. More information on error handling can be found in [Error Handling](#errorHandling)
+which contains the HTTP status code returned by the API, and any result or error returned. More information on error handling can be found in [Error Handling](gettingStarted.md#errorHandling)
 
 ## <a name="connecting">Connecting to Bluesky</a>
 
-As you can see from the [Hello World](#gettingStarted) example connecting to Bluesky consists of creating an instance of a `BlueskyAgent` and then calling the login method.
+As you can see from the [Hello World](gettingStarted.md#gettingStarted) example connecting to Bluesky consists of creating an instance of a `BlueskyAgent` and then calling the login method.
 
 ```c#
 using (BlueskyAgent agent = new ())
