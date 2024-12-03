@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <Product>idunnoBluesky AT Proto and Bluesky client libraries.</Product>
+    <Product>idunno.Bluesky : AT Proto and Bluesky client libraries.</Product>
     <MaintainerEmail>github.com@idunno.org</MaintainerEmail>
 
     <RepositoryUrl>https://github.com/blowdart/idunno.Bluesky</RepositoryUrl>
