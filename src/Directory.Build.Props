@@ -2,7 +2,7 @@
   <Import Project="..\Directory.Build.props" />
 
   <PropertyGroup>
-    <PackageProjectUrl>https://github.com/blowdart/idunno.Authentication</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/blowdart/idunno.Bluesky</PackageProjectUrl>
     <!-- The SPDX name for the source license. See https://spdx.org/licenses/. -->
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
 
@@ -18,27 +18,41 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)' != 'CodeQL'">
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
-
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)icon.png" Pack="true" PackagePath="\"/>
     <None Include="$(MSBuildThisFileDirectory)..\readme.md" Pack="true" PackagePath="\"/>
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.25" PrivateAssets="All" />
-    <PackageReference Include="DotNetAnalyzers.DocumentationAnalyzers" Version="1.0.0-beta.59" PrivateAssets="All" />
-    <PackageReference Include="SonarAnalyzer.CSharp" Version="9.32.0.97167">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
+  <Choose>
+    <When Condition="'$(Configuration)' != 'CodeQL'">
+      <PropertyGroup>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <DebugSymbols>true</DebugSymbols>
+      </PropertyGroup>
 
-  <ItemGroup Condition="'$(Configuration)' != 'CodeQL'">
-    <PackageReference Include="Nerdbank.GitVersioning" Version="3.6.146" PrivateAssets="All" />
+      <ItemGroup>
+        <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.25" PrivateAssets="All" />
+        <PackageReference Include="Nerdbank.GitVersioning" Version="3.6.146" PrivateAssets="All" />
+        <PackageReference Include="SonarAnalyzer.CSharp" Version="9.32.0.97167" PrivateAssets="All" />
+      </ItemGroup>
+    </When>
+  </Choose>
+
+  <Choose>
+    <When Condition="'$(Configuration)' == 'Release'">
+      <PropertyGroup>
+        <GenerateSBOM>true</GenerateSBOM>
+      </PropertyGroup>
+      <ItemGroup>
+        <PackageReference Include="Microsoft.Sbom.Targets" Version="3.0.0" PrivateAssets="All" />
+      </ItemGroup>
+    </When>
+  </Choose>
+
+  <!-- Debug configuration
+       Include documentation analysers, which can't be included in a release build because they're a a prerelease dependency.-->
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+    <PackageReference Include="DotNetAnalyzers.DocumentationAnalyzers" Version="1.0.0-beta.59" PrivateAssets="All" />
   </ItemGroup>
-  
 </Project>

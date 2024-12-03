@@ -42,7 +42,12 @@ The [API status page](docs/endpointStatus.md) shows what is currently implemente
 * Profile editing
 * Trimming support
 * Firehose support
-* Release builds with [SBOM generation](https://github.com/microsoft/sbom-tool/blob/main/docs/setting-up-github-actions.md), code signing and NuGet publishing
+
+* Release builds need to
+  * Extract SBOM from package and expose as separate asset
+  * Upload SBOM via spdx-dependency-submission-action
+  * Code sign
+  * NuGet publishing
 
 ### Minor
 
