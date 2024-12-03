@@ -45,7 +45,7 @@ The [API status page](docs/endpointStatus.md) shows what is currently implemente
 
 * Release builds need to
   * Extract SBOM from package and expose as separate asset
-  * Upload SBOMvia spdx-dependency-submission-action,
+  * Upload SBOM via spdx-dependency-submission-action,
   * Code sign
   * NuGet publishing
 
