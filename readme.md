@@ -38,7 +38,6 @@ The [API status page](docs/endpointStatus.md) shows what is currently implemente
 * Video uploading and attaching
 * Facet detection in text posts, PostBuilder and messages (if no facets manually added).
 * GIF attaching
-* Direct messaging
 * Profile editing
 * Trimming support
 * Firehose support
