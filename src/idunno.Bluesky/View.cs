@@ -4,12 +4,14 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using System.Text.Json;
+using idunno.Bluesky.Embed;
 
 namespace idunno.Bluesky
 {
     /// <summary>
     /// Base class for view records.
     /// </summary>
+    [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
     public record View
     {
         /// <summary>

@@ -231,7 +231,7 @@ postBuilder.Append(hashTag);
 AtProtoHttpResult<CreateRecordResponse> facetedCreatePostResponse = await agent.Post(postBuilder, cancellationToken: cancellationToken);
 ```
 
-## <a name="images>"Posting with images</a>
+## <a name="images">Posting with images</a>
 
 Creating a post with one or more images is a two step process, upload the image as a blob, then create a post with a reference to the newly created blob.
 
@@ -335,4 +335,4 @@ Posts with an embedded card don't need any post text.
 
 ## Chapters
 
-[Table of Contents](readme.md) | [Common Terms](commonTerms.md) | [Timelines and Feeds](timeline.md) | [Checking notifications](notifications.md#checkingNotifications) | [Cursors and pagination](cursorsAndPagination.md) | [Posting](posting.md#posting) | [Thread Gates and Post Gates](threadGatesAndPostGates.md) | [Labels](labels.md) | [Saving and restoring sessions](savingAndRestoringAuthentication.md) | [Logging](logging.md)
+[Table of Contents](readme.md) | [Common Terms](commonTerms.md) | [Timelines and Feeds](timeline.md) | [Checking notifications](notifications.md#checkingNotifications) | [Cursors and pagination](cursorsAndPagination.md) | [Posting](posting.md#posting) | [Thread Gates and Post Gates](threadGatesAndPostGates.md) | [Labels](labels.md) | [Conversations and Messages](conversationsAndMessages.md) | [Saving and restoring sessions](savingAndRestoringAuthentication.md) | [Logging](logging.md)

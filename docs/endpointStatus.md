@@ -49,6 +49,18 @@
 | **Notifications** | [app.bsky.notification.getUnreadCount](https://docs.bsky.app/docs/api/app-bsky-notification-get-unread-count) | `BlueskyAgent.GetNotificationUnreadCount()` | ✔ |
 | | [app.bsky.notification.listNotifications](https://docs.bsky.app/docs/api/app-bsky-notification-list-notifications) | `BlueskyAgent.ListNotifications()` | ✔ |
 | | [app.bsky.notification.updateSeen](https://docs.bsky.app/docs/api/app-bsky-notification-update-seen) | `BlueskyAgent.UpdateNotificationSeenAt()` | ✔ |
+| **Direct Messages** | [chat.bsky.convo.deleteMessageForSelf](https://docs.bsky.app/docs/api/chat-bsky-convo-delete-message-for-self) | `BlueskyAgent.DeleteMessageForSelf()` | ✔ |
+| | [chat.bsky.convo.getConvoForMembers](https://docs.bsky.app/docs/api/chat-bsky-convo-get-convo-for-members) | `BlueskyAgent.GetConversationForMembers()` | ✔ |
+| | [chat.bsky.convo.getConvo](https://docs.bsky.app/docs/api/chat-bsky-convo-get-convo) | `BlueskyAgent.GetConversation()` | ✔ |
+| | [chat.bsky.convo.getLog](https://docs.bsky.app/docs/api/chat-bsky-convo-get-log) | `BlueskyAgent.GetConversationLog()` | ✔ |
+| | [chat.bsky.convo.getMessages](https://docs.bsky.app/docs/api/chat-bsky-convo-get-messages) | `BlueskyAgent.GetMessages()` | ✔ |
+| | [chat.bsky.convo.leaveConvo](https://docs.bsky.app/docs/api/chat-bsky-convo-leave-convo) | `BlueskyAgent.LeaveConversation()` | ✔ |
+| | [chat.bsky.convo.listConvos](https://docs.bsky.app/docs/api/chat-bsky-convo-list-convos) | `BlueskyAgent.ListConversations()` | ✔ |
+| | [chat.bsky.convo.muteConvos](https://docs.bsky.app/docs/api/chat-bsky-convo-mute-convo) | `BlueskyAgent.MuteConversation()` | ✔ |
+| | [chat.bsky.convo.sendMessageBatch](https://docs.bsky.app/docs/api/chat-bsky-convo-send-message-batch) | `BlueskyAgent.SendMessageBatch()` | ✔ |
+| | [chat.bsky.convo.sendMessage](https://docs.bsky.app/docs/api/chat-bsky-convo-send-message) | `BlueskyAgent.SendMessage()` | ✔ |
+| | [chat.bsky.convo.unmuteConvos](https://docs.bsky.app/docs/api/chat-bsky-convo-unmute-convo) | `BlueskyAgent.UnmuteConversation()` | ✔ |
+| | [chat.bsky.convo.updateRead](https://docs.bsky.app/docs/api/chat-bsky-convo-update-read) | `BlueskyAgent.UpdateRead()` | ✔ |
 
 ## AT Protocol Endpoints
 | Group        | Endpoint                                                     | Class / Method                | Status |

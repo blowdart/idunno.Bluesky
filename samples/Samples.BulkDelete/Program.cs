@@ -181,13 +181,18 @@ public sealed class Program
 
                 do
                 {
-                    if (listRecordsResult.Succeeded)
+                    if (listRecordsResult.Succeeded && !cancellationToken.IsCancellationRequested)
                     {
                         Console.Write($"Processing {collection} records {collectionRecordsProcessed + 1} - ");
                         Console.WriteLine($"{collectionRecordsProcessed + listRecordsResult.Result.Count}");
 
                         foreach (AtProtoRecord record in listRecordsResult.Result)
                         {
+                            if (cancellationToken.IsCancellationRequested)
+                            {
+                                break;
+                            }
+
                             const string createdAtKey = "createdAt";
                             const string textKey = "text";
 
@@ -252,9 +257,14 @@ public sealed class Program
                             collectionRecordsProcessed++;
                         }
 
-                        listRecordsResult = await agent.ListRecords<AtProtoRecord>(collection, recordLimit, listRecordsResult.Result.Cursor, cancellationToken: cancellationToken);
+                        if (!cancellationToken.IsCancellationRequested && !string.IsNullOrEmpty(listRecordsResult.Result.Cursor))
+                        {
+                            listRecordsResult = await agent.ListRecords<AtProtoRecord>(collection, recordLimit, listRecordsResult.Result.Cursor, cancellationToken: cancellationToken);
+                        }
                     }
-                } while (listRecordsResult.Succeeded && !string.IsNullOrEmpty(listRecordsResult.Result.Cursor));
+                } while (!cancellationToken.IsCancellationRequested &&
+                         listRecordsResult.Succeeded &&
+                         !string.IsNullOrEmpty(listRecordsResult.Result.Cursor));
 
                 if (collectionRecordsProcessed == 0)
                 {

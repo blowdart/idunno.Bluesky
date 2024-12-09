@@ -43,6 +43,12 @@ The status page for `idunno.AtProto`'s [current and planned APIs](endpointStatus
 * [Labels](labels.md)
     * [Getting a user's labeler subscriptions](labels.md#labelSubscriptions)
     * [Reacting to labels](labels.md#labelReacting)]
+* [Conversations and Messages](conversationsAndMessages.md)
+    * [Reading conversations and messages](conversationsAndMessages.md#reading)
+    * [Starting a conversation](conversationsAndMessages.md#starting)
+    * [Sending a message](conversationsAndMessages.md#sending)
+    * [Deleting a message](conversationsAndMessages.md#deleting)
+    * [Leaving a conversation](conversationsAndMessages.md#leaving)
 * [Saving and restoring sessions](savingAndRestoringAuthentication.md)
     * [Authentication Events](savingAndRestoringAuthentication.md#authenticationEvents)
     * [Restoring or recreating a session](savingAndRestoringAuthentication.md#restoringSessions)

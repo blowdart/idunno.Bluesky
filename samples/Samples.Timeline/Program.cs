@@ -37,7 +37,7 @@ namespace Samples.Timeline
             ArgumentNullException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
-            proxyUri = new Uri("http://localhost:8866");
+            // proxyUri = new Uri("http://localhost:8866");
 
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
@@ -113,7 +113,7 @@ namespace Samples.Timeline
                         subscribedLabelers: preferences.SubscribedLabelers,
                         cancellationToken: cancellationToken).ConfigureAwait(false);
 
-                if (timelineResult.Succeeded && timelineResult.Result.Count != 0)
+                if (timelineResult.Succeeded && timelineResult.Result.Count != 0 && !cancellationToken.IsCancellationRequested)
                 {
                     do
                     {
@@ -124,6 +124,11 @@ namespace Samples.Timeline
 
                         foreach (FeedViewPost timelineView in timelineResult.Result)
                         {
+                            if (cancellationToken.IsCancellationRequested)
+                            {
+                                break;
+                            }
+
                             postCounter++;
                             if (postCounter == maximumNumberOfEntries)
                             {
@@ -198,7 +203,7 @@ namespace Samples.Timeline
 
                         page++;
 
-                        if (!string.IsNullOrEmpty(timelineResult.Result.Cursor))
+                        if (!cancellationToken.IsCancellationRequested && !string.IsNullOrEmpty(timelineResult.Result.Cursor))
                         {
                             timelineResult = await agent.GetTimeline(
                                 limit: pageSize,
@@ -206,7 +211,9 @@ namespace Samples.Timeline
                                 subscribedLabelers: preferences.SubscribedLabelers,
                                 cancellationToken: cancellationToken).ConfigureAwait(false);
                         }
-                    } while (postCounter <= maximumNumberOfEntries && timelineResult.Succeeded && !string.IsNullOrEmpty(timelineResult.Result.Cursor));
+                    } while (!cancellationToken.IsCancellationRequested &&
+                             postCounter <= maximumNumberOfEntries &&
+                             timelineResult.Succeeded && !string.IsNullOrEmpty(timelineResult.Result.Cursor));
                 }
             }
         }

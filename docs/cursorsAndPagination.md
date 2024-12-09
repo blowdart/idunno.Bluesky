@@ -1,4 +1,5 @@
 # Cursors and Pagination
+
 If you've looked at the source code for the [Notifications](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Notifications) or [Timeline](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Timeline) samples you may have noticed they through notifications rather than get all the notifications at once.
 
 Each sample uses the limit and cursor parameters to get their results one page at a time. For example, to page through notifications, with each page containing a maximum of five results you would write the following:.
@@ -40,4 +41,4 @@ One thing to note specifically for feeds is that cursors aren't a standard forma
 
 ## Chapters
 
-[Table of Contents](readme.md) | [Common Terms](commonTerms.md) | [Timelines and Feeds](timeline.md) | [Checking notifications](notifications.md#checkingNotifications) | [Cursors and pagination](cursorsAndPagination.md) | [Posting](posting.md#posting) | [Thread Gates and Post Gates](threadGatesAndPostGates.md) | [Labels](labels.md) | [Saving and restoring sessions](savingAndRestoringAuthentication.md) | [Logging](logging.md)
+[Table of Contents](readme.md) | [Common Terms](commonTerms.md) | [Timelines and Feeds](timeline.md) | [Checking notifications](notifications.md#checkingNotifications) | [Cursors and pagination](cursorsAndPagination.md) | [Posting](posting.md#posting) | [Thread Gates and Post Gates](threadGatesAndPostGates.md) | [Labels](labels.md) | [Conversations and Messages](conversationsAndMessages.md) | [Saving and restoring sessions](savingAndRestoringAuthentication.md) | [Logging](logging.md)
