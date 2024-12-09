@@ -4,7 +4,6 @@
 using System.Collections.ObjectModel;
 
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 using idunno.AtProto;
 using idunno.Bluesky.Actor;
@@ -12,9 +11,6 @@ using idunno.Bluesky.Actor.Model;
 
 namespace idunno.Bluesky
 {
-    /// <summary>
-    /// Provides direct access to various Bluesky APIs.
-    /// </summary>
     public static partial class BlueskyServer
     {
         // https://docs.bsky.app/docs/api/app-bsky-actor-get-profile
@@ -188,7 +184,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// Get a list of suggested actors for the authenticator users. The expected use is discovery of accounts to follow during new account onboarding.
         /// </summary>
-        /// <param name="limit">The number of suggested actors to return. Defaults to 50 if null.</param>
+        /// <param name="limit">The number of suggested actors to return.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
@@ -217,7 +213,7 @@ namespace idunno.Bluesky
 
             ArgumentOutOfRangeException.ThrowIfNegative(limitValue);
             ArgumentOutOfRangeException.ThrowIfZero(limitValue);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, Maximum.SuggestedActors);
 
             AtProtoHttpClient<GetSuggestionsResponse> request = new(loggerFactory);
 

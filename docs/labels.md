@@ -70,4 +70,4 @@ For more information on labels, their values and how your application should rea
 
 ## Chapters
 
-[Table of Contents](readme.md) | [Common Terms](commonTerms.md) | [Timelines and Feeds](timeline.md) | [Checking notifications](notifications.md#checkingNotifications) | [Cursors and pagination](cursorsAndPagination.md) | [Posting](posting.md#posting) | [Thread Gates and Post Gates](threadGatesAndPostGates.md) | [Labels](labels.md) | [Saving and restoring sessions](savingAndRestoringAuthentication.md) | [Logging](logging.md)
+[Table of Contents](readme.md) | [Common Terms](commonTerms.md) | [Timelines and Feeds](timeline.md) | [Checking notifications](notifications.md#checkingNotifications) | [Cursors and pagination](cursorsAndPagination.md) | [Posting](posting.md#posting) | [Thread Gates and Post Gates](threadGatesAndPostGates.md) | [Labels](labels.md) | [Conversations and Messages](conversationsAndMessages.md) | [Saving and restoring sessions](savingAndRestoringAuthentication.md) | [Logging](logging.md)

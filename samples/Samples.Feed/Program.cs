@@ -37,7 +37,7 @@ namespace Samples.Feed
             ArgumentNullException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
-            proxyUri = new Uri("http://localhost:8866");
+            // proxyUri = new Uri("http://localhost:8866");
 
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
@@ -111,7 +111,7 @@ namespace Samples.Feed
                     subscribedLabelers: preferences.SubscribedLabelers,
                     cancellationToken: cancellationToken);
 
-                if (getFeedResult.Succeeded && getFeedResult.Result.Count != 0)
+                if (getFeedResult.Succeeded && getFeedResult.Result.Count != 0 && !cancellationToken.IsCancellationRequested)
                 {
                     do
                     {
@@ -119,6 +119,11 @@ namespace Samples.Feed
 
                         foreach (var feedViewPost in getFeedResult.Result)
                         {
+                            if (cancellationToken.IsCancellationRequested)
+                            {
+                                break;
+                            }
+
                             Console.WriteLine($"{feedViewPost.Post.Record.Text ?? "\u001b[3mNo post text\u001b[23m"}");
                             Console.WriteLine($"  From {feedViewPost.Post.Author}");
                             PrintLabels(feedViewPost.Post.Author);
@@ -130,7 +135,7 @@ namespace Samples.Feed
                             Console.WriteLine();
                         }
 
-                        if (!cancellationToken.IsCancellationRequested)
+                        if (!cancellationToken.IsCancellationRequested && !string.IsNullOrEmpty(getFeedResult.Result.Cursor))
                         {
                             await agent.GetFeed(
                             feedUri,

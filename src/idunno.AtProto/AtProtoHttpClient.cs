@@ -3,6 +3,7 @@
 
 using System.Net.Http.Headers;
 using System.Net.Mime;
+using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Text.Json;
 
@@ -19,6 +20,8 @@ namespace idunno.AtProto
     {
         private readonly ILogger<AtProtoHttpClient<TResult>> _logger;
 
+        private readonly ICollection<NameValueHeaderValue>? _extraHeaders;
+
         /// <summary>
         /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
         /// </summary>
@@ -27,6 +30,51 @@ namespace idunno.AtProto
         {
             loggerFactory ??= NullLoggerFactory.Instance;
             _logger = loggerFactory.CreateLogger<AtProtoHttpClient<TResult>>();
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
+        /// </summary>
+        /// <param name="serviceProxy">An optional headers to add to the requests this instance makes.</param>
+        /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="serviceProxy"/> is null or white space./</exception>
+        public AtProtoHttpClient(string serviceProxy, ILoggerFactory? loggerFactory = null) : this(loggerFactory)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(serviceProxy);
+
+            _extraHeaders = new List<NameValueHeaderValue>
+            {
+                new("atproto-proxy", serviceProxy)
+            };
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
+        /// </summary>
+        /// <param name="header">An header to add to the requests this instance makes.</param>
+        /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="header"/> is null/</exception>
+        public AtProtoHttpClient(NameValueHeaderValue header, ILoggerFactory? loggerFactory = null) : this(loggerFactory)
+        {
+            ArgumentNullException.ThrowIfNull(header);
+
+            _extraHeaders = new List<NameValueHeaderValue>
+            {
+                header
+            };
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
+        /// </summary>
+        /// <param name="headers">Headers to add to the requests this instance makes.</param>
+        /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
+        public AtProtoHttpClient(ICollection<NameValueHeaderValue> headers, ILoggerFactory? loggerFactory = null) : this(loggerFactory)
+        {
+            ArgumentNullException.ThrowIfNull(headers);
+            ArgumentOutOfRangeException.ThrowIfZero(headers.Count);
+
+            _extraHeaders = new List<NameValueHeaderValue>(headers);
         }
 
         /// <summary>
@@ -90,7 +138,7 @@ namespace idunno.AtProto
 
             using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, new Uri(service, endpoint)))
             {
-                ConfigureRequest(httpRequestMessage, httpClient, accessToken, subscribedLabelers);
+                ConfigureRequest(httpRequestMessage, httpClient, accessToken, subscribedLabelers, _extraHeaders);
 
                 try
                 {
@@ -191,7 +239,7 @@ namespace idunno.AtProto
 
             using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(service, endpoint)))
             {
-                ConfigureRequest(httpRequestMessage, httpClient, accessToken, subscribedLabelers);
+                ConfigureRequest(httpRequestMessage, httpClient, accessToken, subscribedLabelers, _extraHeaders);
 
                 if (requestHeaders is not null)
                 {
@@ -291,7 +339,7 @@ namespace idunno.AtProto
 
             using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(service, endpoint)))
             {
-                ConfigureRequest(httpRequestMessage, httpClient, accessToken);
+                ConfigureRequest(httpRequestMessage, httpClient, accessToken, subscribedLabelers: null, _extraHeaders);
 
                 httpRequestMessage.Content = new ByteArrayContent(blob);
 
@@ -390,7 +438,12 @@ namespace idunno.AtProto
             return errorDetail;
         }
 
-        private static void ConfigureRequest(HttpRequestMessage httpRequestMessage, HttpClient httpClient, string? accessToken, IEnumerable<Did>? subscribedLabelers = null)
+        private static void ConfigureRequest(
+            HttpRequestMessage httpRequestMessage,
+            HttpClient httpClient,
+            string? accessToken,
+            IEnumerable<Did>? subscribedLabelers = null,
+            ICollection<NameValueHeaderValue>? headerValues = null)
         {
             // Because we're using HttpRequestMessage.SendAsync none of the useful default configuration on the httpClient comes through.
             // So copy the ones we care most about into the request message.
@@ -423,6 +476,14 @@ namespace idunno.AtProto
                 if (labelerIdentifiers.Count != 0)
                 {
                     httpRequestMessage.Headers.Add("atproto-accept-labelers", labelerIdentifiers);
+                }
+            }
+
+            if (headerValues is not null)
+            {
+                foreach (NameValueHeaderValue headerValue in headerValues)
+                {
+                    httpRequestMessage.Headers.Add(headerValue.Name, headerValue.Value);
                 }
             }
         }

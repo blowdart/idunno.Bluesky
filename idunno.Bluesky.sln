@@ -28,6 +28,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C94F8041-688
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{B1A49FA3-07AB-4D78-BC16-FF7FB5857840}"
+	ProjectSection(SolutionItems) = preProject
+		samples\readme.md = samples\readme.md
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{ACED7B7D-7BBE-4086-937F-7ECEE6A3F6B4}"
 	ProjectSection(SolutionItems) = preProject
@@ -40,6 +43,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{DDB6FAB2-1F8C-47C4-89DC-E319D09065E5}"
 	ProjectSection(SolutionItems) = preProject
 		docs\commonTerms.md = docs\commonTerms.md
+		docs\conversationsAndMessages.md = docs\conversationsAndMessages.md
 		docs\cursorsAndPagination.md = docs\cursorsAndPagination.md
 		docs\endpointStatus.md = docs\endpointStatus.md
 		docs\gettingStarted.md = docs\gettingStarted.md
@@ -122,6 +126,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "images", "images", "{A9FBC3
 	ProjectSection(SolutionItems) = preProject
 		docs\images\embeddedCard.png = docs\images\embeddedCard.png
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.DirectMessages", "samples\Samples.DirectMessages\Samples.DirectMessages.csproj", "{2B34CB51-5878-4C91-90ED-01742EA0CD00}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -232,6 +238,11 @@ Global
 		{184094BE-5D4A-4EAF-BD4F-65B27D46AA07}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{184094BE-5D4A-4EAF-BD4F-65B27D46AA07}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{184094BE-5D4A-4EAF-BD4F-65B27D46AA07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B34CB51-5878-4C91-90ED-01742EA0CD00}.CodeQL|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B34CB51-5878-4C91-90ED-01742EA0CD00}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B34CB51-5878-4C91-90ED-01742EA0CD00}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B34CB51-5878-4C91-90ED-01742EA0CD00}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B34CB51-5878-4C91-90ED-01742EA0CD00}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -260,6 +271,7 @@ Global
 		{F8B3262D-C3F6-4734-93B9-9218A1178297} = {8849E619-47FB-420A-AEA0-A5794F728BD0}
 		{184094BE-5D4A-4EAF-BD4F-65B27D46AA07} = {B1A49FA3-07AB-4D78-BC16-FF7FB5857840}
 		{A9FBC338-5896-44FF-863A-1F608B9777C3} = {DDB6FAB2-1F8C-47C4-89DC-E319D09065E5}
+		{2B34CB51-5878-4C91-90ED-01742EA0CD00} = {B1A49FA3-07AB-4D78-BC16-FF7FB5857840}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2B9F8C2-975D-4E3A-B05E-48FDF4BCE3E6}

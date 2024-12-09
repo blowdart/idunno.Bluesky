@@ -16,9 +16,18 @@ If you use an Bluesky app password you don't need to worry about authorization c
 ## Sample List
 
 * `Samples.ConsoleShell` - a skeleton console application that you can use as a starting point for experimentation.
+* `Samples.Common` - helper functions used in the sample applications.
+
 * `Samples.AtProto` - a sample showing how to use the underlying AtProto APIs.
+* `Samples.DirectMessages` - a sample showing how to use the conversation APIs.
+* `Samples.EmbeddedCard` - a sample showing how to embed an Open Graph card in a post.
+* `Samples.Feed` - a sample showing how to page through a feed..
+* `Samples.Logging` - a sample showing how to configure logging with the .net console logger.
 * `Samples.LoginDiscovery` - a sample that walks threw the various stages of how a handle is resolved its Personal Data Store (PDS).
-* `Samples.SessionEvents` - a sample showing how to subscribe to session events so you can persist authentication tokens and recreate sessions on app startup.
 * `Samples.Notifications` - a sample which shows notifications for the authenticated user.
+* `Samples.SessionEvents` - a sample showing how to subscribe to session events so you can persist authentication tokens and recreate sessions on app startup.
+* `Samples.Posting` - a sample that shows how to make posts.
 * `Samples.Timeline` - a sample that shows reading and paging through the authenticated user's timeline.
 * `Samples.TokenRefresh` - a sample that shows background token refresh happening, by hacking the refresh timer to be very short.
+
+* `Samples.BulkDelete` - a implementation of a bulk delete application, which allows you to specify the date/time before which your posts, likes etc. will be deleted.

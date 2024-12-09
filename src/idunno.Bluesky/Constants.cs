@@ -1,7 +1,6 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.ComponentModel;
 using idunno.AtProto;
 
 namespace idunno.Bluesky
@@ -52,22 +51,22 @@ namespace idunno.Bluesky
         public static readonly int ExternalTagsInPost = 8;
 
         /// <summary>
-        /// The maximum length of an tag. in characters.
+        /// The maximum length of an tag, in characters.
         /// </summary>
         public static readonly int TagLengthInCharacters = 640;
 
         /// <summary>
-        /// The maximum length of an tag. in graphemes.
+        /// The maximum length of an tag, in graphemes.
         /// </summary>
         public static readonly int TagLengthInGraphemes = 64;
 
         /// <summary>
-        /// The maximum length of the text for a link in a post. in characters.
+        /// The maximum length of the text for a link in a post, in characters.
         /// </summary>
         public static readonly int LinkTextLengthInCharacters = 640;
 
         /// <summary>
-        /// The maximum length of the text for a link in a post. in graphemes.
+        /// The maximum length of the text for a link in a post, in graphemes.
         /// </summary>
         public static readonly int LinkTextLengthInGraphemes = 64;
 
@@ -90,6 +89,36 @@ namespace idunno.Bluesky
         /// The maximum number of embedding posts that can be detached in a post gate.
         /// </summary>
         public static readonly int PostGateDetachedEmbeddingPosts = 50;
+
+        /// <summary>
+        /// The maximum number of actors that can suggested 
+        /// </summary>
+        public static readonly int SuggestedActors = 100;
+
+        /// <summary>
+        /// The maximum number of conversations to list.
+        /// </summary>
+        public static readonly int ConversationsToList = 100;
+
+        /// <summary>
+        /// The maximum number of members in a conversation.
+        /// </summary>
+        public static readonly int ConversationMembers = 10;
+
+        /// <summary>
+        /// The maximum number of messages to list.
+        /// </summary>
+        public static readonly int MessagesToList = 100;
+
+        /// <summary>
+        /// The maximum number of characters in a direct message.
+        /// </summary>
+        public static readonly int MessageLengthInCharacters = 10000;
+
+        /// <summary>
+        /// The maximum number of messages in a message batch.
+        /// </summary>
+        public static readonly int BatchedMessages = 100;
     }
 
     /// <summary>
@@ -211,6 +240,7 @@ namespace idunno.Bluesky
         /// Indicates a profile record.
         /// </summary>
         public const string Profile = "app.bsky.actor.profile";
+
     }
 
     /// <summary>
@@ -256,6 +286,27 @@ namespace idunno.Bluesky
     }
 
     /// <summary>
+    /// Type discriminators for views over embedded records.
+    /// </summary>
+    public static class EmbeddedViewTypeDiscriminators
+    {
+        /// <summary>
+        /// The json type discriminator for an view of an embedded record that cannot be found.
+        /// </summary>
+        public const string EmbedViewNotFound = "app.bsky.embed.record#viewNotFound";
+
+        /// <summary>
+        /// The json type discriminator for a view over a record that is blocked
+        /// </summary>
+        public const string EmbedViewBlocked = "app.bsky.embed.record#Blocked";
+
+        /// <summary>
+        /// The json type discriminator for a view over a record that is detached
+        /// </summary>
+        public const string EmbedViewDetached = "app.bsky.embed.record#Detached";
+    }
+
+    /// <summary>
     /// Type discriminators for thread gate rules.
     /// </summary>
     public static class ThreadGateTypeDiscriminators
@@ -274,5 +325,48 @@ namespace idunno.Bluesky
         /// Allow list members to reply.
         /// </summary>
         public const string ListMembers = "app.bsky.feed.threadgate#listRule";
+    }
+
+    /// <summary>
+    /// Type discriminators for message objects
+    /// </summary>
+    public static class MessageTypeDiscriminators
+    {
+        /// <summary>
+        /// A view over a message.
+        /// </summary>
+        public const string MessageView = "chat.bsky.convo.defs#messageView";
+
+        /// <summary>
+        /// A view over a deleted message.
+        /// </summary>
+        public const string DeletedMessageView = "chat.bsky.convo.defs#deletedMessageView";
+    }
+
+    /// <summary>
+    /// Type discriminators for conversation logging.
+    /// </summary>
+    public static class ConversationLogTypeDiscriminators
+    {
+        /// <summary>
+        /// A log entry indicating the beginning of a conversation.
+        /// </summary>
+        public const string BeginConversation = "chat.bsky.convo.defs#logBeginConvo";
+
+        /// <summary>
+        /// A log entry indicating leaving a conversation.
+        /// </summary>
+        public const string LeaveConversation = "chat.bsky.convo.defs#logLeaveConvo";
+
+        /// <summary>
+        /// A log entry indicating a message was created in a conversation.
+        /// </summary>
+        public const string CreateMessage = "chat.bsky.convo.defs#logCreateMessage";
+
+        /// <summary>
+        /// A log entry indicating a message was deleted in a conversation.
+        /// </summary>
+        public const string DeleteMessage = "chat.bsky.convo.defs#logDeleteMessage";
+
     }
 }

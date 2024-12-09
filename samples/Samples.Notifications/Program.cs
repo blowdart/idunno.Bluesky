@@ -41,7 +41,7 @@ namespace Samples.Notifications
             ArgumentNullException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
-            proxyUri = new Uri("http://localhost:8866");
+            // proxyUri = new Uri("http://localhost:8866");
 
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
@@ -110,6 +110,11 @@ namespace Samples.Notifications
                     return;
                 }
 
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 const int pageSize = 10;
 
                 AtProtoHttpResult<NotificationCollection> notificationsListResult =
@@ -118,12 +123,17 @@ namespace Samples.Notifications
                         subscribedLabelers: preferences.SubscribedLabelers,
                         cancellationToken: cancellationToken).ConfigureAwait(false);
 
-                if (notificationsListResult.Succeeded && notificationsListResult.Result.Count != 0)
+                if (notificationsListResult.Succeeded && notificationsListResult.Result.Count != 0 && !cancellationToken.IsCancellationRequested)
                 {
                     do
                     {
                         foreach (Notification notification in notificationsListResult.Result)
                         {
+                            if (cancellationToken.IsCancellationRequested)
+                            {
+                                break;
+                            }
+
                             if (!notification.IsRead)
                             {
                                 Console.Write("\u001b[1m");
@@ -300,16 +310,24 @@ namespace Samples.Notifications
                             }
                         }
 
-                        // Get the next page
-                        notificationsListResult = await agent.ListNotifications(
+                        if (!string.IsNullOrEmpty(notificationsListResult.Result.Cursor) && !cancellationToken.IsCancellationRequested)
+                        {
+                            // Get the next page
+                            notificationsListResult = await agent.ListNotifications(
                             limit: pageSize,
                             cursor: notificationsListResult.Result.Cursor,
                             subscribedLabelers: preferences.SubscribedLabelers,
                             cancellationToken: cancellationToken).ConfigureAwait(false);
+                        }
 
-                    } while (notificationsListResult.Succeeded && !string.IsNullOrEmpty(notificationsListResult.Result.Cursor));
+                    } while (!cancellationToken.IsCancellationRequested &&
+                             notificationsListResult.Succeeded &&
+                             !string.IsNullOrEmpty(notificationsListResult.Result.Cursor));
 
-                    await agent.UpdateNotificationSeenAt(notificationCheckDateTime, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    if (!cancellationToken.IsCancellationRequested)
+                    {
+                        await agent.UpdateNotificationSeenAt(notificationCheckDateTime, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    }
                 }
             }
 

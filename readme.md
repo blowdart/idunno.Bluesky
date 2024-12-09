@@ -36,9 +36,8 @@ The [API status page](docs/endpointStatus.md) shows what is currently implemente
 * Logging in idunno.Bluesky
 * OAuth
 * Video uploading and attaching
-* Facet detection in text posts and PostBuilder (if no facets manually added).
+* Facet detection in text posts, PostBuilder and messages (if no facets manually added).
 * GIF attaching
-* Direct messaging
 * Profile editing
 * Trimming support
 * Firehose support
@@ -58,7 +57,6 @@ The [API status page](docs/endpointStatus.md) shows what is currently implemente
 
 * Docs accuracy after refactoring
 * Docs site generation, including XMLDocs, markdown link checking and publishing
-* Real cancellationToken support in samples
 
 ## License
 
