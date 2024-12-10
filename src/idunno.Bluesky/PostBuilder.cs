@@ -39,10 +39,11 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="text">The text for the post.</param>
         /// <param name="images">A collection of <see cref="EmbeddedImage"/>s to attach to the post, if any.</param>
+        /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
         /// <exception cref="ArgumentException">Thrown if the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long.</exception>
         /// <exception cref="ArgumentNullException">Thrown if the <paramref name="text"/> is null or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">If the text for the post is too long or too many images are specified.</exception>
-        public PostBuilder(string text, ICollection<EmbeddedImage>? images = null) : this()
+        public PostBuilder(string text, ICollection<EmbeddedImage>? images = null, IList<Facet>? facets = null) : this()
         {
             ArgumentNullException.ThrowIfNull(text);
 
@@ -74,6 +75,11 @@ namespace idunno.Bluesky
             {
                 _embeddedImages.AddRange(images);
             }
+
+            if (facets is not null)
+            {
+                _postRecord.Facets = new List<Facet>(facets);
+            }
         }
 
         /// <summary>
@@ -81,7 +87,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="text">The text for the post.</param>
         /// <param name="language">The language for the post.</param>
-        public PostBuilder(string text, string language) : this(text, languages: new string[] { language }, images: null)
+        public PostBuilder(string text, string language) : this(text, languages: new string[] { language }, images: null, facets : null)
         {
         }
 
@@ -91,9 +97,10 @@ namespace idunno.Bluesky
         /// <param name="text">The text for the post.</param>
         /// <param name="languages">The languages for the post.</param>
         /// <param name="images">An optional collection of <see cref="EmbeddedImage"/>s to attach to the post.</param>
+        /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
         /// <exception cref="ArgumentNullException">if <paramref name="languages"/> is null</exception>
         /// <exception cref="ArgumentOutOfRangeException">if <paramref name="languages"/> contains no entries.</exception>
-        public PostBuilder(string text, string[] languages, ICollection<EmbeddedImage>? images = null) : this(text, images)
+        public PostBuilder(string text, string[] languages, ICollection<EmbeddedImage>? images = null, IList<Facet>? facets = null) : this(text, images, facets)
         {
             ArgumentNullException.ThrowIfNull(languages);
             ArgumentOutOfRangeException.ThrowIfZero(languages.Length);
@@ -194,18 +201,52 @@ namespace idunno.Bluesky
                     }
                 }
             }
+
             internal set
             {
-                if (value is not null)
+                lock (_syncLock)
                 {
-                    _postRecord.Langs = new List<string>(value);
-                }
-                else
-                {
-                    _postRecord.Langs = null;
+                    if (value is not null)
+                    {
+                        _postRecord.Langs = new List<string>(value);
+                    }
+                    else
+                    {
+                        _postRecord.Langs = null;
+                    }
                 }
             }
         }
+
+        /// <summary>
+        /// Gets a list of facets for the post.
+        /// </summary>
+        public IList<Facet> Facets
+        {
+            get
+            {
+                lock (_syncLock)
+                {
+                    if (_postRecord.Facets is null)
+                    {
+                        return new List<Facet>();
+                    }
+                    else
+                    {
+                        return new List<Facet>(_postRecord.Facets);
+                    }
+                }
+            }
+
+            internal set
+            {
+                lock (_syncLock)
+                {
+                    _postRecord.Facets = new List<Facet>(value);
+                }
+            }
+        }
+            
 
         /// <summary>
         /// Gets a flag indicating whether this instance has any images

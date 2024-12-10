@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Globalization;
-using System.Net.Http.Headers;
 using System.Text;
 
 using Microsoft.Extensions.Logging;

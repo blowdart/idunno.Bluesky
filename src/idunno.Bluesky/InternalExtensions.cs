@@ -59,5 +59,18 @@ namespace idunno.Bluesky
 
             return enumValue.ToString();
         }
+
+        /// <summary>
+        /// Gets the UTF8 index position of <see cref="Index"/> in <paramref name="s"/>.
+        /// </summary>
+        /// <param name="s">The string in which the <paramref name="index"/> is based.</param>
+        /// <param name="index">The character based index in <paramref name="s"/></param>
+        /// <returns></returns>
+        public static int GetUtf8BytePosition(this string s, int index)
+        {
+            string substring = s[..index];
+
+            return Encoding.UTF8.GetByteCount(substring);
+        }
     }
 }

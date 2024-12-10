@@ -34,7 +34,7 @@
       <ItemGroup>
         <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.25" PrivateAssets="All" />
         <PackageReference Include="Nerdbank.GitVersioning" Version="3.6.146" PrivateAssets="All" />
-        <PackageReference Include="SonarAnalyzer.CSharp" Version="9.32.0.97167" PrivateAssets="All" />
+        <PackageReference Include="SonarAnalyzer.CSharp" Version="10.3.0.106239" PrivateAssets="All" />
       </ItemGroup>
     </When>
   </Choose>

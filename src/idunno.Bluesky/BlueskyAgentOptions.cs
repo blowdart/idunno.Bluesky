@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using idunno.AtProto;
+using idunno.Bluesky.RichText;
 
 namespace idunno.Bluesky
 {
@@ -15,5 +16,10 @@ namespace idunno.Bluesky
         /// as documented in the <see href="https://docs.bsky.app/docs/category/http-reference">Bluesky API documentation</see>.
         /// </summary>
         public Uri PublicAppViewUri { get; set; } = DefaultServiceUris.PublicAppViewUri;
+
+        /// <summary>
+        /// Gets or sets the facet extractor to use when extracting facets from post or message texts.
+        /// </summary>
+        public IFacetExtractor? FacetExtractor {get; set; }
     }
 }

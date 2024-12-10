@@ -3,6 +3,7 @@
 
 using idunno.AtProto;
 using idunno.Bluesky.Chat;
+using idunno.Bluesky.RichText;
 
 namespace idunno.Bluesky
 {
@@ -281,6 +282,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="id">The conversation identifier to send the <paramref name="message"/> to.</param>
         /// <param name="message">The message to send.</param>
+        /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="message" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="id"/> is null or white space, or <paramref name="message"/> is null.</exception>
@@ -288,6 +290,7 @@ namespace idunno.Bluesky
         public async Task<AtProtoHttpResult<MessageView>> SendMessage(
             string id,
             string message,
+            bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(id);
@@ -298,9 +301,21 @@ namespace idunno.Bluesky
                 throw new AuthenticatedSessionRequiredException();
             }
 
+            MessageInput messageInput;
+
+            if (!extractFacets)
+            {
+                messageInput = new MessageInput(message);
+            }
+            else
+            {
+                IList<Facet> facets = await _facetExtractor.ExtractFacets(message, cancellationToken).ConfigureAwait(false);
+                messageInput = new MessageInput(message, facets);
+            }
+
             return await SendMessage(
                 id,
-                new MessageInput(message),
+                messageInput,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         /// <summary>

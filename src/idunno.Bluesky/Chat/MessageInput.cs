@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 
 using idunno.Bluesky.Embed;
@@ -23,10 +24,17 @@ namespace idunno.Bluesky.Chat
         {
             ArgumentNullException.ThrowIfNull(text);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.MessageLengthInCharacters);
-
             Text = text;
 
-            Facets = facets;
+            if (facets is not null)
+            {
+                Facets = new ReadOnlyCollection<Facet>(facets.ToList<Facet>().AsReadOnly());
+            }
+            else
+            {
+                Facets = null;
+            }
+
             Embed = embed;
         }
 
@@ -42,7 +50,7 @@ namespace idunno.Bluesky.Chat
         /// </summary>
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public ICollection<Facet>? Facets { get; init; }
+        public IReadOnlyCollection<Facet>? Facets { get; init; }
 
         /// <summary>
         /// Gets the embedded record of the message, if any.
