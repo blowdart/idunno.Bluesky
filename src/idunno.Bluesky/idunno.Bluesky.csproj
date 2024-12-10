@@ -30,7 +30,11 @@
     <None Update="..\icon.png" Link="icon.png" />
     <None Include="..\..\exclusion.dic" Link="exclusion.dic" />
   </ItemGroup>
-
+  
+  <ItemGroup>
+    <PackageReference Include="System.Runtime.Caching" Version="8.0.1" />
+  </ItemGroup>
+  
   <ItemGroup>
     <ProjectReference Include="..\idunno.AtProto\idunno.AtProto.csproj" />
   </ItemGroup>

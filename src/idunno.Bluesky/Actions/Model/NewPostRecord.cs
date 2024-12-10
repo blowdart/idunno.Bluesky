@@ -45,7 +45,7 @@ namespace idunno.Bluesky.Actions.Model
         /// <exception cref="ArgumentException">
         ///    Thrown when <paramref name="text"/> is null or empty and there is no <paramref name="embed"/> record or
         ///    <paramref name="tags"/> contains an empty tag.
-        /// .</exception>
+        /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///    Thrown when <paramref name="text"/> exceeds the maximum length or.
         ///    <paramref name="tags"/> exceeds the maximum number of tags or has a value that exceeds the maximum tag length.

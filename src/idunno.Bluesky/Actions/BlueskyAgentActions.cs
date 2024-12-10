@@ -10,6 +10,7 @@ using idunno.Bluesky.Embed;
 using idunno.AtProto.Repo.Models;
 using idunno.Bluesky.Feed.Gates;
 using System.Security.Cryptography;
+using idunno.Bluesky.RichText;
 
 namespace idunno.Bluesky
 {
@@ -390,6 +391,7 @@ namespace idunno.Bluesky
         /// <param name="text">The text of the post record to create.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+        /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="text"/> is null, empty or whitespace.</exception>
@@ -399,6 +401,7 @@ namespace idunno.Bluesky
             string text,
             ICollection<ThreadGateRule>? threadGateRules = null,
             ICollection<PostGateRule>? postGateRules = null,
+            bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(text);
@@ -420,6 +423,7 @@ namespace idunno.Bluesky
                 images: null,
                 threadGateRules: threadGateRules,
                 postGateRules: postGateRules,
+                extractFacets,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -430,6 +434,7 @@ namespace idunno.Bluesky
         /// <param name="image">The image to attach to the post.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+        /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="text"/> is null, empty or whitespace.</exception>
@@ -440,6 +445,7 @@ namespace idunno.Bluesky
             EmbeddedImage image,
             ICollection<ThreadGateRule>? threadGateRules = null,
             ICollection<PostGateRule>? postGateRules = null,
+            bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(text);
@@ -471,88 +477,8 @@ namespace idunno.Bluesky
                 images: images,
                 threadGateRules: threadGateRules,
                 postGateRules: postGateRules,
+                extractFacets: extractFacets,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Creates a Bluesky post record containing a external Open Graph embedded card.
-        /// </summary>
-        /// <remarks><para>Posts containing an embedded card do not require post text.</para></remarks>
-        /// <param name="externalCard">An Open Graph embedded card.</param>
-        /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
-        /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="externalCard"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
-            EmbeddedExternal externalCard,
-            ICollection<ThreadGateRule>? threadGateRules = null,
-            ICollection<PostGateRule>? postGateRules = null,
-            CancellationToken cancellationToken = default)
-        {
-            ArgumentNullException.ThrowIfNull(externalCard);
-
-            return await Post(
-                text: string.Empty,
-                externalCard: externalCard,
-                threadGateRules: threadGateRules,
-                postGateRules: postGateRules,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-        }
-
-
-        /// <summary>
-        /// Creates a Bluesky post record containing a external Open Graph embedded card.
-        /// </summary>
-        /// <param name="text">The text of the post record to create.</param>
-        /// <param name="externalCard">An Open Graph embedded card.</param>
-        /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
-        /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="externalCard"/> is null, empty or whitespace.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">if <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
-            string text,
-            EmbeddedExternal externalCard,
-            ICollection<ThreadGateRule>? threadGateRules = null,
-            ICollection<PostGateRule>? postGateRules = null,
-            CancellationToken cancellationToken = default)
-        {
-            ArgumentNullException.ThrowIfNull(text);
-            ArgumentNullException.ThrowIfNull(externalCard);
-
-            if ((text.Length > Maximum.PostLengthInCharacters || text.GetLengthInGraphemes() > Maximum.PostLengthInGraphemes))
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(text),
-                    $"text cannot have a be longer than than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
-            }
-
-            if (!IsAuthenticated)
-            {
-                throw new AuthenticatedSessionRequiredException();
-            }
-
-            var postBuilder = new PostBuilder
-            {
-                Text = text
-            };
-            postBuilder.EmbedRecord(externalCard);
-
-            if (threadGateRules is not null)
-            {
-                postBuilder.ThreadGateRules = new List<ThreadGateRule>(threadGateRules);
-            }
-
-            if (postGateRules is not null)
-            {
-                postBuilder.PostGateRules = new List<PostGateRule>(postGateRules);
-            }
-
-            return await Post(postBuilder, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -562,6 +488,7 @@ namespace idunno.Bluesky
         /// <param name="images">Any images to attach to the post.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+        /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="text"/> is null, empty or whitespace.</exception>
@@ -575,6 +502,7 @@ namespace idunno.Bluesky
             ICollection<EmbeddedImage>? images,
             ICollection<ThreadGateRule>? threadGateRules,
             ICollection<PostGateRule>? postGateRules,
+            bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
             EmbeddedImages? embeddedImages = null;
@@ -622,7 +550,101 @@ namespace idunno.Bluesky
                 langs : new List<string>() { Thread.CurrentThread.CurrentUICulture.Name },
                 embed : embeddedImages);
 
+            if (extractFacets)
+            {
+                IList<Facet> extractedFacets = await _facetExtractor.ExtractFacets(text, cancellationToken: cancellationToken).ConfigureAwait(false);
+                postRecord.Facets = extractedFacets;
+            }
+
             return await CreatePost(postRecord, Did, threadGateRules, postGateRules, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Creates a Bluesky post record containing just a external Open Graph embedded card.
+        /// </summary>
+        /// <remarks><para>Posts containing an embedded card do not require post text.</para></remarks>
+        /// <param name="externalCard">An Open Graph embedded card.</param>
+        /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
+        /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">if <paramref name="externalCard"/> is null.</exception>
+        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
+            EmbeddedExternal externalCard,
+            ICollection<ThreadGateRule>? threadGateRules = null,
+            ICollection<PostGateRule>? postGateRules = null,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(externalCard);
+
+            return await Post(
+                text: string.Empty,
+                externalCard: externalCard,
+                threadGateRules: threadGateRules,
+                postGateRules: postGateRules,
+                extractFacets: false,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+
+        /// <summary>
+        /// Creates a Bluesky post record containing a external Open Graph embedded card.
+        /// </summary>
+        /// <param name="text">The text of the post record to create.</param>
+        /// <param name="externalCard">An Open Graph embedded card.</param>
+        /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
+        /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+        /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">if <paramref name="externalCard"/> is null, empty or whitespace.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">if <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
+        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
+            string text,
+            EmbeddedExternal externalCard,
+            ICollection<ThreadGateRule>? threadGateRules = null,
+            ICollection<PostGateRule>? postGateRules = null,
+            bool extractFacets = true,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(text);
+            ArgumentNullException.ThrowIfNull(externalCard);
+
+            if ((text.Length > Maximum.PostLengthInCharacters || text.GetLengthInGraphemes() > Maximum.PostLengthInGraphemes))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(text),
+                    $"text cannot have a be longer than than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
+            }
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticatedSessionRequiredException();
+            }
+
+            IList<Facet>? facets = null;
+
+            if (extractFacets)
+            {
+                facets = await _facetExtractor.ExtractFacets(text, cancellationToken).ConfigureAwait(false);
+            }
+
+            var postBuilder = new PostBuilder(text, facets: facets);
+            postBuilder.EmbedRecord(externalCard);
+
+            if (threadGateRules is not null)
+            {
+                postBuilder.ThreadGateRules = new List<ThreadGateRule>(threadGateRules);
+            }
+
+            if (postGateRules is not null)
+            {
+                postBuilder.PostGateRules = new List<PostGateRule>(postGateRules);
+            }
+
+            return await Post(postBuilder, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>

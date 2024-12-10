@@ -147,15 +147,42 @@ If you liked a post then its `PostView.Viewer.Like` property will contain an AT 
 
 If you reposted the post then `PostView.Viewer.Repost` will contain the AT Uri of your repost record, which you can use to delete the repost record. 
 
-## <a name="postBuilder">Making rich posts with a PostBuilder</a>
+## <a name="richPosts">Making rich posts</a>
 
-[Rich Posts](https://docs.bsky.app/docs/advanced-guides/post-richtext), in Bluesky parlance, are posts which have facets. Facets are post features, three of which are currently supported, links, mentions, and hashtags. If you don't want to create these manually you can use the `PostBuilder` class. Each facet has its own class which you can add to the `PostBuilder`. Each of these classes a parameter specific to the facet type, DIDs for mentions, strings for hashtags and URIs for links. They also a text parameter, the text in a post you want the facet to apply to.
+[Rich Posts](https://docs.bsky.app/docs/advanced-guides/post-richtext), in Bluesky parlance, are posts which have facets.
+Facets are post features, three of which are currently supported, links, mentions, and hashtags.
 
-While you can create facets manually, and attach the to a `PostRecord`and call down into the lower levels of the library to create a post record an easier option is provided, a `PostBuilder`.
+### <a name="autoDetection">Facet auto-detection</a>
+
+The majority of the `Post()` APIs will try to detect links, mentions and hashtags automatically, although you can disable this by setting the extractFacets to `false`.
+
+```c#
+var postResult = 
+    await agent.Post("Hello #beans");
+```
+
+would result in a hashtag of beans being added to the post. Detection works for hashtags, @ mentions and for uris which begin with either https:// or http://.
+
+The only `Post()` method that doesn't auto-detect and extract facets is `Post(PostBuilder, CancellationToken)` as the `PostBuilder` class allows you to
+specifically add facets as you build your post, see [Building facets with a PostBuilder](posting.md#postBuilder).
+
+### <a name="facetProvider">Replacing the facet extractor</a>
+
+You can write your own facet extractor if the default one doesn't work exactly as you want.
+`IFacetExtractor` has a single method, `ExtractFacets(string, CancellationToken)` that you need to implement.
+This is an `async` method, as creating a mention facet requires you to resolve the detected handle to a DID.
+To replace the default extractor set the `FacetExtractor` property on an instance of `BlueskyAgentOptions` that you pass into the constructor of `BlueskyAgent`.
+
+### <a name="postBuilder">Building facets with a PostBuilder</a>
+
+While you can rely on auto-detection, or create facets manually, and attach the to a `PostRecord`and call down into the lower levels of the library to create a post record another option is available, a `PostBuilder`.
+
+You can use the `PostBuilder` class to create facets, each facet has its own class which you can add to the `PostBuilder`.
+Each of these classes a parameter specific to the facet type, DIDs for mentions, strings for hashtags and URIs for links. They also have a text parameter, the text in a post you want the facet to apply to.
 
 `PostBuilder` works much like a `StringBuilder` does, you create an instance of it, and build your post bit by bit, adding/appending to the `PostBuilder` until you're ready to create a post from it, which you do by calling `agent.Post()` with the `PostBuilder`.
 
-### Mentions
+#### Mentions
 
 To mention someone in a post you must know their DID, which you can get by resolving their handle. Then create a `Mention` instance and add it to your `PostBuilder`, then finally call `agent.Post()` with your 
 
@@ -172,7 +199,7 @@ var mentionPostResult = await agent.Post(builder);
 ```
 One thing of note: the text doesn't have to match the "@handle" format, that's just convention.
 
-### Links to external web sites
+#### Links to external web sites
 
 For links to web sites you create a new instance of a `Link`:
 
@@ -192,7 +219,7 @@ var builder = new PostBuilder("Click me to ") + new Link(uriToLinkTo, "visit Blu
 var linkPostResult = await agent.Post(builder);
 ```
 
-### HashTags
+#### HashTags
 
 To insert a hashtag you create a new `Hashtag` instance:
 

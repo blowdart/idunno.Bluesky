@@ -1,5 +1,7 @@
 # idunno.Bluesky
 
+![GitHub License](https://img.shields.io/github/license/blowdart/idunno.Bluesky)
+
 A .NET 8 class library for the [AT Protocol](https://docs.bsky.app/docs/api/at-protocol-xrpc-api) and APIs for the [Bluesky social network](https://bsky.social/).
 
 ## Current Build Status
@@ -33,25 +35,29 @@ The [API status page](docs/endpointStatus.md) shows what is currently implemente
 
 ### Major
 
+* Consolidate PostRecord and NewPostRecord if possible
 * Logging in idunno.Bluesky
 * OAuth
 * Video uploading and attaching
-* Facet detection in text posts, PostBuilder and messages (if no facets manually added).
 * GIF attaching
 * Profile editing
-* Trimming support
+* AOT & trimming support
 * Firehose support
 
 * Release builds need to
   * Extract SBOM from package and expose as separate asset
-  * Upload SBOM via spdx-dependency-submission-action
+  * Upload SBOM via `spdx-dependency-submission-action`
   * Code sign
   * NuGet publishing
 
 ### Minor
 
 * Wider test coverage
-* More deserialization tests with captured responses.
+* More deserialization tests with captured responses
+
+### Awaiting external
+
+* Automatic Open Graph card generation when link facets detected.
 
 ### Documentation
 
