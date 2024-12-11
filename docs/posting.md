@@ -175,7 +175,7 @@ To replace the default extractor set the `FacetExtractor` property on an instanc
 
 ### <a name="postBuilder">Building facets with a PostBuilder</a>
 
-While you can rely on auto-detection, or create facets manually, and attach the to a `PostRecord`and call down into the lower levels of the library to create a post record another option is available, a `PostBuilder`.
+While you can rely on auto-detection, or create facets manually, and attach them to a `PostRecord` and call down into the lower levels of the library to create a post record another option is available, a `PostBuilder`.
 
 You can use the `PostBuilder` class to create facets, each facet has its own class which you can add to the `PostBuilder`.
 Each of these classes a parameter specific to the facet type, DIDs for mentions, strings for hashtags and URIs for links. They also have a text parameter, the text in a post you want the facet to apply to.
@@ -184,7 +184,7 @@ Each of these classes a parameter specific to the facet type, DIDs for mentions,
 
 #### Mentions
 
-To mention someone in a post you must know their DID, which you can get by resolving their handle. Then create a `Mention` instance and add it to your `PostBuilder`, then finally call `agent.Post()` with your 
+To mention someone in a post you must know their DID, which you can get by resolving their handle. Then create a `Mention` instance and add it to your `PostBuilder`, then finally call `agent.Post()` with your PostBuilder.
 
 ```c#
 string userToTagHandle = "userHandle.test";
@@ -228,7 +228,7 @@ PostBuilder hashtagBuilder = new PostBuilder("This will have a hashtag. ") + new
 var hashtagPostResult = await agent.Post(hashtagBuilder);
 ```
 
-Note that the `HashTag` does not being with the # character. If you include a hash character you end up with a double hashed tag,  for example, if you created a new instance with `new Hashtag("#test")` the hashtag Bluesky and other clients will open a page for `##test`.
+Note that the `HashTag` does not begin with the # character. If you include a hash character you end up with a double hashed tag,  for example, if you created a new instance with `new Hashtag("#test")` the hashtag Bluesky and other clients will open a page for `##test`.
 
 Of course, you can chain everything together:
 
@@ -256,6 +256,12 @@ var hashTag = new HashTag("beans");
 postBuilder.Append(hashTag);
 
 AtProtoHttpResult<CreateRecordResponse> facetedCreatePostResponse = await agent.Post(postBuilder, cancellationToken: cancellationToken);
+```
+
+**Note**: If you chain multiple HashTags together with `Append` they will be posted without a separator between them.  You might want to append them like this.
+
+```c#
+postBuilder.Append(" " + new HashTag(hashtag));
 ```
 
 ## <a name="images">Posting with images</a>
@@ -325,7 +331,7 @@ if (imageUploadResult.Succeeded)
 
 ![An embedded link to Wikipedia's page on Baked Beans](./images/embeddedCard.png "An embedded Card")
 
-To embed an external link with a card create an instance of `EmbeddedExternal` then attack it to a `PostBuilder` with the `Embed()` method.
+To embed an external link with a card create an instance of `EmbeddedExternal` then attach it to a `PostBuilder` with the `Embed()` method.
 
 ```c#
 var embeddedExternal = new(pageUri, title, description, thumbnailBlob);
