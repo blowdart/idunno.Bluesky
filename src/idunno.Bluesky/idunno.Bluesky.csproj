@@ -32,7 +32,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="System.Runtime.Caching" Version="8.0.1" />
+    <PackageReference Include="System.Runtime.Caching" Version="9.0.0" />
   </ItemGroup>
   
   <ItemGroup>
