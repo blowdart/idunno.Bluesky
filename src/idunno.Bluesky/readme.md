@@ -11,11 +11,11 @@
 * Viewing threads
 * Creating and deleting posts
 * Gating threads and posts
-* Likes, quotes and reposts
+* Likes, quotes, and reposts
 * Viewing user profiles
 * Following and unfollowing users
 * Muting and blocking users
-* Sending, receiving and deleting messages
+* Sending, receiving, and deleting messages
 
 ## How to Use
 

@@ -2,11 +2,11 @@
 
 [if you want me to wear 37 pieces of flair, like your pretty boy over there, Brian, why don't you just make the minimum 37 pieces of flair?]: #
 
-![GitHub License](https://img.shields.io/github/license/blowdart/idunno.Bluesky)
-![Last Commit](https://img.shields.io/github/last-commit/blowdart/idunno.Bluesky)
-![GitHub Tag](https://img.shields.io/github/v/tag/blowdart/idunno.Bluesky)
-![NuGet Version](https://img.shields.io/nuget/vpre/idunno.Bluesky)
-![NuGet Downloads](https://img.shields.io/nuget/dt/idunno.Bluesky)
+[![GitHub License](https://img.shields.io/github/license/blowdart/idunno.Bluesky)](https://github.com/blowdart/idunno.Bluesky/blob/main/LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/blowdart/idunno.Bluesky)](https://github.com/blowdart/idunno.Bluesky/commits/main/)
+[![GitHub Tag](https://img.shields.io/github/v/tag/blowdart/idunno.Bluesky)](https://github.com/blowdart/idunno.Bluesky/tags)
+[![NuGet Version](https://img.shields.io/nuget/vpre/idunno.Bluesky)](https://www.nuget.org/packages/idunno.Bluesky/)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/idunno.Bluesky)](https://www.nuget.org/packages/idunno.Bluesky/)
 
 A .NET 8 class library for the [AT Protocol](https://docs.bsky.app/docs/api/at-protocol-xrpc-api) and APIs for the [Bluesky social network](https://bsky.social/).
 
