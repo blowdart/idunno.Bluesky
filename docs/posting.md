@@ -327,7 +327,7 @@ if (imageUploadResult.Succeeded)
 
 ## <a name="openGraphCards">Embedding an external link (Open Graph cards)</a>
 
-[OpenGraph](https://ogp.me/) is a standard that allows web pages to become a rich object in a social graph. Open Graph metadata allows you to embed a rich link card in a Bluesky post, which will look something like this:
+[Open Graph](https://ogp.me/) is a standard that allows web pages to become a rich object in a social graph. Open Graph metadata allows you to embed a rich link card in a Bluesky post, which will look something like this:
 
 ![An embedded link to Wikipedia's page on Baked Beans](./images/embeddedCard.png "An embedded Card")
 
@@ -346,21 +346,23 @@ If you don't want to use a `PostBuilder` you can use the appropriate `Post()` me
 ```c#
 var postResult = agent.Post(externalCard: embeddedExternal, cancellationToken: cancellationToken);
 ```
-
-You can use libraries like [OpenGraph.net](https://github.com/ghorsey/OpenGraph-Net/) or [X.Web.MetaExtractor](https://www.nuget.org/packages/X.Web.MetaExtractor) to retrieve Open Graph properties from which you can construct a card. For example, using X.Web.MetaExtractor:
+You can use libraries like [OpenGraph.net](https://github.com/ghorsey/OpenGraph-Net/) or [X.Web.MetaExtractor](https://www.nuget.org/packages/X.Web.MetaExtractor) to retrieve Open Graph properties from which you can construct a card.
+For example, using OpenGraph.Net
 
 ```
-string targetUri = "https://en.wikipedia.org/wiki/Baked_beans";
-Uri page = new (targetUri);
+Uri pageUri = new ("https://en.wikipedia.org/wiki/Baked_beans");
+OpenGraph graph = await OpenGraph.ParseUrlAsync(pageUri, cancellationToken: cancellationToken);
 
-Extractor metadataExtractor = new ();
-var pageMetadata = await metadataExtractor.ExtractAsync(page);
+string? title = graph.Title;
+string? description = graph.Description;
 
-string? title = pageMetadata.Title;
-string? pageUri = pageMetadata.Url ?? targetUri;
-string? description = pageMetadata.Description;
+// Check to see if there's a different URI specified in the graph metadata.
+if (graph.Url is not null)
+{
+    pageUri = graph.Url;
+}
 ```
-The example in the [Embedded Card](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.EmbeddedCard) sample shows how to not only use X.Web.MetaExtractor to extract the metadata, but also how to retrieve a preview image and use it, if the metadata has an image property.
+The example in the [Embedded Card](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.EmbeddedCard) sample shows how to use OpenGraph.Net to extract the metadata, and to retrieve a preview image and use it, if the metadata has an image property.
 
 Posts with an embedded card don't need any post text.
 

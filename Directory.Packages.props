@@ -1,0 +1,26 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="DotNet.ReproducibleBuilds" Version="1.2.25" />
+    <PackageVersion Include="Nerdbank.GitVersioning" Version="3.6.146" />
+    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.3.0.106239" />
+    <PackageVersion Include="Microsoft.Sbom.Targets" Version="3.0.0" />
+    <PackageVersion Include="DotNetAnalyzers.DocumentationAnalyzers" Version="1.0.0-beta.59"/>
+    <PackageVersion Include="System.Text.Json" Version="9.0.0" />
+    <PackageVersion Include="System.Runtime.Caching" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.3.0" />
+    <PackageVersion Include="DnsClient" Version="1.8.0" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.0-beta4.22272.1"/>
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version ="8.0.1" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageVersion Include="Microsoft.CodeCoverage" Version="17.12.0" />
+    <PackageVersion Include="xunit" Version="2.9.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.2" />
+    <PackageVersion Include="JunitXml.TestLogger" Version="4.1.0" />
+    <PackageVersion Include="OpenGraph-Net" Version="4.0.1" />
+  </ItemGroup>
+</Project>

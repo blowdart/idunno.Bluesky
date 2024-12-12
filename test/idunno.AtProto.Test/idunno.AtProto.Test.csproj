@@ -15,8 +15,4 @@
     <ProjectReference Include="..\..\src\idunno.AtProto\idunno.AtProto.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Using Include="Xunit" />
-  </ItemGroup>
-
 </Project>

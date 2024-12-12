@@ -2,10 +2,6 @@
   <Import Project="..\Directory.Build.props" />
 
   <PropertyGroup>
-    <CIBuild Condition="'$(CIBuild)' == ''">false</CIBuild>
-  </PropertyGroup>
-
-  <PropertyGroup>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisMode>Recommended</AnalysisMode>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
