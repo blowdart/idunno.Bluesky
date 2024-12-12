@@ -2,6 +2,11 @@ name: Manual Build, Test, Sign
 on:
   workflow_dispatch:
     inputs:
+      public_release:
+        description: 'Public Release'
+        type: boolean
+        required: true
+        default: true
       perform_sign:
         description: 'Sign'
         type: boolean
@@ -47,14 +52,14 @@ jobs:
       run: dotnet restore
 
     - name: 'Build and test'
-      run: dotnet test --configuration release --no-restore --property:PublicRelease=true
+      run: dotnet test --configuration release --no-restore --property:PublicRelease=${{ inputs.public_release }}
 
     - name: 'Build and pack release'
-      run: dotnet pack --configuration Release --no-restore  --no-build --output nupkgs --property:PublicRelease=true 
+      run: dotnet pack --configuration Release --no-restore  --no-build --output nupkgs
 
     - name: 'Extract SBOMs'
       shell: pwsh
-      run: | 
+      run: > 
         Get-ChildItem -Path nupkgs -Force -Include *.nupkg | ForEach-Object { 
           Expand-Archive $_.FullName "$($_.DirectoryName)/$($_.Basename)" -Force 
           Copy-Item "$($_.DirectoryName)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json" -Destination "nupkgs/$($_.Basename).spdx.json"
@@ -102,7 +107,7 @@ jobs:
 
     - name: Sign
       shell: pwsh
-      run: |
+      run: >
         ./sign/sign code azure-key-vault nupkgs/*.nupkg
           --azure-key-vault-managed-identity true
           --azure-key-vault-url ${{ secrets.AZURE_KEY_VAULT_URL }}
@@ -137,5 +142,5 @@ jobs:
 
     - name: List assets to be published
       shell: pwsh
-      run: |
+      run: >
         Get-ChildItem -Path nupkgs -Recurse -Force
