@@ -1,18 +1,18 @@
 # idunno.Bluesky
 
+[if you want me to wear 37 pieces of flair, like your pretty boy over there, Brian, why don't you just make the minimum 37 pieces of flair?]: #
+
 ![GitHub License](https://img.shields.io/github/license/blowdart/idunno.Bluesky)
+![Last Commit](https://img.shields.io/github/last-commit/blowdart/idunno.Bluesky)
+![GitHub Tag](https://img.shields.io/github/v/tag/blowdart/idunno.Bluesky)
+![NuGet Version](https://img.shields.io/nuget/vpre/idunno.Bluesky)
+![NuGet Downloads](https://img.shields.io/nuget/dt/idunno.Bluesky)
 
 A .NET 8 class library for the [AT Protocol](https://docs.bsky.app/docs/api/at-protocol-xrpc-api) and APIs for the [Bluesky social network](https://bsky.social/).
 
-## Current Build Status
-
-![Build Status](https://github.com/blowdart/idunno.Bluesky/actions/workflows/ci-build.yml/badge.svg?branch=main)
-
-![Test Results](https://camo.githubusercontent.com/093a129b50ddc14f2e036c983168963591aa1d67eed31f2ae6e364f012f7dc97/68747470733a2f2f7376672e746573742d73756d6d6172792e636f6d2f64617368626f6172642e7376673f703d36343526663d3026733d30)
-
 ## Getting Started
 
-Add the `idunno.Bluesky` package to your project and 
+Add the `idunno.Bluesky` package to your project, and then 
 
 ```c#
 BlueskyAgent agent = new ();
@@ -31,6 +31,12 @@ Please see the [documentation](docs/readme.md) for much more useful documentatio
 
 The [API status page](docs/endpointStatus.md) shows what is currently implemented and what is planned.
 
+## Current Build Status
+
+![Build Status](https://github.com/blowdart/idunno.Bluesky/actions/workflows/ci-build.yml/badge.svg?branch=main)
+
+![Test Results](https://camo.githubusercontent.com/093a129b50ddc14f2e036c983168963591aa1d67eed31f2ae6e364f012f7dc97/68747470733a2f2f7376672e746573742d73756d6d6172792e636f6d2f64617368626f6172642e7376673f703d36343526663d3026733d30)
+
 ## To-dos
 
 ### Major
@@ -43,11 +49,6 @@ The [API status page](docs/endpointStatus.md) shows what is currently implemente
 * Profile editing
 * AOT & trimming support
 * Firehose support
-
-* Create automatic release action, which will
-  * Extract SBOM from package and expose as separate asset
-  * Upload SBOM via `spdx-dependency-submission-action`
-  * Publish to nuget
 
 ### Minor
 

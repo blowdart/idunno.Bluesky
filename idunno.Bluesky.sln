@@ -7,6 +7,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 		.gitignore = .gitignore
+		.vsconfig = .vsconfig
 		architectureNotes.md = architectureNotes.md
 		CONTRIBUTING.md = CONTRIBUTING.md
 		Directory.Build.props = Directory.Build.props
@@ -24,7 +25,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C94F8041-688
 	ProjectSection(SolutionItems) = preProject
 		src\.editorconfig = src\.editorconfig
 		src\Directory.Build.props = src\Directory.Build.props
-		src\readme.md = src\readme.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{B1A49FA3-07AB-4D78-BC16-FF7FB5857840}"

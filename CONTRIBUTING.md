@@ -38,5 +38,5 @@ When creating a pull request please create an issue first, unless it's a simple 
 ### Dependencies Upgrades
 
 Dependencies in the libraries should only be altered by maintainers.
-For security reasons, we will not accept PRs that alter our `DirectoryBuild.props` or `nuget.config` files.
+For security reasons, we will not accept PRs that alter our `Directory.Build.props` or `nuget.config` files.
 If you feel dependencies need upgrading please file an issue.

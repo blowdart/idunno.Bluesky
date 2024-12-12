@@ -1,0 +1,13 @@
+{
+  "version": "1.0",
+    "components": [
+        "Microsoft.NetCore.Component.Runtime.8.0",
+        "Microsoft.NetCore.Component.SDK",
+        "Microsoft.VisualStudio.Component.CoreEditor",
+        "Microsoft.VisualStudio.Component.NuGet.BuildTools",
+        "Microsoft.VisualStudio.Component.Roslyn.Compiler",
+        "Microsoft.VisualStudio.Component.Roslyn.LanguageServices",
+        "Microsoft.VisualStudio.Workload.CoreEditor"
+    ],
+  "extensions": []
+}
