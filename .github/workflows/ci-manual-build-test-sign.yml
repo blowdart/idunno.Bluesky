@@ -115,7 +115,7 @@ jobs:
     - name: Sign
       shell: pwsh
       run: >
-        ./sign/sign code azure-key-vault nupkgs/*.nupkg --azure-key-vault-managed-identity true --azure-key-vault-url "${{ secrets.AZURE_KEY_VAULT_URL }}" --azure-key-vault-certificate "${{ secrets.AZURE_KEY_VAULT_CERTIFICATE }}
+        ./sign/sign code azure-key-vault nupkgs/*.nupkg --azure-key-vault-managed-identity true --azure-key-vault-url "${{ secrets.AZURE_KEY_VAULT_URL }}" --azure-key-vault-certificate "${{ secrets.AZURE_KEY_VAULT_CERTIFICATE }}"
 
     - name: Upload signed nupkgs
       uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
