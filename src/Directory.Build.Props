@@ -5,10 +5,6 @@
     <PackageProjectUrl>https://github.com/blowdart/idunno.Bluesky</PackageProjectUrl>
     <!-- The SPDX name for the source license. See https://spdx.org/licenses/. -->
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-
-    <PackageIcon>icon.png</PackageIcon>
-    <PackageReadMeFile>readme.md</PackageReadMeFile>
-
     <NuspecBasePath>$(MSBuildProjectDirectory)</NuspecBasePath>
   </PropertyGroup>
 
@@ -17,10 +13,6 @@
     <AnalysisMode>All</AnalysisMode>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
-
-  <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)icon.png" Pack="true" PackagePath="\"/>
-  </ItemGroup>
 
   <Choose>
     <When Condition="'$(Configuration)' != 'CodeQL'">
@@ -38,12 +30,10 @@
   </Choose>
 
   <!-- Release configuration
-       Enable sbom generation
-       Enable nupkg generation -->
+       Enable sbom generation -->
   <Choose>
     <When Condition="'$(Configuration)' == 'Release'">
       <PropertyGroup>
-        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <GenerateSBOM>true</GenerateSBOM>
       </PropertyGroup>
       <ItemGroup>

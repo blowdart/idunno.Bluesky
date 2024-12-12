@@ -48,23 +48,30 @@ jobs:
         dotnet-version: 9.0.x
         dotnet-quality: 'ga'
 
-    - name: 'Restore external dependencies'
-      run: dotnet restore
-
     - name: 'Build and test'
-      run: dotnet test --configuration release --no-restore --property:PublicRelease=${{ inputs.public_release }}
+      run: dotnet test --configuration Release --property:PublicRelease=${{ inputs.public_release }}
 
-    - name: 'Build and pack release'
-      run: dotnet pack --configuration Release --no-restore  --no-build --output nupkgs
+    - name: 'Pack release'
+      run: dotnet pack --configuration Release --no-restore  --no-build --output nupkgs --property:PublicRelease=${{ inputs.public_release }}
+
+    - name: 'List artifact directory'
+      shell: pwsh
+      run: >
+        Get-ChildItem -Path nupkgs -Recurse -Force
 
     - name: 'Extract SBOMs'
       shell: pwsh
       run: > 
-        Get-ChildItem -Path nupkgs -Force -Include *.nupkg | ForEach-Object { 
+        Get-ChildItem -Path nupkgs -Include *.nupkg -Force | ForEach-Object { 
           Expand-Archive $_.FullName "$($_.DirectoryName)/$($_.Basename)" -Force 
           Copy-Item "$($_.DirectoryName)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json" -Destination "nupkgs/$($_.Basename).spdx.json"
           Copy-Item "$($_.DirectoryName)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json.sha256" -Destination "nupkgs/$($_.Basename).spdx.json.sha256"
           Remove-Item "$($_.DirectoryName)/$($_.Basename)" -Force -Recurse }
+
+    - name: 'List artifact directory'
+      shell: pwsh
+      run: >
+        Get-ChildItem -Path nupkgs -Recurse -Force
 
     - name: Upload unsigned nupkgs
       uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
@@ -108,10 +115,7 @@ jobs:
     - name: Sign
       shell: pwsh
       run: >
-        ./sign/sign code azure-key-vault nupkgs/*.nupkg
-          --azure-key-vault-managed-identity true
-          --azure-key-vault-url ${{ secrets.AZURE_KEY_VAULT_URL }}
-          --azure-key-vault-certificate ${{ secrets.AZURE_KEY_VAULT_CERTIFICATE }}
+        ./sign/sign code azure-key-vault nupkgs/*.nupkg --azure-key-vault-managed-identity true --azure-key-vault-url "${{ secrets.AZURE_KEY_VAULT_URL }}" --azure-key-vault-certificate "${{ secrets.AZURE_KEY_VAULT_CERTIFICATE }}
 
     - name: Upload signed nupkgs
       uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3

@@ -24,7 +24,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C94F8041-688
 	ProjectSection(SolutionItems) = preProject
 		src\.editorconfig = src\.editorconfig
 		src\Directory.Build.Props = src\Directory.Build.Props
-		src\icon.png = src\icon.png
 		src\readme.md = src\readme.md
 	EndProjectSection
 EndProject
@@ -66,8 +65,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{F0D2699C-0578-4BF0-AB26-84FF918480FD}"
 	ProjectSection(SolutionItems) = preProject
 		.github\workflows\ci-build.yml = .github\workflows\ci-build.yml
-		.github\workflows\close-inactive-issues.yml = .github\workflows\close-inactive-issues.yml
 		.github\workflows\ci-manual-build-test-sign.yml = .github\workflows\ci-manual-build-test-sign.yml
+		.github\workflows\close-inactive-issues.yml = .github\workflows\close-inactive-issues.yml
 		.github\workflows\codeql-analysis.yml = .github\workflows\codeql-analysis.yml
 		.github\workflows\dependency-review.yml = .github\workflows\dependency-review.yml
 		.github\workflows\markdown-link-check.yml = .github\workflows\markdown-link-check.yml

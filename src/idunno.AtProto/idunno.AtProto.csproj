@@ -23,10 +23,19 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="readme.md" Pack="true" PackagePath="\"/>
     <None Include="..\..\exclusion.dic" Link="exclusion.dic" />
-    <None Update="..\src\icon.png" Link="icon.png" />
   </ItemGroup>
+
+  <!-- Nuget package properties -->
+  <PropertyGroup>
+    <PackageReadmeFile>readme.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="readme.md" Pack="true" PackagePath="\" />
+    <None Include="icon.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
 
   <ItemGroup>
     <PackageReference Include="System.Text.Json" Version="9.0.0" />
