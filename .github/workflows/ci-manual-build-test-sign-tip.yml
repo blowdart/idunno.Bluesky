@@ -3,12 +3,12 @@ on:
   workflow_dispatch:
     inputs:
       perform_sign:
-        description: 'Perform signing'
+        description: 'Sign'
         type: boolean
         required: true
         default: true
       perform_publish:
-        description: 'Publish to nuget'
+        description: 'nuget publish'
         type: boolean
         required: true
         default: false
@@ -52,11 +52,20 @@ jobs:
     - name: 'Build and pack release'
       run: dotnet pack --configuration Release --no-restore  --no-build --output nupkgs --property:PublicRelease=true 
 
+    - name: 'Extract SBOMs'
+      shell: pwsh
+      run: | 
+        Get-ChildItem -Path nupkgs -Force -Include *.nupkg | ForEach-Object { 
+          Expand-Archive $_.FullName "$($_.DirectoryName)/$($_.Basename)" -Force 
+          Copy-Item "$($_.DirectoryName)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json" -Destination "nupkgs/$($_.Basename).spdx.json"
+          Copy-Item "$($_.DirectoryName)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json.sha256" -Destination "nupkgs/$($_.Basename).spdx.json.sha256"
+          Remove-Item "$($_.DirectoryName)/$($_.Basename)" -Force -Recurse }
+
     - name: Upload unsigned nupkgs
       uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
       with:
-        name: build-nupkgs
-        path: nupkgs/*.nupkg
+        name: build-artifacts
+        path: nupkgs/*
         retention-days: 7
 
   sign:
@@ -69,18 +78,13 @@ jobs:
       contents: read
       id-token: write
     steps:
-    - name: 'Harden Runner'
-      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
-      with:
-        egress-policy: audit
-
     - name: 'Install Sign CLI'
       run: dotnet tool install --tool-path ./sign  --prerelease sign
 
     - name: 'Gather nupkgs from build output'
       uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
-        name: build-nupkgs
+        name: build-artifacts
         path : nupkgs
 
     - name: List assets to be signed
@@ -91,30 +95,24 @@ jobs:
     - name: Authenticate to Azure
       uses: azure/login@a65d910e8af852a8061c627c456678983e180302 # 2.2.0
       with:
+        allow-no-subscriptions : true
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-    - name: Show the current authenticated azure account
-      uses: azure/cli@089eac9d8cc39f5d003e94f8b65efc51076c9cbd # 2.1.0
-      with:
-        azcliversion: latest
-        inlineScript: |
-          az account show
-
     - name: Sign
       shell: pwsh
-      run: >
+      run: |
         ./sign/sign code azure-key-vault nupkgs/*.nupkg
-        --azure-key-vault-managed-identity true
-        --azure-key-vault-url ${{ secrets.AZURE_KEY_VAULT_URL }}
-        --azure-key-vault-certificate ${{ secrets.AZURE_KEY_VAULT_CERTIFICATE }}
+          --azure-key-vault-managed-identity true
+          --azure-key-vault-url ${{ secrets.AZURE_KEY_VAULT_URL }}
+          --azure-key-vault-certificate ${{ secrets.AZURE_KEY_VAULT_CERTIFICATE }}
 
     - name: Upload signed nupkgs
       uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
       with:
-        name: signed-nupkgs
-        path: nupkgs/*.nupkg
+        name: signed-artifacts
+        path: nupkgs/*
         retention-days: 7
 
   publish:
@@ -131,16 +129,14 @@ jobs:
       with:
         egress-policy: audit
 
-    - name: 'Install Sign CLI'
-      run: dotnet tool install --tool-path ./sign  --prerelease sign
-
     - name: 'Gather nupkgs from signing output'
       uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
-        name: signed-nupkgs
+        name: signed-artifacts
         path : nupkgs
+        pattern: *.nupkg
 
     - name: List assets to be published
       shell: pwsh
-      run: >
-        Get-ChildItem -Path nupkgs -Include *.nupkg -Recurse -Force
+      run: |
+        Get-ChildItem -Path nupkgs -Recurse -Force
