@@ -44,11 +44,10 @@ The [API status page](docs/endpointStatus.md) shows what is currently implemente
 * AOT & trimming support
 * Firehose support
 
-* Release builds need to
+* Create automatic release action, which will
   * Extract SBOM from package and expose as separate asset
   * Upload SBOM via `spdx-dependency-submission-action`
-  * Code sign
-  * NuGet publishing
+  * Publish to nuget
 
 ### Minor
 
@@ -90,6 +89,7 @@ first property in the JSON object.
 * [DotNet.ReproducibleBuilds](https://github.com/dotnet/reproducible-builds) - used to easily set .NET reproducible build settings.
 * [ReportGenerator](https://github.com/danielpalme/ReportGenerator) - used to produce code coverage reports.
 * [JunitXml.TestLogger](https://github.com/spekt/junit.testlogger) - used in CI builds to produce test results in a format understood by the [test-summary](https://github.com/test-summary/action) GitHub action.
+* [sign](https://github.com/dotnet/sign) - used to code sign assemblies and nuget packages.
 
 ## Other .NET Bluesky libraries
 

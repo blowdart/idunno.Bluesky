@@ -1,7 +1,6 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -45,10 +44,13 @@ namespace idunno.AtProto
         {
         }
 
-        internal string Value { get; init; }
+        /// <summary>
+        /// Gets the value of this <see cref="RecordKey"/>.
+        /// </summary>
+        public string Value { get; init; }
 
         /// <summary>
-        /// Returns a string representation of this <see cref="RecordKey"/>
+        /// Returns a string representation of this <see cref="RecordKey"/>.
         /// </summary>
         public override string ToString()
         {

@@ -20,14 +20,12 @@
 
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)icon.png" Pack="true" PackagePath="\"/>
-    <None Include="$(MSBuildThisFileDirectory)..\readme.md" Pack="true" PackagePath="\"/>
   </ItemGroup>
 
   <Choose>
     <When Condition="'$(Configuration)' != 'CodeQL'">
       <PropertyGroup>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <DebugSymbols>true</DebugSymbols>
       </PropertyGroup>
 
@@ -39,9 +37,13 @@
     </When>
   </Choose>
 
+  <!-- Release configuration
+       Enable sbom generation
+       Enable nupkg generation -->
   <Choose>
     <When Condition="'$(Configuration)' == 'Release'">
       <PropertyGroup>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <GenerateSBOM>true</GenerateSBOM>
       </PropertyGroup>
       <ItemGroup>
@@ -52,7 +54,11 @@
 
   <!-- Debug configuration
        Include documentation analysers, which can't be included in a release build because they're a a prerelease dependency.-->
-  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
-    <PackageReference Include="DotNetAnalyzers.DocumentationAnalyzers" Version="1.0.0-beta.59" PrivateAssets="All" />
-  </ItemGroup>
+  <Choose>
+    <When Condition="'$(Configuration)' == 'Debug'">
+      <ItemGroup>
+        <PackageReference Include="DotNetAnalyzers.DocumentationAnalyzers" Version="1.0.0-beta.59" PrivateAssets="All" />
+      </ItemGroup>
+    </When>
+  </Choose>
 </Project>
