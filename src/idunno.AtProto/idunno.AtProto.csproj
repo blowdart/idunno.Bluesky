@@ -38,9 +38,9 @@
 
 
   <ItemGroup>
-    <PackageReference Include="System.Text.Json" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
-    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.3.0" />
-    <PackageReference Include="DnsClient" Version="1.8.0" />
+    <PackageReference Include="System.Text.Json"/>
+    <PackageReference Include="Microsoft.Extensions.Logging"/>
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens"/>
+    <PackageReference Include="DnsClient"/>
   </ItemGroup>
 </Project>

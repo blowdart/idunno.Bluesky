@@ -6,8 +6,6 @@ using System.CommandLine.Parsing;
 
 using Microsoft.Extensions.Logging;
 
-using X.Web.MetaExtractor;
-
 using idunno.Bluesky;
 
 using idunno.AtProto;
@@ -15,6 +13,8 @@ using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
 
 using Samples.Common;
+using OpenGraphNet;
+using OpenGraphNet.Metadata;
 
 namespace Samples.EmbeddedCard
 {
@@ -91,31 +91,31 @@ namespace Samples.EmbeddedCard
                 }
                 // END-AUTHENTICATION
 
-                string targetUri = "https://en.wikipedia.org/wiki/Baked_beans";
-                Uri page = new (targetUri);
+                Uri pageUri = new ("https://en.wikipedia.org/wiki/Baked_beans");
 
-                Extractor metadataExtractor = new ();
-                var pageMetadata = await metadataExtractor.ExtractAsync(page);
+                OpenGraph graph = await OpenGraph.ParseUrlAsync(pageUri, cancellationToken: cancellationToken);
 
-                string? title = pageMetadata.Title;
-                string? pageUri = pageMetadata.Url ?? targetUri;
-                string? description = pageMetadata.Description;
-
-                if (!string.IsNullOrEmpty(pageUri) && !string.IsNullOrEmpty(title))
+                // Check to see if there's a different URI specified in the graph metadata.
+                if (graph.Url is not null)
                 {
-                    // We have the minimum needed to embed a card.
+                    pageUri = graph.Url;
+                }
+
+                if (!string.IsNullOrEmpty(graph.Title) && pageUri is not null)
+                {
+                    string? description = graph.Metadata["og:description"].Value();
+
                     Blob? thumbnailBlob = null;
 
                     // Now see if there's a thumbnail
-                    string? thumbnailUri = pageMetadata.MetaTags.Where(o => o.Key == "og:image").Select(o => o.Value).FirstOrDefault();
-                    if (!string.IsNullOrEmpty(thumbnailUri))
+                    if (graph.Image is not null)
                     {
                         // Try to grab the image, then upload it as a blob.
                         try
                         {
                             var downloadHttpClient = httpClient ?? new HttpClient();
 
-                            using (HttpResponseMessage response = await downloadHttpClient.GetAsync(thumbnailUri, cancellationToken: cancellationToken))
+                            using (HttpResponseMessage response = await downloadHttpClient.GetAsync(graph.Image, cancellationToken: cancellationToken))
                             {
                                 response.EnsureSuccessStatusCode();
 
@@ -139,7 +139,7 @@ namespace Samples.EmbeddedCard
                         }
                         catch (HttpRequestException) { } // Ignore any exceptions from trying to get the thumbnail and upload the image.
 
-                        EmbeddedExternal embeddedExternal = new(pageUri, title, description, thumbnailBlob);
+                        EmbeddedExternal embeddedExternal = new(pageUri, graph.Title, description, thumbnailBlob);
 
                         // Embed with a PostBuilder
                         var postBuilder = new PostBuilder("Embedded record test");
