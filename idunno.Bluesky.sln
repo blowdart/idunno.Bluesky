@@ -23,7 +23,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C94F8041-6886-4D0F-82DC-8AF2B41FF649}"
 	ProjectSection(SolutionItems) = preProject
 		src\.editorconfig = src\.editorconfig
-		src\Directory.Build.Props = src\Directory.Build.Props
+		src\Directory.Build.props = src\Directory.Build.props
 		src\readme.md = src\readme.md
 	EndProjectSection
 EndProject
