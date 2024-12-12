@@ -134,7 +134,6 @@ jobs:
       with:
         name: signed-artifacts
         path : nupkgs
-        pattern: *.nupkg
 
     - name: List assets to be published
       shell: pwsh
