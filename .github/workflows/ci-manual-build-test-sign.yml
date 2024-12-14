@@ -45,9 +45,6 @@ jobs:
  
     - name: 'Setup .NET SDK'
       uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
-      with:
-        dotnet-version: 9.0.x
-        dotnet-quality: 'ga'
 
     - name: 'Build and test'
       run: dotnet test --configuration Release --property:PublicRelease=${{ inputs.public_release }}
@@ -91,6 +88,9 @@ jobs:
       contents: read
       id-token: write
     steps:
+    - name: 'Setup .NET SDK'
+      uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
+
     - name: 'Install Sign CLI'
       run: dotnet tool install --tool-path ./sign  --prerelease sign
 
@@ -141,9 +141,6 @@ jobs:
 
     - name: 'Setup .NET SDK'
       uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
-      with:
-        dotnet-version: 9.0.x
-        dotnet-quality: 'ga'
 
     - name: 'Gather nupkgs from signing output'
       uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
