@@ -5,4 +5,4 @@ foreach ($folder in $folders) {
 }
 
 Remove-Item -Path nupkgs -recurse -Force
-
+Remove-Item -Path sign -recurse -Force
