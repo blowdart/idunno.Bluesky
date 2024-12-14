@@ -26,9 +26,9 @@ namespace idunno.AtProto
         static Agent()
         {
             // Configure the shared client with opinionated defaults.
-            s_sharedClient.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrHigher;
+            s_sharedClient.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
             s_sharedClient.DefaultRequestVersion = HttpVersion.Version20;
-            s_sharedClient.DefaultRequestHeaders.UserAgent.ParseAdd(s_defaultAgent);
+            s_sharedClient.DefaultRequestHeaders.UserAgent.ParseAdd("idunno.AtProto/" + typeof(Agent).Assembly.GetName().Version);
 
             s_sharedClient.DefaultRequestHeaders.Accept.Clear();
             s_sharedClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(MediaTypeNames.Application.Json));
@@ -40,13 +40,6 @@ namespace idunno.AtProto
         /// <param name="httpClient">An optional <see cref="HttpClient"/> to use when making HTTP requests.</param>
         protected Agent(HttpClient? httpClient = null)
         {
-            // If an HttpClient is specified which doesn't have a UserAgent then configure it to use the default
-            // user agent indicating the library name and version.
-            if (httpClient is not null && httpClient.DefaultRequestHeaders.UserAgent.Count == 0)
-            {
-                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(s_defaultAgent);
-            }
-
             HttpClient = httpClient ?? s_sharedClient;
         }
 
@@ -114,7 +107,7 @@ namespace idunno.AtProto
 
             HttpClient httpClient = new(handler: httpClientHandler, disposeHandler: true)
             {
-                DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrHigher,
+                DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower,
                 DefaultRequestVersion = HttpVersion.Version20,
             };
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(httpUserAgent ?? s_defaultAgent);
