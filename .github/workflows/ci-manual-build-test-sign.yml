@@ -63,7 +63,7 @@ jobs:
         Get-ChildItem -Path ${{ env.nupkgDirectory }} -Filter *.nupkg -Force | ForEach-Object { 
           Expand-Archive $_.FullName "$($_.DirectoryName)/$($_.Basename)" -Force 
           Copy-Item "$($_.DirectoryName)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json" -Destination "${{ env.nupkgDirectory }}/$($_.Basename).spdx.json"
-          Copy-Item "$($_.DirectoryName)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json.sha256" -Destination "{{ env.nupkgDirectory }}/$($_.Basename).spdx.json.sha256"
+          Copy-Item "$($_.DirectoryName)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json.sha256" -Destination "${{ env.nupkgDirectory }}/$($_.Basename).spdx.json.sha256"
           Remove-Item "$($_.DirectoryName)/$($_.Basename)" -Force -Recurse }
 
     - name: 'List artifact directory'
