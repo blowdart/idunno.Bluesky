@@ -158,6 +158,6 @@ jobs:
     - name: Publish NuGet package
       shell: pwsh
       run: >
-        foreach($file in (Get-ChildItem "${{ env.nupkgDirectory }}" -Recurse -Filter *.nupkg) {
+        foreach($file in (Get-ChildItem "${{ env.nupkgDirectory }}" -Recurse -Filter *.nupkg)) {
           dotnet nuget push $file --api-key "${{ secrets.NUGET_APIKEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
         }
