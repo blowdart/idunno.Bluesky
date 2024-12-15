@@ -6,7 +6,7 @@ using System.Runtime.Serialization;
 namespace idunno.AtProto
 {
     /// <summary>
-    /// The exception that is thrown when a problem occurs parsing a response from an atproto server.
+    /// The exception thrown when a problem occurs parsing a response from an atproto server.
     /// </summary>
     [Serializable]
     public class ResponseParseException : Exception

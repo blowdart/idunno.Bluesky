@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 namespace idunno.AtProto.Repo
 {
     /// <summary>
-    /// A base record for the value property on an <see cref="AtProtoRecord"/>
+    /// A base record for the value property on an <see cref="AtProtoRecord{T}"/>.
     /// </summary>
     public record AtProtoRecordValue
     {

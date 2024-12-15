@@ -174,6 +174,11 @@ namespace idunno.Bluesky
         /// The NSID for a user's post gates collection.
         /// </summary>
         public static Nsid PostGate { get; } = new Nsid("app.bsky.feed.postgate");
+
+        /// <summary>
+        /// The NSID for an actor's profile.
+        /// </summary>
+        public static Nsid Profile { get; } = new Nsid("app.bsky.actor.profile");
     }
 
     /// <summary>

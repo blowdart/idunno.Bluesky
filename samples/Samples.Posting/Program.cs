@@ -4,15 +4,17 @@
 using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Diagnostics;
-using idunno.AtProto.Repo;
-using idunno.AtProto;
-using idunno.Bluesky;
-using Microsoft.Extensions.Logging;
-using Samples.Common;
-using idunno.Bluesky.RichText;
 using System.Reflection;
+
+using Microsoft.Extensions.Logging;
+
+using Samples.Common;
+
+using idunno.AtProto;
+using idunno.AtProto.Repo;
+using idunno.Bluesky;
 using idunno.Bluesky.Embed;
-using idunno.AtProto.Repo.Models;
+using idunno.Bluesky.RichText;
 
 namespace Samples.Posting
 {
@@ -99,6 +101,30 @@ namespace Samples.Posting
                     Debugger.Break();
 
                    // Delete the post we just made
+                    AtProtoHttpResult<Commit> delete = await agent.DeletePost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
+                    if (!delete.Succeeded)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"{delete.StatusCode} occurred when deleting the post.");
+                        return;
+                    }
+                }
+
+                {
+                    // Simple post creation with a detected hashtag.
+                    AtProtoHttpResult<CreateRecordResponse> createPostResult = await agent.Post("Hello world #helloWorld", cancellationToken: cancellationToken);
+                    if (!createPostResult.Succeeded)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"{createPostResult.StatusCode} occurred when creating the post.");
+                        return;
+                    }
+
+                    Console.WriteLine("Post created");
+                    Console.WriteLine($"  {createPostResult.Result.StrongReference}");
+                    Debugger.Break();
+
+                    // Delete the post we just made
                     AtProtoHttpResult<Commit> delete = await agent.DeletePost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
                     if (!delete.Succeeded)
                     {
@@ -410,55 +436,3 @@ namespace Samples.Posting
         }
     }
 }
-
-
-//        {
-//            byte[] imageAsBytes;
-
-//            using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Samples.Posting.BlueskyLogo.jpg")!)
-//            using (MemoryStream memoryStream = new())
-//            {
-//                resourceStream.CopyTo(memoryStream);
-//                imageAsBytes = memoryStream.ToArray();
-//            }
-
-//            AtProtoHttpResult<Blob?> imageBlobLink = await agent.UploadBlob(imageAsBytes, "image/jpg");
-
-//            PostBuilder imagePostBuilder = new("Hello with images");
-//            imagePostBuilder += new EmbeddedImage(imageBlobLink.Result!, "The Bluesky Logo", new AspectRatio(1000, 1000));
-//            AtProtoHttpResult<StrongReference> imagePostResult = await agent.Post(imagePostBuilder);
-
-//            using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Samples.Posting.BlueskyLogoRotated180.jpg")!)
-//            using (MemoryStream memoryStream = new())
-//            {
-//                resourceStream.CopyTo(memoryStream);
-//                imageAsBytes = memoryStream.ToArray();
-//            }
-//            AtProtoHttpResult<Blob?> replyImageBlobLink = await agent.UploadBlob(imageAsBytes, "image/jpg");
-
-//            PostBuilder replyWithImage = new("And a reply with an image.");
-//            replyWithImage += new EmbeddedImage(replyImageBlobLink.Result!, "The Bluesky Logo", new AspectRatio(1000, 1000));
-
-//            AtProtoHttpResult<StrongReference> replyResult = await agent.ReplyTo(imagePostResult.Result!, replyWithImage);
-
-//            using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Samples.Posting.BlueskyLogoRotated90.jpg")!)
-//            using (MemoryStream memoryStream = new())
-//            {
-//                resourceStream.CopyTo(memoryStream);
-//                imageAsBytes = memoryStream.ToArray();
-//            }
-//            AtProtoHttpResult<Blob?> quoteImageBlobLink = await agent.UploadBlob(imageAsBytes, "image/jpg");
-
-//            PostBuilder quotePostWithImage = new("A quote post with an image.");
-//            quotePostWithImage +=
-//                new EmbeddedImage(quoteImageBlobLink.Result!, "image alt text", new AspectRatio(1000, 1000));
-
-//            AtProtoHttpResult<StrongReference> quoteResult = await agent.Quote(replyResult.Result!, quotePostWithImage);
-
-//            _ = await agent.DeletePost(quoteResult.Result!);
-//            _ = await agent.DeletePost(replyResult.Result!);
-//            _ = await agent.DeletePost(imagePostResult.Result!);
-//        }
-//    }
-
-//}

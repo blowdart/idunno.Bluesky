@@ -8,6 +8,8 @@ using Microsoft.Extensions.Logging;
 using idunno.AtProto;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Actor.Model;
+using System.Security.Cryptography;
+using idunno.AtProto.Repo;
 
 namespace idunno.Bluesky
 {

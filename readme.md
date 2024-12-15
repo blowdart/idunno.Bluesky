@@ -37,7 +37,15 @@ The [API status page](docs/endpointStatus.md) shows what is currently implemente
 
 ![Test Results](https://camo.githubusercontent.com/093a129b50ddc14f2e036c983168963591aa1d67eed31f2ae6e364f012f7dc97/68747470733a2f2f7376672e746573742d73756d6d6172792e636f6d2f64617368626f6172642e7376673f703d36343526663d3026733d30)
 
-## To-dos
+## Release History
+
+The [releases page](https://github.com/blowdart/idunno.Bluesky/releases) provides details of each release and what was added, changed or removed.
+
+## License
+
+`idunno.Bluesky` and `idunno.AtProto` are available under the MIT license, see the [LICENSE](LICENSE) file for more information.
+
+## Planned work
 
 ### Major
 
@@ -46,7 +54,6 @@ The [API status page](docs/endpointStatus.md) shows what is currently implemente
 * OAuth
 * Video uploading and attaching
 * GIF attaching
-* Profile editing
 * AOT & trimming support
 * Firehose support
 
@@ -63,10 +70,6 @@ The [API status page](docs/endpointStatus.md) shows what is currently implemente
 
 * Docs accuracy after refactoring
 * Docs site generation, including XMLDocs, markdown link checking and publishing
-
-## License
-
-`idunno.Bluesky` and `idunno.AtProto` are available under the MIT license, see the [LICENSE](LICENSE) file for more information.
 
 ## Dependencies
 

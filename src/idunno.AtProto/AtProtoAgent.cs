@@ -1207,7 +1207,7 @@ namespace idunno.AtProto
         /// <param name="record"><para>The record to be updated or created.</para></param>
         /// <param name="collection"><para>The collection the record should be updated or created in.</para></param>
         /// <param name="creator"><para>The <see cref="Did"/> of the actor whose collection the record should be created in. Typically this is the Did of the current user.</para></param>
-        /// <param name="rkey"><para>The <see cref="RecordKey"/> of the record to update, otherwise the record key that will be used for the new record.</para></param>
+        /// <param name="rKey"><para>The <see cref="RecordKey"/> of the record to update, otherwise the record key that will be used for the new record.</para></param>
         /// <param name="validate">
         ///   <para>Gets a flag indicating what validation will be performed, if any.</para>
         ///   <para>A value of <keyword>true</keyword> requires lexicon schema validation of record data.</para>
@@ -1216,25 +1216,27 @@ namespace idunno.AtProto
         ///   <para>Defaults to <keyword>true</keyword>.</para>
         /// </param>
         /// <param name="swapCommit"><para>Compare and swap with the previous commit by CID.</para></param>
+        /// <param name="swapRecord"><para>The <see cref="Cid"/> of the record, if any, to compare and swap with.</para></param>
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns><para>The task object representing the asynchronous operation.</para></returns>
         /// <exception cref="ArgumentNullException">
-        ///     <para>Thrown when <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/> or <paramref name="rkey"/> is null.</para>
+        ///     <para>Thrown when <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/> or <paramref name="rKey"/> is null.</para>
         /// </exception>
         /// <exception cref="AuthenticatedSessionRequiredException"><para>Thrown when the current session is not authenticated.</para></exception>
         public async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord(
             object record,
             Nsid collection,
             Did creator,
-            RecordKey rkey,
+            RecordKey rKey,
             bool? validate = true,
             Cid? swapCommit = null,
+            Cid? swapRecord = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(record);
             ArgumentNullException.ThrowIfNull(collection);
             ArgumentNullException.ThrowIfNull(creator);
-            ArgumentNullException.ThrowIfNull(rkey);
+            ArgumentNullException.ThrowIfNull(rKey);
 
             if (!IsAuthenticated)
             {
@@ -1246,9 +1248,10 @@ namespace idunno.AtProto
                 record: record,
                 collection: collection,
                 creator: creator,
-                rKey: rkey,
+                rKey: rKey,
                 validate: validate,
                 swapCommit: swapCommit,
+                swapRecord: swapRecord,
                 Service,
                 AccessToken,
                 httpClient: HttpClient,
@@ -1265,7 +1268,7 @@ namespace idunno.AtProto
             }
             else
             {
-                Logger.PutRecordFailed(_logger, result.StatusCode, collection, rkey, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message, Service);
+                Logger.PutRecordFailed(_logger, result.StatusCode, collection, rKey, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message, Service);
             }
 
             return result;

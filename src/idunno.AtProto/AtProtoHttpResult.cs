@@ -67,5 +67,29 @@ namespace idunno.AtProto
         /// The api rate limit, if the api returned one, otherwise null.
         /// </summary>
         public RateLimit? RateLimit { get; init; }
+
+        /// <summary>
+        /// Throw an <see cref="AtProtoHttpRequestException"/> if <see cref="Succeeded"/> is false.
+        /// </summary>
+        /// <returns>The AtProtoHttpResult if the call succeeded.</returns>
+        /// <exception cref="AtProtoHttpRequestException">The AtProtoHttpResult did not succeed.</exception>
+        public AtProtoHttpResult<TResult> EnsureSucceedStatus()
+        {
+            if (StatusCode != HttpStatusCode.OK)
+            {
+                throw new AtProtoHttpRequestException(
+                    message: "Status code != OK",
+                    innerException: null,
+                    statusCode: StatusCode);
+            }
+            else if (Result is null)
+            {
+                throw new AtProtoHttpRequestException(
+                    message: "Result is null",
+                    innerException: null);
+            }
+
+            return this;
+        }
     }
 }

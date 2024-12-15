@@ -246,7 +246,8 @@ namespace idunno.AtProto
         ///   <para>A value of <keyword>null</keyword> to validate record data only for known lexicons.</para>
         ///   <para>Defaults to <keyword>true</keyword>.</para>
         /// </param>
-        /// <param name="swapCommit"><para>The <see cref="Cid"/>, if any, to compare and swap with.</para></param>
+        /// <param name="swapCommit"><para>The <see cref="Cid"/> of the commit, if any, to compare and swap with.</para></param>
+        /// <param name="swapRecord"><para>The <see cref="Cid"/> of the record, if any, to compare and swap with.</para></param>
         /// <param name="service"><para>The service to create the record on.</para></param>
         /// <param name="accessToken"><para>An access token for the specified service.</para></param>
         /// <param name="httpClient"><para>An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</para></param>
@@ -265,6 +266,7 @@ namespace idunno.AtProto
             RecordKey rKey,
             bool? validate,
             Cid? swapCommit,
+            Cid? swapRecord,
             Uri service,
             string accessToken,
             HttpClient httpClient,
@@ -280,7 +282,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(accessToken);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            PutRecordRequest request = new(record, collection, creator, rKey, validate, swapCommit);
+            PutRecordRequest request = new(record, collection, creator, rKey, validate, swapCommit, swapRecord);
             AtProtoHttpClient<PutRecordResponse> client = new(loggerFactory);
 
             return await client.Post(

@@ -102,6 +102,18 @@ You can find these APIs and more in the [HTTP reference](https://docs.bsky.app/d
 
 ---
 
-## Chapters
-
-[Table of Contents](readme.md) | [Common Terms](commonTerms.md) | [Timelines and Feeds](timeline.md) | [Checking notifications](notifications.md#checkingNotifications) | [Cursors and pagination](cursorsAndPagination.md) | [Posting](posting.md#posting) | [Thread Gates and Post Gates](threadGatesAndPostGates.md) | [Labels](labels.md) | [Conversations and Messages](conversationsAndMessages.md) | [Saving and restoring sessions](savingAndRestoringAuthentication.md) | [Logging](logging.md)
+>**Chapters**
+>  
+>*[Table of Contents](readme.md)*
+>  
+>[Common Terms](commonTerms.md)  
+[Timelines and Feeds](timeline.md)  
+[Checking notifications](notifications.md#checkingNotifications)  
+[Cursors and pagination](cursorsAndPagination.md)  
+[Posting](posting.md#posting)  
+[Thread Gates and Post Gates](threadGatesAndPostGates.md)  
+[Labels](labels.md)  
+[Conversations and Messages](conversationsAndMessages.md)  
+[Changing a user's profile](profileEditing.md)  
+[Saving and restoring sessions](savingAndRestoringAuthentication.md)  
+[Logging](logging.md)

@@ -31,5 +31,65 @@ namespace idunno.Bluesky
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
+
+        /// <summary>
+        /// Gets a <see cref="ProfileRecord"/> for the current user.
+        /// </summary>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<ProfileRecord>> GetProfileRecord(
+            CancellationToken cancellationToken = default)
+        {
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticatedSessionRequiredException();
+            }
+
+            AtUri profileUri = new($"at://{Did}/{CollectionNsid.Profile}/self");
+
+            return await GetRecord<ProfileRecord>(profileUri, service: Service, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Updates the current user's <see cref="ProfileRecord"/>.
+        /// </summary>
+        /// <param name="profileRecord">The <see cref="ProfileRecord"/> to update.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<PutRecordResponse>> UpdateProfileRecord(
+            ProfileRecord profileRecord,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(profileRecord);
+            ArgumentNullException.ThrowIfNull(profileRecord.Value);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticatedSessionRequiredException();
+            }
+
+            if (profileRecord.Uri.Authority is not Did _)
+            {
+                throw new ArgumentException("Uri authority is not a DID", nameof(profileRecord));
+            }
+
+            if (profileRecord.Uri.Authority is Did recordDid && recordDid != Did)
+            {
+                throw new ArgumentException("Uri authority does not match the current user", nameof(profileRecord));
+            }
+
+            return await PutRecord(
+                profileRecord.Value,
+                collection: CollectionNsid.Profile,
+                creator: Did,
+                rKey: "self",
+                validate: null,
+                swapCommit: null,
+                swapRecord: profileRecord.Cid,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
     }
 }

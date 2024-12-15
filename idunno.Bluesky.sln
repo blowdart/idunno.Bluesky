@@ -55,6 +55,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{DDB6FAB2-1
 		docs\logging.md = docs\logging.md
 		docs\notifications.md = docs\notifications.md
 		docs\posting.md = docs\posting.md
+		docs\profileEditing.md = docs\profileEditing.md
 		docs\readme.md = docs\readme.md
 		docs\savingAndRestoringAuthentication.md = docs\savingAndRestoringAuthentication.md
 		docs\threadGatesAndPostGates.md = docs\threadGatesAndPostGates.md

@@ -18,14 +18,16 @@ namespace idunno.AtProto.Repo.Models
         /// <param name="repo">The <see cref="Did"/> of the repo the record will be created in. This would be the DID of the current authenticated user.</param>
         /// <param name="validate">Gets a flag indicating what validation will be performed, if any.</param>
         /// <param name="rKey">The record key, if any, of the record to be created.</param>
-        /// <param name="swapCommit">The <see cref="Cid"/>, if any, to compare and swap with.</param>
+        /// <param name="swapCommit">The <see cref="Cid"/> of the commit, if any, to compare and swap with.</param>
+        /// <param name="swapRecord">The <see cref="Cid"/> of the record, if any, to compare and swap with.</param>
         public PutRecordRequest(
             object record,
             Nsid collection,
             Did repo,
             RecordKey rKey,
             bool? validate = true,
-            Cid? swapCommit = null)
+            Cid? swapCommit = null,
+            Cid? swapRecord = null)
         {
             ArgumentNullException.ThrowIfNull(record);
             ArgumentNullException.ThrowIfNull(collection);
@@ -40,6 +42,7 @@ namespace idunno.AtProto.Repo.Models
             Validate = validate;
             RecordKey = rKey;
             SwapCommit = swapCommit;
+            SwapRecord = swapRecord;
         }
 
         /// <summary>
@@ -70,7 +73,13 @@ namespace idunno.AtProto.Repo.Models
         public bool? Validate { get; init; } = true;
 
         /// <summary>
-        /// Gets the <see cref="Cid"/>, if any, to compare and swap with.
+        /// Gets the <see cref="Cid"/> of the record, if any, to compare and swap with.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public Cid? SwapRecord { get; init; }
+
+        /// <summary>
+        /// Gets the <see cref="Cid"/> of the commit, if any, to compare and swap with.
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public Cid? SwapCommit { get; init; }

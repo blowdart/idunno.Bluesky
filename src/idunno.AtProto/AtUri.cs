@@ -504,6 +504,6 @@ namespace idunno.AtProto
         }
 
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private string DebuggerDisplay => '{' + ToString() + "}";
+        private string DebuggerDisplay => ToString();
     }
 }

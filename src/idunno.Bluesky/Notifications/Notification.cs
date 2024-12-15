@@ -14,7 +14,7 @@ namespace idunno.Bluesky.Notifications
     /// <summary>
     /// A record containing information on a Bluesky notification.
     /// </summary>
-    public sealed record Notification : AtProtoRecord
+    public sealed record Notification : AtProtoReferencedObject
     {
         [JsonConstructor]
         internal Notification(

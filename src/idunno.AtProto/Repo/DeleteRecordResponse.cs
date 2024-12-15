@@ -3,7 +3,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.AtProto.Repo.Models
+namespace idunno.AtProto.Repo
 {
     /// <summary>
     /// Encapsulates data returned by the DeleteRecord API call.
