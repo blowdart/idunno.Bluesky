@@ -18,7 +18,7 @@ namespace idunno.Bluesky.Test
 
             DefaultFacetExtractor extractor = new(MockResolver);
 
-            IList<Facet> results = await extractor.ExtractFacets(text);
+            IList<Facet> results = await extractor.ExtractFacets(text, TestContext.Current.CancellationToken);
 
             Assert.NotNull(results);
             Assert.NotEmpty(results);
@@ -33,7 +33,7 @@ namespace idunno.Bluesky.Test
 
             DefaultFacetExtractor extractor = new(MockResolver);
 
-            IList<Facet> results = await extractor.ExtractFacets(text);
+            IList<Facet> results = await extractor.ExtractFacets(text, TestContext.Current.CancellationToken);
 
             Assert.NotNull(results);
             Assert.NotEmpty(results);
@@ -47,7 +47,7 @@ namespace idunno.Bluesky.Test
 
             DefaultFacetExtractor extractor = new(MockResolver);
 
-            IList<Facet> results = await extractor.ExtractFacets(text);
+            IList<Facet> results = await extractor.ExtractFacets(text, TestContext.Current.CancellationToken);
 
             Assert.NotNull(results);
             Assert.NotEmpty(results);
