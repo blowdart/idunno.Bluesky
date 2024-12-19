@@ -120,6 +120,11 @@ namespace idunno.Bluesky
         /// The <see cref="Did"/> for at://moderation.bsky.app.
         /// </summary>
         public static Did ModerationLabeler => new(@"did:plc:ar7c4by46qjdydhdevvrndac");
+
+        /// <summary>
+        /// The <see cref="Did"/> for the video processing system.
+        /// </summary>
+        public static Did Video => new("did:web:video.bsky.app");
     }
 
     /// <summary>

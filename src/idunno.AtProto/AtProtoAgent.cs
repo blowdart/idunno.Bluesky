@@ -1490,14 +1490,22 @@ namespace idunno.AtProto
                 throw new ArgumentException("blob length cannot be 0.", nameof(blob));
             }
 
-            return await AtProtoServer.UploadBlob(
-                blob,
-                mimeType,
-                service,
-                AccessToken,
-                httpClient:  HttpClient,
-                loggerFactory: LoggerFactory,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+            try
+            {
+                return await AtProtoServer.UploadBlob(
+                    blob,
+                    mimeType,
+                    service,
+                    AccessToken,
+                    httpClient: HttpClient,
+                    loggerFactory: LoggerFactory,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+            catch (HttpRequestException ex)
+            {
+                Logger.UploadBlobThrewHttpRequestException(_logger, service, ex);
+                throw;
+            }
         }
 
         /// <summary>
@@ -1540,6 +1548,48 @@ namespace idunno.AtProto
                 limit,
                 cursor,
                 service,
+                AccessToken,
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Get a signed token on behalf of the requesting DID for the requested <paramref name="audience"/>.
+        /// </summary>
+        /// <param name="audience">The DID of the service that the token will be used to authenticate with.</param>
+        /// <param name="expiry">The time in Unix Epoch seconds that the JWT expires. Defaults to 60 seconds in the future. The service may enforce certain time bounds on tokens depending on the requested scope.</param>
+        /// <param name="lxm">Lexicon (XRPC) method to bind the requested token to</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">
+        ///   Thrown when <paramref name="audience"/>, <paramref name="expiry"/>, or <paramref name="lxm"/> is null.
+        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="expiry"/> is zero or negative.</exception>
+        public async Task<AtProtoHttpResult<string>> GetServiceAuth(
+            Did audience,
+            TimeSpan expiry,
+            Nsid lxm,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(audience);
+            ArgumentNullException.ThrowIfNull(expiry);
+            ArgumentNullException.ThrowIfNull(lxm);
+
+            ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(expiry.TotalSeconds, 0);
+
+            if (!IsAuthenticated)
+            {
+                Logger.GetServiceAuthFailedAsSessionIsAnonymous(_logger, Service);
+
+                throw new AuthenticatedSessionRequiredException();
+            }
+
+            return await AtProtoServer.GetServiceAuth(
+                audience,
+                expiry,
+                lxm,
+                Service,
                 AccessToken,
                 httpClient: HttpClient,
                 loggerFactory: LoggerFactory,

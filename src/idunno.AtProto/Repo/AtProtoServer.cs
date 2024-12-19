@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Text.Json;
 
@@ -493,24 +494,32 @@ namespace idunno.AtProto
 
             AtProtoHttpClient<CreateBlobResponse> client = new(loggerFactory);
 
-            AtProtoHttpResult<CreateBlobResponse> response =
-                await client.PostBlob(service, UploadBlobEndpoint, blob, requestHeaders, accessToken, httpClient, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
+            try
+            {
+                AtProtoHttpResult<CreateBlobResponse> response =
+                    await client.PostBlob(service, UploadBlobEndpoint, blob, requestHeaders, accessToken, httpClient, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
 
-            if (response.Succeeded)
-            {
-                return new AtProtoHttpResult<Blob>(
-                    response.Result.Blob,
-                    response.StatusCode,
-                    response.AtErrorDetail,
-                    response.RateLimit);
+                if (response.Succeeded)
+                {
+                    return new AtProtoHttpResult<Blob>(
+                        response.Result.Blob,
+                        response.StatusCode,
+                        response.AtErrorDetail,
+                        response.RateLimit);
+                }
+                else
+                {
+                    return new AtProtoHttpResult<Blob>(
+                        null,
+                        response.StatusCode,
+                        response.AtErrorDetail,
+                        response.RateLimit);
+                }
             }
-            else
+            catch (HttpRequestException ex)
             {
-                return new AtProtoHttpResult<Blob>(
-                    null,
-                    response.StatusCode,
-                    response.AtErrorDetail,
-                    response.RateLimit);
+                Debug.WriteLine(ex);
+                throw;
             }
         }
 

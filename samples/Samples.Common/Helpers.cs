@@ -8,6 +8,7 @@ using System.CommandLine.Parsing;
 
 using idunno.AtProto;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 
 namespace Samples.Common
 {
@@ -99,7 +100,12 @@ namespace Samples.Common
 
             return LoggerFactory.Create(configure =>
             {
-                configure.AddConsole();
+                configure.AddSimpleConsole(options =>
+                {
+                    options.IncludeScopes = true;
+                    options.TimestampFormat = "G";
+                    options.UseUtcTimestamp = false;
+                });
                 configure.SetMinimumLevel((LogLevel)level);
             });
         }

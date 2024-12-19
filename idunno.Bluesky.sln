@@ -36,6 +36,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{B1A4
 	ProjectSection(SolutionItems) = preProject
 		samples\Directory.Build.Props = samples\Directory.Build.Props
 		samples\readme.md = samples\readme.md
+		samples\Samples.Video\Samples.Video.csproj = samples\Samples.Video\Samples.Video.csproj
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{ACED7B7D-7BBE-4086-937F-7ECEE6A3F6B4}"

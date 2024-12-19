@@ -28,6 +28,9 @@ namespace idunno.AtProto
         // https://docs.bsky.app/docs/api/com-atproto-server-get-session
         private const string GetSessionEndpoint = "/xrpc/com.atproto.server.getSession";
 
+        // https://docs.bsky.app/docs/api/com-atproto-server-get-service-auth
+        private const string GetServiceAuthEndpoint = "/xrpc/com.atproto.server.getServiceAuth";
+
         /// <summary>
         /// Describes the server's account creation requirements and capabilities.
         /// </summary>
@@ -180,6 +183,63 @@ namespace idunno.AtProto
             AtProtoHttpClient<GetSessionResponse> request = new(loggerFactory);
 
             return await request.Get(service, GetSessionEndpoint, accessToken, httpClient: httpClient, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Get a signed token on behalf of the requesting DID for the requested <paramref name="audience"/>.
+        /// </summary>
+        /// <param name="audience">The DID of the service that the token will be used to authenticate with.</param>
+        /// <param name="expiry">The time in Unix Epoch seconds that the JWT expires. Defaults to 60 seconds in the future. The service may enforce certain time bounds on tokens depending on the requested scope.</param>
+        /// <param name="lxm">Lexicon (XRPC) method to bind the requested token to</param>
+        /// <param name="service">The service to get a signed token from.</param>
+        /// <param name="accessToken">An access token for the specified service.</param>
+        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">
+        ///   Thrown when <paramref name="audience"/>, <paramref name="expiry"/>, <paramref name="lxm"/>,
+        ///   <paramref name="accessToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="expiry"/> is zero or negative.</exception>
+        public static async Task<AtProtoHttpResult<string>> GetServiceAuth(
+            Did audience,
+            TimeSpan expiry,
+            Nsid lxm,
+            Uri service,
+            string accessToken,
+            HttpClient httpClient,
+            ILoggerFactory? loggerFactory = default,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(audience);
+            ArgumentNullException.ThrowIfNull(expiry);
+            ArgumentNullException.ThrowIfNull(lxm);
+
+            ArgumentNullException.ThrowIfNullOrEmpty(accessToken);
+            ArgumentNullException.ThrowIfNullOrEmpty(audience);
+            ArgumentNullException.ThrowIfNullOrEmpty(accessToken);
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(httpClient);
+
+            ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(expiry.TotalSeconds, 0);
+
+            DateTimeOffset expiresOn = DateTimeOffset.UtcNow + expiry;
+
+            string endpoint = $"{GetServiceAuthEndpoint}?aud={audience}&exp={expiresOn.ToUnixTimeSeconds()}&lxm={lxm}";
+
+            AtProtoHttpClient<ServiceToken> client = new(loggerFactory);
+
+            AtProtoHttpResult<ServiceToken> result = await client.Get(service, endpoint, accessToken, httpClient: httpClient, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (result.Succeeded)
+            {
+                return new AtProtoHttpResult<string>(result.Result.Token, result.StatusCode, result.AtErrorDetail, result.RateLimit);
+            }
+            else
+            {
+                return new AtProtoHttpResult<string>(null, result.StatusCode, result.AtErrorDetail, result.RateLimit);
+            }
         }
     }
 }

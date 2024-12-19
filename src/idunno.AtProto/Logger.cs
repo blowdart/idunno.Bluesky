@@ -148,6 +148,9 @@ namespace idunno.AtProto
         [LoggerMessage(131, LogLevel.Error, "UploadBlob to {service} failed as blob is length is zero.")]
         internal static partial void UploadBlobFailedAsBlobLengthIsZero(ILogger logger, Uri service);
 
+        [LoggerMessage(132, LogLevel.Error, "UploadBlob to {service} threw.")]
+        internal static partial void UploadBlobThrewHttpRequestException(ILogger logger, Uri service, Exception ex);
+
         [LoggerMessage(140, LogLevel.Information, "SetTokens called for {did} on {service}")]
         internal static partial void UpdateTokensCalled(ILogger logger, Did did, Uri service);
 
@@ -174,6 +177,9 @@ namespace idunno.AtProto
 
         [LoggerMessage(163, LogLevel.Error, "PutRecord failed as current session is not authenticated.")]
         internal static partial void PutRecordFailedAsSessionIsAnonymous(ILogger logger);
+
+        [LoggerMessage(170, LogLevel.Error, "GetServiceAuth failed for {service} as current session is not authenticated.")]
+        internal static partial void GetServiceAuthFailedAsSessionIsAnonymous(ILogger logger, Uri service);
 
         // AtProtoClient logging
         [LoggerMessage(200, LogLevel.Debug, "{method} request to {requestUri} succeeded.")]
@@ -208,5 +214,6 @@ namespace idunno.AtProto
 
         [LoggerMessage(506, LogLevel.Error, "HTTP request for {handle} to {Uri} failed with HTTP status code of {statusCode}")]
         internal static partial void HttpHandleResolutionRequestFailed(ILogger logger, Handle handle, Uri uri, HttpStatusCode statusCode);
+
     }
 }
