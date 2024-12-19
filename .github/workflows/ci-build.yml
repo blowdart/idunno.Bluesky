@@ -52,8 +52,8 @@ jobs:
     - name: 'Build repository'
       run: dotnet build --configuration Debug --no-restore
 
-    - name: 'Save ACLs'
-      run: getfacl -R . > permissions.acl
+    - name: 'Save Test ACLs'
+      run: getfacl test --recursive > testPermissions.acl
 
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
@@ -80,7 +80,7 @@ jobs:
           *.config
           version.json
           global.json
-          permissions.acl
+          testPermissions.acl
         retention-days: 1
 
   test:
@@ -107,7 +107,7 @@ jobs:
       uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
 
     - name: 'Restore ACLs'
-      run: setfacl -q --restore=permissions.acl
+      run: setfacl test --restore=testPermissions.acl
 
     - name: 'Run Tests'
       run: dotnet test --no-build --restore --collect:"XPlat Code Coverage" --logger junit
