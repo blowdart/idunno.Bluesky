@@ -13,12 +13,9 @@ namespace idunno.Bluesky.RichText
         /// </summary>
         /// <param name="uri">The <see cref="Uri"/> to add to a post.</param>
         /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">if <paramref name="uri"/> is longer than the maximum text allowed for the text in a link.</exception>
         public Link(string uri)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(uri);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(uri.Length, Maximum.LinkTextLengthInCharacters);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(uri.GetLengthInGraphemes(), Maximum.LinkTextLengthInGraphemes);
 
             if (!Uri.TryCreate(uri, UriKind.Absolute, out Uri? createdUri))
             {
@@ -34,14 +31,11 @@ namespace idunno.Bluesky.RichText
         /// </summary>
         /// <param name="uri">The <see cref="Uri"/> to add to a post.</param>
         /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">if <paramref name="uri"/> is longer than the maximum text allowed for the text in a link.</exception>
         public Link(Uri uri)
         {
             ArgumentNullException.ThrowIfNull(uri);
 
             string uriAsString = uri.ToString();
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(uriAsString.Length, Maximum.LinkTextLengthInCharacters);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(uriAsString.GetLengthInGraphemes(), Maximum.LinkTextLengthInGraphemes);
 
             Uri = uri;
             Text = uriAsString;
@@ -52,14 +46,10 @@ namespace idunno.Bluesky.RichText
         /// </summary>
         /// <param name="uri">The <see cref="Uri"/> to add to a post.</param>
         /// <param name="text">The text to wrap the hashtag around, if any. If not specified the <paramref name="uri"/> will be used..</param>
-        /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">If <paramref name="text"/> is longer than the maximum allowed.</exception>
         public Link(Uri uri, string text) : base(text)
         {
             ArgumentNullException.ThrowIfNull(uri);
             ArgumentNullException.ThrowIfNull(text);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.LinkTextLengthInCharacters);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetLengthInGraphemes(), Maximum.LinkTextLengthInGraphemes);
 
             Uri = uri;
         }
@@ -70,14 +60,10 @@ namespace idunno.Bluesky.RichText
         /// <param name="uri">The <see cref="Uri"/> to add to a post.</param>
         /// <param name="text">The text to wrap the hashtag around, if any. If not specified the <paramref name="uri"/> will be used..</param>
         /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">If <paramref name="text"/> is longer than the maximum allowed.</exception>
         public Link(string uri, string text) : base(text)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(uri);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(text);
-
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.LinkTextLengthInCharacters);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetLengthInGraphemes(), Maximum.LinkTextLengthInGraphemes);
 
             if (!Uri.TryCreate(uri, UriKind.Absolute, out Uri? createdUri))
             {

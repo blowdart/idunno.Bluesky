@@ -25,5 +25,11 @@ namespace idunno.Bluesky.RichText
         /// </summary>
         [NotNull]
         public string? Text { get; protected set; }
+
+        /// <summary>
+        /// Returns a string that represents the current object.
+        /// </summary>
+        /// <returns>The text of the facet.</returns>
+        public override string ToString() => Text;
     }
 }

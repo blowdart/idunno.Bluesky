@@ -261,7 +261,29 @@ AtProtoHttpResult<CreateRecordResponse> facetedCreatePostResponse = await agent.
 **Note**: If you chain multiple HashTags together with `Append` they will be posted without a separator between them.  You might want to append them like this.
 
 ```c#
-postBuilder.Append(" " + new HashTag(hashtag));
+postBuilder.Append(" ");
+postBuilder.Append(new HashTag(hashtag));
+```
+
+### Warning: Don't concatenate facets with other facets or strings
+
+*Do not* concatenate facets with other facets or strings like this
+
+```
+postBuilder.Append(" " + new Link("https://en.wikipedia.org/wiki/Heinz_Baked_Beans"));
+```
+
+C# will happily thing "That first string is a string, and the second thing is an object, so I'll convert the object to a string and append it".
+So now your post will contain something like
+
+```
+ Link { Text = Read More, Uri = https://en.wikipedia.org/wiki/Heinz_Baked_Bean }
+```
+which is obviously not what you want. Separate your append calls, for example:
+
+```
+postBuilder.Append(" ");
+postBuilder.Append(new Link("https://en.wikipedia.org/wiki/Heinz_Baked_Bean", "Read More"));
 ```
 
 ## <a name="images">Posting with images</a>

@@ -61,16 +61,6 @@ namespace idunno.Bluesky
         public static readonly int TagLengthInGraphemes = 64;
 
         /// <summary>
-        /// The maximum length of the text for a link in a post, in characters.
-        /// </summary>
-        public static readonly int LinkTextLengthInCharacters = 640;
-
-        /// <summary>
-        /// The maximum length of the text for a link in a post, in graphemes.
-        /// </summary>
-        public static readonly int LinkTextLengthInGraphemes = 64;
-
-        /// <summary>
         /// The maximum number of rules a thread gate can contain.
         /// </summary>
         public static readonly int ThreadGateRules = 5;

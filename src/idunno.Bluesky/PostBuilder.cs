@@ -631,8 +631,10 @@ namespace idunno.Bluesky
                     return this;
                 }
 
-                if ((value.Length + _postRecord.Text.Length > MaxCapacity) ||
-                    (value.GetLengthInGraphemes() + _postRecord.Text.GetLengthInGraphemes() > MaxCapacityGraphemes))
+                int newLength = value.Length + _postRecord.Text.Length;
+                int newGraphemeLength = value.GetLengthInGraphemes() + _postRecord.Text.GetLengthInGraphemes();
+
+                if (newLength > MaxCapacity || newGraphemeLength > MaxCapacityGraphemes)
                 {
                     throw new ArgumentOutOfRangeException(nameof(value), $"Appending would cause the post record to have a text property of length greater than {MaxCapacity} characters, or {MaxCapacityGraphemes} graphemes.");
                 }
