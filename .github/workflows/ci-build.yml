@@ -72,9 +72,9 @@ jobs:
       with:
         name: build-output
         path: |
-          samples/**/*.*
-          src/**/*.*
-          test/**/*.*
+          samples/**/*
+          src/**/*
+          test/**/*
           *.sln
           *.props
           *.config
