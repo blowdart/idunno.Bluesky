@@ -1093,26 +1093,10 @@ namespace idunno.AtProto
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
-
-            if (strongReference.Uri is null)
-            {
-                throw new ArgumentException("strongReference must have a Uri", nameof(strongReference));
-            }
-
-            if (strongReference.Uri.Repo is null)
-            {
-                throw new ArgumentException("strongReference.Uri must have a repo", nameof(strongReference));
-            }
-
-            if (strongReference.Uri.Collection is null)
-            {
-                throw new ArgumentException("strongReference.Uri must have a collection", nameof(strongReference));
-            }
-
-            if (strongReference.Uri.RecordKey is null)
-            {
-                throw new ArgumentException("strongReference.Uri must have an rKey", nameof(strongReference));
-            }
+            ArgumentNullException.ThrowIfNull(strongReference.Uri);
+            ArgumentNullException.ThrowIfNull(strongReference.Uri.Repo);
+            ArgumentNullException.ThrowIfNull(strongReference.Uri.Collection);
+            ArgumentNullException.ThrowIfNull(strongReference.Uri.RecordKey);
 
             if (!IsAuthenticated)
             {
