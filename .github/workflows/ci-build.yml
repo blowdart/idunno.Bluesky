@@ -71,6 +71,7 @@ jobs:
           *.props
           *.config
           version.json
+          global.json
         retention-days: 1
 
   test:
