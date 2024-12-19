@@ -107,7 +107,7 @@ jobs:
       uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
 
     - name: 'Restore ACLs'
-      run: setfacl test --restore=testPermissions.acl
+      run: setfacl --restore=testPermissions.acl
 
     - name: 'Run Tests'
       run: dotnet test --no-build --restore --collect:"XPlat Code Coverage" --logger junit
