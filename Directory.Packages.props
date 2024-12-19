@@ -5,7 +5,7 @@
   <ItemGroup>
     <PackageVersion Include="DotNet.ReproducibleBuilds" Version="1.2.25" />
     <PackageVersion Include="Nerdbank.GitVersioning" Version="3.7.112" />
-    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.3.0.106239" />
+    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.4.0.108396" />
     <PackageVersion Include="Microsoft.Sbom.Targets" Version="3.0.0" />
     <PackageVersion Include="DotNetAnalyzers.DocumentationAnalyzers" Version="1.0.0-beta.59"/>
     <PackageVersion Include="System.Text.Json" Version="9.0.0" />
