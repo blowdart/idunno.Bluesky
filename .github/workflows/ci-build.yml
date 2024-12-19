@@ -84,13 +84,13 @@ jobs:
       with:
         egress-policy: audit
 
-    - name: 'Setup .NET SDK'
-      uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
-
     - name: 'Download build output'
       uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
         name: build-output
+
+    - name: 'Setup .NET SDK'
+      uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
 
     - name: 'Run Tests'
       run: dotnet test --no-build --restore --collect:"XPlat Code Coverage" --logger junit
