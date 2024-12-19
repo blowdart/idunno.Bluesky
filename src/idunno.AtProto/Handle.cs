@@ -23,7 +23,7 @@ namespace idunno.AtProto
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private const int MaximumLength = 253;
 
-        [GeneratedRegex(@"^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$", RegexOptions.None, 100)]
+        [GeneratedRegex(@"^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$", RegexOptions.None, 5000)]
         private static partial Regex s_validate();
 
         private Handle(string s, bool validate)
