@@ -406,7 +406,7 @@ namespace idunno.Bluesky
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(text);
 
-            if (text.Length > Maximum.PostLengthInCharacters || text.GetLengthInGraphemes() > Maximum.PostLengthInGraphemes)
+            if (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(text),
@@ -450,7 +450,7 @@ namespace idunno.Bluesky
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(text);
 
-            if (text.Length > Maximum.PostLengthInCharacters || text.GetLengthInGraphemes() > Maximum.PostLengthInGraphemes)
+            if (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(text),
@@ -509,7 +509,7 @@ namespace idunno.Bluesky
 
             ArgumentNullException.ThrowIfNullOrWhiteSpace(text);
 
-            if (text.Length > Maximum.PostLengthInCharacters || text.GetLengthInGraphemes() > Maximum.PostLengthInGraphemes)
+            if (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(text),
@@ -612,7 +612,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(text);
             ArgumentNullException.ThrowIfNull(externalCard);
 
-            if ((text.Length > Maximum.PostLengthInCharacters || text.GetLengthInGraphemes() > Maximum.PostLengthInGraphemes))
+            if ((text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(text),
@@ -757,7 +757,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(text);
             ArgumentNullException.ThrowIfNull(parent);
 
-            if (text.Length > Maximum.PostLengthInCharacters || text.GetLengthInGraphemes() > Maximum.PostLengthInGraphemes)
+            if (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(text),
@@ -789,7 +789,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(parent);
             ArgumentNullException.ThrowIfNull(image);
 
-            if (text.Length > Maximum.PostLengthInCharacters || text.GetLengthInGraphemes() > Maximum.PostLengthInGraphemes)
+            if (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(text),
@@ -825,7 +825,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNullOrEmpty(text);
             ArgumentNullException.ThrowIfNull(parent);
 
-            if (text.Length > Maximum.PostLengthInCharacters || text.GetLengthInGraphemes() > Maximum.PostLengthInGraphemes)
+            if (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
             {
                 throw new ArgumentOutOfRangeException(nameof(text), $"text cannot have be longer than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
             }
@@ -1076,7 +1076,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(strongReference);
             ArgumentNullException.ThrowIfNull(text);
 
-            if (text.Length > Maximum.PostLengthInCharacters || text.GetLengthInGraphemes() > Maximum.PostLengthInGraphemes)
+            if (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
             {
                 throw new ArgumentOutOfRangeException(nameof(text), $"text cannot have be longer than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
             }

@@ -51,7 +51,7 @@ namespace idunno.Bluesky.Feed
             if (!string.IsNullOrWhiteSpace(text))
             {
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.PostLengthInCharacters);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetLengthInGraphemes(), Maximum.PostLengthInGraphemes);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.PostLengthInGraphemes);
             }
 
             if (string.IsNullOrWhiteSpace(text) && embed is null)

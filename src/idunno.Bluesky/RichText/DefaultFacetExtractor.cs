@@ -14,6 +14,8 @@ namespace idunno.Bluesky.RichText
     /// </summary>
     public sealed partial class DefaultFacetExtractor : IFacetExtractor, IDisposable
     {
+        // Regexes and logic taken from https://docs.bsky.app/docs/advanced-guides/post-richtext
+
         private volatile bool _disposed;
 
         private static readonly NameValueCollection s_cacheConfig = new()
@@ -26,7 +28,7 @@ namespace idunno.Bluesky.RichText
 
         private readonly Func<string, CancellationToken, Task<Did?>> _resolveHandle;
 
-        [GeneratedRegex(@"#[a-z0-9_]+", RegexOptions.IgnoreCase, 5000)]
+        [GeneratedRegex(@"(?:^|\s)(#[^\d\s]\S*)(?=\s)?", RegexOptions.IgnoreCase, 5000)]
         private static partial Regex s_HashTagRegex();
 
         [GeneratedRegex(@"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)", RegexOptions.IgnoreCase, 5000)]
@@ -106,8 +108,38 @@ namespace idunno.Bluesky.RichText
 
             foreach (Match match in matches)
             {
-                TagFacetFeature tagFacetFeature = new(match.Value[1..]);
-                ByteSlice index = new(text.GetUtf8BytePosition(match.Index), text.GetUtf8BytePosition(match.Index + match.Length));
+                // This will have the # prefix.
+                string extractedTag = match.Value;
+
+                // Strip trailing punctuation
+                // The length check stops cases like #! from ending up in index errors, because, of course, # is also a punctuation mark.
+                while (extractedTag.Length > 1 && char.IsPunctuation(extractedTag[extractedTag.Length - 1]))
+                {
+                    extractedTag = extractedTag.Substring(0, extractedTag.Length - 1);
+                }
+
+                if (extractedTag.Length <= 1 )
+                {
+                    break;
+                }
+
+                int offset = 0;
+                if (match.Value[0] == ' ')
+                {
+                    offset = 1;
+                    extractedTag = extractedTag[1..];
+                }
+
+                // Max tag length is 64.
+                // Hash prefix is still present so need to account for that.
+                if (extractedTag.GetUtf8Length() > 65)
+                {
+                    break;
+                }
+
+                TagFacetFeature tagFacetFeature = new(extractedTag[1..]);
+
+                ByteSlice index = new(text.GetUtf8BytePosition(match.Index + offset), text.GetUtf8BytePosition(match.Index + offset + extractedTag.Length));
                 hashTags.Add(new Facet(index, new List<FacetFeature> { tagFacetFeature }));
             }
 

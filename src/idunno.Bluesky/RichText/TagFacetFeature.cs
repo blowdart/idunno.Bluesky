@@ -20,7 +20,7 @@ namespace idunno.Bluesky.RichText
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(tag);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetLengthInGraphemes(), Maximum.TagLengthInGraphemes);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             Tag = tag;
         }
 

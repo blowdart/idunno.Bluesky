@@ -9,6 +9,7 @@ using idunno.Bluesky.Actions.Model;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.RichText;
+using static System.Collections.Specialized.BitVector32;
 
 namespace idunno.Bluesky
 {
@@ -47,7 +48,7 @@ namespace idunno.Bluesky
         {
             ArgumentNullException.ThrowIfNull(text);
 
-            if (text.GetLengthInGraphemes() > Maximum.PostLengthInGraphemes)
+            if (text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(text),
@@ -115,15 +116,43 @@ namespace idunno.Bluesky
         public bool HasText => _postRecord.Text is not null && !string.IsNullOrEmpty(_postRecord.Text);
 
         /// <summary>
-        /// Gets the length of the post text, if any.
+        /// Gets the length of the post text, in characters.
         /// </summary>
-        public int? Length
+        public int Length
         {
             get
             {
                 lock (_syncLock)
                 {
-                    return _postRecord.Text?.Length;
+                    return _postRecord.Length;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the length of the post text, in Utf8Bytes.
+        /// </summary>
+        public int Utf8Length
+        {
+            get
+            {
+                lock (_syncLock)
+                {
+                    return _postRecord.Utf8Length;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the length of the post text, in graphemes.
+        /// </summary>
+        public int GraphemeLength
+        {
+            get
+            {
+                lock (_syncLock)
+                {
+                    return _postRecord.GraphemeLength;
                 }
             }
         }
@@ -166,7 +195,7 @@ namespace idunno.Bluesky
             {
                 if (value is not null)
                 {
-                    if (value.Length > Maximum.PostLengthInCharacters || value.GetLengthInGraphemes() > Maximum.PostLengthInGraphemes)
+                    if (value.Length > Maximum.PostLengthInCharacters || value.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
                     {
                         throw new ArgumentOutOfRangeException(
                             nameof(value),
@@ -620,7 +649,7 @@ namespace idunno.Bluesky
 
             lock (_syncLock)
             {
-                if (value.Length > MaxCapacity || value.GetLengthInGraphemes() > MaxCapacityGraphemes)
+                if (value.Length > MaxCapacity || value.GetGraphemeLength() > MaxCapacityGraphemes)
                 {
                     throw new ArgumentOutOfRangeException(nameof(value), $"string cannot have a length greater than {MaxCapacity} characters, or {MaxCapacityGraphemes} graphemes.");
                 }
@@ -632,7 +661,7 @@ namespace idunno.Bluesky
                 }
 
                 int newLength = value.Length + _postRecord.Text.Length;
-                int newGraphemeLength = value.GetLengthInGraphemes() + _postRecord.Text.GetLengthInGraphemes();
+                int newGraphemeLength = value.GetGraphemeLength() + _postRecord.Text.GetGraphemeLength();
 
                 if (newLength > MaxCapacity || newGraphemeLength > MaxCapacityGraphemes)
                 {
@@ -659,15 +688,9 @@ namespace idunno.Bluesky
 
             lock (_syncLock)
             {
-                long startingPosition = 0;
-                if (_postRecord.Text is not null)
-                {
-                    startingPosition = _postRecord.Text.Length;
-                }
-
+                ByteSlice byteSlice = GetFacetPosition(_postRecord.Text, mention.Text);
                 _postRecord.Text += mention.Text;
 
-                ByteSlice byteSlice = new(startingPosition, startingPosition + mention.Text.GetUtf8Length());
                 MentionFacetFeature mentionFacetFeature = new(mention.Did);
                 List<FacetFeature> features = new()
                     {
@@ -722,14 +745,9 @@ namespace idunno.Bluesky
 
             lock (_syncLock)
             {
-                long startingPosition = 0;
-                if (_postRecord.Text is not null)
-                {
-                    startingPosition = _postRecord.Text.Length;
-                }
+                ByteSlice byteSlice = GetFacetPosition(_postRecord.Text, hashTag.Text);
                 _postRecord.Text += hashTag.Text;
 
-                ByteSlice byteSlice = new(startingPosition, startingPosition + hashTag.Text.GetUtf8Length());
                 TagFacetFeature tagFacetFeature = new(hashTag.Tag);
                 List<FacetFeature> features = new()
                     {
@@ -756,14 +774,9 @@ namespace idunno.Bluesky
 
             lock (_syncLock)
             {
-                long startingPosition = 0;
-                if (_postRecord.Text is not null)
-                {
-                    startingPosition = _postRecord.Text.Length;
-                }
+                ByteSlice byteSlice = GetFacetPosition(_postRecord.Text, link.Text);
                 _postRecord.Text += link.Text;
 
-                ByteSlice byteSlice = new(startingPosition, startingPosition + link.Text.GetUtf8Length());
                 LinkFacetFeature linkFacetFeature = new(link.Uri);
                 List<FacetFeature> features = new()
                     {
@@ -1165,6 +1178,19 @@ namespace idunno.Bluesky
                     return HashCode.Combine(postRecord, embeddedImages, threadGateRules, postGateRules);
                 }
             }
+        }
+
+        private static ByteSlice GetFacetPosition(string? currentText, string textToAdd)
+        {
+            int startingPosition = 0;
+            if (currentText is not null)
+            {
+                startingPosition = currentText.GetUtf8Length();
+            }
+
+            ByteSlice byteSlice = new(startingPosition, startingPosition + textToAdd.GetUtf8Length());
+
+            return byteSlice;
         }
     }
 }

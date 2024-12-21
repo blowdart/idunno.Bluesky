@@ -17,7 +17,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="s">The string whose utf8 length to calculate.</param>
         /// <returns>The length of the string if it was encoded as a UTF8 byte array.</returns>
-        public static long GetUtf8Length(this string s)
+        public static int GetUtf8Length(this string s)
         {
             if (string.IsNullOrEmpty(s))
             {
@@ -32,7 +32,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="s">The string whose length to calculate.</param>
         /// <returns></returns>
-        public static int GetLengthInGraphemes(this string s)
+        public static int GetGraphemeLength(this string s)
         {
             StringInfo stringInfo = new(s);
 

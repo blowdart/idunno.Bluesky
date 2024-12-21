@@ -67,7 +67,7 @@ namespace idunno.Bluesky.Actions.Model
                 throw new ArgumentException($"{nameof(text)} cannot be null if {nameof(embed)} is null.", nameof(text));
             }
 
-            if (!string.IsNullOrEmpty(text) && (text.Length > Maximum.PostLengthInCharacters || text.GetLengthInGraphemes() > Maximum.PostLengthInGraphemes))
+            if (!string.IsNullOrEmpty(text) && (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(text),
@@ -96,7 +96,7 @@ namespace idunno.Bluesky.Actions.Model
                         throw new ArgumentException($"Tag[{position}] is null or empty", nameof(tags));
                     }
 
-                    if (tag.Length > Maximum.TagLengthInCharacters || tag.GetLengthInGraphemes() > Maximum.TagLengthInGraphemes)
+                    if (tag.Length > Maximum.TagLengthInCharacters || tag.GetGraphemeLength() > Maximum.TagLengthInGraphemes)
                     {
                         throw new ArgumentException($"Tag[{position}] is longer than {Maximum.TagLengthInCharacters} characters or {Maximum.TagLengthInGraphemes} graphemes", nameof(tags));
                     }
@@ -176,5 +176,61 @@ namespace idunno.Bluesky.Actions.Model
         /// </summary>
         [JsonInclude]
         public DateTimeOffset CreatedAt { get; internal set; }
+
+        /// <summary>
+        /// Gets the number of characters in the post.
+        /// </summary>
+        [JsonIgnore]
+        public int Length
+        {
+            get
+            {
+                if (Text is null)
+                {
+                    return 0;
+                }
+                else
+                {
+                    return Text.Length;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the number of bytes in the post, as a Utf8 byte array.
+        /// </summary>
+        public int Utf8Length
+        {
+            get
+            {
+                if (Text is null)
+                {
+                    return 0;
+                }
+                else
+                {
+                    return Text.GetUtf8Length();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the number of graphemes in the post.
+        /// </summary>
+        [JsonIgnore]
+        public int GraphemeLength
+        {
+            get
+            {
+                if (Text is null)
+                {
+                    return 0;
+                }
+                else
+                {
+                    return Text.GetGraphemeLength();
+                }
+            }
+        }
     }
 }

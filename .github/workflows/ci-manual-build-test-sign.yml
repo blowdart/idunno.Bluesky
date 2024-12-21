@@ -46,8 +46,11 @@ jobs:
     - name: 'Setup .NET SDK'
       uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
 
-    - name: 'Build and test'
-      run: dotnet test --configuration Release --property:PublicRelease=${{ inputs.public_release }}
+    - name: 'Build'
+      run: dotnet build --configuration Release --property:PublicRelease=${{ inputs.public_release }}
+
+    - name: 'Test'
+      run: dotnet test --configuration Release --no-restore --no-build --property:PublicRelease=${{ inputs.public_release }}
 
     - name: 'Pack release'
       run: dotnet pack --configuration Release --no-restore  --no-build --output ${{ env.nupkgDirectory }} --property:PublicRelease=${{ inputs.public_release }}

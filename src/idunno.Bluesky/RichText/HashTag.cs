@@ -19,12 +19,12 @@ namespace idunno.Bluesky.RichText
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(tag);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetLengthInGraphemes(), Maximum.TagLengthInGraphemes);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             Tag = tag;
 
             string tagAsHashTagText = $"#{tag}";
             ArgumentOutOfRangeException.ThrowIfGreaterThan(tagAsHashTagText.Length, Maximum.TagLengthInCharacters);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(tagAsHashTagText.GetLengthInGraphemes(), Maximum.TagLengthInGraphemes);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(tagAsHashTagText.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             Text = tagAsHashTagText;
         }
 
@@ -43,9 +43,9 @@ namespace idunno.Bluesky.RichText
             ArgumentNullException.ThrowIfNullOrWhiteSpace(tag);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(text);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetLengthInGraphemes(), Maximum.TagLengthInGraphemes);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.TagLengthInCharacters);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetLengthInGraphemes(), Maximum.TagLengthInGraphemes);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             Tag = tag;
             Text = text;
         }

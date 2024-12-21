@@ -19,7 +19,7 @@ namespace idunno.Bluesky.RichText
 
             if (!Uri.TryCreate(uri, UriKind.Absolute, out Uri? createdUri))
             {
-                throw new ArgumentException("cannot be parsed as a Uri.");
+                throw new ArgumentException("cannot be parsed as a Uri.", nameof(uri));
             }
 
             Uri = createdUri;
@@ -67,7 +67,7 @@ namespace idunno.Bluesky.RichText
 
             if (!Uri.TryCreate(uri, UriKind.Absolute, out Uri? createdUri))
             {
-                throw new ArgumentException("cannot be parsed as a Uri.");
+                throw new ArgumentException("cannot be parsed as a Uri.", nameof(uri));
             }
 
             Uri = createdUri;

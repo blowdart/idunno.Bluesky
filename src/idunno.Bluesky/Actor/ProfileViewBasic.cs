@@ -50,7 +50,7 @@ namespace idunno.Bluesky.Actor
             if (displayName is not null)
             {
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(displayName.Length, 640);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(displayName.GetLengthInGraphemes(), 64);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(displayName.GetGraphemeLength(), 64);
             }
 
             Did = did;
