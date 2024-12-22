@@ -29,6 +29,5 @@ namespace idunno.Bluesky.Feed
         /// </summary>
         [JsonRequired]
         public AtUri Uri { get; init; }
-
     }
 }

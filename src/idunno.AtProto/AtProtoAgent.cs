@@ -986,6 +986,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Creates a record in the specified collection belonging to the current user.
         /// </summary>
+        /// <typeparam name="TRecord">The type of record to create.</typeparam>
         /// <param name="record"><para>The record to be created.</para></param>
         /// <param name="collection"><para>The collection the record should be created in.</para></param>
         /// <param name="creator"><para>The <see cref="Did"/> of the actor whose collection the record should be created in. Typically this is the Did of the current user.</para></param>
@@ -1002,8 +1003,8 @@ namespace idunno.AtProto
         /// <returns><para>The task object representing the asynchronous operation.</para></returns>
         /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="record"/>, <paramref name="collection"/> or <paramref name="creator"/> is null.</para></exception>
         /// <exception cref="AuthenticatedSessionRequiredException"><para>Thrown when the current session is not authenticated.</para></exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> CreateRecord(
-            object record,
+        public async Task<AtProtoHttpResult<CreateRecordResponse>> CreateRecord<TRecord>(
+            TRecord record,
             Nsid collection,
             Did creator,
             RecordKey? rkey = null,

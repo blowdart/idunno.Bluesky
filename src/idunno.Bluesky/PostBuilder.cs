@@ -5,7 +5,6 @@ using System.ComponentModel.Design;
 using System.Diagnostics.CodeAnalysis;
 
 using idunno.AtProto.Repo;
-using idunno.Bluesky.Actions.Model;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.RichText;
@@ -20,7 +19,7 @@ namespace idunno.Bluesky
     {
         private readonly object _syncLock = new ();
 
-        private readonly NewPostRecord _postRecord;
+        private readonly Post _postRecord;
         private readonly List<EmbeddedImage> _embeddedImages = new();
         private List<ThreadGateRule>? _threadGateRules;
         private List<PostGateRule>? _postGateRules;
@@ -32,7 +31,7 @@ namespace idunno.Bluesky
         /// </summary>
         public PostBuilder()
         {
-            _postRecord = new NewPostRecord() { CreatedAt = DateTimeOffset.UtcNow };
+            _postRecord = new Post() { CreatedAt = DateTimeOffset.UtcNow };
         }
 
         /// <summary>
@@ -1063,10 +1062,10 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Converts the value of this instance to a <see cref="NewPostRecord"/>.
+        /// Converts the value of this instance to a <see cref="Post"/>.
         /// </summary>
-        /// <returns>A <see cref="NewPostRecord"/> whose value is the same as this instance.</returns>
-        public NewPostRecord ToPostRecord()
+        /// <returns>A <see cref="Post"/> whose value is the same as this instance.</returns>
+        public Post ToPostRecord()
         {
             lock (_syncLock)
             {
@@ -1099,7 +1098,7 @@ namespace idunno.Bluesky
                     }
                 }
 
-                return new NewPostRecord(_postRecord);
+                return new Post(_postRecord);
             }
         }
 
@@ -1108,7 +1107,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="obj">The object to compare with the current object.</param>
         /// <returns><see langword="true"/> if the specified object is equal to the current object; otherwise, <see langword="false"/>.</returns>
-        public override bool Equals(object? obj) => obj is PostBuilder builder && EqualityComparer<NewPostRecord>.Default.Equals(_postRecord, builder._postRecord) && EqualityComparer<List<EmbeddedImage>>.Default.Equals(_embeddedImages, builder._embeddedImages) && EqualityComparer<List<ThreadGateRule>?>.Default.Equals(_threadGateRules, builder._threadGateRules) && EqualityComparer<List<PostGateRule>?>.Default.Equals(_postGateRules, builder._postGateRules) && _disableEmbedding == builder._disableEmbedding;
+        public override bool Equals(object? obj) => obj is PostBuilder builder && EqualityComparer<Post>.Default.Equals(_postRecord, builder._postRecord) && EqualityComparer<List<EmbeddedImage>>.Default.Equals(_embeddedImages, builder._embeddedImages) && EqualityComparer<List<ThreadGateRule>?>.Default.Equals(_threadGateRules, builder._threadGateRules) && EqualityComparer<List<PostGateRule>?>.Default.Equals(_postGateRules, builder._postGateRules) && _disableEmbedding == builder._disableEmbedding;
 
         /// <summary>
         /// Determines whether two specified <see cref="PostBuilder"/>s the same value."/>
@@ -1152,7 +1151,7 @@ namespace idunno.Bluesky
 
             lock (_syncLock)
             {
-                NewPostRecord postRecord = new (_postRecord);
+                Post postRecord = new (_postRecord);
 
                 if (_embeddedImages is not null)
                 {

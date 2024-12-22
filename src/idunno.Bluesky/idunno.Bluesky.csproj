@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <None Include="..\..\exclusion.dic" Link="exclusion.dic" />
+    <None Include="Actions\Block.RecordValue.cs" />
   </ItemGroup>
 
   <!-- Nuget package properties -->
@@ -37,7 +38,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="System.Runtime.Caching"/>
+    <PackageReference Include="System.Runtime.Caching" />
   </ItemGroup>
   
   <ItemGroup>

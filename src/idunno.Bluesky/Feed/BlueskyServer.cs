@@ -787,39 +787,6 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Gets post view for the post, identified by <paramref name="strongReference" />.
-        /// </summary>
-        /// <param name="strongReference">The <see cref="StrongReference"/> of the post to return hydrated views for.</param>
-        /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
-        /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
-        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>The task object representing the asynchronous operation.</returns>
-        public static async Task<AtProtoHttpResult<Record.PostRecord>> GetPost(
-            StrongReference strongReference,
-            Uri service,
-            string? accessToken,
-            HttpClient httpClient,
-            ILoggerFactory? loggerFactory = default,
-            CancellationToken cancellationToken = default)
-        {
-            ArgumentNullException.ThrowIfNull(strongReference);
-            ArgumentNullException.ThrowIfNull(strongReference.Uri.RecordKey);
-
-            return await AtProtoServer.GetRecord<Record.PostRecord>(
-                strongReference.Uri.Repo,
-                CollectionNsid.Post,
-                strongReference.Uri.RecordKey,
-                strongReference.Cid,
-                service,
-                accessToken,
-                httpClient,
-                loggerFactory,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-        }
-
-        /// <summary>
         /// Get a list of quotes for a given post.
         /// </summary>
         /// <param name="uri"><see cref="AtUri"/> of post record whose quotes should be retrieved.</param>

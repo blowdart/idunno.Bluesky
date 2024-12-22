@@ -3,31 +3,32 @@
 
 using System.Text.Json.Serialization;
 using idunno.AtProto.Repo;
+using idunno.Bluesky.Record;
 
-namespace idunno.Bluesky.Actions.Model
+namespace idunno.Bluesky.Actions
 {
     /// <summary>
     /// Encapsulates the information needed to create a repost record.
     /// </summary>
-    public sealed record NewRepostRecord
+    public sealed record RepostRecordValue : BlueskyRecordValue
     {
         /// <summary>
-        /// Creates a new instance of <see cref="NewRepostRecord"/>.
+        /// Creates a new instance of <see cref="RepostRecordValue"/> with<see cref = "BlueskyRecordValue.CreatedAt" /> set to the current date and time.
+        /// </summary>
+        /// <param name="subject">The <see cref="StrongReference"/> to the post to be reposted.</param>
+        public RepostRecordValue(StrongReference subject) : this(subject, DateTimeOffset.UtcNow)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="RepostRecordValue"/>.
         /// </summary>
         /// <param name="subject">The <see cref="StrongReference"/> to the post to be reposted.</param>
         /// <param name="createdAt">An optional <see cref="DateTimeOffset"/> for the repost creation date, defaults to now.</param>
-        public NewRepostRecord(StrongReference subject, DateTimeOffset? createdAt = null)
+        [JsonConstructor]
+        public RepostRecordValue(StrongReference subject, DateTimeOffset? createdAt) : base(createdAt)
         {
             Subject = subject;
-
-            if (createdAt is not null)
-            {
-                CreatedAt = (DateTimeOffset)createdAt;
-            }
-            else
-            {
-                CreatedAt = DateTimeOffset.UtcNow;
-            }
         }
 
         /// <summary>
@@ -43,11 +44,5 @@ namespace idunno.Bluesky.Actions.Model
         /// </summary>
         [JsonInclude]
         public StrongReference Subject { get; init; }
-
-        /// <summary>
-        /// Gets <see cref="DateTimeOffset"/> the repost record was created.
-        /// </summary>
-        [JsonInclude]
-        public DateTimeOffset CreatedAt { get; init; }
     }
 }

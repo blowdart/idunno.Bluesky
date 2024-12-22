@@ -73,7 +73,8 @@ namespace idunno.AtProto
         /// </summary>
         /// <returns>The AtProtoHttpResult if the call succeeded.</returns>
         /// <exception cref="AtProtoHttpRequestException">The AtProtoHttpResult did not succeed.</exception>
-        public AtProtoHttpResult<TResult> EnsureSucceedStatus()
+        [MemberNotNull(nameof(Result))]
+        public AtProtoHttpResult<TResult> EnsureSucceeded()
         {
             if (StatusCode != HttpStatusCode.OK)
             {

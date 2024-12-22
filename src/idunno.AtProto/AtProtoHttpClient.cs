@@ -3,12 +3,13 @@
 
 using System.Net.Http.Headers;
 using System.Net.Mime;
-using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Text.Json;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+
+using idunno.AtProto.Repo;
 
 namespace idunno.AtProto
 {
@@ -183,11 +184,10 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Performs a POST request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
+        /// Performs a POST request against the supplied <paramref name="service"/> and <paramref name="endpoint"/> with no request body.
         /// </summary>
         /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
-        /// <param name="requestBody">An optional object to serialize to JSON and send as the request body.</param>
         /// <param name="accessToken">The access token to send in the HTTP Authorization header to the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
@@ -197,22 +197,56 @@ namespace idunno.AtProto
         public async Task<AtProtoHttpResult<TResult>> Post(
             Uri service,
             string endpoint,
-            object? requestBody,
             string? accessToken,
             HttpClient httpClient,
             IEnumerable<Did>? subscribedLabelers = null,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
         {
-            return await Post(service, endpoint, requestBody, null, accessToken, httpClient, subscribedLabelers, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
+            return await Post<AtProtoRecordValue>(
+                service: service,
+                endpoint: endpoint,
+                record: null,
+                accessToken: accessToken,
+                httpClient: httpClient,
+                subscribedLabelers: subscribedLabelers,
+                jsonSerializerOptions: jsonSerializerOptions,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Performs a POST request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
         /// </summary>
+        /// <typeparam name="TRecord">The type of the record to post.</typeparam>
         /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
-        /// <param name="requestBody">An optional object to serialize to JSON and send as the request body.</param>
+        /// <param name="record">An optional object to serialize to JSON and send as the request body.</param>
+        /// <param name="accessToken">The access token to send in the HTTP Authorization header to the <paramref name="service"/>.</param>
+        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
+        /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
+        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        public async Task<AtProtoHttpResult<TResult>> Post<TRecord>(
+            Uri service,
+            string endpoint,
+            TRecord? record,
+            string? accessToken,
+            HttpClient httpClient,
+            IEnumerable<Did>? subscribedLabelers = null,
+            JsonSerializerOptions? jsonSerializerOptions = null,
+            CancellationToken cancellationToken = default)
+        {
+            return await Post(service, endpoint, record, null, accessToken, httpClient, subscribedLabelers, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Performs a POST request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
+        /// </summary>
+        /// <typeparam name="TRecord">The type of the class to post.</typeparam>
+        /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
+        /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
+        /// <param name="record">An optional record to serialize to JSON and send as the request body.</param>
         /// <param name="accessToken">The access token to send in the HTTP Authorization header to the <paramref name="service"/>.</param>
         /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
@@ -220,10 +254,10 @@ namespace idunno.AtProto
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        public async Task<AtProtoHttpResult<TResult>> Post(
+        public async Task<AtProtoHttpResult<TResult>> Post<TRecord>(
             Uri service,
             string endpoint,
-            object? requestBody,
+            TRecord? record,
             IReadOnlyCollection<NameValueHeaderValue>? requestHeaders,
             string? accessToken,
             HttpClient httpClient,
@@ -249,9 +283,9 @@ namespace idunno.AtProto
                     }
                 }
 
-                if (requestBody is not null)
+                if (record is not null)
                 {
-                    string content = JsonSerializer.Serialize(requestBody, jsonSerializerOptions);
+                    string content = JsonSerializer.Serialize(record, jsonSerializerOptions);
                     httpRequestMessage.Content = new StringContent(content, Encoding.UTF8, MediaTypeNames.Application.Json);
                 }
 

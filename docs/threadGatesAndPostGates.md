@@ -12,7 +12,7 @@ The following example demonstrates how to gate a thread so that replies are rest
 ```c#
 await agent.AddThreadGate(
     postUri,
-    new List<ThreadGateRuleBase>()
+    new List<ThreadGateRule>()
     {
         new FollowingRule()
     },

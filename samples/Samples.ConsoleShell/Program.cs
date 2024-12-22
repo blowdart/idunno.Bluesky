@@ -9,6 +9,8 @@ using Microsoft.Extensions.Logging;
 using idunno.Bluesky;
 
 using Samples.Common;
+using idunno.Bluesky.Feed.Gates;
+using idunno.AtProto;
 
 namespace Samples.ConsoleShell
 {
@@ -31,7 +33,7 @@ namespace Samples.ConsoleShell
             ArgumentNullException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
-            // proxyUri = new Uri("http://localhost:8866");
+            proxyUri = new Uri("http://localhost:8866");
 
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
@@ -84,6 +86,18 @@ namespace Samples.ConsoleShell
                     }
                 }
                 // END-AUTHENTICATION
+
+
+                var followResult = await agent.Follow(new Handle("blowdart.pds.blowdart.blue"), cancellationToken: cancellationToken);
+                followResult.EnsureSucceeded();
+                var unfollowResult = await agent.Unfollow(new Handle("blowdart.pds.blowdart.blue"), cancellationToken: cancellationToken);
+                unfollowResult.EnsureSucceeded();
+
+                var profileResult = await agent.GetProfileRecord(cancellationToken: cancellationToken);
+                profileResult.EnsureSucceeded();
+                profileResult.Result.Value.Description = $"Updated on {DateTimeOffset.Now:G}";
+                var profileUpdateResult = await agent.UpdateProfileRecord(profileResult.Result, cancellationToken: cancellationToken);
+                profileResult.EnsureSucceeded();
             }
             return;
         }

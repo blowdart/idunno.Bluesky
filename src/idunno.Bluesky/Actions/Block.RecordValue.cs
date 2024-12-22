@@ -4,33 +4,34 @@
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
+using idunno.Bluesky.Record;
 
-namespace idunno.Bluesky.Actions.Model
+namespace idunno.Bluesky.Actions
 {
     /// <summary>
     /// Encapsulates the information needed to create a block record.
     /// </summary>
-    public sealed record NewBlockRecord
+    public sealed record BlockRecordValue : BlueskyRecordValue
     {
         /// <summary>
-        /// Creates a new instance of <see cref="NewBlockRecord"/>.
+        /// Creates a new instance of <see cref="BlockRecordValue"/> with <see cref="BlueskyRecordValue.CreatedAt"/> set to the current date and time.
+        /// </summary>
+        /// <param name="subject">The <see cref="Did"/> to the actor to be blocked.</param>
+        public BlockRecordValue(Did subject) : this(subject, DateTimeOffset.UtcNow)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="BlockRecordValue"/>.
         /// </summary>
         /// <param name="subject">The <see cref="Did"/> to the actor to be blocked.</param>
         /// <param name="createdAt">An optional <see cref="DateTimeOffset"/> for the repost creation date, defaults to now.</param>
-        public NewBlockRecord(Did subject, DateTimeOffset? createdAt = null)
+        [JsonConstructor]
+        public BlockRecordValue(Did subject, DateTimeOffset? createdAt) : base(createdAt)
         {
             ArgumentNullException.ThrowIfNull(subject);
 
             Subject = subject;
-
-            if (createdAt is not null)
-            {
-                CreatedAt = (DateTimeOffset)createdAt;
-            }
-            else
-            {
-                CreatedAt = DateTimeOffset.UtcNow;
-            }
         }
 
         /// <summary>
@@ -46,11 +47,5 @@ namespace idunno.Bluesky.Actions.Model
         /// </summary>
         [JsonInclude]
         public Did Subject { get; init; }
-
-        /// <summary>
-        /// Gets <see cref="DateTimeOffset"/> the block record was created.
-        /// </summary>
-        [JsonInclude]
-        public DateTimeOffset CreatedAt { get; init; }
     }
 }

@@ -402,7 +402,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets a strong reference to parent post for the specified Bluesky post.
         /// </summary>
-        /// <param name="strongReference">The <see cref="StrongReference" /> of the post to return the <see cref="PostRecord"/> for.</param>
+        /// <param name="strongReference">The <see cref="StrongReference" /> of the post to return the parent <paramref name="strongReference"/> for.</param>
         /// <param name="cancellationToken"></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
@@ -502,34 +502,34 @@ namespace idunno.Bluesky
         {
             ArgumentNullException.ThrowIfNull(strongReference);
 
-            AtProtoHttpResult<Record.PostRecord> getPostResult = await GetPostRecord(strongReference, cancellationToken: cancellationToken).ConfigureAwait(false);
+            AtProtoHttpResult<Record.PostRecord> getPostRecordResult = await GetPostRecord(strongReference, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            if (getPostResult.Succeeded)
+            if (getPostRecordResult.Succeeded)
             {
-                if (getPostResult.Result.Value.Reply is null)
+                if (getPostRecordResult.Result.Value.Reply is null)
                 {
                     return new AtProtoHttpResult<ReplyReferences>(
-                        new ReplyReferences(getPostResult.Result.StrongReference, getPostResult.Result.StrongReference),
-                        getPostResult.StatusCode,
-                        getPostResult.AtErrorDetail,
-                        getPostResult.RateLimit);
+                        new ReplyReferences(getPostRecordResult.Result.StrongReference, getPostRecordResult.Result.StrongReference),
+                        getPostRecordResult.StatusCode,
+                        getPostRecordResult.AtErrorDetail,
+                        getPostRecordResult.RateLimit);
                 }
                 else
                 {
                     return new AtProtoHttpResult<ReplyReferences>(
-                        new ReplyReferences(getPostResult.Result.StrongReference, getPostResult.Result.Value.Reply.Root),
-                        getPostResult.StatusCode,
-                        getPostResult.AtErrorDetail,
-                        getPostResult.RateLimit);
+                        new ReplyReferences(getPostRecordResult.Result.StrongReference, getPostRecordResult.Result.Value.Reply.Root),
+                        getPostRecordResult.StatusCode,
+                        getPostRecordResult.AtErrorDetail,
+                        getPostRecordResult.RateLimit);
                 }
             }
             else
             {
                 return new AtProtoHttpResult<ReplyReferences>(
                     null,
-                    getPostResult.StatusCode,
-                    getPostResult.AtErrorDetail,
-                    getPostResult.RateLimit);
+                    getPostRecordResult.StatusCode,
+                    getPostRecordResult.AtErrorDetail,
+                    getPostRecordResult.RateLimit);
             }
         }
 

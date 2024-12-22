@@ -1,38 +1,97 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto.Labels;
 using idunno.Bluesky.Embed;
+using idunno.Bluesky.Record;
 using idunno.Bluesky.RichText;
 
-namespace idunno.Bluesky.Actions.Model
+namespace idunno.Bluesky
 {
     /// <summary>
-    /// Encapsulates the information needed to make a new post record.
+    /// Encapsulates a Bluesky post.
     /// </summary>
-    public sealed class NewPostRecord
+    /// <remarks>
+    /// <para>See <see href="https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/feed/post.json">post.json</see> for the lexicon definition.</para>
+    /// </remarks>
+    public sealed record class Post : BlueskyRecordValue
     {
-        internal NewPostRecord()
+        /// <summary>
+        /// Creates a new instance of <see cref="Post"/> and sets <see cref="BlueskyRecordValue.CreatedAt"/> to the current date and time.
+        /// </summary>
+        public Post() : base()
         {
-        }
-
-        internal NewPostRecord(NewPostRecord postRecord) : this(
-            postRecord.Text,
-            postRecord.Reply,
-            postRecord.Facets,
-            postRecord.Langs,
-            postRecord.Embed,
-            postRecord.Labels,
-            postRecord.Tags,
-            postRecord.CreatedAt)
-        {
-            ArgumentNullException.ThrowIfNull(postRecord);
         }
 
         /// <summary>
-        /// Creates a new instance of <see cref="NewPostRecord"/>.
+        /// Creates a new instance of <see cref="Post"/> from the specified <paramref name="postRecord"/>.
+        /// </summary>
+        /// <param name="postRecord">The <see cref="Post"/> to create the new instance from.</param>
+        public Post(Post postRecord) : base(postRecord)
+        {
+            if (postRecord is not null)
+            {
+                Text = postRecord.Text;
+                CreatedAt = postRecord.CreatedAt;
+                Embed = postRecord.Embed;
+                Reply = postRecord.Reply;
+
+                if (postRecord.Facets is not null)
+                {
+                    Facets = new List<Facet>(postRecord.Facets);
+                }
+
+                if (postRecord.Langs is not null)
+                {
+                    Langs = new List<string>(postRecord.Langs);
+                }
+
+                if (postRecord.Labels is not null)
+                {
+                    Labels = new SelfLabels(postRecord.Labels.Values);
+                }
+
+                if (postRecord.Tags is not null)
+                {
+                    Tags = new List<string>(postRecord.Tags);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="Post"/>.
+        /// </summary>
+        /// <param name="text">The text for the post.</param>
+        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
+        /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
+        /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
+        /// <param name="embed">The embedded record for the post, if any.</param>
+        /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
+        /// <param name="tags">A collection of tags to apply to the post, if any.</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="text"/> is null and <paramref name="embed"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        ///    Thrown when <paramref name="text"/> exceeds the maximum length or.
+        ///    <paramref name="tags"/> exceeds the maximum number of tags or has a value that exceeds the maximum tag length.
+        /// </exception>
+        /// <remarks>
+        ///<para><paramref name="text"/> may be an empty string, if there are <paramref name="embed"/> is not null.</para>
+        /// </remarks>
+        public Post(
+            string? text,
+            IList<Facet>? facets = null,
+            IList<string>? langs = null,
+            EmbeddedBase? embed = null,
+            ReplyReferences? reply = null,
+            SelfLabels? labels = null,
+            IReadOnlyCollection<string>? tags = null) : this(text, DateTimeOffset.Now, facets, langs, embed, reply, labels, tags)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="Post"/>.
         /// </summary>
         /// <param name="text">The text for the post.</param>
         /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
@@ -42,29 +101,28 @@ namespace idunno.Bluesky.Actions.Model
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created on.</param>
-        /// <exception cref="ArgumentException">
-        ///    Thrown when <paramref name="text"/> is null or empty and there is no <paramref name="embed"/> record or
-        ///    <paramref name="tags"/> contains an empty tag.
-        /// </exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="text"/> is null and <paramref name="embed"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///    Thrown when <paramref name="text"/> exceeds the maximum length or.
         ///    <paramref name="tags"/> exceeds the maximum number of tags or has a value that exceeds the maximum tag length.
-        ///    
         /// </exception>
+        /// <remarks>
+        ///<para><paramref name="text"/> may be an empty string, if there are <paramref name="embed"/> is not null.</para>
+        /// </remarks>
         [JsonConstructor]
-        public NewPostRecord(
+        public Post(
             string? text,
-            ReplyReferences? reply = null,
+            DateTimeOffset? createdAt,
             IList<Facet>? facets = null,
             IList<string>? langs = null,
             EmbeddedBase? embed = null,
-            IReadOnlyCollection<SelfLabels>? labels = null,
-            IReadOnlyCollection<string>? tags = null,
-            DateTimeOffset? createdAt = null)
+            ReplyReferences? reply = null,
+            SelfLabels? labels = null,
+            IReadOnlyCollection<string>? tags = null) : base(createdAt)
         {
-            if (embed is null && string.IsNullOrEmpty(text))
+            if (string.IsNullOrWhiteSpace(text) && embed is null)
             {
-                throw new ArgumentException($"{nameof(text)} cannot be null if {nameof(embed)} is null.", nameof(text));
+                throw new ArgumentNullException(nameof(text));
             }
 
             if (!string.IsNullOrEmpty(text) && (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
@@ -103,21 +161,12 @@ namespace idunno.Bluesky.Actions.Model
                     position++;
                 }
             }
-
-            if (createdAt is null)
-            {
-                CreatedAt = DateTimeOffset.UtcNow;
-            }
-            else
-            {
-                CreatedAt = (DateTimeOffset)createdAt;
-            }
         }
 
         /// <summary>
         /// Gets the JSON record type for this instance.
         /// </summary>
-        [JsonInclude]
+        [JsonIgnore]
         [JsonPropertyName("$type")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Cannot be static as it won't be serialized.")]
         public string Type => RecordType.Post;
@@ -160,9 +209,12 @@ namespace idunno.Bluesky.Actions.Model
         /// <summary>
         /// A collection of <see cref="SelfLabels"/> to apply to the post, if any.
         /// </summary>
+        /// <remarks>
+        /// Post self labels can only be one of the known <see href="https://docs.bsky.app/docs/advanced-guides/moderation#global-label-values">global values</see>.
+        /// </remarks>
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public IReadOnlyCollection<SelfLabels>? Labels { get; internal set; }
+        public SelfLabels? Labels { get; internal set; }
 
         /// <summary>
         /// Gets the collection of tags to apply to the post, if any.
@@ -170,12 +222,6 @@ namespace idunno.Bluesky.Actions.Model
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public IReadOnlyCollection<string>? Tags { get; internal set; }
-
-        /// <summary>
-        /// Gets the <see cref="DateTimeOffset"/> the post was created on.
-        /// </summary>
-        [JsonInclude]
-        public DateTimeOffset CreatedAt { get; internal set; }
 
         /// <summary>
         /// Gets the number of characters in the post.
@@ -199,6 +245,7 @@ namespace idunno.Bluesky.Actions.Model
         /// <summary>
         /// Gets the number of bytes in the post, as a Utf8 byte array.
         /// </summary>
+        [JsonIgnore]
         public int Utf8Length
         {
             get

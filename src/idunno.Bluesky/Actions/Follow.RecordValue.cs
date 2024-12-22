@@ -2,27 +2,34 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
-
 using idunno.AtProto;
+using idunno.Bluesky.Record;
 
-namespace idunno.Bluesky.Actions.Model
+namespace idunno.Bluesky.Actions
 {
     /// <summary>
-    /// Encapsulates the information needed to create a follow record.
+    /// Encapsulates the a follow record.
     /// </summary>
-    public sealed record NewFollowRecord
+    public sealed record FollowRecordValue : BlueskyRecordValue
     {
         /// <summary>
-        /// Creates a new instance of <see cref="NewBlockRecord"/>.
+        /// Creates a new instance of <see cref="FollowRecordValue"/> with <see cref="BlueskyRecordValue.CreatedAt"/> set to the current date and time.
+        /// </summary>
+        /// <param name="subject">The <see cref="Did"/> to the actor to be followed.</param>
+        public FollowRecordValue(Did subject) : this(subject, DateTimeOffset.UtcNow)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="FollowRecordValue"/>.
         /// </summary>
         /// <param name="subject">The <see cref="Did"/> to the actor to be followed.</param>
         /// <param name="createdAt">An optional <see cref="DateTimeOffset"/> for the repost creation date, defaults to now.</param>
         [JsonConstructor]
-        public NewFollowRecord(Did subject, DateTimeOffset? createdAt=null)
+        public FollowRecordValue(Did subject, DateTimeOffset? createdAt) : base(createdAt)
         {
             ArgumentNullException.ThrowIfNull(subject);
             Subject = subject;
-            CreatedAt = createdAt ?? DateTimeOffset.UtcNow;
         }
 
         /// <summary>
@@ -34,15 +41,9 @@ namespace idunno.Bluesky.Actions.Model
         public string Type => RecordType.Follow;
 
         /// <summary>
-        /// Gets the <see cref="Did"/> to the actor to follow.
+        /// Gets the <see cref="Did"/> of the actor being followed.
         /// </summary>
         [JsonInclude]
         public Did Subject { get; init; }
-
-        /// <summary>
-        /// Gets <see cref="DateTimeOffset"/> the follow record was created.
-        /// </summary>
-        [JsonInclude]
-        public DateTimeOffset CreatedAt { get; init; }
     }
 }

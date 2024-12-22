@@ -11,13 +11,12 @@ using idunno.AtProto.Repo;
 namespace idunno.Bluesky.Record
 {
     /// <summary>
-    /// A declaration of a Bluesky account profile.
+    /// Encapsulates a Bluesky account profile.
     /// </summary>
-    [SuppressMessage("Naming", "CA1724: Type names should not match namespaces", Justification = "System.Web.Profile has been long deprecated and cannot be used with ASP.NET Core, so no confusion should arise.")]
-    public sealed record ProfileRecordValue : AtProtoRecordValue
+    public sealed record ProfileRecordValue : BlueskyRecordValue
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private const string DiscourageLoggedOutUserFlagName = "!no-unauthenticated";
+        private const string DiscourageLoggedOutUserLabelName = "!no-unauthenticated";
 
         /// <summary>
         /// Creates a new instance of <see cref="ProfileRecordValue"/>.
@@ -29,6 +28,7 @@ namespace idunno.Bluesky.Record
         /// <param name="joinedViaStarterPack">A <see cref="StrongReference"/> to the starter pack the account joined through, if any.</param>
         /// <param name="pinnedPost">A <see cref="StrongReference"/> to the profile's pinned post, if any.</param>
         /// <param name="labels">Any <see cref="SelfLabels"/> applied to the profile.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the record was created on.</param>
         [JsonConstructor]
         public ProfileRecordValue(
             string? displayName,
@@ -37,7 +37,8 @@ namespace idunno.Bluesky.Record
             Blob? banner,
             StrongReference? joinedViaStarterPack,
             StrongReference? pinnedPost,
-            SelfLabels? labels)
+            SelfLabels? labels,
+            DateTimeOffset? createdAt) : base(createdAt)
         {
             DisplayName = displayName;
             Description = description;
@@ -103,6 +104,9 @@ namespace idunno.Bluesky.Record
         /// <summary>
         /// Gets any <see cref="SelfLabels"/> applied to the profile/
         /// </summary>
+        /// <remarks>
+        /// Profile self labels can only be one of the known <see href="https://docs.bsky.app/docs/advanced-guides/moderation#global-label-values">global values</see>.
+        /// </remarks>
         [NotNull]
         [JsonInclude]
         public SelfLabels? Labels { get; private set; }
@@ -116,18 +120,18 @@ namespace idunno.Bluesky.Record
         {
             get
             {
-                return Labels.Contains(DiscourageLoggedOutUserFlagName);
+                return Labels.Contains(DiscourageLoggedOutUserLabelName);
             }
 
             set
             {
                 if (value)
                 {
-                    Labels.AddLabel(DiscourageLoggedOutUserFlagName);
+                    Labels.AddLabel(DiscourageLoggedOutUserLabelName);
                 }
                 else
                 {
-                    Labels.RemoveLabel(DiscourageLoggedOutUserFlagName);
+                    Labels.RemoveLabel(DiscourageLoggedOutUserLabelName);
                 }
             }
         }

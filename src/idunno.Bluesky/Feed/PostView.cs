@@ -25,7 +25,7 @@ namespace idunno.Bluesky.Feed
             AtUri uri,
             Cid cid,
             ProfileViewBasic author,
-            PostRecord record,
+            Post record,
             int replyCount,
             int repostCount,
             int likeCount,
@@ -92,10 +92,10 @@ namespace idunno.Bluesky.Feed
         public ProfileViewBasic Author { get; init; }
 
         /// <summary>
-        /// The record for the post.
+        /// The value of the post record.
         /// </summary>
         [JsonRequired]
-        public PostRecord Record {get; init;}
+        public Post Record {get; init;}
 
         /// <summary>
         /// The number of replies to this post.

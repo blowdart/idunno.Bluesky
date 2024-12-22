@@ -5,12 +5,11 @@ using System.Net;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
-using idunno.Bluesky.Actions.Model;
 using idunno.Bluesky.Embed;
 using idunno.AtProto.Repo.Models;
 using idunno.Bluesky.Feed.Gates;
-using System.Security.Cryptography;
 using idunno.Bluesky.RichText;
+using idunno.Bluesky.Actions;
 
 namespace idunno.Bluesky
 {
@@ -69,13 +68,24 @@ namespace idunno.Bluesky
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            NewFollowRecord followRecord = new(did);
+            FollowRecordValue follow = new(did);
 
-            return await CreateRecord(
-                followRecord,
+            AtProtoHttpResult<CreateRecordResponse> result = await CreateRecord(
+                follow,
                 CollectionNsid.Follow,
                 Did,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (result.Succeeded)
+            {
+                Logger.FollowSucceeded(_logger, Did, follow.Subject);
+            }
+            else
+            {
+                Logger.FollowFailedAtApiLayer(_logger, Did, follow.Subject);
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -108,7 +118,6 @@ namespace idunno.Bluesky
             {
                 Logger.UnfollowFailedAsHandleCouldNotResolve(_logger, handle);
             }
-
 
             if (didResolutionResult is null || cancellationToken.IsCancellationRequested)
             {
@@ -236,10 +245,10 @@ namespace idunno.Bluesky
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            NewBlockRecord blockRecord = new(did);
+            BlockRecordValue block = new(did);
 
             return await CreateRecord(
-                blockRecord,
+                block,
                 CollectionNsid.Block,
                 Did,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -545,7 +554,7 @@ namespace idunno.Bluesky
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            NewPostRecord postRecord = new(
+            Post postRecord = new(
                 text,
                 langs : new List<string>() { Thread.CurrentThread.CurrentUICulture.Name },
                 embed : embeddedImages);
@@ -664,7 +673,7 @@ namespace idunno.Bluesky
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            NewPostRecord postRecord;
+            Post postRecord;
             List<ThreadGateRule>? threadGateRules = null;
             List<PostGateRule>? postGateRules = null;
 
@@ -886,7 +895,7 @@ namespace idunno.Bluesky
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            NewRepostRecord repostRecord = new(post);
+            RepostRecordValue repostRecord = new(post);
 
             return await CreateRecord(
                 repostRecord,
@@ -963,7 +972,7 @@ namespace idunno.Bluesky
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            NewLikeRecord likeRecord = new(strongReference);
+            LikeRecordValue likeRecord = new(strongReference);
 
             return await CreateRecord(
                 likeRecord,
@@ -1163,7 +1172,7 @@ namespace idunno.Bluesky
 
             // This is a special case as there is no post text, it cannot go through the normal post APIs, it must go through the repo.ApplyWrites() api.
 
-            NewPostRecord postRecord = new()
+            Post postRecord = new()
             {
                 Embed = new EmbeddedRecord(strongReference),
                 Text = string.Empty,
@@ -1349,7 +1358,7 @@ namespace idunno.Bluesky
         }
 
         private async Task<AtProtoHttpResult<CreateRecordResponse>> CreatePost(
-            NewPostRecord postRecord,
+            Post postRecord,
             Did did,
             ICollection<ThreadGateRule>? threadGateRules,
             ICollection<PostGateRule>? postGateRules,

@@ -4,8 +4,6 @@
 using System.Diagnostics.CodeAnalysis;
 using idunno.AtProto;
 using idunno.AtProto.Repo;
-
-using idunno.Bluesky.Actions.Model;
 using idunno.Bluesky.Embed;
 
 namespace idunno.Bluesky.Test
@@ -19,7 +17,7 @@ namespace idunno.Bluesky.Test
             const string expected = "Test Text";
 
             PostBuilder builder = new(expected);
-            NewPostRecord postRecord = builder.ToPostRecord();
+            Post postRecord = builder.ToPostRecord();
 
             Assert.Equal(expected, postRecord.Text);
         }
@@ -41,7 +39,7 @@ namespace idunno.Bluesky.Test
 
             var builder = new PostBuilder("hello", expected);
 
-            NewPostRecord postRecord = builder.ToPostRecord();
+            Post postRecord = builder.ToPostRecord();
 
             Assert.NotNull(postRecord.Langs);
             Assert.Single(postRecord.Langs);
@@ -67,7 +65,7 @@ namespace idunno.Bluesky.Test
 
             var builder = new PostBuilder("hello", expected);
 
-            NewPostRecord postRecord = builder.ToPostRecord();
+            Post postRecord = builder.ToPostRecord();
 
             Assert.NotNull(postRecord.Langs);
             Assert.Equal(expected, postRecord.Langs);
@@ -106,7 +104,7 @@ namespace idunno.Bluesky.Test
 
             Assert.Equal("hello world", builder.Text);
 
-            NewPostRecord postRecord = builder.ToPostRecord();
+            Post postRecord = builder.ToPostRecord();
 
             Assert.Equal("hello world", postRecord.Text);
         }
@@ -119,7 +117,7 @@ namespace idunno.Bluesky.Test
 
             Assert.Equal("hello!", builder.Text);
 
-            NewPostRecord postRecord = builder.ToPostRecord();
+            Post postRecord = builder.ToPostRecord();
 
             Assert.Equal("hello!", postRecord.Text);
         }
@@ -132,7 +130,7 @@ namespace idunno.Bluesky.Test
 
             Assert.Equal("hello world", builder.Text);
 
-            NewPostRecord postRecord = builder.ToPostRecord();
+            Post postRecord = builder.ToPostRecord();
 
             Assert.Equal("hello world", postRecord.Text);
         }
@@ -145,7 +143,7 @@ namespace idunno.Bluesky.Test
 
             Assert.Equal("!", builder.Text);
 
-            NewPostRecord postRecord = builder.ToPostRecord();
+            Post postRecord = builder.ToPostRecord();
 
             Assert.Equal("!", postRecord.Text);
         }

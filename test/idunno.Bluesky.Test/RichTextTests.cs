@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-using idunno.Bluesky.Actions.Model;
 
 namespace idunno.Bluesky.Test
 {
@@ -17,7 +16,7 @@ namespace idunno.Bluesky.Test
         [InlineData("\"", 1, 1, 1)]
         public void LengthChecks(string text, int expectedLength, int expectedGraphemeLength, int expectedUtf8Length)
         {
-            NewPostRecord postRecord = new(text);
+            Post postRecord = new(text);
 
             Assert.Equal(expectedLength, postRecord.Length);
             Assert.Equal(expectedGraphemeLength, postRecord.GraphemeLength);

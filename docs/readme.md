@@ -9,11 +9,11 @@ The status page for `idunno.AtProto`'s [current and planned APIs](endpointStatus
 ## <a name="toc">Table of Contents</a>
 
 * [Getting Started](gettingStarted.md)
-  * [Making requests to Bluesky and understanding the results](gettingStarted.md#makingRequests)
+  * [Making requests to Bluesky](gettingStarted.md#makingRequests)
+  * [Understanding results & error handling](gettingStarted.md#understandingResults)
   * [Connecting to Bluesky](gettingStarted.md#connecting)
   * [Using a proxy server](gettingStarted.md#usingAProxy)
   * [Disabling token refresh](gettingStarted.md#disablingTokenRefresh)
-  ** [Error Handling](gettingStarted.md#errorHandling)
 * [Common Terms](commonTerms.md)
   * [AT URIs, CIDs and Strong References](commonTerms.md#atUris)
   * [Records, Collections and NSIDs](commonTerms.md#records)

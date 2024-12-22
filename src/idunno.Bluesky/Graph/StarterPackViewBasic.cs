@@ -8,6 +8,7 @@ using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
+using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky.Graph
 {

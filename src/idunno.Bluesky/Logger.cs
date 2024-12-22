@@ -11,12 +11,18 @@ namespace idunno.Bluesky
 {
     internal static partial class Logger
     {
-        // GetPost
-        [LoggerMessage(10, LogLevel.Error, "GetPost failed for {rKey}/ {cid} in {repo} with status code {status}, {error} {message} on {service}")]
-        internal static partial void GetPostFailed(ILogger logger, HttpStatusCode status, AtIdentifier repo, RecordKey rkey, Cid? cid, string? error, string? message, Uri service);
+        // GetPostRecord
+        [LoggerMessage(10, LogLevel.Error, "GetPostRecord failed for {uri}/ {cid} with status code {status}, {error} {message} on {service}")]
+        internal static partial void GetPostRecordFailed(ILogger logger, HttpStatusCode status, AtUri uri, Cid? cid, string? error, string? message, Uri service);
 
-        [LoggerMessage(11, LogLevel.Error, "GetPost succeeded for {rKey}/ {cid} in {repo} but returned a null result from {service}")]
-        internal static partial void GetPostSucceededButReturnedNullResult(ILogger logger, AtIdentifier repo, RecordKey rkey, Cid? cid, Uri service);
+        [LoggerMessage(11, LogLevel.Error, "GetPostRecord returned OK for {uri}/ {cid} but returned a null result from {service}")]
+        internal static partial void GetPostRecordSucceededButReturnedNullResult(ILogger logger, AtUri uri, Cid? cid, Uri service);
+
+        [LoggerMessage(12, LogLevel.Information, "GetPostRecord succeeded for {uri} / {cid} from {service} for {did}")]
+        internal static partial void GetPostRecordSucceeded(ILogger logger, Did did, AtUri uri, Cid? cid, Uri service);
+
+        [LoggerMessage(13, LogLevel.Information, "Anonymous GetPostRecord succeeded for {uri} / {cid} from {service}")]
+        internal static partial void GetPostRecordSucceededAnon(ILogger logger, AtUri uri, Cid? cid, Uri service);
 
         // Actions
         [LoggerMessage(20, LogLevel.Error, "Quote() succeeded but the results count from ApplyWrites was {count}.")]
@@ -27,6 +33,12 @@ namespace idunno.Bluesky
 
         [LoggerMessage(25, LogLevel.Error, "Follow() failed as {handle} could not be resolved to a DID.")]
         internal static partial void FollowFailedAsHandleCouldNotResolve(ILogger logger, Handle handle);
+
+        [LoggerMessage(26, LogLevel.Information, "Follow() succeeded {user} is now following {followed}.")]
+        internal static partial void FollowSucceeded(ILogger logger, Did user, Did followed);
+
+        [LoggerMessage(27, LogLevel.Error, "Follow() failed for {user}, did not follow {followed}.")]
+        internal static partial void FollowFailedAtApiLayer(ILogger logger, Did user, Did followed);
 
         [LoggerMessage(30, LogLevel.Error, "Unfollow() failed as {handle} could not be resolved to a DID.")]
         internal static partial void UnfollowFailedAsHandleCouldNotResolve(ILogger logger, Handle handle);

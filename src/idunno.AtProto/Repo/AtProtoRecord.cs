@@ -38,9 +38,10 @@ namespace idunno.AtProto.Repo
     }
 
     /// <summary>
-    /// Properties for an AT Proto record that has been retrieved from a repository.
+    /// Encapsulates an AT Proto record has been retrieved from a repository.
     /// </summary>
-    public record AtProtoRecord<T> : AtProtoReferencedObject where T: AtProtoRecordValue
+    /// <typeparam name="TRecordValue">The type of the record's value.</typeparam>
+    public record AtProtoRecord<TRecordValue> : AtProtoReferencedObject where TRecordValue: AtProtoRecordValue
     {
         /// <summary>
         /// Creates a new instance of at AT Proto record.
@@ -49,7 +50,7 @@ namespace idunno.AtProto.Repo
         /// <param name="cid">The <see cref="Cid"/> of the record.</param>
         /// <param name="value">The value of the record.</param>
         [JsonConstructor]
-        public AtProtoRecord(AtUri uri, Cid cid, T value) : base(uri, cid)
+        public AtProtoRecord(AtUri uri, Cid cid, TRecordValue value) : base(uri, cid)
         {
             Value = value;
         }
@@ -59,7 +60,7 @@ namespace idunno.AtProto.Repo
         /// </summary>
         [JsonInclude]
         [JsonRequired]
-        public T Value { get; init; }
+        public TRecordValue Value { get; init; }
 
         /// <summary>
         /// A list of keys and element data that do not map to any strongly typed properties.

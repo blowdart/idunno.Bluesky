@@ -8,12 +8,13 @@ namespace idunno.AtProto.Repo.Models
     /// <summary>
     /// Encapsulates the information needed to make a create record request.
     /// </summary>
-    public sealed record CreateRecordRequest
+    /// <typeparam name="TRecord">The type of the record to be created.</typeparam>
+    public sealed record CreateRecordRequest<TRecord>
     {
         // https://github.com/bluesky-social/atproto/blob/main/lexicons/com/atproto/repo/createRecord.json
 
         /// <summary>
-        /// Creates a new instance of <see cref="CreateRecordRequest"/>.
+        /// Creates a new instance of <see cref="CreateRecordRequest{TRecord}"/>
         /// </summary>
         /// <param name="record">The record to create.</param>
         /// <param name="collection">The <see cref="Nsid"/> of the collection the record will be created in.</param>
@@ -23,7 +24,7 @@ namespace idunno.AtProto.Repo.Models
         /// <param name="swapCommit">The <see cref="Cid"/>, if any, to compare and swap with.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="record"/>, <paramref name="collection"/> or <paramref name="repo"/> is null.</exception>
         public CreateRecordRequest(
-            object record,
+            TRecord record,
             Nsid collection,
             Did repo,
             bool? validate = true,
@@ -81,6 +82,6 @@ namespace idunno.AtProto.Repo.Models
         /// Gets the record to create.
         /// </summary>
         [JsonRequired]
-        public object Record { get; init; }
+        public TRecord Record { get; init; }
     }
 }

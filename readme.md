@@ -49,18 +49,19 @@ The [releases page](https://github.com/blowdart/idunno.Bluesky/releases) provide
 
 ### Major
 
-* Consolidate PostRecord and NewPostRecord if possible
 * Logging in idunno.Bluesky
 * OAuth
 * Video uploading and attaching
 * GIF attaching
 * AOT & trimming support
 * Firehose support
+* Wider test coverage
+* More deserialization tests with captured responses
 
 ### Minor
 
-* Wider test coverage
-* More deserialization tests with captured responses
+* Self labels on posts
+* Profile sample
 
 ### Awaiting external
 
@@ -68,7 +69,6 @@ The [releases page](https://github.com/blowdart/idunno.Bluesky/releases) provide
 
 ### Documentation
 
-* Docs accuracy after refactoring
 * Docs site generation, including XMLDocs, markdown link checking and publishing
 
 ## Dependencies

@@ -23,13 +23,45 @@ namespace idunno.Bluesky
         {
             ArgumentNullException.ThrowIfNull(strongReference);
 
-            return await BlueskyServer.GetPost(
+            AtProtoHttpResult<PostRecord> result = await BlueskyServer.GetPostRecord(
                 strongReference,
                 AuthenticatedOrUnauthenticatedServiceUri,
                 AccessToken,
                 HttpClient,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (result.Succeeded)
+            {
+                if (IsAuthenticated)
+                {
+                    Logger.GetPostRecordSucceeded(_logger, Did, strongReference.Uri, strongReference.Cid, AuthenticatedOrUnauthenticatedServiceUri);
+                }
+                else
+                {
+                    Logger.GetPostRecordSucceededAnon(_logger, strongReference.Uri, strongReference.Cid, AuthenticatedOrUnauthenticatedServiceUri);
+                }
+            }
+            else
+            {
+                if (result.Result is null)
+                {
+                    Logger.GetPostRecordSucceededButReturnedNullResult(_logger, strongReference.Uri, strongReference.Cid, AuthenticatedOrUnauthenticatedServiceUri);
+                }
+                else
+                {
+                    Logger.GetPostRecordFailed(
+                        _logger,
+                        result.StatusCode,
+                        strongReference.Uri,
+                        strongReference.Cid,
+                        result.AtErrorDetail?.Error,
+                        result.AtErrorDetail?.Message,
+                        AuthenticatedOrUnauthenticatedServiceUri);
+                }
+            }
+
+            return result;
         }
 
         /// <summary>

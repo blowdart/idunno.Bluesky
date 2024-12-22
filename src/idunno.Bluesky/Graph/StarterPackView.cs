@@ -5,6 +5,7 @@ using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Feed;
+using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky.Graph
 {

@@ -50,7 +50,7 @@ namespace idunno.Bluesky.Feed
         {
             get
             {
-                return $"{{{Actor.Handle} on {CreatedAt.LocalDateTime:R}}}";
+                return $"Liked {Actor.Handle} on {CreatedAt.LocalDateTime:R}";
             }
         }
     }

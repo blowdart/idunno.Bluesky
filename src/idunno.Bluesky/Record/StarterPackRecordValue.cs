@@ -2,15 +2,14 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
-
 using idunno.AtProto;
 
-namespace idunno.Bluesky.Graph
+namespace idunno.Bluesky.Record
 {
     /// <summary>
-    ///  Encapsulates the Bluesky record for a starter pack.
+    ///  Encapsulates a Bluesky starter pack.
     /// </summary>
-    public record StarterPackRecordValue : BlueskyRecord
+    public record StarterPackRecordValue : BlueskyRecordValue
     {
         /// <summary>
         /// Creates a new instance of <see cref="StarterPackRecordValue"/>.
@@ -27,7 +26,7 @@ namespace idunno.Bluesky.Graph
             string description,
             AtUri list,
             IReadOnlyList<AtUri> feeds,
-            DateTimeOffset createdAt,
+            DateTimeOffset? createdAt,
             DateTimeOffset? updatedAt) : base(createdAt)
         {
             Name = name;

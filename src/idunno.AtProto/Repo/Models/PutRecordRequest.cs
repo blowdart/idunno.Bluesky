@@ -8,10 +8,11 @@ namespace idunno.AtProto.Repo.Models
     /// <summary>
     /// Encapsulates the information needed to make a put record request.
     /// </summary>
-    public sealed record PutRecordRequest
+    /// <typeparam name="TRecord">The type of the record to update.</typeparam>
+    public sealed record PutRecordRequest<TRecord>
     {
         /// <summary>
-        /// Creates a new instance of <see cref="PutRecordRequest"/>.
+        /// Creates a new instance of <see cref="PutRecordRequest{TRecord}"/>
         /// </summary>
         /// <param name="record">The record to update or create.</param>
         /// <param name="collection">The <see cref="Nsid"/> of the collection the record will be created in.</param>
@@ -21,7 +22,7 @@ namespace idunno.AtProto.Repo.Models
         /// <param name="swapCommit">The <see cref="Cid"/> of the commit, if any, to compare and swap with.</param>
         /// <param name="swapRecord">The <see cref="Cid"/> of the record, if any, to compare and swap with.</param>
         public PutRecordRequest(
-            object record,
+            TRecord record,
             Nsid collection,
             Did repo,
             RecordKey rKey,
@@ -88,6 +89,6 @@ namespace idunno.AtProto.Repo.Models
         /// Gets the record to create.
         /// </summary>
         [JsonRequired]
-        public object Record { get; init; }
+        public TRecord Record { get; init; }
     }
 }

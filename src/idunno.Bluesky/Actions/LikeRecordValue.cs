@@ -2,32 +2,35 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
-using idunno.AtProto.Repo;
 
-namespace idunno.Bluesky.Actions.Model
+using idunno.AtProto.Repo;
+using idunno.Bluesky.Record;
+
+namespace idunno.Bluesky.Actions
 {
     /// <summary>
-    /// Encapsulates the information needed to create a repost record.
+    /// Encapsulates the information needed to create a like record.
     /// </summary>
-    public sealed record NewLikeRecord
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1716:Identifiers should not match keywords", Justification = "Matching Bluesky naming.")]
+    public sealed record LikeRecordValue : BlueskyRecordValue
     {
         /// <summary>
-        /// Creates a new instance of <see cref="NewLikeRecord"/>.
+        /// Creates a new instance of <see cref="LikeRecordValue"/> with <see cref="BlueskyRecordValue.CreatedAt"/> set to the current date and time.
+        /// </summary>
+        /// <param name="subject">The <see cref="StrongReference"/> to the post to be liked.</param>
+        public LikeRecordValue(StrongReference subject) : this(subject, DateTimeOffset.UtcNow)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="LikeRecordValue"/>.
         /// </summary>
         /// <param name="subject">The <see cref="StrongReference"/> to the post to be liked.</param>
         /// <param name="createdAt">An optional <see cref="DateTimeOffset"/> for the repost creation date, defaults to now.</param>
-        public NewLikeRecord(StrongReference subject, DateTimeOffset? createdAt = null)
+        [JsonConstructor]
+        public LikeRecordValue(StrongReference subject, DateTimeOffset? createdAt) : base(createdAt)
         {
             Subject = subject;
-
-            if (createdAt is not null)
-            {
-                CreatedAt = (DateTimeOffset)createdAt;
-            }
-            else
-            {
-                CreatedAt = DateTimeOffset.UtcNow;
-            }
         }
 
         /// <summary>
@@ -43,11 +46,5 @@ namespace idunno.Bluesky.Actions.Model
         /// </summary>
         [JsonInclude]
         public StrongReference Subject { get; init; }
-
-        /// <summary>
-        /// Gets <see cref="DateTimeOffset"/> the repost record was created.
-        /// </summary>
-        [JsonInclude]
-        public DateTimeOffset CreatedAt { get; init; }
     }
 }

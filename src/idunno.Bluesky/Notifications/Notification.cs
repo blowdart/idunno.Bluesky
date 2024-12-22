@@ -8,6 +8,7 @@ using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 
 using idunno.Bluesky.Actor;
+using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky.Notifications
 {
@@ -22,7 +23,7 @@ namespace idunno.Bluesky.Notifications
             Cid cid,
             ProfileViewBasic author,
             NotificationReason reason,
-            BlueskyRecord record,
+            BlueskyRecordValue record,
             bool isRead,
             DateTimeOffset indexedAt,
             IReadOnlyCollection<Label>? labels) : base(uri, cid)
@@ -64,10 +65,10 @@ namespace idunno.Bluesky.Notifications
         public AtUri? ReasonSubject { get; init; }
 
         /// <summary>
-        /// Gets the underlying <see cref="BlueskyRecord"/> for the notification.
+        /// Gets the underlying <see cref="BlueskyRecordValue"/> for the notification.
         /// </summary>
         [JsonInclude]
-        public BlueskyRecord Record { get; init; }
+        public BlueskyRecordValue Record { get; init; }
 
         /// <summary>
         /// Gets a flag indicating whether the notification has been read by the authenticated user.

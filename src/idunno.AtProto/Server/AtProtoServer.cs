@@ -1,9 +1,10 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using Microsoft.Extensions.Logging;
+
 using idunno.AtProto.Models;
 using idunno.AtProto.Server;
-using Microsoft.Extensions.Logging;
 
 namespace idunno.AtProto
 {
@@ -113,7 +114,13 @@ namespace idunno.AtProto
 
             AtProtoHttpClient<EmptyResponse> request = new(loggerFactory);
 
-            return await request.Post(service, DeleteSessionEndpoint, null, refreshToken, httpClient: httpClient, cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await request.Post(
+                service,
+                DeleteSessionEndpoint,
+                refreshToken,
+                httpClient: httpClient,
+                cancellationToken:
+                cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -142,7 +149,6 @@ namespace idunno.AtProto
             AtProtoHttpResult<RefreshSessionResponse> result = await request.Post(
                 service,
                 RefreshSessionEndpoint,
-                requestBody: null,
                 refreshToken,
                 httpClient: httpClient,
                 cancellationToken: cancellationToken).ConfigureAwait(false);

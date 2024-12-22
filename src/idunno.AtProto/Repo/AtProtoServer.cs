@@ -106,6 +106,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Creates an atproto record in the specified collection. Requires authentication.
         /// </summary>
+        /// <typeparam name="TRecord">The type of the record to create.</typeparam>
         /// <param name="record"><para>A json representation of record to be created.</para></param>
         /// <param name="collection"><para>The NSID of collection the record should be created in.</para></param>
         /// <param name="creator"><para>The <see cref="Did"/> of the creating actor.</para></param>
@@ -129,8 +130,8 @@ namespace idunno.AtProto
         /// Thrown if <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="service"/>,
         /// <paramref name="accessToken"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
-        public static async Task<AtProtoHttpResult<CreateRecordResponse>> CreateRecord(
-            object record,
+        public static async Task<AtProtoHttpResult<CreateRecordResponse>> CreateRecord<TRecord>(
+            TRecord record,
             Nsid collection,
             Did creator,
             RecordKey? rKey,
@@ -150,7 +151,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(accessToken);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            CreateRecordRequest request = new(record, collection, creator, validate, rKey, swapCommit);
+            CreateRecordRequest<TRecord> request = new(record, collection, creator, validate, rKey, swapCommit);
             AtProtoHttpClient<CreateRecordResponse> client = new(loggerFactory);
 
             return await client.Post(
@@ -235,6 +236,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Updates or creates an atproto record in the specified collection. Requires authentication.
         /// </summary>
+        /// <typeparam name="TRecord">The type of the record to update or create.</typeparam>
         /// <param name="record"><para>A json representation of record to be created.</para></param>
         /// <param name="collection"><para>The NSID of collection the record should be created in.</para></param>
         /// <param name="creator"><para>The <see cref="Did"/> of the creating actor.</para></param>
@@ -259,8 +261,8 @@ namespace idunno.AtProto
         /// Thrown if <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="rKey"/>, <paramref name="service"/>,
         /// <paramref name="accessToken"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
-        public static async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord(
-            object record,
+        public static async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecord>(
+            TRecord record,
             Nsid collection,
             Did creator,
             RecordKey rKey,
@@ -282,7 +284,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(accessToken);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            PutRecordRequest request = new(record, collection, creator, rKey, validate, swapCommit, swapRecord);
+            PutRecordRequest<TRecord> request = new(record, collection, creator, rKey, validate, swapCommit, swapRecord);
             AtProtoHttpClient<PutRecordResponse> client = new(loggerFactory);
 
             return await client.Post(
@@ -299,7 +301,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Gets the record specified by the identifying parameters. May require authentication.
         /// </summary>
-        /// <typeparam name="T">The type of record to get.</typeparam>
+        /// <typeparam name="TRecord">The type of record to get.</typeparam>
         /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the record from.</param>
         /// <param name="collection">The NSID of the collection the record should be deleted from.</param>
         /// <param name="rKey">The record key, identifying the record to be deleted.</param>
@@ -314,7 +316,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">
         /// Thrown if <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="rKey"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
-        public static async Task<AtProtoHttpResult<T>> GetRecord<T>(
+        public static async Task<AtProtoHttpResult<TRecord>> GetRecord<TRecord>(
             AtIdentifier repo,
             Nsid collection,
             RecordKey rKey,
@@ -324,7 +326,7 @@ namespace idunno.AtProto
             HttpClient httpClient,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
-            CancellationToken cancellationToken = default) where T: class
+            CancellationToken cancellationToken = default) where TRecord: class
         {
             ArgumentNullException.ThrowIfNull(repo);
             ArgumentNullException.ThrowIfNull(collection);
@@ -332,7 +334,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<T> client = new(loggerFactory);
+            AtProtoHttpClient<TRecord> client = new(loggerFactory);
 
             string queryString = $"repo={Uri.EscapeDataString(repo.ToString())}&collection={Uri.EscapeDataString(collection.ToString())}&rkey={Uri.EscapeDataString(rKey.ToString())}";
 
@@ -353,7 +355,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Gets a page of records in the specified <paramref name="collection"/>. May requires authentication.
         /// </summary>
-        /// <typeparam name="T">The type of records to get.</typeparam>
+        /// <typeparam name="TRecord">The type of records to get.</typeparam>
         /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the records from.</param>
         /// <param name="collection">The NSID of the collection the records should be retrieved from.</param>
         /// <param name="limit">The number of records to return in each page.</param>
@@ -370,7 +372,7 @@ namespace idunno.AtProto
         /// Thrown if <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is not &gt;0 and &lt;=100.</exception>
-        public static async Task<AtProtoHttpResult<PagedReadOnlyCollection<T>>> ListRecords<T>(
+        public static async Task<AtProtoHttpResult<PagedReadOnlyCollection<TRecord>>> ListRecords<TRecord>(
             AtIdentifier repo,
             Nsid collection,
             int? limit,
@@ -381,7 +383,7 @@ namespace idunno.AtProto
             HttpClient httpClient,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
-            CancellationToken cancellationToken = default) where T : AtProtoRecord
+            CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
         {
             ArgumentNullException.ThrowIfNull(repo);
             ArgumentNullException.ThrowIfNull(collection);
@@ -414,8 +416,8 @@ namespace idunno.AtProto
             // We need to create an intermediate class to handle the deserialization of the response,
             // because trying to deserialize directly into a class that implements ICollection is
             // just too painful.
-            AtProtoHttpClient<ListRecordsResponse<T>> client = new(loggerFactory);
-            AtProtoHttpResult<ListRecordsResponse<T>> response = await client.Get(
+            AtProtoHttpClient<ListRecordsResponse<TRecord>> client = new(loggerFactory);
+            AtProtoHttpResult<ListRecordsResponse<TRecord>> response = await client.Get(
                 service,
                 $"{ListRecordsEndpoint}?{queryString}",
                 accessToken,
@@ -424,17 +426,17 @@ namespace idunno.AtProto
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             // Flatten the results and into an AtProtoRecordList instance.
-            PagedReadOnlyCollection<T> recordList;
+            PagedReadOnlyCollection<TRecord> recordList;
             if (response.Succeeded)
             {
-                recordList = new PagedReadOnlyCollection<T>(response.Result!.Records, response.Result.Cursor);
+                recordList = new PagedReadOnlyCollection<TRecord>(response.Result!.Records, response.Result.Cursor);
             }
             else
             {
-                recordList = new PagedReadOnlyCollection<T>(new List<T>(), null);
+                recordList = new PagedReadOnlyCollection<TRecord>(new List<TRecord>(), null);
             }
 
-            return new AtProtoHttpResult<PagedReadOnlyCollection<T>>(recordList, response.StatusCode, response.AtErrorDetail, response.RateLimit);
+            return new AtProtoHttpResult<PagedReadOnlyCollection<TRecord>>(recordList, response.StatusCode, response.AtErrorDetail, response.RateLimit);
         }
 
         /// <summary>
