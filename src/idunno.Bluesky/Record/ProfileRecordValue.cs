@@ -105,7 +105,7 @@ namespace idunno.Bluesky.Record
         /// Gets any <see cref="SelfLabels"/> applied to the profile/
         /// </summary>
         /// <remarks>
-        /// Profile self labels can only be one of the known <see href="https://docs.bsky.app/docs/advanced-guides/moderation#global-label-values">global values</see>.
+        /// <para>Profile self labels can only be one of the known <see href="https://docs.bsky.app/docs/advanced-guides/moderation#global-label-values">global values</see>.</para>
         /// </remarks>
         [NotNull]
         [JsonInclude]

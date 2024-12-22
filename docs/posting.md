@@ -347,6 +347,35 @@ if (imageUploadResult.Succeeded)
 }
 ```
 
+## <a name="selfLabels">Self-labelling your posts</a>
+
+Bluesky allows you to [self label](https://docs.bsky.app/docs/advanced-guides/moderation#global-label-values) a post, classifying the media the post contains.
+You can label a post to indicate it contains one, or more, of the following classifications:
+
+* Porn, which puts a warning on images and can only be clicked through if the user is 18+ and has enabled adult content,
+* Sexual, which behaves like porn but is meant to handle less intense sexual content,
+* Graphic-Media, which behaves like porn but is for violence / gore and
+* Nudity which puts a warning on images but isn’t 18+ and defaults to ignore.
+
+You can classify a post by passing in an instance of `PostSelfLabels` to any of the `agent.Post()` methods, with the properties set to indicate your content classification,
+or into a `PostBuilder` via the constructor, or via the `SetSelfLabels` method.
+
+```c#
+var labels = new PostSelfLabels
+{
+    Porn = true,
+    GraphicMedia = true,
+    Nudity = true,
+    SexualContent = true
+};
+
+var postResult = await agent.Post("Naughty bean content", labels : labels, cancellationToken: cancellationToken);
+
+var postBuilder = new PostBuilder("Naughty bean content");
+postBuilder.SetSelfLabels(labels);
+var builderPostResult = await agent.Post(postBuilder, cancellationToken: cancellationToken);
+```
+
 ## <a name="openGraphCards">Embedding an external link (Open Graph cards)</a>
 
 [Open Graph](https://ogp.me/) is a standard that allows web pages to become a rich object in a social graph. Open Graph metadata allows you to embed a rich link card in a Bluesky post, which will look something like this:

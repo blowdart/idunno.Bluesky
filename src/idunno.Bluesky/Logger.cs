@@ -61,7 +61,7 @@ namespace idunno.Bluesky
         [LoggerMessage(45, LogLevel.Debug, "CreatePostWithGatesSucceeded for {did} with a record key of {recordKey}")]
         internal static partial void CreatePostWithGatesSucceeded(ILogger logger, RecordKey recordKey, Did did);
 
-        [LoggerMessage(46, LogLevel.Error, "CreatePostWithGatesFailed for {did} with a status code {statusCode}, at error {error} message {message}")]
+        [LoggerMessage(46, LogLevel.Error, "CreatePostWithGatesFailed for {did} with a status code {statusCode}, ATError {error} message {message}")]
         internal static partial void CreatePostWithGatesFailed(ILogger logger, HttpStatusCode statusCode, Did did, string? error, string? message);
 
         [LoggerMessage(50, LogLevel.Debug, "ImageUpload succeeded for {did} {link}")]
@@ -69,6 +69,13 @@ namespace idunno.Bluesky
 
         [LoggerMessage(51, LogLevel.Error, "ImageUpload for {did} with a status code {statusCode}, at error {error} message {message}")]
         internal static partial void ImageUploadFailed(ILogger logger, HttpStatusCode statusCode, Did did, string? error, string? message);
+
+        // CreatePost logging
+        [LoggerMessage(60, LogLevel.Information, "CreatePost(Post) succeeded for {did}, created {uri} / {cid}")]
+        internal static partial void CreatePostWithPostSucceeded(ILogger logger, Did did, AtUri uri, Cid? cid);
+
+        [LoggerMessage(61, LogLevel.Error, "CreatePost(Post) failed for {did} with a status code of {statusCode}, ATError {error} message {message}")]
+        internal static partial void CreatePostWithPostFailed(ILogger logger, HttpStatusCode statusCode, Did did, string? error, string? message);
 
     }
 }

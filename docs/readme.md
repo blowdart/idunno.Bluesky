@@ -41,6 +41,7 @@ The status page for `idunno.AtProto`'s [current and planned APIs](endpointStatus
     * [Replacing the facet extractor](posting.md#facetProvider)
     * [Building facets with a PostBuilder](posting.md#postBuilder)
   * [Posting with images](posting.md#images)
+  * [Self labelling your posts](posting.md#selfLabels)
   * [Embedding an external link (Open Graph cards)](posting.md#openGraphCards)
 * [Thread Gates and Post Gates](threadGatesAndPostGates.md)
 * [Labels](labels.md)

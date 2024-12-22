@@ -400,6 +400,7 @@ namespace idunno.Bluesky
         /// <param name="text">The text of the post record to create.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+        /// <param name="labels">Optional self label settings for the post media content.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -410,6 +411,7 @@ namespace idunno.Bluesky
             string text,
             ICollection<ThreadGateRule>? threadGateRules = null,
             ICollection<PostGateRule>? postGateRules = null,
+            PostSelfLabels? labels = null,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
@@ -432,7 +434,8 @@ namespace idunno.Bluesky
                 images: null,
                 threadGateRules: threadGateRules,
                 postGateRules: postGateRules,
-                extractFacets,
+                labels: labels,
+                extractFacets: extractFacets,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -443,6 +446,7 @@ namespace idunno.Bluesky
         /// <param name="image">The image to attach to the post.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+        /// <param name="labels">Optional self label settings for the post media content.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -454,6 +458,7 @@ namespace idunno.Bluesky
             EmbeddedImage image,
             ICollection<ThreadGateRule>? threadGateRules = null,
             ICollection<PostGateRule>? postGateRules = null,
+            PostSelfLabels? labels = null,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
@@ -486,6 +491,7 @@ namespace idunno.Bluesky
                 images: images,
                 threadGateRules: threadGateRules,
                 postGateRules: postGateRules,
+                labels: labels,
                 extractFacets: extractFacets,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -497,6 +503,7 @@ namespace idunno.Bluesky
         /// <param name="images">Any images to attach to the post.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+        /// <param name="labels">Optional self label settings for the post media content.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -511,6 +518,7 @@ namespace idunno.Bluesky
             ICollection<EmbeddedImage>? images,
             ICollection<ThreadGateRule>? threadGateRules,
             ICollection<PostGateRule>? postGateRules,
+            PostSelfLabels? labels = null,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
@@ -554,7 +562,7 @@ namespace idunno.Bluesky
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            Post postRecord = new(
+            Post post = new(
                 text,
                 langs : new List<string>() { Thread.CurrentThread.CurrentUICulture.Name },
                 embed : embeddedImages);
@@ -562,10 +570,15 @@ namespace idunno.Bluesky
             if (extractFacets)
             {
                 IList<Facet> extractedFacets = await _facetExtractor.ExtractFacets(text, cancellationToken: cancellationToken).ConfigureAwait(false);
-                postRecord.Facets = extractedFacets;
+                post.Facets = extractedFacets;
             }
 
-            return await CreatePost(postRecord, Did, threadGateRules, postGateRules, cancellationToken).ConfigureAwait(false);
+            if (labels is not null)
+            {
+                post.SetSelfLabels(labels);
+            }
+
+            return await CreatePost(post, Did, threadGateRules, postGateRules, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -575,6 +588,7 @@ namespace idunno.Bluesky
         /// <param name="externalCard">An Open Graph embedded card.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+        /// <param name="labels">Optional self label settings for the post media content.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="externalCard"/> is null.</exception>
@@ -583,6 +597,7 @@ namespace idunno.Bluesky
             EmbeddedExternal externalCard,
             ICollection<ThreadGateRule>? threadGateRules = null,
             ICollection<PostGateRule>? postGateRules = null,
+            PostSelfLabels? labels = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(externalCard);
@@ -593,6 +608,7 @@ namespace idunno.Bluesky
                 threadGateRules: threadGateRules,
                 postGateRules: postGateRules,
                 extractFacets: false,
+                labels: labels,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -604,6 +620,7 @@ namespace idunno.Bluesky
         /// <param name="externalCard">An Open Graph embedded card.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+        /// <param name="labels">Optional self label settings for the post media content.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -615,6 +632,7 @@ namespace idunno.Bluesky
             EmbeddedExternal externalCard,
             ICollection<ThreadGateRule>? threadGateRules = null,
             ICollection<PostGateRule>? postGateRules = null,
+            PostSelfLabels? labels = null,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
@@ -653,7 +671,44 @@ namespace idunno.Bluesky
                 postBuilder.PostGateRules = new List<PostGateRule>(postGateRules);
             }
 
+            if (labels is not null)
+            {
+                postBuilder.SetSelfLabels(labels);
+            }
+
             return await Post(postBuilder, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+
+        /// <summary>
+        /// Creates a post record from the specified <paramref name="post"/>.
+        /// </summary>
+        /// <param name="post">The post to create the record from.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
+        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(Post post, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(post);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticatedSessionRequiredException();
+            }
+
+            AtProtoHttpResult<CreateRecordResponse> result = await CreatePost(post, Did, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (result.Succeeded)
+            {
+                Logger.CreatePostWithPostSucceeded(_logger, Did, result.Result.Uri, result.Result.Cid);
+            }
+            else
+            {
+                Logger.CreatePostWithPostFailed(_logger, result.StatusCode, Did, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message);
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -673,13 +728,13 @@ namespace idunno.Bluesky
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            Post postRecord;
+            Post post;
             List<ThreadGateRule>? threadGateRules = null;
             List<PostGateRule>? postGateRules = null;
 
             lock (postBuilder)
             {
-                postRecord = postBuilder.ToPostRecord();
+                post = postBuilder.ToPostRecord();
 
                 if (postBuilder.ThreadGateRules is not null)
                 {
@@ -693,7 +748,7 @@ namespace idunno.Bluesky
             }
 
             return await CreatePost(
-                postRecord,
+                post,
                 Did,
                 threadGateRules,
                 postGateRules,
@@ -1121,7 +1176,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Creates an Bluesky post record  quoting the post identified by <see cref="StrongReference"/> with just an image.
+        /// Creates an Bluesky post record quoting the post identified by <see cref="StrongReference"/> with just an image.
         /// </summary>
         /// <param name="strongReference">A <see cref="StrongReference"/> to the post to be quoted.</param>
         /// <param name="image">The image to attach to the quote.</param>
@@ -1358,18 +1413,18 @@ namespace idunno.Bluesky
         }
 
         private async Task<AtProtoHttpResult<CreateRecordResponse>> CreatePost(
-            Post postRecord,
-            Did did,
-            ICollection<ThreadGateRule>? threadGateRules,
-            ICollection<PostGateRule>? postGateRules,
-            CancellationToken cancellationToken)
+            Post post,
+            Did owner,
+            ICollection<ThreadGateRule>? threadGateRules = null,
+            ICollection<PostGateRule>? postGateRules = null,
+            CancellationToken cancellationToken = default)
         {
-            if ((threadGateRules is null && postGateRules is null) && !string.IsNullOrEmpty(postRecord.Text))
+            if ((threadGateRules is null && postGateRules is null) && !string.IsNullOrEmpty(post.Text))
             {
                 return await CreateRecord(
-                    postRecord,
+                    post,
                     CollectionNsid.Post,
-                    did,
+                    owner,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
             }
             else
@@ -1381,9 +1436,9 @@ namespace idunno.Bluesky
 
                 // We need to generate a record key to hang it all together.
                 RecordKey rKey = TimestampIdentifier.Generate();
-                AtUri postUri = new($"at://{did}/{CollectionNsid.Post}/{rKey}");
+                AtUri postUri = new($"at://{owner}/{CollectionNsid.Post}/{rKey}");
 
-                writeRequests.Add(new ApplyWritesCreate(CollectionNsid.Post, rKey, postRecord));
+                writeRequests.Add(new ApplyWritesCreate(CollectionNsid.Post, rKey, post));
 
                 if (threadGateRules is not null)
                 {
@@ -1402,11 +1457,11 @@ namespace idunno.Bluesky
                 }
 
                 AtProtoHttpResult<ApplyWritesResponse> response =
-                    await ApplyWrites(writeRequests, did, validate: true, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    await ApplyWrites(writeRequests, owner, validate: true, cancellationToken: cancellationToken).ConfigureAwait(false);
 
                 if (response.Succeeded)
                 {
-                    Logger.CreatePostWithGatesSucceeded(_logger, rKey, did);
+                    Logger.CreatePostWithGatesSucceeded(_logger, rKey, owner);
 
                     CreateRecordResponse? createRecordResponse = null;
 
@@ -1423,7 +1478,7 @@ namespace idunno.Bluesky
                 }
                 else
                 {
-                    Logger.CreatePostWithGatesFailed(_logger, response.StatusCode, did, response.AtErrorDetail?.Error, response.AtErrorDetail?.Message);
+                    Logger.CreatePostWithGatesFailed(_logger, response.StatusCode, owner, response.AtErrorDetail?.Error, response.AtErrorDetail?.Message);
                     return new AtProtoHttpResult<CreateRecordResponse>(null, response.StatusCode, response.AtErrorDetail, response.RateLimit);
                 }
             }

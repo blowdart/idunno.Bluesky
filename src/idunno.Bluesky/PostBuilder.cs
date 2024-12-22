@@ -40,10 +40,11 @@ namespace idunno.Bluesky
         /// <param name="text">The text for the post.</param>
         /// <param name="images">A collection of <see cref="EmbeddedImage"/>s to attach to the post, if any.</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
+        /// <param name="labels">Any self labels to apply to the post.</param>
         /// <exception cref="ArgumentException">Thrown if the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long.</exception>
         /// <exception cref="ArgumentNullException">Thrown if the <paramref name="text"/> is null or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">If the text for the post is too long or too many images are specified.</exception>
-        public PostBuilder(string text, ICollection<EmbeddedImage>? images = null, IList<Facet>? facets = null) : this()
+        public PostBuilder(string text, ICollection<EmbeddedImage>? images = null, IList<Facet>? facets = null, PostSelfLabels? labels = null) : this()
         {
             ArgumentNullException.ThrowIfNull(text);
 
@@ -80,6 +81,11 @@ namespace idunno.Bluesky
             {
                 _postRecord.Facets = new List<Facet>(facets);
             }
+
+            if (labels is not null)
+            {
+                _postRecord.SetSelfLabels(labels);
+            }
         }
 
         /// <summary>
@@ -87,7 +93,8 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="text">The text for the post.</param>
         /// <param name="language">The language for the post.</param>
-        public PostBuilder(string text, string language) : this(text, languages: new string[] { language }, images: null, facets : null)
+        /// <param name="labels">Any self labels to apply to the post.</param>
+        public PostBuilder(string text, string language, PostSelfLabels? labels = null) : this(text, languages: new string[] { language }, images: null, facets : null, labels: labels)
         {
         }
 
@@ -98,9 +105,10 @@ namespace idunno.Bluesky
         /// <param name="languages">The languages for the post.</param>
         /// <param name="images">An optional collection of <see cref="EmbeddedImage"/>s to attach to the post.</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
+        /// <param name="labels">Any self labels to apply to the post.</param>
         /// <exception cref="ArgumentNullException">if <paramref name="languages"/> is null</exception>
         /// <exception cref="ArgumentOutOfRangeException">if <paramref name="languages"/> contains no entries.</exception>
-        public PostBuilder(string text, string[] languages, ICollection<EmbeddedImage>? images = null, IList<Facet>? facets = null) : this(text, images, facets)
+        public PostBuilder(string text, string[] languages, ICollection<EmbeddedImage>? images = null, IList<Facet>? facets = null, PostSelfLabels? labels = null) : this(text, images, facets, labels)
         {
             ArgumentNullException.ThrowIfNull(languages);
             ArgumentOutOfRangeException.ThrowIfZero(languages.Length);
@@ -1059,6 +1067,18 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(images);
 
             return Add(postBuilder, images);
+        }
+
+        /// <summary>
+        /// Sets the self labels for the post to the values specified in <paramref name="labels"/>.
+        /// </summary>
+        /// <param name="labels">The self label values to set.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="labels"/> is null.</exception>
+        public void SetSelfLabels(PostSelfLabels labels)
+        {
+            ArgumentNullException.ThrowIfNull(labels);
+
+            _postRecord.SetSelfLabels(labels);
         }
 
         /// <summary>

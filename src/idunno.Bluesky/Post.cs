@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
@@ -19,6 +20,19 @@ namespace idunno.Bluesky
     /// </remarks>
     public sealed record class Post : BlueskyRecordValue
     {
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private const string PornLabelName = "porn";
+
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private const string SexualLabelName = "sexual";
+
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private const string GraphicMediaLabelName = "graphic-media";
+
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private const string NudityLabelName = "nudity";
+
+
         /// <summary>
         /// Creates a new instance of <see cref="Post"/> and sets <see cref="BlueskyRecordValue.CreatedAt"/> to the current date and time.
         /// </summary>
@@ -137,7 +151,11 @@ namespace idunno.Bluesky
             Facets = facets;
             Langs = langs;
             Embed = embed;
-            Labels = labels;
+
+            if (labels is not null)
+            {
+                Labels = labels;
+            }
 
             if (tags is not null)
             {
@@ -210,11 +228,12 @@ namespace idunno.Bluesky
         /// A collection of <see cref="SelfLabels"/> to apply to the post, if any.
         /// </summary>
         /// <remarks>
-        /// Post self labels can only be one of the known <see href="https://docs.bsky.app/docs/advanced-guides/moderation#global-label-values">global values</see>.
+        /// <para>Post self labels can only be one of the known <see href="https://docs.bsky.app/docs/advanced-guides/moderation#global-label-values">global values</see>.</para>
         /// </remarks>
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public SelfLabels? Labels { get; internal set; }
+        [NotNull]
+        public SelfLabels? Labels { get; internal set; } = new SelfLabels();
 
         /// <summary>
         /// Gets the collection of tags to apply to the post, if any.
@@ -279,5 +298,151 @@ namespace idunno.Bluesky
                 }
             }
         }
+
+        /// <summary>
+        /// Gets or sets a flag indicating the post media contains porn.
+        /// This puts a warning on images and can only be clicked through if the user is 18+ and has enabled adult content.
+        /// </summary>
+        [JsonIgnore]
+        public bool ContainsPorn
+        {
+            get
+            {
+                return Labels.Contains(PornLabelName);
+            }
+
+            set
+            {
+                if (value)
+                {
+                    Labels.AddLabel(PornLabelName);
+                }
+                else
+                {
+                    Labels.RemoveLabel(PornLabelName);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets a flag indicating the post media contains sexual content.
+        /// This behaves like <see cref="ContainsPorn"/> but is meant to handle less intense sexual content.
+        /// </summary>
+        [JsonIgnore]
+        public bool ContainsSexualContent
+        {
+            get
+            {
+                return Labels.Contains(SexualLabelName);
+            }
+
+            set
+            {
+                if (value)
+                {
+                    Labels.AddLabel(SexualLabelName);
+                }
+                else
+                {
+                    Labels.RemoveLabel(SexualLabelName);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets a flag indicating the post media contains graphic media.
+        /// This behaves like <see cref="ContainsPorn"/> but is for violence or gore.
+        /// </summary>
+        [JsonIgnore]
+        public bool ContainsGraphicMedia
+        {
+            get
+            {
+                return Labels.Contains(GraphicMediaLabelName);
+            }
+
+            set
+            {
+                if (value)
+                {
+                    Labels.AddLabel(GraphicMediaLabelName);
+                }
+                else
+                {
+                    Labels.RemoveLabel(GraphicMediaLabelName);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets a flag indicating the post media contains nudity.
+        /// This puts a warning on images but isn't 18+ and defaults to ignore.
+        /// </summary>
+        [JsonIgnore]
+        public bool ContainsNudity
+        {
+            get
+            {
+                return Labels.Contains(NudityLabelName);
+            }
+
+            set
+            {
+                if (value)
+                {
+                    Labels.AddLabel(NudityLabelName);
+                }
+                else
+                {
+                    Labels.RemoveLabel(NudityLabelName);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sets the self labels for the post to the values specified in <paramref name="labels"/>.
+        /// </summary>
+        /// <param name="labels">The self label values to set.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="labels"/> is null.</exception>
+        public void SetSelfLabels(PostSelfLabels labels)
+        {
+            ArgumentNullException.ThrowIfNull(labels);
+
+            ContainsPorn = labels.Porn;
+            ContainsSexualContent = labels.SexualContent;
+            ContainsGraphicMedia = labels.GraphicMedia;
+            ContainsNudity = labels.Nudity;
+        }
+    }
+
+    /// <summary>
+    /// Properties for labels to apply to a post.
+    /// </summary>
+    public sealed record PostSelfLabels
+    {
+        /// <summary>
+        /// Gets or sets a flag indicating the post media contains porn.
+        /// This puts a warning on images and can only be clicked through if the user is 18+ and has enabled adult content.
+        /// </summary>
+        public bool Porn { get; set; }
+
+        /// <summary>
+        /// Gets or sets a flag indicating the post media contains sexual content.
+        /// This behaves like <see cref="Porn"/> but is meant to handle less intense sexual content.
+        /// </summary>
+        public bool SexualContent { get; set; }
+
+        /// <summary>
+        /// Gets or sets a flag indicating the post media contains graphic media.
+        /// This behaves like <see cref="Porn"/> but is for violence or gore.
+        /// </summary>
+        public bool GraphicMedia { get; set; }
+
+        /// <summary>
+        /// Gets or sets a flag indicating the post media contains nudity.
+        /// This puts a warning on images but isn't 18+ and defaults to ignore.
+        /// </summary>
+        public bool Nudity { get; set; }
+
     }
 }
