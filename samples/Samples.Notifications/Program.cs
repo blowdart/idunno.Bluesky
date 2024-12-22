@@ -17,6 +17,7 @@ using idunno.Bluesky.Notifications;
 using Samples.Common;
 using idunno.AtProto.Labels;
 using idunno.Bluesky.Graph;
+using idunno.Bluesky.Actions;
 
 namespace Samples.Notifications
 {
@@ -148,52 +149,52 @@ namespace Samples.Notifications
 
                                 case NotificationReason.Like:
                                     {
-                                        if (notification.Record is PostRecord likeRecord)
+                                        if (notification.Record is Post post)
                                         {
                                             if (notification.Author.Did != agent.Session!.Did)
                                             {
-                                                Console.WriteLine($"❤️ {notification.Author} liked your post at {notification.Record.CreatedAt.LocalDateTime}.");
+                                                Console.WriteLine($"❤️ {notification.Author} liked your post at {post.CreatedAt.GetValueOrDefault().LocalDateTime}.");
                                                 PrintLabels(notification.Author);
                                             }
                                             else
                                             {
-                                                Console.WriteLine($"❤️ You liked your own post at {notification.Record.CreatedAt.LocalDateTime}.");
+                                                Console.WriteLine($"❤️ You liked your own post at {post.CreatedAt.GetValueOrDefault().LocalDateTime}.");
                                             }
-                                            Console.WriteLine($"   {likeRecord.Text}");
+                                            Console.WriteLine($"   {post.Text}");
                                         }
                                     }
                                     break;
 
                                 case NotificationReason.Mention:
                                     {
-                                        if (notification.Record is PostRecord mentionRecord)
+                                        if (notification.Record is Post post)
                                         {
                                             if (notification.Author.Did != agent.Session!.Did)
                                             {
-                                                Console.WriteLine($"📟 {notification.Author} mentioned you at {notification.Record.CreatedAt.LocalDateTime}.");
+                                                Console.WriteLine($"📟 {notification.Author} mentioned you at {notification.Record.CreatedAt.GetValueOrDefault().LocalDateTime}.");
                                                 PrintLabels(notification.Author);
                                             }
                                             else
                                             {
-                                                Console.WriteLine($"📟 You mentioned yourself at {notification.Record.CreatedAt.LocalDateTime}.");
+                                                Console.WriteLine($"📟 You mentioned yourself at {notification.Record.CreatedAt.GetValueOrDefault().LocalDateTime}.");
                                             }
-                                            Console.WriteLine($"   {mentionRecord.Text}");
+                                            Console.WriteLine($"   {post.Text}");
                                         }
                                     }
                                     break;
 
                                 case NotificationReason.Quote:
                                     {
-                                        if (notification.Record is PostRecord quoteRecord)
+                                        if (notification.Record is Post quoteRecord)
                                         {
                                             if (notification.Author.Did != agent.Session!.Did)
                                             {
-                                                Console.WriteLine($"🗨️ {notification.Author} quoted your post at {notification.Record.CreatedAt.LocalDateTime}.");
+                                                Console.WriteLine($"🗨️ {notification.Author} quoted your post at {notification.Record.CreatedAt.GetValueOrDefault().LocalDateTime}.");
                                                 PrintLabels(notification.Author);
                                             }
                                             else
                                             {
-                                                Console.WriteLine($"🗨️ You quoted your post at {notification.Record.CreatedAt.LocalDateTime}.");
+                                                Console.WriteLine($"🗨️ You quoted your post at {notification.Record.CreatedAt.GetValueOrDefault().LocalDateTime}.");
                                             }
                                             Console.WriteLine($"   \"{quoteRecord.Text}\"");
 
@@ -224,7 +225,7 @@ namespace Samples.Notifications
 
                                 case NotificationReason.Reply:
                                     {
-                                        if (notification.Record is PostRecord replyRecord)
+                                        if (notification.Record is Post replyRecord)
                                         {
                                             if (replyRecord.Reply is not null && replyRecord.Reply.Parent is not null)
                                             {
@@ -240,7 +241,7 @@ namespace Samples.Notifications
                                                         parentPostOwner = $"{inReplyToFeedPost.Result.Author}'s";
                                                     }
                                                 }
-                                                Console.WriteLine($"↳ {notification.Author} replied to {parentPostOwner} post at {notification.Record.CreatedAt.LocalDateTime}.");
+                                                Console.WriteLine($"↳ {notification.Author} replied to {parentPostOwner} post at {notification.Record.CreatedAt.GetValueOrDefault().LocalDateTime}.");
                                                 if (notification.Author.Did != agent.Session!.Did)
                                                 {
                                                     PrintLabels(notification.Author);
@@ -260,7 +261,7 @@ namespace Samples.Notifications
                                             if (repostView.Succeeded)
                                             {
 
-                                                Console.WriteLine($"♲ {notification.Author} reposted your post at {notification.Record.CreatedAt.LocalDateTime}.");
+                                                Console.WriteLine($"♲ {notification.Author} reposted your post at {notification.Record.CreatedAt.GetValueOrDefault().LocalDateTime}.");
                                                 if (notification.Author.Did != agent.Session!.Did)
                                                 {
                                                     PrintLabels(notification.Author);
@@ -296,7 +297,7 @@ namespace Samples.Notifications
                                     break;
 
                                 default:
-                                    Console.WriteLine($"{notification.Author} did something unknown to trigger a notification at {notification.Record.CreatedAt.LocalDateTime}.");
+                                    Console.WriteLine($"{notification.Author} did something unknown to trigger a notification at {notification.Record.CreatedAt.GetValueOrDefault().LocalDateTime}.");
                                     if (notification.Author.Did != agent.Session!.Did)
                                     {
                                         PrintLabels(notification.Author);

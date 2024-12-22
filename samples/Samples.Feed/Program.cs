@@ -37,7 +37,7 @@ namespace Samples.Feed
             ArgumentNullException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
-            // proxyUri = new Uri("http://localhost:8866");
+            proxyUri = new Uri("http://localhost:8866");
 
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
@@ -128,7 +128,7 @@ namespace Samples.Feed
                             Console.WriteLine($"  From {feedViewPost.Post.Author}");
                             PrintLabels(feedViewPost.Post.Author);
 
-                            Console.WriteLine($"  Posted at: {feedViewPost.Post.Record.CreatedAt.LocalDateTime}");
+                            Console.WriteLine($"  Posted at: {feedViewPost.Post.Record.CreatedAt.GetValueOrDefault().LocalDateTime}");
                             Console.WriteLine($"  {feedViewPost.Post.LikeCount} like{(feedViewPost.Post.LikeCount != 1 ? "s" : "")} {feedViewPost.Post.RepostCount} repost{(feedViewPost.Post.RepostCount != 1 ? "s" : "")}.");
                             Console.WriteLine($"  AtUri : {feedViewPost.Post.Uri}");
                             Console.WriteLine($"  Cid   : {feedViewPost.Post.Cid}");

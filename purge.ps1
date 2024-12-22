@@ -35,4 +35,9 @@ if (Test-Path *.binlog) {
   Remove-Item -Path *.binlog -recurse -Force
 }
 
+if (Test-Path TestResults) {
+  Write-Host "Deleting TestResults"
+  Remove-Item -Path TestResults -recurse -Force
+}
+
 Write-Host 'Done'
