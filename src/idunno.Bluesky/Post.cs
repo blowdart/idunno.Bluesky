@@ -75,6 +75,38 @@ namespace idunno.Bluesky
             }
         }
 
+
+        /// <summary>
+        /// Creates a new instance of <see cref="Post"/>.
+        /// </summary>
+        /// <param name="text">The text for the post.</param>
+        /// <param name="lang">The language the post is written in.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="text" /> or <paramref name="lang" /> is null or empty.</exception>
+        public Post(
+            string text,
+            string lang) : this(text: text, langs: new List<string>() { lang })
+        {
+            ArgumentNullException.ThrowIfNullOrEmpty(text);
+            ArgumentNullException.ThrowIfNullOrEmpty(lang);
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="Post"/>.
+        /// </summary>
+        /// <param name="text">The text for the post.</param>
+        /// <param name="langs">The languages the post is written in.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="text" /> is null or empty, or <paramref name="langs"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="langs"/> is an empty list.</exception>
+        public Post(
+            string text,
+            IList<string> langs) : this(text: text, facets: null, langs: langs, embed: null, reply: null, labels : null, tags : null)
+        {
+            ArgumentNullException.ThrowIfNullOrEmpty(text);
+            ArgumentNullException.ThrowIfNull(langs);
+
+            ArgumentOutOfRangeException.ThrowIfZero(langs.Count);
+        }
+
         /// <summary>
         /// Creates a new instance of <see cref="Post"/>.
         /// </summary>
@@ -178,6 +210,8 @@ namespace idunno.Bluesky
                     }
                     position++;
                 }
+
+                Tags = new List<string>(tags).AsReadOnly();
             }
         }
 
