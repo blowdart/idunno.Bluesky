@@ -38,7 +38,7 @@ namespace idunno.Bluesky.Record
             StrongReference? joinedViaStarterPack,
             StrongReference? pinnedPost,
             SelfLabels? labels,
-            DateTimeOffset? createdAt) : base(createdAt)
+            DateTimeOffset? createdAt)
         {
             DisplayName = displayName;
             Description = description;
@@ -55,6 +55,8 @@ namespace idunno.Bluesky.Record
             {
                 Labels = new SelfLabels();
             }
+
+            CreatedAt = createdAt;
         }
 
         /// <summary>
@@ -64,6 +66,11 @@ namespace idunno.Bluesky.Record
         [JsonPropertyName("$type")]
         [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Can't be static as it needs to be included in the json serialized value.")]
         public string Type => RecordType.Profile;
+
+        /// <summary>
+        /// Gets the creation date/time of the profile, if provided.
+        /// </summary>
+        public DateTimeOffset? CreatedAt { get; set; }
 
         /// <summary>
         /// Gets the display name of the account.

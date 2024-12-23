@@ -142,7 +142,7 @@ namespace Samples.Timeline
                             }
 
                             Console.WriteLine($"  From {@timelineView.Post.Author} {GetLabels(timelineView.Post.Author)}");
-                            Console.WriteLine($"  Posted at: {timelineView.Post.Record.CreatedAt.GetValueOrDefault().ToLocalTime():G}");
+                            Console.WriteLine($"  Posted at: {timelineView.Post.Record.CreatedAt.ToLocalTime():G}");
                             Console.WriteLine($"  {timelineView.Post.LikeCount} like{(timelineView.Post.LikeCount != 1 ? "s" : "")} {timelineView.Post.RepostCount} repost{(timelineView.Post.RepostCount != 1 ? "s" : "")}.");
                             Console.WriteLine($"  AtUri: {timelineView.Post.Uri}");
                             Console.WriteLine($"  Cid:   {timelineView.Post.Cid}");
@@ -189,7 +189,7 @@ namespace Samples.Timeline
                                         }
 
                                         Console.WriteLine($"    From {@postView.Author} {GetLabels(postView.Author)}");
-                                        Console.WriteLine($"    Posted at: {postView.Record.CreatedAt.GetValueOrDefault().ToLocalTime():G}");
+                                        Console.WriteLine($"    Posted at: {postView.Record.CreatedAt.ToLocalTime():G}");
                                         break;
 
                                     default:

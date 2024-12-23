@@ -13,18 +13,21 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets the post record for the specified <see cref="StrongReference"/>.
         /// </summary>
-        /// <param name="strongReference">The <see cref="StrongReference" /> of the post to return the <see cref="PostRecord"/> for.</param>
+        /// <param name="uri">The <see cref="AtUri" /> of the post to return the <see cref="PostRecord"/> for.</param>
+        /// <param name="cid">An optional <see cref="Cid" /> of the post to return the <see cref="PostRecord"/> for.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="strongReference"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is null.</exception>
         public async Task<AtProtoHttpResult<PostRecord>> GetPostRecord(
-            StrongReference strongReference,
+            AtUri uri,
+            Cid? cid = null,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNull(strongReference);
+            ArgumentNullException.ThrowIfNull(uri);
 
             AtProtoHttpResult<PostRecord> result = await BlueskyServer.GetPostRecord(
-                strongReference,
+                uri,
+                cid,
                 AuthenticatedOrUnauthenticatedServiceUri,
                 AccessToken,
                 HttpClient,
@@ -35,26 +38,26 @@ namespace idunno.Bluesky
             {
                 if (IsAuthenticated)
                 {
-                    Logger.GetPostRecordSucceeded(_logger, Did, strongReference.Uri, strongReference.Cid, AuthenticatedOrUnauthenticatedServiceUri);
+                    Logger.GetPostRecordSucceeded(_logger, Did, uri, cid, AuthenticatedOrUnauthenticatedServiceUri);
                 }
                 else
                 {
-                    Logger.GetPostRecordSucceededAnon(_logger, strongReference.Uri, strongReference.Cid, AuthenticatedOrUnauthenticatedServiceUri);
+                    Logger.GetPostRecordSucceededAnon(_logger, uri, cid, AuthenticatedOrUnauthenticatedServiceUri);
                 }
             }
             else
             {
                 if (result.Result is null)
                 {
-                    Logger.GetPostRecordSucceededButReturnedNullResult(_logger, strongReference.Uri, strongReference.Cid, AuthenticatedOrUnauthenticatedServiceUri);
+                    Logger.GetPostRecordSucceededButReturnedNullResult(_logger, uri, cid, AuthenticatedOrUnauthenticatedServiceUri);
                 }
                 else
                 {
                     Logger.GetPostRecordFailed(
                         _logger,
                         result.StatusCode,
-                        strongReference.Uri,
-                        strongReference.Cid,
+                        uri,
+                        cid,
                         result.AtErrorDetail?.Error,
                         result.AtErrorDetail?.Message,
                         AuthenticatedOrUnauthenticatedServiceUri);
@@ -62,6 +65,22 @@ namespace idunno.Bluesky
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Gets the post record for the specified <see cref="StrongReference"/>.
+        /// </summary>
+        /// <param name="strongReference">The <see cref="StrongReference" /> of the post to return the <see cref="PostRecord"/> for.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="strongReference"/> is null.</exception>
+        public async Task<AtProtoHttpResult<PostRecord>> GetPostRecord(
+            StrongReference strongReference,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(strongReference);
+
+            return await GetPostRecord(strongReference.Uri, strongReference.Cid, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>

@@ -149,18 +149,27 @@ namespace Samples.Notifications
 
                                 case NotificationReason.Like:
                                     {
-                                        if (notification.Record is Post post)
+                                        if (notification.ReasonSubject is not null)
                                         {
-                                            if (notification.Author.Did != agent.Session!.Did)
+                                            var getLikedPost = await agent.GetPostView(notification.ReasonSubject, preferences.SubscribedLabelers, cancellationToken: cancellationToken);
+
+                                            if (getLikedPost.Succeeded)
                                             {
-                                                Console.WriteLine($"❤️ {notification.Author} liked your post at {post.CreatedAt.GetValueOrDefault().LocalDateTime}.");
-                                                PrintLabels(notification.Author);
+                                                if (notification.Author.Did != getLikedPost.Result.Author.Did)
+                                                {
+                                                    Console.WriteLine($"❤️ {notification.Author} liked your post at {getLikedPost.Result.Record.CreatedAt.ToLocalTime():G}.");
+                                                    PrintLabels(notification.Author);
+                                                }
+                                                else
+                                                {
+                                                    Console.WriteLine($"❤️ You liked your own post at {getLikedPost.Result.Record.CreatedAt.ToLocalTime():G}.");
+                                                }
+                                                Console.WriteLine($"   {getLikedPost.Result.Record.Text}");
                                             }
-                                            else
+                                            else if (getLikedPost.StatusCode == System.Net.HttpStatusCode.OK && getLikedPost.Result is null)
                                             {
-                                                Console.WriteLine($"❤️ You liked your own post at {post.CreatedAt.GetValueOrDefault().LocalDateTime}.");
+                                                Console.WriteLine("   🛈 Liked post was deleted");
                                             }
-                                            Console.WriteLine($"   {post.Text}");
                                         }
                                     }
                                     break;
@@ -171,12 +180,12 @@ namespace Samples.Notifications
                                         {
                                             if (notification.Author.Did != agent.Session!.Did)
                                             {
-                                                Console.WriteLine($"📟 {notification.Author} mentioned you at {notification.Record.CreatedAt.GetValueOrDefault().LocalDateTime}.");
+                                                Console.WriteLine($"📟 {notification.Author} mentioned you at {post.CreatedAt.ToLocalTime():G}.");
                                                 PrintLabels(notification.Author);
                                             }
                                             else
                                             {
-                                                Console.WriteLine($"📟 You mentioned yourself at {notification.Record.CreatedAt.GetValueOrDefault().LocalDateTime}.");
+                                                Console.WriteLine($"📟 You mentioned yourself at {post.CreatedAt.ToLocalTime():G}.");
                                             }
                                             Console.WriteLine($"   {post.Text}");
                                         }
@@ -185,18 +194,18 @@ namespace Samples.Notifications
 
                                 case NotificationReason.Quote:
                                     {
-                                        if (notification.Record is Post quoteRecord)
+                                        if (notification.Record is Post post)
                                         {
                                             if (notification.Author.Did != agent.Session!.Did)
                                             {
-                                                Console.WriteLine($"🗨️ {notification.Author} quoted your post at {notification.Record.CreatedAt.GetValueOrDefault().LocalDateTime}.");
+                                                Console.WriteLine($"🗨️ {notification.Author} quoted your post at {post.CreatedAt.ToLocalTime():G}.");
                                                 PrintLabels(notification.Author);
                                             }
                                             else
                                             {
-                                                Console.WriteLine($"🗨️ You quoted your post at {notification.Record.CreatedAt.GetValueOrDefault().LocalDateTime}.");
+                                                Console.WriteLine($"🗨️ You quoted your post at post.CreatedAt.ToLocalTime():G.");
                                             }
-                                            Console.WriteLine($"   \"{quoteRecord.Text}\"");
+                                            Console.WriteLine($"   \"{post.Text}\"");
 
                                             if (notification.ReasonSubject is not null)
                                             {
@@ -225,14 +234,14 @@ namespace Samples.Notifications
 
                                 case NotificationReason.Reply:
                                     {
-                                        if (notification.Record is Post replyRecord)
+                                        if (notification.Record is Post post)
                                         {
-                                            if (replyRecord.Reply is not null && replyRecord.Reply.Parent is not null)
+                                            if (post.Reply is not null && post.Reply.Parent is not null)
                                             {
                                                 string parentPostOwner = "your";
 
                                                 AtProtoHttpResult<PostView> inReplyToFeedPost =
-                                                    await agent.GetPostView(replyRecord.Reply.Parent.Uri, cancellationToken: cancellationToken).ConfigureAwait(false);
+                                                    await agent.GetPostView(post.Reply.Parent.Uri, cancellationToken: cancellationToken).ConfigureAwait(false);
 
                                                 if (inReplyToFeedPost.Succeeded)
                                                 {
@@ -241,12 +250,12 @@ namespace Samples.Notifications
                                                         parentPostOwner = $"{inReplyToFeedPost.Result.Author}'s";
                                                     }
                                                 }
-                                                Console.WriteLine($"↳ {notification.Author} replied to {parentPostOwner} post at {notification.Record.CreatedAt.GetValueOrDefault().LocalDateTime}.");
+                                                Console.WriteLine($"↳ {notification.Author} replied to {parentPostOwner} post at {post.CreatedAt.ToLocalTime():G}.");
                                                 if (notification.Author.Did != agent.Session!.Did)
                                                 {
                                                     PrintLabels(notification.Author);
                                                 }
-                                                Console.WriteLine($"   {replyRecord.Text}");
+                                                Console.WriteLine($"   {post.Text}");
                                             }
                                         }
                                     }
@@ -257,11 +266,10 @@ namespace Samples.Notifications
                                         if (notification.ReasonSubject is not null)
                                         {
                                             AtProtoHttpResult<PostView> repostView =
-                                                await agent.GetPostView(notification.ReasonSubject!, cancellationToken: cancellationToken).ConfigureAwait(false);
+                                                await agent.GetPostView(notification.ReasonSubject, preferences.SubscribedLabelers, cancellationToken: cancellationToken).ConfigureAwait(false);
                                             if (repostView.Succeeded)
                                             {
-
-                                                Console.WriteLine($"♲ {notification.Author} reposted your post at {notification.Record.CreatedAt.GetValueOrDefault().LocalDateTime}.");
+                                                Console.WriteLine($"♲ {notification.Author} reposted your post at {repostView.Result.Record.CreatedAt.ToLocalTime():G}.");
                                                 if (notification.Author.Did != agent.Session!.Did)
                                                 {
                                                     PrintLabels(notification.Author);
@@ -297,7 +305,7 @@ namespace Samples.Notifications
                                     break;
 
                                 default:
-                                    Console.WriteLine($"{notification.Author} did something unknown to trigger a notification at {notification.Record.CreatedAt.GetValueOrDefault().LocalDateTime}.");
+                                    Console.WriteLine($"{notification.Author} did something unknown to trigger a notification at {notification.IndexedAt.ToLocalTime():G}.");
                                     if (notification.Author.Did != agent.Session!.Did)
                                     {
                                         PrintLabels(notification.Author);

@@ -10,10 +10,10 @@ namespace idunno.Bluesky.Actions
     /// <summary>
     /// Encapsulates the a follow record.
     /// </summary>
-    public sealed record FollowRecordValue : BlueskyRecordValue
+    public sealed record FollowRecordValue : BlueskyTimestampedRecordValue
     {
         /// <summary>
-        /// Creates a new instance of <see cref="FollowRecordValue"/> with <see cref="BlueskyRecordValue.CreatedAt"/> set to the current date and time.
+        /// Creates a new instance of <see cref="FollowRecordValue"/> with <see cref="BlueskyTimestampedRecordValue.CreatedAt"/> set to the current date and time.
         /// </summary>
         /// <param name="subject">The <see cref="Did"/> to the actor to be followed.</param>
         public FollowRecordValue(Did subject) : this(subject, DateTimeOffset.UtcNow)
@@ -24,9 +24,9 @@ namespace idunno.Bluesky.Actions
         /// Creates a new instance of <see cref="FollowRecordValue"/>.
         /// </summary>
         /// <param name="subject">The <see cref="Did"/> to the actor to be followed.</param>
-        /// <param name="createdAt">An optional <see cref="DateTimeOffset"/> for the repost creation date, defaults to now.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> for the repost creation date.</param>
         [JsonConstructor]
-        public FollowRecordValue(Did subject, DateTimeOffset? createdAt) : base(createdAt)
+        public FollowRecordValue(Did subject, DateTimeOffset createdAt) : base(createdAt)
         {
             ArgumentNullException.ThrowIfNull(subject);
             Subject = subject;

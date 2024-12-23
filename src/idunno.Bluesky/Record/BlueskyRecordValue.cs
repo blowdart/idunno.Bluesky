@@ -19,24 +19,14 @@ namespace idunno.Bluesky.Record
     [JsonDerivedType(typeof(LikeRecordValue), RecordType.Like)]
     [JsonDerivedType(typeof(BlockRecordValue), RecordType.Block)]
     [JsonDerivedType(typeof(ProfileRecordValue), RecordType.Profile)]
+    [JsonDerivedType(typeof(StarterPackRecordValue), RecordType.StarterPack)]
     public record BlueskyRecordValue : AtProtoRecordValue
     {
         /// <summary>
-        /// Creates a new instance of <see cref="BlueskyRecordValue"/> with <see cref="CreatedAt"/> set to the current date and time.
+        /// Creates a new instance of <see cref="BlueskyRecordValue"/>.
         /// </summary>
         public BlueskyRecordValue()
         {
-            CreatedAt = DateTimeOffset.UtcNow;
-        }
-
-        /// <summary>
-        /// Creates a new instance of <see cref="BlueskyRecordValue"/>
-        /// </summary>
-        /// <param name="createdAt">The date and time the record was created at.</param>
-        [JsonConstructor]
-        public BlueskyRecordValue(DateTimeOffset? createdAt) : base()
-        {
-            CreatedAt = createdAt;
         }
 
         /// <summary>
@@ -45,16 +35,6 @@ namespace idunno.Bluesky.Record
         /// <param name="record">The <see cref="BlueskyRecordValue"/> to create the new instance from.</param>
         public BlueskyRecordValue(BlueskyRecordValue record) : base(record)
         {
-            if (record is not null)
-            {
-                CreatedAt = record.CreatedAt;
-            }
         }
-
-        /// <summary>
-        /// Gets the date and time the record was created at, if known.
-        /// </summary>
-        [JsonInclude]
-        public DateTimeOffset? CreatedAt { get; init; }
     }
 }

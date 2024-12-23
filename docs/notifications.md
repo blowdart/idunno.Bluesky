@@ -1,4 +1,4 @@
-# <a name="checkingNotifications">Checking your notifications</a>
+﻿# <a name="checkingNotifications">Checking your notifications</a>
 
 Like the [timeline sample](timeline.md) notifications can be retrieved and iterated through, but Bluesky allows you to check your unread count first.
 
@@ -22,109 +22,44 @@ Each type of notification, `Follow`, `Like`, `Mention`, `Quote`, `Reply`, and `R
 ```c#
 foreach (Notification notification in notifications.Result!.Notifications)
 {
-    // As in the timeline example we first look at how
-    // the author should be displayed, using their display
-    // name if one exists, otherwise we just use their handle.
-    string? author = notification.Author.Handle.ToString();
-    if (notification.Author.DisplayName is not null && 
-        notification.Author.DisplayName.Length > 0)
-    {
-        author = notification.Author.DisplayName;
-    }
-
     switch (notification.Reason)
     {
         case NotificationReason.Follow:
-            Console.Write(
-                $" {author} followed you");
-            Console.WriteLine(
-                $" at {notification.Record.CreatedAt}.");
+            Console.Write($" {notification.Author} followed you");
             // There's no other information that a follow record 
             // provides, so we're done.
             break;
 
         case NotificationReason.Like:
-            Console.Write($"{author} liked your post");
-            Console.WriteLine(
-                $" at {notification.Record.CreatedAt}.");
-            
-            // A like happens on a post. 
-            // So let's try to get that post
-            // ResultSubject is an AT URI that points to that post,
-            // so let's get it.
-            HttpResult<FeedPost> likedPost = await 
-                agent.GetPost(notification.ReasonSubject!)
-                     .ConfigureAwait(false);
-            
-            // However people delete their posts, so the API status code
-            // would be 200 OK but the actual result property would be 
-            // null.
-            if (likedPost.Result is not null)
+            if (notification.ReasonSubject is not null)
             {
-                // The post still exists
-                Console.WriteLine($"  {likedPost.Result.Record.Text}");
-            }
-            else
-            {
-                // The post was deleted
-                Console.WriteLine($"  Liked post was deleted.");
-            }
-            break;
+                // A like happens on a post.
+                // ResultSubject is an AT URI that points to that post,
+                // So let's go get a hydrated PostView for that post.
 
-        case NotificationReason.Mention:
-            Console.Write(
-                $" {author} mentioned you ");
-            Console.WriteLine(
-                $" at {notification.Record.CreatedAt}.");
-            
-            // Mentions, quotes, and replys all have a record property
-            // that is basically a FeedPost record, 
-            // and FeedPost contains the text which triggered the
-            // notification.            
-            FeedPostRecord mentionRecord = 
-                (FeedPostRecord)notification.Record;
-            Console.WriteLine($"  {mentionRecord.Text}.");
-            break;
+                var getLikedPost = await agent.GetPostView(notification.ReasonSubject, cancellationToken: cancellationToken);
 
-        case NotificationReason.Quote:
-            Console.Write(
-                $"{author} quoted your post");
-            Console.WriteLine(
-                $" at {notification.Record.CreatedAt}.");
-            FeedPostRecord quoteRecord = 
-                (FeedPostRecord)notification.Record;
-            Console.WriteLine($"  {quoteRecord.Text}.");
-            break;
+                if (getLikedPost.Succeeded)
+                {
+                    if (notification.Author.Did != getLikedPost.Result.Author.Did)
+                    {
+                        Console.WriteLine($"{notification.Author} liked your post at {getLikedPost.Result.Record.CreatedAt.ToLocalTime():G}.");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"You liked your own post at {getLikedPost.Result.Record.CreatedAt.ToLocalTime():G}.");
+                    }
 
-        case NotificationReason.Reply:
-            Console.Write(
-                $"{author} replied to your post");
-            Console.WriteLine(
-                $" at {notification.Record.CreatedAt}.");
-            FeedPostRecord replyRecord = 
-                (FeedPostRecord)notification.Record;
-            Console.WriteLine($"  {replyRecord.Text}.");
-            break;
-
-        case NotificationReason.Repost:
-            Console.Write($"{author} reposted your post");
-            Console.WriteLine($" at {notification.Record.CreatedAt}.");
-
-            // Reposts work like likes, so we need to grab the post
-            // that was reposted.
-            HttpResult<FeedPost> repostedPost = 
-            await agent.GetPost(notification.ReasonSubject!)
-                       .ConfigureAwait(false);
-            if (repostedPost.Result is not null)
-            {
-                Console.WriteLine(
-                    $"  {repostedPost.Result.Record.Text}");
-            }
-            else
-            {
-                Console.WriteLine($"Reposted post was deleted.");
+                    Console.WriteLine($"{getLikedPost.Result.Record.Text}");
+                }
+                else if (getLikedPost.StatusCode == System.Net.HttpStatusCode.OK && getLikedPost.Result is null)
+                {
+                    Console.WriteLine("Liked post was deleted");
+                }
             }
             break;
+
+        // See the notification sample for a full illustration of each of teh notification types.
 
         default:
             // Error handling in the case of an 

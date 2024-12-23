@@ -9,7 +9,7 @@ namespace idunno.Bluesky.Record
     /// <summary>
     ///  Encapsulates a Bluesky starter pack.
     /// </summary>
-    public record StarterPackRecordValue : BlueskyRecordValue
+    public record StarterPackRecordValue : BlueskyTimestampedRecordValue
     {
         /// <summary>
         /// Creates a new instance of <see cref="StarterPackRecordValue"/>.
@@ -26,7 +26,7 @@ namespace idunno.Bluesky.Record
             string description,
             AtUri list,
             IReadOnlyList<AtUri> feeds,
-            DateTimeOffset? createdAt,
+            DateTimeOffset createdAt,
             DateTimeOffset? updatedAt) : base(createdAt)
         {
             Name = name;

@@ -11,10 +11,10 @@ namespace idunno.Bluesky.Actions
     /// <summary>
     /// Encapsulates the information needed to create a block record.
     /// </summary>
-    public sealed record BlockRecordValue : BlueskyRecordValue
+    public sealed record BlockRecordValue : BlueskyTimestampedRecordValue
     {
         /// <summary>
-        /// Creates a new instance of <see cref="BlockRecordValue"/> with <see cref="BlueskyRecordValue.CreatedAt"/> set to the current date and time.
+        /// Creates a new instance of <see cref="BlockRecordValue"/> with <see cref="BlueskyTimestampedRecordValue.CreatedAt"/> set to the current date and time.
         /// </summary>
         /// <param name="subject">The <see cref="Did"/> to the actor to be blocked.</param>
         public BlockRecordValue(Did subject) : this(subject, DateTimeOffset.UtcNow)
@@ -25,9 +25,9 @@ namespace idunno.Bluesky.Actions
         /// Creates a new instance of <see cref="BlockRecordValue"/>.
         /// </summary>
         /// <param name="subject">The <see cref="Did"/> to the actor to be blocked.</param>
-        /// <param name="createdAt">An optional <see cref="DateTimeOffset"/> for the repost creation date, defaults to now.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> for the repost creation date.</param>
         [JsonConstructor]
-        public BlockRecordValue(Did subject, DateTimeOffset? createdAt) : base(createdAt)
+        public BlockRecordValue(Did subject, DateTimeOffset createdAt) : base(createdAt)
         {
             ArgumentNullException.ThrowIfNull(subject);
 

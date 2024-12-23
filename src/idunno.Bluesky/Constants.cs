@@ -172,7 +172,7 @@ namespace idunno.Bluesky
     }
 
     /// <summary>
-    /// The type discriminators used for various post records in a feed or thread.
+    /// The type discriminators used for various records in a feed or thread.
     /// </summary>
     public static class RecordType
     {
@@ -235,6 +235,12 @@ namespace idunno.Bluesky
         /// Indicates a profile record.
         /// </summary>
         public const string Profile = "app.bsky.actor.profile";
+
+        /// <summary>
+        /// Indicates a starter pack record.
+        /// </summary>
+        public const string StarterPack = "app.bsky.graph.starterpack";
+
 
     }
 

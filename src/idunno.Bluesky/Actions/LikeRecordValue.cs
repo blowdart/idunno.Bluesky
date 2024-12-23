@@ -11,11 +11,10 @@ namespace idunno.Bluesky.Actions
     /// <summary>
     /// Encapsulates the information needed to create a like record.
     /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1716:Identifiers should not match keywords", Justification = "Matching Bluesky naming.")]
-    public sealed record LikeRecordValue : BlueskyRecordValue
+    public sealed record LikeRecordValue : BlueskyTimestampedRecordValue
     {
         /// <summary>
-        /// Creates a new instance of <see cref="LikeRecordValue"/> with <see cref="BlueskyRecordValue.CreatedAt"/> set to the current date and time.
+        /// Creates a new instance of <see cref="LikeRecordValue"/> with <see cref="BlueskyTimestampedRecordValue.CreatedAt"/> set to the current date and time.
         /// </summary>
         /// <param name="subject">The <see cref="StrongReference"/> to the post to be liked.</param>
         public LikeRecordValue(StrongReference subject) : this(subject, DateTimeOffset.UtcNow)
@@ -26,9 +25,9 @@ namespace idunno.Bluesky.Actions
         /// Creates a new instance of <see cref="LikeRecordValue"/>.
         /// </summary>
         /// <param name="subject">The <see cref="StrongReference"/> to the post to be liked.</param>
-        /// <param name="createdAt">An optional <see cref="DateTimeOffset"/> for the repost creation date, defaults to now.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> for the repost creation date.</param>
         [JsonConstructor]
-        public LikeRecordValue(StrongReference subject, DateTimeOffset? createdAt) : base(createdAt)
+        public LikeRecordValue(StrongReference subject, DateTimeOffset createdAt) : base(createdAt)
         {
             Subject = subject;
         }
