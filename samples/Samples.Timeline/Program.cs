@@ -101,7 +101,7 @@ namespace Samples.Timeline
                 const int maximumNumberOfEntries = 250;
 
                 // Change this to adjust how many entries are returned in each API call
-                int? pageSize = 50;
+                int? pageSize = 10;
 
                 int page = 1;
                 int postCounter = 0;

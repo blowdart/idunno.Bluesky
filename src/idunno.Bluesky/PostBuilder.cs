@@ -1109,7 +1109,7 @@ namespace idunno.Bluesky
                     else if (QuotePost is not null)
                     {
                         // Quote post, so we need fix up the embedded record to include images.
-                        _postRecord.Embed = new EmbeddedRecordWithMedia(QuotePost, new EmbeddedImages(_embeddedImages));
+                        _postRecord.Embed = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), new EmbeddedImages(_embeddedImages));
                     }
                     else
                     {

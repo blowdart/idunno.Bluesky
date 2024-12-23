@@ -1237,7 +1237,7 @@ namespace idunno.Bluesky
             if (images is not null)
             {
                 postRecord.Embed =
-                    new EmbeddedRecordWithMedia(strongReference, new EmbeddedImages(images));
+                    new EmbeddedRecordWithMedia(new EmbeddedRecord(strongReference), new EmbeddedImages(images));
             }
 
             ApplyWritesCreate applyWritesCreate = new(CollectionNsid.Post, TimestampIdentifier.Generate(), postRecord);
