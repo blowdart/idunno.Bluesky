@@ -36,7 +36,7 @@ jobs:
       uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
 
     - run: dotnet tool update -g docfx
-    - run: docfx <docfx-project-path>/docfx.json
+    - run: docfx docfx.json
 
     - name: Upload Pages Artifact
       uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
