@@ -1,0 +1,42 @@
+items:
+  - name: Getting started
+    items:
+      - name: Getting Started
+        href: ../index.md
+      - name: Common Terms & Concepts
+        href: commonTerms.md
+
+  - name: Feeds & timelines
+    items:
+      - name: Reading Timelines & Feeds
+        href: timeline.md
+      - name: Cursors & Pagination
+        href: cursorsAndPagination.md
+
+  - name: Posting
+    items:
+      - name: Posting
+        href: posting.md
+      - name: Thread Gates & Post Gates
+        href: threadGatesAndPostGates.md
+
+  - name: Users
+    items:
+      - name: Conversations & Messages
+        href: conversationsAndMessages.md
+      - name: Editing a user profile
+        href: profileEditing.md
+
+  - name: Advanced Topics
+    items:
+      - name: Labels
+        href: labels.md
+      - name: Saving & restoring authentication state
+        href: savingAndRestoringAuthentication.md
+      - name: Configuring logging
+        href: logging.md
+
+  - name: Reference
+    items:
+      - name: Endpoint implementation status
+        href: endpointStatus.md

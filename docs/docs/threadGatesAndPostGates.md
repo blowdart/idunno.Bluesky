@@ -1,6 +1,6 @@
-## Thread Gates and Post Gates
+# Thread Gates and Post Gates
 
-### Thread Gates
+## Thread Gates
 
 Thread gates allow the original author of a thread to control who can reply to the thread, allowing people mentioned in the root post to reply, people the author is following to reply, replies from actors in a list or allow no replies at all. A thread gate can have up to five rules, but allowing no replies is an exclusive rule, no other rules can be applied. A thread gate can also be used to hide replies in a thread.
 
@@ -23,7 +23,7 @@ The three types of thread gate rules are `FollowingRule`, `MentionRule` and `Lis
 
 You can use `GetPostThread()` to see a view over a thread, including replies.
 
-### Post Gates
+## Post Gates
 
 Post gates allow the post author to remove it from someone else's post quoting their post, and also to disable embedding on a post.
 
@@ -48,20 +48,3 @@ await agent.Post("New gated post",
     cancellationToken: cancellationToken);
 ```
 
----
-
->**Chapters**
->  
->*[Table of Contents](readme.md)*
->  
->[Common Terms](commonTerms.md)  
-[Timelines and Feeds](timeline.md)  
-[Checking notifications](notifications.md#checkingNotifications)  
-[Cursors and pagination](cursorsAndPagination.md)  
-[Posting](posting.md#posting)  
-[Thread Gates and Post Gates](threadGatesAndPostGates.md)  
-[Labels](labels.md)  
-[Conversations and Messages](conversationsAndMessages.md)  
-[Changing a user's profile](profileEditing.md)  
-[Saving and restoring sessions](savingAndRestoringAuthentication.md)  
-[Logging](logging.md)

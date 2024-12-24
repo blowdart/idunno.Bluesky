@@ -27,7 +27,7 @@ if (loginResult.Succeeded)
 }
 ```
 
-Please see the [documentation](docs/readme.md) for much more useful documentation and samples.
+Please see the [documentation](github.idunno.dev/idunno.Bluesky/) for much more useful documentation and samples.
 
 The [API status page](docs/endpointStatus.md) shows what is currently implemented and what is planned.
 
@@ -58,18 +58,9 @@ The [releases page](https://github.com/blowdart/idunno.Bluesky/releases) provide
 * Wider test coverage
 * More deserialization tests with captured responses
 
-### Minor
-
-* Self labels on posts
-* Profile sample
-
 ### Awaiting external
 
 * Automatic Open Graph card generation when link facets detected.
-
-### Documentation
-
-* Docs site generation, including XMLDocs, markdown link checking and publishing
 
 ## Dependencies
 
@@ -94,6 +85,7 @@ first property in the JSON object.
 * [ReportGenerator](https://github.com/danielpalme/ReportGenerator) - used to produce code coverage reports.
 * [JunitXml.TestLogger](https://github.com/spekt/junit.testlogger) - used in CI builds to produce test results in a format understood by the [test-summary](https://github.com/test-summary/action) GitHub action.
 * [sign](https://github.com/dotnet/sign) - used to code sign assemblies and nuget packages.
+* [docfx](https://dotnet.github.io/docfx/) - used to generate the documentation site.
 
 ## Other .NET Bluesky libraries
 

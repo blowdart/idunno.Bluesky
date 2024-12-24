@@ -1,0 +1,59 @@
+{
+    "$schema": "https://raw.githubusercontent.com/dotnet/docfx/main/schemas/docfx.schema.json",
+    "metadata": [
+        {
+            "src": [
+                {
+                    "src": "../src",
+                    "files": [
+                        "**/*.csproj"
+                    ]
+                }
+            ],
+            "dest": "api",
+            "outputFormat": "apiPage"
+        }
+    ],
+    "build": {
+        "content": [
+            {
+                "files": [
+                    "**/*.{md,yml}"
+                ],
+                "exclude": [
+                    "_site/**"
+                ]
+            }
+        ],
+        "resource": [
+            {
+                "files": [
+                    "**/images/**",
+                    "**/media/**"
+                ]
+            },
+            {
+                "files": [
+                    "favicon.ico",
+                    "favicon.png",
+                    "docicon.png"
+                ]
+            }
+        ],
+        "output": "_site",
+        "template": [
+            "default",
+            "modern"
+        ],
+        "globalMetadata": {
+            "_appName": "idunno.Bluesky",
+            "_appTitle": "idunno.Bluesky Documentation",
+            "_appFooter": "&copy; Barry Dorrans",
+            "_enableSearch": true,
+            "_appFaviconPath": "favicon.png",
+            "_appLogoPath": "docicon.png",
+            "_enableNewTab": "true",
+            "pdf": false
+        }
+    }
+}

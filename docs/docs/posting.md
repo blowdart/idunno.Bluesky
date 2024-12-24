@@ -255,36 +255,29 @@ postBuilder.Append('.');
 var hashTag = new HashTag("beans");
 postBuilder.Append(hashTag);
 
-AtProtoHttpResult<CreateRecordResponse> facetedCreatePostResponse = await agent.Post(postBuilder, cancellationToken: cancellationToken);
+AtProtoHttpResult<CreateRecordResponse> facetedCreatePostResponse =
+    await agent.Post(postBuilder, cancellationToken: cancellationToken);
 ```
 
-**Note**: If you chain multiple HashTags together with `Append` they will be posted without a separator between them.  You might want to append them like this.
-
-```c#
-postBuilder.Append(" ");
-postBuilder.Append(new HashTag(hashtag));
+> [!TIP]
+> If you chain multiple HashTags together with `Append` they will be posted without a separator between them.  You might want to append them like this.
+> 
+> ``postBuilder.Append(" ");`<br>`postBuilder.Append(new HashTag(hashtag));`
 ```
 
 ### Warning: Don't concatenate facets with other facets or strings
 
-*Do not* concatenate facets with other facets or strings like this
-
-```
-postBuilder.Append(" " + new Link("https://en.wikipedia.org/wiki/Heinz_Baked_Beans"));
-```
-
-C# will happily thing "That first string is a string, and the second thing is an object, so I'll convert the object to a string and append it".
-So now your post will contain something like
-
-```
- Link { Text = Read More, Uri = https://en.wikipedia.org/wiki/Heinz_Baked_Bean }
-```
-which is obviously not what you want. Separate your append calls, for example:
-
-```
-postBuilder.Append(" ");
-postBuilder.Append(new Link("https://en.wikipedia.org/wiki/Heinz_Baked_Bean", "Read More"));
-```
+> [!CAUTION] Do not concatenate facets with other facets or strings, for example:
+> 
+> `postBuilder.Append(" " + new Link("https://en.wikipedia.org/wiki/Heinz_Baked_Beans"));`
+> 
+> C# will call `ToString()` on the `Link`` as it is being appended to a string and your post will look something like this:
+>
+> `Link { Text = Read More, Uri = https://en.wikipedia.org/wiki/Heinz_Baked_Bean }`
+> 
+> Separate your `PostBuilder` append calls into individual statements:
+>
+> `postBuilder.Append(" ")`<br />`postBuilder.Append(new Link("https://en.wikipedia.org/wiki/Heinz_Baked_Bean", "Read More"));`
 
 ## <a name="images">Posting with images</a>
 
@@ -380,7 +373,7 @@ var builderPostResult = await agent.Post(postBuilder, cancellationToken: cancell
 
 [Open Graph](https://ogp.me/) is a standard that allows web pages to become a rich object in a social graph. Open Graph metadata allows you to embed a rich link card in a Bluesky post, which will look something like this:
 
-![An embedded link to Wikipedia's page on Baked Beans](./images/embeddedCard.png "An embedded Card")
+![An embedded link to Wikipedia's page on Baked Beans](media/embeddedCard.png "An embedded Card")
 
 To embed an external link with a card create an instance of `EmbeddedExternal` then attach it to a `PostBuilder` with the `Embed()` method.
 
@@ -416,21 +409,3 @@ if (graph.Url is not null)
 The example in the [Embedded Card](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.EmbeddedCard) sample shows how to use OpenGraph.Net to extract the metadata, and to retrieve a preview image and use it, if the metadata has an image property.
 
 Posts with an embedded card don't need any post text.
-
----
-
->**Chapters**
->  
->*[Table of Contents](readme.md)*
->  
->[Common Terms](commonTerms.md)  
-[Timelines and Feeds](timeline.md)  
-[Checking notifications](notifications.md#checkingNotifications)  
-[Cursors and pagination](cursorsAndPagination.md)  
-[Posting](posting.md#posting)  
-[Thread Gates and Post Gates](threadGatesAndPostGates.md)  
-[Labels](labels.md)  
-[Conversations and Messages](conversationsAndMessages.md)  
-[Changing a user's profile](profileEditing.md)  
-[Saving and restoring sessions](savingAndRestoringAuthentication.md)  
-[Logging](logging.md)

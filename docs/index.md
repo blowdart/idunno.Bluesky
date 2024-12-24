@@ -1,6 +1,4 @@
-# <a name="gettingStarted">Getting started</a>
-
-As is now tradition we start with "Hello Word".
+# <a name="gettingStarted">Hello World</a>
 
 ```c#
 using idunno.Bluesky.
@@ -69,7 +67,7 @@ The `EnsureSucceeded()` method on `AtProtoHttpResult<T>` will throw and `AtProto
 
 ## <a name="connecting">Connecting to Bluesky</a>
 
-As you can see from the [Hello World](gettingStarted.md#gettingStarted) example connecting to Bluesky consists of creating an instance of a `BlueskyAgent` and then calling the login method.
+As you can see from the [Hello World](#gettingStarted) example connecting to Bluesky consists of creating an instance of a `BlueskyAgent` and then calling the login method.
 
 ```c#
 using (BlueskyAgent agent = new ())
@@ -164,21 +162,3 @@ using (BlueskyAgent agent = new (options)
     var did = await agent.ResolveHandle("blowdart.me");
 }
 ```
-
----
-
->**Chapters**
->  
->*[Table of Contents](readme.md)*
->  
->[Common Terms](commonTerms.md)  
-[Timelines and Feeds](timeline.md)  
-[Checking notifications](notifications.md#checkingNotifications)  
-[Cursors and pagination](cursorsAndPagination.md)  
-[Posting](posting.md#posting)  
-[Thread Gates and Post Gates](threadGatesAndPostGates.md)  
-[Labels](labels.md)  
-[Conversations and Messages](conversationsAndMessages.md)  
-[Changing a user's profile](profileEditing.md)  
-[Saving and restoring sessions](savingAndRestoringAuthentication.md)  
-[Logging](logging.md)

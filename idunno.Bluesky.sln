@@ -9,10 +9,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.gitignore = .gitignore
 		.vsconfig = .vsconfig
 		architectureNotes.md = architectureNotes.md
+		buildDocs.ps1 = buildDocs.ps1
 		CONTRIBUTING.md = CONTRIBUTING.md
 		Directory.Build.props = Directory.Build.props
 		Directory.Packages.props = Directory.Packages.props
+		docfx.json = docfx.json
 		exclusion.dic = exclusion.dic
+		history.md = history.md
 		key.snk = key.snk
 		LICENSE = LICENSE
 		nuget.config = nuget.config
@@ -45,20 +48,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "idunno.AtProto.Test", "test
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{DDB6FAB2-1F8C-47C4-89DC-E319D09065E5}"
 	ProjectSection(SolutionItems) = preProject
-		docs\commonTerms.md = docs\commonTerms.md
-		docs\conversationsAndMessages.md = docs\conversationsAndMessages.md
-		docs\cursorsAndPagination.md = docs\cursorsAndPagination.md
-		docs\endpointStatus.md = docs\endpointStatus.md
-		docs\gettingStarted.md = docs\gettingStarted.md
-		docs\labels.md = docs\labels.md
-		docs\logging.md = docs\logging.md
-		docs\notifications.md = docs\notifications.md
-		docs\posting.md = docs\posting.md
-		docs\profileEditing.md = docs\profileEditing.md
-		docs\readme.md = docs\readme.md
-		docs\savingAndRestoringAuthentication.md = docs\savingAndRestoringAuthentication.md
-		docs\threadGatesAndPostGates.md = docs\threadGatesAndPostGates.md
-		docs\timeline.md = docs\timeline.md
+		docs\docfx.json = docs\docfx.json
+		docs\docicon.png = docs\docicon.png
+		docs\favicon.ico = docs\favicon.ico
+		docs\favicon.png = docs\favicon.png
+		docs\index.md = docs\index.md
+		docs\toc.yml = docs\toc.yml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{8849E619-47FB-420A-AEA0-A5794F728BD0}"
@@ -73,6 +68,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 		.github\workflows\close-inactive-issues.yml = .github\workflows\close-inactive-issues.yml
 		.github\workflows\codeql-analysis.yml = .github\workflows\codeql-analysis.yml
 		.github\workflows\dependency-review.yml = .github\workflows\dependency-review.yml
+		.github\workflows\generate-publish-docs.yml = .github\workflows\generate-publish-docs.yml
 		.github\workflows\markdown-link-check.yml = .github\workflows\markdown-link-check.yml
 		.github\workflows\upload-coverage-report.yml = .github\workflows\upload-coverage-report.yml
 	EndProjectSection
@@ -127,12 +123,30 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ISSUE_TEMPLATE", "ISSUE_TEM
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.EmbeddedCard", "samples\Samples.EmbeddedCard\Samples.EmbeddedCard.csproj", "{184094BE-5D4A-4EAF-BD4F-65B27D46AA07}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "images", "images", "{A9FBC338-5896-44FF-863A-1F608B9777C3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.DirectMessages", "samples\Samples.DirectMessages\Samples.DirectMessages.csproj", "{2B34CB51-5878-4C91-90ED-01742EA0CD00}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{E2B63F0A-9892-45AA-8453-4E5A23017D63}"
 	ProjectSection(SolutionItems) = preProject
-		docs\images\embeddedCard.png = docs\images\embeddedCard.png
+		docs\docs\commonTerms.md = docs\docs\commonTerms.md
+		docs\docs\conversationsAndMessages.md = docs\docs\conversationsAndMessages.md
+		docs\docs\cursorsAndPagination.md = docs\docs\cursorsAndPagination.md
+		docs\docs\endpointStatus.md = docs\docs\endpointStatus.md
+		docs\docs\index.md = docs\docs\index.md
+		docs\docs\labels.md = docs\docs\labels.md
+		docs\docs\logging.md = docs\docs\logging.md
+		docs\docs\notifications.md = docs\docs\notifications.md
+		docs\docs\posting.md = docs\docs\posting.md
+		docs\docs\profileEditing.md = docs\docs\profileEditing.md
+		docs\docs\savingAndRestoringAuthentication.md = docs\docs\savingAndRestoringAuthentication.md
+		docs\docs\threadGatesAndPostGates.md = docs\docs\threadGatesAndPostGates.md
+		docs\docs\timeline.md = docs\docs\timeline.md
+		docs\docs\toc.yml = docs\docs\toc.yml
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.DirectMessages", "samples\Samples.DirectMessages\Samples.DirectMessages.csproj", "{2B34CB51-5878-4C91-90ED-01742EA0CD00}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "media", "media", "{5BDA46D6-18E0-4F11-9F0E-EE5E503D64F0}"
+	ProjectSection(SolutionItems) = preProject
+		docs\docs\images\embeddedCard.png = docs\docs\images\embeddedCard.png
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -260,8 +274,9 @@ Global
 		{6DE172D9-8DB7-496B-BDE5-BD144FC3D1DE} = {B1A49FA3-07AB-4D78-BC16-FF7FB5857840}
 		{F8B3262D-C3F6-4734-93B9-9218A1178297} = {8849E619-47FB-420A-AEA0-A5794F728BD0}
 		{184094BE-5D4A-4EAF-BD4F-65B27D46AA07} = {B1A49FA3-07AB-4D78-BC16-FF7FB5857840}
-		{A9FBC338-5896-44FF-863A-1F608B9777C3} = {DDB6FAB2-1F8C-47C4-89DC-E319D09065E5}
 		{2B34CB51-5878-4C91-90ED-01742EA0CD00} = {B1A49FA3-07AB-4D78-BC16-FF7FB5857840}
+		{E2B63F0A-9892-45AA-8453-4E5A23017D63} = {DDB6FAB2-1F8C-47C4-89DC-E319D09065E5}
+		{5BDA46D6-18E0-4F11-9F0E-EE5E503D64F0} = {E2B63F0A-9892-45AA-8453-4E5A23017D63}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2B9F8C2-975D-4E3A-B05E-48FDF4BCE3E6}

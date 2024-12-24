@@ -30,7 +30,10 @@ For example, to get a user's notifications with labels applied:
 
 ```c#
 AtProtoHttpResult<NotificationsList> notificationsList =
-    await agent.ListNotifications(limit: pageSize, cursor: cursor, subscribedLabelers: userPreferences.SubscribedLabelers).ConfigureAwait(false);
+    await agent.ListNotifications(
+      limit: pageSize,
+      cursor: cursor,
+      subscribedLabelers: userPreferences.SubscribedLabelers).ConfigureAwait(false);
 ```
 
 For notifications labels are applied to the `Author` property and the `PostView` property. You can iterate through the collection, and act on it
@@ -65,21 +68,3 @@ A user chooses to hide, warn, or ignore each label from a labeler.
 
 For more information on labels, their values and how your application should react to them, see the
 [Bluesky moderation guide](https://docs.bsky.app/docs/advanced-guides/moderation).
-
----
-
->**Chapters**
->  
->*[Table of Contents](readme.md)*
->  
->[Common Terms](commonTerms.md)  
-[Timelines and Feeds](timeline.md)  
-[Checking notifications](notifications.md#checkingNotifications)  
-[Cursors and pagination](cursorsAndPagination.md)  
-[Posting](posting.md#posting)  
-[Thread Gates and Post Gates](threadGatesAndPostGates.md)  
-[Labels](labels.md)  
-[Conversations and Messages](conversationsAndMessages.md)  
-[Changing a user's profile](profileEditing.md)  
-[Saving and restoring sessions](savingAndRestoringAuthentication.md)  
-[Logging](logging.md)

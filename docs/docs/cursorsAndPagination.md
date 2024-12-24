@@ -1,4 +1,4 @@
-# Cursors and Pagination
+# Cursors & Pagination
 
 If you've looked at the source code for the [Notifications](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Notifications) or [Timeline](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Timeline) samples you may have noticed they through notifications rather than get all the notifications at once.
 
@@ -36,21 +36,3 @@ The response from the `ListNotifications()` API, or any API that supports paging
 APIs that support pagination include `ListNotifications()`, `SearchActors()`, `GetTimeline()`, `GetFeed()` and `GetSuggestions()`.
 
 One thing to note specifically for feeds is that cursors aren't a standard format - an feed can generate whatever they type of cursor they want, and use that to decide what to serve next. The [Feed sample](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Feed) pages through the Bluesky Discovery feed. This feed users the cursor to track what it's already shown you, so as you load more and more pages the cursor grows and grows, until, if you page for long enough the cursor is too big to send in the request and you get a 400 Bad Request response. This is why the feed sample only loads 10 pages of 5 posts.
-
----
-
->**Chapters**
->  
->*[Table of Contents](readme.md)*
->  
->[Common Terms](commonTerms.md)  
-[Timelines and Feeds](timeline.md)  
-[Checking notifications](notifications.md#checkingNotifications)  
-[Cursors and pagination](cursorsAndPagination.md)  
-[Posting](posting.md#posting)  
-[Thread Gates and Post Gates](threadGatesAndPostGates.md)  
-[Labels](labels.md)  
-[Conversations and Messages](conversationsAndMessages.md)  
-[Changing a user's profile](profileEditing.md)  
-[Saving and restoring sessions](savingAndRestoringAuthentication.md)  
-[Logging](logging.md)

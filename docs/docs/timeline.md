@@ -16,7 +16,8 @@ if (timelineResult.Succeeded && timelineResult.Result.Count != 0)
         }
         Console.WriteLine($"  From {@timelineView.Post.Author} {GetLabels(timelineView.Post.Author)}");
         Console.WriteLine($"  Posted at: {timelineView.Post.Record.CreatedAt.ToLocalTime():G}");
-        Console.WriteLine($"  {timelineView.Post.LikeCount} like{(timelineView.Post.LikeCount != 1 ? "s" : "")} {timelineView.Post.RepostCount} repost{(timelineView.Post.RepostCount != 1 ? "s" : "")}.");
+        Console.Write($"  {timelineView.Post.LikeCount} like{(timelineView.Post.LikeCount != 1 ? "s" : "")} ");
+        Console.WriteLine($"{timelineView.Post.RepostCount} repost{(timelineView.Post.RepostCount != 1 ? "s" : "")}.");
         Console.WriteLine($"  AtUri: {timelineView.Post.Uri}");
         Console.WriteLine($"  Cid:   {timelineView.Post.Cid}");
 
@@ -100,20 +101,3 @@ if (searchResult.Succeeded && getFeedResult.Result.Count != 0)
 
 You can find these APIs and more in the [HTTP reference](https://docs.bsky.app/docs/api/at-protocol-xrpc-api), each API has its equivalent `BlueskyAgent` method.
 
----
-
->**Chapters**
->  
->*[Table of Contents](readme.md)*
->  
->[Common Terms](commonTerms.md)  
-[Timelines and Feeds](timeline.md)  
-[Checking notifications](notifications.md#checkingNotifications)  
-[Cursors and pagination](cursorsAndPagination.md)  
-[Posting](posting.md#posting)  
-[Thread Gates and Post Gates](threadGatesAndPostGates.md)  
-[Labels](labels.md)  
-[Conversations and Messages](conversationsAndMessages.md)  
-[Changing a user's profile](profileEditing.md)  
-[Saving and restoring sessions](savingAndRestoringAuthentication.md)  
-[Logging](logging.md)
