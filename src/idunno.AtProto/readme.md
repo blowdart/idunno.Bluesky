@@ -46,4 +46,6 @@ if (loginResult.Succeeded)
 * [idunno.Bluesky](https://www.nuget.org/packages/idunno.Bluesky) for interacting with the [Bluesky social network](https://docs.bsky.app/).
 
 ## Documentation
-[Documentation](https://github.com/blowdart/idunno.Bluesky/tree/main/docs/) is available on GitHub.
+[Documentation](https://bluesky.idunno.dev/) is available, including API references.
+
+The [API status page](https://bluesky.idunno.dev/docs/endpointStatus.html) shows the current state of API support.

@@ -33,6 +33,6 @@ if (loginResult.Succeeded)
 ```
 
 ## Documentation
-[Documentation](https://github.com/blowdart/idunno.Bluesky/tree/main/docs/) is available on GitHub.
+[Documentation](https://bluesky.idunno.dev/) is available, including API references.
 
-The [API status page](https://github.com/blowdart/idunno.Bluesky/tree/main/docs/endpointStatus.md) shows the current state of API support.
+The [API status page](https://bluesky.idunno.dev/docs/endpointStatus.html) shows the current state of API support.
