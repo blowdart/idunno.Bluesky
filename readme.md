@@ -27,9 +27,9 @@ if (loginResult.Succeeded)
 }
 ```
 
-Please see the [documentation](https://github.idunno.dev/idunno.Bluesky/) for much more useful documentation and samples.
+Please see the [documentation](https://bluesky.idunno.dev/) for much more useful documentation and samples.
 
-The [API status page](https://github.idunno.dev/idunno.Bluesky/endpointStatus.html) shows what APIs are currently implemented.
+The [API status page](https://bluesky.idunno.dev/endpointStatus.html) shows what APIs are currently implemented.
 
 ## Current Build Status
 
