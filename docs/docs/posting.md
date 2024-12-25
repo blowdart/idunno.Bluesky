@@ -105,7 +105,7 @@ var replyToReplyStrongReference =
   await agent.ReplyTo(replyCreatePostResponse.StrongReference, "This is a reply to the reply.");
 ```
 
-Reply to a post creates a new record, and it may surprise you to see that the `ReplyTo()`
+Replying to a post creates a new record, and it may not surprise you to see that the `ReplyTo()`
 methods returns an `HttpResult<CreateRecordResponse>` just like creating a post does.
 
 ## <a name="likeRepostQuote">Liking, reposting and quote posting posts</a>
@@ -228,7 +228,8 @@ PostBuilder hashtagBuilder = new PostBuilder("This will have a hashtag. ") + new
 var hashtagPostResult = await agent.Post(hashtagBuilder);
 ```
 
-Note that the `HashTag` does not begin with the # character. If you include a hash character you end up with a double hashed tag,  for example, if you created a new instance with `new Hashtag("#test")` the hashtag Bluesky and other clients will open a page for `##test`.
+> [!TIP]
+> The `HashTag` does not begin with the # character. If you include a hash character you end up with a double hashed tag.
 
 Of course, you can chain everything together:
 
@@ -260,14 +261,15 @@ AtProtoHttpResult<CreateRecordResponse> facetedCreatePostResponse =
 ```
 
 > [!TIP]
-> If you chain multiple HashTags together with `Append` they will be posted without a separator between them.  You might want to append them like this.
+> If you chain multiple HashTags together with `Append` they will be posted without a separator between them. You might want to append them like this.
 > 
-> ``postBuilder.Append(" ");`<br>`postBuilder.Append(new HashTag(hashtag));`
-```
+> `postBuilder.Append(" ");`<br/>`postBuilder.Append(new HashTag(hashtag));`
+
 
 ### Warning: Don't concatenate facets with other facets or strings
 
-> [!CAUTION] Do not concatenate facets with other facets or strings, for example:
+> [!CAUTION]
+> Do not concatenate facets with other facets or strings, for example:
 > 
 > `postBuilder.Append(" " + new Link("https://en.wikipedia.org/wiki/Heinz_Baked_Beans"));`
 > 
