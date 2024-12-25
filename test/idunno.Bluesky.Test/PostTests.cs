@@ -7,6 +7,7 @@ using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.RichText;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace idunno.Bluesky.Test
 {
@@ -332,6 +333,91 @@ namespace idunno.Bluesky.Test
             ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("text", images: images));
 
             Assert.Equal("images.Count", caughtException.ParamName);
+        }
+
+        [Fact]
+        public void SettingSelfLabelFlagsSetsTheEntry()
+        {
+            Post post = new("Flags");
+            Assert.Null(post.Tags);
+            Assert.False(post.ContainsPorn);
+            Assert.False(post.ContainsSexualContent);
+            Assert.False(post.ContainsGraphicMedia);
+            Assert.False(post.ContainsNudity);
+
+            post.ContainsPorn = true;
+            Assert.NotNull(post.Labels);
+            Assert.True(post.Labels.Contains("porn"));
+            Assert.True(post.ContainsPorn);
+
+            post.ContainsSexualContent = true;
+            Assert.NotNull(post.Labels);
+            Assert.True(post.Labels.Contains("sexual"));
+            Assert.True(post.ContainsSexualContent);
+
+            post.ContainsGraphicMedia = true;
+            Assert.NotNull(post.Labels);
+            Assert.True(post.Labels.Contains("graphic-media"));
+            Assert.True(post.ContainsGraphicMedia);
+
+            post.ContainsNudity = true;
+            Assert.NotNull(post.Labels);
+            Assert.True(post.Labels.Contains("nudity"));
+            Assert.True(post.ContainsNudity);
+        }
+
+        [Fact]
+        public void UnsettingSelfLabelsUnsetsTheUnderlyingEntry()
+        {
+            Post post = new("Flags")
+            {
+                ContainsPorn = true,
+                ContainsSexualContent = true,
+                ContainsGraphicMedia = true,
+                ContainsNudity = true
+            };
+
+            Assert.NotNull(post.Labels);
+            Assert.True(post.ContainsPorn);
+            Assert.True(post.ContainsSexualContent);
+            Assert.True(post.ContainsGraphicMedia);
+            Assert.True(post.ContainsNudity);
+
+            post.ContainsPorn = false;
+            Assert.NotNull(post.Labels);
+            Assert.False(post.ContainsPorn);
+            Assert.False(post.Labels.Contains("porn"));
+
+            post.ContainsSexualContent = false;
+            Assert.NotNull(post.Labels);
+            Assert.False(post.ContainsSexualContent);
+            Assert.False(post.Labels.Contains("sexual"));
+
+            post.ContainsGraphicMedia = false;
+            Assert.NotNull(post.Labels);
+            Assert.False(post.ContainsGraphicMedia);
+            Assert.False(post.Labels.Contains("graphic-media"));
+
+            post.ContainsNudity = false;
+            Assert.NotNull(post.Labels);
+            Assert.False(post.ContainsNudity);
+            Assert.False(post.Labels.Contains("nudity"));
+        }
+
+        [Fact]
+        public void SettingSelfLabelsViaSetPostSelfLabelsSetsTheUnderlyingEntry()
+        {
+            PostSelfLabels selfLabels = new() { Porn = true, GraphicMedia = true, Nudity= true, SexualContent = true };
+
+            Post post = new ("text");
+
+            post.SetSelfLabels(selfLabels);
+
+            Assert.NotNull(post.Labels);
+            Assert.True(post.ContainsPorn);
+            Assert.True(post.ContainsSexualContent);
+            Assert.True(post.ContainsGraphicMedia);
+            Assert.True(post.ContainsNudity);
         }
     }
 }

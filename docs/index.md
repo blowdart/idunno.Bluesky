@@ -67,7 +67,7 @@ The `EnsureSucceeded()` method on `AtProtoHttpResult<T>` will throw and `AtProto
 
 ## <a name="connecting">Connecting to Bluesky</a>
 
-As you can see from the [Hello World](#gettingStarted) example connecting to Bluesky consists of creating an instance of a `BlueskyAgent` and then calling the login method.
+As you can see from the [Hello World](index.md#gettingStarted) example connecting to Bluesky consists of creating an instance of a `BlueskyAgent` and then calling the login method.
 
 ```c#
 using (BlueskyAgent agent = new ())
