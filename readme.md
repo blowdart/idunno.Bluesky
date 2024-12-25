@@ -1,4 +1,4 @@
-# idunno.Bluesky
+# ![The Bluesky butterfly logo, except in purple](docs/docicon.png)idunno.Bluesky
 
 [if you want me to wear 37 pieces of flair, like your pretty boy over there, Brian, why don't you just make the minimum 37 pieces of flair?]: #
 

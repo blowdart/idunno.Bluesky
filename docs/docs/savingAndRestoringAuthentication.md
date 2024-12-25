@@ -30,12 +30,15 @@ var agent = new BlueskyAgent()
 ```
 
 The `SessionCreated` is raised when a login is successful and a new session is created.The `SessionRefreshed` event is raised when the background
-token refresh occurs or you call RefreshSession(). `SessionRefreshFailed` event is raised when the background refresh fails, or your manual call to
-RefreshSession() fails. `SessionEnded` is raised when you call `Logout()`.
+token refresh occurs or you call `RefreshSession()`. `SessionRefreshFailed` event is raised when the background refresh fails, or your manual call to
+`RefreshSession()` fails. `SessionEnded` is raised when you call `Logout()`.
 
-In your handler for `SessionCreated` it is suggested you store the refresh token, the URI that issued it and the DID it belongs to securely,
-in whatever way is appropriate for your platform (for example the Windows Credential Store, or the Mac/iOS keychain). If your application supports
-multiple accounts you should also store the handle that was used to create the session.
+> [!IMPORTANT]
+> In your handler for `SessionCreated` it is suggested you store the refresh token, the URI that issued it and the DID it belongs to securely,
+> in whatever way is appropriate for your platform (for example the
+[Windows Credential Store](https://learn.microsoft.com/en-us/samples/microsoft/windows-universal-samples/passwordvault/),
+or the [Mac/iOS keychain](https://developer.apple.com/documentation/security/keychain-services)). If your application supports
+> multiple accounts you should also store the handle that was used to create the session.
 
 Storing the access token is optional, it is meant to be short lived and may no longer be valid when your application restarts.
 

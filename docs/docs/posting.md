@@ -16,17 +16,19 @@ if (postResult.Succeeded)
 }
 ```
 
-The result from creating a post contains. amongst other things, a strong reference to the new record. This `StrongReference` consists of an [AT URI](https://atproto.com/specs/at-uri-scheme) and a Content Identifier ([CID](https://github.com/multiformats/cid)). 
+The result from creating a post contains. amongst other things, a strong reference to the new record. This `StrongReference` consists of an
+[AT URI](https://atproto.com/specs/at-uri-scheme) and a Content Identifier ([CID](https://github.com/multiformats/cid)). 
 
 An AT URI is a way to reference individual records in a specific repository (every Bluesky user has their own repository).
 
 A CID is a way to identify the contents of a record using a fingerprint hash. 
 
-The AT URI, or a record's complete `StrongReference` are used as a parameters in methods which deal with existing Bluesky records, for example, liking or deleting a post.
+The AT URI, or a record's complete `StrongReference` are used as a parameters in methods which deal with existing Bluesky records, for example,
+liking or deleting a post.
 
 ### Setting the language on a post
 
-Setting the post's language helps custom feeds or other services filter and parse posts. You can set the posts language or languages using the language argument
+Setting the post's language helps custom feeds or other services filter and parse posts. You can set the posts language or languages using the language argument:
 
 ```c#
 await agent.Post("G'day world!", language: "en-au");
@@ -51,9 +53,14 @@ If you don't provide `createdAt` the current date and time will be used.
 
 ## <a name="understandingPostResults">Understanding the results from a post call</a>
 
-The `Post()` method creates a record in your Bluesky repo and returns an`AtProtoHttpResult<CreateRecordResponse>` This encapsulates the HTTP status code returned by the Bluesky API, the result of the operation, if the operation was successful, any error messages the API returned, and information on the current rate limits applied to you, which can be useful for making sure you don't flood the servers and get locked by a rate limiter.
+The `Post()` method creates a record in your Bluesky repo and returns an`AtProtoHttpResult<CreateRecordResponse>`
+This encapsulates the HTTP status code returned by the Bluesky API, the result of the operation,
+if the operation was successful, any error messages the API returned, and information on the current rate limits applied to you,
+which can be useful for making sure you don't flood the servers and get locked by a rate limiter.
 
-To check if the call was successful you can check the `Succeeded` property of the `HttpResult`, which will be `true` if the operation succeeded. If its false, the `StatusCode` property will contain the HTTP status code returned by the Bluesky API, and the `AtErrorDetail` property will contain any error information the API returned.
+To check if the call was successful you can check the `Succeeded` property of the `HttpResult`, which will be `true` if the operation succeeded.
+If its false, the `StatusCode` property will contain the HTTP status code returned by the Bluesky API, and the `AtErrorDetail` property will contain any
+error information the API returned.
 
 ```c#
 AtProtoHttpResult<CreateRecordResponse> postResult =  await agent.Post("Hello world!");
@@ -76,7 +83,9 @@ else
 
 "Hello world" isn't exactly the most engaging post, so now is a good time to look at how to delete posts.
 
-To delete a post you can use a post's AT URI, or a post's strong reference, pass it to `DeletePost()` and now the post is gone. For example, to delete the post you just made using the first code snippet above you would pass the an AT URI returned as part of the strong reference you got from creating the post, or the strong reference itself.
+To delete a post you can use a post's AT URI, or a post's strong reference, pass it to `DeletePost()` and now the post is gone.
+For example, to delete the post you just made using the first code snippet above you would pass the an AT URI returned as part of the strong reference
+you got from creating the post, or the strong reference itself.
 
 ```c#
 HttpResult<Commit> deleteResult = await agent.DeletePost(postResult.Result.StrongReference.Uri);
@@ -129,7 +138,8 @@ HttpResult<StrongReference> repostResult = await agent.Repost(postReference);
 HttpResult<bool> undoRepostResult = await agent.UndoRepost(repostResult.Result);
 ```
 
-Quoting a post requires both the post strong reference, and the text you the quote post to contain. Deleting a post quoting another post is like deleting a regular post, you call `DeletePost`;
+Quoting a post requires both the post strong reference, and the text you the quote post to contain.
+Deleting a post quoting another post is like deleting a regular post, you call `DeletePost`;
 
 ```c#
 HttpResult<StrongReference> quoteResult = 
@@ -139,9 +149,9 @@ HttpResult<bool> deleteResult = await agent.DeleteQuote(quoteResult.Result!);
 
 ## <a name="postRelationships">Getting your relationships with a post</a>
 
-You can see if you have liked or reposted by examining the view of the post you get from a feed. If you're not dealing with feeds you can get a `PostView` by calling `GetPostView()` with a `StrongReference` to the post. A `PostView`
-contains an optional `Viewer` property, which is present should you have reposted, liked, pinned or muted the post, or if
-the post author has disabled replies to, or embedding of the post.
+You can see if you have liked or reposted by examining the view of the post you get from a feed. If you're not dealing with feeds you can get a `PostView`
+by calling `GetPostView()` with a `StrongReference` to the post. A `PostView` contains an optional `Viewer` property, which is present should you have
+reposted, liked, pinned or muted the post, or if the post author has disabled replies to, or embedding of the post.
 
 If you liked a post then its `PostView.Viewer.Like` property will contain an AT Uri to your own like record, which you can use to unlike.
 
@@ -154,24 +164,27 @@ Facets are post features, three of which are currently supported, links, mention
 
 ### <a name="autoDetection">Facet auto-detection</a>
 
-The majority of the `Post()` APIs will try to detect links, mentions and hashtags automatically, although you can disable this by setting the extractFacets to `false`.
+The majority of the `Post()` APIs will try to detect links, mentions and hashtags automatically, although you can disable this by setting the
+`extractFacets` parameter to `false`. For example:
 
 ```c#
 var postResult = 
     await agent.Post("Hello #beans");
 ```
 
-would result in a hashtag of beans being added to the post. Detection works for hashtags, @ mentions and for uris which begin with either https:// or http://.
+This will result in a hashtag of beans being added to the post. Detection works for hashtags, @ mentions and for uris which begin with either
+https:// or http://.
 
 The only `Post()` method that doesn't auto-detect and extract facets is `Post(PostBuilder, CancellationToken)` as the `PostBuilder` class allows you to
 specifically add facets as you build your post, see [Building facets with a PostBuilder](posting.md#postBuilder).
 
-### <a name="facetProvider">Replacing the facet extractor</a>
-
-You can write your own facet extractor if the default one doesn't work exactly as you want.
-`IFacetExtractor` has a single method, `ExtractFacets(string, CancellationToken)` that you need to implement.
-This is an `async` method, as creating a mention facet requires you to resolve the detected handle to a DID.
-To replace the default extractor set the `FacetExtractor` property on an instance of `BlueskyAgentOptions` that you pass into the constructor of `BlueskyAgent`.
+> [!TIP]
+> You can write your own facet extractor if the default one doesn't work exactly as you want, by implementing `IFacetExtractor`.
+>
+> `IFacetExtractor` has a single method, `ExtractFacets(string, CancellationToken)` that you need to implement.
+> This is an `async` method, as creating a mention facet requires you to resolve the detected handle to a DID.
+>
+> To replace the default extractor set the `FacetExtractor` property on the instance of `BlueskyAgentOptions` that you pass into the `BlueskyAgent` constructor.
 
 ### <a name="postBuilder">Building facets with a PostBuilder</a>
 
@@ -184,7 +197,8 @@ Each of these classes a parameter specific to the facet type, DIDs for mentions,
 
 #### Mentions
 
-To mention someone in a post you must know their DID, which you can get by resolving their handle. Then create a `Mention` instance and add it to your `PostBuilder`, then finally call `agent.Post()` with your PostBuilder.
+To mention someone in a post you must know their DID, which you can get by resolving their handle.
+Then create a `Mention` instance and add it to your `PostBuilder`, then finally call `agent.Post()` with your PostBuilder.
 
 ```c#
 string userToTagHandle = "userHandle.test";
@@ -233,6 +247,11 @@ var hashtagPostResult = await agent.Post(hashtagBuilder);
 
 Of course, you can chain everything together:
 
+> [!TIP]
+> If you chain multiple HashTags together with `Append` they will be posted without a separator between them. You might want to append them like this.
+> 
+> `postBuilder.Append(" ");`<br/>`postBuilder.Append(new HashTag(hashtag));`
+
 ```c#
 string userToTagHandle = "userHandle.test";
 var userToTagDid = await agent.ResolveHandle(userToTagHandle);
@@ -259,14 +278,6 @@ postBuilder.Append(hashTag);
 AtProtoHttpResult<CreateRecordResponse> facetedCreatePostResponse =
     await agent.Post(postBuilder, cancellationToken: cancellationToken);
 ```
-
-> [!TIP]
-> If you chain multiple HashTags together with `Append` they will be posted without a separator between them. You might want to append them like this.
-> 
-> `postBuilder.Append(" ");`<br/>`postBuilder.Append(new HashTag(hashtag));`
-
-
-### Warning: Don't concatenate facets with other facets or strings
 
 > [!CAUTION]
 > Do not concatenate facets with other facets or strings, for example:
@@ -318,7 +329,10 @@ If the call to `UploadImage` didn't error you can pass its result to `agent.Post
 ```c#
 if (imageUploadResult.Succeeded)
 {
-    var createPostResult = await agent.Post("Hello world with an image.", imageUploadResult.Result, cancellationToken: cancellationToken);
+    var createPostResult = await agent.Post(
+      "Hello world with an image.",
+      imageUploadResult.Result,
+      cancellationToken: cancellationToken);
 }
 ```
 
@@ -392,6 +406,7 @@ If you don't want to use a `PostBuilder` you can use the appropriate `Post()` me
 ```c#
 var postResult = agent.Post(externalCard: embeddedExternal, cancellationToken: cancellationToken);
 ```
+
 You can use libraries like [OpenGraph.net](https://github.com/ghorsey/OpenGraph-Net/) or [X.Web.MetaExtractor](https://www.nuget.org/packages/X.Web.MetaExtractor) to retrieve Open Graph properties from which you can construct a card.
 For example, using OpenGraph.Net
 
@@ -408,6 +423,7 @@ if (graph.Url is not null)
     pageUri = graph.Url;
 }
 ```
-The example in the [Embedded Card](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.EmbeddedCard) sample shows how to use OpenGraph.Net to extract the metadata, and to retrieve a preview image and use it, if the metadata has an image property.
+The example in the [Embedded Card](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.EmbeddedCard) sample shows how to use
+OpenGraph.Net to extract the metadata, and to retrieve a preview image and use it, if the metadata has an image property.
 
 Posts with an embedded card don't need any post text.

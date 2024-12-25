@@ -125,5 +125,5 @@ APIs that support pagination include `ListNotifications()`, `SearchActors()`, `G
 One thing to note for feeds is that cursors aren't a standard format, an API can generate whatever they want, and use that to
 decide what to serve next. The [Feed](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.Feed) sample pages
 through the Bluesky Discovery feed. This feed users the cursor to track what it's already shown you, so as you load more and more pages the
-cursor grows and grows, until, if you page for long enough the cursor is too big to send in the request and you get a 400 Bad Request response.
+cursor grows and grows, until, if you page for long enough the cursor is too big to send in the request and you get a `400 Bad Request`` response.
 This is why the feed sample only loads 10 pages of 5 posts.

@@ -5,6 +5,8 @@ items:
         href: ../index.md
       - name: Common Terms & Concepts
         href: commonTerms.md
+      - name: Configuring Connections
+        href: configuringConnections.md
 
   - name: Feeds & timelines
     items:

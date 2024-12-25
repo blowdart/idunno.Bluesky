@@ -25,7 +25,7 @@ else
 }
 ````
 
-From there, you can use the `SubscribedLabelers` property and pass that into any API that takes a `subscribedLabelers` parameter.
+From there, you use the `SubscribedLabelers` property and pass that into any API that takes a `subscribedLabelers` parameter.
 For example, to get a user's notifications with labels applied:
 
 ```c#

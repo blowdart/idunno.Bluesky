@@ -128,6 +128,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{E2B63F0A-9892-45AA-8453-4E5A23017D63}"
 	ProjectSection(SolutionItems) = preProject
 		docs\docs\commonTerms.md = docs\docs\commonTerms.md
+		docs\docs\configuringConnections.md = docs\docs\configuringConnections.md
 		docs\docs\conversationsAndMessages.md = docs\docs\conversationsAndMessages.md
 		docs\docs\cursorsAndPagination.md = docs\docs\cursorsAndPagination.md
 		docs\docs\endpointStatus.md = docs\docs\endpointStatus.md

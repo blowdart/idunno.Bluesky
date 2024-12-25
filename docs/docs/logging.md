@@ -29,5 +29,8 @@ using var agent = new AtProtoAgent(new("https://bsky.social"), loggerFactory: lo
     _ = await agent.Login(new Credentials(handle, password), cancellationToken: cancellationToken).ConfigureAwait(false);
     await agent.Logout(cancellationToken: cancellationToken).ConfigureAwait(false);
 }
-
 ```
+
+> [!IMPORTANT]
+> Depending on the regulatory environment you are working under logs may contain personal information such as a user's DID.
+> Make sure your logs are secured appropriately.
