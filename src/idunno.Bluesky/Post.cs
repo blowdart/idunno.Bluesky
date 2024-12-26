@@ -614,6 +614,5 @@ namespace idunno.Bluesky
         /// This puts a warning on images but isn't 18+ and defaults to ignore.
         /// </summary>
         public bool Nudity { get; set; }
-
     }
 }

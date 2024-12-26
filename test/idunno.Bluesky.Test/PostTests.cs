@@ -2,12 +2,13 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Xml.Serialization;
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.RichText;
-using static System.Net.Mime.MediaTypeNames;
+using Microsoft.Testing.Platform.MSBuild;
 
 namespace idunno.Bluesky.Test
 {
@@ -15,12 +16,48 @@ namespace idunno.Bluesky.Test
     public class PostTests
     {
         [Fact]
+        public void EmptyConstructorSetsText()
+        {
+            DateTimeOffset start = DateTimeOffset.UtcNow;
+            var post = new Post();
+            DateTimeOffset end = DateTimeOffset.UtcNow;
+
+            Assert.True(post.CreatedAt >= start);
+            Assert.True(post.CreatedAt <= end);
+        }
+
+
+        [Fact]
+        public void PolymorphicTypeIsExpected()
+        {
+            var post = new Post("text");
+
+            Assert.Equal("app.bsky.feed.post", post.Type);
+        }
+
+        [Fact]
         public void TextOnlyConstructorSetsText()
+        {
+            const string postText = "post text";
+
+            DateTimeOffset start = DateTimeOffset.UtcNow;
+            var post = new Post(postText);
+            DateTimeOffset end = DateTimeOffset.UtcNow;
+
+            Assert.Equal(postText, post.Text);
+            Assert.True(post.CreatedAt >= start);
+            Assert.True(post.CreatedAt <= end);
+        }
+
+        [Fact]
+        public void TextOnlyConstructorSetsTextAndCreatedAt()
         {
             const string postText = "post text";
 
             var post = new Post(postText);
             Assert.Equal(postText, post.Text);
+
+
         }
 
         [Fact]
@@ -281,9 +318,19 @@ namespace idunno.Bluesky.Test
         }
 
         [Fact]
-        public void ConstructorThrowsWhenAnTooLongTagIsPassed()
+        public void ConstructorThrowsWhenAnTooLongTagInGraphemesIsPassed()
         {
             List<string> tags = new() { new('x', Maximum.TagLengthInGraphemes + 1) };
+
+            ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post("text", tags: tags));
+
+            Assert.Equal("tags", caughtException.ParamName);
+        }
+
+        [Fact]
+        public void ConstructorThrowsWhenAnTooLongTagInCharactersIsPassed()
+        {
+            List<string> tags = new() { new('x', Maximum.TagLengthInCharacters + 1) };
 
             ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post("text", tags: tags));
 
@@ -301,6 +348,46 @@ namespace idunno.Bluesky.Test
         }
 
         [Fact]
+        public void ConstructorDoesNotThrowWhenImageAndTextIsProvided()
+        {
+            var image = new EmbeddedImage(new Blob(new BlobReference("https://example.org/image"), "image/jpg", 1024), "alt text");
+
+            var post = new Post("text", image);
+
+            Assert.Equal("text", post.Text);
+            Assert.IsType<EmbeddedImages>(post.Embed);
+
+            EmbeddedImages postImages = (EmbeddedImages)post.Embed;
+
+            Assert.Single(postImages.Images);
+        }
+
+        [Fact]
+        public void ConstructorThrowsWhenImageIsNullAndCreatedAtProvided()
+        {
+            EmbeddedImage? image = null;
+
+            ArgumentNullException caughtException = Assert.Throws<ArgumentNullException>(() => new Post("text", createdAt: DateTimeOffset.UtcNow, image: image!));
+
+            Assert.Equal("image", caughtException.ParamName);
+        }
+
+        [Fact]
+        public void ConstructorDoesNotThrowWhenImageAndTextAndCreatedAtIsProvided()
+        {
+            var image = new EmbeddedImage(new Blob(new BlobReference("https://example.org/image"), "image/jpg", 1024), "alt text");
+
+            var post = new Post("text", DateTimeOffset.UtcNow, image);
+
+            Assert.Equal("text", post.Text);
+            Assert.IsType<EmbeddedImages>(post.Embed);
+
+            EmbeddedImages postImages = (EmbeddedImages)post.Embed;
+
+            Assert.Single(postImages.Images);
+        }
+
+        [Fact]
         public void ConstructorThrowsWhenImagesIsNull()
         {
             List<EmbeddedImage>? images = null;
@@ -311,11 +398,31 @@ namespace idunno.Bluesky.Test
         }
 
         [Fact]
+        public void ConstructorThrowsWhenImagesIsNullAndCreatedAtProvided()
+        {
+            List<EmbeddedImage>? images = null;
+
+            ArgumentNullException caughtException = Assert.Throws<ArgumentNullException>(() => new Post("text", createdAt: DateTimeOffset.UtcNow, images: images!));
+
+            Assert.Equal("images", caughtException.ParamName);
+        }
+
+        [Fact]
         public void ConstructorThrowsWhenImagesIsEmpty()
         {
             List<EmbeddedImage> images = new();
 
             ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("text", images: images));
+
+            Assert.Equal("images.Count", caughtException.ParamName);
+        }
+
+        [Fact]
+        public void ConstructorThrowsWhenImagesIsEmptyAndCreatedAtProvided()
+        {
+            List<EmbeddedImage> images = new();
+
+            ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("text", createdAt: DateTimeOffset.UtcNow, images: images));
 
             Assert.Equal("images.Count", caughtException.ParamName);
         }
@@ -333,6 +440,84 @@ namespace idunno.Bluesky.Test
             ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("text", images: images));
 
             Assert.Equal("images.Count", caughtException.ParamName);
+        }
+
+        [Fact]
+        public void ConstructorDoesNotThrowsWhenImagesIsHasEnoughImages()
+        {
+            List<EmbeddedImage> images = new();
+
+            for (int i = 0; i < Maximum.ImagesInPost; i++)
+            {
+                images.Add(new EmbeddedImage(new Blob(new BlobReference("https://example.org/image"), "image/jpg", 1024), "alt text"));
+            }
+
+            var post = new Post("text", images);
+
+            Assert.Equal("text", post.Text);
+            Assert.IsType<EmbeddedImages>(post.Embed);
+
+            EmbeddedImages postImages = (EmbeddedImages)post.Embed;
+
+            Assert.Equal(Maximum.ImagesInPost, postImages.Images.Count);
+        }
+
+        [Fact]
+        public void ConstructorThrowsWhenImagesIsHasTooManyImagesAndCreatedAtProvided()
+        {
+            List<EmbeddedImage> images = new();
+
+            for (int i = 0; i <= Maximum.ImagesInPost; i++)
+            {
+                images.Add(new EmbeddedImage(new Blob(new BlobReference("https://example.org/image"), "image/jpg", 1024), "alt text"));
+            }
+
+            ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("text", createdAt: DateTimeOffset.UtcNow, images: images));
+
+            Assert.Equal("images.Count", caughtException.ParamName);
+        }
+
+        [Fact]
+        public void ConstructorDoesNotThrowsWhenImagesIsHasEnoughImagesAndCreatedAtIsProvided()
+        {
+            List<EmbeddedImage> images = new();
+
+            for (int i = 0; i < Maximum.ImagesInPost; i++)
+            {
+                images.Add(new EmbeddedImage(new Blob(new BlobReference("https://example.org/image"), "image/jpg", 1024), "alt text"));
+            }
+
+            var post = new Post("text", DateTimeOffset.UtcNow, images);
+
+            Assert.Equal("text", post.Text);
+            Assert.IsType<EmbeddedImages>(post.Embed);
+
+            EmbeddedImages postImages = (EmbeddedImages)post.Embed;
+
+            Assert.Equal(Maximum.ImagesInPost, postImages.Images.Count);
+        }
+
+        [Fact]
+        public void ConstructorDoesNotThrowWhenTextAndLangAreProvided()
+        {
+            Post post = new ("text", "en-gb");
+
+            Assert.Equal("text", post.Text);
+            Assert.NotNull(post.Langs);
+            Assert.Single(post.Langs);
+            Assert.Contains("en-gb", post.Langs);
+        }
+
+        [Fact]
+        public void ConstructorDoesNotThrowWhenTextAndLangsAreProvided()
+        {
+            Post post = new("text", new List<string> { "en-gb", "en-us" });
+
+            Assert.Equal("text", post.Text);
+            Assert.NotNull(post.Langs);
+            Assert.Equal(2, post.Langs.Count);
+            Assert.Contains("en-gb", post.Langs);
+            Assert.Contains("en-us", post.Langs);
         }
 
         [Fact]
@@ -418,6 +603,49 @@ namespace idunno.Bluesky.Test
             Assert.True(post.ContainsSexualContent);
             Assert.True(post.ContainsGraphicMedia);
             Assert.True(post.ContainsNudity);
+        }
+
+        [Theory]
+        [InlineData("Hello", 5, 5, 5)]
+        [InlineData("👨‍👩‍👧‍👧", 11, 1, 25)]
+        [InlineData("🤦🏼‍♂️", 7, 1, 17)]
+        [InlineData("💩", 2, 1, 4)]
+        [InlineData("\"", 1, 1, 1)]
+        public void LengthPropertiesReturnsCorrectValue(string text, int expectedLength, int expectedGraphemeLength, int expectedUtf8Length)
+        {
+            var post = new Post(text);
+
+            Assert.Equal(expectedLength, post.Length);
+            Assert.Equal(expectedGraphemeLength, post.GraphemeLength);
+            Assert.Equal(expectedUtf8Length, post.Utf8Length);
+        }
+
+        [Fact]
+        public void PostSelfLabelsStartsOffWithFalseEverywhere()
+        {
+            var postSelfLabels = new PostSelfLabels();
+
+            Assert.False(postSelfLabels.Porn);
+            Assert.False(postSelfLabels.SexualContent);
+            Assert.False(postSelfLabels.GraphicMedia);
+            Assert.False(postSelfLabels.Nudity);
+        }
+
+        [Fact]
+        public void LengthPropertiesAreZeroWhenTextIsNull()
+        {
+            List<EmbeddedImage> images = new();
+
+            for (int i = 0; i < Maximum.ImagesInPost; i++)
+            {
+                images.Add(new EmbeddedImage(new Blob(new BlobReference("https://example.org/image"), "image/jpg", 1024), "alt text"));
+            }
+
+            Post post = new (null, images: images);
+
+            Assert.Equal(0, post.Length);
+            Assert.Equal(0, post.GraphemeLength);
+            Assert.Equal(0, post.Utf8Length); ;
         }
     }
 }
