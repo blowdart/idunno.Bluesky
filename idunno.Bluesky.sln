@@ -36,7 +36,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{B1A4
 	ProjectSection(SolutionItems) = preProject
 		samples\Directory.Build.Props = samples\Directory.Build.Props
 		samples\readme.md = samples\readme.md
-		samples\Samples.Video\Samples.Video.csproj = samples\Samples.Video\Samples.Video.csproj
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{ACED7B7D-7BBE-4086-937F-7ECEE6A3F6B4}"
@@ -143,12 +142,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{E2B63F0A-9
 		docs\docs\threadGatesAndPostGates.md = docs\docs\threadGatesAndPostGates.md
 		docs\docs\timeline.md = docs\docs\timeline.md
 		docs\docs\toc.yml = docs\docs\toc.yml
+		docs\docs\video.md = docs\docs\video.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "media", "media", "{5BDA46D6-18E0-4F11-9F0E-EE5E503D64F0}"
 	ProjectSection(SolutionItems) = preProject
 		docs\docs\images\embeddedCard.png = docs\docs\images\embeddedCard.png
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.Video", "samples\Samples.Video\Samples.Video.csproj", "{55550FC6-B850-4C60-834A-9EF80E980000}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -249,6 +251,12 @@ Global
 		{2B34CB51-5878-4C91-90ED-01742EA0CD00}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2B34CB51-5878-4C91-90ED-01742EA0CD00}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2B34CB51-5878-4C91-90ED-01742EA0CD00}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{55550FC6-B850-4C60-834A-9EF80E980000}.CodeQL|Any CPU.ActiveCfg = Debug|Any CPU
+		{55550FC6-B850-4C60-834A-9EF80E980000}.CodeQL|Any CPU.Build.0 = Debug|Any CPU
+		{55550FC6-B850-4C60-834A-9EF80E980000}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{55550FC6-B850-4C60-834A-9EF80E980000}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{55550FC6-B850-4C60-834A-9EF80E980000}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{55550FC6-B850-4C60-834A-9EF80E980000}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -279,6 +287,7 @@ Global
 		{2B34CB51-5878-4C91-90ED-01742EA0CD00} = {B1A49FA3-07AB-4D78-BC16-FF7FB5857840}
 		{E2B63F0A-9892-45AA-8453-4E5A23017D63} = {DDB6FAB2-1F8C-47C4-89DC-E319D09065E5}
 		{5BDA46D6-18E0-4F11-9F0E-EE5E503D64F0} = {E2B63F0A-9892-45AA-8453-4E5A23017D63}
+		{55550FC6-B850-4C60-834A-9EF80E980000} = {B1A49FA3-07AB-4D78-BC16-FF7FB5857840}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2B9F8C2-975D-4E3A-B05E-48FDF4BCE3E6}

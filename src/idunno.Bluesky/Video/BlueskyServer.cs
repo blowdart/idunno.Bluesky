@@ -2,10 +2,12 @@
 // Licensed under the MIT License.
 
 using System.Net.Http.Headers;
+using System.Reflection.Metadata.Ecma335;
 using System.Text.Encodings.Web;
 using idunno.AtProto;
 
 using idunno.Bluesky.Video;
+using idunno.Bluesky.Video.Model;
 using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky
@@ -26,35 +28,33 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="jobId">The job id whose status should be queried.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to query the status against.</param>
-        /// <param name="serviceToken">An service access token to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
         ///   Thrown if <paramref name="jobId"/> is null or whitespace, or
-        ///   <paramref name="service"/>, <paramref name="serviceToken"/> or <paramref name="httpClient"/> is null.
+        ///   <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
         public static async Task<AtProtoHttpResult<JobStatus>> GetVideoJobStatus(
             string jobId,
             Uri service,
-            string serviceToken,
             HttpClient httpClient,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(jobId);
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(serviceToken);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<JobStatus> client = new(loggerFactory);
-
-            return await client.Get(
+            AtProtoHttpClient<JobStatusResponse> client = new(loggerFactory);
+            AtProtoHttpResult<JobStatusResponse> response = await client.Get(
                 service, $"{GetJobStatusEndpoint}?jobId={Uri.EscapeDataString(jobId)}",
-                serviceToken,
                 httpClient: httpClient,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            // Flatten
+            return new AtProtoHttpResult<JobStatus>(response.Result?.JobStatus, response.StatusCode, response.AtErrorDetail, response.RateLimit);
         }
 
         /// <summary>
@@ -123,9 +123,9 @@ namespace idunno.Bluesky
                 new NameValueHeaderValue("Content-Type", "video/mp4")
             };
 
-            AtProtoHttpClient<JobStatus> client = new(loggerFactory);
+            AtProtoHttpClient<JobStatusResponse> client = new(loggerFactory);
 
-            return
+            AtProtoHttpResult<JobStatusResponse> response =
                 await client.PostBlob(
                     service,
                     $"{UploadVideoEndpoint}?did={Uri.EscapeDataString(did)}&name={Uri.EscapeDataString(fileName)}",
@@ -134,6 +134,9 @@ namespace idunno.Bluesky
                     serviceToken,
                     httpClient,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            // Flatten
+            return new AtProtoHttpResult<JobStatus>(response.Result?.JobStatus, response.StatusCode, response.AtErrorDetail, response.RateLimit);
         }
     }
 }

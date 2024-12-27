@@ -348,7 +348,7 @@ namespace idunno.Bluesky
 
                     _postRecord.Reply = value;
 
-                    if (value is not null && (_postRecord.Embed is EmbeddedRecord || _postRecord.Embed is EmbeddedRecordWithMedia))
+                    if (value is not null && (_postRecord.EmbeddedRecord is EmbeddedRecord || _postRecord.EmbeddedRecord is EmbeddedRecordWithMedia))
                     {
                         // Being a reply post excludes being a quote post.
                         QuotePost = null;
@@ -372,7 +372,7 @@ namespace idunno.Bluesky
             {
                 lock (_syncLock)
                 {
-                    if (_postRecord.Embed is EmbeddedRecord embeddedRecord)
+                    if (_postRecord.EmbeddedRecord is EmbeddedRecord embeddedRecord)
                     {
                         return embeddedRecord.Record;
                     }
@@ -387,16 +387,16 @@ namespace idunno.Bluesky
             {
                 lock (_syncLock)
                 {
-                    if (value is null && _postRecord.Embed is null)
+                    if (value is null && _postRecord.EmbeddedRecord is null)
                     {
                         // Nothing to do
                     }
                     else if (value is null)
                     {
-                        if (_postRecord.Embed is EmbeddedRecord || _postRecord.Embed is EmbeddedRecordWithMedia)
+                        if (_postRecord.EmbeddedRecord is EmbeddedRecord || _postRecord.EmbeddedRecord is EmbeddedRecordWithMedia)
                         {
                             // We already have a quote record, so let's just delete it.
-                            _postRecord.Embed = null;
+                            _postRecord.EmbeddedRecord = null;
                         }
                         else
                         {
@@ -405,7 +405,7 @@ namespace idunno.Bluesky
                     }
                     else
                     {
-                        _postRecord.Embed = new EmbeddedRecord(value);
+                        _postRecord.EmbeddedRecord = new EmbeddedRecord(value);
                     }
                 }
             }
@@ -562,7 +562,7 @@ namespace idunno.Bluesky
         {
             get
             {
-                return _postRecord.Embed;
+                return _postRecord.EmbeddedRecord;
             }
 
             set
@@ -571,7 +571,7 @@ namespace idunno.Bluesky
                 {
                     if (value is null)
                     {
-                        _postRecord.Embed = null;
+                        _postRecord.EmbeddedRecord = null;
                     }
                     else
                     {
@@ -638,7 +638,7 @@ namespace idunno.Bluesky
         public void EmbedRecord(EmbeddedBase embeddedRecord)
         {
             ArgumentNullException.ThrowIfNull(embeddedRecord);
-            _postRecord.Embed = embeddedRecord;
+            _postRecord.EmbeddedRecord = embeddedRecord;
         }
 
         /// <summary>
@@ -1104,17 +1104,17 @@ namespace idunno.Bluesky
                     if (InReplyTo is null && QuotePost is null)
                     {
                         // Plain old post
-                        _postRecord.Embed = new EmbeddedImages(_embeddedImages);
+                        _postRecord.EmbeddedRecord = new EmbeddedImages(_embeddedImages);
                     }
                     else if (QuotePost is not null)
                     {
                         // Quote post, so we need fix up the embedded record to include images.
-                        _postRecord.Embed = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), new EmbeddedImages(_embeddedImages));
+                        _postRecord.EmbeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), new EmbeddedImages(_embeddedImages));
                     }
                     else
                     {
                         // Reply post
-                        _postRecord.Embed = new EmbeddedImages(_embeddedImages);
+                        _postRecord.EmbeddedRecord = new EmbeddedImages(_embeddedImages);
                     }
                 }
 

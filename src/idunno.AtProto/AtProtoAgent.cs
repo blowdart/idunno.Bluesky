@@ -1,6 +1,7 @@
 ﻿// Copyright(c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Timers;
 using System.Text.Json;
@@ -17,7 +18,6 @@ using idunno.AtProto.Events;
 using Blob = idunno.AtProto.Repo.Blob;
 
 using idunno.DidPlcDirectory;
-using System.Diagnostics.CodeAnalysis;
 using idunno.AtProto.Models;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo.Models;
@@ -1557,43 +1557,80 @@ namespace idunno.AtProto
         /// <summary>
         /// Get a signed token on behalf of the requesting DID for the requested <paramref name="audience"/>.
         /// </summary>
+        /// <param name="service">The server to request the service authentication from.</param>
         /// <param name="audience">The DID of the service that the token will be used to authenticate with.</param>
-        /// <param name="expiry">The time in Unix Epoch seconds that the JWT expires. Defaults to 60 seconds in the future. The service may enforce certain time bounds on tokens depending on the requested scope.</param>
         /// <param name="lxm">Lexicon (XRPC) method to bind the requested token to</param>
+        /// <param name="expiry">An optional length of the time the token should be valid for.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        ///   Thrown when <paramref name="audience"/>, <paramref name="expiry"/>, or <paramref name="lxm"/> is null.
+        ///   Thrown when <paramref name="service"/>, <paramref name="audience"/> or <paramref name="lxm"/> is null.
         /// </exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="expiry"/> is zero or negative.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="expiry"/> is specified but is zero or negative.</exception>
         public async Task<AtProtoHttpResult<string>> GetServiceAuth(
+            Uri service,
             Did audience,
-            TimeSpan expiry,
             Nsid lxm,
+            TimeSpan? expiry = null,
             CancellationToken cancellationToken = default)
         {
+            ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(audience);
-            ArgumentNullException.ThrowIfNull(expiry);
             ArgumentNullException.ThrowIfNull(lxm);
 
-            ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(expiry.TotalSeconds, 0);
-
-            if (!IsAuthenticated)
+            if (expiry is not null)
             {
-                Logger.GetServiceAuthFailedAsSessionIsAnonymous(_logger, Service);
-
-                throw new AuthenticatedSessionRequiredException();
+                ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(expiry.Value.TotalSeconds, 0);
             }
 
-            return await AtProtoServer.GetServiceAuth(
-                audience,
-                expiry,
-                lxm,
-                Service,
-                AccessToken,
-                httpClient: HttpClient,
-                loggerFactory: LoggerFactory,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+            using (_logger.BeginScope($"GetServiceAuth()"))
+            {
+                if (expiry is not null)
+                {
+                    Logger.RequestingServiceAuthToken(_logger, Service, audience, expiry.Value.ToString("c"), lxm);
+                }
+                else
+                {
+                    Logger.RequestingServiceAuthTokenNoExpirySpecified(_logger, Service, audience, lxm);
+                }
+
+                if (!IsAuthenticated)
+                {
+                    Logger.GetServiceAuthFailedAsSessionIsAnonymous(_logger, Service);
+
+                    throw new AuthenticatedSessionRequiredException();
+                }
+
+                AtProtoHttpResult<string> result = await AtProtoServer.GetServiceAuth(
+                    audience,
+                    expiry,
+                    lxm,
+                    service,
+                    AccessToken,
+                    httpClient: HttpClient,
+                    loggerFactory: LoggerFactory,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                if (result.Succeeded)
+                {
+                    TimeSpan expiresIn = GetTimeToJwtTokenExpiry(result.Result);
+                    Logger.ServiceAuthTokenAcquired(_logger, service, audience, expiresIn.ToString("c"), lxm);
+                }
+                else
+                {
+                    Logger.ServiceAuthTokenAcquisitionFailed(
+                        _logger,
+                        service,
+                        Did,
+                        audience,
+                        lxm,
+                        result.StatusCode,
+                        result.AtErrorDetail?.Error,
+                        result.AtErrorDetail?.Message);
+                }
+
+                return result;
+            }
         }
 
         /// <summary>
@@ -1695,7 +1732,12 @@ namespace idunno.AtProto
 
             JsonWebToken jsonWebToken = new(jwt);
 
-            return jsonWebToken.ValidTo.ToUniversalTime() - DateTime.UtcNow;
+            DateTime validUntil = jsonWebToken.ValidTo.ToUniversalTime();
+            DateTime now = DateTime.Now.ToUniversalTime();
+
+            TimeSpan validityPeriod = validUntil - now;
+
+            return validityPeriod;
         }
 
         private static async Task<bool> ValidateJwtToken(string jwt, Did did, Uri service)

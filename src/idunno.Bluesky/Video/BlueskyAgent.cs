@@ -1,15 +1,25 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Linq;
+using System.Text.Json;
+using DnsClient.Protocol;
 using idunno.AtProto;
+using idunno.AtProto.Repo;
+using idunno.Bluesky.Embed;
 using idunno.Bluesky.Video;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace idunno.Bluesky
 {
     public partial class BlueskyAgent
     {
         private readonly Uri _videoServer = new("https://video.bsky.app/");
+
+        private const string GetUploadLimitsLxm = "app.bsky.video.getUploadLimits";
+
+        private const string UploadBlobLxm = "com.atproto.repo.uploadBlob";
 
         /// <summary>
         /// Gets the status details for the specified video processing job.
@@ -24,30 +34,11 @@ namespace idunno.Bluesky
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(jobId);
 
-            if (!IsAuthenticated)
+            using (_logger.BeginScope($"Getting jobStatus for {jobId}"))
             {
-                throw new AuthenticatedSessionRequiredException();
-            }
-
-            using (_logger.BeginScope($"Getting jobStatus for {jobId}, user is {Did}"))
-            {
-                AtProtoHttpResult<string> videoAccessToken = await GetVideoAuth(
-                    Did,
-                    Service,
-                    AccessToken,
-                    HttpClient,
-                    LoggerFactory,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                if (!videoAccessToken.Succeeded)
-                {
-                    return new AtProtoHttpResult<JobStatus>(null, videoAccessToken.StatusCode, videoAccessToken.AtErrorDetail, videoAccessToken.RateLimit);
-                }
-
                 AtProtoHttpResult<JobStatus> result = await BlueskyServer.GetVideoJobStatus(
                     jobId,
                     _videoServer,
-                    videoAccessToken.Result,
                     HttpClient,
                     LoggerFactory,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -66,7 +57,7 @@ namespace idunno.Bluesky
                         message = result.AtErrorDetail.Message;
                     }
 
-                    Logger.GetJobStatusFailed(_logger, result.StatusCode, Did, error, message);
+                    Logger.GetJobStatusFailed(_logger, result.StatusCode, error, message);
                 }
 
                 return result;
@@ -86,24 +77,22 @@ namespace idunno.Bluesky
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            using (_logger.BeginScope($"Getting video restrictions for {Did}"))
+            using (_logger.BeginScope($"Getting video upload limits for {Did}"))
             {
-                AtProtoHttpResult<string> videoAccessToken = await GetVideoAuth(
-                    Did,
+                AtProtoHttpResult<string> getServiceAuthResult = await GetServiceAuth(
                     Service,
-                    AccessToken,
-                    HttpClient,
-                    LoggerFactory,
+                    audience: WellKnownDistributedIdentifiers.Video,
+                    lxm: GetUploadLimitsLxm,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
-                if (!videoAccessToken.Succeeded)
+                if (!getServiceAuthResult.Succeeded)
                 {
-                    return new AtProtoHttpResult<UploadLimits>(null, videoAccessToken.StatusCode, videoAccessToken.AtErrorDetail, videoAccessToken.RateLimit);
+                    return new AtProtoHttpResult<UploadLimits>(null, getServiceAuthResult.StatusCode, getServiceAuthResult.AtErrorDetail, getServiceAuthResult.RateLimit);
                 }
 
                 AtProtoHttpResult<UploadLimits> result = await BlueskyServer.GetVideoUploadStatus(
                     _videoServer,
-                    videoAccessToken.Result,
+                    getServiceAuthResult.Result,
                     HttpClient,
                     LoggerFactory,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -146,94 +135,138 @@ namespace idunno.Bluesky
         {
             ArgumentNullException.ThrowIfNullOrEmpty(fileName);
             ArgumentNullException.ThrowIfNull(video);
-
             ArgumentOutOfRangeException.ThrowIfZero(video.Length);
+
+            using (_logger.BeginScope($"Uploading video for {Did}"))
+            {
+                if (!IsAuthenticated)
+                {
+                    throw new AuthenticatedSessionRequiredException();
+                }
+
+                AtProtoHttpResult<AtProto.Server.ServerDescription> serverDescriptionResult = await DescribeServer(Service, cancellationToken).ConfigureAwait(false);
+
+                if (serverDescriptionResult.Succeeded)
+                {
+                    AtProtoHttpResult<string> getServiceAuthResult = await GetServiceAuth(
+                        Service,
+                        audience: serverDescriptionResult.Result.Did,
+                        lxm: UploadBlobLxm,
+                        expiry: new TimeSpan(0, 30, 0),
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                    if (!getServiceAuthResult.Succeeded)
+                    {
+                        return new AtProtoHttpResult<JobStatus>(
+                            null,
+                            getServiceAuthResult.StatusCode,
+                            getServiceAuthResult.AtErrorDetail,
+                            getServiceAuthResult.RateLimit);
+                    }
+
+                    Logger.UploadVideoStarted(_logger, Did, _videoServer, fileName, video.Length);
+
+                    AtProtoHttpResult<JobStatus> result = await BlueskyServer.UploadVideo(
+                        serverDescriptionResult.Result.Did,
+                        fileName,
+                        video,
+                        _videoServer,
+                        getServiceAuthResult.Result,
+                        HttpClient,
+                        LoggerFactory,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                    if (result.Succeeded)
+                    {
+                        Logger.UploadVideoSucceeded(_logger, result.Result.JobId, Did);
+                    }
+                    else
+                    {
+                        if (result.AtErrorDetail is not null &&
+                            string.Equals("already_exists", result.AtErrorDetail.Error, StringComparison.Ordinal) &&
+                            result.AtErrorDetail.ExtensionData is not null &&
+                            result.AtErrorDetail.ExtensionData.TryGetValue("jobId", out JsonElement jobIdElement))
+                        {
+                            string jobId = jobIdElement.GetString()!;
+
+                            return await GetVideoJobStatus(jobId, cancellationToken).ConfigureAwait(false);
+                        }
+
+                        string? error = null;
+                        string? message = null;
+                        if (result.AtErrorDetail is not null)
+                        {
+                            error = result.AtErrorDetail.Error;
+                            message = result.AtErrorDetail.Message;
+                        }
+
+                        Logger.UploadVideoFailed(_logger, result.StatusCode, Did, error, message);
+                    }
+
+                    return result;
+                }
+                else
+                {
+                    Logger.UploadVideoGetServerDescriptionFailed(
+                        _logger,
+                        Did,
+                        Service,
+                        serverDescriptionResult.StatusCode,
+                        serverDescriptionResult.AtErrorDetail?.Error,
+                        serverDescriptionResult.AtErrorDetail?.Message);
+
+                    return new AtProtoHttpResult<JobStatus>(null, serverDescriptionResult.StatusCode, serverDescriptionResult.AtErrorDetail, serverDescriptionResult.RateLimit);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Uploads an caption file to be referenced in an embedded video.
+        /// </summary>
+        /// <param name="captionsAsBytes">The captions, as a byte array.</param>
+        /// <param name="captionLanguage">The language the captions are in.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="captionsAsBytes"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="captionLanguage"/> is null or empty.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="captionsAsBytes"/> is a zero length array.</exception>
+        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is not an authenticated session.</exception>
+        public async Task<AtProtoHttpResult<Caption>> UploadCaptions(
+            byte[] captionsAsBytes,
+            string captionLanguage,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(captionsAsBytes);
+            ArgumentException.ThrowIfNullOrEmpty(captionLanguage);
+            ArgumentOutOfRangeException.ThrowIfZero(captionsAsBytes.Length);
 
             if (!IsAuthenticated)
             {
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            using (_logger.BeginScope($"Uploading video for {Did}"))
-            {
-                AtProtoHttpResult<string> videoAccessToken = await GetVideoAuth(
-                    Did,
-                    Service,
-                    AccessToken,
-                    HttpClient,
-                    LoggerFactory,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                if (!videoAccessToken.Succeeded)
-                {
-                    return new AtProtoHttpResult<JobStatus>(null, videoAccessToken.StatusCode, videoAccessToken.AtErrorDetail, videoAccessToken.RateLimit);
-                }
-
-                Logger.UploadVideoStarted(_logger, Did, _videoServer, fileName, video.Length);
-
-                AtProtoHttpResult<JobStatus> result = await BlueskyServer.UploadVideo(
-                    Did,
-                    fileName,
-                    video,
-                    _videoServer,
-                    videoAccessToken.Result,
-                    HttpClient,
-                    LoggerFactory,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                if (result.Succeeded)
-                {
-                    Logger.UploadVideoSucceeded(_logger, result.Result.JobId, Did);
-                }
-                else
-                {
-                    string? error = null;
-                    string? message = null;
-                    if (result.AtErrorDetail is not null)
-                    {
-                        error = result.AtErrorDetail.Error;
-                        message = result.AtErrorDetail.Message;
-                    }
-
-                    Logger.UploadVideoFailed(_logger, result.StatusCode, Did, error, message);
-                }
-
-                return result;
-            }
-        }
-
-        private async Task<AtProtoHttpResult<string>> GetVideoAuth(
-            Did did,
-            Uri service,
-            string accessToken,
-            HttpClient httpClient,
-            ILoggerFactory loggerFactory,
-            CancellationToken cancellationToken = default)
-        {
-            AtProtoHttpResult<string> getServiceAuthResult = await AtProtoServer.GetServiceAuth(
-                WellKnownDistributedIdentifiers.Video,
-                new TimeSpan(0, 0, 60),
-                "app.bsky.video.getUploadLimits",
-                service,
-                accessToken,
-                httpClient,
-                loggerFactory,
+            AtProtoHttpResult<Blob> uploadResult = await UploadBlob(
+                captionsAsBytes,
+                "text/vtt",
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            if (!getServiceAuthResult.Succeeded)
+
+            if (uploadResult.Succeeded)
             {
-                string? error = null;
-                string? message = null;
-                if (getServiceAuthResult.AtErrorDetail is not null)
-                {
-                    error = getServiceAuthResult.AtErrorDetail.Error;
-                    message = getServiceAuthResult.AtErrorDetail.Message;
-                }
-
-                Logger.UploadVideoServiceTokenAcquisitionFailed(_logger, getServiceAuthResult.StatusCode, did, error, message);
+                return new AtProtoHttpResult<Caption>(
+                    new Caption(captionLanguage, uploadResult.Result),
+                    uploadResult.StatusCode,
+                    uploadResult.AtErrorDetail,
+                    uploadResult.RateLimit);
             }
-
-            return getServiceAuthResult;
+            else
+            {
+                return new AtProtoHttpResult<Caption>(
+                    null,
+                    uploadResult.StatusCode,
+                    uploadResult.AtErrorDetail,
+                    uploadResult.RateLimit);
+            }
         }
     }
 }

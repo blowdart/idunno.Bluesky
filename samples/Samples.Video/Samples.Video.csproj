@@ -8,11 +8,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="captions.vtt" />
     <None Remove="DroneBeach.mp4" />
+    <None Remove="Flowers.mp4" />
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="captions.vtt" />
     <EmbeddedResource Include="DroneBeach.mp4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Flowers.mp4" />
   </ItemGroup>
 
   <ItemGroup>

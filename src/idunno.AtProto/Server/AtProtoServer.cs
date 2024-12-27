@@ -5,6 +5,8 @@ using Microsoft.Extensions.Logging;
 
 using idunno.AtProto.Models;
 using idunno.AtProto.Server;
+using System.Text;
+using System.Globalization;
 
 namespace idunno.AtProto
 {
@@ -189,7 +191,7 @@ namespace idunno.AtProto
         /// Get a signed token on behalf of the requesting DID for the requested <paramref name="audience"/>.
         /// </summary>
         /// <param name="audience">The DID of the service that the token will be used to authenticate with.</param>
-        /// <param name="expiry">The time in Unix Epoch seconds that the JWT expires. Defaults to 60 seconds in the future. The service may enforce certain time bounds on tokens depending on the requested scope.</param>
+        /// <param name="expiry">The length of time the token should be valid for.</param>
         /// <param name="lxm">Lexicon (XRPC) method to bind the requested token to</param>
         /// <param name="service">The service to get a signed token from.</param>
         /// <param name="accessToken">An access token for the specified service.</param>
@@ -204,7 +206,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="expiry"/> is zero or negative.</exception>
         public static async Task<AtProtoHttpResult<string>> GetServiceAuth(
             Did audience,
-            TimeSpan expiry,
+            TimeSpan? expiry,
             Nsid lxm,
             Uri service,
             string accessToken,
@@ -213,7 +215,6 @@ namespace idunno.AtProto
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(audience);
-            ArgumentNullException.ThrowIfNull(expiry);
             ArgumentNullException.ThrowIfNull(lxm);
 
             ArgumentNullException.ThrowIfNullOrEmpty(accessToken);
@@ -222,14 +223,23 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(expiry.TotalSeconds, 0);
+            if (expiry is not null)
+            {
+                ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(expiry.Value.TotalSeconds, 0);
+            }
 
-            DateTimeOffset expiresOn = DateTimeOffset.UtcNow + expiry;
+            StringBuilder endpointBuilder = new($"{GetServiceAuthEndpoint}?");
+            endpointBuilder.Append(CultureInfo.InvariantCulture, $"aud={Uri.EscapeDataString(audience)}");
+            if (expiry is not null)
+            {
+                DateTimeOffset expiresOn = DateTimeOffset.UtcNow + expiry.Value;
 
-            string endpoint = $"{GetServiceAuthEndpoint}?aud={audience}&exp={expiresOn.ToUnixTimeSeconds()}&lxm={lxm}";
+                endpointBuilder.Append(CultureInfo.InvariantCulture, $"&exp={expiresOn.ToUnixTimeSeconds()}");
+            }
+            endpointBuilder.Append(CultureInfo.InvariantCulture, $"&lxm={lxm}");
+            string endpoint = endpointBuilder.ToString();
 
             AtProtoHttpClient<ServiceToken> client = new(loggerFactory);
-
             AtProtoHttpResult<ServiceToken> result = await client.Get(service, endpoint, accessToken, httpClient: httpClient, cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (result.Succeeded)

@@ -3,12 +3,14 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Xml.Serialization;
+
+using Microsoft.Testing.Platform.MSBuild;
+
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.RichText;
-using Microsoft.Testing.Platform.MSBuild;
 
 namespace idunno.Bluesky.Test
 {

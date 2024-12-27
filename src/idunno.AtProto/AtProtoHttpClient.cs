@@ -473,6 +473,7 @@ namespace idunno.AtProto
                         {
                             errorDetail.Error = responseAtErrorDetail.Error;
                             errorDetail.Message = responseAtErrorDetail.Message;
+                            errorDetail.ExtensionData = responseAtErrorDetail.ExtensionData;
                         }
                     }
                     catch (NotSupportedException) { }

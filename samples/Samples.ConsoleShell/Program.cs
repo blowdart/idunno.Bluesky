@@ -87,17 +87,6 @@ namespace Samples.ConsoleShell
                 }
                 // END-AUTHENTICATION
 
-
-                var followResult = await agent.Follow(new Handle("blowdart.pds.blowdart.blue"), cancellationToken: cancellationToken);
-                followResult.EnsureSucceeded();
-                var unfollowResult = await agent.Unfollow(new Handle("blowdart.pds.blowdart.blue"), cancellationToken: cancellationToken);
-                unfollowResult.EnsureSucceeded();
-
-                var profileResult = await agent.GetProfileRecord(cancellationToken: cancellationToken);
-                profileResult.EnsureSucceeded();
-                profileResult.Result.Value.Description = $"Updated on {DateTimeOffset.Now:G}";
-                var profileUpdateResult = await agent.UpdateProfileRecord(profileResult.Result, cancellationToken: cancellationToken);
-                profileResult.EnsureSucceeded();
             }
             return;
         }

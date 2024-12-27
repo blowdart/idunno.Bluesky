@@ -191,6 +191,19 @@ namespace idunno.AtProto
         [LoggerMessage(202, LogLevel.Debug, "{method} request to {requestUri} cancelled.")]
         internal static partial void AtProtoClientRequestCancelled(ILogger logger, Uri requestUri, HttpMethod method);
 
+        // Service Auth logging
+        [LoggerMessage(250, LogLevel.Debug, "Requesting {lxm} service token from {endpoint} for {audience} with a validity of {expires}")]
+        internal static partial void RequestingServiceAuthToken(ILogger logger, Uri endpoint, Did audience, string expires, Nsid lxm);
+
+        [LoggerMessage(251, LogLevel.Debug, "Requesting {lxm} service token from {endpoint} for {audience} with no expiry override specified.")]
+        internal static partial void RequestingServiceAuthTokenNoExpirySpecified(ILogger logger, Uri endpoint, Did audience, Nsid lxm);
+
+        [LoggerMessage(255, LogLevel.Debug, "Acquired service token for {audience}/{lxm} from {endpoint}, valid for {validity}")]
+        internal static partial void ServiceAuthTokenAcquired(ILogger logger, Uri endpoint, Did audience, string validity, Nsid lxm);
+
+        [LoggerMessage(260, LogLevel.Error, "Service token acquisition failed for user {user}, for {audience}/{lxm} from {endpoint} with status code {status}, \"{error}\" \"{message}\" ")]
+        internal static partial void ServiceAuthTokenAcquisitionFailed(ILogger logger, Uri endpoint, Did user, Did audience, Nsid lxm, HttpStatusCode status, string? error, string? message);
+
         // AtProtoServer logging
 
         // AtProtoServer Identity Logging

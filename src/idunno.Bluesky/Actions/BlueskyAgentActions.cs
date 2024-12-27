@@ -582,6 +582,71 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
+        /// Creates a Bluesky post record.
+        /// </summary>
+        /// <param name="text">The text of the post record to create.</param>
+        /// <param name="video">The video to embed in the post.</param>
+        /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
+        /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+        /// <param name="labels">Optional self label settings for the post media content.</param>
+        /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null</exception>
+        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
+            string? text,
+            EmbeddedVideo video,
+            ICollection<ThreadGateRule>? threadGateRules = null,
+            ICollection<PostGateRule>? postGateRules = null,
+            PostSelfLabels? labels = null,
+            bool extractFacets = true,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(video);
+
+            if (text is not null &&
+                (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
+            {
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.PostLengthInCharacters);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.PostLengthInGraphemes);
+            }
+
+            if (threadGateRules is not null && threadGateRules.Count > Maximum.ThreadGateRules)
+            {
+                throw new ArgumentOutOfRangeException(nameof(threadGateRules), $"Cannot have more than {Maximum.ThreadGateRules} rules.");
+            }
+
+            if (postGateRules is not null && postGateRules.Count > Maximum.PostGateRules)
+            {
+                throw new ArgumentOutOfRangeException(nameof(postGateRules), $"Cannot have more than {Maximum.PostGateRules} rules.");
+            }
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticatedSessionRequiredException();
+            }
+
+            Post post = new(
+                text,
+                langs: new List<string>() { Thread.CurrentThread.CurrentUICulture.Name },
+                embed: video);
+
+            if (extractFacets && text is not null)
+            {
+                IList<Facet> extractedFacets = await _facetExtractor.ExtractFacets(text, cancellationToken: cancellationToken).ConfigureAwait(false);
+                post.Facets = extractedFacets;
+            }
+
+            if (labels is not null)
+            {
+                post.SetSelfLabels(labels);
+            }
+
+            return await CreatePost(post, Did, threadGateRules, postGateRules, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
         /// Creates a Bluesky post record containing just a external Open Graph embedded card.
         /// </summary>
         /// <remarks><para>Posts containing an embedded card do not require post text.</para></remarks>
@@ -1229,14 +1294,14 @@ namespace idunno.Bluesky
 
             Post postRecord = new()
             {
-                Embed = new EmbeddedRecord(strongReference),
+                EmbeddedRecord = new EmbeddedRecord(strongReference),
                 Text = string.Empty,
                 CreatedAt = DateTimeOffset.UtcNow
             };
 
             if (images is not null)
             {
-                postRecord.Embed =
+                postRecord.EmbeddedRecord =
                     new EmbeddedRecordWithMedia(new EmbeddedRecord(strongReference), new EmbeddedImages(images));
             }
 
@@ -1331,7 +1396,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Uploads an an image to be referenced in a post.
+        /// Uploads an image to be referenced in a post.
         /// </summary>
         /// <param name="imageAsBytes">The image, as a byte array.</param>
         /// <param name="mimeType">The mime type of the image. No validation is performed on this value.</param>
@@ -1339,9 +1404,10 @@ namespace idunno.Bluesky
         /// <param name="aspectRatio">The image's aspect ratio.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="imageAsBytes"/> is null.</exception>
-        /// <exception cref="ArgumentException">if <paramref name="imageAsBytes"/> has a zero length.or if <paramref name="mimeType"/> is null or empty.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the current session is not an authenticated session.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="imageAsBytes"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when if <paramref name="imageAsBytes"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when if <paramref name="mimeType"/> is null or empty.</exception>
+        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is not an authenticated session.</exception>
         public async Task<AtProtoHttpResult<EmbeddedImage>> UploadImage(
             byte[] imageAsBytes,
             string mimeType,
@@ -1350,17 +1416,15 @@ namespace idunno.Bluesky
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(imageAsBytes);
+            ArgumentOutOfRangeException.ThrowIfZero(imageAsBytes.Length);
             ArgumentException.ThrowIfNullOrEmpty(mimeType);
+
 
             if (!IsAuthenticated)
             {
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            if (imageAsBytes.Length == 0)
-            {
-                throw new ArgumentException("length cannot be 0.", nameof(imageAsBytes));
-            }
 
             AtProtoHttpResult<Blob> uploadResult = await UploadBlob(
                 imageAsBytes,
