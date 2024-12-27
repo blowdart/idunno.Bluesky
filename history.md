@@ -1,5 +1,17 @@
 # idunno.Bluesky Version History
 
+## 0.2.0
+
+### Features
+
+#### idunno.AtProto
+
+* Add support for GetServiceAuth()
+
+#### idunno.Bluesky
+
+* Add support for video
+
 ## 0.1.3
 
 ### Features
@@ -17,7 +29,7 @@
 
 ### Docs
 
-* Added Profile editing sample
+* Add Profile editing sample
 
 ## 0.1.2
 

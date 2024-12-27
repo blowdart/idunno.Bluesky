@@ -78,5 +78,6 @@
 | **Server** | [com.atproto.server.describeServer](https://docs.bsky.app/docs/api/com-atproto-server-describe-server) | `AtProtoAgent.DescribeServer()` | ✔ |
 | | [com.atproto.server.createSession](https://docs.bsky.app/docs/api/com-atproto-server-create-session) | `AtProtoAgent.Login()` | ✔ |
 | | [com.atproto.server.deleteSession](https://docs.bsky.app/docs/api/com-atproto-server-delete-session) | `AtProtoAgent.Logout()` | ✔ |
+| | [com.atproto.server.getServiceAuth](https://docs.bsky.app/docs/api/com-atproto-server-get-service-auth) | `AtProtoAgent.GetServiceAuth()` | ✔ |
 | | [com.atproto.server.getSession](https://docs.bsky.app/docs/api/com-atproto-server-get-session) | `AtProtoAgent.GetSession()` | ✔ |
 | | [com.atproto.server.refreshSession](https://docs.bsky.app/docs/api/com-atproto-server-refresh-session) | `AtProtoAgent.RefreshSession()` | ✔ |
