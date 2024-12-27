@@ -243,7 +243,7 @@ namespace idunno.Bluesky.Test
             StrongReference strongReference = new(new AtUri("at://foo.com/com.example.foo/123"), new Cid("\"bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"));
             EmbeddedBase expectedEmbedded = new EmbeddedRecord(strongReference);
 
-            var post = new Post(null, embed : expectedEmbedded);
+            var post = new Post(null, embeddedRecord : expectedEmbedded);
 
             Assert.Null(post.Text);
             Assert.Equal(expectedEmbedded, post.EmbeddedRecord);
@@ -255,7 +255,7 @@ namespace idunno.Bluesky.Test
             StrongReference strongReference = new(new AtUri("at://foo.com/com.example.foo/123"), new Cid("\"bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"));
             EmbeddedBase expectedEmbedded = new EmbeddedRecord(strongReference);
 
-            var post = new Post(string.Empty, embed: expectedEmbedded);
+            var post = new Post(string.Empty, embeddedRecord: expectedEmbedded);
 
             Assert.Equal(string.Empty, post.Text);
             Assert.Equal(expectedEmbedded, post.EmbeddedRecord);
