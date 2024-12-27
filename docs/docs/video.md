@@ -1,4 +1,4 @@
-# Using videos in your post
+# Adding videos to your posts
 Like images, videos need to be uploaded as a blob before they can be used in a post. However, unlike images, videos undergo processing after you upload them,
 and you cannot use them until processing is complete.
 
@@ -26,7 +26,8 @@ while (videoUploadResult.Result.State == idunno.Bluesky.Video.JobState.InProgres
     videoUploadResult.Succeeded)
 {
     // Give the user some feedback
-    Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} processing, progress {videoUploadResult.Result.Progress}");
+    Console.WriteLine(
+      $"Video job # {videoUploadResult.Result.JobId} processing, progress {videoUploadResult.Result.Progress}");
 
     await Task.Delay(1000);
     videoUploadResult = await agent.GetVideoJobStatus(videoUploadResult.Result.JobId);
@@ -43,6 +44,10 @@ if (!videoUploadResult.Succeeded ||
 
 EmbeddedVideo video = new(videoUploadResult.Result.Blob!, altText: "Alt Text");
 ```
+
+Bluesky cache processed videos for an indeterminate length of time. You may see, depending on your [logging level](logging.md),
+if you have previously uploaded a video file and try to upload it again that UploadVideo() fails internally when a video has already been processed,
+but returns a succeeded result with the job status of the previous upload.
 
 ## Video Captions
 If you have captions they will also need to be uploaded. You will need to specify the language for your captions when calling `UploadCaptions`.

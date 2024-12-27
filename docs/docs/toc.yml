@@ -21,8 +21,8 @@ items:
         href: posting.md
       - name: Thread Gates & Post Gates
         href: threadGatesAndPostGates.md
-      - name: Posting videos
-        href: videos.md
+      - name: Ading videos to your posts
+        href: video.md
 
   - name: Users
     items:
