@@ -34,7 +34,7 @@ namespace Samples.Video
             ArgumentNullException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
-            proxyUri = new Uri("http://localhost:8866");
+            // proxyUri = new Uri("http://localhost:8866");
 
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
@@ -88,85 +88,141 @@ namespace Samples.Video
                 }
                 // END-AUTHENTICATION
 
-                byte[] videoAsBytes;
-                using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Samples.Video.Flowers.mp4")!)
-                using (MemoryStream memoryStream = new())
+                //{
+                //    byte[] videoAsBytes;
+                //    using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Samples.Video.Flowers.mp4")!)
+                //    using (MemoryStream memoryStream = new())
+                //    {
+                //        resourceStream.CopyTo(memoryStream);
+                //        videoAsBytes = memoryStream.ToArray();
+                //    }
+
+                //    var videoUploadLimitsResult = await agent.GetVideoUploadLimits(cancellationToken: cancellationToken);
+                //    videoUploadLimitsResult.EnsureSucceeded();
+
+                //    if (!videoUploadLimitsResult.Result.CanUpload ||
+                //        videoUploadLimitsResult.Result.RemainingDailyVideos == 0 ||
+                //        videoUploadLimitsResult.Result.RemainingDailyBytes < (ulong)videoAsBytes.LongLength)
+                //    {
+                //        ConsoleColor oldColor = Console.ForegroundColor;
+                //        Console.ForegroundColor = ConsoleColor.Red;
+                //        Console.WriteLine("Account has hit its video limits");
+                //        Console.WriteLine("Can upload: {videoUploadLimitsResult.Result.CanUpload}");
+                //        Console.WriteLine("Daily videos remaining: {videoUploadLimitsResult.Result.RemainingDailyVideos}");
+                //        Console.WriteLine("Daily bytes remaining: {videoUploadLimitsResult.Result.RemainingBytesVideos}");
+                //        Console.ForegroundColor = oldColor;
+                //        return;
+                //    }
+
+                //    // We're using a random file name here, because if a video upload with the same name already exists the upload fails.
+                //    var videoUploadResult = await agent.UploadVideo(
+                //        Path.GetRandomFileName() + ".mp4",
+                //        videoAsBytes,
+                //        cancellationToken: cancellationToken);
+
+                //    // Quick fail - you'd want to be more graceful in handling errors.
+                //    videoUploadResult.EnsureSucceeded();
+
+                //    while (videoUploadResult.Result.State == idunno.Bluesky.Video.JobState.InProgress &&
+                //        videoUploadResult.Succeeded &&
+                //        !cancellationToken.IsCancellationRequested)
+                //    {
+                //        Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} processing, progress {videoUploadResult.Result.Progress}");
+                //        await Task.Delay(1000, cancellationToken: cancellationToken);
+                //        videoUploadResult = await agent.GetVideoJobStatus(videoUploadResult.Result.JobId, cancellationToken: cancellationToken);
+                //        videoUploadResult.EnsureSucceeded();
+                //    }
+
+                //    if (!videoUploadResult.Succeeded ||
+                //        videoUploadResult.Result.Blob is null ||
+                //        videoUploadResult.Result.State != idunno.Bluesky.Video.JobState.Completed)
+                //    {
+                //        ConsoleColor oldColor = Console.ForegroundColor;
+                //        Console.ForegroundColor = ConsoleColor.Red;
+                //        Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} failed. {videoUploadResult.Result.Error} {videoUploadResult.Result.Message}.");
+                //        Console.ForegroundColor = oldColor;
+                //        return;
+                //    }
+
+                //    Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} finished processing, {videoUploadResult.Result.State}");
+
+                //    byte[] captionsAsBytes;
+                //    using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Samples.Video.captions.vtt")!)
+                //    using (MemoryStream memoryStream = new())
+                //    {
+                //        resourceStream.CopyTo(memoryStream);
+                //        captionsAsBytes = memoryStream.ToArray();
+                //    }
+
+                //    var captionUploadResult = await agent.UploadCaptions(captionsAsBytes, "en", cancellationToken: cancellationToken).ConfigureAwait(false);
+                //    if (!captionUploadResult.Succeeded)
+                //    {
+                //        ConsoleColor oldColor = Console.ForegroundColor;
+                //        Console.ForegroundColor = ConsoleColor.Red;
+                //        Console.WriteLine($"Caption upload failed.{captionUploadResult.StatusCode} {captionUploadResult.AtErrorDetail?.Error} {captionUploadResult.AtErrorDetail?.Message}.");
+                //        Console.ForegroundColor = oldColor;
+                //        return;
+                //    }
+
+                //    EmbeddedVideo video = new(videoUploadResult.Result.Blob, altText: "Alt Text", captions: captionUploadResult.Result);
+
+                //    var postResult = await agent.Post("With video and captions", video: video, cancellationToken: cancellationToken);
+                //    postResult.EnsureSucceeded();
+                //    Debugger.Break();
+
+                //    await agent.DeletePost(postResult.Result.StrongReference, cancellationToken: cancellationToken);
+                //}
+
                 {
-                    resourceStream.CopyTo(memoryStream);
-                    videoAsBytes = memoryStream.ToArray();
-                }
+                    byte[] videoAsBytes;
+                    using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Samples.Video.DroneBeach.mp4")!)
+                    using (MemoryStream memoryStream = new())
+                    {
+                        resourceStream.CopyTo(memoryStream);
+                        videoAsBytes = memoryStream.ToArray();
+                    }
 
-                var videoUploadLimitsResult = await agent.GetVideoUploadLimits(cancellationToken: cancellationToken);
-                videoUploadLimitsResult.EnsureSucceeded();
+                    var videoUploadResult = await agent.UploadVideo(
+                        Path.GetRandomFileName() + ".mp4",
+                        videoAsBytes,
+                        cancellationToken: cancellationToken);
 
-                if (!videoUploadLimitsResult.Result.CanUpload ||
-                    videoUploadLimitsResult.Result.RemainingDailyVideos == 0 ||
-                    videoUploadLimitsResult.Result.RemainingDailyBytes < (ulong)videoAsBytes.LongLength)
-                {
-                    ConsoleColor oldColor = Console.ForegroundColor;
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Account has hit its video limits");
-                    Console.WriteLine("Can upload: {videoUploadLimitsResult.Result.CanUpload}");
-                    Console.WriteLine("Daily videos remaining: {videoUploadLimitsResult.Result.RemainingDailyVideos}");
-                    Console.WriteLine("Daily bytes remaining: {videoUploadLimitsResult.Result.RemainingBytesVideos}");
-                    Console.ForegroundColor = oldColor;
-                    return;
-                }
-
-                // We're using a random file name here, because if a video upload with the same name already exists the upload fails.
-                var videoUploadResult = await agent.UploadVideo(
-                    Path.GetRandomFileName()+".mp4",
-                    videoAsBytes,
-                    cancellationToken: cancellationToken);
-
-                // Quick fail - you'd want to be more graceful in handling errors.
-                videoUploadResult.EnsureSucceeded();
-
-                while (videoUploadResult.Result.State == idunno.Bluesky.Video.JobState.InProgress &&
-                    videoUploadResult.Succeeded && 
-                    !cancellationToken.IsCancellationRequested)
-                {
-                    Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} processing, progress {videoUploadResult.Result.Progress}");
-                    await Task.Delay(1000, cancellationToken: cancellationToken);
-                    videoUploadResult = await agent.GetVideoJobStatus(videoUploadResult.Result.JobId, cancellationToken: cancellationToken);
                     videoUploadResult.EnsureSucceeded();
+
+                    while (videoUploadResult.Result.State == idunno.Bluesky.Video.JobState.InProgress &&
+                        videoUploadResult.Succeeded &&
+                        !cancellationToken.IsCancellationRequested)
+                    {
+                        Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} processing, progress {videoUploadResult.Result.Progress}");
+                        await Task.Delay(1000, cancellationToken: cancellationToken);
+                        videoUploadResult = await agent.GetVideoJobStatus(videoUploadResult.Result.JobId, cancellationToken: cancellationToken);
+                        videoUploadResult.EnsureSucceeded();
+                    }
+
+                    if (!videoUploadResult.Succeeded ||
+                        videoUploadResult.Result.Blob is null ||
+                        videoUploadResult.Result.State != idunno.Bluesky.Video.JobState.Completed)
+                    {
+                        ConsoleColor oldColor = Console.ForegroundColor;
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} failed. {videoUploadResult.Result.Error} {videoUploadResult.Result.Message}.");
+                        Console.ForegroundColor = oldColor;
+                        return;
+                    }
+
+                    Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} finished processing, {videoUploadResult.Result.State}");
+
+                    EmbeddedVideo video = new(videoUploadResult.Result.Blob, altText: "Alt Text");
+
+                    PostBuilder postBuilder = new("PostBuilder with video test");
+                    postBuilder.Add(video);
+
+                    var postResult = await agent.Post(postBuilder, cancellationToken: cancellationToken);
+                    postResult.EnsureSucceeded();
+                    Debugger.Break();
+
+                    await agent.DeletePost(postResult.Result.StrongReference, cancellationToken: cancellationToken);
                 }
-
-                if (!videoUploadResult.Succeeded ||
-                    videoUploadResult.Result.Blob is null ||
-                    videoUploadResult.Result.State != idunno.Bluesky.Video.JobState.Completed)
-                {
-                    ConsoleColor oldColor = Console.ForegroundColor;
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} failed. {videoUploadLimitsResult.Result.Error} {videoUploadLimitsResult.Result.Message}.");
-                    Console.ForegroundColor = oldColor;
-                    return;
-                }
-
-                Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} finished processing, {videoUploadResult.Result.State}");
-
-                byte[] captionsAsBytes;
-                using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Samples.Video.captions.vtt")!)
-                using (MemoryStream memoryStream = new())
-                {
-                    resourceStream.CopyTo(memoryStream);
-                    captionsAsBytes = memoryStream.ToArray();
-                }
-
-                var captionUploadResult = await agent.UploadCaptions(captionsAsBytes, "en", cancellationToken: cancellationToken).ConfigureAwait(false);
-                if (!captionUploadResult.Succeeded)
-                {
-                    ConsoleColor oldColor = Console.ForegroundColor;
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"Caption upload failed.{captionUploadResult.StatusCode} {captionUploadResult.AtErrorDetail?.Error} {captionUploadResult.AtErrorDetail?.Message}.");
-                    Console.ForegroundColor = oldColor;
-                    return;
-                }
-
-                EmbeddedVideo video = new(videoUploadResult.Result.Blob, altText: "Alt Text", captions: captionUploadResult.Result);
-
-                var postResult = await agent.Post("With video and captions", video: video, cancellationToken: cancellationToken);
-                Debugger.Break();
             }
             return;
         }

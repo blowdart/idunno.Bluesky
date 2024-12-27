@@ -8,7 +8,7 @@ using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.RichText;
-using static System.Collections.Specialized.BitVector32;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace idunno.Bluesky
 {
@@ -21,6 +21,7 @@ namespace idunno.Bluesky
 
         private readonly Post _postRecord;
         private readonly List<EmbeddedImage> _embeddedImages = new();
+        private EmbeddedVideo? _embeddedVideo;
         private List<ThreadGateRule>? _threadGateRules;
         private List<PostGateRule>? _postGateRules;
         private bool _disableReplies;
@@ -307,11 +308,50 @@ namespace idunno.Bluesky
             {
                 lock (_syncLock)
                 {
-                    _embeddedImages.Clear();
-
                     if (value is not null)
                     {
                         _embeddedImages.AddRange(value);
+                        _embeddedVideo = null;
+                    }
+                    else
+                    {
+                        _embeddedImages.Clear();
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets a flag indicating whether this instance has an embedded video
+        /// </summary>
+        [MemberNotNullWhen(true, nameof(Video))]
+        public bool HasVideo => _embeddedVideo is not null;
+
+        /// <summary>
+        /// Gets the embedded video for the post, if any.
+        /// </summary>
+        public EmbeddedVideo? Video
+        {
+            get
+            {
+                lock (_syncLock)
+                {
+                    return _embeddedVideo;
+                }
+            }
+
+            private set
+            {
+                lock (_syncLock)
+                {
+                    if (value is not null)
+                    {
+                        _embeddedImages.Clear();
+                        _embeddedVideo = value;
+                    }
+                    else
+                    {
+                        _embeddedVideo = null;
                     }
                 }
             }
@@ -558,6 +598,9 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets or sets the embedded media for the post.
         /// </summary>
+        /// <remarks>
+        /// <para>Images and video only get processed to embedded records when ToPost() is called.</para>
+        /// </remarks>
         public EmbeddedBase? Embed
         {
             get
@@ -874,7 +917,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// Adds a <see cref="EmbeddedImage"/> to this instance.
         /// </summary>
-        /// <param name="image">The <see cref="EmbeddedImage"/> to append.</param>
+        /// <param name="image">The <see cref="EmbeddedImage"/> to embed.</param>
         /// <returns>A reference to this instance after the append operation has completed.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="image"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">if the number of images in this instance is already equal to <see cref="MaxImages"/>.</exception>
@@ -890,6 +933,7 @@ namespace idunno.Bluesky
                 }
 
                 _embeddedImages.Add(image);
+                _embeddedVideo = null;
                 return this;
             }
         }
@@ -915,13 +959,16 @@ namespace idunno.Bluesky
                 }
 
                 postBuilder._embeddedImages.Add(image);
+                postBuilder._embeddedVideo = null;
+
                 return postBuilder;
             }
         }
+
         /// <summary>
         /// Adds a collection <see cref="EmbeddedImage"/>s to this instance.
         /// </summary>
-        /// <param name="images">The collection of <see cref="EmbeddedImage"/> to append.</param>
+        /// <param name="images">The collection of <see cref="EmbeddedImage"/> to embed.</param>
         /// <returns>A reference to this instance after the append operation has completed.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="images"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">if adding the images in this instance is will result in an image count &gt;<see cref="MaxImages"/>.</exception>
@@ -937,6 +984,7 @@ namespace idunno.Bluesky
                 }
 
                 _embeddedImages.AddRange(images);
+                _embeddedVideo = null;
                 return this;
             }
         }
@@ -962,6 +1010,45 @@ namespace idunno.Bluesky
                 }
 
                 postBuilder._embeddedImages.AddRange(images);
+                postBuilder._embeddedVideo = null;
+                return postBuilder;
+            }
+        }
+
+        /// <summary>
+        /// Adds a <see cref="EmbeddedVideo"/> to this instance.
+        /// </summary>
+        /// <param name="video">The <see cref="EmbeddedVideo"/> to embed.</param>
+        /// <returns>A reference to this instance after the append operation has completed.</returns>
+        /// <exception cref="ArgumentNullException">if <paramref name="video"/> is null.</exception>
+        public PostBuilder Add(EmbeddedVideo video)
+        {
+            ArgumentNullException.ThrowIfNull(video);
+
+            lock (_syncLock)
+            {
+                Video = video;
+                _embeddedImages.Clear();
+                return this;
+            }
+        }
+
+        /// <summary>
+        /// Adds a <see cref="EmbeddedVideo"/> to the specified <paramref name="postBuilder" />.
+        /// </summary>
+        /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the video to.</param>
+        /// <param name="video">The <see cref="EmbeddedVideo"/> to embed.</param>
+        /// <returns>A reference to this instance after the append operation has completed.</returns>
+        /// <exception cref="ArgumentNullException">if <paramref name="video"/> is null.</exception>
+        public static PostBuilder Add(PostBuilder postBuilder, EmbeddedVideo video)
+        {
+            ArgumentNullException.ThrowIfNull(postBuilder);
+            ArgumentNullException.ThrowIfNull(video);
+
+            lock (postBuilder._syncLock)
+            {
+                postBuilder.Video = video;
+                postBuilder._embeddedImages.Clear();
                 return postBuilder;
             }
         }
@@ -1040,7 +1127,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Adds a <see cref="EmbeddedImage"/> to the specified <paramref name="postBuilder" />.
+        /// Adds an <see cref="EmbeddedImage"/> to the specified <paramref name="postBuilder" />.
         /// </summary>
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the image to.</param>
         /// <param name="image">The <see cref="EmbeddedImage"/> to add.</param>
@@ -1070,6 +1157,21 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
+        /// Adds an <see cref="EmbeddedVideo"/> to the specified <paramref name="postBuilder" />.
+        /// </summary>
+        /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the image to.</param>
+        /// <param name="video">The <see cref="EmbeddedVideo"/> to add.</param>
+        /// <returns>A reference to this instance after the add operation has completed.</returns>
+        /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> or <paramref name="video"/> is null.</exception>
+        public static PostBuilder operator +(PostBuilder postBuilder, EmbeddedVideo video)
+        {
+            ArgumentNullException.ThrowIfNull(postBuilder);
+            ArgumentNullException.ThrowIfNull(video);
+
+            return Add(postBuilder, video);
+        }
+
+        /// <summary>
         /// Sets the self labels for the post to the values specified in <paramref name="labels"/>.
         /// </summary>
         /// <param name="labels">The self label values to set.</param>
@@ -1089,14 +1191,19 @@ namespace idunno.Bluesky
         {
             lock (_syncLock)
             {
-                if (!HasText && !HasImages && !HasEmbed)
+                if (!HasText && !HasImages && !HasEmbed && !HasVideo)
                 {
-                    throw new PostBuilderException("Post text cannot be null or empty unless there are images or an embedded record.");
+                    throw new PostBuilderException("Post text cannot be null or empty unless there are images, video or another type of embedded record.");
                 }
 
                 if (InReplyTo is not null && QuotePost is not null)
                 {
                     throw new PostBuilderException("Post cannot be both a reply and a quote");
+                }
+
+                if (HasVideo && HasImages)
+                {
+                    throw new PostBuilderException("Post cannot have both images and video");
                 }
 
                 if (HasImages)
@@ -1115,6 +1222,25 @@ namespace idunno.Bluesky
                     {
                         // Reply post
                         _postRecord.EmbeddedRecord = new EmbeddedImages(_embeddedImages);
+                    }
+                }
+
+                if (HasVideo)
+                {
+                    if (InReplyTo is null && QuotePost is null)
+                    {
+                        // Plain old post
+                        _postRecord.EmbeddedRecord = _embeddedVideo;
+                    }
+                    else if (QuotePost is not null)
+                    {
+                        // Quote post, so we need fix up the embedded record to include the video.
+                        _postRecord.EmbeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), Video);
+                    }
+                    else
+                    {
+                        // Reply post
+                        _postRecord.EmbeddedRecord = _embeddedVideo;
                     }
                 }
 
@@ -1194,7 +1320,7 @@ namespace idunno.Bluesky
                 }
                 else
                 {
-                    return HashCode.Combine(postRecord, embeddedImages, threadGateRules, postGateRules);
+                    return HashCode.Combine(postRecord, embeddedImages, threadGateRules, postGateRules, _embeddedVideo);
                 }
             }
         }

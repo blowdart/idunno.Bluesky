@@ -6,12 +6,14 @@
 
 ## Key Features
 
-* Viewing feeds
 * Viewing a user's timeline and notifications
+* Viewing feeds
 * Viewing threads
 * Creating and deleting posts
-* Gating threads and posts
-* Likes, quotes, and reposts
+  * Adding Mentions, links and hashtags to posts
+  * Adding images and video to posts
+  * Gating threads and posts
+  * Liking, quoting, and reposting posts
 * Viewing user profiles
 * Following and unfollowing users
 * Muting and blocking users
