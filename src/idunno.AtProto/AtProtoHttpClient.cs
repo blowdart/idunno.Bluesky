@@ -420,12 +420,24 @@ namespace idunno.AtProto
                         return result;
                     }
                 }
+                catch (TaskCanceledException ex) when (ex.CancellationToken == cancellationToken)
+                {
+                    Logger.AtProtoClientRequestCancelled
+                        (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
+
+                    return new AtProtoHttpResult<TResult>(null, System.Net.HttpStatusCode.OK, null);
+                }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
                     Logger.AtProtoClientRequestCancelled
                         (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
 
                     return new AtProtoHttpResult<TResult>(null, System.Net.HttpStatusCode.OK, null);
+                }
+                catch (HttpRequestException ex)
+                {
+                    Logger.UploadBlobThrewHttpRequestException(_logger, httpRequestMessage.RequestUri!, ex);
+                    throw;
                 }
             }
         }
@@ -461,6 +473,7 @@ namespace idunno.AtProto
                         {
                             errorDetail.Error = responseAtErrorDetail.Error;
                             errorDetail.Message = responseAtErrorDetail.Message;
+                            errorDetail.ExtensionData = responseAtErrorDetail.ExtensionData;
                         }
                     }
                     catch (NotSupportedException) { }

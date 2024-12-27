@@ -1,13 +1,15 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Text.Json;
+
+using Microsoft.Extensions.Logging;
 
 using idunno.AtProto.Models;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
-using Microsoft.Extensions.Logging;
 
 namespace idunno.AtProto
 {
@@ -457,9 +459,9 @@ namespace idunno.AtProto
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">
-        /// Thrown if <paramref name="blob"/> is empty or the <paramref name="mimeType"/> is empty or not in the type/subtype.
-        /// </exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="blob"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="blob"/> is a zero length array.</exception>
+        /// <exception cref="ArgumentException">Thrown when<paramref name="mimeType"/> is empty or not in the type/subtype format.</exception>
         public static async Task<AtProtoHttpResult<Blob>> UploadBlob(
             byte[] blob,
             string mimeType,
@@ -471,12 +473,9 @@ namespace idunno.AtProto
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(blob);
-            if (blob.Length == 0)
-            {
-                throw new ArgumentException("Blob cannot be empty.", nameof(blob));
-            }
+            ArgumentOutOfRangeException.ThrowIfZero(blob.Length);
 
-            ArgumentNullException.ThrowIfNullOrEmpty(mimeType);
+            ArgumentException.ThrowIfNullOrEmpty(mimeType);
             if (!mimeType.Contains('/', StringComparison.Ordinal) || mimeType.Count(c => c == '/') != 1)
             {
                 throw new ArgumentException("Mime type must be in the format 'type/subtype'.", nameof(mimeType));
@@ -493,24 +492,32 @@ namespace idunno.AtProto
 
             AtProtoHttpClient<CreateBlobResponse> client = new(loggerFactory);
 
-            AtProtoHttpResult<CreateBlobResponse> response =
-                await client.PostBlob(service, UploadBlobEndpoint, blob, requestHeaders, accessToken, httpClient, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
+            try
+            {
+                AtProtoHttpResult<CreateBlobResponse> response =
+                    await client.PostBlob(service, UploadBlobEndpoint, blob, requestHeaders, accessToken, httpClient, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
 
-            if (response.Succeeded)
-            {
-                return new AtProtoHttpResult<Blob>(
-                    response.Result.Blob,
-                    response.StatusCode,
-                    response.AtErrorDetail,
-                    response.RateLimit);
+                if (response.Succeeded)
+                {
+                    return new AtProtoHttpResult<Blob>(
+                        response.Result.Blob,
+                        response.StatusCode,
+                        response.AtErrorDetail,
+                        response.RateLimit);
+                }
+                else
+                {
+                    return new AtProtoHttpResult<Blob>(
+                        null,
+                        response.StatusCode,
+                        response.AtErrorDetail,
+                        response.RateLimit);
+                }
             }
-            else
+            catch (HttpRequestException ex)
             {
-                return new AtProtoHttpResult<Blob>(
-                    null,
-                    response.StatusCode,
-                    response.AtErrorDetail,
-                    response.RateLimit);
+                Debug.WriteLine(ex);
+                throw;
             }
         }
 

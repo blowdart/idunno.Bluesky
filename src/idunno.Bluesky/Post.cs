@@ -32,7 +32,6 @@ namespace idunno.Bluesky
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private const string NudityLabelName = "nudity";
 
-
         /// <summary>
         /// Creates a new instance of <see cref="Post"/> and sets <see cref="BlueskyTimestampedRecordValue.CreatedAt"/> to the current date and time.
         /// </summary>
@@ -50,7 +49,7 @@ namespace idunno.Bluesky
             {
                 Text = postRecord.Text;
                 CreatedAt = postRecord.CreatedAt;
-                Embed = postRecord.Embed;
+                EmbeddedRecord = postRecord.EmbeddedRecord;
                 Reply = postRecord.Reply;
 
                 if (postRecord.Facets is not null)
@@ -99,7 +98,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="langs"/> is an empty list.</exception>
         public Post(
             string text,
-            IList<string> langs) : this(text: text, facets: null, langs: langs, embed: null, reply: null, labels : null, tags : null)
+            IList<string> langs) : this(text: text, facets: null, langs: langs, embeddedRecord: null, reply: null, labels : null, tags : null)
         {
             ArgumentException.ThrowIfNullOrEmpty(text);
             ArgumentNullException.ThrowIfNull(langs);
@@ -114,25 +113,25 @@ namespace idunno.Bluesky
         /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
         /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
-        /// <param name="embed">The embedded record for the post, if any.</param>
+        /// <param name="embeddedRecord">The embedded record for the post, if any.</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="text"/> is null and <paramref name="embed"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="text"/> is null and <paramref name="embeddedRecord"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///    Thrown when <paramref name="text"/> exceeds the maximum length or.
         ///    <paramref name="tags"/> exceeds the maximum number of tags or has a value that exceeds the maximum tag length.
         /// </exception>
         /// <remarks>
-        ///<para><paramref name="text"/> may be an empty string, if there are <paramref name="embed"/> is not null.</para>
+        ///<para><paramref name="text"/> may be an empty string, if there are <paramref name="embeddedRecord"/> is not null.</para>
         /// </remarks>
         public Post(
             string? text,
             IList<Facet>? facets = null,
             IList<string>? langs = null,
-            EmbeddedBase? embed = null,
+            EmbeddedBase? embeddedRecord = null,
             ReplyReferences? reply = null,
             SelfLabels? labels = null,
-            IReadOnlyCollection<string>? tags = null) : this(text, DateTimeOffset.Now, facets, langs, embed, reply, labels, tags)
+            IReadOnlyCollection<string>? tags = null) : this(text, DateTimeOffset.Now, facets, langs, embeddedRecord, reply, labels, tags)
         {
         }
 
@@ -143,17 +142,17 @@ namespace idunno.Bluesky
         /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
         /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
-        /// <param name="embed">The embedded record for the post, if any.</param>
+        /// <param name="embeddedRecord">The embedded record for the post, if any.</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created on.</param>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="text"/> is null and <paramref name="embed"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="text"/> is null and <paramref name="embeddedRecord"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///    Thrown when <paramref name="text"/> exceeds the maximum length or.
         ///    <paramref name="tags"/> exceeds the maximum number of tags or has a value that exceeds the maximum tag length.
         /// </exception>
         /// <remarks>
-        ///<para><paramref name="text"/> may be an empty string, if there are <paramref name="embed"/> is not null.</para>
+        ///<para><paramref name="text"/> may be an empty string, if there are <paramref name="embeddedRecord"/> is not null.</para>
         /// </remarks>
         [JsonConstructor]
         public Post(
@@ -161,12 +160,12 @@ namespace idunno.Bluesky
             DateTimeOffset createdAt,
             IList<Facet>? facets = null,
             IList<string>? langs = null,
-            EmbeddedBase? embed = null,
+            EmbeddedBase? embeddedRecord = null,
             ReplyReferences? reply = null,
             SelfLabels? labels = null,
             IReadOnlyCollection<string>? tags = null) : base(createdAt)
         {
-            if (string.IsNullOrWhiteSpace(text) && embed is null)
+            if (string.IsNullOrWhiteSpace(text) && embeddedRecord is null)
             {
                 throw new ArgumentNullException(nameof(text));
             }
@@ -183,7 +182,7 @@ namespace idunno.Bluesky
             Facets = facets;
             Langs = langs;
 
-            Embed = embed;
+            EmbeddedRecord = embeddedRecord;
 
             if (labels is not null)
             {
@@ -251,13 +250,13 @@ namespace idunno.Bluesky
         /// Creates a new instance of <see cref="Post"/>.
         /// </summary>
         /// <param name="text">The text for the post.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created on.</param>
         /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
         /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
         /// <param name="image">The <see cref="EmbeddedImage"/> to embed in the post..</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
-        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created on.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is null.</exception>
         public Post(
             string? text,
@@ -319,13 +318,13 @@ namespace idunno.Bluesky
         /// Creates a new instance of <see cref="Post"/>.
         /// </summary>
         /// <param name="text">The text for the post.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created on.</param>
         /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
         /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
         /// <param name="images">The <see cref="EmbeddedImage"/> to embed in the post..</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
-        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created on.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="images"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="images"/> or empty, or contains more than the maximum allowed number of images.</exception>
         public Post(
@@ -350,6 +349,70 @@ namespace idunno.Bluesky
 
             ArgumentOutOfRangeException.ThrowIfZero(images.Count);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(images.Count, Maximum.ImagesInPost);
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="Post"/>.
+        /// </summary>
+        /// <param name="text">The text for the post.</param>
+        /// <param name="video">The <see cref="EmbeddedVideo"/> to embed in the post.</param>
+        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
+        /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
+        /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
+        /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
+        /// <param name="tags">A collection of tags to apply to the post, if any.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null.</exception>
+        public Post(
+            string? text,
+            EmbeddedVideo video,
+            IList<Facet>? facets = null,
+            IList<string>? langs = null,
+            ReplyReferences? reply = null,
+            SelfLabels? labels = null,
+            IReadOnlyCollection<string>? tags = null)
+            : this(text,
+                createdAt: DateTimeOffset.UtcNow,
+                facets: facets,
+                langs: langs,
+                video,
+                reply: reply,
+                labels: labels,
+                tags: tags)
+        {
+            ArgumentNullException.ThrowIfNull(video);
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="Post"/>.
+        /// </summary>
+        /// <param name="text">The text for the post.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created on.</param>
+        /// <param name="video">The <see cref="EmbeddedVideo"/> to embed in the post.</param>
+        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
+        /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
+        /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
+        /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
+        /// <param name="tags">A collection of tags to apply to the post, if any.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null.</exception>
+        public Post(
+            string? text,
+            DateTimeOffset createdAt,
+            EmbeddedVideo video,
+            IList<Facet>? facets = null,
+            IList<string>? langs = null,
+            ReplyReferences? reply = null,
+            SelfLabels? labels = null,
+            IReadOnlyCollection<string>? tags = null)
+            : this(text,
+                createdAt: createdAt,
+                facets: facets,
+                langs: langs,
+                video,
+                reply: reply,
+                labels: labels,
+                tags: tags)
+        {
+            ArgumentNullException.ThrowIfNull(video);
         }
 
         /// <summary>
@@ -386,7 +449,8 @@ namespace idunno.Bluesky
         /// </summary>
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public EmbeddedBase? Embed { get; internal set; }
+        [JsonPropertyName("embed")]
+        public EmbeddedBase? EmbeddedRecord { get; internal set; }
 
         /// <summary>
         /// Gets the collection of language strings, if any, that the post is written in.
@@ -583,6 +647,23 @@ namespace idunno.Bluesky
             ContainsSexualContent = labels.SexualContent;
             ContainsGraphicMedia = labels.GraphicMedia;
             ContainsNudity = labels.Nudity;
+        }
+
+        /// <summary>
+        /// Embeds the specified <paramref name="embed"/> in this instance.
+        /// </summary>
+        /// <param name="embed">The record to embed in the post.</param>
+        public void Embed(EmbeddedBase embed)
+        {
+            EmbeddedRecord = embed;
+        }
+
+        /// <summary>
+        /// Removes the embedded record from the post.
+        /// </summary>
+        public void RemoveEmbed()
+        {
+            EmbeddedRecord = null;
         }
     }
 

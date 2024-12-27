@@ -5,7 +5,6 @@ using System.Globalization;
 using System.Text;
 
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;

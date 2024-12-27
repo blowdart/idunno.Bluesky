@@ -51,7 +51,6 @@ The [releases page](https://github.com/blowdart/idunno.Bluesky/releases) provide
 
 * Logging in idunno.Bluesky
 * OAuth
-* Video uploading and attaching
 * GIF attaching
 * AOT & trimming support
 * Firehose support

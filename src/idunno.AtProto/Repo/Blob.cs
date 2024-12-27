@@ -8,7 +8,7 @@ namespace idunno.AtProto.Repo
     /// <summary>
     /// Represents a blob contained in a repo.
     ///
-    /// Typically this is used for image uploads for posts with embedded images.
+    /// Typically this is used for image uploads for posts with embedded images or video uploads for posts with embedded videos.
     /// </summary>
     public record Blob
     {

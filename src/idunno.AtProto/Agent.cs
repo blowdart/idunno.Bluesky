@@ -15,8 +15,9 @@ namespace idunno.AtProto
     {
         private static readonly string s_defaultAgent = "idunno.AtProto/" + typeof(Agent).Assembly.GetName().Version;
 
-        private static readonly HttpClientHandler s_httpClientHandler = new() { AutomaticDecompression = DecompressionMethods.All };
-        private static readonly HttpClient s_sharedClient= new(s_httpClientHandler, disposeHandler: true);
+        private static readonly TimeSpan s_defaultHttpTimeout = new(0, 5, 0);
+        private static readonly HttpClientHandler s_httpClientHandler = new() { AutomaticDecompression = DecompressionMethods.All, };
+        private static readonly HttpClient s_sharedClient= new(s_httpClientHandler, disposeHandler: true) { Timeout = s_defaultHttpTimeout };
 
         private volatile bool _disposed;
 
@@ -78,8 +79,10 @@ namespace idunno.AtProto
 
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Handler lifetime is delegated to the HttpClient")]
         [SuppressMessage("Reliability", "CA5399:Enable HttpClient certificate revocation list check", Justification = "Fiddler and other dev time proxies don't support CRLs in their generated certificates, so this should be off by default.")]
-        private static HttpClient CreateHttpClient(Uri? proxyUri=null, string? httpUserAgent=null)
+        private static HttpClient CreateHttpClient(Uri? proxyUri=null, string? httpUserAgent=null, TimeSpan? timeout = null)
         {
+            timeout ??= s_defaultHttpTimeout;
+
             HttpClientHandler? httpClientHandler;
             if (proxyUri is not null)
             {
@@ -103,12 +106,13 @@ namespace idunno.AtProto
                 {
                     AutomaticDecompression = DecompressionMethods.All,
                 };
-            }   
+            }
 
             HttpClient httpClient = new(handler: httpClientHandler, disposeHandler: true)
             {
                 DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower,
                 DefaultRequestVersion = HttpVersion.Version20,
+                Timeout = (TimeSpan)timeout
             };
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(httpUserAgent ?? s_defaultAgent);
 
@@ -119,21 +123,23 @@ namespace idunno.AtProto
         /// Creates an HttpClient with an opinionated configuration, using the specified <paramref name="httpUserAgent"/>.
         /// </summary>
         /// <param name="httpUserAgent">The HTTP User Agent to use in all requests.</param>
+        /// <param name="timeout">An optional timeout to use when waiting for requests.</param>
         /// <returns>An HttpClient configured with the <paramref name="httpUserAgent"/>.</returns>
         /// <exception cref="ArgumentNullException">Throw <paramref name="httpUserAgent"/> is null.</exception>
         /// <remarks>
         ///</remarks>
-        public static HttpClient CreateConfiguredHttpClient(string httpUserAgent)
+        public static HttpClient CreateConfiguredHttpClient(string httpUserAgent, TimeSpan? timeout = null)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(httpUserAgent);
 
-            return CreateHttpClient(httpUserAgent: httpUserAgent);
+            return CreateHttpClient(httpUserAgent: httpUserAgent, timeout: timeout);
         }
 
         /// <summary>
         /// Creates an HttpClient with an opinionated configuration, using the <paramref name="proxyUri"/>.
         /// </summary>
         /// <param name="proxyUri">The <paramref name="proxyUri"/> of the proxy client to use in all requests.</param>
+        /// <param name="timeout">An optional timeout to use when waiting for requests.</param>
         /// <returns>An HttpClient configured with the <paramref name="proxyUri"/>.</returns>
         /// <exception cref="ArgumentNullException">Throw if <paramref name="proxyUri"/> is null.</exception>
         /// <remarks>
@@ -143,11 +149,11 @@ namespace idunno.AtProto
         /// to disable CRL checks.
         ///</para>
         ///</remarks>
-        public static HttpClient CreateConfiguredHttpClient(Uri proxyUri)
+        public static HttpClient CreateConfiguredHttpClient(Uri proxyUri, TimeSpan? timeout = null)
         {
             ArgumentNullException.ThrowIfNull(proxyUri);
 
-            return CreateHttpClient(proxyUri: proxyUri);
+            return CreateHttpClient(proxyUri: proxyUri, timeout: timeout);
         }
 
         /// <summary>
@@ -155,6 +161,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="proxyUri">The <paramref name="proxyUri"/> of the proxy client to use in all requests.</param>
         /// <param name="httpUserAgent">The HTTP User Agent to use in all requests.</param>
+        /// <param name="timeout">An optional timeout to use when waiting for requests.</param>
         /// <returns>An HttpClient configured with the <paramref name="proxyUri"/> and <paramref name="httpUserAgent"/>.</returns>
         /// <exception cref="ArgumentNullException">Throw if <paramref name="proxyUri"/> or <paramref name="httpUserAgent"/> is null.</exception>
         /// <remarks>
@@ -165,12 +172,12 @@ namespace idunno.AtProto
         /// If a <paramref name="httpUserAgent"/> is specified the client will be configured to use it with all requests.
         ///</para>
         ///</remarks>
-        public static HttpClient CreateConfiguredHttpClient(Uri proxyUri, string httpUserAgent)
+        public static HttpClient CreateConfiguredHttpClient(Uri proxyUri, string httpUserAgent, TimeSpan timeout)
         {
             ArgumentNullException.ThrowIfNull(proxyUri);
             ArgumentNullException.ThrowIfNullOrWhiteSpace(httpUserAgent);
 
-            return CreateHttpClient(proxyUri: proxyUri, httpUserAgent: httpUserAgent);
+            return CreateHttpClient(proxyUri: proxyUri, httpUserAgent: httpUserAgent, timeout: timeout);
         }
     }
 }

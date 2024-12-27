@@ -148,6 +148,9 @@ namespace idunno.AtProto
         [LoggerMessage(131, LogLevel.Error, "UploadBlob to {service} failed as blob is length is zero.")]
         internal static partial void UploadBlobFailedAsBlobLengthIsZero(ILogger logger, Uri service);
 
+        [LoggerMessage(132, LogLevel.Error, "UploadBlob to {service} threw.")]
+        internal static partial void UploadBlobThrewHttpRequestException(ILogger logger, Uri service, Exception ex);
+
         [LoggerMessage(140, LogLevel.Information, "SetTokens called for {did} on {service}")]
         internal static partial void UpdateTokensCalled(ILogger logger, Did did, Uri service);
 
@@ -175,6 +178,9 @@ namespace idunno.AtProto
         [LoggerMessage(163, LogLevel.Error, "PutRecord failed as current session is not authenticated.")]
         internal static partial void PutRecordFailedAsSessionIsAnonymous(ILogger logger);
 
+        [LoggerMessage(170, LogLevel.Error, "GetServiceAuth failed for {service} as current session is not authenticated.")]
+        internal static partial void GetServiceAuthFailedAsSessionIsAnonymous(ILogger logger, Uri service);
+
         // AtProtoClient logging
         [LoggerMessage(200, LogLevel.Debug, "{method} request to {requestUri} succeeded.")]
         internal static partial void AtProtoClientRequestSucceeded(ILogger logger, Uri requestUri, HttpMethod method);
@@ -184,6 +190,19 @@ namespace idunno.AtProto
 
         [LoggerMessage(202, LogLevel.Debug, "{method} request to {requestUri} cancelled.")]
         internal static partial void AtProtoClientRequestCancelled(ILogger logger, Uri requestUri, HttpMethod method);
+
+        // Service Auth logging
+        [LoggerMessage(250, LogLevel.Debug, "Requesting {lxm} service token from {endpoint} for {audience} with a validity of {expires}")]
+        internal static partial void RequestingServiceAuthToken(ILogger logger, Uri endpoint, Did audience, string expires, Nsid lxm);
+
+        [LoggerMessage(251, LogLevel.Debug, "Requesting {lxm} service token from {endpoint} for {audience} with no expiry override specified.")]
+        internal static partial void RequestingServiceAuthTokenNoExpirySpecified(ILogger logger, Uri endpoint, Did audience, Nsid lxm);
+
+        [LoggerMessage(255, LogLevel.Debug, "Acquired service token for {audience}/{lxm} from {endpoint}, valid for {validity}")]
+        internal static partial void ServiceAuthTokenAcquired(ILogger logger, Uri endpoint, Did audience, string validity, Nsid lxm);
+
+        [LoggerMessage(260, LogLevel.Error, "Service token acquisition failed for user {user}, for {audience}/{lxm} from {endpoint} with status code {status}, \"{error}\" \"{message}\" ")]
+        internal static partial void ServiceAuthTokenAcquisitionFailed(ILogger logger, Uri endpoint, Did user, Did audience, Nsid lxm, HttpStatusCode status, string? error, string? message);
 
         // AtProtoServer logging
 
@@ -208,5 +227,6 @@ namespace idunno.AtProto
 
         [LoggerMessage(506, LogLevel.Error, "HTTP request for {handle} to {Uri} failed with HTTP status code of {statusCode}")]
         internal static partial void HttpHandleResolutionRequestFailed(ILogger logger, Handle handle, Uri uri, HttpStatusCode statusCode);
+
     }
 }

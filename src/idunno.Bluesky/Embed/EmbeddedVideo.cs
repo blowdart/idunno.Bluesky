@@ -19,13 +19,38 @@ namespace idunno.Bluesky.Embed
         /// <param name="captions">A collection of <see cref="Caption"/>s for the video, if any.</param>
         /// <param name="altText">The alternative text for the video, if any.</param>
         /// <param name="aspectRatio">The <see cref="AspectRatio"/> of the video, if any.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null.</exception>
         [JsonConstructor]
-        public EmbeddedVideo(Blob video, ICollection<Caption>? captions, string? altText, AspectRatio? aspectRatio)
+        public EmbeddedVideo(
+            Blob video,
+            ICollection<Caption>? captions = null,
+            string? altText = null,
+            AspectRatio? aspectRatio = null)
         {
+            ArgumentNullException.ThrowIfNull(video);
+
             Video = video;
             Captions = captions;
             AltText = altText;
             AspectRatio = aspectRatio;
+        }
+
+        /// <summary>
+        /// Constructs a new instance of <see cref="EmbeddedVideo"/>
+        /// </summary>
+        /// <param name="video">The <see cref="Blob"/> containing the video.</param>
+        /// <param name="captions">A <see cref="Caption"/> for the video, if any.</param>
+        /// <param name="altText">The alternative text for the video, if any.</param>
+        /// <param name="aspectRatio">The <see cref="AspectRatio"/> of the video, if any.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> or <paramref name="captions"/> is null.</exception>
+        public EmbeddedVideo(
+            Blob video,
+            Caption captions,
+            string? altText = null,
+            AspectRatio? aspectRatio = null) : this(video, new List<Caption>() { captions }, altText, aspectRatio)
+        {
+            ArgumentNullException.ThrowIfNull(video);
+            ArgumentNullException.ThrowIfNull(captions);
         }
 
         /// <summary>
@@ -57,6 +82,9 @@ namespace idunno.Bluesky.Embed
     /// <summary>
     /// Holds caption information for a video.
     /// </summary>
+    /// <remarks>
+    /// <para>Captions are in the <see href="https://www.w3.org/TR/webvtt1/">VTT</see> format.</para>
+    /// </remarks>
     public record Caption
     {
         /// <summary>

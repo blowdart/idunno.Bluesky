@@ -6,6 +6,7 @@ using System.Net;
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
+using idunno.Bluesky.Video;
 
 namespace idunno.Bluesky
 {
@@ -70,12 +71,40 @@ namespace idunno.Bluesky
         [LoggerMessage(51, LogLevel.Error, "ImageUpload for {did} with a status code {statusCode}, at error {error} message {message}")]
         internal static partial void ImageUploadFailed(ILogger logger, HttpStatusCode statusCode, Did did, string? error, string? message);
 
+        [LoggerMessage(55, LogLevel.Error, "GetServiceAuth for video failed failed with {statusCode} when getting service auth token for {did}, error {error} message {message}")]
+        internal static partial void UploadVideoServiceTokenAcquisitionFailed(ILogger logger, HttpStatusCode statusCode, Did did, string? error, string? message);
+
         // CreatePost logging
         [LoggerMessage(60, LogLevel.Information, "CreatePost(Post) succeeded for {did}, created {uri} / {cid}")]
         internal static partial void CreatePostWithPostSucceeded(ILogger logger, Did did, AtUri uri, Cid? cid);
 
         [LoggerMessage(61, LogLevel.Error, "CreatePost(Post) failed for {did} with a status code of {statusCode}, ATError {error} message {message}")]
         internal static partial void CreatePostWithPostFailed(ILogger logger, HttpStatusCode statusCode, Did did, string? error, string? message);
+
+        // Upload video logging
+        [LoggerMessage(70, LogLevel.Information, "UploadVideo succeeded for {did} with job #{jobId}.")]
+        internal static partial void UploadVideoSucceeded(ILogger logger, string jobId, Did did);
+
+        [LoggerMessage(71, LogLevel.Error, "UploadVideo failed with {statusCode} when uploading video for {did}, error {error} message {message}")]
+        internal static partial void UploadVideoFailed(ILogger logger, HttpStatusCode statusCode, Did did, string? error, string? message);
+
+        [LoggerMessage(72, LogLevel.Information, "UploadVideo started for {did} on {server}, filename: {fileName} length: {length}")]
+        internal static partial void UploadVideoStarted(ILogger logger, Did did, Uri server, string fileName, long length);
+
+        [LoggerMessage(74, LogLevel.Error, "GetServerDescription in UploadVideo for user {did}, service {service} failed with {statusCode} error {error} message {message}")]
+        internal static partial void UploadVideoGetServerDescriptionFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
+
+        [LoggerMessage(75, LogLevel.Debug, "GetUploadLimitsSucceeded succeeded for {did} CanUpload = {canUpload}, RemainingDailyVideos = {remainingDailyVideos} RemainingDailyBytes: {remainingDailyBytes}")]
+        internal static partial void GetUploadLimitsSucceeded(ILogger logger, Did did, bool canUpload, uint? remainingDailyVideos, ulong? remainingDailyBytes);
+
+        [LoggerMessage(76, LogLevel.Error, "GetUploadLimitsSucceeded failed with {statusCode} for {did}, error {error} message {message}")]
+        internal static partial void GetUploadLimitsFailed(ILogger logger, HttpStatusCode statusCode, Did did, string? error, string? message);
+
+        [LoggerMessage(80, LogLevel.Information, "GetJobStatus for jobId {jobId} succeeded, state is {state}, progress {progress}")]
+        internal static partial void GetJobStatusSucceeded(ILogger logger, string jobId, JobState state, int? progress);
+
+        [LoggerMessage(81, LogLevel.Error, "GetJobStatus failed with {statusCode} error {error} message {message}")]
+        internal static partial void GetJobStatusFailed(ILogger logger, HttpStatusCode statusCode, string? error, string? message);
 
     }
 }

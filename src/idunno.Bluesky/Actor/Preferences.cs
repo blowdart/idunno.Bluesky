@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.ObjectModel;
+
 using idunno.AtProto;
 
 namespace idunno.Bluesky.Actor
