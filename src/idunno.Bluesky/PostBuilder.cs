@@ -1,14 +1,12 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.ComponentModel.Design;
 using System.Diagnostics.CodeAnalysis;
 
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.RichText;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace idunno.Bluesky
 {

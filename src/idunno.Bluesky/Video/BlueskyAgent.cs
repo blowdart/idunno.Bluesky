@@ -1,15 +1,12 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Linq;
 using System.Text.Json;
-using DnsClient.Protocol;
+
 using idunno.AtProto;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Video;
-using Microsoft.Extensions.Primitives;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace idunno.Bluesky
 {

@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-
 using System.Text.Json.Serialization;
 
 namespace idunno.Bluesky.Graph.Model

@@ -2,9 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-using System.Xml.Serialization;
-
-using Microsoft.Testing.Platform.MSBuild;
 
 using idunno.AtProto;
 using idunno.AtProto.Labels;
@@ -112,7 +109,7 @@ namespace idunno.Bluesky.Test
             Assert.Equal(postText, post.Text);
             Assert.Equal(expectedFacets, post.Facets);
             Assert.Equal(expectedLanguages, post.Langs);
-            Assert.Equal(expectedEmbedded, post.Embed);
+            Assert.Equal(expectedEmbedded, post.EmbeddedRecord);
             Assert.Equal(expectedReplyReferences, post.Reply);
             Assert.Equal(expectedReplyReferences, post.Reply);
             Assert.Equal(expectedLabels, post.Labels);
@@ -148,7 +145,7 @@ namespace idunno.Bluesky.Test
             Assert.Equal(expectedDate, post.CreatedAt);
             Assert.Equal(expectedFacets, post.Facets);
             Assert.Equal(expectedLanguages, post.Langs);
-            Assert.Equal(expectedEmbedded, post.Embed);
+            Assert.Equal(expectedEmbedded, post.EmbeddedRecord);
             Assert.Equal(expectedReplyReferences, post.Reply);
             Assert.Equal(expectedReplyReferences, post.Reply);
             Assert.Equal(expectedLabels, post.Labels);
@@ -186,7 +183,7 @@ namespace idunno.Bluesky.Test
             Assert.Equal(expectedDate, post.CreatedAt);
             Assert.Equal(expectedFacets, post.Facets);
             Assert.Equal(expectedLanguages, post.Langs);
-            Assert.Equal(expectedEmbedded, post.Embed);
+            Assert.Equal(expectedEmbedded, post.EmbeddedRecord);
             Assert.Equal(expectedReplyReferences, post.Reply);
             Assert.Equal(expectedLabels.Values, post.Labels.Values);
             Assert.Equal(expectedTags, post.Tags);
@@ -249,7 +246,7 @@ namespace idunno.Bluesky.Test
             var post = new Post(null, embed : expectedEmbedded);
 
             Assert.Null(post.Text);
-            Assert.Equal(expectedEmbedded, post.Embed);
+            Assert.Equal(expectedEmbedded, post.EmbeddedRecord);
         }
 
         [Fact]
@@ -261,7 +258,7 @@ namespace idunno.Bluesky.Test
             var post = new Post(string.Empty, embed: expectedEmbedded);
 
             Assert.Equal(string.Empty, post.Text);
-            Assert.Equal(expectedEmbedded, post.Embed);
+            Assert.Equal(expectedEmbedded, post.EmbeddedRecord);
         }
 
         [Fact]
@@ -357,9 +354,9 @@ namespace idunno.Bluesky.Test
             var post = new Post("text", image);
 
             Assert.Equal("text", post.Text);
-            Assert.IsType<EmbeddedImages>(post.Embed);
+            Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
 
-            EmbeddedImages postImages = (EmbeddedImages)post.Embed;
+            EmbeddedImages postImages = (EmbeddedImages)post.EmbeddedRecord;
 
             Assert.Single(postImages.Images);
         }
@@ -382,9 +379,9 @@ namespace idunno.Bluesky.Test
             var post = new Post("text", DateTimeOffset.UtcNow, image);
 
             Assert.Equal("text", post.Text);
-            Assert.IsType<EmbeddedImages>(post.Embed);
+            Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
 
-            EmbeddedImages postImages = (EmbeddedImages)post.Embed;
+            EmbeddedImages postImages = (EmbeddedImages)post.EmbeddedRecord;
 
             Assert.Single(postImages.Images);
         }
@@ -457,9 +454,9 @@ namespace idunno.Bluesky.Test
             var post = new Post("text", images);
 
             Assert.Equal("text", post.Text);
-            Assert.IsType<EmbeddedImages>(post.Embed);
+            Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
 
-            EmbeddedImages postImages = (EmbeddedImages)post.Embed;
+            EmbeddedImages postImages = (EmbeddedImages)post.EmbeddedRecord;
 
             Assert.Equal(Maximum.ImagesInPost, postImages.Images.Count);
         }
@@ -492,9 +489,9 @@ namespace idunno.Bluesky.Test
             var post = new Post("text", DateTimeOffset.UtcNow, images);
 
             Assert.Equal("text", post.Text);
-            Assert.IsType<EmbeddedImages>(post.Embed);
+            Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
 
-            EmbeddedImages postImages = (EmbeddedImages)post.Embed;
+            EmbeddedImages postImages = (EmbeddedImages)post.EmbeddedRecord;
 
             Assert.Equal(Maximum.ImagesInPost, postImages.Images.Count);
         }

@@ -5,10 +5,11 @@ using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Text.Json;
 
+using Microsoft.Extensions.Logging;
+
 using idunno.AtProto.Models;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
-using Microsoft.Extensions.Logging;
 
 namespace idunno.AtProto
 {

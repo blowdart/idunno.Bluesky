@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
+
 using idunno.Bluesky.Actor;
 
 namespace idunno.Bluesky.Graph.Model

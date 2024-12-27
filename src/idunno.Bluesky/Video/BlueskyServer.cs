@@ -2,13 +2,12 @@
 // Licensed under the MIT License.
 
 using System.Net.Http.Headers;
-using System.Reflection.Metadata.Ecma335;
-using System.Text.Encodings.Web;
-using idunno.AtProto;
 
+using Microsoft.Extensions.Logging;
+
+using idunno.AtProto;
 using idunno.Bluesky.Video;
 using idunno.Bluesky.Video.Model;
-using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky
 {

@@ -565,7 +565,7 @@ namespace idunno.Bluesky
             Post post = new(
                 text,
                 langs : new List<string>() { Thread.CurrentThread.CurrentUICulture.Name },
-                embed : embeddedImages);
+                embeddedRecord: embeddedImages);
 
             if (extractFacets)
             {
@@ -630,7 +630,7 @@ namespace idunno.Bluesky
             Post post = new(
                 text,
                 langs: new List<string>() { Thread.CurrentThread.CurrentUICulture.Name },
-                embed: video);
+                embeddedRecord: video);
 
             if (extractFacets && text is not null)
             {

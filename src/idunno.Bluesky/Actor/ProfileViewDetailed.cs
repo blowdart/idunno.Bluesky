@@ -11,7 +11,7 @@ using idunno.Bluesky.Graph;
 namespace idunno.Bluesky.Actor
 {
     /// <summary>
-    /// A detauked view of an actor profile
+    /// A detailed view of an actor profile
     /// </summary>
     /// <remarks>
     /// <para>See <see href="https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/actor/defs.json" /> for the definition.</para>

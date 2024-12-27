@@ -1,12 +1,13 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text;
+using System.Globalization;
+
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto.Models;
 using idunno.AtProto.Server;
-using System.Text;
-using System.Globalization;
 
 namespace idunno.AtProto
 {

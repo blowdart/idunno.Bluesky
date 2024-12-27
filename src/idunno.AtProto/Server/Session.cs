@@ -2,8 +2,10 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-using idunno.AtProto.Models;
+
 using Microsoft.IdentityModel.JsonWebTokens;
+
+using idunno.AtProto.Models;
 
 namespace idunno.AtProto.Server
 {

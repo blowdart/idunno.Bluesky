@@ -4,7 +4,6 @@
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
-
 using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky
