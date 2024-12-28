@@ -231,14 +231,21 @@ namespace Samples.SessionEvents
                 // Now mess with the refresh token to cause the refresh call to fail
                 if (agent.Session is not null)
                 {
-                    await agent.SetTokens("invalid", "invalid", cancellationToken: cancellationToken);
-
-                    Console.WriteLine("Refreshing the session with an invalid refresh token.");
                     try
                     {
-                        _ = await agent.RefreshSession(cancellationToken: cancellationToken);
+                        await agent.SetTokens("invalid", "invalid", cancellationToken: cancellationToken);
+
+                        Console.WriteLine("Refreshing the session with an invalid refresh token.");
+                        try
+                        {
+                            _ = await agent.RefreshSession(cancellationToken: cancellationToken);
+                        }
+                        catch (InvalidSessionException e)
+                        {
+                            Console.WriteLine($"Exception Thrown : {e.Message}");
+                        }
                     }
-                    catch (InvalidSessionException e)
+                    catch (SecurityTokenValidationException e)
                     {
                         Console.WriteLine($"Exception Thrown : {e.Message}");
                     }
@@ -269,7 +276,7 @@ namespace Samples.SessionEvents
                         }
                     }
 
-                    // Try to restore a session using the refresh token. 
+                    // Try to restore a session using the refresh token.
                     using (var restoredFromRefreshToken = new AtProtoAgent(persistedLoginState.Service, httpClient))
                     {
                         Console.WriteLine("Restoring the session from an refresh token.");
