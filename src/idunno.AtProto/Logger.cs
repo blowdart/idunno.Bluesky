@@ -228,5 +228,8 @@ namespace idunno.AtProto
         [LoggerMessage(506, LogLevel.Error, "HTTP request for {handle} to {Uri} failed with HTTP status code of {statusCode}")]
         internal static partial void HttpHandleResolutionRequestFailed(ILogger logger, Handle handle, Uri uri, HttpStatusCode statusCode);
 
+        // AtProtoServer auth logging
+        [LoggerMessage(600, LogLevel.Information, "Generated oath login {loginUri} for {server}")]
+        internal static partial void OAuthLoginUriGenerated(ILogger logger, Uri server, Uri loginUri);
     }
 }

@@ -152,6 +152,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "media", "media", "{5BDA46D6
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.Video", "samples\Samples.Video\Samples.Video.csproj", "{55550FC6-B850-4C60-834A-9EF80E980000}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "idunno.AtProto.OAuth", "src\idunno.AtProto.OAuth\idunno.AtProto.OAuth.csproj", "{5A8D2BCF-214F-4E7B-B812-F602DCF99948}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		CodeQL|Any CPU = CodeQL|Any CPU
@@ -255,6 +257,12 @@ Global
 		{55550FC6-B850-4C60-834A-9EF80E980000}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{55550FC6-B850-4C60-834A-9EF80E980000}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{55550FC6-B850-4C60-834A-9EF80E980000}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A8D2BCF-214F-4E7B-B812-F602DCF99948}.CodeQL|Any CPU.ActiveCfg = CodeQL|Any CPU
+		{5A8D2BCF-214F-4E7B-B812-F602DCF99948}.CodeQL|Any CPU.Build.0 = CodeQL|Any CPU
+		{5A8D2BCF-214F-4E7B-B812-F602DCF99948}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A8D2BCF-214F-4E7B-B812-F602DCF99948}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A8D2BCF-214F-4E7B-B812-F602DCF99948}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A8D2BCF-214F-4E7B-B812-F602DCF99948}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -286,6 +294,7 @@ Global
 		{E2B63F0A-9892-45AA-8453-4E5A23017D63} = {DDB6FAB2-1F8C-47C4-89DC-E319D09065E5}
 		{5BDA46D6-18E0-4F11-9F0E-EE5E503D64F0} = {E2B63F0A-9892-45AA-8453-4E5A23017D63}
 		{55550FC6-B850-4C60-834A-9EF80E980000} = {B1A49FA3-07AB-4D78-BC16-FF7FB5857840}
+		{5A8D2BCF-214F-4E7B-B812-F602DCF99948} = {C94F8041-6886-4D0F-82DC-8AF2B41FF649}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2B9F8C2-975D-4E3A-B05E-48FDF4BCE3E6}

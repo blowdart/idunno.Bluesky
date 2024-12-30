@@ -27,7 +27,7 @@ namespace idunno.AtProto
     /// <summary>
     /// Provides a class for sending requests to and receiving responses from an atproto service, identified by its service URI.
     /// </summary>
-    public class AtProtoAgent : Agent
+    public partial class AtProtoAgent : Agent
     {
         private readonly bool _enableTokenRefresh = true;
         private readonly TimeSpan _refreshAccessTokenInterval = new(1, 0, 0);

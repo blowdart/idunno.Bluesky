@@ -36,11 +36,11 @@
     <None Include="icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
-
   <ItemGroup>
     <PackageReference Include="System.Text.Json"/>
     <PackageReference Include="Microsoft.Extensions.Logging"/>
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens"/>
     <PackageReference Include="DnsClient"/>
+    <PackageReference Include="IdentityModel.OidcClient"/>
   </ItemGroup>
 </Project>
