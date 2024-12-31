@@ -8,7 +8,7 @@ namespace idunno.AtProto.OAuth
 {
     internal static partial class Logger
     {
-        [LoggerMessage(1, LogLevel.Debug, "ListeningOn {listeningOn}")]
+        [LoggerMessage(1, LogLevel.Debug, "Callback listener statred on {listeningOn}")]
         internal static partial void ListeningOn(ILogger logger, Uri listeningOn);
 
         [LoggerMessage(2, LogLevel.Debug, "Awaiting callback for {timeout} seconds")]

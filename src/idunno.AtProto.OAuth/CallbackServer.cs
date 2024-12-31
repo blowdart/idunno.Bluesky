@@ -9,6 +9,7 @@ using System.Net.Sockets;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -54,6 +55,11 @@ namespace idunno.AtProto.OAuth
             Uri = new Uri($"http://{IPAddress.Loopback}:{port}/{path}");
 
             WebApplicationBuilder builder = WebApplication.CreateBuilder();
+
+            if (loggerFactory is not null)
+            {
+                builder.Services.AddSingleton<ILoggerFactory>(loggerFactory);
+            }
 
             builder.Services.AddHostFiltering(options =>
             {
