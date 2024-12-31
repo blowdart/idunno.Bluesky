@@ -24,7 +24,7 @@ namespace Samples.SessionEvents
             var handleOption = new Option<string>(
                 name: "--handle",
                 description: "The handle to use when authenticating to the PDS.",
-                getDefaultValue: () => Environment.GetEnvironmentVariable("_BlueskyUserName")!);
+                getDefaultValue: () => Environment.GetEnvironmentVariable("_BlueskyHandle")!);
 
             var passwordOption = new Option<string>(
                 name: "--password",
