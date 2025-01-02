@@ -1,4 +1,4 @@
-{
+﻿{
     "did": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
     "didDoc": {
         "@context": [
@@ -27,9 +27,6 @@
         ]
     },
     "handle": "handle.example.org",
-    "email": "email@example.org",
-    "emailConfirmed": true,
-    "emailAuthFactor": false,
     "accessJwt": "accessJwt",
     "refreshJwt": "refreshJwt",
     "active": true

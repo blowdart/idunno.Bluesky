@@ -191,8 +191,12 @@ namespace idunno.AtProto
 
             if (disposing)
             {
+                Logger.AgentDisposing(_logger);
+
                 if (_sessionRefreshTimer is not null)
                 {
+                    Logger.AgentDisposeStoppingRefreshTimer(_logger);
+
                     _sessionRefreshTimer.Stop();
                     _sessionRefreshTimer.Enabled = false;
                     _sessionRefreshTimer.Dispose();
@@ -457,96 +461,105 @@ namespace idunno.AtProto
         {
             ArgumentNullException.ThrowIfNull(credentials);
 
-            if (service is null)
+            using (_logger.BeginScope($"Login for {credentials.Identifier}"))
             {
-                Did? userDid = await ResolveHandle(credentials.Identifier, cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                if (userDid is null || cancellationToken.IsCancellationRequested)
-                {
-                    return new AtProtoHttpResult<bool>(
-                        false,
-                        HttpStatusCode.NotFound,
-                        new AtErrorDetail() { Error = "HandleNotResolvable", Message = "Handle could not be resolved to a DID." });
-                }
-
-                Uri? pds = null;
-
-                if (!cancellationToken.IsCancellationRequested)
-                {
-                    pds = await ResolvePds(userDid, cancellationToken).ConfigureAwait(false);
-                }
-
-                if (pds is null || cancellationToken.IsCancellationRequested)
-                {
-                    return new AtProtoHttpResult<bool>(
-                        false,
-                        HttpStatusCode.NotFound,
-                        new AtErrorDetail() { Error = "PdsNotResolvable", Message = $"Could not resolve a PDS for {userDid}." });
-                }
-
-                service = pds;
-            }
-
-            StopTokenRefreshTimer();
-
-            Logger.CreateSessionCalled(_logger, credentials.Identifier, service);
-            AtProtoHttpResult<CreateSessionResponse> createSessionResult =
-                await AtProtoServer.CreateSession(
-                    credentials,
-                    service,
-                    httpClient: HttpClient,
-                    loggerFactory: LoggerFactory,
-                    cancellationToken :cancellationToken).ConfigureAwait(false);
-            Logger.CreateSessionReturned(_logger, createSessionResult.StatusCode);
-
-            if (createSessionResult.Succeeded)
-            {
-                if (!await ValidateJwtToken(createSessionResult.Result.AccessJwt, createSessionResult.Result.Did, service).ConfigureAwait(false))
-                {
-                    Logger.CreateSessionJwtValidationFailed(_logger);
-                    throw new SecurityTokenValidationException("The issued access token could not be validated.");
-                }
-
                 lock (_session_SyncLock)
                 {
-                    Service = service;
-                    Session = new Session(service, createSessionResult.Result);
+                    StopTokenRefreshTimer();
+                }
 
-                    _sessionRefreshTimer ??= new();
-                    StartTokenRefreshTimer();
+                if (service is null)
+                {
+                    Did? userDid = await ResolveHandle(credentials.Identifier, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-                    var sessionCreatedEventArgs = new SessionCreatedEventArgs(
-                        createSessionResult.Result.Did,
+                    if (userDid is null || cancellationToken.IsCancellationRequested)
+                    {
+                        return new AtProtoHttpResult<bool>(
+                            false,
+                            HttpStatusCode.NotFound,
+                            new AtErrorDetail() { Error = "HandleNotResolvable", Message = "Handle could not be resolved to a DID." });
+                    }
+
+                    Uri? pds = null;
+
+                    if (!cancellationToken.IsCancellationRequested)
+                    {
+                        pds = await ResolvePds(userDid, cancellationToken).ConfigureAwait(false);
+                    }
+
+                    if (pds is null || cancellationToken.IsCancellationRequested)
+                    {
+                        return new AtProtoHttpResult<bool>(
+                            false,
+                            HttpStatusCode.NotFound,
+                            new AtErrorDetail() { Error = "PdsNotResolvable", Message = $"Could not resolve a PDS for {userDid}." });
+                    }
+
+                    service = pds;
+                }
+
+                Logger.CreateSessionCalled(_logger, credentials.Identifier, service);
+                AtProtoHttpResult<CreateSessionResponse> createSessionResult =
+                    await AtProtoServer.CreateSession(
+                        credentials,
                         service,
-                        createSessionResult.Result.Handle,
-                        createSessionResult.Result.AccessJwt,
-                        createSessionResult.Result.RefreshJwt);
-                    OnSessionCreated(sessionCreatedEventArgs);
-                }
+                        httpClient: HttpClient,
+                        loggerFactory: LoggerFactory,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                Logger.CreateSessionReturned(_logger, createSessionResult.StatusCode);
 
-                return new AtProtoHttpResult<bool>() {
-                    Result = true,
-                    StatusCode = createSessionResult.StatusCode,
-                    AtErrorDetail = createSessionResult.AtErrorDetail,
-                    RateLimit = createSessionResult.RateLimit};
-            }
-            else
-            {
-                Logger.CreateSessionFailed(_logger, createSessionResult.StatusCode);
-
-                lock (_session_SyncLock)
+                if (createSessionResult.Succeeded)
                 {
-                    _sessionRefreshTimer?.Stop();
-                    Session = null;
-                }
+                    if (!await ValidateJwtToken(createSessionResult.Result.AccessJwt, createSessionResult.Result.Did, service).ConfigureAwait(false))
+                    {
+                        Logger.CreateSessionJwtValidationFailed(_logger);
+                        throw new SecurityTokenValidationException("The issued access token could not be validated.");
+                    }
 
-                return new AtProtoHttpResult<bool>
+                    lock (_session_SyncLock)
+                    {
+                        Service = service;
+                        Session = new Session(service, createSessionResult.Result);
+                        Logger.SessionCreated(_logger, credentials.Identifier, Session.InternalSessionIdentifier, service);
+
+                        _sessionRefreshTimer ??= new();
+                        StartTokenRefreshTimer();
+
+                        var sessionCreatedEventArgs = new SessionCreatedEventArgs(
+                            createSessionResult.Result.Did,
+                            service,
+                            createSessionResult.Result.Handle,
+                            createSessionResult.Result.AccessJwt,
+                            createSessionResult.Result.RefreshJwt);
+                        OnSessionCreated(sessionCreatedEventArgs);
+                    }
+
+                    return new AtProtoHttpResult<bool>()
+                    {
+                        Result = true,
+                        StatusCode = createSessionResult.StatusCode,
+                        AtErrorDetail = createSessionResult.AtErrorDetail,
+                        RateLimit = createSessionResult.RateLimit
+                    };
+                }
+                else
                 {
-                    Result = false,
-                    StatusCode = createSessionResult.StatusCode,
-                    AtErrorDetail = createSessionResult.AtErrorDetail,
-                    RateLimit = createSessionResult.RateLimit
-                };
+                    Logger.CreateSessionFailed(_logger, createSessionResult.StatusCode);
+
+                    lock (_session_SyncLock)
+                    {
+                        StopTokenRefreshTimer();
+                        Session = null;
+                    }
+
+                    return new AtProtoHttpResult<bool>
+                    {
+                        Result = false,
+                        StatusCode = createSessionResult.StatusCode,
+                        AtErrorDetail = createSessionResult.AtErrorDetail,
+                        RateLimit = createSessionResult.RateLimit
+                    };
+                }
             }
         }
 
@@ -649,33 +662,36 @@ namespace idunno.AtProto
         /// <exception cref="InvalidSessionException">Thrown when the current session does not have enough information to call refresh itself.</exception>
         public async Task<bool> RefreshSession(CancellationToken cancellationToken = default)
         {
-            SessionConfigurationErrorType sessionErrorFlags = SessionConfigurationErrorType.None;
-
-            if (Session is null)
+            lock (_session_SyncLock)
             {
-                sessionErrorFlags |= SessionConfigurationErrorType.NullSession;
-            }
+                SessionConfigurationErrorType sessionErrorFlags = SessionConfigurationErrorType.None;
 
-            if (Session is not null && Session.RefreshJwt is null)
-            {
-                sessionErrorFlags |= SessionConfigurationErrorType.MissingRefreshToken;
-            }
-
-            if (Session is not null && Session.Service is null)
-            {
-                sessionErrorFlags |= SessionConfigurationErrorType.MissingService;
-            }
-
-            if (sessionErrorFlags != SessionConfigurationErrorType.None)
-            {
-                var sessionRefreshFailedEventArgs = new SessionRefreshFailedEventArgs(sessionErrorFlags, Session?.Did, Session?.Service);
-
-                OnSessionRefreshFailed(sessionRefreshFailedEventArgs);
-
-                throw new InvalidSessionException($"The current session does not have enough information to refresh: {sessionErrorFlags}")
+                if (Session is null)
                 {
-                    SessionErrors = sessionErrorFlags
-                };
+                    sessionErrorFlags |= SessionConfigurationErrorType.NullSession;
+                }
+
+                if (Session is not null && Session.RefreshJwt is null)
+                {
+                    sessionErrorFlags |= SessionConfigurationErrorType.MissingRefreshToken;
+                }
+
+                if (Session is not null && Session.Service is null)
+                {
+                    sessionErrorFlags |= SessionConfigurationErrorType.MissingService;
+                }
+
+                if (sessionErrorFlags != SessionConfigurationErrorType.None)
+                {
+                    var sessionRefreshFailedEventArgs = new SessionRefreshFailedEventArgs(sessionErrorFlags, Session?.Did, Session?.Service);
+
+                    OnSessionRefreshFailed(sessionRefreshFailedEventArgs);
+
+                    throw new InvalidSessionException($"The current session does not have enough information to refresh: {sessionErrorFlags}")
+                    {
+                        SessionErrors = sessionErrorFlags
+                    };
+                }
             }
 
             return await RefreshSession(Session!.RefreshJwt!, Session.Service!, cancellationToken).ConfigureAwait(false);
@@ -692,8 +708,6 @@ namespace idunno.AtProto
         /// <exception cref="SecurityTokenValidationException">Thrown when the token issued by <paramref name="service"/> cannot be validated.</exception>
         public async Task<bool> RefreshSession(string refreshJwt, Uri? service = null, CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(refreshJwt);
-
             service ??= Service;
 
             if (!IsAuthenticated)
@@ -702,74 +716,79 @@ namespace idunno.AtProto
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            Logger.RefreshSessionCalled(_logger, Session!.Did, service);
-
-            if (_sessionRefreshTimer is not null)
+            using (_logger.BeginScope($"RefreshSession {Session.InternalSessionIdentifier}"))
             {
+                ArgumentNullException.ThrowIfNullOrEmpty(refreshJwt);
+
+                Logger.RefreshSessionCalled(_logger, Session!.Did, service);
+
+                if (_sessionRefreshTimer is not null)
+                {
+                    lock (_session_SyncLock)
+                    {
+                        StopTokenRefreshTimer();
+                    }
+                }
+
+                AtProtoHttpResult<RefreshSessionResponse> refreshSessionResult;
+                try
+                {
+                    refreshSessionResult = await AtProtoServer.RefreshSession(refreshJwt, service, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    Logger.TokenRefreshApiThrew(_logger, e);
+                    throw;
+                }
+
+                if (!refreshSessionResult.Succeeded || refreshSessionResult.Result.AccessJwt is null || refreshSessionResult.Result.RefreshJwt is null)
+                {
+                    Logger.RefreshSessionApiCallFailed(_logger, Session!.Did, service, refreshSessionResult.StatusCode);
+
+                    var sessionRefreshFailedEventArgs = new SessionRefreshFailedEventArgs(
+                        SessionConfigurationErrorType.None,
+                        null,
+                        service,
+                        refreshSessionResult.StatusCode,
+                        refreshSessionResult.AtErrorDetail);
+
+                    OnSessionRefreshFailed(sessionRefreshFailedEventArgs);
+
+                    return false;
+                }
+
+                if (!await ValidateJwtToken(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.Did, service).ConfigureAwait(false))
+                {
+                    Logger.RefreshSessionTokenValidationFailed(_logger, Session!.Did, service);
+
+                    throw new SecurityTokenValidationException("The issued access token could not be validated.");
+                }
+
                 lock (_session_SyncLock)
                 {
-                    StopTokenRefreshTimer();
+                    if (Session is not null)
+                    {
+                        Logger.RefreshSessionSucceeded(_logger, Session.Did, service);
+
+                        Session.UpdateAccessTokens(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.RefreshJwt);
+
+                        _sessionRefreshTimer ??= new();
+                        StartTokenRefreshTimer();
+
+                        var sessionRefreshedEventArgs = new SessionRefreshedEventArgs(
+                            Session.Did,
+                            service,
+                            refreshSessionResult.Result.AccessJwt,
+                            refreshSessionResult.Result.RefreshJwt);
+
+                        OnSessionRefreshed(sessionRefreshedEventArgs);
+
+                        return true;
+                    }
                 }
-            }
-
-            AtProtoHttpResult<RefreshSessionResponse> refreshSessionResult;
-            try
-            {
-                refreshSessionResult = await AtProtoServer.RefreshSession(refreshJwt, service, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                Logger.TokenRefreshApiThrew(_logger, e);
-                throw;
-            }
-
-            if (!refreshSessionResult.Succeeded || refreshSessionResult.Result.AccessJwt is null || refreshSessionResult.Result.RefreshJwt is null)
-            {
-                Logger.RefreshSessionApiCallFailed(_logger, Session!.Did, service, refreshSessionResult.StatusCode);
-
-                var sessionRefreshFailedEventArgs = new SessionRefreshFailedEventArgs(
-                    SessionConfigurationErrorType.None,
-                    null,
-                    service,
-                    refreshSessionResult.StatusCode,
-                    refreshSessionResult.AtErrorDetail);
-
-                OnSessionRefreshFailed(sessionRefreshFailedEventArgs);
 
                 return false;
             }
-
-            if (!await ValidateJwtToken(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.Did, service).ConfigureAwait(false))
-            {
-                Logger.RefreshSessionTokenValidationFailed(_logger, Session!.Did, service);
-
-                throw new SecurityTokenValidationException("The issued access token could not be validated.");
-            }
-
-            lock (_session_SyncLock)
-            {
-                if (Session is not null)
-                {
-                    Logger.RefreshSessionSucceeded(_logger, Session.Did, service);
-
-                    Session.UpdateAccessTokens(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.RefreshJwt);
-
-                    _sessionRefreshTimer ??= new();
-                    StartTokenRefreshTimer();
-
-                    var sessionRefreshedEventArgs = new SessionRefreshedEventArgs(
-                        Session.Did,
-                        service,
-                        refreshSessionResult.Result.AccessJwt,
-                        refreshSessionResult.Result.RefreshJwt);
-
-                    OnSessionRefreshed(sessionRefreshedEventArgs);
-
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         /// <summary>
@@ -1677,8 +1696,11 @@ namespace idunno.AtProto
                 {
                     TimeSpan accessTokenExpiresIn = GetTimeToJwtTokenExpiry(AccessToken);
 
+                    Logger.RefreshTimerStartedAccessTokenExpiresIn(_logger, accessTokenExpiresIn);
+
                     if (accessTokenExpiresIn.TotalSeconds < 60)
                     {
+                        Logger.RefreshTimerCallingRefreshSession(_logger);
                         // As we're about to expire, go refresh the token
                         RefreshSession().FireAndForget();
                         return;
@@ -1690,15 +1712,14 @@ namespace idunno.AtProto
                         refreshIn = accessTokenExpiresIn - new TimeSpan(0, 1, 0);
                     }
 
-                    if (_sessionRefreshTimer is not null)
-                    {
-                        _sessionRefreshTimer.Interval = refreshIn.TotalMilliseconds >= int.MaxValue ? int.MaxValue : refreshIn.TotalMilliseconds;
-                        _sessionRefreshTimer.Elapsed += RefreshTimerElapsed;
-                        _sessionRefreshTimer.Enabled = true;
-                        _sessionRefreshTimer.Start();
+                    _sessionRefreshTimer ??= new();
 
-                        Logger.TokenRefreshTimerStarted(_logger);
-                    }
+                    _sessionRefreshTimer.Interval = refreshIn.TotalMilliseconds >= int.MaxValue ? int.MaxValue : refreshIn.TotalMilliseconds;
+                    _sessionRefreshTimer.Elapsed += RefreshTimerElapsed;
+                    _sessionRefreshTimer.Enabled = true;
+                    _sessionRefreshTimer.Start();
+
+                    Logger.TokenRefreshTimerStarted(_logger, _sessionRefreshTimer.Interval);
                 }
             }
             else

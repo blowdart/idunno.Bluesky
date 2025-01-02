@@ -10,7 +10,7 @@ using idunno.AtProto.Models;
 namespace idunno.AtProto.Server
 {
     /// <summary>
-    /// Representation information about, and the state of a session on an AT Proto service.
+    /// Represents information about, and the state of, a session on an AT Proto service.
     /// </summary>
     public sealed record Session
     {
@@ -33,6 +33,8 @@ namespace idunno.AtProto.Server
             EmailAuthFactor = createSessionResult.EmailAuthFactor;
             IsAccountActive = createSessionResult.Active;
             AccountStatus = createSessionResult.Status;
+
+            InternalSessionIdentifier = Guid.NewGuid();
         }
 
         internal Session(Uri service, GetSessionResponse getSessionResponse)
@@ -48,6 +50,8 @@ namespace idunno.AtProto.Server
             DidDoc = getSessionResponse.DidDoc;
             IsAccountActive = getSessionResponse.Active;
             AccountStatus = getSessionResponse.Status;
+
+            InternalSessionIdentifier = Guid.NewGuid();
         }
 
         internal Session(Uri service, GetSessionResponse getSessionResponse, string? accessToken, string? refreshToken) : this(service, getSessionResponse)
@@ -151,6 +155,8 @@ namespace idunno.AtProto.Server
                 return !string.IsNullOrWhiteSpace(AccessJwt);
             }
         }
+
+        internal Guid InternalSessionIdentifier { get; init; }
 
         internal void UpdateAccessTokens(string? accessJwt, string? refreshJwt)
         {

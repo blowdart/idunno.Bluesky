@@ -22,6 +22,9 @@ namespace idunno.AtProto
         [LoggerMessage(4, LogLevel.Error, "CreateSession failed {statusCode}")]
         internal static partial void CreateSessionFailed(ILogger logger, HttpStatusCode statusCode);
 
+        [LoggerMessage(5, LogLevel.Debug, "CreateSession for {loginIdentifier} created session #{sessionIdentifier} on {service}")]
+        internal static partial void SessionCreated(ILogger logger, string loginIdentifier, Guid sessionIdentifier, Uri service);
+
         // Delete session logging
         [LoggerMessage(10, LogLevel.Debug, "Logout called for {did} on {service}")]
         internal static partial void LogoutCalled(ILogger logger, Did? did, Uri service);
@@ -30,8 +33,8 @@ namespace idunno.AtProto
         internal static partial void LogoutFailed(ILogger logger, Did? did, Uri service, HttpStatusCode statusCode);
 
         // Token refresh logging
-        [LoggerMessage(20, LogLevel.Debug, "Token refresh timer started")]
-        internal static partial void TokenRefreshTimerStarted(ILogger logger);
+        [LoggerMessage(20, LogLevel.Debug, "Token refresh timer started, will raise refresh event in {interval} milliseconds")]
+        internal static partial void TokenRefreshTimerStarted(ILogger logger, double interval);
 
         [LoggerMessage(21, LogLevel.Debug, "Token refresh timer stopped")]
         internal static partial void TokenRefreshTimerStopped(ILogger logger);
@@ -39,11 +42,17 @@ namespace idunno.AtProto
         [LoggerMessage(22, LogLevel.Information, "Background token refresh fired")]
         internal static partial void BackgroundTokenRefreshFired(ILogger logger);
 
-        [LoggerMessage(23, LogLevel.Error, "StartTokenRefreshTime() called but token refresh is disabled")]
+        [LoggerMessage(23, LogLevel.Error, "StartTokenRefreshTimer() called but token refresh is disabled")]
         internal static partial void TokenRefreshTimerStartCalledButRefreshDisabled (ILogger logger);
 
         [LoggerMessage(24, LogLevel.Error, "RefreshToken API call threw")]
         internal static partial void TokenRefreshApiThrew(ILogger logger, Exception e);
+
+        [LoggerMessage(25, LogLevel.Information, "StartTokenRefreshTimer called. AccessToken expires in {expiresIn}")]
+        internal static partial void RefreshTimerStartedAccessTokenExpiresIn(ILogger logger, TimeSpan expiresIn);
+
+        [LoggerMessage(26, LogLevel.Warning, "StartTokenRefreshTimer is immediately refreshing the token")]
+        internal static partial void RefreshTimerCallingRefreshSession(ILogger logger);
 
         // Restore Session logging
         [LoggerMessage(30, LogLevel.Debug, "RestoreSession called for {did} on {service}")]
@@ -227,6 +236,14 @@ namespace idunno.AtProto
 
         [LoggerMessage(506, LogLevel.Error, "HTTP request for {handle} to {Uri} failed with HTTP status code of {statusCode}")]
         internal static partial void HttpHandleResolutionRequestFailed(ILogger logger, Handle handle, Uri uri, HttpStatusCode statusCode);
+
+
+        // Agent flow logging
+        [LoggerMessage(750, LogLevel.Debug, "Agent disposing")]
+        internal static partial void AgentDisposing(ILogger logger);
+
+        [LoggerMessage(751, LogLevel.Debug, "Stopping session refresh timer")]
+        internal static partial void AgentDisposeStoppingRefreshTimer(ILogger logger);
 
     }
 }

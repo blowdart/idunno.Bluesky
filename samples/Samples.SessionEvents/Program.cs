@@ -5,11 +5,14 @@ using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Help;
 using System.CommandLine.Parsing;
+using System.Diagnostics;
 using System.Net;
+
+using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
 using idunno.AtProto.Server;
-using Microsoft.Extensions.Logging;
+
 using Samples.Common;
 
 namespace Samples.SessionEvents
@@ -90,7 +93,7 @@ namespace Samples.SessionEvents
             TokenStore? persistedLoginState = null;
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
-            // proxyUri = new Uri("http://localhost:8866");
+            proxyUri = new Uri("http://localhost:8866");
 
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
@@ -203,15 +206,21 @@ namespace Samples.SessionEvents
 
                 Console.WriteLine($"Login result: {loginResult.StatusCode}");
 
-                Console.WriteLine("Refreshing sessions");
+                Debugger.Break();
+
+                Console.WriteLine("Refreshing sessions manually");
 
                 var refreshSessionResult = await agent.RefreshSession(cancellationToken: cancellationToken);
 
                 Console.WriteLine($"Refresh session result: {refreshSessionResult}");
 
+                Debugger.Break();
+
                 Console.WriteLine("Logging out");
 
                 await agent.Logout(cancellationToken: cancellationToken);
+
+                Debugger.Break();
 
                 Console.WriteLine("Refreshing the session once the agent has logged out.");
 
@@ -274,6 +283,8 @@ namespace Samples.SessionEvents
                         {
                             Console.WriteLine($"Restore failed.");
                         }
+
+                        Debugger.Break();
                     }
 
                     // Try to restore a session using the refresh token.
