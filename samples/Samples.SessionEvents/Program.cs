@@ -93,7 +93,7 @@ namespace Samples.SessionEvents
             TokenStore? persistedLoginState = null;
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
-            proxyUri = new Uri("http://localhost:8866");
+            // proxyUri = new Uri("http://localhost:8866");
 
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
