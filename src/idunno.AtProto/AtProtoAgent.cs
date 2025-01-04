@@ -133,7 +133,7 @@ namespace idunno.AtProto
         {
             get
             {
-                return Session is not null && Session.HasAccessToken && Session.AccessJwtExpiresOn > DateTime.Now;
+                return Session is not null && Session.HasAccessToken && Session.AccessJwtExpiresOn > DateTime.UtcNow;
             }
         }
 
