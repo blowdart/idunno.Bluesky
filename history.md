@@ -1,5 +1,24 @@
 # idunno.Bluesky Version History
 
+## 0.3.0
+
+### Features
+
+#### idunno.AtProto
+
+* Extra logging in token refresh
+
+### Bug Fixes
+
+#### idunno.AtProto
+
+* Fixed incorrect JWT DateTime comparison - thank you [alexmg](https://github.com/alexmg)
+* Fixed json deserialization errors in GetSessionResponse
+
+#### Samples
+
+* Added catch in Samples.SessionEvents when a bad token is being set on purpose - thank you [peteraritchie](https://github.com/peteraritchie)
+
 ## 0.2.0
 
 ### Features
