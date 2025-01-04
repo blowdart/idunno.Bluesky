@@ -1,91 +1,109 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.CommandLine;
+using System.CommandLine.Parsing;
 using System.Diagnostics;
 
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
 using idunno.AtProto.OAuth;
+
 using idunno.Bluesky;
+using idunno.AtProto.Authentication;
+using Samples.Common;
 
-using var cts = new CancellationTokenSource();
+namespace Samples.OAuth
 {
-    Console.CancelKeyPress += (sender, e) =>
+    public sealed class Program
     {
-        e.Cancel = true;
-        cts.Cancel();
-    };
-
-    ILoggerFactory loggerFactory = LoggerFactory.Create(configure =>
-    {
-        configure.AddSimpleConsole(options =>
+        static async Task<int> Main(string[] args)
         {
-            options.IncludeScopes = true;
-            options.TimestampFormat = "G";
-            options.UseUtcTimestamp = false;
-        });
-        configure.SetMinimumLevel(LogLevel.Debug);
-    });
+            // Necessary to render emojis.
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-    Console.Write("Please enter your Bluesky username: ");
-    var userName = Console.ReadLine();
+            var parser = Helpers.ConfigureCommandLine(PerformOperations);
+            await parser.InvokeAsync(args);
 
-    if (string.IsNullOrEmpty(userName))
-    {
-        return;
-    }
-
-    using (var agent = new BlueskyAgent())
-    {
-        Did? did = await agent.ResolveHandle(userName, cts.Token);
-
-        if (did is null)
-        {
-            Console.WriteLine("Could not resolve DID");
-            return;
+            return 0;
         }
 
-        Uri? pds = await agent.ResolvePds(did, cts.Token);
-
-        if (pds is null)
+        static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
         {
-            Console.WriteLine($"Could not resolve PDS for {did}.");
-            return;
+            ArgumentNullException.ThrowIfNullOrEmpty(handle);
+
+            // Uncomment the next line to route all requests through Fiddler Everywhere
+            proxyUri = new Uri("http://localhost:8866");
+
+            // Uncomment the next line to route all requests  through Fiddler Classic
+            // proxyUri = new Uri("http://localhost:8888");
+
+            // Get an HttpClient configured to use a proxy, if proxyUri is not null.
+            using (HttpClient? httpClient = Helpers.CreateOptionalHttpClient(proxyUri))
+
+            // Change the log level in the ConfigureConsoleLogging() to enable logging
+            using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
+
+            using (var agent = new BlueskyAgent(httpClient: httpClient, loggerFactory: loggerFactory))
+            {
+                Did? did = await agent.ResolveHandle(handle, cancellationToken);
+
+                if (did is null)
+                {
+                    Console.WriteLine("Could not resolve DID");
+                    return;
+                }
+
+                Uri? pds = await agent.ResolvePds(did, cancellationToken);
+
+                if (pds is null)
+                {
+                    Console.WriteLine($"Could not resolve PDS for {did}.");
+                    return;
+                }
+
+                Uri? authorizationServer = await agent.ResolveAuthorizationServer(pds, cancellationToken);
+
+                if (authorizationServer is null)
+                {
+                    Console.WriteLine($"Could not discover authorization server for {pds}.");
+                    return;
+                }
+
+                string clientId = "http://localhost";
+
+                Console.WriteLine($"Username:             {handle}");
+                Console.WriteLine($"DID:                  {did}");
+                Console.WriteLine($"PDS:                  {pds}");
+                Console.WriteLine($"Authorization Server: {authorizationServer}");
+
+                Debugger.Break();
+
+                await using var callbackServer = new CallbackServer(CallbackServer.GetRandomUnusedPort(), loggerFactory: loggerFactory);
+                {
+                    var loginClient = new OAuthClient(loggerFactory);
+
+                    Uri startUri = await loginClient.CreateOAuth2StartUri(authorizationServer, clientId, callbackServer.Uri, cancellationToken: cancellationToken);
+
+                    Console.WriteLine($"Login URI           : {startUri}");
+
+                    Console.WriteLine($"Awaiting callback on {callbackServer.Uri}");
+                    string queryString = await callbackServer.WaitForCallbackAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+
+
+
+                    if (!string.IsNullOrEmpty(queryString))
+                    {
+                        Console.WriteLine($"Got {queryString}");
+
+                        var loginResult = await loginClient.ProcessOAuth2Response(queryString, cancellationToken: cancellationToken);
+
+                        Debugger.Break();
+                    }
+                }
+
+            }
         }
-
-        Uri? authorizationServer = await agent.ResolveAuthorizationServer(pds, cts.Token);
-
-        if (authorizationServer is null)
-        {
-            Console.WriteLine($"Could not discover authorization server for {pds}.");
-            return;
-        }
-
-        string clientId = "http://localhost";
-
-        var loginUri = await agent.GetOAuthAuthorizationUri(clientId: clientId, authorizationServer: authorizationServer, redirectUri: new Uri("http://127.0.0.1"));
-
-        Console.WriteLine($"Username:             {userName}");
-        Console.WriteLine($"DID:                  {did}");
-        Console.WriteLine($"PDS:                  {pds}");
-        Console.WriteLine($"Authorization Server: {authorizationServer}");
-        Console.WriteLine($"Login URI           : {loginUri}&login_hint={Uri.EscapeDataString(userName)}");
-
-        Debugger.Break();
-
-        //int postToListenOn = CallbackServer.GetRandomUnusedPort();
-
-        await using var callbackServer = new CallbackServer(51163, loggerFactory: loggerFactory);
-        Console.WriteLine($"Awaiting callback on {callbackServer.Uri}");
-        string queryString = await callbackServer.WaitForCallbackAsync().ConfigureAwait(true);
-
-        if (!string.IsNullOrEmpty(queryString))
-        {
-            Console.WriteLine($"Got {queryString}");
-        }
-
-        Debugger.Break();
     }
 }
-

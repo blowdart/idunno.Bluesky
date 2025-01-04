@@ -1,9 +1,10 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using idunno.AtProto;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+
+using idunno.AtProto;
 
 namespace idunno.DidPlcDirectory
 {

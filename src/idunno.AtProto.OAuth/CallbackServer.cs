@@ -70,10 +70,11 @@ namespace idunno.AtProto.OAuth
             _listener = builder.Build();
             _listener.Urls.Add($"http://{IPAddress.Loopback}:{port}");
 
+            _listener.MapShortCircuit(404, "robots.txt", "favicon.ico");
+
             _listener.MapGet($"{path}", PullQueryString);
             _listener.MapPost($"{path}", MethodNotAllowed);
 
-            _listener.MapShortCircuit(404, "robots.txt", "favicon.ico");
             _listener.MapFallback(BadRequest);
 
             Logger.ListeningOn(_logger, Uri);
@@ -228,6 +229,7 @@ namespace idunno.AtProto.OAuth
                 await context.Response.WriteAsync(SuccessBody).ConfigureAwait(false);
                 await context.Response.WriteAsync("</body>").ConfigureAwait(false);
                 await context.Response.WriteAsync("</html>").ConfigureAwait(false);
+
                 await context.Response.Body.FlushAsync().ConfigureAwait(false);
             }
             catch

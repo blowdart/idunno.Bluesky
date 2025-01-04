@@ -79,6 +79,16 @@ namespace idunno.AtProto
         }
 
         /// <summary>
+        /// Gets or sets a function called when a request is about to be sent.
+        /// </summary>
+        public Func<HttpRequestMessage, CancellationToken, Task> OnSendingRequest { get; set; } = (requestMessage, cancellationToken) => Task.CompletedTask;
+
+        /// <summary>
+        /// Gets or sets a function called when a response has been received.
+        /// </summary>
+        public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived { get; set; } = (responseMessage, cancellationToken) => Task.CompletedTask;
+
+        /// <summary>
         /// Performs an unauthenticated GET request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
         /// </summary>
         /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
@@ -139,11 +149,22 @@ namespace idunno.AtProto
 
             using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, new Uri(service, endpoint)))
             {
-                ConfigureRequest(httpRequestMessage, httpClient, accessToken, subscribedLabelers, _extraHeaders);
+                SetRequestHeaders(httpRequestMessage, httpClient, accessToken, subscribedLabelers, _extraHeaders);
+
+                if (OnSendingRequest is not null)
+                {
+                    await OnSendingRequest(httpRequestMessage, cancellationToken).ConfigureAwait(false);
+                }
 
                 try
                 {
                     using HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false);
+
+                    if (OnResponseReceived is not null)
+                    {
+                        await OnResponseReceived(httpResponseMessage, cancellationToken).ConfigureAwait(false);
+                    }
+
                     AtProtoHttpResult<TResult> result = new()
                     {
                         StatusCode = httpResponseMessage.StatusCode,
@@ -266,14 +287,14 @@ namespace idunno.AtProto
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNullOrEmpty(endpoint);
+            ArgumentException.ThrowIfNullOrEmpty(endpoint);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             jsonSerializerOptions ??= JsonSerializationDefaults.DefaultJsonSerializerOptions;
 
             using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(service, endpoint)))
             {
-                ConfigureRequest(httpRequestMessage, httpClient, accessToken, subscribedLabelers, _extraHeaders);
+                SetRequestHeaders(httpRequestMessage, httpClient, accessToken, subscribedLabelers, _extraHeaders);
 
                 if (requestHeaders is not null)
                 {
@@ -289,10 +310,20 @@ namespace idunno.AtProto
                     httpRequestMessage.Content = new StringContent(content, Encoding.UTF8, MediaTypeNames.Application.Json);
                 }
 
+                if (OnSendingRequest is not null)
+                {
+                    await OnSendingRequest(httpRequestMessage, cancellationToken).ConfigureAwait(false);
+                }
+
                 try
                 {
                     using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false))
                     {
+                        if (OnResponseReceived is not null)
+                        {
+                            await OnResponseReceived(httpResponseMessage, cancellationToken).ConfigureAwait(false);
+                        }
+
                         AtProtoHttpResult<TResult> result = new()
                         {
                             StatusCode = httpResponseMessage.StatusCode,
@@ -358,7 +389,7 @@ namespace idunno.AtProto
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNullOrEmpty(endpoint);
+            ArgumentException.ThrowIfNullOrEmpty(endpoint);
 
             ArgumentNullException.ThrowIfNull(blob);
             if (blob.Length == 0)
@@ -366,14 +397,14 @@ namespace idunno.AtProto
                 throw new ArgumentException("Blob cannot be empty.", nameof(blob));
             }
 
-            ArgumentNullException.ThrowIfNullOrEmpty(accessToken);
+            ArgumentException.ThrowIfNullOrEmpty(accessToken);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             jsonSerializerOptions ??= JsonSerializationDefaults.DefaultJsonSerializerOptions;
 
             using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(service, endpoint)))
             {
-                ConfigureRequest(httpRequestMessage, httpClient, accessToken, subscribedLabelers: null, _extraHeaders);
+                SetRequestHeaders(httpRequestMessage, httpClient, accessToken, subscribedLabelers: null, _extraHeaders);
 
                 httpRequestMessage.Content = new ByteArrayContent(blob);
 
@@ -385,10 +416,20 @@ namespace idunno.AtProto
                     }
                 }
 
+                if (OnSendingRequest is not null)
+                {
+                    await OnSendingRequest(httpRequestMessage, cancellationToken).ConfigureAwait(false);
+                }
+
                 try
                 {
                     using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false))
                     {
+                        if (OnResponseReceived is not null)
+                        {
+                            await OnResponseReceived(httpResponseMessage, cancellationToken).ConfigureAwait(false);
+                        }
+
                         AtProtoHttpResult<TResult> result = new()
                         {
                             StatusCode = httpResponseMessage.StatusCode,
@@ -485,7 +526,7 @@ namespace idunno.AtProto
             return errorDetail;
         }
 
-        private static void ConfigureRequest(
+        private static void SetRequestHeaders(
             HttpRequestMessage httpRequestMessage,
             HttpClient httpClient,
             string? accessToken,

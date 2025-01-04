@@ -5,7 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace idunno.AtProto.Auth
+namespace idunno.AtProto.Authentication
 {
     /// <summary>
     /// A class for exposing metadata about an authorization server retrieved from an OpenID Connect discovery point.

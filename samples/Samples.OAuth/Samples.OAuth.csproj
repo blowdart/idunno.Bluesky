@@ -11,6 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\idunno.AtProto.OAuth\idunno.AtProto.OAuth.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky\idunno.Bluesky.csproj" />
+    <ProjectReference Include="..\Samples.Common\Samples.Common.csproj" />
   </ItemGroup>
 
 </Project>

@@ -229,7 +229,13 @@ namespace idunno.AtProto
         internal static partial void HttpHandleResolutionRequestFailed(ILogger logger, Handle handle, Uri uri, HttpStatusCode statusCode);
 
         // AtProtoServer auth logging
-        [LoggerMessage(600, LogLevel.Information, "Generated oath login {loginUri} for {server}")]
-        internal static partial void OAuthLoginUriGenerated(ILogger logger, Uri server, Uri loginUri);
+        [LoggerMessage(600, LogLevel.Debug, "Generated oauth login {loginUri} for {authority}, correlation {correlation}")]
+        internal static partial void OAuthLoginUriGenerated(ILogger logger, Uri authority, Uri loginUri, Guid correlation);
+
+        [LoggerMessage(601, LogLevel.Debug, "OAuth login completed, correlation {correlation}")]
+        internal static partial void OAuthLoginCompleted(ILogger logger, Guid correlation);
+
+        [LoggerMessage(602, LogLevel.Error, "OAuth login processing failed {error} {errorDescription}, correlation {correlation}")]
+        internal static partial void OAuthLoginFailed(ILogger logger, Guid correlation, string? error, string? errorDescription);
     }
 }

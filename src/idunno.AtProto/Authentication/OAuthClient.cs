@@ -1,0 +1,159 @@
+﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Licensed under the MIT License.
+
+using System.Security.Cryptography;
+using System.Text.Json;
+
+using Microsoft.IdentityModel.Tokens;
+
+using IdentityModel.OidcClient;
+using Microsoft.Extensions.Logging;
+using idunno.DidPlcDirectory;
+using Microsoft.Extensions.Logging.Abstractions;
+using IdentityModel.Client;
+
+namespace idunno.AtProto.Authentication
+{
+    /// <summary>
+    /// Helper methods for oauth authentication.
+    /// </summary>
+    public class OAuthClient
+    {
+        const string OAuthDiscoveryDocumentEndpoint = ".well-known/oauth-authorization-server";
+
+        private readonly string[] _defaultScopes = { "atproto" };
+
+        private OidcClient? _oidcClient;
+        private AuthorizeState? _authorizeState;
+
+        private readonly ILoggerFactory _loggerFactory;
+        private readonly ILogger<OAuthClient> _logger;
+
+        private Guid _logCorrelation = Guid.NewGuid();
+
+        /// <summary>
+        /// Creates a new instance of <see cref="OAuthClient"/>.
+        /// </summary>
+        /// <param name="loggerFactory">An optional <see cref="ILoggerFactory"/> to use to create loggers.</param>
+        public OAuthClient(ILoggerFactory? loggerFactory = null)
+        {
+            _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+            _logger = _loggerFactory.CreateLogger<OAuthClient>();
+        }
+
+        /// <summary>
+        /// Generates a new DPop key
+        /// </summary>
+        /// <returns></returns>
+        public static string GenerateDPopKey()
+        {
+            using (RSA rsa = RSA.Create(2048))
+            {
+                RsaSecurityKey rsaKey = new(rsa);
+                JsonWebKey jwkKey = JsonWebKeyConverter.ConvertFromSecurityKey(rsaKey);
+                jwkKey.Alg = "PS256";
+                return JsonSerializer.Serialize(jwkKey);
+            }
+        }
+
+        /// <summary>
+        /// Gets the OAuth authorization URI for starting the OAuth flow.
+        /// </summary>
+        /// <param name="clientId">The client ID</param>
+        /// <param name="redirectUri">The redirect URI where the oauth server should send tokens back to.</param>
+        /// <param name="authority">The authorization server to use.</param>
+        /// <param name="scopes">A collection of scopes to request.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="clientId"/> is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="redirectUri"/>, <paramref name="authority"/> or <paramref name="scopes"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="scopes"/> is empty.</exception>
+        /// <exception cref="OAuthException">Thrown when the authorize state cannot be prepared or encounters an error during preparation.</exception>
+        public async Task<Uri> CreateOAuth2StartUri(
+            Uri authority,
+            string clientId,
+            Uri redirectUri,
+            IEnumerable<string>? scopes = null,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(clientId);
+            ArgumentNullException.ThrowIfNull(authority);
+            ArgumentNullException.ThrowIfNull(redirectUri);
+
+            if (scopes is not null)
+            {
+                ArgumentOutOfRangeException.ThrowIfZero(scopes.Count());
+            }
+
+            scopes ??= _defaultScopes;
+
+            var oidcOptions = new OidcClientOptions
+            {
+                ClientId = clientId,
+                Authority = authority.ToString(),
+                Scope = string.Join(" ", scopes.Where(s => !string.IsNullOrEmpty(s))),
+                RedirectUri = redirectUri.ToString(),
+                LoadProfile = false,
+                LoggerFactory = _loggerFactory,
+                
+            };
+
+            oidcOptions.Policy.Discovery.DiscoveryDocumentPath = OAuthDiscoveryDocumentEndpoint;
+
+            _oidcClient = new OidcClient(oidcOptions);
+            _authorizeState = await _oidcClient.PrepareLoginAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (_authorizeState is null)
+            {
+                throw new OAuthException("state preparation failed");
+            }
+            else if (_authorizeState.IsError)
+            {
+                throw new OAuthException(_authorizeState.Error);
+            }
+            else
+            {
+                Uri startUri = new (_authorizeState.StartUrl);
+
+                Logger.OAuthLoginUriGenerated(_logger, authority, startUri, _logCorrelation);
+
+                return startUri;
+            }
+        }
+
+        /// <summary>
+        /// Processes the login response received from the client URI generated from CreateOAuth2StartUri().
+        /// </summary>
+        /// <param name="data">The data returned to the callback URI</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="OAuthException">Thrown when the internal state of this instance is faulty.</exception>
+        public async Task<LoginResult> ProcessOAuth2Response(string data, CancellationToken cancellationToken = default)
+        {
+            if (_oidcClient is null)
+            {
+                throw new OAuthException("Internal client is null");
+            }
+
+            if (_authorizeState is null)
+            {
+                throw new OAuthException("Internal state is null");
+            }
+
+            LoginResult result = await _oidcClient.ProcessResponseAsync(data, _authorizeState, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (!result.IsError)
+            {
+                Logger.OAuthLoginCompleted(_logger, _logCorrelation);
+            }
+            else
+            {
+                Logger.OAuthLoginFailed(_logger, _logCorrelation, result.Error, result.ErrorDescription);
+            }
+
+            // Validate issuer, date/time, signature using key from discovery doc.
+
+            return result;
+        }
+    }
+}
