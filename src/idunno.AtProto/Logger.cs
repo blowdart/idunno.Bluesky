@@ -237,5 +237,11 @@ namespace idunno.AtProto
 
         [LoggerMessage(602, LogLevel.Error, "OAuth login processing failed {error} {errorDescription}, correlation {correlation}")]
         internal static partial void OAuthLoginFailed(ILogger logger, Guid correlation, string? error, string? errorDescription);
+
+        [LoggerMessage(603, LogLevel.Error, "DPoP header is already present on request to {host}/{path}")]
+        internal static partial void DPoPHeaderAlreadyPresent(ILogger logger, string? host, string? path);
+
+        [LoggerMessage(604, LogLevel.Information, "DPoP header added to request to {host}/{path}")]
+        internal static partial void DPoPHeaderAddedToTokenRequest(ILogger logger, string? host, string? path);
     }
 }

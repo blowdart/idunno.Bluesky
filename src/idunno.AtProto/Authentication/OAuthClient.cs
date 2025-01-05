@@ -1,16 +1,17 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text.Json;
+
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 using Microsoft.IdentityModel.Tokens;
 
 using IdentityModel.OidcClient;
-using Microsoft.Extensions.Logging;
-using idunno.DidPlcDirectory;
-using Microsoft.Extensions.Logging.Abstractions;
-using IdentityModel.Client;
+using IdentityModel.OidcClient.DPoP;
 
 namespace idunno.AtProto.Authentication
 {
@@ -29,31 +30,16 @@ namespace idunno.AtProto.Authentication
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger<OAuthClient> _logger;
 
-        private Guid _logCorrelation = Guid.NewGuid();
+        private readonly Guid _logCorrelation = Guid.NewGuid();
 
         /// <summary>
         /// Creates a new instance of <see cref="OAuthClient"/>.
         /// </summary>
         /// <param name="loggerFactory">An optional <see cref="ILoggerFactory"/> to use to create loggers.</param>
-        public OAuthClient(ILoggerFactory? loggerFactory = null)
+        internal OAuthClient(ILoggerFactory? loggerFactory = null)
         {
             _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
             _logger = _loggerFactory.CreateLogger<OAuthClient>();
-        }
-
-        /// <summary>
-        /// Generates a new DPop key
-        /// </summary>
-        /// <returns></returns>
-        public static string GenerateDPopKey()
-        {
-            using (RSA rsa = RSA.Create(2048))
-            {
-                RsaSecurityKey rsaKey = new(rsa);
-                JsonWebKey jwkKey = JsonWebKeyConverter.ConvertFromSecurityKey(rsaKey);
-                jwkKey.Alg = "PS256";
-                return JsonSerializer.Serialize(jwkKey);
-            }
         }
 
         /// <summary>
@@ -87,18 +73,18 @@ namespace idunno.AtProto.Authentication
 
             scopes ??= _defaultScopes;
 
-            var oidcOptions = new OidcClientOptions
+            OidcClientOptions oidcOptions = new()
             {
                 ClientId = clientId,
                 Authority = authority.ToString(),
                 Scope = string.Join(" ", scopes.Where(s => !string.IsNullOrEmpty(s))),
                 RedirectUri = redirectUri.ToString(),
                 LoadProfile = false,
-                LoggerFactory = _loggerFactory,
-                
+                LoggerFactory = _loggerFactory
             };
 
             oidcOptions.Policy.Discovery.DiscoveryDocumentPath = OAuthDiscoveryDocumentEndpoint;
+            oidcOptions.ConfigureDPoP(JsonWebKeys.CreateRsaJson());
 
             _oidcClient = new OidcClient(oidcOptions);
             _authorizeState = await _oidcClient.PrepareLoginAsync(cancellationToken: cancellationToken).ConfigureAwait(false);

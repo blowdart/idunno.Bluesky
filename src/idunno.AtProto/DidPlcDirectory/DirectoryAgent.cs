@@ -21,11 +21,40 @@ namespace idunno.DidPlcDirectory
         /// <summary>
         /// Creates a new instance of <see cref="DirectoryAgent"/>.
         /// </summary>
-        /// <param name="httpClient">An optional <see cref="HttpClient"/> to use when making requests.</param>
-        /// <param name="options"><see cref="DirectoryAgentOptions"/> for the use in the creation of this instance of <see cref="DirectoryAgent"/>.</param>
-        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use when creating loggers.</param>
-        public DirectoryAgent(HttpClient? httpClient = null, DirectoryAgentOptions? options = null, ILoggerFactory? loggerFactory = default) : base(httpClient)
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/>, if any, to use when creating loggers.</param>
+        /// <param name="proxyUri">The proxy URI to use, if any.</param>
+        /// <param name="httpUserAgent">The user agent string to use, if any.</param>
+        /// <param name="timeout">The default HTTP timeout to use, if any.</param>
+        /// <param name="options">Any <see cref="DirectoryAgentOptions"/> to configure this instance with.</param>
+        public DirectoryAgent(
+            ILoggerFactory? loggerFactory = default,
+            Uri ? proxyUri = null,
+            string? httpUserAgent = null,
+            TimeSpan? timeout = null,
+            DirectoryAgentOptions? options = null) : base(proxyUri, httpUserAgent, timeout)
         {
+            if (options is not null)
+            {
+                PlcDirectory = options.PlcDirectoryUri;
+            }
+
+            _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+            _logger = _loggerFactory.CreateLogger<DirectoryAgent>();
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="DirectoryAgent"/>.
+        /// </summary>
+        /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/>, if any, to use when creating loggers.</param>
+        /// <param name="options">Any <see cref="DirectoryAgentOptions"/> to configure this instance with.</param>
+        public DirectoryAgent(
+            IHttpClientFactory httpClientFactory,
+            ILoggerFactory? loggerFactory = default,
+            DirectoryAgentOptions? options = null) : base(httpClientFactory)
+        {
+            ArgumentNullException.ThrowIfNull(HttpClientFactory);
+
             if (options is not null)
             {
                 PlcDirectory = options.PlcDirectoryUri;
@@ -42,7 +71,7 @@ namespace idunno.DidPlcDirectory
         /// The default directory server used to issue commands against.
         /// </value>
         /// <remarks>
-        /// <para>this directory is ignored if the DID is a web DID.</para>
+        /// <para>This directory is ignored if the DID is a web DID.</para>
         /// </remarks>
         private Uri PlcDirectory { get; } = s_defaultDirectoryServer;
 

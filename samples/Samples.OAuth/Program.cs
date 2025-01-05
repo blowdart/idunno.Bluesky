@@ -7,11 +7,12 @@ using System.Diagnostics;
 
 using Microsoft.Extensions.Logging;
 
+using IdentityModel.OidcClient;
+
 using idunno.AtProto;
 using idunno.AtProto.OAuth;
-
 using idunno.Bluesky;
-using idunno.AtProto.Authentication;
+
 using Samples.Common;
 
 namespace Samples.OAuth
@@ -31,7 +32,7 @@ namespace Samples.OAuth
 
         static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(handle);
+            ArgumentException.ThrowIfNullOrEmpty(handle);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
             proxyUri = new Uri("http://localhost:8866");
@@ -39,13 +40,10 @@ namespace Samples.OAuth
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
 
-            // Get an HttpClient configured to use a proxy, if proxyUri is not null.
-            using (HttpClient? httpClient = Helpers.CreateOptionalHttpClient(proxyUri))
-
             // Change the log level in the ConfigureConsoleLogging() to enable logging
             using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
 
-            using (var agent = new BlueskyAgent(httpClient: httpClient, loggerFactory: loggerFactory))
+            using (var agent = new BlueskyAgent(proxyUri : proxyUri, loggerFactory: loggerFactory))
             {
                 Did? did = await agent.ResolveHandle(handle, cancellationToken);
 
@@ -82,7 +80,7 @@ namespace Samples.OAuth
 
                 await using var callbackServer = new CallbackServer(CallbackServer.GetRandomUnusedPort(), loggerFactory: loggerFactory);
                 {
-                    var loginClient = new OAuthClient(loggerFactory);
+                    var loginClient = agent.CreateOAuthClient();
 
                     Uri startUri = await loginClient.CreateOAuth2StartUri(authorizationServer, clientId, callbackServer.Uri, cancellationToken: cancellationToken);
 
@@ -91,14 +89,13 @@ namespace Samples.OAuth
                     Console.WriteLine($"Awaiting callback on {callbackServer.Uri}");
                     string queryString = await callbackServer.WaitForCallbackAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
 
-
-
                     if (!string.IsNullOrEmpty(queryString))
                     {
                         Console.WriteLine($"Got {queryString}");
 
-                        var loginResult = await loginClient.ProcessOAuth2Response(queryString, cancellationToken: cancellationToken);
+                        LoginResult loginResult = await loginClient.ProcessOAuth2Response(queryString, cancellationToken: cancellationToken);
 
+                        Console.WriteLine($"Succeeded : {!loginResult.IsError}");
                         Debugger.Break();
                     }
                 }

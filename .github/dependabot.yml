@@ -5,6 +5,10 @@ updates:
   schedule:
     interval: daily
     ignore:
+      - dependency-name: "Microsoft.Extensions.DependencyInjection"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.Extensions.Http"
+        update-types: ["version-update:semver-major"]
       - dependency-name: "Microsoft.Extensions.Logging"
         update-types: ["version-update:semver-major"]
       - dependency-name: "System.Runtime.Caching"

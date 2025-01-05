@@ -21,13 +21,17 @@ namespace idunno.Bluesky
         /// <summary>
         /// Creates a new instance of <see cref="BlueskyAgent"/>.
         /// </summary>
-        /// <param name="httpClient">An optional <see cref="HttpClient"/> to use when making requests.</param>
         /// <param name="loggerFactory">The logger factory to use for logging messages, if any.</param>
+        /// <param name="proxyUri">The proxy URI to use, if any.</param>
+        /// <param name="httpUserAgent">The user agent string to use, if any.</param>
+        /// <param name="timeout">The default HTTP timeout to use, if any.</param>
         /// <param name="options"><see cref="BlueskyAgentOptions"/> for the use in the creation of this instance of <see cref="BlueskyAgent"/>.</param>
         public BlueskyAgent(
-            HttpClient? httpClient = null,
             ILoggerFactory? loggerFactory = default,
-            BlueskyAgentOptions ? options = null) : base (DefaultServiceUris.BlueskyApiUri, httpClient, loggerFactory, options)
+            Uri? proxyUri = null,
+            string? httpUserAgent = null,
+            TimeSpan? timeout = null,
+            BlueskyAgentOptions ? options = null) : base (DefaultServiceUris.BlueskyApiUri, loggerFactory, proxyUri, httpUserAgent, timeout, options)
         {
             if (options is not null && options.PublicAppViewUri is not null)
             {

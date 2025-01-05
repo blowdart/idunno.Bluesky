@@ -48,10 +48,18 @@ namespace idunno.AtProto
         /// Creates a new instance of <see cref="AtProtoAgent"/>
         /// </summary>
         /// <param name="service">The URI of the AtProto service to connect to.</param>
-        /// <param name="httpClient">An optional <see cref="HttpClient"/> to use when making requests.</param>
-        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use when creating loggers.</param>
-        /// <param name="options"><see cref="AtProtoAgentOptions"/> for the use in the creation of this instance of <see cref="AtProtoAgent"/>.</param>
-        public AtProtoAgent(Uri service, HttpClient? httpClient = null, ILoggerFactory? loggerFactory = default, AtProtoAgentOptions? options = null) : base(httpClient)
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/>, if any, to use when creating loggers.</param>
+        /// <param name="proxyUri">The proxy URI to use, if any.</param>
+        /// <param name="httpUserAgent">The user agent string to use, if any.</param>
+        /// <param name="timeout">The default HTTP timeout to use, if any.</param>
+        /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
+        public AtProtoAgent(
+            Uri service,
+            ILoggerFactory? loggerFactory = default,
+            Uri? proxyUri = null,
+            string? httpUserAgent = null,
+            TimeSpan? timeout = null,
+            AtProtoAgentOptions? options = null) : base(proxyUri, httpUserAgent, timeout)
         {
             ArgumentNullException.ThrowIfNull(service);
 
@@ -66,7 +74,32 @@ namespace idunno.AtProto
             LoggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
             _logger = LoggerFactory.CreateLogger<AtProtoAgent>();
 
-            _directoryAgent = new DirectoryAgent(httpClient, loggerFactory: loggerFactory);
+            _directoryAgent = new DirectoryAgent(loggerFactory, proxyUri, httpUserAgent, timeout);
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoAgent"/>
+        /// </summary>
+        /// <param name="service">The URI of the AtProto service to connect to.</param>
+        /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/>, if any, to use when creating loggers.</param>
+        /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
+        public AtProtoAgent(Uri service, IHttpClientFactory httpClientFactory, ILoggerFactory? loggerFactory = default, AtProtoAgentOptions? options = null) : base(httpClientFactory)
+        {
+            ArgumentNullException.ThrowIfNull(service);
+
+            _initialServiceUri = service;
+            Service = service;
+
+            if (options is not null)
+            {
+                _enableTokenRefresh = options.EnableBackgroundTokenRefresh;
+            }
+
+            LoggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+            _logger = LoggerFactory.CreateLogger<AtProtoAgent>();
+
+            _directoryAgent = new DirectoryAgent(httpClientFactory, loggerFactory);
         }
 
         /// <summary>
