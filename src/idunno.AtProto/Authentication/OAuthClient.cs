@@ -1,14 +1,8 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Net.Http;
-using System.Security.Cryptography;
-using System.Text.Json;
-
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-
-using Microsoft.IdentityModel.Tokens;
 
 using IdentityModel.OidcClient;
 using IdentityModel.OidcClient.DPoP;
@@ -43,6 +37,11 @@ namespace idunno.AtProto.Authentication
         }
 
         /// <summary>
+        /// Gets the DPoP key to use on subsequent requests.
+        /// </summary>
+        public string? ProofKey { get; internal set; }
+
+        /// <summary>
         /// Gets the OAuth authorization URI for starting the OAuth flow.
         /// </summary>
         /// <param name="clientId">The client ID</param>
@@ -66,6 +65,8 @@ namespace idunno.AtProto.Authentication
             ArgumentNullException.ThrowIfNull(authority);
             ArgumentNullException.ThrowIfNull(redirectUri);
 
+            ProofKey = JsonWebKeys.CreateRsaJson();
+
             if (scopes is not null)
             {
                 ArgumentOutOfRangeException.ThrowIfZero(scopes.Count());
@@ -80,11 +81,12 @@ namespace idunno.AtProto.Authentication
                 Scope = string.Join(" ", scopes.Where(s => !string.IsNullOrEmpty(s))),
                 RedirectUri = redirectUri.ToString(),
                 LoadProfile = false,
-                LoggerFactory = _loggerFactory
+                LoggerFactory = _loggerFactory,
             };
 
             oidcOptions.Policy.Discovery.DiscoveryDocumentPath = OAuthDiscoveryDocumentEndpoint;
-            oidcOptions.ConfigureDPoP(JsonWebKeys.CreateRsaJson());
+
+            oidcOptions.ConfigureDPoP(ProofKey);
 
             _oidcClient = new OidcClient(oidcOptions);
             _authorizeState = await _oidcClient.PrepareLoginAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -116,6 +118,11 @@ namespace idunno.AtProto.Authentication
         /// <exception cref="OAuthException">Thrown when the internal state of this instance is faulty.</exception>
         public async Task<LoginResult> ProcessOAuth2Response(string data, CancellationToken cancellationToken = default)
         {
+            if (ProofKey is null)
+            {
+                throw new OAuthException("ProofKey is null");
+            }
+
             if (_oidcClient is null)
             {
                 throw new OAuthException("Internal client is null");
@@ -128,14 +135,14 @@ namespace idunno.AtProto.Authentication
 
             LoginResult result = await _oidcClient.ProcessResponseAsync(data, _authorizeState, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            if (!result.IsError)
+            if (result.IsError)
             {
-                Logger.OAuthLoginCompleted(_logger, _logCorrelation);
-            }
-            else
-            {
+                ProofKey = null;
                 Logger.OAuthLoginFailed(_logger, _logCorrelation, result.Error, result.ErrorDescription);
+                return result;
             }
+
+            Logger.OAuthLoginCompleted(_logger, _logCorrelation);
 
             // Validate issuer, date/time, signature using key from discovery doc.
 

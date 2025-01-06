@@ -14,6 +14,8 @@ using idunno.AtProto.OAuth;
 using idunno.Bluesky;
 
 using Samples.Common;
+using IdentityModel;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace Samples.OAuth
 {
@@ -96,6 +98,32 @@ namespace Samples.OAuth
                         LoginResult loginResult = await loginClient.ProcessOAuth2Response(queryString, cancellationToken: cancellationToken);
 
                         Console.WriteLine($"Succeeded : {!loginResult.IsError}");
+
+                        if (!loginResult.IsError)
+                        {
+                            JsonWebToken accessToken = new (loginResult.AccessToken);
+
+                            Uri issuer = new (accessToken.Issuer);
+
+                            if (!issuer.Equals(authorizationServer))
+                            {
+                                ConsoleColor currentColor = Console.ForegroundColor;
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.WriteLine($"Invalid issuer, expected {authorizationServer}, received {accessToken.Issuer}");
+                                Console.ForegroundColor = currentColor;
+                                return;
+                            }
+
+                            if (accessToken.Subject is null || accessToken.Subject != did)
+                            {
+                                ConsoleColor currentColor = Console.ForegroundColor;
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.WriteLine($"Invalid subject, expected {did}, received {accessToken.Subject}");
+                                Console.ForegroundColor = currentColor;
+                                return;
+                            }
+                        }
+
                         Debugger.Break();
                     }
                 }
