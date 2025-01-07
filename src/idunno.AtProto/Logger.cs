@@ -22,6 +22,12 @@ namespace idunno.AtProto
         [LoggerMessage(4, LogLevel.Error, "CreateSession failed {statusCode}")]
         internal static partial void CreateSessionFailed(ILogger logger, HttpStatusCode statusCode);
 
+        [LoggerMessage(6, LogLevel.Debug, "CreateSession with GetSession succeeded with access token for {did} on {service}")]
+        internal static partial void SessionCreatedFromOauthLogin(ILogger logger, string did, Uri service);
+
+        [LoggerMessage(7, LogLevel.Error, "CreateSession with GetSession failed with access token for {did} on {service}, {statusCode} {error} {message}")]
+        internal static partial void SessionCreatedFromOauthLoginFailed(ILogger logger, string did, Uri service, HttpStatusCode statusCode, string? error, string? message);
+
         // Delete session logging
         [LoggerMessage(10, LogLevel.Debug, "Logout called for {did} on {service}")]
         internal static partial void LogoutCalled(ILogger logger, Did? did, Uri service);

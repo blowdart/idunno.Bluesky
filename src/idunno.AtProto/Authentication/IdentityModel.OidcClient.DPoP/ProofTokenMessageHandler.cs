@@ -27,9 +27,9 @@ public class ProofTokenMessageHandler : DelegatingHandler
 
         CreateProofToken(request);
 
-        var response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        HttpResponseMessage response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
-        var dPoPNonce = response.GetDPoPNonce();
+        string? dPoPNonce = response.GetDPoPNonce();
 
         if (dPoPNonce != _nonce)
         {
@@ -65,7 +65,7 @@ public class ProofTokenMessageHandler : DelegatingHandler
             proofRequest.AccessToken = request.Headers.Authorization.Parameter;
         }
 
-        var proof = _proofTokenFactory.CreateProofToken(proofRequest);
+        DPoPProof proof = _proofTokenFactory.CreateProofToken(proofRequest);
 
         request.SetDPoPProofToken(proof.ProofToken);
     }

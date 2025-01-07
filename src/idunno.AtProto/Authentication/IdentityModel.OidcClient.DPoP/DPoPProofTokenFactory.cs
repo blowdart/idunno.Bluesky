@@ -37,7 +37,7 @@ public class DPoPProofTokenFactory
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var jsonWebKey = _jwk;
+        JsonWebKey jsonWebKey = _jwk;
 
         // jwk: representing the public key chosen by the client, in JSON Web Key (JWK) [RFC7517] format,
         // as defined in Section 4.1.3 of [RFC7515]. MUST NOT contain a private key.
@@ -84,8 +84,8 @@ public class DPoPProofTokenFactory
         {
             // ath: hash of the access token. The value MUST be the result of a base64url encoding 
             // the SHA-256 hash of the ASCII encoding of the associated access token's value.
-            var hash = SHA256.HashData(Encoding.ASCII.GetBytes(request.AccessToken));
-            var ath = Base64Url.Encode(hash);
+            byte[] hash = SHA256.HashData(Encoding.ASCII.GetBytes(request.AccessToken));
+            string ath = Base64Url.Encode(hash);
 
             payload.DPoPAccessTokenHash = ath;
         }
@@ -97,7 +97,7 @@ public class DPoPProofTokenFactory
 
         var handler = new JsonWebTokenHandler() { SetDefaultTimesOnTokenCreation = false };
         var key = new SigningCredentials(jsonWebKey, jsonWebKey.Alg);
-        var proofToken = handler.CreateToken(JsonSerializer.Serialize(payload, SourceGenerationContext.Default.DPoPProofPayload), key, header);
+        string proofToken = handler.CreateToken(JsonSerializer.Serialize(payload, SourceGenerationContext.Default.DPoPProofPayload), key, header);
 
         return new DPoPProof { ProofToken = proofToken! };
     }

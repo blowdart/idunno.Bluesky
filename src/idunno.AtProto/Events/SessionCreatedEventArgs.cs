@@ -16,20 +16,40 @@ namespace idunno.AtProto.Events
         /// <param name="handle">The <see cref="Handle"/> the session was created for.</param>
         /// <param name="accessJwt">The access token for the session.</param>
         /// <param name="refreshJwt">The refresh token for the session.</param>
-        /// <exception cref="ArgumentNullException">Thrown if any of the parameters are null</exception>
-        public SessionCreatedEventArgs(Did did, Uri service, Handle handle, string accessJwt, string refreshJwt)
+        /// <param name="authenticationType">The type of authentication that raised this event.</param>
+        /// <param name="dPoPKey">The key used to sign requests when the authentication type is OAuth.</param>
+        /// <param name="dPoPNonce">The nonce used when signing requests if <paramref name="dPoPKey"/> is not null.</param>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="accessJwt"/> or <paramref name="refreshJwt"/> are null or empty.</exception>
+        /// <exception cref="ArgumentNullException">
+        ///   Thrown when <paramref name="did"/>, <paramref name="service"/>, <paramref name="handle"/> or <paramref name="authenticationType"/> is null.
+        /// </exception>
+        public SessionCreatedEventArgs(
+            Did did,
+            Uri service,
+            Handle handle,
+            string accessJwt,
+            string refreshJwt,
+            AuthenticationType authenticationType,
+            string? dPoPKey = null,
+            string? dPoPNonce = null)
         {
             ArgumentNullException.ThrowIfNull(did);
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(handle);
-            ArgumentNullException.ThrowIfNullOrEmpty(accessJwt);
-            ArgumentNullException.ThrowIfNullOrEmpty(refreshJwt);
+            ArgumentNullException.ThrowIfNull(authenticationType);
+
+            ArgumentException.ThrowIfNullOrEmpty(accessJwt);
+            ArgumentException.ThrowIfNullOrEmpty(refreshJwt);
 
             AccessJwt = accessJwt;
             RefreshJwt = refreshJwt;
             Did = did;
             Handle = handle;
             Service = service;
+            AuthenticationType = authenticationType;
+
+            DPoPKey = dPoPKey;
+            DPoPNonce = dPoPNonce;
         }
 
         /// <summary>
@@ -57,5 +77,19 @@ namespace idunno.AtProto.Events
         /// </summary>
         public string RefreshJwt { get; }
 
+        /// <summary>
+        /// Gets the type of authentication that raised this event.
+        /// </summary>
+        public AuthenticationType AuthenticationType { get; }
+
+        /// <summary>
+        /// Gets the key used to sign requests when the authentication type is OAuth
+        /// </summary>
+        public string? DPoPKey { get; }
+
+        /// <summary>
+        /// Gets the nonce used in signing requests when the authentication type is OAuth and DPopKey is not null
+        /// </summary>
+        public string? DPoPNonce { get;  }
     }
 }

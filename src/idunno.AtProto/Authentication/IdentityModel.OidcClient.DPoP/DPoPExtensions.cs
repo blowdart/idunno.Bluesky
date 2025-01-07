@@ -31,8 +31,7 @@ public static class DPoPExtensions
     {
         ArgumentNullException.ThrowIfNull(response);
 
-
-        var nonce = response.Headers
+        string? nonce = response.Headers
             .FirstOrDefault(x => x.Key == OidcConstants.HttpHeaders.DPoPNonce)
             .Value?.FirstOrDefault();
         return nonce;

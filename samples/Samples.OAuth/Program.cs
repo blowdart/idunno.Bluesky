@@ -16,6 +16,7 @@ using idunno.Bluesky;
 using Samples.Common;
 using IdentityModel;
 using Microsoft.IdentityModel.JsonWebTokens;
+using idunno.AtProto.Authentication;
 
 namespace Samples.OAuth
 {
@@ -82,13 +83,18 @@ namespace Samples.OAuth
 
                 await using var callbackServer = new CallbackServer(CallbackServer.GetRandomUnusedPort(), loggerFactory: loggerFactory);
                 {
-                    var loginClient = agent.CreateOAuthClient();
+                    OAuthClient loginClient = agent.CreateOAuthClient();
 
                     Uri startUri = await loginClient.CreateOAuth2StartUri(authorizationServer, clientId, callbackServer.Uri, cancellationToken: cancellationToken);
 
                     Console.WriteLine($"Login URI           : {startUri}");
 
+                    Console.WriteLine($"Opening browser");
+
+                    OAuthClient.OpenBrowser(startUri);
+
                     Console.WriteLine($"Awaiting callback on {callbackServer.Uri}");
+
                     string queryString = await callbackServer.WaitForCallbackAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
 
                     if (!string.IsNullOrEmpty(queryString))
@@ -119,6 +125,15 @@ namespace Samples.OAuth
                                 ConsoleColor currentColor = Console.ForegroundColor;
                                 Console.ForegroundColor = ConsoleColor.Red;
                                 Console.WriteLine($"Invalid subject, expected {did}, received {accessToken.Subject}");
+                                Console.ForegroundColor = currentColor;
+                                return;
+                            }
+
+                            if (!accessToken.GetClaim("scope").ToString().Contains("atproto"))
+                            {
+                                ConsoleColor currentColor = Console.ForegroundColor;
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.WriteLine($"AccessToken does not contain atproto in the scope claim");
                                 Console.ForegroundColor = currentColor;
                                 return;
                             }

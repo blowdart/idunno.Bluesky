@@ -1,6 +1,9 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -21,19 +24,34 @@ namespace idunno.AtProto.Authentication
         private OidcClient? _oidcClient;
         private AuthorizeState? _authorizeState;
 
+        private readonly Func<HttpClient, HttpClient> _clientConfigurationHandler = (httpClient) => { return httpClient; };
+        private readonly Func<HttpClientHandler> _innerFactoryHandler = () => { throw new OAuthException("Handler factory not configured"); };
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger<OAuthClient> _logger;
 
         private readonly Guid _logCorrelation = Guid.NewGuid();
 
-        /// <summary>
-        /// Creates a new instance of <see cref="OAuthClient"/>.
-        /// </summary>
-        /// <param name="loggerFactory">An optional <see cref="ILoggerFactory"/> to use to create loggers.</param>
-        internal OAuthClient(ILoggerFactory? loggerFactory = null)
+        private OAuthClient(ILoggerFactory? loggerFactory = null)
         {
             _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
             _logger = _loggerFactory.CreateLogger<OAuthClient>();
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="OAuthClient"/>.
+        /// </summary>
+        /// <param name="httpClientConfigurator">Func to apply configuration to an <see cref="HttpClient" />.</param>
+        /// <param name="innerHandlerFactory">Func to generate the same <see cref="HttpClientHandler"/> used in factory configuration used elsewhere.</param>
+        /// <param name="loggerFactory">An optional <see cref="ILoggerFactory"/> to use to create loggers.</param>
+        internal OAuthClient(
+            Func<HttpClient, HttpClient> httpClientConfigurator,
+            Func<HttpClientHandler> innerHandlerFactory,
+            ILoggerFactory? loggerFactory = null) : this(loggerFactory)
+        {
+            ArgumentNullException.ThrowIfNull(httpClientConfigurator);
+            ArgumentNullException.ThrowIfNull(innerHandlerFactory);
+            _clientConfigurationHandler = httpClientConfigurator;
+            _innerFactoryHandler = innerHandlerFactory;
         }
 
         /// <summary>
@@ -82,10 +100,14 @@ namespace idunno.AtProto.Authentication
                 RedirectUri = redirectUri.ToString(),
                 LoadProfile = false,
                 LoggerFactory = _loggerFactory,
+                HttpClientFactory = (oidcOptions) =>
+                {
+                    var httpClient = new HttpClient(new ProofTokenMessageHandler(ProofKey, _innerFactoryHandler()), true);
+                    return _clientConfigurationHandler(httpClient);
+                }
             };
 
             oidcOptions.Policy.Discovery.DiscoveryDocumentPath = OAuthDiscoveryDocumentEndpoint;
-
             oidcOptions.ConfigureDPoP(ProofKey);
 
             _oidcClient = new OidcClient(oidcOptions);
@@ -145,8 +167,35 @@ namespace idunno.AtProto.Authentication
             Logger.OAuthLoginCompleted(_logger, _logCorrelation);
 
             // Validate issuer, date/time, signature using key from discovery doc.
+            // Change return type to be my own login result
 
             return result;
+        }
+
+        /// <summary>
+        /// Opens a browser to the specified <paramref name="uri"/>
+        /// </summary>
+        /// <param name="uri">The uri to open.</param>
+        public static void OpenBrowser(Uri uri)
+        {
+            ArgumentNullException.ThrowIfNull(uri);
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = uri.ToString(),
+                    UseShellExecute = true
+                });
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                Process.Start("xdg-open", uri.ToString());
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                Process.Start("open", uri.ToString());
+            }
         }
     }
 }

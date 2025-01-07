@@ -548,12 +548,20 @@ namespace idunno.AtProto
                     _sessionRefreshTimer ??= new();
                     StartTokenRefreshTimer();
 
+                    AuthenticationType authenticationType = AuthenticationType.HandlePassword;
+
+                    if (credentials.AuthFactorToken is not null)
+                    {
+                        authenticationType = AuthenticationType.HandlePasswordToken;
+                    }
+
                     var sessionCreatedEventArgs = new SessionCreatedEventArgs(
                         createSessionResult.Result.Did,
                         service,
                         createSessionResult.Result.Handle,
                         createSessionResult.Result.AccessJwt,
-                        createSessionResult.Result.RefreshJwt);
+                        createSessionResult.Result.RefreshJwt,
+                        authenticationType);
                     OnSessionCreated(sessionCreatedEventArgs);
                 }
 

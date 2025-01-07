@@ -22,7 +22,7 @@ public static class JsonWebKeys
         {
             var rsaKey = new RsaSecurityKey(rsa);
 
-            var jwk = JsonWebKeyConverter.ConvertFromSecurityKey(rsaKey);
+            JsonWebKey jwk = JsonWebKeyConverter.ConvertFromSecurityKey(rsaKey);
             jwk.Alg = algorithm;
 
             return jwk;
@@ -42,10 +42,10 @@ public static class JsonWebKeys
     /// </summary>
     public static JsonWebKey CreateECDsa(string algorithm = OidcConstants.Algorithms.Asymmetric.ES256)
     {
-        using (ECDsa ecdsa = ECDsa.Create(GetCurveFromCrvValue(GetCurveNameFromSigningAlgorithm(algorithm))))
+        using (ECDsa eCDsa = ECDsa.Create(GetCurveFromCrvValue(GetCurveNameFromSigningAlgorithm(algorithm))))
         {
 
-            var ecKey = new ECDsaSecurityKey(ecdsa);
+            var ecKey = new ECDsaSecurityKey(eCDsa);
             JsonWebKey jwk = JsonWebKeyConverter.ConvertFromSecurityKey(ecKey);
             jwk.Alg = algorithm;
 

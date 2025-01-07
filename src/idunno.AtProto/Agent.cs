@@ -20,6 +20,10 @@ namespace idunno.AtProto
 
         private readonly ServiceProvider? _serviceProvider;
 
+        private readonly string? _httpUserAgent;
+        private readonly TimeSpan? _timeout;
+        private readonly Uri? _proxyUri;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Agent"/> class.
         /// </summary>
@@ -28,60 +32,15 @@ namespace idunno.AtProto
         /// <param name="timeout">The default HTTP timeout to use, if any.</param>
         protected Agent(Uri? proxyUri = null, string? httpUserAgent = null, TimeSpan? timeout = null)
         {
+            _proxyUri = proxyUri;
+            _httpUserAgent = httpUserAgent;
+            _timeout = timeout;
+
             IServiceCollection services = new ServiceCollection();
 
-            services.AddHttpClient(HttpClientName, client =>
-            {
-                client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
-                client.DefaultRequestVersion = HttpVersion.Version20;
-
-                if (httpUserAgent is null)
-                {
-                    client.DefaultRequestHeaders.UserAgent.ParseAdd("idunno.AtProto/" + typeof(Agent).Assembly.GetName().Version);
-                }
-                else
-                {
-                    client.DefaultRequestHeaders.UserAgent.ParseAdd(httpUserAgent);
-                }
-
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(MediaTypeNames.Application.Json));
-
-                if (timeout is null)
-                {
-                    client.Timeout = new(0, 5, 0);
-                }
-                else
-                {
-                    client.Timeout = (TimeSpan)timeout;
-                }
-            })
-            .ConfigurePrimaryHttpMessageHandler(() =>
-            {
-                if (proxyUri is not null)
-                {
-                    return new HttpClientHandler
-                    {
-                        Proxy = new WebProxy
-                        {
-                            Address = proxyUri,
-                            BypassProxyOnLocal = true,
-                            UseDefaultCredentials = true
-                        },
-                        UseProxy = true,
-                        CheckCertificateRevocationList = false,
-
-                        AutomaticDecompression = DecompressionMethods.All,
-                    };
-                }
-                else
-                {
-                    return new HttpClientHandler
-                    {
-                        AutomaticDecompression = DecompressionMethods.All
-                    };
-                }
-            });
+            services
+                .AddHttpClient(HttpClientName, client => InternalConfigureHttpClient(client, httpUserAgent, timeout))
+                .ConfigurePrimaryHttpMessageHandler(() => BuildProxyClientHandler(proxyUri));
 
             _serviceProvider = services.BuildServiceProvider();
             HttpClientFactory = _serviceProvider.GetService<IHttpClientFactory>()!;
@@ -111,6 +70,11 @@ namespace idunno.AtProto
         protected HttpClient HttpClient => HttpClientFactory.CreateClient(HttpClientName);
 
         /// <summary>
+        /// Gets a new HttpClientHandler configured with any proxy settings passed during the agent configuration.
+        /// </summary>
+        protected HttpClientHandler HttpClientHandler => BuildProxyClientHandler(_proxyUri);
+
+        /// <summary>
         /// Gets a value indicating whether the agent has an active session.
         /// </summary>
         public virtual bool IsAuthenticated { get; }
@@ -138,6 +102,83 @@ namespace idunno.AtProto
         {
             Dispose(true);
             GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Configures an HttpClient with the initialization parameters specified when creating the agent.
+        /// </summary>
+        /// <param name="client">The <see cref="HttpClient"/> to configure.</param>
+        /// <returns>The configured <see cref="HttpClient"/>.</returns>
+        protected HttpClient ConfigureHttpClient(HttpClient client)
+        {
+            InternalConfigureHttpClient(client, _httpUserAgent, _timeout);
+
+            return client;
+        }
+
+        private static void InternalConfigureHttpClient(HttpClient client, string? httpUserAgent = null, TimeSpan? timeout = null)
+        {
+            ArgumentNullException.ThrowIfNull(client);
+
+            client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
+            client.DefaultRequestVersion = HttpVersion.Version20;
+
+            if (httpUserAgent is null)
+            {
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("idunno.AtProto/" + typeof(Agent).Assembly.GetName().Version);
+            }
+            else
+            {
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(httpUserAgent);
+            }
+
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(MediaTypeNames.Application.Json));
+
+            if (timeout is null)
+            {
+                client.Timeout = new(0, 5, 0);
+            }
+            else
+            {
+                client.Timeout = (TimeSpan)timeout;
+            }
+        }
+
+        /// <summary>
+        /// Creates a client handler to configure proxy setup with the initialization parameters specified when creating the agent.
+        /// </summary>
+        /// <returns>An <see cref="HttpClientHandler"/> configured to any proxy specified when the agent was created.</returns>
+        protected HttpClientHandler CreateProxyHttpClientHandler()
+        {
+            return BuildProxyClientHandler(_proxyUri);
+        }
+
+        private static HttpClientHandler BuildProxyClientHandler(Uri? proxyUri)
+        { 
+            if (proxyUri is not null)
+            {
+                return new HttpClientHandler
+                {
+                    Proxy = new WebProxy
+                    {
+                        Address = proxyUri,
+                        BypassProxyOnLocal = true,
+                        UseDefaultCredentials = true
+                    },
+                    UseProxy = true,
+                    CheckCertificateRevocationList = false,
+
+                    AutomaticDecompression = DecompressionMethods.All,
+                };
+            }
+            else
+            {
+                return new HttpClientHandler
+                {
+                    AutomaticDecompression = DecompressionMethods.All
+                };
+            }
         }
     }
 }
