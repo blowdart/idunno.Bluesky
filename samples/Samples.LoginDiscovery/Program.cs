@@ -5,11 +5,11 @@ using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Help;
 using System.CommandLine.Parsing;
-using System.Net;
 
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
+
 using Samples.Common;
 
 namespace Samples.LoginDiscovery
@@ -105,14 +105,22 @@ namespace Samples.LoginDiscovery
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
 
-            // Get an HttpClient configured to use a proxy, if proxyUri is not null.
-            using (HttpClient? httpClient = Helpers.CreateOptionalHttpClient(proxyUri))
+            // If a proxy is being used turn off certificate revocation checks.
+            //
+            // WARNING: this setting can introduce security vulnerabilities.
+            // The assumption in these samples is that any proxy is a debugging proxy,
+            // which tend to not support CRLs in the proxy HTTPS certificates they generate.
+            bool checkCertificateRevocationList = true;
+            if (proxyUri is not null)
+            {
+                checkCertificateRevocationList = false;
+            }
 
             // Change the log level in the ConfigureConsoleLogging() to enable logging
             using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
 
             // The Login APIs on the BlueskyAgent do all this for you behind the scenes, this sample just shows the steps.
-            using (var agent = new AtProtoAgent(new Uri("https://bsky.social"), httpClient: httpClient, loggerFactory : loggerFactory))
+            using (var agent = new AtProtoAgent(new Uri("https://bsky.social"), proxyUri: proxyUri, checkCertificateRevocationList: checkCertificateRevocationList, loggerFactory : loggerFactory))
             {
                 var did = await agent.ResolveHandle(handle, CancellationToken.None);
 

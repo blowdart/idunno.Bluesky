@@ -17,10 +17,12 @@ using idunno.AtProto.Server;
 using idunno.AtProto.Events;
 using Blob = idunno.AtProto.Repo.Blob;
 
-using idunno.DidPlcDirectory;
 using idunno.AtProto.Models;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo.Models;
+using idunno.AtProto.Authentication;
+
+using idunno.DidPlcDirectory;
 
 namespace idunno.AtProto
 {
@@ -50,16 +52,28 @@ namespace idunno.AtProto
         /// <param name="service">The URI of the AtProto service to connect to.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/>, if any, to use when creating loggers.</param>
         /// <param name="proxyUri">The proxy URI to use, if any.</param>
+        /// <param name="checkCertificateRevocationList">Flag indicating whether certificate revocation lists should be checked. Defaults to <see langword="true" />.</param>
         /// <param name="httpUserAgent">The user agent string to use, if any.</param>
         /// <param name="timeout">The default HTTP timeout to use, if any.</param>
         /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
+        /// <remarks>
+        /// <para>
+        /// Settings <paramref name="checkCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
+        /// false if you are using a debugging proxy which does not support CRLs.
+        /// </para>
+        /// </remarks>
         public AtProtoAgent(
             Uri service,
             ILoggerFactory? loggerFactory = default,
             Uri? proxyUri = null,
+            bool checkCertificateRevocationList = true,
             string? httpUserAgent = null,
             TimeSpan? timeout = null,
-            AtProtoAgentOptions? options = null) : base(proxyUri, httpUserAgent, timeout)
+            AtProtoAgentOptions? options = null) : base(
+                proxyUri: proxyUri,
+                checkCertificateRevocationList: checkCertificateRevocationList,
+                httpUserAgent: httpUserAgent,
+                timeout: timeout)
         {
             ArgumentNullException.ThrowIfNull(service);
 
@@ -74,7 +88,12 @@ namespace idunno.AtProto
             LoggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
             _logger = LoggerFactory.CreateLogger<AtProtoAgent>();
 
-            _directoryAgent = new DirectoryAgent(loggerFactory, proxyUri, httpUserAgent, timeout);
+            _directoryAgent = new DirectoryAgent(
+                loggerFactory: loggerFactory,
+                proxyUri: proxyUri,
+                checkCertificateRevocationList: checkCertificateRevocationList,
+                httpUserAgent: httpUserAgent,
+                timeout: timeout);
         }
 
         /// <summary>
@@ -145,9 +164,46 @@ namespace idunno.AtProto
         {
             get
             {
-                if (IsAuthenticated)
+                if (Session is not null)
                 {
                     return Session.Did;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// Gets the current session's access token if the agent is authenticated and the access token has not expired, otherwise returns null.
+        /// </summary>
+        protected string? AccessToken
+        {
+            get
+            {
+                if (IsAuthenticated)
+                {
+                    return Session.AccessCredentials.AccessJwt;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the current session's refresh token if any, otherwise returns null.
+        /// </summary>
+        protected string? RefreshToken
+        {
+            get
+            {
+                if (Session is not null)
+                {
+                    return Session.AccessCredentials.RefreshJwt;
                 }
                 else
                 {
@@ -166,43 +222,7 @@ namespace idunno.AtProto
         {
             get
             {
-                return Session is not null && Session.HasAccessToken && Session.AccessJwtExpiresOn > DateTime.Now;
-            }
-        }
-
-        /// <summary>
-        /// Gets the current session's access token if the agent is authenticated and the access token has not expired, otherwise returns null.
-        /// </summary>
-        protected string? AccessToken
-        {
-            get
-            {
-                if (IsAuthenticated)
-                {
-                    return Session.AccessJwt;
-                }
-                else
-                {
-                    return null;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Gets the current session's refresh token if any, otherwise returns null.
-        /// </summary>
-        protected string? RefreshToken
-        {
-            get
-            {
-                if (Session is not null)
-                {
-                    return Session.RefreshJwt;
-                }
-                else
-                {
-                    return null;
-                }
+                return Session is not null && Session.AccessCredentials is not null && Session.AccessCredentials.AccessJwtExpiresOn > DateTimeOffset.UtcNow;
             }
         }
 
@@ -499,6 +519,7 @@ namespace idunno.AtProto
                     return new AtProtoHttpResult<bool>(
                         false,
                         HttpStatusCode.NotFound,
+                        null,
                         new AtErrorDetail() { Error = "HandleNotResolvable", Message = "Handle could not be resolved to a DID." });
                 }
 
@@ -514,6 +535,7 @@ namespace idunno.AtProto
                     return new AtProtoHttpResult<bool>(
                         false,
                         HttpStatusCode.NotFound,
+                        null,
                         new AtErrorDetail() { Error = "PdsNotResolvable", Message = $"Could not resolve a PDS for {userDid}." });
                 }
 
@@ -559,15 +581,15 @@ namespace idunno.AtProto
                         createSessionResult.Result.Did,
                         service,
                         createSessionResult.Result.Handle,
-                        createSessionResult.Result.AccessJwt,
-                        createSessionResult.Result.RefreshJwt,
-                        authenticationType);
+                        authenticationType,
+                        new(createSessionResult.Result.AccessJwt, createSessionResult.Result.RefreshJwt));
                     OnSessionCreated(sessionCreatedEventArgs);
                 }
 
                 return new AtProtoHttpResult<bool>() {
                     Result = true,
                     StatusCode = createSessionResult.StatusCode,
+                    HttpResponseHeaders = createSessionResult.HttpResponseHeaders,
                     AtErrorDetail = createSessionResult.AtErrorDetail,
                     RateLimit = createSessionResult.RateLimit};
             }
@@ -585,6 +607,7 @@ namespace idunno.AtProto
                 {
                     Result = false,
                     StatusCode = createSessionResult.StatusCode,
+                    HttpResponseHeaders = createSessionResult.HttpResponseHeaders,
                     AtErrorDetail = createSessionResult.AtErrorDetail,
                     RateLimit = createSessionResult.RateLimit
                 };
@@ -600,11 +623,11 @@ namespace idunno.AtProto
         /// <param name="service">The service to authenticate to.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="identifier" /> or <paramref name="password"/> is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="identifier" /> or <paramref name="password"/> is null or empty.</exception>
         public async Task<AtProtoHttpResult<bool>> Login(string identifier, string password, string? emailAuthFactor = null, Uri? service = null, CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(identifier);
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(password);
+            ArgumentException.ThrowIfNullOrWhiteSpace(identifier);
+            ArgumentException.ThrowIfNullOrWhiteSpace(password);
 
             return await Login(new Credentials(identifier, password, emailAuthFactor), service, cancellationToken).ConfigureAwait(false);
         }
@@ -626,7 +649,7 @@ namespace idunno.AtProto
             }
             else
             {
-                if (Session.RefreshJwt is null)
+                if (Session.AccessCredentials.RefreshJwt is null)
                 {
                     sessionErrorFlags |= SessionConfigurationErrorType.MissingRefreshToken;
                 }
@@ -650,7 +673,7 @@ namespace idunno.AtProto
             Uri currentSessionService = Session!.Service!;
 
             AtProtoHttpResult<EmptyResponse> deleteSessionResult =
-                await AtProtoServer.DeleteSession(Session!.RefreshJwt!, currentSessionService, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
+                await AtProtoServer.DeleteSession(Session.AccessCredentials.RefreshJwt!, currentSessionService, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
 
             lock (_session_SyncLock)
             {
@@ -697,7 +720,7 @@ namespace idunno.AtProto
                 sessionErrorFlags |= SessionConfigurationErrorType.NullSession;
             }
 
-            if (Session is not null && Session.RefreshJwt is null)
+            if (Session is not null && Session.AccessCredentials.RefreshJwt is null)
             {
                 sessionErrorFlags |= SessionConfigurationErrorType.MissingRefreshToken;
             }
@@ -719,21 +742,23 @@ namespace idunno.AtProto
                 };
             }
 
-            return await RefreshSession(Session!.RefreshJwt!, Session.Service!, cancellationToken).ConfigureAwait(false);
+            return await RefreshSession(Session!.AccessCredentials, Session.Service!, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
-        /// Refreshes the session specified by the <paramref name="refreshJwt"/> on the <paramref name="service"/>
+        /// Refreshes the session specified by the <paramref name="accessCredentials"/> on the <paramref name="service"/>
         /// </summary>
-        /// <param name="refreshJwt">The refresh token to use to refresh the session.</param>
+        /// <param name="accessCredentials">The refresh token to use to refresh the session.</param>
         /// <param name="service">The service to refresh the session on.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="refreshJwt"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="accessCredentials"/>'s RefreshJwt property is null or whitespace.</exception>
         /// <exception cref="SecurityTokenValidationException">Thrown when the token issued by <paramref name="service"/> cannot be validated.</exception>
-        public async Task<bool> RefreshSession(string refreshJwt, Uri? service = null, CancellationToken cancellationToken = default)
+        public async Task<bool> RefreshSession(AccessCredentials accessCredentials, Uri? service = null, CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(refreshJwt);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
+            ArgumentException.ThrowIfNullOrWhiteSpace(accessCredentials.RefreshJwt);
 
             service ??= Service;
 
@@ -756,7 +781,7 @@ namespace idunno.AtProto
             AtProtoHttpResult<RefreshSessionResponse> refreshSessionResult;
             try
             {
-                refreshSessionResult = await AtProtoServer.RefreshSession(refreshJwt, service, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
+                refreshSessionResult = await AtProtoServer.RefreshSession(accessCredentials.RefreshJwt, service, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -793,7 +818,7 @@ namespace idunno.AtProto
                 {
                     Logger.RefreshSessionSucceeded(_logger, Session.Did, service);
 
-                    Session.UpdateAccessTokens(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.RefreshJwt);
+                    Session.AccessCredentials.UpdateAccessTokens(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.RefreshJwt);
 
                     _sessionRefreshTimer ??= new();
                     StartTokenRefreshTimer();
@@ -801,8 +826,7 @@ namespace idunno.AtProto
                     var sessionRefreshedEventArgs = new SessionRefreshedEventArgs(
                         Session.Did,
                         service,
-                        refreshSessionResult.Result.AccessJwt,
-                        refreshSessionResult.Result.RefreshJwt);
+                        Session.AccessCredentials);
 
                     OnSessionRefreshed(sessionRefreshedEventArgs);
 
@@ -820,10 +844,10 @@ namespace idunno.AtProto
         /// <param name="service">The service <see cref="Uri"/> the session access token was generated from.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when the <paramref name="accessJwt"/> is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="accessJwt"/> is null or empty.</exception>
         public async Task<AtProtoHttpResult<GetSessionResponse>> GetSession(string accessJwt, Uri? service = null, CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(accessJwt);
+            ArgumentException.ThrowIfNullOrEmpty(accessJwt);
 
             service ??= Session!.Service!;
 
@@ -923,13 +947,12 @@ namespace idunno.AtProto
                     _sessionRefreshTimer ??= new();
                     StartTokenRefreshTimer();
 
-                    if (wereTokensRefreshed && restoredSession.AccessJwt is not null && restoredSession.RefreshJwt is not null)
+                    if (wereTokensRefreshed && restoredSession.AccessCredentials.AccessJwt is not null && restoredSession.AccessCredentials.RefreshJwt is not null)
                     {
                         var sessionRefreshedEventArgs = new SessionRefreshedEventArgs(
-                            restoredSession.Did,
+                            Session.Did,
                             service,
-                            restoredSession.AccessJwt,
-                            restoredSession.RefreshJwt);
+                            Session.AccessCredentials);
 
                         OnSessionRefreshed(sessionRefreshedEventArgs);
                     }
@@ -1212,6 +1235,7 @@ namespace idunno.AtProto
                     Result = response.Result,
                     AtErrorDetail = response.AtErrorDetail,
                     StatusCode = response.StatusCode,
+                    HttpResponseHeaders = response.HttpResponseHeaders,
                     RateLimit = response.RateLimit
                 };
             }
@@ -1222,6 +1246,7 @@ namespace idunno.AtProto
                     Result = null,
                     AtErrorDetail = response.AtErrorDetail,
                     StatusCode = response.StatusCode,
+                    HttpResponseHeaders = response.HttpResponseHeaders,
                     RateLimit = response.RateLimit
                 };
             }
@@ -1698,7 +1723,7 @@ namespace idunno.AtProto
                 if (!cancellationToken.IsCancellationRequested)
                 {
                     Logger.UpdateTokensCalled(_logger, Session.Did, Session.Service!);
-                    Session.UpdateAccessTokens(accessJwt, refreshJwt);
+                    Session.AccessCredentials.UpdateAccessTokens(accessJwt, refreshJwt);
                 }
             }
             else

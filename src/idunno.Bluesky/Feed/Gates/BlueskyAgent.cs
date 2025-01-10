@@ -231,6 +231,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ThreadGate>(
                     recordResponse.Result.Value,
                     recordResponse.StatusCode,
+                    recordResponse.HttpResponseHeaders,
                     recordResponse.AtErrorDetail,
                     recordResponse.RateLimit);
             }
@@ -239,6 +240,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ThreadGate>(
                     null,
                     recordResponse.StatusCode,
+                    recordResponse.HttpResponseHeaders,
                     recordResponse.AtErrorDetail,
                     recordResponse.RateLimit);
             }
@@ -405,6 +407,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PostGate>(
                     recordResponse.Result.Value,
                     recordResponse.StatusCode,
+                    recordResponse.HttpResponseHeaders,
                     recordResponse.AtErrorDetail,
                     recordResponse.RateLimit);
             }
@@ -413,6 +416,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PostGate>(
                     null,
                     recordResponse.StatusCode,
+                    recordResponse.HttpResponseHeaders,
                     recordResponse.AtErrorDetail,
                     recordResponse.RateLimit);
             }

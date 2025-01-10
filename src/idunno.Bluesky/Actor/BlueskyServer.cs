@@ -122,6 +122,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<IReadOnlyCollection<ProfileViewDetailed>>(
                     new Collection<ProfileViewDetailed>(response.Result.Profiles).AsReadOnly(), 
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -130,6 +131,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<IReadOnlyCollection<ProfileViewDetailed>>(
                     new Collection<ProfileViewDetailed>().AsReadOnly(),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -172,12 +174,13 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<Preferences>(
                     new Preferences(response.Result.Preferences, includeBlueskyModerationLabeler),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
             else
             {
-                return new AtProtoHttpResult<Preferences>(new Preferences(), response.StatusCode, response.AtErrorDetail,response.RateLimit);
+                return new AtProtoHttpResult<Preferences>(new Preferences(), response.StatusCode, response.HttpResponseHeaders, response.AtErrorDetail,response.RateLimit);
             }
         }
 
@@ -230,6 +233,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>(
                     new PagedViewReadOnlyCollection<ProfileView>(new List<ProfileView>(response.Result.Actors).AsReadOnly(), response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -238,6 +242,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>(
                     new PagedViewReadOnlyCollection<ProfileView>(),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -293,6 +298,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>(
                     new PagedViewReadOnlyCollection<ProfileView>(new List<ProfileView>(response.Result.Actors).AsReadOnly(), response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -301,6 +307,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>(
                     new PagedViewReadOnlyCollection<ProfileView>(),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -354,6 +361,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileViewBasic>>(
                     new PagedViewReadOnlyCollection<ProfileViewBasic>(new List<ProfileViewBasic>(response.Result.Actors).AsReadOnly()),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -362,6 +370,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileViewBasic>>(
                     new PagedViewReadOnlyCollection<ProfileViewBasic>(),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
+
 using idunno.AtProto.Server;
 
 namespace idunno.AtProto.Models
@@ -11,7 +12,12 @@ namespace idunno.AtProto.Models
     /// </summary>
     public abstract record BaseSessionResponse
     {
-        private protected BaseSessionResponse(Handle handle, Did did, DidDocument? didDoc, bool? active, AccountStatus? accountStatus)
+        private protected BaseSessionResponse(
+            Handle handle,
+            Did did,
+            DidDocument? didDoc,
+            bool? active,
+            AccountStatus? accountStatus)
         {
             ArgumentNullException.ThrowIfNull(handle);
             ArgumentNullException.ThrowIfNull(did);

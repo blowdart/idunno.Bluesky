@@ -7,9 +7,11 @@ using System.CommandLine.Help;
 using System.CommandLine.Parsing;
 using System.Net;
 
+using Microsoft.Extensions.Logging;
+
 using idunno.AtProto;
 using idunno.AtProto.Server;
-using Microsoft.Extensions.Logging;
+
 using Samples.Common;
 
 namespace Samples.SessionEvents
@@ -87,7 +89,7 @@ namespace Samples.SessionEvents
             ArgumentNullException.ThrowIfNullOrEmpty(password);
 
             // This approximates a token store for the purposes of the sample.
-            TokenStore? persistedLoginState = null;
+            StoredAuthenticationState? persistedLoginState = null;
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
             // proxyUri = new Uri("http://localhost:8866");
@@ -95,13 +97,21 @@ namespace Samples.SessionEvents
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
 
-            // Get an HttpClient configured to use a proxy, if proxyUri is not null.
-            using (HttpClient? httpClient = Helpers.CreateOptionalHttpClient(proxyUri))
+            // If a proxy is being used turn off certificate revocation checks.
+            //
+            // WARNING: this setting can introduce security vulnerabilities.
+            // The assumption in these samples is that any proxy is a debugging proxy,
+            // which tend to not support CRLs in the proxy HTTPS certificates they generate.
+            bool checkCertificateRevocationList = true;
+            if (proxyUri is not null)
+            {
+                checkCertificateRevocationList = false;
+            }
 
             // Change the log level in the ConfigureConsoleLogging() to enable logging
             using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
 
-            using (var agent = new AtProtoAgent(new Uri("https://bsky.social"), httpClient, loggerFactory: loggerFactory))
+            using (var agent = new AtProtoAgent(new Uri("https://bsky.social"), proxyUri: proxyUri, checkCertificateRevocationList: checkCertificateRevocationList, loggerFactory: loggerFactory))
             {
                 agent.SessionCreated += (sender, e) =>
                 {
@@ -117,7 +127,13 @@ namespace Samples.SessionEvents
                     //
                     // If you save the access token RestoreSession() will try to use that first, before
                     // falling back to using the refresh token to create a new authenticated session.
-                    persistedLoginState = new TokenStore(e.Did, e.AccessJwt, e.RefreshJwt, e.Service!);
+                    persistedLoginState = new StoredAuthenticationState(
+                        did: e.Did,
+                        service: e.Service!,
+                        accessToken: e.AccessJwt,
+                        refreshToken: e.RefreshJwt,
+                        dPoPKey: e.DPoPKey,
+                        dPoPNonce : e.DPoPNonce);
 
                     Console.WriteLine($"EVENT: Session created for : {e.Handle} ({e.Did}) on {e.Service}");
                 };
@@ -131,7 +147,13 @@ namespace Samples.SessionEvents
                     //
                     // If you save the access token RestoreSession() will try to use that first, before
                     // falling back to using the refresh token to create a new authenticated session.
-                    persistedLoginState = new TokenStore(e.Did, e.AccessJwt, e.RefreshJwt, e.Service!);
+                    persistedLoginState = new StoredAuthenticationState(
+                        did: e.Did,
+                        service: e.Service!,
+                        accessToken: e.AccessJwt,
+                        refreshToken: e.RefreshJwt,
+                        dPoPKey: e.DPoPKey,
+                        dPoPNonce: e.DPoPNonce);
 
                     Console.WriteLine($"EVENT: Session refreshed for : {e.Did}");
                 };
@@ -295,14 +317,16 @@ namespace Samples.SessionEvents
     /// <summary>
     /// An in-memory store for session information.
     /// </summary>
-    sealed record TokenStore
+    sealed record StoredAuthenticationState
     {
-        public TokenStore(Did did, string accessToken, string refreshToken, Uri service)
+        public StoredAuthenticationState(Did did, Uri service, string accessToken, string refreshToken, string? dPoPKey = null, string? dPoPNonce = null)
         {
             Did = did;
             AccessToken = accessToken;
             RefreshToken = refreshToken;
             Service = service;
+            DPoPKey = dPoPKey;
+            DPoPNonce = dPoPNonce;
         }
 
         /// <summary>
@@ -325,5 +349,22 @@ namespace Samples.SessionEvents
         /// The <see cref="Uri"/> of the service that issued the tokens.
         /// </summary>
         public Uri Service { get; set; }
+
+        /// <summary>
+        /// The signing key to use when making API requests.
+        /// </summary>
+        /// <remarks>
+        ///<para>This is only applicable if OAuth authentication was used to create the <see cref="AccessToken"/> and <see cref="RefreshToken"/>.</para>
+        /// </remarks>
+        public string? DPoPKey { get; set; }
+
+        /// <summary>
+        /// The nonce to use when making signed API requests.
+        /// </summary>
+        /// <remarks>
+        ///<para>This is only applicable if OAuth authentication was used to create the <see cref="AccessToken"/> and <see cref="RefreshToken"/>.</para>
+        /// </remarks>
+        public string? DPoPNonce { get; set; }
+
     }
 }

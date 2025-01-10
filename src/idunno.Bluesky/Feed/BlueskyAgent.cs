@@ -367,7 +367,7 @@ namespace idunno.Bluesky
 
             AtProtoHttpResult<IReadOnlyCollection<PostView>> postViewsResult =
                 await GetPosts(
-                    new List<AtUri>() { uri },
+                    [uri],
                     subscribedLabelers: subscribedLabelers,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -378,6 +378,7 @@ namespace idunno.Bluesky
                     return new AtProtoHttpResult<PostView>(
                         postViewsResult.Result.ElementAt(0),
                         postViewsResult.StatusCode,
+                        postViewsResult.HttpResponseHeaders,
                         postViewsResult.AtErrorDetail,
                         postViewsResult.RateLimit);
                 }
@@ -386,6 +387,7 @@ namespace idunno.Bluesky
                     return new AtProtoHttpResult<PostView>(
                         null,
                         postViewsResult.StatusCode,
+                        postViewsResult.HttpResponseHeaders,
                         postViewsResult.AtErrorDetail,
                         postViewsResult.RateLimit);
                 }
@@ -395,6 +397,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PostView>(
                     null,
                     postViewsResult.StatusCode,
+                    postViewsResult.HttpResponseHeaders,
                     postViewsResult.AtErrorDetail,
                     postViewsResult.RateLimit);
             }
@@ -422,6 +425,7 @@ namespace idunno.Bluesky
                     return new AtProtoHttpResult<StrongReference>(
                         getPostResult.Result.StrongReference,
                         getPostResult.StatusCode,
+                        getPostResult.HttpResponseHeaders,
                         getPostResult.AtErrorDetail,
                         getPostResult.RateLimit);
 
@@ -431,6 +435,7 @@ namespace idunno.Bluesky
                     return new AtProtoHttpResult<StrongReference>(
                         getPostResult.Result.Value.Reply.Parent,
                         getPostResult.StatusCode,
+                        getPostResult.HttpResponseHeaders,
                         getPostResult.AtErrorDetail,
                         getPostResult.RateLimit);
                 }
@@ -440,6 +445,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<StrongReference>(
                     null,
                     getPostResult.StatusCode,
+                    getPostResult.HttpResponseHeaders,
                     getPostResult.AtErrorDetail,
                     getPostResult.RateLimit);
             }
@@ -467,6 +473,7 @@ namespace idunno.Bluesky
                     return new AtProtoHttpResult<StrongReference>(
                         getPostResult.Result.StrongReference,
                         getPostResult.StatusCode,
+                        getPostResult.HttpResponseHeaders,
                         getPostResult.AtErrorDetail,
                         getPostResult.RateLimit);
 
@@ -476,6 +483,7 @@ namespace idunno.Bluesky
                     return new AtProtoHttpResult<StrongReference>(
                         getPostResult.Result.Value.Reply.Root,
                         getPostResult.StatusCode,
+                        getPostResult.HttpResponseHeaders,
                         getPostResult.AtErrorDetail,
                         getPostResult.RateLimit);
                 }
@@ -485,6 +493,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<StrongReference>(
                     null,
                     getPostResult.StatusCode,
+                    getPostResult.HttpResponseHeaders,
                     getPostResult.AtErrorDetail,
                     getPostResult.RateLimit);
             }
@@ -512,6 +521,7 @@ namespace idunno.Bluesky
                     return new AtProtoHttpResult<ReplyReferences>(
                         new ReplyReferences(getPostRecordResult.Result.StrongReference, getPostRecordResult.Result.StrongReference),
                         getPostRecordResult.StatusCode,
+                        getPostRecordResult.HttpResponseHeaders,
                         getPostRecordResult.AtErrorDetail,
                         getPostRecordResult.RateLimit);
                 }
@@ -520,6 +530,7 @@ namespace idunno.Bluesky
                     return new AtProtoHttpResult<ReplyReferences>(
                         new ReplyReferences(getPostRecordResult.Result.StrongReference, getPostRecordResult.Result.Value.Reply.Root),
                         getPostRecordResult.StatusCode,
+                        getPostRecordResult.HttpResponseHeaders,
                         getPostRecordResult.AtErrorDetail,
                         getPostRecordResult.RateLimit);
                 }
@@ -529,6 +540,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ReplyReferences>(
                     null,
                     getPostRecordResult.StatusCode,
+                    getPostRecordResult.HttpResponseHeaders,
                     getPostRecordResult.AtErrorDetail,
                     getPostRecordResult.RateLimit);
             }

@@ -67,7 +67,12 @@ namespace idunno.Bluesky
             }
 
             // Flatten the result a little for ease of use.
-            return new(unreadCount, response.StatusCode,  response.AtErrorDetail);
+            return new(
+                unreadCount,
+                response.StatusCode,
+                response.HttpResponseHeaders,
+                response.AtErrorDetail,
+                response.RateLimit);
         }
 
         /// <summary>
@@ -142,6 +147,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<NotificationCollection>(
                     new NotificationCollection(response.Result.Notifications, response.Result.Cursor, response.Result.Priority, response.Result.SeenAt),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -150,6 +156,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<NotificationCollection>(
                     new(),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }

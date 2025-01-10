@@ -10,6 +10,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using idunno.AtProto.Repo;
+using IdentityModel.OidcClient;
+using System.Net.Http;
 
 namespace idunno.AtProto
 {
@@ -38,15 +40,12 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="serviceProxy">An optional headers to add to the requests this instance makes.</param>
         /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="serviceProxy"/> is null or white space./</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="serviceProxy"/> is null or white space./</exception>
         public AtProtoHttpClient(string serviceProxy, ILoggerFactory? loggerFactory = null) : this(loggerFactory)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(serviceProxy);
+            ArgumentException.ThrowIfNullOrWhiteSpace(serviceProxy);
 
-            _extraHeaders = new List<NameValueHeaderValue>
-            {
-                new("atproto-proxy", serviceProxy)
-            };
+            _extraHeaders = [new("atproto-proxy", serviceProxy)];
         }
 
         /// <summary>
@@ -59,10 +58,7 @@ namespace idunno.AtProto
         {
             ArgumentNullException.ThrowIfNull(header);
 
-            _extraHeaders = new List<NameValueHeaderValue>
-            {
-                header
-            };
+            _extraHeaders = [ header ];
         }
 
         /// <summary>
@@ -191,6 +187,8 @@ namespace idunno.AtProto
                         Logger.AtProtoClientRequestFailed
                                 (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, httpResponseMessage.StatusCode, result.AtErrorDetail.Error, result.AtErrorDetail.Message);
                     }
+
+                    result.HttpResponseHeaders = httpResponseMessage.Headers;
 
                     return result;
                 }
@@ -353,6 +351,8 @@ namespace idunno.AtProto
 
                         }
 
+                        result.HttpResponseHeaders = httpResponseMessage.Headers;
+
                         return result;
                     }
                 }
@@ -458,6 +458,8 @@ namespace idunno.AtProto
                                 (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, httpResponseMessage.StatusCode, result.AtErrorDetail.Error, result.AtErrorDetail.Message);
                         }
 
+                        result.HttpResponseHeaders = httpResponseMessage.Headers;
+
                         return result;
                     }
                 }
@@ -555,11 +557,7 @@ namespace idunno.AtProto
 
             if (subscribedLabelers is not null)
             {
-                List<string> labelerIdentifiers = new();
-                foreach (Did did in subscribedLabelers)
-                {
-                    labelerIdentifiers.Add(did);
-                }
+                List<string> labelerIdentifiers = [.. subscribedLabelers];
 
                 if (labelerIdentifiers.Count != 0)
                 {

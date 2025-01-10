@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using IdentityModel.OidcClient;
 using IdentityModel.OidcClient.DPoP;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace idunno.AtProto.Authentication
 {
@@ -19,7 +20,7 @@ namespace idunno.AtProto.Authentication
     {
         const string OAuthDiscoveryDocumentEndpoint = ".well-known/oauth-authorization-server";
 
-        private readonly string[] _defaultScopes = { "atproto" };
+        private readonly string[] _defaultScopes = ["atproto"];
 
         private OidcClient? _oidcClient;
         private AuthorizeState? _authorizeState;

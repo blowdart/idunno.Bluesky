@@ -24,12 +24,12 @@ namespace idunno.Bluesky
         /// <param name="jobId">The job id whose status should be queried.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="jobId"/> is null or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="jobId"/> is null or whitespace.</exception>
         public async Task<AtProtoHttpResult<JobStatus>> GetVideoJobStatus(
             string jobId,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(jobId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(jobId);
 
             using (_logger.BeginScope($"Getting jobStatus for {jobId}"))
             {
@@ -84,7 +84,12 @@ namespace idunno.Bluesky
 
                 if (!getServiceAuthResult.Succeeded)
                 {
-                    return new AtProtoHttpResult<UploadLimits>(null, getServiceAuthResult.StatusCode, getServiceAuthResult.AtErrorDetail, getServiceAuthResult.RateLimit);
+                    return new AtProtoHttpResult<UploadLimits>(
+                        null,
+                        getServiceAuthResult.StatusCode,
+                        getServiceAuthResult.HttpResponseHeaders,
+                        getServiceAuthResult.AtErrorDetail,
+                        getServiceAuthResult.RateLimit);
                 }
 
                 AtProtoHttpResult<UploadLimits> result = await BlueskyServer.GetVideoUploadStatus(
@@ -122,7 +127,8 @@ namespace idunno.Bluesky
         /// <param name="video">The video to upload as bytes.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="fileName"/> is null or empty or <paramref name="video"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> is null or empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="video"/> is empty.</exception>
         /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<JobStatus>> UploadVideo(
@@ -130,7 +136,7 @@ namespace idunno.Bluesky
             byte[] video,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(fileName);
+            ArgumentException.ThrowIfNullOrEmpty(fileName);
             ArgumentNullException.ThrowIfNull(video);
             ArgumentOutOfRangeException.ThrowIfZero(video.Length);
 
@@ -157,6 +163,7 @@ namespace idunno.Bluesky
                         return new AtProtoHttpResult<JobStatus>(
                             null,
                             getServiceAuthResult.StatusCode,
+                            getServiceAuthResult.HttpResponseHeaders,
                             getServiceAuthResult.AtErrorDetail,
                             getServiceAuthResult.RateLimit);
                     }
@@ -212,7 +219,12 @@ namespace idunno.Bluesky
                         serverDescriptionResult.AtErrorDetail?.Error,
                         serverDescriptionResult.AtErrorDetail?.Message);
 
-                    return new AtProtoHttpResult<JobStatus>(null, serverDescriptionResult.StatusCode, serverDescriptionResult.AtErrorDetail, serverDescriptionResult.RateLimit);
+                    return new AtProtoHttpResult<JobStatus>(
+                        null,
+                        serverDescriptionResult.StatusCode,
+                        serverDescriptionResult.HttpResponseHeaders,
+                        serverDescriptionResult.AtErrorDetail,
+                        serverDescriptionResult.RateLimit);
                 }
             }
         }
@@ -253,6 +265,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<Caption>(
                     new Caption(captionLanguage, uploadResult.Result),
                     uploadResult.StatusCode,
+                    uploadResult.HttpResponseHeaders,
                     uploadResult.AtErrorDetail,
                     uploadResult.RateLimit);
             }
@@ -261,6 +274,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<Caption>(
                     null,
                     uploadResult.StatusCode,
+                    uploadResult.HttpResponseHeaders,
                     uploadResult.AtErrorDetail,
                     uploadResult.RateLimit);
             }

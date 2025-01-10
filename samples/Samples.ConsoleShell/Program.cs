@@ -3,15 +3,13 @@
 
 using System.CommandLine;
 using System.CommandLine.Parsing;
+using System.Diagnostics;
 
 using Microsoft.Extensions.Logging;
 
 using idunno.Bluesky;
 
 using Samples.Common;
-using idunno.Bluesky.Feed.Gates;
-using idunno.AtProto;
-using System.Diagnostics;
 
 namespace Samples.ConsoleShell
 {
@@ -39,11 +37,22 @@ namespace Samples.ConsoleShell
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
 
+            // If a proxy is being used turn off certificate revocation checks.
+            //
+            // WARNING: this setting can introduce security vulnerabilities.
+            // The assumption in these samples is that any proxy is a debugging proxy,
+            // which tend to not support CRLs in the proxy HTTPS certificates they generate.
+            bool checkCertificateRevocationList = true;
+            if (proxyUri is not null)
+            {
+                checkCertificateRevocationList = false;
+            }
+
             // Change the log level in the ConfigureConsoleLogging() to enable logging
             using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
 
             // Create a new BlueSkyAgent
-            using (var agent = new BlueskyAgent(proxyUri: proxyUri, loggerFactory: loggerFactory))
+            using (var agent = new BlueskyAgent(proxyUri: proxyUri, checkCertificateRevocationList: checkCertificateRevocationList, loggerFactory: loggerFactory))
             {
                 // Test code goes here.
 

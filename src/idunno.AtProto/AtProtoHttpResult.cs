@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Net.Http.Headers;
 
 namespace idunno.AtProto
 {
@@ -22,12 +23,14 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="statusCode">The underlying HTTP status code returned by the API call.</param>
         /// <param name="result">The resulting object of type <typeparamref name="TResult"/> returned by the API call, if any.</param>
+        /// <param name="httpResponseHeaders">The <see cref="HttpResponseHeaders"/> returned by the request</param>
         /// <param name="atErrorDetail">The <see cref="AtErrorDetail"/> returned by the API call, if any.</param>
         /// <param name="rateLimit">The API rate limit for the current user, if the response included one.</param>
-        public AtProtoHttpResult(TResult? result, HttpStatusCode statusCode, AtErrorDetail? atErrorDetail = null, RateLimit? rateLimit = null)
+        public AtProtoHttpResult(TResult? result, HttpStatusCode statusCode, HttpResponseHeaders? httpResponseHeaders, AtErrorDetail ? atErrorDetail = null, RateLimit? rateLimit = null)
         {
             Result = result;
             StatusCode = statusCode;
+            HttpResponseHeaders = httpResponseHeaders;
             AtErrorDetail = atErrorDetail;
             RateLimit = rateLimit;
         }
@@ -48,7 +51,6 @@ namespace idunno.AtProto
         /// <summary>
         /// The extended error information, if any, if the request was unsuccessful.
         /// </summary>
-        /// 
         public AtErrorDetail? AtErrorDetail {get; internal set; }
 
         /// <summary>
@@ -67,6 +69,11 @@ namespace idunno.AtProto
         /// The api rate limit, if the api returned one, otherwise null.
         /// </summary>
         public RateLimit? RateLimit { get; init; }
+
+        /// <summary>
+        /// The <see cref="HttpResponseHeaders"/> returned by the request, if any.
+        /// </summary>
+        public HttpResponseHeaders? HttpResponseHeaders { get; internal set; }
 
         /// <summary>
         /// Throw an <see cref="AtProtoHttpRequestException"/> if <see cref="Succeeded"/> is false.

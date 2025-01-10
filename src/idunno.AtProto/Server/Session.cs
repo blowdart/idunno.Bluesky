@@ -1,29 +1,20 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
-
-using Microsoft.IdentityModel.JsonWebTokens;
-
 using idunno.AtProto.Models;
+using idunno.AtProto.Authentication;
 
 namespace idunno.AtProto.Server
 {
     /// <summary>
-    /// Representation information about, and the state of a session on an AT Proto service.
+    /// Encapsulates information about, and the state of a session on an atproto service.
     /// </summary>
     public sealed record Session
     {
-        private readonly object _syncRoot = new ();
-
-        private string? _accessJwt;
-
         internal Session(Uri service, CreateSessionResponse createSessionResult)
         {
             Service = service;
 
-            AccessJwt = createSessionResult.AccessJwt;
-            RefreshJwt = createSessionResult.RefreshJwt;
             Handle = createSessionResult.Handle;
             Did = createSessionResult.Did;
 
@@ -33,9 +24,15 @@ namespace idunno.AtProto.Server
             EmailAuthFactor = createSessionResult.EmailAuthFactor;
             IsAccountActive = createSessionResult.Active;
             AccountStatus = createSessionResult.Status;
+
+            AccessCredentials = new AccessCredentials(
+                createSessionResult.AccessJwt,
+                createSessionResult.RefreshJwt,
+                createSessionResult.DPoPProofKey,
+                createSessionResult.DPoPNonce);
         }
 
-        internal Session(Uri service, GetSessionResponse getSessionResponse)
+        internal Session(Uri service, GetSessionResponse getSessionResponse, string accessJwt, string refreshJwt, string? dPoPProofKey = null, string? dPoPNonce = null)
         {
             Service = service;
 
@@ -48,12 +45,18 @@ namespace idunno.AtProto.Server
             DidDoc = getSessionResponse.DidDoc;
             IsAccountActive = getSessionResponse.Active;
             AccountStatus = getSessionResponse.Status;
+
+            AccessCredentials = new AccessCredentials(
+                accessJwt,
+                refreshJwt,
+                dPoPProofKey,
+                dPoPNonce);
         }
 
-        internal Session(Uri service, GetSessionResponse getSessionResponse, string? accessToken, string? refreshToken) : this(service, getSessionResponse)
-        {
-            UpdateAccessTokens(accessToken, refreshToken);
-        }
+        /// <summary>
+        /// Gets the <see cref="AccessCredentials"/> for this session.
+        /// </summary>
+        public AccessCredentials AccessCredentials { get; init; }
 
         /// <summary>
         /// Gets the access token for the actor whose authentication produced this Session instance.
@@ -61,24 +64,14 @@ namespace idunno.AtProto.Server
         /// <remarks>
         /// <para>The access token is attached automatically to every API call through an agent that requires authentication.</para>
         /// </remarks>
-        public string? AccessJwt
-        {
-            get
-            {
-                return _accessJwt;
-            }
-
-            private set
-            {
-                _accessJwt = value;
-                AccessJwtExpiresOn = GetJwtExpiry(value);
-            }
-        }
+        [Obsolete("This property is obsolete. Use AccessCredentials.AccessToken instead.", false)]
+        public string AccessJwt => AccessCredentials.AccessJwt;
 
         /// <summary>
         /// Gets the <see cref="DateTime"/> the access token expires on, if an access token is present.
         /// </summary>
-        public DateTime? AccessJwtExpiresOn { get; private set; }
+        [Obsolete("This property is obsolete. Use AccessCredentials.AccessJwtExpiresOn instead.", false)]
+        public DateTimeOffset AccessJwtExpiresOn => AccessCredentials.AccessJwtExpiresOn;
 
         /// <summary>
         /// Gets the refresh token for the actor whose authentication produced this Session instance.
@@ -86,7 +79,9 @@ namespace idunno.AtProto.Server
         /// <remarks>
         /// <para>The refresh token is used to exchange an expiring access token for a new access token.</para>
         /// </remarks>
-        public string? RefreshJwt { get; private set; }
+        [Obsolete("This property is obsolete. Use AccessCredentials.RefreshJwt instead.", false)]
+        public string RefreshJwt => AccessCredentials.RefreshJwt;
+
 
         /// <summary>
         /// Gets the <see cref="Did"/> of the actor whose authentication produced this Session instance.
@@ -138,38 +133,5 @@ namespace idunno.AtProto.Server
         /// Gets the URI of the service that the <see cref="Session"/> instance was created on.
         /// </summary>
         public Uri? Service { get; init; }
-
-        /// <summary>
-        /// Returns a flag indicating whether this session has an access token.
-        /// </summary>
-        [MemberNotNullWhen(true, nameof(AccessJwt))]
-        [MemberNotNullWhen(true, nameof(AccessJwtExpiresOn))]
-        public bool HasAccessToken
-        {
-            get
-            {
-                return !string.IsNullOrWhiteSpace(AccessJwt);
-            }
-        }
-
-        internal void UpdateAccessTokens(string? accessJwt, string? refreshJwt)
-        {
-            lock (_syncRoot)
-            {
-                AccessJwt = accessJwt;
-                RefreshJwt = refreshJwt;
-            }
-        }
-
-        private static DateTime? GetJwtExpiry(string? jwt)
-        {
-            if (string.IsNullOrEmpty(jwt))
-            {
-                return null;
-            }
-
-            JsonWebToken token = new(jwt);
-            return token.ValidTo;
-        }
     }
 }

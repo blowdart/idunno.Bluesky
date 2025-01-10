@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using idunno.AtProto.Authentication;
+
 namespace idunno.AtProto.Events
 {
     /// <summary>
@@ -13,21 +15,24 @@ namespace idunno.AtProto.Events
         /// </summary>
         /// <param name="did">The <see cref="Did"/> the session was created for.</param>
         /// <param name="service">The <see cref="Uri"/> of the service the session was created on.</param>
-        /// <param name="accessJwt">The access token for the session.</param>
-        /// <param name="refreshJwt">The refresh token for the session.</param>
-        /// <exception cref="ArgumentNullException">Thrown if any of the parameters are null.</exception>
-        public SessionRefreshedEventArgs(Did did, Uri service, string accessJwt, string refreshJwt)
+        /// <param name="accessCredentials">The new access credentials for the session</param>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="accessCredentials"/> AccessJwt or RefreshJwt are null or whitespace.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> or <paramref name="service"/> is null.</exception>
+        public SessionRefreshedEventArgs(
+            Did did,
+            Uri service,
+            AccessCredentials accessCredentials)
         {
             ArgumentNullException.ThrowIfNull(did);
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNullOrEmpty(accessJwt);
-            ArgumentNullException.ThrowIfNullOrEmpty(refreshJwt);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
+
+            ArgumentException.ThrowIfNullOrWhiteSpace(accessCredentials.AccessJwt);
+            ArgumentException.ThrowIfNullOrWhiteSpace(accessCredentials.RefreshJwt);
 
             Did = did;
             Service = service;
-
-            AccessJwt = accessJwt;
-            RefreshJwt = refreshJwt;
+            AccessCredentials = accessCredentials;
         }
 
         /// <summary>
@@ -41,13 +46,8 @@ namespace idunno.AtProto.Events
         public Uri Service { get; }
 
         /// <summary>
-        /// Gets a string representation of the access token for the session.
+        /// Gets the access credentials for the session..
         /// </summary>
-        public string AccessJwt { get; }
-
-        /// <summary>
-        /// Gets a string representation of the refresh token for the session.
-        /// </summary>
-        public string RefreshJwt { get; }
+        public AccessCredentials AccessCredentials { get; }
     }
 }

@@ -84,8 +84,8 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
         public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>> GetBlocks(
             int? limit,
             string? cursor,
@@ -135,6 +135,7 @@ namespace idunno.Bluesky
                         new List<ProfileView>(response.Result.Blocks).AsReadOnly(),
                         cursor: response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -143,6 +144,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -162,8 +164,8 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
         public static async Task<AtProtoHttpResult<Followers>> GetFollowers(
             AtIdentifier actor,
             int? limit,
@@ -217,14 +219,16 @@ namespace idunno.Bluesky
                         followers: new List<ProfileView>(response.Result.Followers).AsReadOnly(),
                         cursor: response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
             else
             {
                 return new AtProtoHttpResult<Followers>(
-                    new Followers(subject: null, followers: new List<ProfileView>(), null),
+                    new Followers(subject: null, followers: [], null),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -243,8 +247,8 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
         public static async Task<AtProtoHttpResult<Follows>> GetFollows(
             AtIdentifier actor,
             int? limit,
@@ -298,14 +302,16 @@ namespace idunno.Bluesky
                         follows: new List<ProfileView>(response.Result.Follows).AsReadOnly(),
                         cursor: response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
             else
             {
                 return new AtProtoHttpResult<Follows>(
-                    new Follows(subject: null, follows: new List<ProfileView>(), null),
+                    new Follows(subject: null, follows: [], null),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -324,8 +330,8 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
         public static async Task<AtProtoHttpResult<Followers>> GetKnownFollowers(
             AtIdentifier actor,
             int? limit,
@@ -380,14 +386,16 @@ namespace idunno.Bluesky
                         followers: new List<ProfileView>(response.Result.Followers).AsReadOnly(),
                         cursor: response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
             else
             {
                 return new AtProtoHttpResult<Followers>(
-                    new Followers(subject: null, followers: new List<ProfileView>(), null),
+                    new Followers(subject: null, followers: [], null),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -405,8 +413,8 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
         public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>> GetListBlocks(
             int? limit,
             string? cursor,
@@ -454,6 +462,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>(
                     new PagedViewReadOnlyCollection<ListView>(response.Result.Lists, response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -462,6 +471,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -479,8 +489,8 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
         public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>> GetListMutes(
             int? limit,
             string? cursor,
@@ -528,6 +538,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>(
                     new PagedViewReadOnlyCollection<ListView>(response.Result.Lists, response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -536,6 +547,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -554,8 +566,8 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="list"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
         public static async Task<AtProtoHttpResult<ListViewWithItems>> GetList(
             AtUri list,
             int? limit,
@@ -607,6 +619,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ListViewWithItems>(
                     new ListViewWithItems(response.Result.List, response.Result.Items, response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -615,6 +628,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ListViewWithItems>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -633,8 +647,8 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
         public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>> GetLists(
             AtIdentifier actor,
             int? limit,
@@ -685,6 +699,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>(
                     new PagedViewReadOnlyCollection<ListView>(response.Result.Lists, response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -693,6 +708,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -710,8 +726,8 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accessToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
         public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>> GetMutes(
             int? limit,
             string? cursor,
@@ -765,6 +781,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>(
                     new PagedViewReadOnlyCollection<ProfileView>(response.Result.Mutes, response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -773,6 +790,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -791,8 +809,8 @@ namespace idunno.Bluesky
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/>, <paramref name="others"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="others"/> is empty, or has &gt; 30 entries.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="others"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="others"/> is empty, or has &gt; 30 entries.</exception>
         public static async Task<AtProtoHttpResult<ActorRelationships>> GetRelationships(
             Did actor,
             ICollection<Did> others,
@@ -830,7 +848,7 @@ namespace idunno.Bluesky
 
             if (response.Succeeded)
             {
-                Dictionary<Did, Relationship> returnValue = new();
+                Dictionary<Did, Relationship> returnValue = [];
 
                 foreach (RelationshipType relationshipType in response.Result.Relationships)
                 {
@@ -843,6 +861,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ActorRelationships>(
                     new ActorRelationships(response.Result.Actor, returnValue),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -851,6 +870,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ActorRelationships>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -867,7 +887,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<StarterPackView>> GetStarterPack(
             AtUri uri,
             Uri service,
@@ -895,6 +915,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<StarterPackView>(
                     response.Result.StarterPack,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -903,6 +924,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<StarterPackView>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -919,8 +941,8 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="uris"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if number <paramref name="uris"/> is &lt; 1 or &gt; 25.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uris"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when number <paramref name="uris"/> is &lt; 1 or &gt; 25.</exception>
         public static async Task<AtProtoHttpResult<IReadOnlyList<StarterPackViewBasic>>> GetStarterPacks(
             ICollection<AtUri> uris,
             Uri service,
@@ -960,6 +982,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<IReadOnlyList<StarterPackViewBasic>>(
                     new List<StarterPackViewBasic>(response.Result.StarterPacks).AsReadOnly(),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -968,6 +991,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<IReadOnlyList<StarterPackViewBasic>>(
                     new List<StarterPackViewBasic>().AsReadOnly(),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -984,7 +1008,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<SuggestedActors>> GetSuggestedFollowsByActor(
             AtIdentifier actor,
             Uri service,
@@ -1020,7 +1044,7 @@ namespace idunno.Bluesky
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="listUri"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<EmptyResponse>> MuteActorList(
             AtUri listUri,
             Uri service,
@@ -1056,7 +1080,7 @@ namespace idunno.Bluesky
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<EmptyResponse>> MuteActor(
             AtIdentifier actor,
             Uri service,
@@ -1092,7 +1116,7 @@ namespace idunno.Bluesky
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="rootUri"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="rootUri"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<EmptyResponse>> MuteThread(
             AtUri rootUri,
             Uri service,
@@ -1128,7 +1152,7 @@ namespace idunno.Bluesky
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="listUri"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<EmptyResponse>> UnmuteActorList(
             AtUri listUri,
             Uri service,
@@ -1164,7 +1188,7 @@ namespace idunno.Bluesky
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<EmptyResponse>> UnmuteActor(
             AtIdentifier actor,
             Uri service,
@@ -1200,7 +1224,7 @@ namespace idunno.Bluesky
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="rootUri"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="rootUri"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<EmptyResponse>> UnmuteThread(
             AtUri rootUri,
             Uri service,

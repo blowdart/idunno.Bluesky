@@ -106,7 +106,8 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <remarks><para>Delete session requires the refresh token, not the access token.</para></remarks>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="refreshToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="refreshToken"/> is null or whitespace.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<EmptyResponse>> DeleteSession(
             string refreshToken,
             Uri service,
@@ -114,7 +115,7 @@ namespace idunno.AtProto
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(refreshToken);
+            ArgumentException.ThrowIfNullOrWhiteSpace(refreshToken);
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -138,7 +139,8 @@ namespace idunno.AtProto
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="refreshToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="refreshToken"/> is null or whitespace.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<RefreshSessionResponse>> RefreshSession(
             string refreshToken,
             Uri service,
@@ -146,7 +148,7 @@ namespace idunno.AtProto
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(refreshToken);
+            ArgumentException.ThrowIfNullOrEmpty(refreshToken);
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -171,7 +173,8 @@ namespace idunno.AtProto
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accessToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="accessToken"/> is null or empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<GetSessionResponse>> GetSession(
             string accessToken,
             Uri service,
@@ -179,7 +182,7 @@ namespace idunno.AtProto
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(accessToken);
+            ArgumentException.ThrowIfNullOrEmpty(accessToken);
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -245,11 +248,11 @@ namespace idunno.AtProto
 
             if (result.Succeeded)
             {
-                return new AtProtoHttpResult<string>(result.Result.Token, result.StatusCode, result.AtErrorDetail, result.RateLimit);
+                return new AtProtoHttpResult<string>(result.Result.Token, result.StatusCode, result.HttpResponseHeaders, result.AtErrorDetail, result.RateLimit);
             }
             else
             {
-                return new AtProtoHttpResult<string>(null, result.StatusCode, result.AtErrorDetail, result.RateLimit);
+                return new AtProtoHttpResult<string>(null, result.StatusCode, result.HttpResponseHeaders, result.AtErrorDetail, result.RateLimit);
             }
         }
     }

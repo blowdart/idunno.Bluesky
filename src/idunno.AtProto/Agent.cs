@@ -23,16 +23,25 @@ namespace idunno.AtProto
         private readonly string? _httpUserAgent;
         private readonly TimeSpan? _timeout;
         private readonly Uri? _proxyUri;
+        private readonly bool _checkCertificateRevocationList = true;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Agent"/> class.
         /// </summary>
         /// <param name="proxyUri">The proxy URI to use, if any.</param>
+        /// <param name="checkCertificateRevocationList">Flag indicating whether certificate revocation lists should be checked. Defaults to <see langword="true" />.</param>
         /// <param name="httpUserAgent">The user agent string to use, if any.</param>
-        /// <param name="timeout">The default HTTP timeout to use, if any.</param>
-        protected Agent(Uri? proxyUri = null, string? httpUserAgent = null, TimeSpan? timeout = null)
+        /// <param name="timeout">Overrides the default amount of time to wait before an HTTP request times out.</param>
+        /// <remarks>
+        /// <para>
+        /// Settings <paramref name="checkCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
+        /// false if you are using a debugging proxy which does not support CRLs.
+        /// </para>
+        /// </remarks>
+        protected Agent(Uri? proxyUri = null, bool checkCertificateRevocationList = true, string? httpUserAgent = null, TimeSpan? timeout = null)
         {
             _proxyUri = proxyUri;
+            _checkCertificateRevocationList = checkCertificateRevocationList;
             _httpUserAgent = httpUserAgent;
             _timeout = timeout;
 
@@ -40,7 +49,7 @@ namespace idunno.AtProto
 
             services
                 .AddHttpClient(HttpClientName, client => InternalConfigureHttpClient(client, httpUserAgent, timeout))
-                .ConfigurePrimaryHttpMessageHandler(() => BuildProxyClientHandler(proxyUri));
+                .ConfigurePrimaryHttpMessageHandler(() => BuildProxyClientHandler(proxyUri, checkCertificateRevocationList));
 
             _serviceProvider = services.BuildServiceProvider();
             HttpClientFactory = _serviceProvider.GetService<IHttpClientFactory>()!;
@@ -72,7 +81,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Gets a new HttpClientHandler configured with any proxy settings passed during the agent configuration.
         /// </summary>
-        protected HttpClientHandler HttpClientHandler => BuildProxyClientHandler(_proxyUri);
+        protected HttpClientHandler HttpClientHandler => BuildProxyClientHandler(_proxyUri, _checkCertificateRevocationList);
 
         /// <summary>
         /// Gets a value indicating whether the agent has an active session.
@@ -116,6 +125,15 @@ namespace idunno.AtProto
             return client;
         }
 
+        /// <summary>
+        /// Creates a client handler to configure proxy setup with the initialization parameters specified when creating the agent.
+        /// </summary>
+        /// <returns>An <see cref="HttpClientHandler"/> configured to any proxy specified when the agent was created.</returns>
+        protected HttpClientHandler CreateProxyHttpClientHandler()
+        {
+            return BuildProxyClientHandler(_proxyUri, _checkCertificateRevocationList);
+        }
+
         private static void InternalConfigureHttpClient(HttpClient client, string? httpUserAgent = null, TimeSpan? timeout = null)
         {
             ArgumentNullException.ThrowIfNull(client);
@@ -145,16 +163,7 @@ namespace idunno.AtProto
             }
         }
 
-        /// <summary>
-        /// Creates a client handler to configure proxy setup with the initialization parameters specified when creating the agent.
-        /// </summary>
-        /// <returns>An <see cref="HttpClientHandler"/> configured to any proxy specified when the agent was created.</returns>
-        protected HttpClientHandler CreateProxyHttpClientHandler()
-        {
-            return BuildProxyClientHandler(_proxyUri);
-        }
-
-        private static HttpClientHandler BuildProxyClientHandler(Uri? proxyUri)
+        private static HttpClientHandler BuildProxyClientHandler(Uri? proxyUri, bool checkCertificateRevocationList)
         { 
             if (proxyUri is not null)
             {
@@ -167,7 +176,7 @@ namespace idunno.AtProto
                         UseDefaultCredentials = true
                     },
                     UseProxy = true,
-                    CheckCertificateRevocationList = false,
+                    CheckCertificateRevocationList = checkCertificateRevocationList,
 
                     AutomaticDecompression = DecompressionMethods.All,
                 };
@@ -176,6 +185,7 @@ namespace idunno.AtProto
             {
                 return new HttpClientHandler
                 {
+                    CheckCertificateRevocationList = checkCertificateRevocationList,
                     AutomaticDecompression = DecompressionMethods.All
                 };
             }

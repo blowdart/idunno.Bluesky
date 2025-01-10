@@ -60,5 +60,17 @@ namespace idunno.AtProto.Models
         /// A flag indicating whether the newly created session required an email based authentication token.
         /// </summary>
         public bool? EmailAuthFactor { get; init; }
+
+        /// <summary>
+        /// Gets a string representation of the DPoP proof key to use when signing requests.
+        /// </summary>
+        [JsonIgnore]
+        public string? DPoPProofKey { get; internal set; }
+
+        /// <summary>
+        /// Gets a string representation of the DPoP nonce to use when signing requests.
+        /// </summary>
+        [JsonIgnore]
+        public string? DPoPNonce { get; internal set; }
     }
 }

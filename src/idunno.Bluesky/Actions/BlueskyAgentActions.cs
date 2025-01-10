@@ -5,8 +5,9 @@ using System.Net;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
-using idunno.Bluesky.Embed;
 using idunno.AtProto.Repo.Models;
+
+using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.RichText;
 using idunno.Bluesky.Actions;
@@ -157,6 +158,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<Commit>(
                     null,
                     userProfileResult.StatusCode,
+                    userProfileResult.HttpResponseHeaders,
                     userProfileResult.AtErrorDetail,
                     userProfileResult.RateLimit);
             }
@@ -170,6 +172,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<Commit>(
                     null,
                     HttpStatusCode.NotFound,
+                    userProfileResult.HttpResponseHeaders,
                     null,
                     userProfileResult.RateLimit);
             }
@@ -323,6 +326,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<Commit>(
                     null,
                     userProfileResult.StatusCode,
+                    userProfileResult.HttpResponseHeaders,
                     userProfileResult.AtErrorDetail,
                     userProfileResult.RateLimit);
             }
@@ -336,6 +340,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<Commit>(
                     null,
                     HttpStatusCode.NotFound,
+                    userProfileResult.HttpResponseHeaders,
                     null,
                     userProfileResult.RateLimit);
             }
@@ -404,7 +409,7 @@ namespace idunno.Bluesky
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="text"/> is null, empty or whitespace.</exception>
+        /// <exception cref="ArgumentException">if <paramref name="text"/> is null, empty or whitespace.</exception>
         /// <exception cref="ArgumentOutOfRangeException">if <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
         /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
@@ -415,7 +420,7 @@ namespace idunno.Bluesky
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(text);
+            ArgumentException.ThrowIfNullOrWhiteSpace(text);
 
             if (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
             {
@@ -450,7 +455,7 @@ namespace idunno.Bluesky
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="text"/> is null, empty or whitespace.</exception>
+        /// <exception cref="ArgumentException">if <paramref name="text"/> is null, empty or whitespace.</exception>
         /// <exception cref="ArgumentOutOfRangeException">if <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
         /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
@@ -462,7 +467,7 @@ namespace idunno.Bluesky
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(text);
+            ArgumentException.ThrowIfNullOrWhiteSpace(text);
 
             if (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
             {
@@ -480,10 +485,7 @@ namespace idunno.Bluesky
 
             if (image is not null)
             {
-                images = new List<EmbeddedImage>
-                {
-                    image
-                };
+                images = [ image ];
             }
 
             return await Post(
@@ -564,7 +566,7 @@ namespace idunno.Bluesky
 
             Post post = new(
                 text,
-                langs : new List<string>() { Thread.CurrentThread.CurrentUICulture.Name },
+                langs : [Thread.CurrentThread.CurrentUICulture.Name],
                 embeddedRecord: embeddedImages);
 
             if (extractFacets)
@@ -629,7 +631,7 @@ namespace idunno.Bluesky
 
             Post post = new(
                 text,
-                langs: new List<string>() { Thread.CurrentThread.CurrentUICulture.Name },
+                langs: [Thread.CurrentThread.CurrentUICulture.Name],
                 embeddedRecord: video);
 
             if (extractFacets && text is not null)
@@ -930,10 +932,7 @@ namespace idunno.Bluesky
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            List<EmbeddedImage> images = new()
-            {
-                image
-            };
+            List<EmbeddedImage> images = [ image ];
 
             return await ReplyTo(parent, text, images, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -976,6 +975,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<CreateRecordResponse>(
                     null,
                     replyReferencesResult.StatusCode,
+                    replyReferencesResult.HttpResponseHeaders,
                     replyReferencesResult.AtErrorDetail,
                     replyReferencesResult.RateLimit);
             }
@@ -1177,16 +1177,17 @@ namespace idunno.Bluesky
         /// <param name="image">The image to attach to the post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="strongReference"/>, <paramref name="text"/> is null or empty or <paramref name="image"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">if <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="image"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is null.</exception>
+        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Quote(StrongReference strongReference, string text, EmbeddedImage image, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
-            ArgumentNullException.ThrowIfNullOrEmpty(text);
+            ArgumentException.ThrowIfNullOrEmpty(text);
             ArgumentNullException.ThrowIfNull(image);
 
-            return await Quote(strongReference, text, new List<EmbeddedImage>() { image }, cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await Quote(strongReference, text, [image], cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1197,9 +1198,9 @@ namespace idunno.Bluesky
         /// <param name="images">Any images to attach to the post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="strongReference"/> is null or <paramref name="text"/> is null or empty.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">if <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null or <paramref name="text"/> is null or empty.</exception>
+        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Quote(StrongReference strongReference, string text, ICollection<EmbeddedImage>? images, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
@@ -1229,7 +1230,7 @@ namespace idunno.Bluesky
             {
                 QuotePost = strongReference,
                 Text = text,
-                Languages = new List<string>() { Thread.CurrentThread.CurrentUICulture.Name }
+                Languages = [Thread.CurrentThread.CurrentUICulture.Name]
             };
 
             if (images is not null)
@@ -1261,7 +1262,7 @@ namespace idunno.Bluesky
                 throw new AuthenticatedSessionRequiredException();
             }
 
-            return await Quote(strongReference, new List<EmbeddedImage>() { image }, cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await Quote(strongReference, [image], cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1308,10 +1309,7 @@ namespace idunno.Bluesky
             ApplyWritesCreate applyWritesCreate = new(CollectionNsid.Post, TimestampIdentifier.Generate(), postRecord);
 
             AtProtoHttpResult<ApplyWritesResponse> result = await ApplyWrites(
-                new List<ApplyWritesRequestValueBase>()
-                {
-                    applyWritesCreate
-                },
+                [applyWritesCreate],
                 Did,
                 cid: null,
                 validate: true,
@@ -1339,6 +1337,7 @@ namespace idunno.Bluesky
                         result.Result.Commit,
                         recordResult.ValidationStatus),
                     result.StatusCode,
+                    result.HttpResponseHeaders,
                     result.AtErrorDetail,
                     result.RateLimit);
             }
@@ -1347,6 +1346,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<CreateRecordResponse>(
                     null,
                     result.StatusCode,
+                    result.HttpResponseHeaders,
                     result.AtErrorDetail,
                     result.RateLimit);
             }
@@ -1438,6 +1438,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<EmbeddedImage>(
                     new EmbeddedImage(uploadResult.Result, altText, aspectRatio),
                     uploadResult.StatusCode,
+                    uploadResult.HttpResponseHeaders,
                     uploadResult.AtErrorDetail,
                     uploadResult.RateLimit);
             }
@@ -1448,6 +1449,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<EmbeddedImage>(
                     null,
                     uploadResult.StatusCode,
+                    uploadResult.HttpResponseHeaders,
                     uploadResult.AtErrorDetail,
                     uploadResult.RateLimit);
             }
@@ -1496,7 +1498,7 @@ namespace idunno.Bluesky
                 // If a post has no text (which is possible if there are embedded records
                 // or it has gates and creating the post and gates need to be atomic
                 // we have to use ApplyWrites() rather than CreateRecord()
-                List<ApplyWritesRequestValueBase> writeRequests = new();
+                List<ApplyWritesRequestValueBase> writeRequests = [];
 
                 // We need to generate a record key to hang it all together.
                 RecordKey rKey = TimestampIdentifier.Generate();
@@ -1538,12 +1540,12 @@ namespace idunno.Bluesky
                         }
                     }
 
-                    return new AtProtoHttpResult<CreateRecordResponse>(createRecordResponse, response.StatusCode, response.AtErrorDetail, response.RateLimit);
+                    return new AtProtoHttpResult<CreateRecordResponse>(createRecordResponse, response.StatusCode, response.HttpResponseHeaders, response.AtErrorDetail, response.RateLimit);
                 }
                 else
                 {
                     Logger.CreatePostWithGatesFailed(_logger, response.StatusCode, owner, response.AtErrorDetail?.Error, response.AtErrorDetail?.Message);
-                    return new AtProtoHttpResult<CreateRecordResponse>(null, response.StatusCode, response.AtErrorDetail, response.RateLimit);
+                    return new AtProtoHttpResult<CreateRecordResponse>(null, response.StatusCode, response.HttpResponseHeaders, response.AtErrorDetail, response.RateLimit);
                 }
             }
         }

@@ -53,7 +53,7 @@ namespace idunno.AtProto
                 throw new ArgumentOutOfRangeException(nameof(limit), "{limit} must be between 1 and 250.");
             }
 
-            List<Did> sourcesList = new();
+            List<Did> sourcesList = [];
             if (sources is not null)
             {
                 sourcesList.AddRange(sources);
@@ -87,11 +87,20 @@ namespace idunno.AtProto
             if (response.Succeeded)
             {
                 return new AtProtoHttpResult<PagedReadOnlyCollection<Label>>(
-                    new PagedReadOnlyCollection<Label>(response.Result.Labels, cursor), response.StatusCode, response.AtErrorDetail, response.RateLimit);
+                    new PagedReadOnlyCollection<Label>(response.Result.Labels, cursor),
+                    response.StatusCode,
+                    response.HttpResponseHeaders,
+                    response.AtErrorDetail,
+                    response.RateLimit);
             }
             else
             {
-                return new AtProtoHttpResult<PagedReadOnlyCollection<Label>>(null, response.StatusCode, response.AtErrorDetail, response.RateLimit);
+                return new AtProtoHttpResult<PagedReadOnlyCollection<Label>>(
+                    null,
+                    response.StatusCode,
+                    response.HttpResponseHeaders,
+                    response.AtErrorDetail,
+                    response.RateLimit);
             }
         }
     }

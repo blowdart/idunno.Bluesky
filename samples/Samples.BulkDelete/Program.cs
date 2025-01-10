@@ -128,9 +128,20 @@ public sealed class Program
             { "app.bsky.feed.postgate", "Post Gates"}
         };
 
+        // If a proxy is being used turn off certificate revocation checks.
+        //
+        // WARNING: this setting can introduce security vulnerabilities.
+        // The assumption in these samples is that any proxy is a debugging proxy,
+        // which tend to not support CRLs in the proxy HTTPS certificates they generate.
+        bool checkCertificateRevocationList = true;
+        if (proxyUri is not null)
+        {
+            checkCertificateRevocationList = false;
+        }
+
         using (HttpClient? httpClient = CreateOptionalHttpClient(proxyUri))
         using (ILoggerFactory? loggerFactory = ConfigureConsoleLogging(LogLevel.Error))
-        using (var agent = new BlueskyAgent(httpClient: httpClient, loggerFactory: loggerFactory))
+        using (var agent = new BlueskyAgent(proxyUri: proxyUri, checkCertificateRevocationList: checkCertificateRevocationList, loggerFactory: loggerFactory))
         {
             AtProtoHttpResult<bool> loginResult =
                 await agent.Login(handle, password!, authCode, cancellationToken: cancellationToken);

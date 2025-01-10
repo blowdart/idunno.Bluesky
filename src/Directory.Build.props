@@ -12,6 +12,8 @@
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisMode>All</AnalysisMode>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- Always treat "S1133 Deprecated code should be removed" as a warning -->
+    <WarningsNotAsErrors>S1133</WarningsNotAsErrors>
   </PropertyGroup>
 
   <Choose>

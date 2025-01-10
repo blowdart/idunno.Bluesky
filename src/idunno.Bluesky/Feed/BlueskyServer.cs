@@ -155,16 +155,18 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<GeneratorView>>(
                     new PagedViewReadOnlyCollection<GeneratorView>(response.Result.Feeds, response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
             else
             {
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<GeneratorView>>(
-                     new PagedViewReadOnlyCollection<GeneratorView>(),
-                     response.StatusCode,
-                     response.AtErrorDetail,
-                     response.RateLimit);
+                    new PagedViewReadOnlyCollection<GeneratorView>(),
+                    response.StatusCode,
+                    response.HttpResponseHeaders,
+                    response.AtErrorDetail,
+                    response.RateLimit);
             }
         }
 
@@ -231,6 +233,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
                     new PagedViewReadOnlyCollection<FeedViewPost>(response.Result.Feed, response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -239,6 +242,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
                     new PagedViewReadOnlyCollection<FeedViewPost>(),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -318,6 +322,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
                     new PagedViewReadOnlyCollection<FeedViewPost>(response.Result.Feed, response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -326,6 +331,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
                     new PagedViewReadOnlyCollection<FeedViewPost>(),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -419,6 +425,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<IReadOnlyCollection<GeneratorView>>(
                     response.Result.Feeds.AsReadOnly(),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -427,6 +434,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<IReadOnlyCollection<GeneratorView>>(
                     new List<GeneratorView>().AsReadOnly(),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -495,6 +503,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
                     new PagedViewReadOnlyCollection<FeedViewPost>(response.Result.Feed, response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -503,6 +512,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
                     new PagedViewReadOnlyCollection<FeedViewPost>(),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -574,6 +584,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<Likes>(
                     new Likes(response.Result.Uri, response.Result.Cid, response.Result.Likes, response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -582,6 +593,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<Likes>(
                     new Likes(uri, cid),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -650,6 +662,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
                     new PagedViewReadOnlyCollection<FeedViewPost>(response.Result.Feed, response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -658,6 +671,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>(
                     new PagedViewReadOnlyCollection<FeedViewPost>(),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -777,11 +791,21 @@ namespace idunno.Bluesky
 
             if (response.Succeeded)
             {
-                return new AtProtoHttpResult<IReadOnlyCollection<PostView>>(response.Result.Posts, response.StatusCode, response.AtErrorDetail, response.RateLimit);
+                return new AtProtoHttpResult<IReadOnlyCollection<PostView>>(
+                    response.Result.Posts,
+                    response.StatusCode,
+                    response.HttpResponseHeaders,
+                    response.AtErrorDetail,
+                    response.RateLimit);
             }
             else
             {
-                return new AtProtoHttpResult<IReadOnlyCollection<PostView>>(s_emptyFeedPostCollection, response.StatusCode, response.AtErrorDetail, response.RateLimit);
+                return new AtProtoHttpResult<IReadOnlyCollection<PostView>>(
+                    s_emptyFeedPostCollection,
+                    response.StatusCode,
+                    response.HttpResponseHeaders,
+                    response.AtErrorDetail,
+                    response.RateLimit);
             }
         }
 
@@ -855,6 +879,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<QuotesCollection>(
                     new QuotesCollection(response.Result.Uri, response.Result.Cid, response.Result.Posts, response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -863,6 +888,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<QuotesCollection>(
                     new QuotesCollection(uri, cid),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -937,6 +963,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<RepostedBy>(
                     new RepostedBy(response.Result.Uri, response.Result.Cid, response.Result.RepostedBy, response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -945,6 +972,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<RepostedBy>(
                     new RepostedBy(uri, cid),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -987,6 +1015,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<SuggestedFeeds>(
                     new SuggestedFeeds(response.Result.Feeds, response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -995,6 +1024,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<SuggestedFeeds>(
                     new SuggestedFeeds(),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -1070,6 +1100,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<Timeline>(
                     new Timeline(response.Result.Feed, response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -1078,6 +1109,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<Timeline>(
                     new Timeline(),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -1205,6 +1237,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<SearchResults>(
                     new SearchResults(response.Result.Posts, response.Result.HitsTotal, response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -1213,6 +1246,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<SearchResults>(
                     new SearchResults(),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }

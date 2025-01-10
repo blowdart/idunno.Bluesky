@@ -222,6 +222,7 @@ namespace idunno.AtProto
                 return new AtProtoHttpResult<Commit>(
                     response.Result.Commit,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -230,6 +231,7 @@ namespace idunno.AtProto
                 return new AtProtoHttpResult<Commit>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -435,10 +437,10 @@ namespace idunno.AtProto
             }
             else
             {
-                recordList = new PagedReadOnlyCollection<TRecord>(new List<TRecord>(), null);
+                recordList = new PagedReadOnlyCollection<TRecord>([], null);
             }
 
-            return new AtProtoHttpResult<PagedReadOnlyCollection<TRecord>>(recordList, response.StatusCode, response.AtErrorDetail, response.RateLimit);
+            return new AtProtoHttpResult<PagedReadOnlyCollection<TRecord>>(recordList, response.StatusCode, response.HttpResponseHeaders, response.AtErrorDetail, response.RateLimit);
         }
 
         /// <summary>
@@ -459,9 +461,9 @@ namespace idunno.AtProto
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="blob"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="blob"/> is null or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="blob"/> is a zero length array.</exception>
-        /// <exception cref="ArgumentException">Thrown when<paramref name="mimeType"/> is empty or not in the type/subtype format.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="accessToken"/> is null ot empty, or <paramref name="mimeType"/> is empty or not in the type/subtype format.</exception>
         public static async Task<AtProtoHttpResult<Blob>> UploadBlob(
             byte[] blob,
             string mimeType,
@@ -482,43 +484,37 @@ namespace idunno.AtProto
             }
 
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNullOrEmpty(accessToken);
+            ArgumentException.ThrowIfNullOrEmpty(accessToken);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            List<NameValueHeaderValue> requestHeaders = new()
-            {
+            List<NameValueHeaderValue> requestHeaders =
+            [
                 new NameValueHeaderValue("Content-Type", mimeType)
-            };
+            ];
 
             AtProtoHttpClient<CreateBlobResponse> client = new(loggerFactory);
 
-            try
-            {
-                AtProtoHttpResult<CreateBlobResponse> response =
-                    await client.PostBlob(service, UploadBlobEndpoint, blob, requestHeaders, accessToken, httpClient, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
+            AtProtoHttpResult<CreateBlobResponse> response =
+                await client.PostBlob(service, UploadBlobEndpoint, blob, requestHeaders, accessToken, httpClient, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
 
-                if (response.Succeeded)
-                {
-                    return new AtProtoHttpResult<Blob>(
-                        response.Result.Blob,
-                        response.StatusCode,
-                        response.AtErrorDetail,
-                        response.RateLimit);
-                }
-                else
-                {
-                    return new AtProtoHttpResult<Blob>(
-                        null,
-                        response.StatusCode,
-                        response.AtErrorDetail,
-                        response.RateLimit);
-                }
-            }
-            catch (HttpRequestException ex)
+            if (response.Succeeded)
             {
-                Debug.WriteLine(ex);
-                throw;
+                return new AtProtoHttpResult<Blob>(
+                    response.Result.Blob,
+                    response.StatusCode,
+                    response.HttpResponseHeaders,
+                    response.AtErrorDetail,
+                    response.RateLimit);
             }
+            else
+            {
+                return new AtProtoHttpResult<Blob>(
+                    null,
+                    response.StatusCode,
+                    response.HttpResponseHeaders,
+                    response.AtErrorDetail,
+                    response.RateLimit);
+             }
         }
 
         /// <summary>
