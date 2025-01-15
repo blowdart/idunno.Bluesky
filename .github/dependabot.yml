@@ -7,6 +7,8 @@ updates:
   ignore:
     - dependency-name: "Microsoft.Extensions.Logging"
       update-types: ["version-update:semver-major"]
+    - dependency-name: "Microsoft.Extensions.Logging.Console"
+      update-types: ["version-update:semver-major"]
     - dependency-name: "System.Runtime.Caching"
       update-types: ["version-update:semver-major"]
   reviewers:
