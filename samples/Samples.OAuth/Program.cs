@@ -86,10 +86,10 @@ namespace Samples.OAuth
 
                 string clientId = "http://localhost";
 
-                Console.WriteLine($"Username:             {handle}");
-                Console.WriteLine($"DID:                  {did}");
-                Console.WriteLine($"PDS:                  {pds}");
-                Console.WriteLine($"Authorization Server: {authorizationServer}");
+                Console.WriteLine($"Username:              {handle}");
+                Console.WriteLine($"DID:                   {did}");
+                Console.WriteLine($"PDS:                   {pds}");
+                Console.WriteLine($"Authorization Server:  {authorizationServer}");
 
                 Debugger.Break();
 
@@ -97,7 +97,7 @@ namespace Samples.OAuth
                 {
                     OAuthClient loginClient = agent.CreateOAuthClient();
 
-                    Uri startUri = await loginClient.CreateOAuth2StartUri(authorizationServer, clientId, callbackServer.Uri, cancellationToken: cancellationToken);
+                    Uri startUri = await loginClient.CreateOAuth2StartUri(pds, clientId, authorizationServer, callbackServer.Uri, cancellationToken: cancellationToken);
 
                     Console.WriteLine($"Login URI           : {startUri}");
 
@@ -111,35 +111,11 @@ namespace Samples.OAuth
 
                     if (!string.IsNullOrEmpty(queryString))
                     {
-                        Console.WriteLine($"Got {queryString}");
+                        AccessCredentials? credentials = await loginClient.ProcessOAuth2Response(queryString, cancellationToken: cancellationToken);
 
-                        LoginResult loginResult = await loginClient.ProcessOAuth2Response(queryString, cancellationToken: cancellationToken);
-
-                        Console.WriteLine($"Succeeded : {!loginResult.IsError}");
-
-                        if (!loginResult.IsError)
+                        if (credentials is not null)
                         {
-                            JsonWebToken accessToken = new (loginResult.AccessToken);
-
-                            Uri issuer = new (accessToken.Issuer);
-
-                            if (!issuer.Equals(authorizationServer))
-                            {
-                                ConsoleColor currentColor = Console.ForegroundColor;
-                                Console.ForegroundColor = ConsoleColor.Red;
-                                Console.WriteLine($"Invalid issuer, expected {authorizationServer}, received {accessToken.Issuer}");
-                                Console.ForegroundColor = currentColor;
-                                return;
-                            }
-
-                            if (!accessToken.GetClaim("scope").ToString().Contains("atproto"))
-                            {
-                                ConsoleColor currentColor = Console.ForegroundColor;
-                                Console.ForegroundColor = ConsoleColor.Red;
-                                Console.WriteLine($"AccessToken does not contain atproto in the scope claim");
-                                Console.ForegroundColor = currentColor;
-                                return;
-                            }
+                            Console.WriteLine($"Access JWT expires on: {credentials.AccessJwtExpiresOn:G}");
                         }
 
                         Debugger.Break();

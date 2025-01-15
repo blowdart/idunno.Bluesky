@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Text;
@@ -9,9 +10,12 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using IdentityModel.Client;
+using IdentityModel.OidcClient.DPoP;
+
+using idunno.AtProto;
 using idunno.AtProto.Repo;
-using IdentityModel.OidcClient;
-using System.Net.Http;
+using idunno.AtProto.Authentication;
 
 namespace idunno.AtProto
 {
@@ -58,7 +62,7 @@ namespace idunno.AtProto
         {
             ArgumentNullException.ThrowIfNull(header);
 
-            _extraHeaders = [ header ];
+            _extraHeaders = [header];
         }
 
         /// <summary>
@@ -92,12 +96,17 @@ namespace idunno.AtProto
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        public async Task<AtProtoHttpResult<TResult>> Get(Uri service, string endpoint, HttpClient httpClient, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<TResult>> Get(
+            Uri service,
+            string endpoint,
+            HttpClient httpClient,
+            CancellationToken cancellationToken = default)
         {
             return await Get(
                 service: service,
                 endpoint: endpoint,
-                accessToken: null,
+                accessCredentials: null,
+                accessCredentialsUpdated: null,
                 httpClient: httpClient,
                 subscribedLabelers: null,
                 jsonSerializerOptions: null,
@@ -109,8 +118,9 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
-        /// <param name="accessToken">An optional access token to send in the HTTP Authorization header to the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/>> <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="accessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -118,8 +128,9 @@ namespace idunno.AtProto
         public async Task<AtProtoHttpResult<TResult>> Get(
             Uri service,
             string endpoint,
-            string? accessToken,
+            AccessCredentials? accessCredentials,
             HttpClient httpClient,
+            Action<AccessCredentials>? accessCredentialsUpdated = null,
             IEnumerable<Did>? subscribedLabelers = null,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -145,7 +156,7 @@ namespace idunno.AtProto
 
             using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, new Uri(service, endpoint)))
             {
-                SetRequestHeaders(httpRequestMessage, httpClient, accessToken, subscribedLabelers, _extraHeaders);
+                SetRequestHeaders(httpRequestMessage, httpClient, accessCredentials, false, subscribedLabelers, _extraHeaders);
 
                 if (OnSendingRequest is not null)
                 {
@@ -166,6 +177,8 @@ namespace idunno.AtProto
                         StatusCode = httpResponseMessage.StatusCode,
                         RateLimit = ExtractRateLimit(httpResponseMessage.Headers)
                     };
+
+                    NotifyOnDPoPNonceChange(accessCredentials, httpRequestMessage, httpResponseMessage, accessCredentialsUpdated);
 
                     if (httpResponseMessage.IsSuccessStatusCode)
                     {
@@ -207,8 +220,10 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
-        /// <param name="accessToken">The access token to send in the HTTP Authorization header to the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/>> <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="useRefreshToken">Flag indicating that if <paramref name="accessCredentials"/> are provided the refresh token should be used.</param>
+        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -216,8 +231,10 @@ namespace idunno.AtProto
         public async Task<AtProtoHttpResult<TResult>> Post(
             Uri service,
             string endpoint,
-            string? accessToken,
+            AccessCredentials? accessCredentials,
             HttpClient httpClient,
+            bool useRefreshToken = false,
+            Action<AccessCredentials>? onAccessCredentialsUpdated = null,
             IEnumerable<Did>? subscribedLabelers = null,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -226,8 +243,11 @@ namespace idunno.AtProto
                 service: service,
                 endpoint: endpoint,
                 record: null,
-                accessToken: accessToken,
+                requestHeaders: null,
+                accessCredentials: accessCredentials,
                 httpClient: httpClient,
+                useRefreshToken: useRefreshToken,
+                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 jsonSerializerOptions: jsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -240,8 +260,9 @@ namespace idunno.AtProto
         /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
         /// <param name="record">An optional object to serialize to JSON and send as the request body.</param>
-        /// <param name="accessToken">The access token to send in the HTTP Authorization header to the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/>> <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -250,13 +271,25 @@ namespace idunno.AtProto
             Uri service,
             string endpoint,
             TRecord? record,
-            string? accessToken,
+            AccessCredentials? accessCredentials,
             HttpClient httpClient,
+            Action<AccessCredentials>? onAccessCredentialsUpdated = null,
             IEnumerable<Did>? subscribedLabelers = null,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
         {
-            return await Post(service, endpoint, record, null, accessToken, httpClient, subscribedLabelers, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
+            return await Post(
+                service,
+                endpoint,
+                record,
+                requestHeaders: null,
+                accessCredentials: accessCredentials,
+                httpClient: httpClient,
+                useRefreshToken: false,
+                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
+                subscribedLabelers: subscribedLabelers,
+                jsonSerializerOptions: jsonSerializerOptions,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -266,9 +299,11 @@ namespace idunno.AtProto
         /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
         /// <param name="record">An optional record to serialize to JSON and send as the request body.</param>
-        /// <param name="accessToken">The access token to send in the HTTP Authorization header to the <paramref name="service"/>.</param>
         /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/>> <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="useRefreshToken">Flag indicating that if <paramref name="accessCredentials"/> are provided the refresh token should be used.</param>
+        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -278,8 +313,10 @@ namespace idunno.AtProto
             string endpoint,
             TRecord? record,
             IReadOnlyCollection<NameValueHeaderValue>? requestHeaders,
-            string? accessToken,
+            AccessCredentials? accessCredentials,
             HttpClient httpClient,
+            bool useRefreshToken = false,
+            Action<AccessCredentials>? onAccessCredentialsUpdated = null,
             IEnumerable<Did>? subscribedLabelers = null,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -292,7 +329,7 @@ namespace idunno.AtProto
 
             using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(service, endpoint)))
             {
-                SetRequestHeaders(httpRequestMessage, httpClient, accessToken, subscribedLabelers, _extraHeaders);
+                SetRequestHeaders(httpRequestMessage, httpClient, accessCredentials, useRefreshToken, subscribedLabelers, _extraHeaders);
 
                 if (requestHeaders is not null)
                 {
@@ -327,6 +364,8 @@ namespace idunno.AtProto
                             StatusCode = httpResponseMessage.StatusCode,
                             RateLimit = ExtractRateLimit(httpResponseMessage.Headers)
                         };
+
+                        NotifyOnDPoPNonceChange(accessCredentials, httpRequestMessage, httpResponseMessage, onAccessCredentialsUpdated);
 
                         if (httpResponseMessage.IsSuccessStatusCode)
                         {
@@ -373,18 +412,22 @@ namespace idunno.AtProto
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
         /// <param name="blob">The blob to send as the request body.</param>
         /// <param name="contentHeaders">A collection of HTTP content headers to send with the request.</param>
-        /// <param name="accessToken">The access token to send in the HTTP Authorization header to the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/>> <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="blob"/> is an empty array.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="httpClient"/> or <paramref name="accessCredentials"/> is null.</exception>
         public async Task<AtProtoHttpResult<TResult>> PostBlob(
             Uri service,
             string endpoint,
             byte[] blob,
             IReadOnlyCollection<NameValueHeaderValue>? contentHeaders,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AccessCredentials>? onAccessCredentialsUpdated = null,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
         {
@@ -397,14 +440,14 @@ namespace idunno.AtProto
                 throw new ArgumentException("Blob cannot be empty.", nameof(blob));
             }
 
-            ArgumentException.ThrowIfNullOrEmpty(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             jsonSerializerOptions ??= JsonSerializationDefaults.DefaultJsonSerializerOptions;
 
             using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Post, new Uri(service, endpoint)))
             {
-                SetRequestHeaders(httpRequestMessage, httpClient, accessToken, subscribedLabelers: null, _extraHeaders);
+                SetRequestHeaders(httpRequestMessage, httpClient, accessCredentials, useRefreshToken: false, subscribedLabelers: null, headerValues: _extraHeaders);
 
                 httpRequestMessage.Content = new ByteArrayContent(blob);
 
@@ -435,6 +478,8 @@ namespace idunno.AtProto
                             StatusCode = httpResponseMessage.StatusCode,
                             RateLimit = ExtractRateLimit(httpResponseMessage.Headers)
                         };
+
+                        NotifyOnDPoPNonceChange(accessCredentials, httpRequestMessage, httpResponseMessage, onAccessCredentialsUpdated);
 
                         if (httpResponseMessage.IsSuccessStatusCode)
                         {
@@ -485,7 +530,7 @@ namespace idunno.AtProto
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Major Code Smell", "S108:Nested blocks of code should not be left empty", Justification = "Catching unexpected exceptions in error handling, so as to return as much as can be returned.")]
+        [SuppressMessage("Major Code Smell", "S108:Nested blocks of code should not be left empty", Justification = "Catching unexpected exceptions in error handling, so as to return as much as can be returned.")]
         private static async Task<AtErrorDetail> BuildErrorDetail(
             HttpRequestMessage request,
             HttpResponseMessage responseMessage,
@@ -531,13 +576,13 @@ namespace idunno.AtProto
         private static void SetRequestHeaders(
             HttpRequestMessage httpRequestMessage,
             HttpClient httpClient,
-            string? accessToken,
+            AccessCredentials? accessCredentials,
+            bool useRefreshToken = false,
             IEnumerable<Did>? subscribedLabelers = null,
             ICollection<NameValueHeaderValue>? headerValues = null)
         {
             // Because we're using HttpRequestMessage.SendAsync none of the useful default configuration on the httpClient comes through.
             // So copy the ones we care most about into the request message.
-
             httpRequestMessage.Version = httpClient.DefaultRequestVersion;
             httpRequestMessage.VersionPolicy = httpClient.DefaultVersionPolicy;
 
@@ -550,9 +595,52 @@ namespace idunno.AtProto
             httpRequestMessage.Headers.Accept.Clear();
             httpRequestMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(MediaTypeNames.Application.Json));
 
-            if (accessToken is not null)
+            // Add authentication headers
+            if (accessCredentials is not null)
             {
-                httpRequestMessage.AddBearerToken(accessToken);
+                if (accessCredentials.AccessJwt is null && accessCredentials.RefreshJwt is null)
+                {
+                    throw new ArgumentException("No AccessJwt or RefreshJwt present", nameof(accessCredentials));
+                }
+                else if (useRefreshToken && accessCredentials.RefreshJwt is null)
+                {
+                    ArgumentNullException.ThrowIfNull(accessCredentials.RefreshJwt);
+                }
+                else if (accessCredentials.AccessJwt is null)
+                {
+                    ArgumentNullException.ThrowIfNull(accessCredentials.AccessJwt);
+                }
+
+                string token;
+                if (useRefreshToken)
+                {
+                    token = accessCredentials.RefreshJwt;
+                }
+                else
+                { 
+                    token = accessCredentials.AccessJwt!;
+                }
+
+                if (!accessCredentials.RequiresDPoP)
+                {
+                    httpRequestMessage.SetBearerToken(token);
+                }
+                else
+                {
+                    // Calculate and add DPoP proof token
+                    DPoPProofRequest dPoPProofRequest = new()
+                    {
+                        AccessToken = token,
+                        DPoPNonce = accessCredentials.DPoPNonce,
+                        Method = httpRequestMessage.Method.ToString(),
+                        Url = httpRequestMessage.GetDPoPUrl()
+                    };
+
+                    DPoPProofTokenFactory factory = new(token);
+                    DPoPProof proofToken = factory.CreateProofToken(dPoPProofRequest);
+
+                    httpRequestMessage.SetDPoPToken(token, proofToken.ProofToken);
+                }
             }
 
             if (subscribedLabelers is not null)
@@ -597,7 +685,7 @@ namespace idunno.AtProto
                 return null;
             }
 
-            if(!int.TryParse(limitHeaderValue, out int limit) || 
+            if (!int.TryParse(limitHeaderValue, out int limit) ||
                !int.TryParse(remainingHeaderValue, out int remaining) ||
                !long.TryParse(resetHeaderValue, out long reset))
             {
@@ -619,6 +707,37 @@ namespace idunno.AtProto
             }
 
             return new RateLimit(limit, remaining, reset, readLimit, writeLimit);
+        }
+
+        private void NotifyOnDPoPNonceChange(
+            AccessCredentials? accessCredentials,
+            HttpRequestMessage httpRequestMessage,
+            HttpResponseMessage httpResponseMessage,
+            Action<AccessCredentials>? accessCredentialsUpdated)
+        {
+            if (accessCredentials is null || accessCredentialsUpdated is null)
+            {
+                return;
+            }
+
+            if (accessCredentials.RequiresDPoP &&
+                httpResponseMessage.Headers.ContainsDPoPNonce())
+            {
+                string? returnedDPoPNonce = httpResponseMessage.Headers.DPoPNonce();
+
+                if (!string.Equals(accessCredentials.DPoPNonce, returnedDPoPNonce, StringComparison.Ordinal))
+                {
+                    Logger.AtProtoClientDetectedDPoPNonceChanged(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
+                    AccessCredentials updatedCredentials = new(
+                        accessCredentials.Service,
+                        accessCredentials.AccessJwt,
+                        accessCredentials.RefreshJwt,
+                        accessCredentials.DPoPProofKey,
+                        returnedDPoPNonce);
+
+                    accessCredentialsUpdated(updatedCredentials);
+                }
+            }
         }
     }
 }

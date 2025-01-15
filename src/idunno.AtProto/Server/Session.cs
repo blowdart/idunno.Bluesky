@@ -11,30 +11,29 @@ namespace idunno.AtProto.Server
     /// </summary>
     public sealed record Session
     {
-        internal Session(Uri service, CreateSessionResponse createSessionResult)
+        internal Session(Uri service, CreateSessionResponse createSessionResponse)
         {
-            Service = service;
+            Handle = createSessionResponse.Handle;
+            Did = createSessionResponse.Did;
 
-            Handle = createSessionResult.Handle;
-            Did = createSessionResult.Did;
-
-            DidDoc = createSessionResult.DidDoc;
-            Email = createSessionResult.Email;
-            EmailConfirmed = createSessionResult.EmailConfirmed;
-            EmailAuthFactor = createSessionResult.EmailAuthFactor;
-            IsAccountActive = createSessionResult.Active;
-            AccountStatus = createSessionResult.Status;
+            DidDoc = createSessionResponse.DidDoc;
+            Email = createSessionResponse.Email;
+            EmailConfirmed = createSessionResponse.EmailConfirmed;
+            EmailAuthFactor = createSessionResponse.EmailAuthFactor;
+            IsAccountActive = createSessionResponse.Active;
+            AccountStatus = createSessionResponse.Status;
 
             AccessCredentials = new AccessCredentials(
-                createSessionResult.AccessJwt,
-                createSessionResult.RefreshJwt,
-                createSessionResult.DPoPProofKey,
-                createSessionResult.DPoPNonce);
+                service,
+                createSessionResponse.AccessJwt,
+                createSessionResponse.RefreshJwt,
+                createSessionResponse.DPoPProofKey,
+                createSessionResponse.DPoPNonce);
         }
 
-        internal Session(Uri service, GetSessionResponse getSessionResponse, string accessJwt, string refreshJwt, string? dPoPProofKey = null, string? dPoPNonce = null)
+        internal Session(GetSessionResponse getSessionResponse, AccessCredentials accessCredentials)
         {
-            Service = service;
+            AccessCredentials = accessCredentials;
 
             Did = getSessionResponse.Did;
             Handle = getSessionResponse.Handle;
@@ -45,12 +44,6 @@ namespace idunno.AtProto.Server
             DidDoc = getSessionResponse.DidDoc;
             IsAccountActive = getSessionResponse.Active;
             AccountStatus = getSessionResponse.Status;
-
-            AccessCredentials = new AccessCredentials(
-                accessJwt,
-                refreshJwt,
-                dPoPProofKey,
-                dPoPNonce);
         }
 
         /// <summary>
@@ -81,7 +74,6 @@ namespace idunno.AtProto.Server
         /// </remarks>
         [Obsolete("This property is obsolete. Use AccessCredentials.RefreshJwt instead.", false)]
         public string RefreshJwt => AccessCredentials.RefreshJwt;
-
 
         /// <summary>
         /// Gets the <see cref="Did"/> of the actor whose authentication produced this Session instance.
@@ -132,6 +124,6 @@ namespace idunno.AtProto.Server
         /// <summary>
         /// Gets the URI of the service that the <see cref="Session"/> instance was created on.
         /// </summary>
-        public Uri? Service { get; init; }
+        public Uri Service => AccessCredentials.Service;
     }
 }

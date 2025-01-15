@@ -52,7 +52,6 @@ namespace idunno.DidPlcDirectory
                     return await request.Get(
                         directory,
                         $"/{did}",
-                        accessToken: null,
                         httpClient: httpClient,
                         cancellationToken: cancellationToken).ConfigureAwait(false);
                 }
@@ -69,7 +68,6 @@ namespace idunno.DidPlcDirectory
                     return await request.Get(
                         service,
                         $"/.well-known/did.json",
-                        accessToken: null,
                         httpClient: httpClient,
                         cancellationToken: cancellationToken).ConfigureAwait(false);
                 }

@@ -221,7 +221,7 @@ namespace Samples.SessionEvents
 
                 Console.WriteLine("Logging in");
 
-                var loginResult = await agent.Login(new Credentials(handle, password), cancellationToken: cancellationToken).ConfigureAwait(false);
+                var loginResult = await agent.Login(new LoginCredentials(handle, password), cancellationToken: cancellationToken).ConfigureAwait(false);
 
                 Console.WriteLine($"Login result: {loginResult.StatusCode}");
 
@@ -248,7 +248,7 @@ namespace Samples.SessionEvents
                 }
 
                 // Login again
-                _ = await agent.Login(new Credentials(handle, password), cancellationToken: cancellationToken).ConfigureAwait(false);
+                _ = await agent.Login(new LoginCredentials(handle, password), cancellationToken: cancellationToken).ConfigureAwait(false);
 
                 // Now mess with the refresh token to cause the refresh call to fail
                 if (agent.Session is not null)

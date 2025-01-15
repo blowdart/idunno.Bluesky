@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using IdentityModel.OidcClient;
 using IdentityModel.OidcClient.DPoP;
 using Microsoft.IdentityModel.JsonWebTokens;
+using idunno.AtProto.Server;
 
 namespace idunno.AtProto.Authentication
 {
@@ -31,6 +32,10 @@ namespace idunno.AtProto.Authentication
         private readonly ILogger<OAuthClient> _logger;
 
         private readonly Guid _logCorrelation = Guid.NewGuid();
+
+        private Uri? _expectedAuthority;
+
+        private Uri? _expectedService;
 
         private OAuthClient(ILoggerFactory? loggerFactory = null)
         {
@@ -63,6 +68,7 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Gets the OAuth authorization URI for starting the OAuth flow.
         /// </summary>
+        /// <param name="service">The service to acquire a token for.</param>
         /// <param name="clientId">The client ID</param>
         /// <param name="redirectUri">The redirect URI where the oauth server should send tokens back to.</param>
         /// <param name="authority">The authorization server to use.</param>
@@ -74,9 +80,10 @@ namespace idunno.AtProto.Authentication
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="scopes"/> is empty.</exception>
         /// <exception cref="OAuthException">Thrown when the authorize state cannot be prepared or encounters an error during preparation.</exception>
         public async Task<Uri> CreateOAuth2StartUri(
-            Uri authority,
+            Uri service,
             string clientId,
             Uri redirectUri,
+            Uri authority,
             IEnumerable<string>? scopes = null,
             CancellationToken cancellationToken = default)
         {
@@ -91,6 +98,8 @@ namespace idunno.AtProto.Authentication
                 ArgumentOutOfRangeException.ThrowIfZero(scopes.Count());
             }
 
+            _expectedAuthority = authority;
+            _expectedService = service;
             scopes ??= _defaultScopes;
 
             OidcClientOptions oidcOptions = new()
@@ -139,7 +148,7 @@ namespace idunno.AtProto.Authentication
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="OAuthException">Thrown when the internal state of this instance is faulty.</exception>
-        public async Task<LoginResult> ProcessOAuth2Response(string data, CancellationToken cancellationToken = default)
+        public async Task<AccessCredentials?> ProcessOAuth2Response(string data, CancellationToken cancellationToken = default)
         {
             if (ProofKey is null)
             {
@@ -148,29 +157,76 @@ namespace idunno.AtProto.Authentication
 
             if (_oidcClient is null)
             {
-                throw new OAuthException("Internal client is null");
+                throw new OAuthException("Internal _oidcClient is null");
             }
 
             if (_authorizeState is null)
             {
-                throw new OAuthException("Internal state is null");
+                throw new OAuthException("Internal _authorizeState is null");
             }
 
-            LoginResult result = await _oidcClient.ProcessResponseAsync(data, _authorizeState, cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (_expectedService is null)
+            {
+                throw new OAuthException("Internal _expectedService is null");
+            }
 
-            if (result.IsError)
+            LoginResult loginResult = await _oidcClient.ProcessResponseAsync(data, _authorizeState, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (loginResult.IsError)
             {
                 ProofKey = null;
-                Logger.OAuthLoginFailed(_logger, _logCorrelation, result.Error, result.ErrorDescription);
-                return result;
+                Logger.OAuthLoginFailed(_logger, _logCorrelation, loginResult.Error, loginResult.ErrorDescription);
+                return null;
             }
 
             Logger.OAuthLoginCompleted(_logger, _logCorrelation);
 
-            // Validate issuer, date/time, signature using key from discovery doc.
-            // Change return type to be my own login result
+            JsonWebToken accessToken = new(loginResult.AccessToken);
 
-            return result;
+            if (accessToken.Audiences is null || !accessToken.Audiences.Any())
+            {
+                throw new OAuthException("Issued token does not contain aud.");
+            }
+
+            if (!accessToken.GetClaim("scope").ToString().Contains("atproto", StringComparison.Ordinal))
+            {
+                Logger.OAuthTokenDoesNotContainAtProtoScope(_logger, _logCorrelation);
+                throw new OAuthException("Issued token does not contain atproto in scope.");
+            }
+
+            Uri issuer = new(accessToken.Issuer);
+            if (!issuer.Equals(_expectedAuthority))
+            {
+                Logger.OAuthTokenHasMismatchedAuthority(_logger, issuer, _expectedAuthority!, _logCorrelation);
+                throw new OAuthException("Unexpected access token issuer");
+            }
+
+            // TODO: More logging
+
+            AtProtoHttpResult<ServerDescription> serverDescriptionResult;
+
+            using (HttpClientHandler handler = _innerFactoryHandler())
+            using (var httpClient = new HttpClient(handler))
+            {
+                _clientConfigurationHandler(httpClient);
+                serverDescriptionResult = await AtProtoServer.DescribeServer(_expectedService, httpClient, _loggerFactory, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (!serverDescriptionResult.Succeeded)
+            {
+                throw new OAuthException($"Could not get service description for {_expectedService}");
+            }
+            else if (!accessToken.Audiences.Contains(serverDescriptionResult.Result.Did.ToString()))
+            {
+                throw new OAuthException($"Access token audience did not contain {serverDescriptionResult.Result.Did}");
+            }
+
+            return new (
+                _expectedService,
+                loginResult.AccessToken,
+                loginResult.RefreshToken,
+                ProofKey,
+                loginResult.TokenResponse.DPoPNonce);
         }
 
         /// <summary>

@@ -52,14 +52,14 @@ namespace Samples.Logging
             {
                 using (var agentWithLogging = new AtProtoAgent(new("https://bsky.social"), proxyUri: proxyUri, checkCertificateRevocationList: checkCertificateRevocationList, loggerFactory: loggerFactory))
                 {
-                    _ = await agentWithLogging.Login(new Credentials(handle, password), cancellationToken: cancellationToken).ConfigureAwait(false);
+                    _ = await agentWithLogging.Login(new LoginCredentials(handle, password), cancellationToken: cancellationToken).ConfigureAwait(false);
                     await agentWithLogging.Logout(cancellationToken: cancellationToken).ConfigureAwait(false);
                 }
 
                 // Now do it again without a logger to demonstrate no bad side effects
                 using var agentWithoutLogging = new AtProtoAgent(new("https://bsky.social"));
                 {
-                    _ = await agentWithoutLogging.Login(new Credentials(handle, password), cancellationToken: cancellationToken).ConfigureAwait(false);
+                    _ = await agentWithoutLogging.Login(new LoginCredentials(handle, password), cancellationToken: cancellationToken).ConfigureAwait(false);
                     await agentWithoutLogging.Logout(cancellationToken: cancellationToken).ConfigureAwait(false);
                 }
             }

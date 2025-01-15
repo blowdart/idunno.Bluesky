@@ -2,8 +2,10 @@
 // Licensed under the MIT License.
 
 using System.Net;
-using idunno.AtProto.Repo;
+
 using Microsoft.Extensions.Logging;
+
+using idunno.AtProto.Repo;
 
 namespace idunno.AtProto
 {
@@ -23,10 +25,10 @@ namespace idunno.AtProto
         internal static partial void CreateSessionFailed(ILogger logger, HttpStatusCode statusCode);
 
         [LoggerMessage(6, LogLevel.Debug, "CreateSession with GetSession succeeded with access token for {did} on {service}")]
-        internal static partial void SessionCreatedFromOauthLogin(ILogger logger, string did, Uri service);
+        internal static partial void SessionCreatedFromOAuthLogin(ILogger logger, string did, Uri service);
 
         [LoggerMessage(7, LogLevel.Error, "CreateSession with GetSession failed with access token for {did} on {service}, {statusCode} {error} {message}")]
-        internal static partial void SessionCreatedFromOauthLoginFailed(ILogger logger, string did, Uri service, HttpStatusCode statusCode, string? error, string? message);
+        internal static partial void SessionCreatedFromOAuthLoginFailed(ILogger logger, string did, Uri service, HttpStatusCode statusCode, string? error, string? message);
 
         // Delete session logging
         [LoggerMessage(10, LogLevel.Debug, "Logout called for {did} on {service}")]
@@ -65,8 +67,8 @@ namespace idunno.AtProto
         [LoggerMessage(40, LogLevel.Debug, "RefreshSession called for {did} on {service}")]
         internal static partial void RefreshSessionCalled(ILogger logger, Did did, Uri service);
 
-        [LoggerMessage(41, LogLevel.Error, "RefreshSession called on {service} without an authenticated session")]
-        internal static partial void RefreshSessionFailedNoSession(ILogger logger, Uri service);
+        [LoggerMessage(41, LogLevel.Error, "RefreshSession called without an authenticated session")]
+        internal static partial void RefreshSessionFailedNoSession(ILogger logger);
 
         [LoggerMessage(42, LogLevel.Error, "RefreshSession API failed for {did} on {service} with {statusCode}")]
         internal static partial void RefreshSessionApiCallFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode);
@@ -191,11 +193,14 @@ namespace idunno.AtProto
         [LoggerMessage(200, LogLevel.Debug, "{method} request to {requestUri} succeeded.")]
         internal static partial void AtProtoClientRequestSucceeded(ILogger logger, Uri requestUri, HttpMethod method);
 
-        [LoggerMessage(201, LogLevel.Error, "{Method} request to {requestUri} failed with status code {status}, \"{error}\" \"{message}\"")]
+        [LoggerMessage(201, LogLevel.Error, "{method} request to {requestUri} failed with status code {status}, \"{error}\" \"{message}\"")]
         internal static partial void AtProtoClientRequestFailed(ILogger logger, Uri requestUri, HttpMethod method, HttpStatusCode status, string? error, string? message);
 
         [LoggerMessage(202, LogLevel.Debug, "{method} request to {requestUri} cancelled.")]
         internal static partial void AtProtoClientRequestCancelled(ILogger logger, Uri requestUri, HttpMethod method);
+
+        [LoggerMessage(203, LogLevel.Debug, "DPoP nonce changed on {method} call to {requestUri}")]
+        internal static partial void AtProtoClientDetectedDPoPNonceChanged(ILogger logger, Uri requestUri, HttpMethod method);
 
         // Service Auth logging
         [LoggerMessage(250, LogLevel.Debug, "Requesting {lxm} service token from {endpoint} for {audience} with a validity of {expires}")]
@@ -249,5 +254,11 @@ namespace idunno.AtProto
 
         [LoggerMessage(604, LogLevel.Information, "DPoP header added to request to {host}/{path}")]
         internal static partial void DPoPHeaderAddedToTokenRequest(ILogger logger, string? host, string? path);
+
+        [LoggerMessage(605, LogLevel.Error, "OAuth login access token did not contain AtProto in scope, correlation {correlation}")]
+        internal static partial void OAuthTokenDoesNotContainAtProtoScope(ILogger logger, Guid correlation);
+
+        [LoggerMessage(606, LogLevel.Error, "OAuth login access token issuer {actual} did not match the expected {expected}, correlation {correlation}")]
+        internal static partial void OAuthTokenHasMismatchedAuthority(ILogger logger, Uri expected, Uri actual, Guid correlation);
     }
 }

@@ -522,10 +522,8 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve information for.</param>
         /// <param name="service">The service to delete the record from.</param>
-        /// <param name="accessToken">An access token for the specified service.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
-        /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
@@ -534,10 +532,8 @@ namespace idunno.AtProto
         public static async Task<AtProtoHttpResult<RepoDescription>> DescribeRepo(
             AtIdentifier repo,
             Uri service,
-            string? accessToken,
             HttpClient httpClient,
             ILoggerFactory? loggerFactory = default,
-            JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(repo);
@@ -547,13 +543,10 @@ namespace idunno.AtProto
             AtProtoHttpClient<RepoDescription> request = new(loggerFactory);
 
             return await request.Get(
-                service,
-                $"{DescribeRepoEndpoint}?repo={Uri.EscapeDataString(repo.ToString())}",
-                accessToken,
-                httpClient,
-                jsonSerializerOptions: jsonSerializerOptions,
+                service: service,
+                endpoint: $"{DescribeRepoEndpoint}?repo={Uri.EscapeDataString(repo.ToString())}",
+                httpClient: httpClient,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
-
     }
 }
