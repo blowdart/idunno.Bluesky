@@ -58,13 +58,13 @@ namespace idunno.AtProto.Server
         /// <para>The access token is attached automatically to every API call through an agent that requires authentication.</para>
         /// </remarks>
         [Obsolete("This property is obsolete. Use AccessCredentials.AccessToken instead.", false)]
-        public string AccessJwt => AccessCredentials.AccessJwt;
+        public string AccessJwt => AccessCredentials.AccessJwt!;
 
         /// <summary>
         /// Gets the <see cref="DateTime"/> the access token expires on, if an access token is present.
         /// </summary>
         [Obsolete("This property is obsolete. Use AccessCredentials.AccessJwtExpiresOn instead.", false)]
-        public DateTimeOffset AccessJwtExpiresOn => AccessCredentials.AccessJwtExpiresOn;
+        public DateTimeOffset AccessJwtExpiresOn => (DateTimeOffset)AccessCredentials.AccessJwtExpiresOn!;
 
         /// <summary>
         /// Gets the refresh token for the actor whose authentication produced this Session instance.
@@ -73,7 +73,7 @@ namespace idunno.AtProto.Server
         /// <para>The refresh token is used to exchange an expiring access token for a new access token.</para>
         /// </remarks>
         [Obsolete("This property is obsolete. Use AccessCredentials.RefreshJwt instead.", false)]
-        public string RefreshJwt => AccessCredentials.RefreshJwt;
+        public string RefreshJwt => AccessCredentials.RefreshJwt!;
 
         /// <summary>
         /// Gets the <see cref="Did"/> of the actor whose authentication produced this Session instance.

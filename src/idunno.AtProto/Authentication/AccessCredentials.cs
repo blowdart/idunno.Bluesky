@@ -42,6 +42,7 @@ namespace idunno.AtProto.Authentication
             if (AccessJwt is not null)
             {
                 AccessJwtExpiresOn = GetJwtExpiry(AccessJwt);
+                Did = GetJwtDid(AccessJwt);
             }
         }
 
@@ -74,6 +75,11 @@ namespace idunno.AtProto.Authentication
         /// Gets a string representation of the DPoP nonce to use when signing requests.
         /// </summary>
         public string? DPoPNonce { get; internal set; }
+
+        /// <summary>
+        /// Gets the <see cref="AtProto.Did"/> for the access token.
+        /// </summary>
+        public Did? Did { get; internal set; }
 
         /// <summary>
         /// Flag indicating whether or not this instance has DPoP information and that api requests need to be signed.
@@ -131,6 +137,13 @@ namespace idunno.AtProto.Authentication
             DateTimeOffset expiryDateTimeOffset = expiryDateTime;
 
             return expiryDateTimeOffset;
+        }
+
+        private static Did GetJwtDid(string jwt)
+        {
+            JsonWebToken token = new(jwt);
+
+            return new Did(token.Subject);
         }
     }
 }

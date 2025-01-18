@@ -201,7 +201,7 @@ namespace idunno.AtProto
                 GetSessionEndpoint,
                 accessCredentials,
                 httpClient: httpClient,
-                accessCredentialsUpdated: accessCredentialsUpdated,
+                onAccessCredentialsUpdated: accessCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -266,7 +266,7 @@ namespace idunno.AtProto
                 endpoint,
                 accessCredentials,
                 httpClient: httpClient,
-                accessCredentialsUpdated: accessCredentialsUpdated,
+                onAccessCredentialsUpdated: accessCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (result.Succeeded)

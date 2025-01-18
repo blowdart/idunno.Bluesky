@@ -630,7 +630,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(service);
             ArgumentException.ThrowIfNullOrWhiteSpace(refreshJwt);
 
-            AccessCredentials accessCredentials = new AccessCredentials(
+            AccessCredentials accessCredentials = new(
                 service: service,
                 accessJwt: null,
                 refreshJwt: refreshJwt,
@@ -699,14 +699,14 @@ namespace idunno.AtProto
                         refreshSessionResult.Result.AccessJwt,
                         refreshSessionResult.Result.RefreshJwt,
                         accessCredentials.DPoPProofKey,
-                        refreshSessionResult.HttpResponseHeaders.DPoPNonce);
+                        refreshSessionResult.HttpResponseHeaders!.DPoPNonce());
 
-                    AtProtoHttpResult<GetSessionResponse> getSessionResult = await GetSession(accessCredentials, cancellationToken).ConfigureAwait(false);
+                    AtProtoHttpResult<GetSessionResponse> getSessionResult = await GetSession(refreshedAccessCredentials, cancellationToken).ConfigureAwait(false);
                     if (getSessionResult.Succeeded)
                     {
                         wereTokensRefreshed = true;
 
-                        restoredSession = new Session(service, getSessionResult.Result, refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.RefreshJwt);
+                        restoredSession = new Session(getSessionResult.Result, refreshedAccessCredentials);
                     }
                 }
             }
@@ -810,8 +810,9 @@ namespace idunno.AtProto
                 validate,
                 cid,
                 Service,
-                AccessToken,
+                Session.AccessCredentials,
                 httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -874,8 +875,9 @@ namespace idunno.AtProto
                 validate: validate,
                 swapCommit : swapCommit,
                 Service,
-                AccessToken,
+                Session.AccessCredentials,
                 httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -994,8 +996,9 @@ namespace idunno.AtProto
                     swapRecord,
                     swapCommit,
                     Service,
-                    AccessToken,
+                    Session.AccessCredentials,
                     httpClient: HttpClient,
+                    onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                     loggerFactory: LoggerFactory,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -1084,8 +1087,9 @@ namespace idunno.AtProto
                 swapCommit: swapCommit,
                 swapRecord: swapRecord,
                 Service,
-                AccessToken,
+                Session.AccessCredentials,
                 httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -1123,8 +1127,7 @@ namespace idunno.AtProto
             return await AtProtoServer.DescribeRepo(
                 repo,
                 service,
-                AccessToken,
-                httpClient: HttpClient,
+                HttpClient,
                 loggerFactory : LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -1194,6 +1197,13 @@ namespace idunno.AtProto
 
             Logger.GetRecordCalled(_logger, repo, collection, rKey, service);
 
+            AccessCredentials? accessCredentials = null;
+
+            if (IsAuthenticated)
+            {
+                accessCredentials = Session.AccessCredentials;
+            }
+
             AtProtoHttpResult<T> result =
                 await AtProtoServer.GetRecord<T>(
                     repo,
@@ -1201,8 +1211,9 @@ namespace idunno.AtProto
                     rKey,
                     cid,
                     service,
-                    AccessToken,
+                    accessCredentials,
                     httpClient: HttpClient,
+                    onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                     loggerFactory: LoggerFactory,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -1276,6 +1287,13 @@ namespace idunno.AtProto
 
             service ??= Service;
 
+            AccessCredentials? accessCredentials = null;
+
+            if (IsAuthenticated)
+            {
+                accessCredentials = Session.AccessCredentials;
+            }
+
             Logger.ListRecordsCalled(_logger, repo, collection, service);
 
             AtProtoHttpResult<PagedReadOnlyCollection<T>> result = await AtProtoServer.ListRecords<T>(
@@ -1285,7 +1303,8 @@ namespace idunno.AtProto
                 cursor,
                 reverse,
                 service,
-                AccessToken,
+                accessCredentials,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 httpClient: HttpClient,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1342,8 +1361,9 @@ namespace idunno.AtProto
                     blob,
                     mimeType,
                     service,
-                    AccessToken,
+                    Session.AccessCredentials,
                     httpClient: HttpClient,
+                    onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                     loggerFactory: LoggerFactory,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
             }
@@ -1394,8 +1414,9 @@ namespace idunno.AtProto
                 limit,
                 cursor,
                 service,
-                AccessToken,
+                accessCredentials: null,
                 httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -1452,7 +1473,7 @@ namespace idunno.AtProto
                     expiry,
                     lxm,
                     service,
-                    AccessToken,
+                    Session.AccessCredentials,
                     httpClient: HttpClient,
                     loggerFactory: LoggerFactory,
                     cancellationToken: cancellationToken).ConfigureAwait(false);

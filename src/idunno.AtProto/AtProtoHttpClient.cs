@@ -106,7 +106,7 @@ namespace idunno.AtProto
                 service: service,
                 endpoint: endpoint,
                 accessCredentials: null,
-                accessCredentialsUpdated: null,
+                onAccessCredentialsUpdated: null,
                 httpClient: httpClient,
                 subscribedLabelers: null,
                 jsonSerializerOptions: null,
@@ -120,7 +120,7 @@ namespace idunno.AtProto
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/>> <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="accessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -130,7 +130,7 @@ namespace idunno.AtProto
             string endpoint,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials>? accessCredentialsUpdated = null,
+            Action<AccessCredentials>? onAccessCredentialsUpdated,
             IEnumerable<Did>? subscribedLabelers = null,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -178,7 +178,7 @@ namespace idunno.AtProto
                         RateLimit = ExtractRateLimit(httpResponseMessage.Headers)
                     };
 
-                    NotifyOnDPoPNonceChange(accessCredentials, httpRequestMessage, httpResponseMessage, accessCredentialsUpdated);
+                    NotifyOnDPoPNonceChange(accessCredentials, httpRequestMessage, httpResponseMessage, onAccessCredentialsUpdated);
 
                     if (httpResponseMessage.IsSuccessStatusCode)
                     {
@@ -231,7 +231,7 @@ namespace idunno.AtProto
         public async Task<AtProtoHttpResult<TResult>> Post(
             Uri service,
             string endpoint,
-            AccessCredentials? accessCredentials,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
             bool useRefreshToken = false,
             Action<AccessCredentials>? onAccessCredentialsUpdated = null,
@@ -271,7 +271,7 @@ namespace idunno.AtProto
             Uri service,
             string endpoint,
             TRecord? record,
-            AccessCredentials? accessCredentials,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
             Action<AccessCredentials>? onAccessCredentialsUpdated = null,
             IEnumerable<Did>? subscribedLabelers = null,
@@ -313,7 +313,7 @@ namespace idunno.AtProto
             string endpoint,
             TRecord? record,
             IReadOnlyCollection<NameValueHeaderValue>? requestHeaders,
-            AccessCredentials? accessCredentials,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
             bool useRefreshToken = false,
             Action<AccessCredentials>? onAccessCredentialsUpdated = null,
@@ -411,7 +411,7 @@ namespace idunno.AtProto
         /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
         /// <param name="blob">The blob to send as the request body.</param>
-        /// <param name="contentHeaders">A collection of HTTP content headers to send with the request.</param>
+        /// <param name="requestHeaders">A collection of HTTP content headers to send with the request.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/>> <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
@@ -424,7 +424,7 @@ namespace idunno.AtProto
             Uri service,
             string endpoint,
             byte[] blob,
-            IReadOnlyCollection<NameValueHeaderValue>? contentHeaders,
+            IReadOnlyCollection<NameValueHeaderValue>? requestHeaders,
             AccessCredentials accessCredentials,
             HttpClient httpClient,
             Action<AccessCredentials>? onAccessCredentialsUpdated = null,
@@ -451,9 +451,9 @@ namespace idunno.AtProto
 
                 httpRequestMessage.Content = new ByteArrayContent(blob);
 
-                if (contentHeaders is not null)
+                if (requestHeaders is not null)
                 {
-                    foreach (NameValueHeaderValue header in contentHeaders)
+                    foreach (NameValueHeaderValue header in requestHeaders)
                     {
                         httpRequestMessage.Content.Headers.Add(header.Name, header.Value);
                     }

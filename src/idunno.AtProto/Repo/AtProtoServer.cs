@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using idunno.AtProto.Models;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
+using idunno.AtProto.Authentication;
 
 namespace idunno.AtProto
 {
@@ -58,15 +59,16 @@ namespace idunno.AtProto
         ///   Used to prevent conflicting repo mutations.
         ///</param>
         /// <param name="service">The service to create the record on.</param>
-        /// <param name="accessToken">An access token for the specified service.</param>
+        /// <param name="accessCredentials">Access credentials for the specified service.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown if <paramref name="writes"/>, <paramref name="repo"/>, <paramref name="service"/>,
-        /// <paramref name="accessToken"/>, or <paramref name="httpClient"/> is null.
+        /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
         /// <exception cref="ArgumentException">Thrown if <paramref name="writes"/> is an empty collection.</exception>
         public static async Task<AtProtoHttpResult<ApplyWritesResponse>> ApplyWrites(
@@ -75,8 +77,9 @@ namespace idunno.AtProto
             bool? validate,
             Cid? cid,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AccessCredentials> onAccessCredentialsUpdated,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -84,7 +87,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(writes);
             ArgumentNullException.ThrowIfNull(repo);
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             if (writes.Count == 0)
@@ -99,8 +102,9 @@ namespace idunno.AtProto
                 service,
                 ApplyWritesEndpoint,
                 request,
-                accessToken,
+                accessCredentials,
                 httpClient,
+                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
                 jsonSerializerOptions: jsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -122,15 +126,15 @@ namespace idunno.AtProto
         /// </param>
         /// <param name="swapCommit"><para>The <see cref="Cid"/>, if any, to compare and swap with.</para></param>
         /// <param name="service"><para>The service to create the record on.</para></param>
-        /// <param name="accessToken"><para>An access token for the specified service.</para></param>
+        /// <param name="accessCredentials"><para><see cref="AccessCredentials"/> for the specified service.</para></param>
         /// <param name="httpClient"><para>An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</para></param>
+        /// <param name="onAccessCredentialsUpdated"><para>An <see cref="Action{T}" /> to call if the credentials in the request need updating.</para></param>
         /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
         /// <param name="jsonSerializerOptions"><para><see cref="JsonSerializerOptions"/> to apply during deserialization.</para></param>
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown if <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="service"/>,
-        /// <paramref name="accessToken"/>, or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
         public static async Task<AtProtoHttpResult<CreateRecordResponse>> CreateRecord<TRecord>(
             TRecord record,
@@ -140,8 +144,9 @@ namespace idunno.AtProto
             bool? validate,
             Cid? swapCommit,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AccessCredentials> onAccessCredentialsUpdated,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -150,7 +155,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(collection);
             ArgumentNullException.ThrowIfNull(creator);
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             CreateRecordRequest<TRecord> request = new(record, collection, creator, validate, rKey, swapCommit);
@@ -160,8 +165,9 @@ namespace idunno.AtProto
                 service,
                 CreateRecordEndpoint,
                 request,
-                accessToken,
+                accessCredentials,
                 httpClient,
+                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
                 jsonSerializerOptions: jsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -175,15 +181,16 @@ namespace idunno.AtProto
         /// <param name="swapRecord">Specified if the operation should compare and swap with the previous record by cid.</param>
         /// <param name="swapCommit">Specified if the operation should compare and swap with the previous commit by cid.</param>
         /// <param name="service">The service to delete the record from.</param>
+        /// <param name="accessCredentials"><see cref="AccessCredentials"/> for the specified <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="accessToken">An access token for the specified service.</param>
+        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown if <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="rKey"/>, <paramref name="service"/>,
-        /// <paramref name="accessToken"/>, or <paramref name="httpClient"/> is null.
+        /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
         public static async Task<AtProtoHttpResult<Commit>> DeleteRecord(
             AtIdentifier repo,
@@ -192,8 +199,9 @@ namespace idunno.AtProto
             Cid? swapRecord,
             Cid? swapCommit,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AccessCredentials> onAccessCredentialsUpdated,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions=null,
             CancellationToken cancellationToken = default)
@@ -201,7 +209,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(repo);
             ArgumentNullException.ThrowIfNull(collection);
             ArgumentNullException.ThrowIfNull(rKey);
-            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -212,8 +220,9 @@ namespace idunno.AtProto
                 service,
                 DeleteRecordEndpoint,
                 deleteRecordRequest,
-                accessToken,
+                accessCredentials,
                 httpClient,
+                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
                 jsonSerializerOptions : jsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -255,15 +264,16 @@ namespace idunno.AtProto
         /// <param name="swapCommit"><para>The <see cref="Cid"/> of the commit, if any, to compare and swap with.</para></param>
         /// <param name="swapRecord"><para>The <see cref="Cid"/> of the record, if any, to compare and swap with.</para></param>
         /// <param name="service"><para>The service to create the record on.</para></param>
-        /// <param name="accessToken"><para>An access token for the specified service.</para></param>
+        /// <param name="accessCredentials"><para><see cref="AccessCredentials"/> for the specified service</para></param>
         /// <param name="httpClient"><para>An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</para></param>
+        /// <param name="onAccessCredentialsUpdated"><para>An <see cref="Action{T}" /> to call if the credentials in the request need updating.</para></param>
         /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
         /// <param name="jsonSerializerOptions"><para><see cref="JsonSerializerOptions"/> to apply during deserialization.</para></param>
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown if <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="rKey"/>, <paramref name="service"/>,
-        /// <paramref name="accessToken"/>, or <paramref name="httpClient"/> is null.
+        /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
         public static async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecord>(
             TRecord record,
@@ -274,8 +284,9 @@ namespace idunno.AtProto
             Cid? swapCommit,
             Cid? swapRecord,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AccessCredentials> onAccessCredentialsUpdated,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -285,7 +296,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(creator);
             ArgumentNullException.ThrowIfNull(rKey);
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             PutRecordRequest<TRecord> request = new(record, collection, creator, rKey, validate, swapCommit, swapRecord);
@@ -295,8 +306,9 @@ namespace idunno.AtProto
                 service,
                 PutRecordEndpoint,
                 request,
-                accessToken,
+                accessCredentials,
                 httpClient,
+                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
                 jsonSerializerOptions: jsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -311,8 +323,9 @@ namespace idunno.AtProto
         /// <param name="rKey">The record key, identifying the record to be deleted.</param>
         /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
         /// <param name="service">The service to retrieve the record from.</param>
-        /// <param name="accessToken">An access token for the specified service.</param>
+        /// <param name="accessCredentials">Optional access credentials for the specified service.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -326,8 +339,9 @@ namespace idunno.AtProto
             RecordKey rKey,
             Cid? cid,
             Uri service,
-            string? accessToken,
+            AccessCredentials? accessCredentials,
             HttpClient httpClient,
+            Action<AccessCredentials> onAccessCredentialsUpdated,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default) where TRecord: class
@@ -350,8 +364,9 @@ namespace idunno.AtProto
             return await client.Get(
                 service,
                 $"{GetRecordEndpoint}?{queryString}",
-                accessToken,
+                accessCredentials,
                 httpClient,
+                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
                 jsonSerializerOptions: jsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -366,8 +381,9 @@ namespace idunno.AtProto
         /// <param name="cursor">The cursor position to start retrieving records from.</param>
         /// <param name="reverse">A flag indicating if records should be listed in reverse order.</param>
         /// <param name="service">The service to retrieve the record from.</param>
-        /// <param name="accessToken">An access token for the specified service.</param>
+        /// <param name="accessCredentials">Optional access credentials for the specified service.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -383,8 +399,9 @@ namespace idunno.AtProto
             string? cursor,
             bool reverse,
             Uri service,
-            string? accessToken,
+            AccessCredentials? accessCredentials,
             HttpClient httpClient,
+            Action<AccessCredentials> onAccessCredentialsUpdated,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
@@ -424,8 +441,9 @@ namespace idunno.AtProto
             AtProtoHttpResult<ListRecordsResponse<TRecord>> response = await client.Get(
                 service,
                 $"{ListRecordsEndpoint}?{queryString}",
-                accessToken,
+                accessCredentials,
                 httpClient,
+                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
                 jsonSerializerOptions: jsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -455,21 +473,23 @@ namespace idunno.AtProto
         /// <param name="blob">The blob to upload.</param>
         /// <param name="mimeType">The mime type of the blob to upload.</param>
         /// <param name="service">The service to upload the blob to.</param>
-        /// <param name="accessToken">An access token for the specified service.</param>
+        /// <param name="accessCredentials">Access credentials for the specified service.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="blob"/> is null or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="blob"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="blob"/> is a zero length array.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="accessToken"/> is null ot empty, or <paramref name="mimeType"/> is empty or not in the type/subtype format.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="mimeType"/> is empty or not in the type/subtype format.</exception>
         public static async Task<AtProtoHttpResult<Blob>> UploadBlob(
             byte[] blob,
             string mimeType,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AccessCredentials> onAccessCredentialsUpdated,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -484,7 +504,7 @@ namespace idunno.AtProto
             }
 
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentException.ThrowIfNullOrEmpty(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             List<NameValueHeaderValue> requestHeaders =
@@ -495,7 +515,16 @@ namespace idunno.AtProto
             AtProtoHttpClient<CreateBlobResponse> client = new(loggerFactory);
 
             AtProtoHttpResult<CreateBlobResponse> response =
-                await client.PostBlob(service, UploadBlobEndpoint, blob, requestHeaders, accessToken, httpClient, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
+                await client.PostBlob(
+                    service: service,
+                    endpoint: UploadBlobEndpoint,
+                    blob: blob,
+                    requestHeaders: requestHeaders,
+                    accessCredentials: accessCredentials,
+                    httpClient: httpClient,
+                    onAccessCredentialsUpdated: onAccessCredentialsUpdated,
+                    jsonSerializerOptions : jsonSerializerOptions,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)
             {
