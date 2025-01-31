@@ -24,9 +24,11 @@ namespace idunno.Bluesky.Chat
         /// <param name="embed">A view over the embedded record in the message, if any.</param>
         /// <param name="sender">A view over the message author.</param>
         /// <param name="sentAt">The <see cref="DateTimeOffset"/> the message was sent on.</param>
+        /// <exception cref="ArgumentException">
+        ///   Thrown when <paramref name="id" /> or <paramref name="revision"/> is null or whitespace.
+        /// </exception>
         /// <exception cref="ArgumentNullException">
-        ///   Thrown when <paramref name="text"/> or <paramref name="sentAt"/> or <paramref name="sender"/> is null, or
-        ///   when <paramref name="id" /> or <paramref name="revision"/> is null or whitespace.
+        ///   Thrown when <paramref name="text"/> or <paramref name="sentAt"/> or <paramref name="sender"/> is null.
         /// </exception>
         public MessageView(
             string id,
@@ -37,8 +39,9 @@ namespace idunno.Bluesky.Chat
             EmbeddedRecordView embed,
             DateTimeOffset sentAt) : base(id, revision, sender, sentAt)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(id);
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(revision);
+            ArgumentException.ThrowIfNullOrWhiteSpace(id);
+            ArgumentException.ThrowIfNullOrWhiteSpace(revision);
+
             ArgumentNullException.ThrowIfNull(text);
             ArgumentNullException.ThrowIfNull(sender);
             ArgumentNullException.ThrowIfNull(sentAt);

@@ -14,8 +14,8 @@ namespace idunno.AtProto.Labels
         /// Creates a new instance of <see cref="SelfLabel"/>
         /// </summary>
         /// <param name="value">The short string name of the value or type of this label.</param>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null or whitespace.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="value"/> is longer than 128 characters.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null or whitespace.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> is longer than 128 characters.</exception>
         public SelfLabel(string value)
         {
             ArgumentNullException.ThrowIfNullOrWhiteSpace(value);

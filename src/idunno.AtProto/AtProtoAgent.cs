@@ -1,7 +1,6 @@
 ﻿// Copyright(c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Timers;
 
@@ -11,17 +10,19 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
-using idunno.AtProto.Repo;
-using idunno.AtProto.Server;
-using idunno.AtProto.Events;
-using Blob = idunno.AtProto.Repo.Blob;
-
-using idunno.AtProto.Models;
-using idunno.AtProto.Labels;
-using idunno.AtProto.Repo.Models;
 using idunno.AtProto.Authentication;
+using idunno.AtProto.Events;
+using idunno.AtProto.Labels;
+using idunno.AtProto.Models;
+using idunno.AtProto.Repo;
+using idunno.AtProto.Repo.Models;
+using idunno.AtProto.Server;
 
 using idunno.DidPlcDirectory;
+
+using Blob = idunno.AtProto.Repo.Blob;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace idunno.AtProto
 {
@@ -30,20 +31,11 @@ namespace idunno.AtProto
     /// </summary>
     public partial class AtProtoAgent : Agent
     {
-        private readonly bool _enableTokenRefresh = true;
-        private readonly TimeSpan _refreshAccessTokenInterval = new(1, 0, 0);
-
-        private System.Timers.Timer? _sessionRefreshTimer;
-        private readonly object _session_SyncLock = new();
         private volatile bool _disposed;
 
         private readonly DirectoryAgent _directoryAgent;
 
         private readonly ILogger<AtProtoAgent> _logger;
-
-        private readonly Uri _initialServiceUri;
-
-        private Session? _session;
 
         /// <summary>
         /// Creates a new instance of <see cref="AtProtoAgent"/>
@@ -76,7 +68,6 @@ namespace idunno.AtProto
         {
             ArgumentNullException.ThrowIfNull(service);
 
-            _initialServiceUri = service;
             Service = service;
 
             if (options is not null)
@@ -106,7 +97,6 @@ namespace idunno.AtProto
         {
             ArgumentNullException.ThrowIfNull(service);
 
-            _initialServiceUri = service;
             Service = service;
 
             if (options is not null)
@@ -121,109 +111,9 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Gets the <see cref="Uri"/> for the AT Proto service the agent is issuing commands against.
+        /// Gets the <see cref="Uri"/> for the AT Proto service the agent is issuing requests against.
         /// </summary>
-        /// <remarks>
-        /// <para>
-        ///   This may change based on the results of a <see cref="Login(LoginCredentials, Uri?, CancellationToken)"/> operation if the
-        ///   Personal Data Server (PDS) discovered in the user's DID Document is different from the service URI provided at construction.
-        ///</para>
-        /// </remarks>
         public Uri Service { get; protected set; }
-
-        /// <summary>
-        /// Gets or sets the authenticated session to use when making requests that require authentication.
-        /// </summary>
-        [SuppressMessage("Naming", "CA1721:Property names should not match get methods", Justification = "It's not that confusing as GetSession() refers to the ATProto api, like the other Get* methods.")]
-        public Session? Session
-        {
-            get
-            {
-                return _session;
-            }
-
-            protected set
-            {
-                _session = value;
-                if (value is not null && value.Service is not null)
-                {
-                    Service = value.Service;
-                }
-                else
-                {
-                    Service = _initialServiceUri;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Gets the current <see cref="Did"/> of the agent's authenticated session, if any, otherwise returns null.
-        /// </summary>
-        public Did? Did
-        {
-            get
-            {
-                if (Session is not null)
-                {
-                    return Session.Did;
-                }
-                else
-                {
-                    return null;
-                }
-            }
-        }
-
-
-        /// <summary>
-        /// Gets the current session's access token if the agent is authenticated and the access token has not expired, otherwise returns null.
-        /// </summary>
-        protected string? AccessToken
-        {
-            get
-            {
-                if (IsAuthenticated)
-                {
-                    return Session.AccessCredentials.AccessJwt;
-                }
-                else
-                {
-                    return null;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Gets the current session's refresh token if any, otherwise returns null.
-        /// </summary>
-        protected string? RefreshToken
-        {
-            get
-            {
-                if (Session is not null)
-                {
-                    return Session.AccessCredentials.RefreshJwt;
-                }
-                else
-                {
-                    return null;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Gets a value indicating whether the agent has an active session.
-        /// </summary>
-        [MemberNotNullWhen(true, nameof(Session))]
-        [MemberNotNullWhen(true, nameof(AccessToken))]
-        [MemberNotNullWhen(true, nameof(Did))]
-        public override bool IsAuthenticated
-        {
-            get
-            {
-                return Session is not null && Session.AccessCredentials is not null && Session.AccessCredentials.AccessJwtExpiresOn > DateTimeOffset.UtcNow;
-            }
-        }
 
         /// <summary>
         /// Gets a configured logger factory from which to create loggers.
@@ -243,107 +133,25 @@ namespace idunno.AtProto
 
             if (disposing)
             {
-                if (_sessionRefreshTimer is not null)
+                if (_credentialRefreshTimer is not null)
                 {
-                    _sessionRefreshTimer.Stop();
-                    _sessionRefreshTimer.Enabled = false;
-                    _sessionRefreshTimer.Dispose();
-                    _sessionRefreshTimer = null;
+                    _credentialRefreshTimer.Stop();
+                    _credentialRefreshTimer.Enabled = false;
+                    _credentialRefreshTimer.Dispose();
+                    _credentialRefreshTimer = null;
                 }
 
-                SessionRefreshed = null;
+                Authenticated = null;
+                CredentialsUpdated = null;
 
                 _directoryAgent.Dispose();
+
+                _credentialReaderWriterLockSlim.Dispose();
             }
 
             base.Dispose(disposing);
 
             _disposed = true;
-        }
-
-        /// <summary>
-        /// Raised when a session is created for this instance of <see cref="AtProtoAgent"/>.
-        /// </summary>
-        public event EventHandler<SessionCreatedEventArgs>? SessionCreated;
-
-        /// <summary>
-        /// Raised when the session for this instance of <see cref="AtProtoAgent"/> is refreshed.
-        /// </summary>
-        public event EventHandler<SessionRefreshedEventArgs>? SessionRefreshed;
-
-        /// <summary>
-        /// Raised when the session refresh for this instance of <see cref="AtProtoAgent"/> failed.
-        /// </summary>
-        public event EventHandler<SessionRefreshFailedEventArgs>? SessionRefreshFailed;
-
-        /// <summary>
-        /// Raised when the session for this instance of <see cref="AtProtoAgent"/> ended.
-        /// </summary>
-        public event EventHandler<SessionEndedEventArgs>? SessionEnded;
-
-        /// <summary>
-        /// Called to raise any <see cref="SessionCreated"/> events, if any.
-        /// </summary>
-        /// <param name="e">The <see cref="SessionCreatedEventArgs"/> for the event.</param>
-        protected virtual void OnSessionCreated(SessionCreatedEventArgs e)
-        {
-            EventHandler<SessionCreatedEventArgs>? sessionCreated = SessionCreated;
-
-            if (!_disposed)
-            {
-                sessionCreated?.Invoke(this, e);
-            }
-        }
-
-        /// <summary>
-        /// Called to raise any <see cref="SessionRefreshed"/> events, if any.
-        /// </summary>
-        /// <param name="e">The <see cref="SessionRefreshedEventArgs"/> for the event.</param>
-        protected virtual void OnSessionRefreshed(SessionRefreshedEventArgs e)
-        {
-            EventHandler<SessionRefreshedEventArgs>? sessionRefreshed = SessionRefreshed;
-
-            if (!_disposed)
-            {
-                sessionRefreshed?.Invoke(this, e);
-            }
-        }
-
-        /// <summary>
-        /// Called to raise any <see cref="SessionRefreshFailed"/> events, if any.
-        /// </summary>
-        /// <param name="e">The <see cref="SessionRefreshFailedEventArgs"/> for the event.</param>
-        protected virtual void OnSessionRefreshFailed(SessionRefreshFailedEventArgs e)
-        {
-            EventHandler<SessionRefreshFailedEventArgs>? sessionRefreshFailed = SessionRefreshFailed;
-
-            if (!_disposed)
-            {
-                sessionRefreshFailed?.Invoke(this, e);
-            }
-        }
-
-        /// <summary>
-        /// Called to raise any <see cref="SessionEnded"/> events, if any.
-        /// </summary>
-        /// <param name="e">The <see cref="SessionEndedEventArgs"/> for the event.</param>
-        protected virtual void OnSessionEnded(SessionEndedEventArgs e)
-        {
-            EventHandler<SessionEndedEventArgs>? sessionEnded = SessionEnded;
-
-            if (!_disposed)
-            {
-                sessionEnded?.Invoke(this, e);
-            }
-        }
-
-        /// <summary>
-        /// Called internally by an <see cref="AtProtoHttpClient{TResult}"/> if the credentials were updated.
-        /// </summary>
-        /// <param name="credentials">The new credentials</param>
-        protected virtual void OnAccessCredentialsUpdated(AccessCredentials credentials)
-        {
-            Session?.AccessCredentials.Update(credentials);
         }
 
         /// <summary>
@@ -461,132 +269,132 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="InvalidSessionException">Thrown when the current session does not have enough information to call refresh itself.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when agent is not authenticated.</exception>
         public async Task<bool> RefreshSession(CancellationToken cancellationToken = default)
         {
-            SessionConfigurationErrorType sessionErrorFlags = SessionConfigurationErrorType.None;
-
-            if (Session is null)
-            {
-                sessionErrorFlags |= SessionConfigurationErrorType.NullSession;
-            }
-
-            if (Session is not null && Session.AccessCredentials.RefreshJwt is null)
-            {
-                sessionErrorFlags |= SessionConfigurationErrorType.MissingRefreshToken;
-            }
-
-            if (Session is not null && Session.Service is null)
-            {
-                sessionErrorFlags |= SessionConfigurationErrorType.MissingService;
-            }
-
-            if (sessionErrorFlags != SessionConfigurationErrorType.None)
-            {
-                var sessionRefreshFailedEventArgs = new SessionRefreshFailedEventArgs(sessionErrorFlags, Session?.Did, Session?.Service);
-
-                OnSessionRefreshFailed(sessionRefreshFailedEventArgs);
-
-                throw new InvalidSessionException($"The current session does not have enough information to refresh: {sessionErrorFlags}")
-                {
-                    SessionErrors = sessionErrorFlags
-                };
-            }
-
-            return await RefreshSession(Session!.AccessCredentials, cancellationToken).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Refreshes the session specified by the <paramref name="accessCredentials"/>.
-        /// </summary>
-        /// <param name="accessCredentials">The refresh token to use to refresh the session.</param>
-        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="accessCredentials"/>'s RefreshJwt property is null or whitespace.</exception>
-        public async Task<bool> RefreshSession(AccessCredentials accessCredentials, CancellationToken cancellationToken = default)
-        {
-            ArgumentNullException.ThrowIfNull(accessCredentials);
-            ArgumentException.ThrowIfNullOrWhiteSpace(accessCredentials.RefreshJwt);
-
             if (!IsAuthenticated)
             {
                 Logger.RefreshSessionFailedNoSession(_logger);
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
-            Logger.RefreshSessionCalled(_logger, Session!.Did, accessCredentials.Service);
+            return await RefreshSession(Credentials, cancellationToken).ConfigureAwait(false);
+        }
 
-            if (_sessionRefreshTimer is not null)
+        /// <summary>
+        /// Refreshes the session specified by the <paramref name="refreshCredential"/>.
+        /// </summary>
+        /// <param name="refreshCredential">The refresh token to use to refresh the session.</param>
+        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="refreshCredential"/> is null, or its Uri property is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="refreshCredential"/>'s RefreshToken property is null or whitespace.</exception>
+        public async Task<bool> RefreshSession(RefreshCredential refreshCredential, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(refreshCredential);
+            ArgumentNullException.ThrowIfNull(refreshCredential.Service);
+
+            ArgumentException.ThrowIfNullOrWhiteSpace(refreshCredential.RefreshToken);
+
+            string tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(refreshCredential.RefreshToken)));
+
+            using (_logger.BeginScope($"RefreshSession() with refresh token #{tokenHash}"))
             {
-                lock (_session_SyncLock)
+                Logger.RefreshSessionCalled(_logger, refreshCredential.Service, tokenHash);
+
+                if (_credentialRefreshTimer is not null)
                 {
                     StopTokenRefreshTimer();
                 }
-            }
 
-            AtProtoHttpResult<RefreshSessionResponse> refreshSessionResult;
-            try
-            {
-                refreshSessionResult = await AtProtoServer.RefreshSession(
-                    accessCredentials,
-                    HttpClient,
-                    accessCredentialsUpdated: OnAccessCredentialsUpdated,
-                    loggerFactory: LoggerFactory,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                Logger.TokenRefreshApiThrew(_logger, e);
-                throw;
-            }
-
-            if (!refreshSessionResult.Succeeded || refreshSessionResult.Result.AccessJwt is null || refreshSessionResult.Result.RefreshJwt is null)
-            {
-                Logger.RefreshSessionApiCallFailed(_logger, Session!.Did, accessCredentials.Service, refreshSessionResult.StatusCode);
-
-                var sessionRefreshFailedEventArgs = new SessionRefreshFailedEventArgs(
-                    SessionConfigurationErrorType.None,
-                    null,
-                    accessCredentials.Service,
-                    refreshSessionResult.StatusCode,
-                    refreshSessionResult.AtErrorDetail);
-
-                OnSessionRefreshFailed(sessionRefreshFailedEventArgs);
-
-                return false;
-            }
-
-            if (!await ValidateJwtToken(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.Did, accessCredentials.Service).ConfigureAwait(false))
-            {
-                Logger.RefreshSessionTokenValidationFailed(_logger, Session!.Did, accessCredentials.Service);
-
-                throw new SecurityTokenValidationException("The issued access token could not be validated.");
-            }
-
-            lock (_session_SyncLock)
-            {
-                if (Session is not null)
+                AtProtoHttpResult<RefreshSessionResponse> refreshSessionResult;
+                try
                 {
-                    Logger.RefreshSessionSucceeded(_logger, Session.Did, accessCredentials.Service);
-
-                    Session.AccessCredentials.UpdateAccessTokens(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.RefreshJwt);
-
-                    _sessionRefreshTimer ??= new();
-                    StartTokenRefreshTimer();
-
-                    var sessionRefreshedEventArgs = new SessionRefreshedEventArgs(
-                        Session.Did,
-                        Session.Service,
-                        Session.AccessCredentials);
-
-                    OnSessionRefreshed(sessionRefreshedEventArgs);
-
-                    return true;
+                    refreshSessionResult = await AtProtoServer.RefreshSession(
+                        refreshCredential,
+                        HttpClient,
+                        credentialsUpdated: null,
+                        loggerFactory: LoggerFactory,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
                 }
-            }
+                catch (Exception e)
+                {
+                    Logger.TokenRefreshApiThrew(_logger, e);
+                    throw;
+                }
 
-            return false;
+                if (!refreshSessionResult.Succeeded || refreshSessionResult.Result.AccessJwt is null || refreshSessionResult.Result.RefreshJwt is null)
+                {
+                    Logger.RefreshSessionApiCallFailed(_logger, refreshCredential.Service, tokenHash, refreshSessionResult.StatusCode);
+
+                    var tokenRefreshFailedEventArgs = new TokenRefreshFailedEventArgs(
+                        refreshCredential.RefreshToken,
+                        refreshCredential.Service,
+                        refreshSessionResult.StatusCode,
+                        refreshSessionResult.AtErrorDetail);
+
+                    OnTokenRefreshFailed(tokenRefreshFailedEventArgs);
+                    return false;
+                }
+
+                if (!await ValidateJwtToken(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.Did, refreshCredential.Service).ConfigureAwait(false))
+                {
+                    Logger.RefreshSessionTokenValidationFailed(_logger, refreshSessionResult.Result.Did, refreshCredential.Service);
+
+                    throw new SecurityTokenValidationException("The issued access token could not be validated.");
+                }
+
+                AccessCredentials refreshedCredentials;
+
+                if (refreshCredential is IDPoPBoundCredential dPoPBoundCredential)
+                {
+                    if (refreshSessionResult.HttpResponseHeaders is null || !refreshSessionResult.HttpResponseHeaders.ContainsDPoPNonce())
+                    {
+                        var tokenRefreshFailedEventArgs = new TokenRefreshFailedEventArgs(
+                            refreshCredential.RefreshToken,
+                            refreshCredential.Service,
+                            refreshSessionResult.StatusCode,
+                            refreshSessionResult.AtErrorDetail);
+
+                        OnTokenRefreshFailed(tokenRefreshFailedEventArgs);
+
+                        throw new AtProtoException("Refresh was for a DPoP token but did not return a DPoP nonce.");
+                    }
+                    else
+                    {
+                        refreshedCredentials = new DPoPAccessCredentials(
+                            refreshCredential.Service,
+                            refreshSessionResult.Result.AccessJwt,
+                            refreshSessionResult.Result.RefreshJwt,
+                            dPoPBoundCredential.DPoPProofKey,
+                            refreshSessionResult.HttpResponseHeaders.DPoPNonce()!);
+                    }
+                }
+                else
+                {
+                    refreshedCredentials = new AccessCredentials(
+                        refreshCredential.Service,
+                        refreshSessionResult.Result.AccessJwt,
+                        refreshSessionResult.Result.RefreshJwt);
+                }
+
+
+                Logger.RefreshSessionSucceeded(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
+
+                Credentials = refreshedCredentials;
+
+                _credentialRefreshTimer ??= new();
+                StartTokenRefreshTimer();
+
+                var credentialsUpdatedEventArgs = new CredentialsUpdatedEventArgs(
+                    refreshedCredentials.Did,
+                    refreshedCredentials.Service,
+                    refreshedCredentials);
+
+                OnCredentialsUpdated(credentialsUpdatedEventArgs);
+
+                return true;
+            }
         }
 
         /// <summary>
@@ -604,148 +412,113 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentException.ThrowIfNullOrEmpty(accessCredentials.AccessJwt);
 
-            return await AtProtoServer.GetSession(accessCredentials, HttpClient, OnAccessCredentialsUpdated, LoggerFactory, cancellationToken).ConfigureAwait(false);
+            return await AtProtoServer.GetSession(accessCredentials, HttpClient, InternalOnCredentialsUpdatedCallBack, LoggerFactory, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
-        /// Resumes a session on the <paramref name="service"/> from the <paramref name="refreshJwt"/>.
+        /// Resumes a session on the <paramref name="service"/> from the <paramref name="refreshCredential"/>.
         /// </summary>
         /// <param name="did">The <see cref="Did"/> the tokens are associated with.</param>
         /// <param name="service">The <see cref="Uri"/> of the PDS that issued the tokens.</param>
-        /// <param name="refreshJwt">The refresh token to restore the session for.</param>
-        /// <param name="dPoPProofKey">An optional string representation of the DPoP proof key to use when signing requests.</param>
-        /// <param name="dPoPNonce">An optional string representation of the DPoP nonce to use when signing requests.</param>
+        /// <param name="refreshCredential">The refresh token to restore the session for.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/>, <paramref name="refreshJwt"/> or <paramref name="service"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/>, <paramref name="refreshCredential"/> or <paramref name="service"/> is null.</exception>
         public async Task<bool> ResumeSession(
             Did did,
             Uri service,
-            string refreshJwt,
-            string? dPoPProofKey = null,
-            string? dPoPNonce = null,
+            RefreshCredential refreshCredential,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(did);
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentException.ThrowIfNullOrWhiteSpace(refreshJwt);
+            ArgumentNullException.ThrowIfNull(refreshCredential);
 
-            AccessCredentials accessCredentials = new(
-                service: service,
-                accessJwt: null,
-                refreshJwt: refreshJwt,
-                dPoPProofKey: dPoPProofKey,
-                dPoPNonce: dPoPNonce);
+            ArgumentException.ThrowIfNullOrWhiteSpace(refreshCredential.RefreshToken);
 
-            return await ResumeSession(did, accessCredentials, cancellationToken).ConfigureAwait(false);
+            return await ResumeSession(did, refreshCredential, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
-        /// Resumes a session from the provided <paramref name="accessCredentials"/>.
+        /// Resumes a session from the provided <paramref name="refreshCredential"/>.
         /// </summary>
         /// <param name="did">The <see cref="Did"/> the tokens are associated with.</param>
-        /// <param name="accessCredentials">The credentials to restore the session for.</param>
+        /// <param name="refreshCredential">The credentials to restore the session for.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/>.</exception>
-        /// <exception cref="ArgumentException">Thrown when the RefreshJwt or Service properties in <paramref name="accessCredentials"/> is null or whitespace.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="refreshCredential"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when the RefreshJwt or Service properties in <paramref name="refreshCredential"/> is null or whitespace.</exception>
         /// <exception cref="SessionRestorationFailedException">Thrown when the session recreated on the PDS does not match the expected <paramref name="did"/>.</exception>
-        public async Task<bool> ResumeSession(Did did, AccessCredentials accessCredentials, CancellationToken cancellationToken = default)
+        public async Task<bool> ResumeSession(Did did, RefreshCredential refreshCredential, CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNull(accessCredentials);
-            ArgumentNullException.ThrowIfNull(accessCredentials.Service);
+            ArgumentNullException.ThrowIfNull(refreshCredential);
+            ArgumentNullException.ThrowIfNull(refreshCredential.Service);
 
-            ArgumentException.ThrowIfNullOrWhiteSpace(accessCredentials.RefreshJwt);
+            ArgumentException.ThrowIfNullOrWhiteSpace(refreshCredential.RefreshToken);
 
-            Session? restoredSession = null;
-            bool wereTokensRefreshed = false;
+            Logger.RestoreSessionCalled(_logger, did, refreshCredential.Service);
 
-            Logger.RestoreSessionCalled(_logger, did, accessCredentials.Service);
+            AtProtoHttpResult<RefreshSessionResponse> refreshSessionResult =
+                await AtProtoServer.RefreshSession(
+                    refreshCredential,
+                    httpClient: HttpClient,
+                    InternalOnCredentialsUpdatedCallBack,
+                    loggerFactory: LoggerFactory,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            // Try the access token first if there is one.
-            if (!string.IsNullOrEmpty(accessCredentials.AccessJwt) &&
-                (DateTimeOffset.UtcNow - accessCredentials.AccessJwtExpiresOn) > new TimeSpan(0, 5, 0))
+            if (refreshSessionResult.Succeeded)
             {
-                AtProtoHttpResult<GetSessionResponse> getSessionResult = await GetSession(
-                    accessCredentials,
-                    cancellationToken).ConfigureAwait(false);
-
-                if (getSessionResult.Succeeded)
+                if (!await ValidateJwtToken(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.Did, refreshCredential.Service).ConfigureAwait(false))
                 {
-                    restoredSession = new Session(getSessionResult.Result, accessCredentials);
+                    throw new SecurityTokenValidationException("The issued access token could not be validated.");
                 }
-            }
 
-            // If that failed, try refreshing the session to get a new token, then try again.
-            if (restoredSession is null && !cancellationToken.IsCancellationRequested)
-            {
-                AtProtoHttpResult<RefreshSessionResponse> refreshSessionResult =
-                        await AtProtoServer.RefreshSession(
-                            accessCredentials,
-                            httpClient: HttpClient,
-                            OnAccessCredentialsUpdated,
-                            loggerFactory: LoggerFactory,
-                            cancellationToken: cancellationToken).ConfigureAwait(false);
+                AccessCredentials refreshedAccessCredentials;
 
-                if (refreshSessionResult.Succeeded)
+                if (refreshCredential is not IDPoPBoundCredential dPoPRefreshCredential)
                 {
-                    if (!await ValidateJwtToken(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.Did, accessCredentials.Service).ConfigureAwait(false))
+                    refreshedAccessCredentials = new AccessCredentials(
+                        refreshCredential.Service,
+                        refreshSessionResult.Result.AccessJwt,
+                        refreshSessionResult.Result.RefreshJwt);
+                }
+                else
+                {
+                    if (refreshSessionResult.HttpResponseHeaders is null)
                     {
-                        throw new SecurityTokenValidationException("The issued access token could not be validated.");
+                        throw new SessionRestorationFailedException("Refresh token was DPoPBound, but no http response headers were returned");
                     }
 
-                    AccessCredentials refreshedAccessCredentials = new(
-                        accessCredentials.Service,
+                    string? dPoPNonce = refreshSessionResult.HttpResponseHeaders.DPoPNonce() ??
+                        throw new SessionRestorationFailedException("Refresh token was DPoPBound, but no nonce was present in the response headers.");
+
+                    refreshedAccessCredentials = new DPoPAccessCredentials(
+                        refreshCredential.Service,
                         refreshSessionResult.Result.AccessJwt,
                         refreshSessionResult.Result.RefreshJwt,
-                        accessCredentials.DPoPProofKey,
-                        refreshSessionResult.HttpResponseHeaders!.DPoPNonce());
-
-                    AtProtoHttpResult<GetSessionResponse> getSessionResult = await GetSession(refreshedAccessCredentials, cancellationToken).ConfigureAwait(false);
-                    if (getSessionResult.Succeeded)
-                    {
-                        wereTokensRefreshed = true;
-
-                        restoredSession = new Session(getSessionResult.Result, refreshedAccessCredentials);
-                    }
-                }
-            }
-
-            if (restoredSession is not null)
-            {
-                if (restoredSession.Did != did)
-                {
-                    Logger.RestoreSessionDidValidationFailed(_logger, did, restoredSession.Did);
-                    throw new SessionRestorationFailedException("The restored session DID not match the expected DID.");
+                        dPoPRefreshCredential.DPoPProofKey,
+                        dPoPNonce);
                 }
 
-                lock (_session_SyncLock)
-                {
-                    Logger.RestoreSessionSucceeded(_logger, did, accessCredentials.Service);
+                Credentials = refreshedAccessCredentials;
 
-                    Session = restoredSession;
-                    _sessionRefreshTimer ??= new();
-                    StartTokenRefreshTimer();
+                Logger.RestoreSessionSucceeded(_logger, did, refreshedAccessCredentials.Service);
 
-                    if (wereTokensRefreshed && restoredSession.AccessCredentials.AccessJwt is not null && restoredSession.AccessCredentials.RefreshJwt is not null)
-                    {
-                        var sessionRefreshedEventArgs = new SessionRefreshedEventArgs(
-                            Session.Did,
-                            Session.Service,
-                            Session.AccessCredentials);
+                _credentialRefreshTimer ??= new();
+                StartTokenRefreshTimer();
 
-                        OnSessionRefreshed(sessionRefreshedEventArgs);
-                    }
-                }
+                var sessionRefreshedEventArgs = new CredentialsUpdatedEventArgs(
+                    refreshedAccessCredentials.Did,
+                    refreshedAccessCredentials.Service,
+                    Credentials);
+
+                OnCredentialsUpdated(sessionRefreshedEventArgs);
 
                 return true;
             }
             else
             {
-                lock (_session_SyncLock)
-                {
-                    StopTokenRefreshTimer(true);
-                }
+                StopTokenRefreshTimer(true);
                 return false;
             }
         }
@@ -787,7 +560,7 @@ namespace idunno.AtProto
         /// Thrown when <paramref name="writeRequests"/> or <paramref name="repo" /> is null.
         /// </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="writeRequests"/> is an empty collection.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ApplyWritesResponse>> ApplyWrites(
             ICollection<ApplyWritesRequestValueBase> writeRequests,
             Did repo,
@@ -801,7 +574,7 @@ namespace idunno.AtProto
             if (!IsAuthenticated)
             {
                 Logger.ApplyWritesFailedAsSessionIsAnonymous(_logger);
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             AtProtoHttpResult<ApplyWritesResponse> applyWritesResult = await AtProtoServer.ApplyWrites(
@@ -809,10 +582,10 @@ namespace idunno.AtProto
                 repo,
                 validate,
                 cid,
-                Service,
-                Session.AccessCredentials,
+                service: Service,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated : InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -847,7 +620,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns><para>The task object representing the asynchronous operation.</para></returns>
         /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="record"/>, <paramref name="collection"/> or <paramref name="creator"/> is null.</para></exception>
-        /// <exception cref="AuthenticatedSessionRequiredException"><para>Thrown when the current session is not authenticated.</para></exception>
+        /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current session is not authenticated.</para></exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> CreateRecord<TRecord>(
             TRecord record,
             Nsid collection,
@@ -864,7 +637,7 @@ namespace idunno.AtProto
             if (!IsAuthenticated)
             {
                 Logger.CreateRecordFailedAsSessionIsAnonymous(_logger);
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             AtProtoHttpResult<CreateRecordResponse> result = await AtProtoServer.CreateRecord(
@@ -874,10 +647,10 @@ namespace idunno.AtProto
                 rKey: rkey,
                 validate: validate,
                 swapCommit : swapCommit,
-                Service,
-                Session.AccessCredentials,
+                service: Service,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -905,7 +678,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="collection"/> or <paramref name="rKey"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is not an authenticated session.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteRecord(
             Nsid collection,
             RecordKey rKey,
@@ -919,7 +692,7 @@ namespace idunno.AtProto
             if (!IsAuthenticated)
             {
                 Logger.DeleteRecordFailedAsSessionIsAnonymous(_logger);
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await DeleteRecord(Did, collection, rKey, swapRecord, swapCommit, cancellationToken).ConfigureAwait(false);
@@ -948,7 +721,7 @@ namespace idunno.AtProto
             if (!IsAuthenticated)
             {
                 Logger.DeleteRecordFailedAsSessionIsAnonymous(_logger);
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await DeleteRecord(
@@ -968,7 +741,7 @@ namespace idunno.AtProto
         /// <param name="swapCommit">Specified if the operation should compare and swap with the previous commit by cid.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="AuthenticatedSessionRequiredException">Throw when the current session is not an authenticated session.</exception>
+        /// <exception cref="AuthenticationRequiredException">Throw when the current session is not an authenticated session.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/> is null, <paramref name="collection"/> or <paramref name="rKey"/> are null or empty.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteRecord(
             AtIdentifier repo,
@@ -985,7 +758,7 @@ namespace idunno.AtProto
             if (!IsAuthenticated)
             {
                 Logger.DeleteRecordFailedAsSessionIsAnonymous(_logger);
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             AtProtoHttpResult<Commit> response =
@@ -995,10 +768,10 @@ namespace idunno.AtProto
                     rKey,
                     swapRecord,
                     swapCommit,
-                    Service,
-                    Session.AccessCredentials,
+                    service: Service,
+                    accessCredentials: Credentials,
                     httpClient: HttpClient,
-                    onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                    onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                     loggerFactory: LoggerFactory,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -1056,7 +829,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">
         ///     <para>Thrown when <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/> or <paramref name="rKey"/> is null.</para>
         /// </exception>
-        /// <exception cref="AuthenticatedSessionRequiredException"><para>Thrown when the current session is not authenticated.</para></exception>
+        /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current session is not authenticated.</para></exception>
         public async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord(
             object record,
             Nsid collection,
@@ -1075,7 +848,7 @@ namespace idunno.AtProto
             if (!IsAuthenticated)
             {
                 Logger.PutRecordFailedAsSessionIsAnonymous(_logger);
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             AtProtoHttpResult<PutRecordResponse> result = await AtProtoServer.PutRecord(
@@ -1086,10 +859,10 @@ namespace idunno.AtProto
                 validate: validate,
                 swapCommit: swapCommit,
                 swapRecord: swapRecord,
-                Service,
-                Session.AccessCredentials,
+                service: Service,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -1201,19 +974,19 @@ namespace idunno.AtProto
 
             if (IsAuthenticated)
             {
-                accessCredentials = Session.AccessCredentials;
+                accessCredentials = Credentials;
             }
 
             AtProtoHttpResult<T> result =
                 await AtProtoServer.GetRecord<T>(
-                    repo,
-                    collection,
-                    rKey,
-                    cid,
-                    service,
-                    accessCredentials,
+                    repo: repo,
+                    collection: collection,
+                    rKey: rKey,
+                    cid: cid,
+                    service: service,
+                    accessCredentials: accessCredentials,
                     httpClient: HttpClient,
-                    onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                    onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                     loggerFactory: LoggerFactory,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -1240,6 +1013,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="collection"/> is null or empty.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<PagedReadOnlyCollection<T>>> ListRecords<T>(
             Nsid collection,
             int? limit = 50,
@@ -1250,8 +1024,13 @@ namespace idunno.AtProto
         {
             ArgumentNullException.ThrowIfNull(collection);
 
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
             return await ListRecords<T>(
-                Session!.Did,
+                Credentials.Did,
                 collection,
                 limit,
                 cursor,
@@ -1271,8 +1050,8 @@ namespace idunno.AtProto
         /// <param name="service">The service to retrieve the record from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="repo"/> or <paramref name="collection"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is not an authenticated session.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/> or <paramref name="collection"/> is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
         public async Task<AtProtoHttpResult<PagedReadOnlyCollection<T>>> ListRecords<T>(
             AtIdentifier repo,
             Nsid collection,
@@ -1291,20 +1070,20 @@ namespace idunno.AtProto
 
             if (IsAuthenticated)
             {
-                accessCredentials = Session.AccessCredentials;
+                accessCredentials = Credentials;
             }
 
             Logger.ListRecordsCalled(_logger, repo, collection, service);
 
             AtProtoHttpResult<PagedReadOnlyCollection<T>> result = await AtProtoServer.ListRecords<T>(
-                repo,
-                collection,
-                limit,
-                cursor,
-                reverse,
-                service,
-                accessCredentials,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                repo: repo,
+                collection: collection,
+                limit: limit,
+                cursor: cursor,
+                reverse: reverse,
+                service: service,
+                accessCredentials: accessCredentials,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 httpClient: HttpClient,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1330,7 +1109,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="blob"/> has a zero length or if <paramref name="mimeType"/> is null or empty.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is not an authenticated session.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
         public async Task<AtProtoHttpResult<Blob>> UploadBlob(
             byte[] blob,
             string mimeType,
@@ -1346,7 +1125,7 @@ namespace idunno.AtProto
             {
                 Logger.UploadBlobFailedAsSessionIsAnonymous(_logger, service);
 
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             if (blob.Length == 0)
@@ -1358,12 +1137,12 @@ namespace idunno.AtProto
             try
             {
                 return await AtProtoServer.UploadBlob(
-                    blob,
-                    mimeType,
-                    service,
-                    Session.AccessCredentials,
+                    blob: blob,
+                    mimeType: mimeType,
+                    service: service,
+                    accessCredentials: Credentials,
                     httpClient: HttpClient,
-                    onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                    onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                     loggerFactory: LoggerFactory,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
             }
@@ -1409,20 +1188,20 @@ namespace idunno.AtProto
             service ??= Service;
 
             return await AtProtoServer.QueryLabels(
-                uriPatterns,
-                sources,
-                limit,
-                cursor,
-                service,
+                uriPatterns: uriPatterns,
+                sources: sources,
+                limit: limit,
+                cursor: cursor,
+                service: service,
                 accessCredentials: null,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
-        /// Get a signed token on behalf of the requesting DID for the requested <paramref name="audience"/>.
+        /// Get a <see cref="ServiceCredential"/> on behalf of the requesting DID for the requested <paramref name="audience"/>.
         /// </summary>
         /// <param name="service">The server to request the service authentication from.</param>
         /// <param name="audience">The DID of the service that the token will be used to authenticate with.</param>
@@ -1434,7 +1213,7 @@ namespace idunno.AtProto
         ///   Thrown when <paramref name="service"/>, <paramref name="audience"/> or <paramref name="lxm"/> is null.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="expiry"/> is specified but is zero or negative.</exception>
-        public async Task<AtProtoHttpResult<string>> GetServiceAuth(
+        public async Task<AtProtoHttpResult<ServiceCredential>> GetServiceAuth(
             Uri service,
             Did audience,
             Nsid lxm,
@@ -1465,22 +1244,22 @@ namespace idunno.AtProto
                 {
                     Logger.GetServiceAuthFailedAsSessionIsAnonymous(_logger, Service);
 
-                    throw new AuthenticatedSessionRequiredException();
+                    throw new AuthenticationRequiredException();
                 }
 
-                AtProtoHttpResult<string> result = await AtProtoServer.GetServiceAuth(
-                    audience,
-                    expiry,
-                    lxm,
-                    service,
-                    Session.AccessCredentials,
+                AtProtoHttpResult<ServiceCredential> serviceCredentialResult = await AtProtoServer.GetServiceAuth(
+                    audience: audience,
+                    expiry: expiry,
+                    lxm: lxm,
+                    service: service,
+                    accessCredentials: Credentials,
                     httpClient: HttpClient,
                     loggerFactory: LoggerFactory,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
-                if (result.Succeeded)
+                if (serviceCredentialResult.Succeeded && serviceCredentialResult.Result.AccessJwt is not null)
                 {
-                    TimeSpan expiresIn = GetTimeToJwtTokenExpiry(result.Result);
+                    TimeSpan expiresIn = GetTimeToJwtTokenExpiry(serviceCredentialResult.Result.AccessJwt);
                     Logger.ServiceAuthTokenAcquired(_logger, service, audience, expiresIn.ToString("c"), lxm);
                 }
                 else
@@ -1491,58 +1270,22 @@ namespace idunno.AtProto
                         Did,
                         audience,
                         lxm,
-                        result.StatusCode,
-                        result.AtErrorDetail?.Error,
-                        result.AtErrorDetail?.Message);
+                        serviceCredentialResult.StatusCode,
+                        serviceCredentialResult.AtErrorDetail?.Error,
+                        serviceCredentialResult.AtErrorDetail?.Message);
                 }
 
-                return result;
+                return serviceCredentialResult;
             }
-        }
-
-        /// <summary>
-        /// Sets the access and refresh tokens for the current session.
-        /// </summary>
-        /// <param name="accessJwt">The new access token to use.</param>
-        /// <param name="refreshJwt">The new refresh token to use.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ArgumentNullException">Thrown when either the provided <paramref name="accessJwt"/> or <paramref name="refreshJwt"/> is null or empty.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
-        public async Task SetTokens(string accessJwt, string refreshJwt, CancellationToken cancellationToken = default)
-        {
-            ArgumentNullException.ThrowIfNullOrEmpty(accessJwt);
-            ArgumentNullException.ThrowIfNullOrEmpty(refreshJwt);
-
-            if (Session is null)
-            {
-                throw new AuthenticatedSessionRequiredException();
-            }
-
-            if (await ValidateJwtToken(accessJwt, Session.Did, Session.Service!).ConfigureAwait(false) &&
-                await ValidateJwtToken(refreshJwt, Session.Did, Session.Service!).ConfigureAwait(false))
-            {
-                if (!cancellationToken.IsCancellationRequested)
-                {
-                    Logger.UpdateTokensCalled(_logger, Session.Did, Session.Service!);
-                    Session.AccessCredentials.UpdateAccessTokens(accessJwt, refreshJwt);
-                }
-            }
-            else
-            {
-                Logger.UpdateTokensGivenInvalidTokens(_logger, Session.Did, Session.Service!);
-                throw new SecurityTokenValidationException("The issued access token could not be validated.");
-            }
-
-            await Task.CompletedTask.ConfigureAwait(false);
         }
 
         private void StartTokenRefreshTimer()
         {
             if (_enableTokenRefresh)
             {
-                if (Session is not null && !string.IsNullOrEmpty(AccessToken))
+                if (Credentials is AccessCredentials accessCredentials && !string.IsNullOrEmpty(accessCredentials.AccessJwt))
                 {
-                    TimeSpan accessTokenExpiresIn = GetTimeToJwtTokenExpiry(AccessToken);
+                    TimeSpan accessTokenExpiresIn = GetTimeToJwtTokenExpiry(accessCredentials.AccessJwt);
 
                     if (accessTokenExpiresIn.TotalSeconds < 60)
                     {
@@ -1557,12 +1300,12 @@ namespace idunno.AtProto
                         refreshIn = accessTokenExpiresIn - new TimeSpan(0, 1, 0);
                     }
 
-                    if (_sessionRefreshTimer is not null)
+                    if (_credentialRefreshTimer is not null)
                     {
-                        _sessionRefreshTimer.Interval = refreshIn.TotalMilliseconds >= int.MaxValue ? int.MaxValue : refreshIn.TotalMilliseconds;
-                        _sessionRefreshTimer.Elapsed += RefreshTimerElapsed;
-                        _sessionRefreshTimer.Enabled = true;
-                        _sessionRefreshTimer.Start();
+                        _credentialRefreshTimer.Interval = refreshIn.TotalMilliseconds >= int.MaxValue ? int.MaxValue : refreshIn.TotalMilliseconds;
+                        _credentialRefreshTimer.Elapsed += RefreshTimerElapsed;
+                        _credentialRefreshTimer.Enabled = true;
+                        _credentialRefreshTimer.Start();
 
                         Logger.TokenRefreshTimerStarted(_logger);
                     }
@@ -1577,15 +1320,15 @@ namespace idunno.AtProto
 
         private void StopTokenRefreshTimer(bool dispose = false)
         {
-            if (_sessionRefreshTimer is not null)
+            if (_credentialRefreshTimer is not null)
             {
-                _sessionRefreshTimer.Stop();
+                _credentialRefreshTimer.Stop();
                 Logger.TokenRefreshTimerStopped(_logger);
 
                 if (dispose)
                 {
-                    _sessionRefreshTimer.Dispose();
-                    _sessionRefreshTimer = null;
+                    _credentialRefreshTimer.Dispose();
+                    _credentialRefreshTimer = null;
                 }
             }
         }
@@ -1597,12 +1340,10 @@ namespace idunno.AtProto
                 throw new ArgumentNullException(nameof(jwt));
             }
 
-            JsonWebToken jsonWebToken = new(jwt);
+            JsonWebToken token = new(jwt);
 
-            DateTime validUntil = jsonWebToken.ValidTo.ToUniversalTime();
-            DateTime now = DateTime.Now.ToUniversalTime();
-
-            TimeSpan validityPeriod = validUntil - now;
+            DateTimeOffset validUntil = DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc);
+            TimeSpan validityPeriod = validUntil - DateTimeOffset.UtcNow;
 
             return validityPeriod;
         }

@@ -6,19 +6,19 @@ using idunno.AtProto.Authentication;
 namespace idunno.AtProto.Events
 {
     /// <summary>
-    /// A class holding information about a session that has just been refreshed.
+    /// Encapsulations information about credentials that have been updated on an agent, typically by an access token refresh, or by DPoP nonce changes.
     /// </summary>
-    public sealed class SessionRefreshedEventArgs : EventArgs
+    public sealed class CredentialsUpdatedEventArgs : EventArgs
     {
         /// <summary>
-        /// Creates a new instance of <see cref="SessionRefreshedEventArgs"/>
+        /// Creates a new instance of <see cref="CredentialsUpdatedEventArgs"/>
         /// </summary>
         /// <param name="did">The <see cref="Did"/> the session was created for.</param>
         /// <param name="service">The <see cref="Uri"/> of the service the session was created on.</param>
         /// <param name="accessCredentials">The new access credentials for the session</param>
         /// <exception cref="ArgumentException">Thrown when the <paramref name="accessCredentials"/> AccessJwt or RefreshJwt are null or whitespace.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> or <paramref name="service"/> is null.</exception>
-        public SessionRefreshedEventArgs(
+        public CredentialsUpdatedEventArgs(
             Did did,
             Uri service,
             AccessCredentials accessCredentials)
@@ -28,7 +28,7 @@ namespace idunno.AtProto.Events
             ArgumentNullException.ThrowIfNull(accessCredentials);
 
             ArgumentException.ThrowIfNullOrWhiteSpace(accessCredentials.AccessJwt);
-            ArgumentException.ThrowIfNullOrWhiteSpace(accessCredentials.RefreshJwt);
+            ArgumentException.ThrowIfNullOrWhiteSpace(accessCredentials.RefreshToken);
 
             Did = did;
             Service = service;

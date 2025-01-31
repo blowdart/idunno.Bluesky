@@ -27,11 +27,11 @@ namespace idunno.AtProto
         /// <param name="service">The service to create fine the labels on.</param>
         /// <param name="accessCredentials">Optional access credentials to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="uriPatterns" /> is null</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uriPatterns" /> is null</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown <paramref name="uriPatterns"/> is empty or if <paramref name="limit"/> is &lt;1 or &gt;250.</exception>
         public static async Task<AtProtoHttpResult<PagedReadOnlyCollection<Label>>> QueryLabels(
             IEnumerable<string> uriPatterns,
@@ -41,7 +41,7 @@ namespace idunno.AtProto
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials> onAccessCredentialsUpdated,
+            Action<AtProtoCredentials>? onCredentialsUpdated,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
@@ -86,9 +86,8 @@ namespace idunno.AtProto
                 $"{QueryLabelsEndpoint}{queryStringBuilder}",
                 accessCredentials,
                 httpClient,
-                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
-                cancellationToken: cancellationToken
-                ).ConfigureAwait(false);
+                onCredentialsUpdated: onCredentialsUpdated,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)
             {

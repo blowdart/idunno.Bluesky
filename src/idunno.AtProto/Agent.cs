@@ -74,14 +74,14 @@ namespace idunno.AtProto
         protected IHttpClientFactory HttpClientFactory { get; init; }
 
         /// <summary>
-        /// Gets an <see cref="HttpClient"/> to use when making requests.
-        /// </summary>
-        protected HttpClient HttpClient => HttpClientFactory.CreateClient(HttpClientName);
-
-        /// <summary>
         /// Gets a new HttpClientHandler configured with any proxy settings passed during the agent configuration.
         /// </summary>
         protected HttpClientHandler HttpClientHandler => BuildProxyClientHandler(_proxyUri, _checkCertificateRevocationList);
+
+        /// <summary>
+        /// Gets an <see cref="HttpClient"/> to use when making requests.
+        /// </summary>
+        public HttpClient HttpClient => HttpClientFactory.CreateClient(HttpClientName);
 
         /// <summary>
         /// Gets a value indicating whether the agent has an active session.

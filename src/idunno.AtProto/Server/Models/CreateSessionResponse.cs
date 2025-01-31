@@ -2,9 +2,9 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
-using idunno.AtProto.Server;
+using idunno.AtProto.Models;
 
-namespace idunno.AtProto.Models
+namespace idunno.AtProto.Server.Models
 {
     /// <summary>
     /// The results of a CreateSession API call.

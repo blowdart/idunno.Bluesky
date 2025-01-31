@@ -7,15 +7,11 @@ using System.Diagnostics;
 
 using Microsoft.Extensions.Logging;
 
-using IdentityModel.OidcClient;
-
 using idunno.AtProto;
-using idunno.AtProto.OAuth;
-using idunno.Bluesky;
-
-using Microsoft.IdentityModel.JsonWebTokens;
-
 using idunno.AtProto.Authentication;
+using idunno.AtProto.OAuth;
+
+using idunno.Bluesky;
 
 using Samples.Common;
 
@@ -93,11 +89,19 @@ namespace Samples.OAuth
 
                 Debugger.Break();
 
+                AccessCredentials? accessCredentials = null;
+
                 await using var callbackServer = new CallbackServer(CallbackServer.GetRandomUnusedPort(), loggerFactory: loggerFactory);
                 {
                     OAuthClient loginClient = agent.CreateOAuthClient();
 
-                    Uri startUri = await loginClient.CreateOAuth2StartUri(pds, clientId, authorizationServer, callbackServer.Uri, cancellationToken: cancellationToken);
+                    Uri startUri = await loginClient.CreateOAuth2StartUri(
+                        service: pds,
+                        clientId: clientId,
+                        redirectUri: callbackServer.Uri,
+                        authority: authorizationServer,
+                        handle: handle,
+                        cancellationToken: cancellationToken);
 
                     Console.WriteLine($"Login URI           : {startUri}");
 
@@ -111,15 +115,59 @@ namespace Samples.OAuth
 
                     if (!string.IsNullOrEmpty(queryString))
                     {
-                        AccessCredentials? credentials = await loginClient.ProcessOAuth2Response(queryString, cancellationToken: cancellationToken);
-
-                        if (credentials is not null)
-                        {
-                            Console.WriteLine($"Access JWT expires on: {credentials.AccessJwtExpiresOn:G}");
-                        }
-
-                        Debugger.Break();
+                        accessCredentials = await loginClient.ProcessOAuth2Response(queryString, cancellationToken: cancellationToken);
                     }
+                }
+
+                if (accessCredentials is not null)
+                {
+                    Console.WriteLine($"Access JWT expires on: {accessCredentials.ExpiresOn:G}");
+                    Console.WriteLine();
+
+                    Post post = new("hello oauth");
+
+                    var result = await AtProtoServer.CreateRecord(
+                        post,
+                        CollectionNsid.Post,
+                        accessCredentials.Did!,
+                        rKey: null,
+                        validate: null,
+                        swapCommit: null,
+                        service: pds,
+                        accessCredentials: accessCredentials,
+                        httpClient: agent.HttpClient,
+                        onAccessCredentialsUpdated: null,
+                        cancellationToken: cancellationToken);
+
+                    var result2 = await BlueskyServer.GetProfile(
+                        actor: accessCredentials.Did!,
+                        service: pds,
+                        accessCredentials: accessCredentials,
+                        httpClient: agent.HttpClient,
+                        onAccessCredentialsUpdated: null,
+                        loggerFactory: loggerFactory,
+                        subscribedLabelers: null,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                    Debugger.Break();
+
+                    AtProtoHttpResult<bool> loginResult = await agent.Login(accessCredentials, cancellationToken);
+
+                    if (loginResult.Succeeded)
+                    {
+                        Console.WriteLine("Logged in with OAuth");
+                    }
+                    else
+                    {
+                        ConsoleColor oldColor = Console.ForegroundColor;
+
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("Could not login with oauth credentials");
+                        Console.ForegroundColor = oldColor;
+                        return;
+                    }
+
+                    Debugger.Break();
                 }
 
             }

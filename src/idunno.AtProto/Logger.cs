@@ -30,6 +30,9 @@ namespace idunno.AtProto
         [LoggerMessage(7, LogLevel.Error, "CreateSession with GetSession failed with access token for {did} on {service}, {statusCode} {error} {message}")]
         internal static partial void SessionCreatedFromOAuthLoginFailed(ILogger logger, string did, Uri service, HttpStatusCode statusCode, string? error, string? message);
 
+        [LoggerMessage(8, LogLevel.Debug, "Login() called with OAuthCredentials for {did} on {service}.")]
+        internal static partial void AgentAuthenticatedWithOAuthCredentials(ILogger logger, string did, Uri service);
+
         // Delete session logging
         [LoggerMessage(10, LogLevel.Debug, "Logout called for {did} on {service}")]
         internal static partial void LogoutCalled(ILogger logger, Did? did, Uri service);
@@ -64,14 +67,14 @@ namespace idunno.AtProto
         internal static partial void RestoreSessionSucceeded(ILogger logger, Did did, Uri service);
 
         // Refresh Session logging
-        [LoggerMessage(40, LogLevel.Debug, "RefreshSession called for {did} on {service}")]
-        internal static partial void RefreshSessionCalled(ILogger logger, Did did, Uri service);
+        [LoggerMessage(40, LogLevel.Debug, "RefreshSession called on {service} with token #{tokenHash}")]
+        internal static partial void RefreshSessionCalled(ILogger logger, Uri service, string tokenHash);
 
         [LoggerMessage(41, LogLevel.Error, "RefreshSession called without an authenticated session")]
         internal static partial void RefreshSessionFailedNoSession(ILogger logger);
 
-        [LoggerMessage(42, LogLevel.Error, "RefreshSession API failed for {did} on {service} with {statusCode}")]
-        internal static partial void RefreshSessionApiCallFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode);
+        [LoggerMessage(42, LogLevel.Error, "RefreshSession API failed for #{tokenHash} on {service} with {statusCode}")]
+        internal static partial void RefreshSessionApiCallFailed(ILogger logger, Uri service, string tokenHash, HttpStatusCode statusCode);
 
         [LoggerMessage(43, LogLevel.Error, "RefreshSession token validation failed for {did} on {service}")]
         internal static partial void RefreshSessionTokenValidationFailed(ILogger logger, Did did, Uri service);
@@ -159,12 +162,6 @@ namespace idunno.AtProto
         [LoggerMessage(132, LogLevel.Error, "UploadBlob to {service} threw.")]
         internal static partial void UploadBlobThrewHttpRequestException(ILogger logger, Uri service, Exception ex);
 
-        [LoggerMessage(140, LogLevel.Information, "SetTokens called for {did} on {service}")]
-        internal static partial void UpdateTokensCalled(ILogger logger, Did did, Uri service);
-
-        [LoggerMessage(141, LogLevel.Error, "SetTokens for {did} on {service} was passed invalid tokens")]
-        internal static partial void UpdateTokensGivenInvalidTokens(ILogger logger, Did did, Uri service);
-
         [LoggerMessage(150, LogLevel.Debug, "ApplyWrites succeeded, commit id {cid}, revision {revision}  on {service}")]
         internal static partial void ApplyWritesSucceeded(ILogger logger, Cid cid, string revision, Uri service);
 
@@ -214,6 +211,12 @@ namespace idunno.AtProto
 
         [LoggerMessage(260, LogLevel.Error, "Service token acquisition failed for user {user}, for {audience}/{lxm} from {endpoint} with status code {status}, \"{error}\" \"{message}\" ")]
         internal static partial void ServiceAuthTokenAcquisitionFailed(ILogger logger, Uri endpoint, Did user, Did audience, Nsid lxm, HttpStatusCode status, string? error, string? message);
+
+        [LoggerMessage(300, LogLevel.Debug, "Agent credentials updated via OnCredentialsUpdatedCallBack().")]
+        internal static partial void OnCredentialUpdatedCallbackCalled(ILogger logger);
+
+        [LoggerMessage(301, LogLevel.Error, "Agent credentials update via OnCredentialsUpdatedCallBack() ignored, unexpected credentials type.")]
+        internal static partial void OnCredentialUpdatedCallbackCalledWithUnexpectedCredentialType(ILogger logger);
 
         // AtProtoServer logging
 

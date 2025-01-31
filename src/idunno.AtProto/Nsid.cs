@@ -50,7 +50,7 @@ namespace idunno.AtProto
         /// Creates a new instance of <see cref="Nsid"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to create an <see cref="Nsid"/> from.</param>
-        /// <exception cref="NsidFormatException">Thrown if <paramref name="s"/> is not a valid NSID.</exception>
+        /// <exception cref="NsidFormatException">Thrown when <paramref name="s"/> is not a valid NSID.</exception>
         [JsonConstructor]
         public Nsid(string s) : this(s, true)
         {
@@ -106,9 +106,10 @@ namespace idunno.AtProto
         /// supplied in result will be overwritten.
         /// </param>
         /// <returns>true if s was converted successfully; otherwise, false.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> is null or whitespace.</exception>
         public static bool TryParse(string s, out Nsid? result)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(s);
+            ArgumentException.ThrowIfNullOrWhiteSpace(s);
             return Parse(s, false, out result);
         }
 
@@ -146,7 +147,7 @@ namespace idunno.AtProto
             }
 
             // Optimization for a common success case.
-            if (Object.ReferenceEquals(this, other))
+            if (ReferenceEquals(this, other))
             {
                 return true;
             }
@@ -198,7 +199,7 @@ namespace idunno.AtProto
             {
                 if (throwOnError)
                 {
-                    ArgumentNullException.ThrowIfNullOrWhiteSpace(s);
+                    ArgumentException.ThrowIfNullOrWhiteSpace(s);
                 }
                 else
                 {

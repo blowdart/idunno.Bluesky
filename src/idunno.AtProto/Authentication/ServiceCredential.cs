@@ -9,27 +9,28 @@ using Microsoft.IdentityModel.JsonWebTokens;
 namespace idunno.AtProto.Authentication
 {
     /// <summary>
-    /// Encapsulates the credentials and supporting values necessary to call an authenticated API.
+    /// Encapsulates the credential to call an authenticated service API.
+    /// Service credentials only have an Access JWT, and have no refresh token.
     /// </summary>
-    public class AccessCredentials : RefreshCredential, IAccessCredential
+
+    public class ServiceCredential : AtProtoCredentials, IAccessCredential
     {
         private string _accessToken;
 
         /// <summary>
-        /// Creates a new instance of <see cref="AccessCredentials"/> with the specified <paramref name="accessJwt"/> and <paramref name="refreshToken"/>.
+        /// Creates a new instance of <see cref="AccessCredentials"/> with the specified <paramref name="accessJwt"/>.
         /// </summary>
         /// <param name="service">The <see cref="Uri"/> of the service the credentials were issued from.</param>
         /// <param name="accessJwt">A string representation of the JWT to use when making authenticated access requests.</param>
-        /// <param name="refreshToken">A string representation of the token to use when a new access token is required.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="accessJwt"/> or <paramref name="refreshToken"/> is null or whitespace.</exception>
-        public AccessCredentials(Uri service, string accessJwt, string refreshToken) : base(service, refreshToken)
+        /// <exception cref="ArgumentException">Thrown when <paramref name="accessJwt"/>.</exception>
+        public ServiceCredential(Uri service, string accessJwt) : base(service)
         {
             ArgumentNullException.ThrowIfNull(service);
             ArgumentException.ThrowIfNullOrWhiteSpace(accessJwt);
-            ArgumentException.ThrowIfNullOrWhiteSpace(refreshToken);
 
             _accessToken = accessJwt;
+
             ExtractJwtProperties(accessJwt);
         }
 
@@ -80,11 +81,6 @@ namespace idunno.AtProto.Authentication
         public DateTimeOffset ExpiresOn { get; private set; }
 
         /// <summary>
-        /// Gets the <see cref="AtProto.Did"/> the access token was issued for.
-        /// </summary>
-        public Did Did { get; private set; }
-
-        /// <summary>
         /// Add authentication headers to the specified <paramref name="httpRequestMessage"/>.
         /// </summary>
         /// <param name="httpRequestMessage">The <see cref="HttpRequestMessage"/> to add authentication headers to.</param>
@@ -95,32 +91,11 @@ namespace idunno.AtProto.Authentication
             httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", AccessJwt);
         }
 
-        internal void Update(AccessCredentials accessCredentials)
-        {
-            ArgumentNullException.ThrowIfNull(accessCredentials);
-            ArgumentException.ThrowIfNullOrWhiteSpace(accessCredentials.AccessJwt);
-            ArgumentException.ThrowIfNullOrWhiteSpace(accessCredentials.RefreshToken);
-
-            ReaderWriterLockSlim.EnterWriteLock();
-
-            try
-            {
-                AccessJwt = accessCredentials.AccessJwt;
-                RefreshToken = accessCredentials.RefreshToken;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitWriteLock();
-            }
-        }
-
-        [MemberNotNull(nameof(Did))]
         [MemberNotNull(nameof(ExpiresOn))]
         private void ExtractJwtProperties(string jwt)
         {
             JsonWebToken token = new(jwt);
             ExpiresOn = DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc);
-            Did = new Did(token.Subject);
         }
     }
 }

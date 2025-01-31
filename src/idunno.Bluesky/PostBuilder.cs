@@ -40,8 +40,8 @@ namespace idunno.Bluesky
         /// <param name="images">A collection of <see cref="EmbeddedImage"/>s to attach to the post, if any.</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
         /// <param name="labels">Any self labels to apply to the post.</param>
-        /// <exception cref="ArgumentException">Thrown if the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long.</exception>
-        /// <exception cref="ArgumentNullException">Thrown if the <paramref name="text"/> is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when the <paramref name="text"/> is null or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">If the text for the post is too long or too many images are specified.</exception>
         public PostBuilder(string text, ICollection<EmbeddedImage>? images = null, IList<Facet>? facets = null, PostSelfLabels? labels = null) : this()
         {

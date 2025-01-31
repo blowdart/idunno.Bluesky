@@ -61,8 +61,8 @@ namespace idunno.AtProto
         /// Creates a new instance of <see cref="Did"/> using the specified <paramref name="s"/> as the identifier.
         /// </summary>
         /// <param name="s"></param>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="s"/> is null or empty.</exception>
-        /// <exception cref="ArgumentException">Thrown if <paramref name="s"/> does not pass validation.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="s"/> is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> does not pass validation.</exception>
         [JsonConstructor]
         public Did(string s) : this(s, true)
         {
@@ -115,7 +115,7 @@ namespace idunno.AtProto
             }
 
             // Optimization for a common success case.
-            if (Object.ReferenceEquals(this, other))
+            if (ReferenceEquals(this, other))
             {
                 return true;
             }

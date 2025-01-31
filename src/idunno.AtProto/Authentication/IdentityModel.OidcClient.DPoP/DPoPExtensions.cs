@@ -1,9 +1,6 @@
 // Copyright (c) Duende Software. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
-using System.Linq;
-using System.Net.Http;
-
 namespace IdentityModel.OidcClient.DPoP;
 
 /// <summary>
@@ -30,10 +27,10 @@ public static class DPoPExtensions
     public static string? GetDPoPNonce(this HttpResponseMessage response)
     {
         ArgumentNullException.ThrowIfNull(response);
-
         string? nonce = response.Headers
-            .FirstOrDefault(x => x.Key == OidcConstants.HttpHeaders.DPoPNonce)
+            .FirstOrDefault(x => string.Equals(OidcConstants.HttpHeaders.DPoPNonce, x.Key, StringComparison.OrdinalIgnoreCase))
             .Value?.FirstOrDefault();
+
         return nonce;
     }
 

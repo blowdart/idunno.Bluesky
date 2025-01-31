@@ -15,10 +15,12 @@ namespace idunno.Bluesky.Chat
         /// </summary>
         /// <param name="conversationId">The conversation identifier to post the <paramref name="message"/> in.</param>
         /// <param name="message">The <see cref="Message"/> to post.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/> is null or white space, or when <paramref name="message"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/> is null or white space.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is null.</exception>
         public BatchedMessage(string conversationId, MessageInput message)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(conversationId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+
             ArgumentNullException.ThrowIfNull(message);
 
             ConversationId = conversationId;

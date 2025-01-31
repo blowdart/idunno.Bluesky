@@ -26,27 +26,27 @@ namespace idunno.AtProto.Authentication
         /// A list of the Subject Identifier types that the provider supports. Valid types include pairwise and public.
         /// </summary>
         [JsonPropertyName("subject_types_supported")]
-        public IList<string> SupportedSubjectTypes { get; init; } = new List<string>();
+        public IList<string> SupportedSubjectTypes { get; init; } = [];
 
         /// <summary>
         /// A list of the OAuth 2.0 scope values that the provider supports.
         /// </summary>
         /// <remarks><para><see href="https://datatracker.ietf.org/doc/html/rfc6749">RFC6749</see> describes the format of scope values.</para></remarks>
         [JsonPropertyName("scopes_supported")]
-        public IList<string> SupportedScopes { get; init; } = new List<string>();
+        public IList<string> SupportedScopes { get; init; } = [];
 
         /// <summary>
         /// A list of the OAuth 2.0 response_type values that the provider supports.
         /// </summary>
         [JsonPropertyName("response_types_supported")]
-        public IList<string> SupportedResponseTypes { get; init; } = new List<string>();
+        public IList<string> SupportedResponseTypes { get; init; } = [];
 
         /// <summary>
         /// A list of the OAuth 2.0 response_mode values that the provider supports.
         /// </summary>
         /// <remarks><para>The <see href="https://openid.net/specs/oauth-v2-multiple-response-types-1_0.html">OAuth 2.0 Multiple Response Type Encoding Practices</see> defines response types.</para></remarks>
         [JsonPropertyName("response_modes_supported")]
-        public IList<string> SupportedResponseModes { get; init; } = new List<string>();
+        public IList<string> SupportedResponseModes { get; init; } = [];
 
         /// <summary>
         /// A list of the OAuth 2.0 Grant Type values that this OP supports.
@@ -54,7 +54,7 @@ namespace idunno.AtProto.Authentication
         /// </summary>
         /// <remarks><para>If omitted, the default list has two entries, "authorization_code" and "implicit".</para></remarks>
         [JsonPropertyName("grant_types_supported")]
-        public IList<string> SupportedGrantTypes { get; init; } = new List<string>();
+        public IList<string> SupportedGrantTypes { get; init; } = [];
 
         /// <summary>
         /// A list of Proof Key for <see href="https://datatracker.ietf.org/doc/html/rfc7636">Code Exchange(PKCE)</see>
@@ -65,19 +65,19 @@ namespace idunno.AtProto.Authentication
         /// </para>
         /// </remarks>
         [JsonPropertyName("code_challenge_methods_supported")]
-        public IList<string> SupportedCodeChallengeMethods { get; init; } = new List<string>();
+        public IList<string> SupportedCodeChallengeMethods { get; init; } = [];
 
         /// <summary>
         /// A list of languages and scripts supported for the user interface of the provider.
         /// </summary>
         [JsonPropertyName("ui_locales_supported")]
-        public IList<string> SupportedUILocales { get; init; } = new List<string>();
+        public IList<string> SupportedUILocales { get; init; } = [];
 
         /// <summary>
         /// A list of the display parameter values that the provider supports.
         /// </summary>
         [JsonPropertyName("display_values_supported")]
-        public IList<string> DisplayValuesSupported { get; init; } = new List<string>();
+        public IList<string> DisplayValuesSupported { get; init; } = [];
 
         /// <summary>
         /// A flag indicating whether the provider supports the
@@ -90,7 +90,7 @@ namespace idunno.AtProto.Authentication
         /// A list of the JWS signing algorithms (alg values) supported by the prover for Request Objects
         /// </summary>
         [JsonPropertyName("request_object_signing_alg_values_supported")]
-        public IList<string> RequestObjectSigningSupportedAlgorithms { get; init; } = new List<string>();
+        public IList<string> RequestObjectSigningSupportedAlgorithms { get; init; } = [];
 
         /// <summary>
         /// A list of keys and element data that do not map to any strongly typed properties.

@@ -138,7 +138,7 @@ namespace Samples.SessionEvents
                     Console.WriteLine($"EVENT: Session created for : {e.Handle} ({e.Did}) on {e.Service}");
                 };
 
-                agent.SessionRefreshed += (sender, e) =>
+                agent.CredentialsUpdated += (sender, e) =>
                 {
                     // Here you update your saved state. Saving the access token is optional.
                     //
@@ -166,7 +166,7 @@ namespace Samples.SessionEvents
                     Console.WriteLine($"EVENT: Logged out from {e.Service}: {e.Did}");
                 };
 
-                agent.SessionRefreshFailed += (sender, e) =>
+                agent.TokenRefreshFailed += (sender, e) =>
                 {
                     // Here you would clear any saved authentication state for the DID because the session
                     // could not refresh and so any tokens you saved will be invalid.

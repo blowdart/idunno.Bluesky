@@ -4,12 +4,17 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
+using Microsoft.AspNetCore.WebUtilities;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Microsoft.IdentityModel.JsonWebTokens;
+
+using IdentityModel.Client;
 using IdentityModel.OidcClient;
 using IdentityModel.OidcClient.DPoP;
-using Microsoft.IdentityModel.JsonWebTokens;
+
 using idunno.AtProto.Server;
 
 namespace idunno.AtProto.Authentication
@@ -21,7 +26,7 @@ namespace idunno.AtProto.Authentication
     {
         const string OAuthDiscoveryDocumentEndpoint = ".well-known/oauth-authorization-server";
 
-        private readonly string[] _defaultScopes = ["atproto"];
+        private readonly string[] _defaultScopes = ["atproto", "transition:generic"];
 
         private OidcClient? _oidcClient;
         private AuthorizeState? _authorizeState;
@@ -72,6 +77,7 @@ namespace idunno.AtProto.Authentication
         /// <param name="clientId">The client ID</param>
         /// <param name="redirectUri">The redirect URI where the oauth server should send tokens back to.</param>
         /// <param name="authority">The authorization server to use.</param>
+        /// <param name="handle">The handle to acquire a token for.</param>
         /// <param name="scopes">A collection of scopes to request.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -84,6 +90,7 @@ namespace idunno.AtProto.Authentication
             string clientId,
             Uri redirectUri,
             Uri authority,
+            Handle? handle = null,
             IEnumerable<string>? scopes = null,
             CancellationToken cancellationToken = default)
         {
@@ -100,15 +107,25 @@ namespace idunno.AtProto.Authentication
 
             _expectedAuthority = authority;
             _expectedService = service;
+
             scopes ??= _defaultScopes;
+            string scopeString = string.Join(" ", scopes.Where(s => !string.IsNullOrEmpty(s)));
+
+            // Special case the client ID if it matches localhost to add the desired scope as query string parameters.
+            // See Localhost Client Development at https://atproto.com/specs/oauth#clients.
+            if (clientId == "http://localhost")
+            {
+                clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
+            }
 
             OidcClientOptions oidcOptions = new()
             {
                 ClientId = clientId,
                 Authority = authority.ToString(),
-                Scope = string.Join(" ", scopes.Where(s => !string.IsNullOrEmpty(s))),
+                Scope = scopeString,
                 RedirectUri = redirectUri.ToString(),
                 LoadProfile = false,
+                DisablePushedAuthorization = false,
                 LoggerFactory = _loggerFactory,
                 HttpClientFactory = (oidcOptions) =>
                 {
@@ -121,7 +138,15 @@ namespace idunno.AtProto.Authentication
             oidcOptions.ConfigureDPoP(ProofKey);
 
             _oidcClient = new OidcClient(oidcOptions);
-            _authorizeState = await _oidcClient.PrepareLoginAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            Parameters? extraParameters = null;
+
+            if (handle is not null)
+            {
+                extraParameters = [KeyValuePair.Create<string, string>("login_hint", handle.ToString())];
+            }
+
+            _authorizeState = await _oidcClient.PrepareLoginAsync(extraParameters, cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (_authorizeState is null)
             {
@@ -148,7 +173,7 @@ namespace idunno.AtProto.Authentication
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="OAuthException">Thrown when the internal state of this instance is faulty.</exception>
-        public async Task<AccessCredentials?> ProcessOAuth2Response(string data, CancellationToken cancellationToken = default)
+        public async Task<DPoPAccessCredentials?> ProcessOAuth2Response(string data, CancellationToken cancellationToken = default)
         {
             if (ProofKey is null)
             {
@@ -171,6 +196,11 @@ namespace idunno.AtProto.Authentication
             }
 
             LoginResult loginResult = await _oidcClient.ProcessResponseAsync(data, _authorizeState, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (loginResult.TokenResponse.DPoPNonce is null)
+            {
+                throw new OAuthException("login result has no dPoP nonce");
+            }
 
             if (loginResult.IsError)
             {

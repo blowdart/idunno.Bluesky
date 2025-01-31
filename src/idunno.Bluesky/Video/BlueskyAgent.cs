@@ -4,6 +4,7 @@
 using System.Text.Json;
 
 using idunno.AtProto;
+using idunno.AtProto.Authentication;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Video;
@@ -24,7 +25,7 @@ namespace idunno.Bluesky
         /// <param name="jobId">The job id whose status should be queried.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown if <paramref name="jobId"/> is null or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="jobId"/> is null or whitespace.</exception>
         public async Task<AtProtoHttpResult<JobStatus>> GetVideoJobStatus(
             string jobId,
             CancellationToken cancellationToken = default)
@@ -66,18 +67,18 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<UploadLimits>> GetVideoUploadLimits(CancellationToken cancellationToken = default)
         {
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             using (_logger.BeginScope($"Getting video upload limits for {Did}"))
             {
-                AtProtoHttpResult<string> getServiceAuthResult = await GetServiceAuth(
-                    Service,
+                AtProtoHttpResult<AccessCredentials> getServiceAuthResult = await GetServiceAuth(
+                    service: Service,
                     audience: WellKnownDistributedIdentifiers.Video,
                     lxm: GetUploadLimitsLxm,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -94,9 +95,9 @@ namespace idunno.Bluesky
 
                 AtProtoHttpResult<UploadLimits> result = await BlueskyServer.GetVideoUploadStatus(
                     _videoServer,
-                    getServiceAuthResult.Result,
-                    HttpClient,
-                    LoggerFactory,
+                    serviceCredentials: getServiceAuthResult.Result,
+                    httpClient: HttpClient,
+                    loggerFactory: LoggerFactory,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
                 if (result.Succeeded)
@@ -130,7 +131,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> is null or empty.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="video"/> is empty.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<JobStatus>> UploadVideo(
             string fileName,
             byte[] video,
@@ -144,14 +145,14 @@ namespace idunno.Bluesky
             {
                 if (!IsAuthenticated)
                 {
-                    throw new AuthenticatedSessionRequiredException();
+                    throw new AuthenticationRequiredException();
                 }
 
                 AtProtoHttpResult<AtProto.Server.ServerDescription> serverDescriptionResult = await DescribeServer(Service, cancellationToken).ConfigureAwait(false);
 
                 if (serverDescriptionResult.Succeeded)
                 {
-                    AtProtoHttpResult<string> getServiceAuthResult = await GetServiceAuth(
+                    AtProtoHttpResult<AccessCredentials> getServiceAuthResult = await GetServiceAuth(
                         Service,
                         audience: serverDescriptionResult.Result.Did,
                         lxm: UploadBlobLxm,
@@ -239,7 +240,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="captionsAsBytes"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="captionLanguage"/> is null or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="captionsAsBytes"/> is a zero length array.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is not an authenticated session.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
         public async Task<AtProtoHttpResult<Caption>> UploadCaptions(
             byte[] captionsAsBytes,
             string captionLanguage,
@@ -251,7 +252,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             AtProtoHttpResult<Blob> uploadResult = await UploadBlob(

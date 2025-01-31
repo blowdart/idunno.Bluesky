@@ -19,7 +19,7 @@ namespace idunno.AtProto
         /// Creates a new instance of a <see cref="Cid"/> class using the specified parameters.
         /// </summary>
         /// <param name="value">The value of the content identifier.</param>
-        /// <exception cref="ArgumentNullException">Thrown if the provided value is null or empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when the provided value is null or empty.</exception>
         [JsonConstructor]
         public Cid(string value)
         {
@@ -93,7 +93,7 @@ namespace idunno.AtProto
             }
 
             // Optimization for a common success case.
-            if (Object.ReferenceEquals(this, other))
+            if (ReferenceEquals(this, other))
             {
                 return true;
             }

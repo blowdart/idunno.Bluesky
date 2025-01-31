@@ -9,6 +9,8 @@ using Microsoft.Extensions.Logging;
 using idunno.AtProto.Models;
 using idunno.AtProto.Server;
 using idunno.AtProto.Authentication;
+using System.Runtime.CompilerServices;
+using idunno.AtProto.Server.Models;
 
 namespace idunno.AtProto
 {
@@ -43,7 +45,7 @@ namespace idunno.AtProto
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ResponseParseException">Thrown when the response from the service cannot be parsed or does not pass validation.</exception>
         public static async Task<AtProtoHttpResult<ServerDescription>> DescribeServer(
             Uri service,
@@ -70,31 +72,39 @@ namespace idunno.AtProto
         /// <summary>
         /// Create an authenticated session on the specified <paramref name="service"/>.
         /// </summary>
-        /// <param name="credentials"><see cref="LoginCredentials"/> containing the user identifier and password to authenticate with.</param>
-        /// <param name="service">The service to create an authenticated session on.</param>
+        /// <param name="identifier">The account identifier to authenticate with.</param>
+        /// <param name="password">The account identifier to authenticate with.</param>
+        /// <param name="authFactorToken">The multifactor authentication token to authenticate with.</param>
+        /// <param name="service">The service to authenticate against.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Throw if <paramref name="credentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentException">Throw if <paramref name="identifier"/> or <paramref name="password"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Throw if <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<CreateSessionResponse>> CreateSession(
-            LoginCredentials credentials,
+            string identifier,
+            string password,
+            string? authFactorToken,
             Uri service,
             HttpClient httpClient,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNull(credentials);
+            ArgumentException.ThrowIfNullOrWhiteSpace(identifier);
+            ArgumentException.ThrowIfNullOrWhiteSpace(password);
+
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             AtProtoHttpClient<CreateSessionResponse> request = new(loggerFactory);
 
+            CreateSessionRequest loginRequestRecord = new (identifier, password, authFactorToken);
+
             AtProtoHttpResult<CreateSessionResponse> result = await request.Post(
                 service,
                 CreateSessionEndpoint,
-                credentials,
-                accessCredentials: null, // We have no access token at this point.
+                loginRequestRecord,
                 httpClient: httpClient,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -104,33 +114,32 @@ namespace idunno.AtProto
         /// <summary>
         /// Deletes an authenticated session.
         /// </summary>
-        /// <param name="accessCredentials">The access credentials to use.</param>
-        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request`  .</param>
+        /// <param name="refreshCredential">The refresh credentials to delete the session for.</param>
+        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request`.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <remarks><para>Delete session requires the refresh token, not the access token.</para></remarks>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="accessCredentials"/>'s refresh token is null or whitespace.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="refreshCredential"/>'s refresh token is null or whitespace.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="refreshCredential"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<EmptyResponse>> DeleteSession(
-            AccessCredentials accessCredentials,
+            RefreshCredential refreshCredential,
             HttpClient httpClient,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNull(accessCredentials );
+            ArgumentNullException.ThrowIfNull(refreshCredential);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            ArgumentException.ThrowIfNullOrWhiteSpace(accessCredentials.RefreshJwt);
+            ArgumentException.ThrowIfNullOrWhiteSpace(refreshCredential.RefreshToken);
 
             AtProtoHttpClient<EmptyResponse> request = new(loggerFactory);
 
             AtProtoHttpResult<EmptyResponse> result = await request.Post(
-                service: accessCredentials.Service,
+                service: refreshCredential.Service,
                 endpoint: DeleteSessionEndpoint,
-                accessCredentials: accessCredentials,
+                credentials: refreshCredential,
                 httpClient: httpClient,
-                useRefreshToken: true,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return result;
@@ -139,35 +148,34 @@ namespace idunno.AtProto
         /// <summary>
         /// Refreshes an authenticated session.
         /// </summary>
-        /// <param name="accessCredentials">The access credentials to use.</param>
-        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="accessCredentials"/>'s service.</param>
-        /// <param name="accessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="refreshCredential">The access credentials to use.</param>
+        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="refreshCredential"/>'s service.</param>
+        /// <param name="credentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when the <paramref name="accessCredentials"/> has a null or whitespace refresh token.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="refreshCredential"/> has a null or whitespace refresh token.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="refreshCredential"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<RefreshSessionResponse>> RefreshSession(
-            AccessCredentials accessCredentials,
+            RefreshCredential refreshCredential,
             HttpClient httpClient,
-            Action<AccessCredentials>? accessCredentialsUpdated = null,
+            Action<AtProtoCredentials>? credentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNull(accessCredentials);
+            ArgumentNullException.ThrowIfNull(refreshCredential);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            ArgumentException.ThrowIfNullOrWhiteSpace(accessCredentials.RefreshJwt);
+            ArgumentException.ThrowIfNullOrWhiteSpace(refreshCredential.RefreshToken);
 
             AtProtoHttpClient<RefreshSessionResponse> request = new(loggerFactory);
 
             AtProtoHttpResult<RefreshSessionResponse> result = await request.Post(
-                service: accessCredentials.Service,
+                service: refreshCredential.Service,
                 endpoint: RefreshSessionEndpoint,
-                accessCredentials: accessCredentials,
+                credentials: refreshCredential,
                 httpClient: httpClient,
-                useRefreshToken: true,
-                onAccessCredentialsUpdated: accessCredentialsUpdated,
+                onCredentialsUpdated: credentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return result;
@@ -178,15 +186,15 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="accessCredentials">The access credentials to retrieve the session for.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making the API request.</param>
-        /// <param name="accessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="credentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<GetSessionResponse>> GetSession(
             AccessCredentials accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials>? accessCredentialsUpdated = null,
+            Action<AtProtoCredentials>? credentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
@@ -201,12 +209,12 @@ namespace idunno.AtProto
                 GetSessionEndpoint,
                 accessCredentials,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: accessCredentialsUpdated,
+                onCredentialsUpdated: credentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
-        /// Get a signed token on behalf of the requesting DID for the requested <paramref name="audience"/>.
+        /// Get access credentials on behalf of the requesting DID for the requested <paramref name="audience"/>.
         /// </summary>
         /// <param name="audience">The DID of the service that the token will be used to authenticate with.</param>
         /// <param name="expiry">The length of time the token should be valid for.</param>
@@ -224,14 +232,14 @@ namespace idunno.AtProto
         /// </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="audience"/> or the AccessJwt in <paramref name="accessCredentials"/> is null or whitespace.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="expiry"/> is zero or negative.</exception>
-        public static async Task<AtProtoHttpResult<string>> GetServiceAuth(
+        public static async Task<AtProtoHttpResult<ServiceCredential>> GetServiceAuth(
             Did audience,
             TimeSpan? expiry,
             Nsid lxm,
             Uri service,
             AccessCredentials accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials>? accessCredentialsUpdated = null,
+            Action<AtProtoCredentials>? accessCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
@@ -266,16 +274,21 @@ namespace idunno.AtProto
                 endpoint,
                 accessCredentials,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: accessCredentialsUpdated,
+                onCredentialsUpdated: accessCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (result.Succeeded)
             {
-                return new AtProtoHttpResult<string>(result.Result.Token, result.StatusCode, result.HttpResponseHeaders, result.AtErrorDetail, result.RateLimit);
+                return new AtProtoHttpResult<ServiceCredential>(
+                    new ServiceCredential(service, accessJwt: result.Result.Token),
+                    result.StatusCode,
+                    result.HttpResponseHeaders, result
+                    .AtErrorDetail,
+                    result.RateLimit);
             }
             else
             {
-                return new AtProtoHttpResult<string>(null, result.StatusCode, result.HttpResponseHeaders, result.AtErrorDetail, result.RateLimit);
+                return new AtProtoHttpResult<ServiceCredential>(null, result.StatusCode, result.HttpResponseHeaders, result.AtErrorDetail, result.RateLimit);
             }
         }
     }

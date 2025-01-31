@@ -101,8 +101,8 @@ namespace idunno.Bluesky
         /// <remarks>
         /// <para>This method makes outgoing web requests to resolve the handle in a Bluesky URI to a <see cref="AtProto.Did"/>.</para>
         /// </remarks>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> is in an unexpected format.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an unexpected format.</exception>
         public async Task<AtUri> BuildAtUriFromBlueskyWebUri(Uri uri, CancellationToken cancellationToken = default)
         {
             // Bluesky web client URIs should be in the format
@@ -163,8 +163,8 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="atUri">The <see cref="AtUri"/> to generate a web URI for.</param>
         /// <returns>A URI for the Bluesky Web Client which will display the record specified by the <paramref name="atUri"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="atUri"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown if <paramref name="atUri"/> is in an unexpected format or collection.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="atUri"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="atUri"/> is in an unexpected format or collection.</exception>
         public static Uri BuildBlueskyPostUriFromAtUri(AtUri atUri)
         {
             ArgumentNullException.ThrowIfNull(atUri);

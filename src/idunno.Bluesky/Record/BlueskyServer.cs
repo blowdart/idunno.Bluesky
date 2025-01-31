@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
 using idunno.Bluesky.Record;
+using idunno.AtProto.Authentication;
 
 namespace idunno.Bluesky
 {
@@ -17,8 +18,9 @@ namespace idunno.Bluesky
         /// <param name="uri">The <see cref="AtUri"/> of the post to return hydrated views for.</param>
         /// <param name="cid">An optional <see cref="Cid"/> of the post to return hydrated views for.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
-        /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -26,8 +28,9 @@ namespace idunno.Bluesky
             AtUri uri,
             Cid? cid,
             Uri service,
-            string? accessToken,
+            AccessCredentials? accessCredentials,
             HttpClient httpClient,
+            Action<AccessCredentials> onAccessCredentialsUpdated,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
@@ -39,10 +42,11 @@ namespace idunno.Bluesky
                 CollectionNsid.Post,
                 uri.RecordKey,
                 cid,
-                service,
-                accessToken,
-                httpClient,
-                loggerFactory,
+                service : service,
+                accessCredentials: accessCredentials,
+                httpClient: httpClient,
+                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
+                loggerFactory: loggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
     }

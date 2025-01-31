@@ -116,7 +116,7 @@ namespace idunno.Bluesky
         /// <param name="embeddedRecord">The embedded record for the post, if any.</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="text"/> is null and <paramref name="embeddedRecord"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is null and <paramref name="embeddedRecord"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///    Thrown when <paramref name="text"/> exceeds the maximum length or.
         ///    <paramref name="tags"/> exceeds the maximum number of tags or has a value that exceeds the maximum tag length.
@@ -146,7 +146,7 @@ namespace idunno.Bluesky
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created on.</param>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="text"/> is null and <paramref name="embeddedRecord"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is null and <paramref name="embeddedRecord"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///    Thrown when <paramref name="text"/> exceeds the maximum length or.
         ///    <paramref name="tags"/> exceeds the maximum number of tags or has a value that exceeds the maximum tag length.

@@ -17,7 +17,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>> GetBlocks(
             int? limit = null,
             string? cursor = null,
@@ -26,15 +26,16 @@ namespace idunno.Bluesky
         {
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.GetBlocks(
                 limit,
                 cursor,
-                Service,
-                AccessToken,
-                HttpClient,
+                service: Service,
+                accessCredentials: AccessCredentials,
+                httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -49,7 +50,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
         public async Task<AtProtoHttpResult<Followers>> GetFollowers(
             AtIdentifier actor,
             int? limit = null,
@@ -63,9 +64,10 @@ namespace idunno.Bluesky
                 actor,
                 limit,
                 cursor,
-                AuthenticatedOrUnauthenticatedServiceUri,
-                AccessToken,
-                HttpClient,
+                service: AuthenticatedOrUnauthenticatedServiceUri,
+                accessCredentials: AccessCredentials,
+                httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -79,7 +81,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the agent is unauthenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<Followers>> GetFollowers(
             int? limit = null,
             string? cursor = null,
@@ -88,7 +90,7 @@ namespace idunno.Bluesky
         {
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await GetFollowers(
@@ -108,7 +110,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
         public async Task<AtProtoHttpResult<Follows>> GetFollows(
             AtIdentifier actor,
             int? limit = null,
@@ -122,9 +124,10 @@ namespace idunno.Bluesky
                 actor,
                 limit,
                 cursor,
-                AuthenticatedOrUnauthenticatedServiceUri,
-                AccessToken,
-                HttpClient,
+                service: AuthenticatedOrUnauthenticatedServiceUri,
+                accessCredentials: AccessCredentials,
+                httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -138,7 +141,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the agent is unauthenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<Follows>> GetFollows(
             int? limit = null,
             string? cursor = null,
@@ -147,7 +150,7 @@ namespace idunno.Bluesky
         {
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await GetFollows(
@@ -167,7 +170,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the agent is unauthenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<Followers>> GetKnownFollowers(
             AtIdentifier actor,
             int? limit = null,
@@ -177,7 +180,7 @@ namespace idunno.Bluesky
         {
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             ArgumentNullException.ThrowIfNull(actor);
@@ -186,9 +189,10 @@ namespace idunno.Bluesky
                 actor,
                 limit,
                 cursor,
-                Service,
-                AccessToken,
-                HttpClient,
+                service: Service,
+                accessCredentials: AccessCredentials,
+                httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -202,7 +206,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the agent is unauthenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>> GetListBlocks(
             int? limit = null,
             string? cursor = null,
@@ -211,15 +215,16 @@ namespace idunno.Bluesky
         {
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.GetListBlocks(
                 limit,
                 cursor,
-                Service,
-                AccessToken,
-                HttpClient,
+                service: Service,
+                accessCredentials: AccessCredentials,
+                httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -233,7 +238,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the agent is unauthenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>> GetListMutes(
             int? limit = null,
             string? cursor = null,
@@ -242,15 +247,16 @@ namespace idunno.Bluesky
         {
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.GetListMutes(
                 limit,
                 cursor,
-                Service,
-                AccessToken,
-                HttpClient,
+                service: Service,
+                accessCredentials: AccessCredentials,
+                httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -266,8 +272,8 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="list"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
         public async Task<AtProtoHttpResult<ListViewWithItems>> GetList(
             AtUri list,
             int? limit = null,
@@ -281,9 +287,10 @@ namespace idunno.Bluesky
                 list,
                 limit,
                 cursor,
-                AuthenticatedOrUnauthenticatedServiceUri,
-                AccessToken,
-                HttpClient,
+                service: AuthenticatedOrUnauthenticatedServiceUri,
+                accessCredentials: AccessCredentials,
+                httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -298,8 +305,8 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>> GetLists(
             AtIdentifier actor,
             int? limit = null,
@@ -313,9 +320,10 @@ namespace idunno.Bluesky
                 actor,
                 limit,
                 cursor,
-                AuthenticatedOrUnauthenticatedServiceUri,
-                AccessToken,
-                HttpClient,
+                service: AuthenticatedOrUnauthenticatedServiceUri,
+                accessCredentials: AccessCredentials,
+                httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -329,7 +337,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the agent is unauthenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>> GetMutes(
             int? limit = null,
             string? cursor = null,
@@ -338,15 +346,16 @@ namespace idunno.Bluesky
         {
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.GetMutes(
                 limit,
                 cursor,
-                Service,
-                AccessToken,
-                HttpClient,
+                service: Service,
+                accessCredentials: AccessCredentials,
+                httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -371,10 +380,11 @@ namespace idunno.Bluesky
             return await BlueskyServer.GetRelationships(
                 actor,
                 others,
-                AuthenticatedOrUnauthenticatedServiceUri,
-                AccessToken,
-                HttpClient,
-                loggerFactory : LoggerFactory,
+                service: AuthenticatedOrUnauthenticatedServiceUri,
+                accessCredentials: AccessCredentials,
+                httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -385,14 +395,14 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="others"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ActorRelationships>> GetRelationships(
             ICollection<Did> others,
             CancellationToken cancellationToken = default)
         {
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             ArgumentNullException.ThrowIfNull(others);
@@ -420,9 +430,10 @@ namespace idunno.Bluesky
 
             return await BlueskyServer.GetStarterPack(
                 uri,
-                AuthenticatedOrUnauthenticatedServiceUri,
-                AccessToken,
-                HttpClient,
+                service: AuthenticatedOrUnauthenticatedServiceUri,
+                accessCredentials: AccessCredentials,
+                httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -445,9 +456,10 @@ namespace idunno.Bluesky
 
             return await BlueskyServer.GetStarterPacks(
                 uris,
-                AuthenticatedOrUnauthenticatedServiceUri,
-                AccessToken,
-                HttpClient,
+                service: AuthenticatedOrUnauthenticatedServiceUri,
+                accessCredentials: AccessCredentials,
+                httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -470,9 +482,10 @@ namespace idunno.Bluesky
 
             return await BlueskyServer.GetSuggestedFollowsByActor(
                 actor,
-                AuthenticatedOrUnauthenticatedServiceUri,
-                AccessToken,
-                HttpClient,
+                service: AuthenticatedOrUnauthenticatedServiceUri,
+                accessCredentials: AccessCredentials,
+                httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -484,8 +497,8 @@ namespace idunno.Bluesky
         /// <param name="listUri">The <see cref="AtUri"/> of the list of actors to mute.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="listUri"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the agent is unauthenticated.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/> is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> MuteActorList(
             AtUri listUri,
             CancellationToken cancellationToken = default)
@@ -494,14 +507,15 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.MuteActorList(
                 listUri,
-                Service,
-                AccessToken,
-                HttpClient,
+                service: Service,
+                accessCredentials: AccessCredentials,
+                httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -512,8 +526,8 @@ namespace idunno.Bluesky
         /// <param name="actor">The <see cref="AtIdentifier"/> of the actor to mute.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the agent is unauthenticated.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> MuteActor(
             AtIdentifier actor,
             CancellationToken cancellationToken = default)
@@ -522,14 +536,15 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.MuteActor(
                 actor,
-                Service,
-                AccessToken,
-                HttpClient,
+                service: Service,
+                accessCredentials: AccessCredentials,
+                httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -540,8 +555,8 @@ namespace idunno.Bluesky
         /// <param name="rootUri">The <see cref="AtUri"/> of the thread to mute</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="rootUri"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the agent is unauthenticated.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="rootUri"/> is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> MuteThread(
             AtUri rootUri,
             CancellationToken cancellationToken = default)
@@ -550,14 +565,15 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.MuteThread(
                 rootUri,
-                Service,
-                AccessToken,
-                HttpClient,
+                service: Service,
+                accessCredentials: AccessCredentials,
+                httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -568,24 +584,25 @@ namespace idunno.Bluesky
         /// <param name="listUri">The <see cref="AtUri"/> of the list of actors to unmute.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="listUri"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the agent is unauthenticated.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/> is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> UnmuteActorList(
             AtUri listUri,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(listUri);
 
-            if (Session is null || string.IsNullOrWhiteSpace(AccessToken))
+            if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.UnmuteActorList(
                 listUri,
-                Service,
-                AccessToken,
-                HttpClient,
+                service: Service,
+                accessCredentials: AccessCredentials,
+                httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -596,8 +613,8 @@ namespace idunno.Bluesky
         /// <param name="actor">The <see cref="AtIdentifier"/> of the actor to unmute</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the agent is unauthenticated.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> UnmuteActor(
             AtIdentifier actor,
             CancellationToken cancellationToken = default)
@@ -606,14 +623,15 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.UnmuteActor(
                 actor,
-                Service,
-                AccessToken,
-                HttpClient,
+                service: Service,
+                accessCredentials: AccessCredentials,
+                httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -624,8 +642,8 @@ namespace idunno.Bluesky
         /// <param name="rootUri">The <see cref="AtUri"/> of the thread to unmute</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="rootUri"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the agent is unauthenticated.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="rootUri"/> is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> UnmuteThread(
             AtUri rootUri,
             CancellationToken cancellationToken = default)
@@ -634,14 +652,15 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.UnmuteThread(
                 rootUri,
-                Service,
-                AccessToken,
-                HttpClient,
+                service: Service,
+                accessCredentials: AccessCredentials,
+                httpClient: HttpClient,
+                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }

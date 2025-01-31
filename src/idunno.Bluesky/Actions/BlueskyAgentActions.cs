@@ -23,14 +23,14 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken"></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="handle"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Follow(Handle handle, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(handle);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             Did? didResolutionResult = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false);
@@ -59,14 +59,14 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken"></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="did"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Follow(Did did, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(did);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             FollowRecordValue follow = new(did);
@@ -96,21 +96,21 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken"></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="handle"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> Unfollow(Handle handle, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(handle);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             ArgumentNullException.ThrowIfNull(handle);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             Did? didResolutionResult = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false);
@@ -139,14 +139,14 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken"></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="did"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> Unfollow(Did did, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(did);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             AtProtoHttpResult<Actor.ProfileViewDetailed> userProfileResult = await GetProfile(did, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -187,15 +187,15 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentException">Thrown if the <paramref name="uri"/> does not point to a Bluesky follow record, or its RecordKey is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky follow record, or its RecordKey is null.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteFollow(AtUri uri, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uri);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             if (uri.Collection != CollectionNsid.Follow)
@@ -218,14 +218,14 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="strongReference"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteFollow(StrongReference strongReference, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await DeleteFollow(strongReference.Uri, cancellationToken).ConfigureAwait(false);
@@ -238,14 +238,14 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken"></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="did"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Block(Did did, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(did);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             BlockRecordValue block = new(did);
@@ -264,21 +264,21 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken"></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="handle"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> Unblock(Handle handle, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(handle);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             ArgumentNullException.ThrowIfNull(handle);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             Did? didResolutionResult = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false);
@@ -307,14 +307,14 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken"></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="did"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> Unblock(Did did, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(did);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             AtProtoHttpResult<Actor.ProfileViewDetailed> userProfileResult = await GetProfile(did, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -355,15 +355,15 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentException">Thrown if the <paramref name="uri"/> does not point to a Bluesky block record, or its RecordKey is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky block record, or its RecordKey is null.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteBlock(AtUri uri, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uri);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             if (uri.Collection != CollectionNsid.Block)
@@ -386,14 +386,14 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="strongReference"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteBlock(StrongReference strongReference, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await DeleteBlock(strongReference.Uri, cancellationToken).ConfigureAwait(false);
@@ -411,7 +411,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">if <paramref name="text"/> is null, empty or whitespace.</exception>
         /// <exception cref="ArgumentOutOfRangeException">if <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
             string text,
             ICollection<ThreadGateRule>? threadGateRules = null,
@@ -431,7 +431,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await Post(
@@ -457,7 +457,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">if <paramref name="text"/> is null, empty or whitespace.</exception>
         /// <exception cref="ArgumentOutOfRangeException">if <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
             string text,
             EmbeddedImage image,
@@ -478,7 +478,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             List<EmbeddedImage>? images = null;
@@ -510,7 +510,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="text"/> is null, empty or whitespace.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///   if <paramref name="text"/> length is greater than the maximum number of characters or graphemes, or
         ///   <paramref name="images"/> contains more than the maximum allowed number of images.
@@ -561,7 +561,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             Post post = new(
@@ -595,7 +595,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
             string? text,
             EmbeddedVideo video,
@@ -626,7 +626,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             Post post = new(
@@ -659,7 +659,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="externalCard"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
             EmbeddedExternal externalCard,
             ICollection<ThreadGateRule>? threadGateRules = null,
@@ -693,7 +693,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="externalCard"/> is null, empty or whitespace.</exception>
         /// <exception cref="ArgumentOutOfRangeException">if <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
             string text,
             EmbeddedExternal externalCard,
@@ -715,7 +715,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             IList<Facet>? facets = null;
@@ -754,14 +754,14 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(Post post, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(post);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             AtProtoHttpResult<CreateRecordResponse> result = await CreatePost(post, Did, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -785,14 +785,14 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="postBuilder"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(PostBuilder postBuilder, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(postBuilder);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             Post post;
@@ -829,15 +829,15 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentException">Thrown if the <paramref name="uri"/> does not point to a Bluesky feed post record, or its RecordKey is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky feed post record, or its RecordKey is null.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeletePost(AtUri uri, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uri);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             if (uri.Collection != CollectionNsid.Post)
@@ -860,14 +860,14 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeletePost(StrongReference strongReference, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await DeletePost(strongReference.Uri, cancellationToken).ConfigureAwait(false);
@@ -881,7 +881,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/> or <paramref name="text"/> is nul.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> ReplyTo(StrongReference parent, string text, CancellationToken cancellationToken = default)
         {
@@ -897,7 +897,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await ReplyTo(parent, text, images:null, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -912,7 +912,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="parent"/>, <paramref name="text"/> or <paramref name="image"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">if <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> ReplyTo(StrongReference parent, string text, EmbeddedImage image, CancellationToken cancellationToken = default)
         {
@@ -929,7 +929,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             List<EmbeddedImage> images = [ image ];
@@ -946,7 +946,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="parent"/> is null or <paramref name="text"/> is null or empty.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">if <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> ReplyTo(StrongReference parent, string text, ICollection<EmbeddedImage>? images, CancellationToken cancellationToken = default)
         {
@@ -965,7 +965,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             AtProtoHttpResult<ReplyReferences> replyReferencesResult = await GetReplyReferences(parent, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1000,7 +1000,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Repost(StrongReference post, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(post);
@@ -1012,7 +1012,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             RepostRecordValue repostRecord = new(post);
@@ -1031,15 +1031,15 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentException">Thrown if the <paramref name="uri"/> does not point to a Bluesky feed repost record, or its RecordKey is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky feed repost record, or its RecordKey is null.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteRepost(AtUri uri, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uri);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             if (uri.Collection != CollectionNsid.Repost)
@@ -1062,14 +1062,14 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteRepost(StrongReference strongReference, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await DeleteRepost(strongReference.Uri, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1082,14 +1082,14 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Like(StrongReference strongReference, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             LikeRecordValue likeRecord = new(strongReference);
@@ -1108,15 +1108,15 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentException">Thrown if the <paramref name="uri"/> does not point to a Bluesky feed repost record, or its RecordKey is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky feed repost record, or its RecordKey is null.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteLike(AtUri uri, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uri);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             if (uri.Collection != CollectionNsid.Like)
@@ -1139,14 +1139,14 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="strongReference"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteLike(StrongReference strongReference, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await DeleteLike(strongReference.Uri, cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1160,7 +1160,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is longer than the maximum permitted.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Quote(StrongReference strongReference, string text, CancellationToken cancellationToken = default)
         {
@@ -1179,7 +1179,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="image"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Quote(StrongReference strongReference, string text, EmbeddedImage image, CancellationToken cancellationToken = default)
         {
@@ -1199,7 +1199,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null or <paramref name="text"/> is null or empty.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Quote(StrongReference strongReference, string text, ICollection<EmbeddedImage>? images, CancellationToken cancellationToken = default)
         {
@@ -1223,7 +1223,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             PostBuilder postBuilder = new()
@@ -1249,7 +1249,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="image"/> is null</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Quote(
             StrongReference strongReference,
             EmbeddedImage image,
@@ -1259,7 +1259,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await Quote(strongReference, [image], cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1273,7 +1273,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="strongReference"/> is null</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Quote(
             StrongReference strongReference,
             ICollection<EmbeddedImage>? images = null,
@@ -1283,7 +1283,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             if (images?.Count > Maximum.ImagesInPost)
@@ -1359,14 +1359,14 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteQuote(AtUri uri, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uri);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await DeletePost(uri, cancellationToken).ConfigureAwait(false);
@@ -1379,7 +1379,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="strongReference"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">if the agent is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         /// <remarks>
         /// <para>A quote record is really a post record, so DeletePost() would also work. This method is just here for ease of discover and consistency.</para>
         /// </remarks>
@@ -1389,7 +1389,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await DeletePost(strongReference, cancellationToken).ConfigureAwait(false);
@@ -1407,7 +1407,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="imageAsBytes"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when if <paramref name="imageAsBytes"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when if <paramref name="mimeType"/> is null or empty.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is not an authenticated session.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
         public async Task<AtProtoHttpResult<EmbeddedImage>> UploadImage(
             byte[] imageAsBytes,
             string mimeType,
@@ -1422,7 +1422,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
 
@@ -1461,7 +1461,7 @@ namespace idunno.Bluesky
         /// <param name="did">The <see cref="Did"/> to lookup.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="did"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null.</exception>
         public async Task<Handle?> LookupDid(Did did, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNullOrEmpty(did);

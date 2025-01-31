@@ -63,7 +63,7 @@ namespace Samples.TokenRefresh
                     Console.WriteLine($"EVENT: Session created for : {e.Handle} ({e.Did}) on {e.Service}");
                 };
 
-                agent.SessionRefreshed += (sender, e) =>
+                agent.CredentialsUpdated += (sender, e) =>
                 {
                     Console.WriteLine($"EVENT: Session refreshed for : {e.Did}");
                 };
@@ -73,7 +73,7 @@ namespace Samples.TokenRefresh
                     Console.WriteLine($"EVENT: Logged out from {e.Service}: {e.Did}");
                 };
 
-                agent.SessionRefreshFailed += (sender, e) =>
+                agent.TokenRefreshFailed += (sender, e) =>
                 {
                     if (e.SessionErrors != SessionConfigurationErrorType.None)
                     {
