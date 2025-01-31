@@ -101,6 +101,7 @@ namespace Samples.OAuth
                         redirectUri: callbackServer.Uri,
                         authority: authorizationServer,
                         handle: handle,
+                        scopes: ["atproto", "transition:generic"],
                         cancellationToken: cancellationToken);
 
                     Console.WriteLine($"Login URI           : {startUri}");
@@ -124,38 +125,31 @@ namespace Samples.OAuth
                     Console.WriteLine($"Access JWT expires on: {accessCredentials.ExpiresOn:G}");
                     Console.WriteLine();
 
-                    Post post = new("hello oauth");
-
-                    var result = await AtProtoServer.CreateRecord(
-                        post,
-                        CollectionNsid.Post,
-                        accessCredentials.Did!,
-                        rKey: null,
-                        validate: null,
-                        swapCommit: null,
-                        service: pds,
-                        accessCredentials: accessCredentials,
-                        httpClient: agent.HttpClient,
-                        onAccessCredentialsUpdated: null,
-                        cancellationToken: cancellationToken);
-
-                    var result2 = await BlueskyServer.GetProfile(
-                        actor: accessCredentials.Did!,
-                        service: pds,
-                        accessCredentials: accessCredentials,
-                        httpClient: agent.HttpClient,
-                        onAccessCredentialsUpdated: null,
-                        loggerFactory: loggerFactory,
-                        subscribedLabelers: null,
-                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                    //var result = await AtProtoServer.CreateRecord(
+                    //    new Post("hello oauth"),
+                    //    CollectionNsid.Post,
+                    //    accessCredentials.Did!,
+                    //    rKey: null,
+                    //    validate: null,
+                    //    swapCommit: null,
+                    //    service: pds,
+                    //    accessCredentials: accessCredentials,
+                    //    httpClient: agent.HttpClient,
+                    //    onCredentialsUpdated: null,
+                    //    cancellationToken: cancellationToken);
 
                     Debugger.Break();
 
-                    AtProtoHttpResult<bool> loginResult = await agent.Login(accessCredentials, cancellationToken);
+                    bool loginResult = await agent.Login(accessCredentials, cancellationToken);
 
-                    if (loginResult.Succeeded)
+                    if (loginResult)
                     {
-                        Console.WriteLine("Logged in with OAuth");
+                        await agent.CreateRecord(new Post("hello oauth, via agent"), CollectionNsid.Post, cancellationToken: cancellationToken);
+
+                        Debugger.Break();
+
+                        // Now try refresh operation
+
                     }
                     else
                     {

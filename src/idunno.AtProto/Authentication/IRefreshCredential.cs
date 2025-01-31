@@ -12,7 +12,6 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Gets or sets a string representation of the token to use when a new access token is required.
         /// </summary>
-        /// <exception cref="ArgumentException">Thrown when setting the value and the value is null or whitespace.</exception>
-        public string RefreshToken { get; set; }
+        public string RefreshToken { get; }
     }
 }

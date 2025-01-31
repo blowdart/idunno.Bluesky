@@ -114,13 +114,20 @@ namespace idunno.AtProto.Authentication
             }
         }
 
+        /// <summary>
+        /// Extracts the DID and expiration date from the specified jwt and sets the <see cref="Did"/> and <see cref="ExpiresOn"/> properties.
+        /// </summary>
+        /// <param name="jwt">A string representation of the jwt to extract the properties from</param>.
+        /// <exception cref="ArgumentException">Thrown when <paramref name="jwt"/> is null or whitespace.</exception>
         [MemberNotNull(nameof(Did))]
         [MemberNotNull(nameof(ExpiresOn))]
-        private void ExtractJwtProperties(string jwt)
+        protected void ExtractJwtProperties(string jwt)
         {
+            ArgumentException.ThrowIfNullOrWhiteSpace(jwt);
+
             JsonWebToken token = new(jwt);
-            ExpiresOn = DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc);
             Did = new Did(token.Subject);
+            ExpiresOn = DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc);
         }
     }
 }

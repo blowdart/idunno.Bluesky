@@ -79,7 +79,7 @@ namespace idunno.AtProto
             Uri service,
             AccessCredentials accessCredentials,
             HttpClient httpClient,
-            Action<AtProtoCredentials> onCredentialsUpdated,
+            Action<AtProtoCredentials>? onCredentialsUpdated,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -146,7 +146,7 @@ namespace idunno.AtProto
             Uri service,
             AccessCredentials accessCredentials,
             HttpClient httpClient,
-            Action<AtProtoCredentials> onCredentialsUpdated,
+            Action<AtProtoCredentials>? onCredentialsUpdated,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -201,7 +201,7 @@ namespace idunno.AtProto
             Uri service,
             AccessCredentials accessCredentials,
             HttpClient httpClient,
-            Action<AtProtoCredentials> onCredentialsUpdated,
+            Action<AtProtoCredentials>? onCredentialsUpdated,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions=null,
             CancellationToken cancellationToken = default)
@@ -286,7 +286,7 @@ namespace idunno.AtProto
             Uri service,
             AccessCredentials accessCredentials,
             HttpClient httpClient,
-            Action<AtProtoCredentials> onCredentialsUpdated,
+            Action<AtProtoCredentials>? onCredentialsUpdated,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -341,7 +341,7 @@ namespace idunno.AtProto
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AtProtoCredentials> onCredentialsUpdated,
+            Action<AtProtoCredentials>? onCredentialsUpdated,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default) where TRecord: class
@@ -401,7 +401,7 @@ namespace idunno.AtProto
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AtProtoCredentials> onCredentialsUpdated,
+            Action<AtProtoCredentials>? onCredentialsUpdated,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
@@ -489,7 +489,7 @@ namespace idunno.AtProto
             Uri service,
             AccessCredentials accessCredentials,
             HttpClient httpClient,
-            Action<AtProtoCredentials> onCredentialsUpdated,
+            Action<AtProtoCredentials>? onCredentialsUpdated,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)

@@ -91,9 +91,9 @@ namespace idunno.AtProto
         {
             get
             {
-                return _credentials is AccessCredentials accessCredentials &&
-                    accessCredentials.Did is not null && 
-                    accessCredentials.ExpiresOn < DateTimeOffset.UtcNow;
+                return _credentials is IAccessCredential accessCredential &&
+                    accessCredential.Did is not null &&
+                    accessCredential.ExpiresOn > DateTimeOffset.UtcNow;
             }
         }
 
@@ -203,6 +203,36 @@ namespace idunno.AtProto
         }
 
         /// <summary>
+        /// Sets the agent credentials to the specified <paramref name="accessCredentials"/>.
+        /// </summary>
+        /// <param name="accessCredentials"><see cref="AccessCredentials"/> to use when authenticating to the service.</param>
+        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/> or any of its properties are null.</exception>
+        [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Matching other login methods.")]
+        public async Task<bool> Login(
+            AccessCredentials accessCredentials,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(accessCredentials);
+            ArgumentNullException.ThrowIfNull(accessCredentials.AccessJwt);
+            ArgumentNullException.ThrowIfNull(accessCredentials.Did);
+            ArgumentNullException.ThrowIfNull(accessCredentials.RefreshToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials.Service);
+
+            if (accessCredentials is DPoPAccessCredentials dPoPAccessCredentials)
+            {
+                return await Login(dPoPAccessCredentials, cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+
+            Logger.AgentAuthenticatedWithOAuthCredentials(_logger, accessCredentials.Did, accessCredentials.Service);
+
+            await InternalLogin(accessCredentials).ConfigureAwait(false);
+
+            return true;
+        }
+
+        /// <summary>
         /// Sets the agent credentials to the specified <paramref name="dPoPAccessCredentials"/>.
         /// </summary>
         /// <param name="dPoPAccessCredentials"><see cref="DPoPAccessCredentials"/> to use when authenticating to the service.</param>
@@ -222,7 +252,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(dPoPAccessCredentials.DPoPProofKey);
             ArgumentNullException.ThrowIfNull(dPoPAccessCredentials.DPoPNonce);
 
-            Logger.AgentAuthenticatedWithOAuthCredentials(_logger, dPoPAccessCredentials.Did, dPoPAccessCredentials.Service);
+            Logger.AgentAuthenticatedWithDPoPOAuthCredentials(_logger, dPoPAccessCredentials.Did, dPoPAccessCredentials.Service);
 
             await InternalLogin(dPoPAccessCredentials).ConfigureAwait(false);
 
@@ -267,24 +297,15 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(accessCredentials.RefreshToken);
             ArgumentNullException.ThrowIfNull(accessCredentials.Service);
 
-            _credentialReaderWriterLockSlim.EnterWriteLock();
+            Service = accessCredentials.Service;
+            Credentials = accessCredentials;
 
-            try
-            {
-                Service = accessCredentials.Service;
-                Credentials = accessCredentials;
+            _credentialRefreshTimer ??= new();
+            StartTokenRefreshTimer();
 
-                _credentialRefreshTimer ??= new();
-                StartTokenRefreshTimer();
+            var authenticatedEventArgs = new AuthenticatedEventArgs(accessCredentials);
 
-                var authenticatedEventArgs = new AuthenticatedEventArgs(accessCredentials);
-
-                OnAuthenticated(authenticatedEventArgs);
-            }
-            finally
-            {
-                _credentialReaderWriterLockSlim.ExitWriteLock();
-            }
+            OnAuthenticated(authenticatedEventArgs);
 
             await Task.CompletedTask.ConfigureAwait(false);
         }

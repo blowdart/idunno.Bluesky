@@ -607,7 +607,6 @@ namespace idunno.AtProto
         /// <typeparam name="TRecord">The type of record to create.</typeparam>
         /// <param name="record"><para>The record to be created.</para></param>
         /// <param name="collection"><para>The collection the record should be created in.</para></param>
-        /// <param name="creator"><para>The <see cref="Did"/> of the actor whose collection the record should be created in. Typically this is the Did of the current user.</para></param>
         /// <param name="rkey"><para>An optional <see cref="RecordKey"/> to create the record with.</para></param>
         /// <param name="validate">
         ///   <para>Gets a flag indicating what validation will be performed, if any.</para>
@@ -619,12 +618,11 @@ namespace idunno.AtProto
         /// <param name="swapCommit"><para>Compare and swap with the previous commit by CID.</para></param>
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns><para>The task object representing the asynchronous operation.</para></returns>
-        /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="record"/>, <paramref name="collection"/> or <paramref name="creator"/> is null.</para></exception>
+        /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="record"/> or <paramref name="collection"/> is null.</para></exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current session is not authenticated.</para></exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> CreateRecord<TRecord>(
             TRecord record,
             Nsid collection,
-            Did creator,
             RecordKey? rkey = null,
             bool? validate = true,
             Cid? swapCommit = null,
@@ -632,7 +630,6 @@ namespace idunno.AtProto
         {
             ArgumentNullException.ThrowIfNull(record);
             ArgumentNullException.ThrowIfNull(collection);
-            ArgumentNullException.ThrowIfNull(creator);
 
             if (!IsAuthenticated)
             {
@@ -643,7 +640,7 @@ namespace idunno.AtProto
             AtProtoHttpResult<CreateRecordResponse> result = await AtProtoServer.CreateRecord(
                 record: record,
                 collection: collection,
-                creator: creator,
+                creator: Credentials.Did,
                 rKey: rkey,
                 validate: validate,
                 swapCommit : swapCommit,

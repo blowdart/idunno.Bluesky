@@ -18,6 +18,5 @@ namespace idunno.AtProto.Authentication
         /// Gets a string representation of the DPoP nonce to use when signing requests.
         /// </summary>
         public string DPoPNonce { get; set; }
-
     }
 }

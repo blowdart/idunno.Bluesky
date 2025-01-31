@@ -1,7 +1,6 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Net.Http.Headers;
 using IdentityModel.Client;
 using IdentityModel.OidcClient.DPoP;
 
@@ -34,7 +33,7 @@ namespace idunno.AtProto.Authentication
             ArgumentException.ThrowIfNullOrWhiteSpace(accessJwt);
             ArgumentException.ThrowIfNullOrWhiteSpace(refreshToken);
             ArgumentException.ThrowIfNullOrEmpty(dPoPProofKey);
-            ArgumentException.ThrowIfNullOrEmpty(DPoPNonce);
+            ArgumentException.ThrowIfNullOrEmpty(dPoPNonce);
 
             _dPoPProofKey = dPoPProofKey;
             _dPoPNonce = dPoPNonce;

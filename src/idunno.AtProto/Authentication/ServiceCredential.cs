@@ -30,7 +30,6 @@ namespace idunno.AtProto.Authentication
             ArgumentException.ThrowIfNullOrWhiteSpace(accessJwt);
 
             _accessToken = accessJwt;
-
             ExtractJwtProperties(accessJwt);
         }
 
@@ -81,6 +80,11 @@ namespace idunno.AtProto.Authentication
         public DateTimeOffset ExpiresOn { get; private set; }
 
         /// <summary>
+        /// Gets the <see cref="AtProto.Did"/> the access token was issued for.
+        /// </summary>
+        public Did Did { get; private set; }
+
+        /// <summary>
         /// Add authentication headers to the specified <paramref name="httpRequestMessage"/>.
         /// </summary>
         /// <param name="httpRequestMessage">The <see cref="HttpRequestMessage"/> to add authentication headers to.</param>
@@ -92,9 +96,11 @@ namespace idunno.AtProto.Authentication
         }
 
         [MemberNotNull(nameof(ExpiresOn))]
+        [MemberNotNull(nameof(Did))]
         private void ExtractJwtProperties(string jwt)
         {
             JsonWebToken token = new(jwt);
+            Did = new Did(token.Subject);
             ExpiresOn = DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc);
         }
     }

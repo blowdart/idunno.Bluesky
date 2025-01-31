@@ -22,18 +22,18 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="InvalidSessionException"/> class.
+        /// Initializes a new instance of the <see cref="SessionRestorationFailedException"/> class.
         /// </summary>
         public SessionRestorationFailedException() : base() { }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="InvalidSessionException"/> class with a specified error message.
+        /// Initializes a new instance of the <see cref="SessionRestorationFailedException"/> class with a specified error message.
         /// </summary>
         /// <param name="message">The message that describes the parsing error.</param>
         public SessionRestorationFailedException(string message) : base(message) { }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="InvalidSessionException"/> class with a specified error message
+        /// Initializes a new instance of the <see cref="SessionRestorationFailedException"/> class with a specified error message
         /// and inner exception.
         /// </summary>
         /// <param name="message">The message that describes the parsing error.</param>

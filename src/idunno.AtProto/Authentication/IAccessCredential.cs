@@ -12,7 +12,21 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Gets a string representation of the JWT to use when making authenticated access requests.
         /// </summary>
-        /// <exception cref="ArgumentException">Thrown when setting the value and the value is null or whitespace.</exception>
-        public string AccessJwt { get; set; }
+        public string AccessJwt { get; }
+
+        /// <summary>
+        /// Gets the <see cref="DateTimeOffset"/> the <see cref="AccessJwt"/> expires on.
+        /// </summary>
+        /// <returns>The value of the 'exp' claim converted to a <see cref="DateTimeOffset"/> from the jwt.</returns>
+        /// <remarks>
+        /// <para>Identifies the expiration time on or after which the JWT MUST NOT be accepted for processing. See: https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.4.</para>
+        /// <para>If the 'exp' claim is not found, then <see cref="DateTimeOffset.MinValue">MinValue</see> is returned.</para>
+        /// </remarks>
+        public DateTimeOffset ExpiresOn { get; }
+
+        /// <summary>
+        /// Gets the <see cref="AtProto.Did"/> the access token was issued for.
+        /// </summary>
+        public Did Did { get; }
     }
 }

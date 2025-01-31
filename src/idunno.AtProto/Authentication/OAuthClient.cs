@@ -26,8 +26,7 @@ namespace idunno.AtProto.Authentication
     {
         const string OAuthDiscoveryDocumentEndpoint = ".well-known/oauth-authorization-server";
 
-        private readonly string[] _defaultScopes = ["atproto", "transition:generic"];
-
+        private readonly string[] _defaultScopes = ["atproto"];
         private OidcClient? _oidcClient;
         private AuthorizeState? _authorizeState;
 

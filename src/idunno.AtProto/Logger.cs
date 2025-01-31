@@ -33,6 +33,9 @@ namespace idunno.AtProto
         [LoggerMessage(8, LogLevel.Debug, "Login() called with OAuthCredentials for {did} on {service}.")]
         internal static partial void AgentAuthenticatedWithOAuthCredentials(ILogger logger, string did, Uri service);
 
+        [LoggerMessage(9, LogLevel.Debug, "Login() called with DPoP bound OAuthCredentials for {did} on {service}.")]
+        internal static partial void AgentAuthenticatedWithDPoPOAuthCredentials(ILogger logger, string did, Uri service);
+
         // Delete session logging
         [LoggerMessage(10, LogLevel.Debug, "Logout called for {did} on {service}")]
         internal static partial void LogoutCalled(ILogger logger, Did? did, Uri service);
