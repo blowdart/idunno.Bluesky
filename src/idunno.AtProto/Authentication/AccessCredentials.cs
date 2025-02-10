@@ -19,11 +19,12 @@ namespace idunno.AtProto.Authentication
         /// Creates a new instance of <see cref="AccessCredentials"/> with the specified <paramref name="accessJwt"/> and <paramref name="refreshToken"/>.
         /// </summary>
         /// <param name="service">The <see cref="Uri"/> of the service the credentials were issued from.</param>
+        /// <param name="authenticationType">The type of authentication used to acquire the credentials.</param>
         /// <param name="accessJwt">A string representation of the JWT to use when making authenticated access requests.</param>
         /// <param name="refreshToken">A string representation of the token to use when a new access token is required.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="accessJwt"/> or <paramref name="refreshToken"/> is null or whitespace.</exception>
-        public AccessCredentials(Uri service, string accessJwt, string refreshToken) : base(service, refreshToken)
+        public AccessCredentials(Uri service, AuthenticationType authenticationType, string accessJwt, string refreshToken) : base(service, authenticationType, refreshToken)
         {
             ArgumentNullException.ThrowIfNull(service);
             ArgumentException.ThrowIfNullOrWhiteSpace(accessJwt);

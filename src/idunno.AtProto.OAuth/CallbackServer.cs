@@ -22,13 +22,13 @@ namespace idunno.AtProto.OAuth
     {
         private const int DefaultTimeout = 60 * 5; // 5 minutes
 
-        private volatile bool _isDisposed;
-
-        private readonly TaskCompletionSource<string> _source = new ();
-
-        private WebApplication? _listener;
 
         private readonly ILogger<CallbackServer> _logger;
+        private readonly TaskCompletionSource<string> _source = new ();
+
+        private volatile bool _isDisposed;
+
+        private WebApplication? _listener;
 
         /// <summary>
         /// Creates a new instance of <see cref="CallbackServer"/>.
@@ -63,7 +63,7 @@ namespace idunno.AtProto.OAuth
 
             builder.Services.AddHostFiltering(options =>
             {
-                options.AllowedHosts = new List<string> { IPAddress.Loopback.ToString() };
+                options.AllowedHosts = [IPAddress.Loopback.ToString()];
                 options.AllowEmptyHosts = false;
             });
 

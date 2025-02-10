@@ -22,28 +22,10 @@ namespace idunno.DidPlcDirectory
         /// Creates a new instance of <see cref="DirectoryAgent"/>.
         /// </summary>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/>, if any, to use when creating loggers.</param>
-        /// <param name="proxyUri">The proxy URI to use, if any.</param>
-        /// <param name="checkCertificateRevocationList">Flag indicating whether certificate revocation lists should be checked. Defaults to <see langword="true" />.</param>
-        /// <param name="httpUserAgent">The user agent string to use, if any.</param>
-        /// <param name="timeout">The default HTTP timeout to use, if any.</param>
         /// <param name="options">Any <see cref="DirectoryAgentOptions"/> to configure this instance with.</param>
-        /// <remarks>
-        /// <para>
-        /// Settings <paramref name="checkCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
-        /// false if you are using a debugging proxy which does not support CRLs.
-        /// </para>
-        /// </remarks>
         public DirectoryAgent(
             ILoggerFactory? loggerFactory = default,
-            Uri ? proxyUri = null,
-            bool checkCertificateRevocationList = true,
-            string? httpUserAgent = null,
-            TimeSpan? timeout = null,
-            DirectoryAgentOptions? options = null) : base(
-                proxyUri: proxyUri,
-                checkCertificateRevocationList: checkCertificateRevocationList,
-                httpUserAgent: httpUserAgent,
-                timeout: timeout)
+            DirectoryAgentOptions? options = null) : base(options?.HttpClientOptions)
         {
             if (options is not null)
             {

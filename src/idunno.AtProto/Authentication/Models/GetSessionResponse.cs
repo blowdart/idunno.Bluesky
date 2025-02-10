@@ -4,7 +4,7 @@
 using System.Text.Json.Serialization;
 using idunno.AtProto.Server;
 
-namespace idunno.AtProto.Models
+namespace idunno.AtProto.Authentication.Models
 {
     /// <summary>
     /// The results of a GetSession API call.

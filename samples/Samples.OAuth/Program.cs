@@ -54,7 +54,23 @@ namespace Samples.OAuth
             // Change the log level in the ConfigureConsoleLogging() to enable logging
             using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
 
-            using (var agent = new BlueskyAgent(proxyUri : proxyUri, checkCertificateRevocationList: checkCertificateRevocationList, loggerFactory: loggerFactory))
+            using (var agent = new AtProtoAgent(
+                service: new Uri("https://api.bsky.app"),
+                loggerFactory: loggerFactory,
+                options: new AtProtoAgentOptions()
+                {
+                    HttpClientOptions = new HttpClientOptions()
+                    {
+                        CheckCertificateRevocationList = checkCertificateRevocationList,
+                        ProxyUri = proxyUri
+                    },
+
+                    OAuthOptions = new OAuthOptions()
+                    {
+                        ClientId = "http://localhost",
+                        Scopes = ["atproto", "transition:generic"]
+                    }
+                }))
             {
                 Did? did = await agent.ResolveHandle(handle, cancellationToken);
 
@@ -72,7 +88,7 @@ namespace Samples.OAuth
                     return;
                 }
 
-                Uri? authorizationServer = await agent.ResolveAuthorizationServer(pds, cancellationToken);
+                Uri? authorizationServer = await agent.ResolveAuthorizationServer(handle, cancellationToken);
 
                 if (authorizationServer is null)
                 {
@@ -80,29 +96,26 @@ namespace Samples.OAuth
                     return;
                 }
 
-                string clientId = "http://localhost";
-
-                Console.WriteLine($"Username:              {handle}");
-                Console.WriteLine($"DID:                   {did}");
-                Console.WriteLine($"PDS:                   {pds}");
-                Console.WriteLine($"Authorization Server:  {authorizationServer}");
-
-                Debugger.Break();
+                Console.WriteLine($"Username:               {handle}");
+                Console.WriteLine($"DID:                    {did}");
+                Console.WriteLine($"PDS:                    {pds}");
+                Console.WriteLine($"Authorization Server:   {authorizationServer}");
 
                 AccessCredentials? accessCredentials = null;
 
                 await using var callbackServer = new CallbackServer(CallbackServer.GetRandomUnusedPort(), loggerFactory: loggerFactory);
                 {
-                    OAuthClient loginClient = agent.CreateOAuthClient();
+                    OAuthClient oAuthClient = agent.CreateOAuthClient();
 
-                    Uri startUri = await loginClient.CreateOAuth2StartUri(
+                    Uri startUri = await oAuthClient.BuildOAuth2LoginUri(
                         service: pds,
-                        clientId: clientId,
                         redirectUri: callbackServer.Uri,
                         authority: authorizationServer,
                         handle: handle,
-                        scopes: ["atproto", "transition:generic"],
                         cancellationToken: cancellationToken);
+
+                    // Save state to use when processing the response, mimicking what we'd do in a web application.
+                    OAuthLoginState? oAuthLoginState = oAuthClient.State;
 
                     Console.WriteLine($"Login URI           : {startUri}");
 
@@ -116,13 +129,23 @@ namespace Samples.OAuth
 
                     if (!string.IsNullOrEmpty(queryString))
                     {
-                        accessCredentials = await loginClient.ProcessOAuth2Response(queryString, cancellationToken: cancellationToken);
+                        accessCredentials = await oAuthClient.ProcessOAuth2LoginResponse(queryString, cancellationToken: cancellationToken);
+                    }
+                    else
+                    {
+                        ConsoleColor oldColor = Console.ForegroundColor;
+
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("Received no login response");
+                        Console.ForegroundColor = oldColor;
+                        return;
                     }
                 }
 
                 if (accessCredentials is not null)
                 {
-                    Console.WriteLine($"Access JWT expires on: {accessCredentials.ExpiresOn:G}");
+                    Console.WriteLine($"Credentials issued for: {accessCredentials.Service}");
+                    Console.WriteLine($"Access JWT expires on:  {accessCredentials.ExpiresOn:G}");
                     Console.WriteLine();
 
                     //var result = await AtProtoServer.CreateRecord(
@@ -138,18 +161,19 @@ namespace Samples.OAuth
                     //    onCredentialsUpdated: null,
                     //    cancellationToken: cancellationToken);
 
-                    Debugger.Break();
+                   // Debugger.Break();
 
                     bool loginResult = await agent.Login(accessCredentials, cancellationToken);
 
                     if (loginResult)
                     {
-                        await agent.CreateRecord(new Post("hello oauth, via agent"), CollectionNsid.Post, cancellationToken: cancellationToken);
+                        // await agent.CreateRecord(new Post("hello oauth, via agent"), CollectionNsid.Post, cancellationToken: cancellationToken);
 
-                        Debugger.Break();
+                        // Debugger.Break();
 
                         // Now try refresh operation
 
+                        await agent.RefreshCredentials(cancellationToken: cancellationToken);
                     }
                     else
                     {

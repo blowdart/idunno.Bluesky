@@ -5,12 +5,11 @@ using System.Text;
 using System.Globalization;
 
 using Microsoft.Extensions.Logging;
-
-using idunno.AtProto.Models;
 using idunno.AtProto.Server;
 using idunno.AtProto.Authentication;
 using System.Runtime.CompilerServices;
 using idunno.AtProto.Server.Models;
+using idunno.AtProto.Authentication.Models;
 
 namespace idunno.AtProto
 {
@@ -159,7 +158,7 @@ namespace idunno.AtProto
         public static async Task<AtProtoHttpResult<RefreshSessionResponse>> RefreshSession(
             RefreshCredential refreshCredential,
             HttpClient httpClient,
-            Action<AtProtoCredentials>? credentialsUpdated = null,
+            Action<AtProtoCredential>? credentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
@@ -194,7 +193,7 @@ namespace idunno.AtProto
         public static async Task<AtProtoHttpResult<GetSessionResponse>> GetSession(
             AccessCredentials accessCredentials,
             HttpClient httpClient,
-            Action<AtProtoCredentials>? credentialsUpdated = null,
+            Action<AtProtoCredential>? credentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
@@ -239,7 +238,7 @@ namespace idunno.AtProto
             Uri service,
             AccessCredentials accessCredentials,
             HttpClient httpClient,
-            Action<AtProtoCredentials>? accessCredentialsUpdated = null,
+            Action<AtProtoCredential>? accessCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {

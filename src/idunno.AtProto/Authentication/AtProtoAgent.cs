@@ -3,14 +3,28 @@
 
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-
 using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using System.Timers;
+
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
 
 using idunno.AtProto.Authentication;
+using idunno.AtProto.Authentication.Models;
 using idunno.AtProto.Events;
-
 using idunno.AtProto.Server.Models;
+using IdentityModel.Client;
+using Microsoft.AspNetCore.WebUtilities;
+using static System.Formats.Asn1.AsnWriter;
+using System.Net.Http.Headers;
+using System.Net.Http;
+using System.Net.Mime;
+using IdentityModel.OidcClient.DPoP;
+using IdentityModel.OidcClient;
+
 
 namespace idunno.AtProto
 {
@@ -98,6 +112,170 @@ namespace idunno.AtProto
         }
 
         /// <summary>
+        /// Called internally by an <see cref="AtProtoHttpClient{TResult}"/> if the credentials were updated.
+        /// </summary>
+        /// <param name="credentials">The new credentials</param>
+        protected internal virtual void InternalOnCredentialsUpdatedCallBack(AtProtoCredential credentials)
+        {
+            ArgumentNullException.ThrowIfNull(credentials);
+
+            Debug.Assert(credentials is not AccessCredentials);
+
+            if (credentials is AccessCredentials accessCredentials)
+            {
+                Credentials = accessCredentials;
+                Logger.OnCredentialUpdatedCallbackCalled(_logger);
+
+                OnCredentialsUpdated(new CredentialsUpdatedEventArgs(accessCredentials.Did, accessCredentials.Service, accessCredentials));
+            }
+            else
+            {
+                // This should never happen.
+                Logger.OnCredentialUpdatedCallbackCalledWithUnexpectedCredentialType(_logger);
+            }
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="OAuthClient"/>.
+        /// </summary>
+        public OAuthClient CreateOAuthClient()
+        {
+            return new OAuthClient(ConfigureHttpClient, CreateProxyHttpClientHandler, LoggerFactory, Options?.OAuthOptions);
+        }
+
+        /// <summary>
+        /// Get a <see cref="ServiceCredential"/> on behalf of the requesting DID for the requested <paramref name="audience"/>.
+        /// </summary>
+        /// <param name="service">The server to request the service authentication from.</param>
+        /// <param name="audience">The DID of the service that the token will be used to authenticate with.</param>
+        /// <param name="lxm">Lexicon (XRPC) method to bind the requested token to</param>
+        /// <param name="expiry">An optional length of the time the token should be valid for.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">
+        ///   Thrown when <paramref name="service"/>, <paramref name="audience"/> or <paramref name="lxm"/> is null.
+        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="expiry"/> is specified but is zero or negative.</exception>
+        public async Task<AtProtoHttpResult<ServiceCredential>> GetServiceAuth(
+            Uri service,
+            Did audience,
+            Nsid lxm,
+            TimeSpan? expiry = null,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(audience);
+            ArgumentNullException.ThrowIfNull(lxm);
+
+            if (expiry is not null)
+            {
+                ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(expiry.Value.TotalSeconds, 0);
+            }
+
+            using (_logger.BeginScope($"GetServiceAuth()"))
+            {
+                if (expiry is not null)
+                {
+                    Logger.RequestingServiceAuthToken(_logger, Service, audience, expiry.Value.ToString("c"), lxm);
+                }
+                else
+                {
+                    Logger.RequestingServiceAuthTokenNoExpirySpecified(_logger, Service, audience, lxm);
+                }
+
+                if (!IsAuthenticated)
+                {
+                    Logger.GetServiceAuthFailedAsSessionIsAnonymous(_logger, Service);
+
+                    throw new AuthenticationRequiredException();
+                }
+
+                AtProtoHttpResult<ServiceCredential> serviceCredentialResult = await AtProtoServer.GetServiceAuth(
+                    audience: audience,
+                    expiry: expiry,
+                    lxm: lxm,
+                    service: service,
+                    accessCredentials: Credentials,
+                    httpClient: HttpClient,
+                    loggerFactory: LoggerFactory,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                if (serviceCredentialResult.Succeeded && serviceCredentialResult.Result.AccessJwt is not null)
+                {
+                    TimeSpan expiresIn = GetTimeToJwtTokenExpiry(serviceCredentialResult.Result.AccessJwt);
+                    Logger.ServiceAuthTokenAcquired(_logger, service, audience, expiresIn.ToString("c"), lxm);
+                }
+                else
+                {
+                    Logger.ServiceAuthTokenAcquisitionFailed(
+                        _logger,
+                        service,
+                        Did,
+                        audience,
+                        lxm,
+                        serviceCredentialResult.StatusCode,
+                        serviceCredentialResult.AtErrorDetail?.Error,
+                        serviceCredentialResult.AtErrorDetail?.Message);
+                }
+
+                return serviceCredentialResult;
+            }
+        }
+
+        /// <summary>
+        /// Gets information about the session associated with the access token provided.
+        /// </summary>
+        /// <param name="accessCredentials">The access credentials to authenticate with.</param>
+        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="accessCredentials"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when the <paramref name="accessCredentials"/>'s AccessJwt is null or empty.</exception>
+        public async Task<AtProtoHttpResult<GetSessionResponse>> GetSession(
+            AccessCredentials accessCredentials,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(accessCredentials);
+            ArgumentException.ThrowIfNullOrEmpty(accessCredentials.AccessJwt);
+
+            return await AtProtoServer.GetSession(accessCredentials, HttpClient, InternalOnCredentialsUpdatedCallBack, LoggerFactory, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Resolves the authorization server <see cref="Uri"/> for the specified <paramref name="authorizationServer"/>.
+        /// </summary>
+        /// <param name="authorizationServer">The <see cref="Uri"/> of the the authorization server whose token endpoint uri should be retrieved.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="authorizationServer"/> is null.</exception>
+        public async Task<Uri?> GetTokenEndpoint(Uri authorizationServer, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(authorizationServer);
+
+            Uri? tokenEndpoint = null;
+
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                using (Stream responseStream = await HttpClient.GetStreamAsync(new Uri($"https://{authorizationServer.Host}/.well-known/oauth-authorization-server"), cancellationToken).ConfigureAwait(false))
+                using (JsonDocument protectedResultMetadata = await JsonDocument.ParseAsync(responseStream, cancellationToken: cancellationToken).ConfigureAwait(false))
+                {
+                    if (!cancellationToken.IsCancellationRequested && protectedResultMetadata is not null)
+                    {
+                        string? tokenEndpointValue = protectedResultMetadata.RootElement.GetProperty("token_endpoint").GetString();
+
+                        if (!cancellationToken.IsCancellationRequested && !string.IsNullOrWhiteSpace(tokenEndpointValue))
+                        {
+                            tokenEndpoint = new Uri(tokenEndpointValue);
+                        }
+                    }
+                }
+            }
+
+            return tokenEndpoint;
+        }
+
+
+
+        /// <summary>
         /// Authenticates to and creates a session on the <paramref name="service"/> with the specified <paramref name="identifier"/> and <paramref name="password"/>.
         /// </summary>
         /// <param name="identifier">The identifier used to authenticate.</param>
@@ -114,7 +292,7 @@ namespace idunno.AtProto
 
             using (_logger.BeginScope($"Handle/Password login for {identifier}"))
             {
-                 StopTokenRefreshTimer();
+                StopTokenRefreshTimer();
 
                 if (service is null)
                 {
@@ -169,8 +347,15 @@ namespace idunno.AtProto
                         throw new SecurityTokenValidationException("The issued access token could not be validated.");
                     }
 
+                    AuthenticationType authenticationType = AuthenticationType.UsernamePassword;
+                    if (!string.IsNullOrWhiteSpace(authFactorToken))
+                    {
+                        authenticationType = AuthenticationType.UsernamePasswordAuthFactorToken;
+                    }
+
                     AccessCredentials accessCredentials = new(
                             service,
+                            authenticationType,
                             createSessionResult.Result.AccessJwt,
                             createSessionResult.Result.RefreshJwt);
 
@@ -187,7 +372,7 @@ namespace idunno.AtProto
                 else
                 {
                     Logger.CreateSessionFailed(_logger, createSessionResult.StatusCode);
-                    
+
                     StopTokenRefreshTimer();
                     Credentials = null;
 
@@ -260,57 +445,6 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Called internally by an <see cref="AtProtoHttpClient{TResult}"/> if the credentials were updated.
-        /// </summary>
-        /// <param name="credentials">The new credentials</param>
-        protected internal virtual void InternalOnCredentialsUpdatedCallBack(AtProtoCredentials credentials)
-        {
-            ArgumentNullException.ThrowIfNull(credentials);
-
-            Debug.Assert(credentials is not AccessCredentials);
-
-            if (credentials is AccessCredentials accessCredentials)
-            {
-                Credentials = accessCredentials;
-                Logger.OnCredentialUpdatedCallbackCalled(_logger);
-
-                OnCredentialsUpdated(new CredentialsUpdatedEventArgs(accessCredentials.Did, accessCredentials.Service, accessCredentials));
-            }
-            else
-            {
-                // This should never happen.
-                Logger.OnCredentialUpdatedCallbackCalledWithUnexpectedCredentialType(_logger);
-            }
-        }
-
-        /// <summary>
-        /// Sets the agent credentials to the specified <paramref name="accessCredentials"/>.
-        /// </summary>
-        /// <param name="accessCredentials"><see cref="AccessCredentials"/> to use when authenticating to the service.</param>
-        /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/> is null.</exception>
-        private async Task InternalLogin(AccessCredentials accessCredentials)
-        {
-            ArgumentNullException.ThrowIfNull(accessCredentials);
-            ArgumentNullException.ThrowIfNull(accessCredentials.AccessJwt);
-            ArgumentNullException.ThrowIfNull(accessCredentials.Did);
-            ArgumentNullException.ThrowIfNull(accessCredentials.RefreshToken);
-            ArgumentNullException.ThrowIfNull(accessCredentials.Service);
-
-            Service = accessCredentials.Service;
-            Credentials = accessCredentials;
-
-            _credentialRefreshTimer ??= new();
-            StartTokenRefreshTimer();
-
-            var authenticatedEventArgs = new AuthenticatedEventArgs(accessCredentials);
-
-            OnAuthenticated(authenticatedEventArgs);
-
-            await Task.CompletedTask.ConfigureAwait(false);
-        }
-
-        /// <summary>
         /// Clears the internal session state used by the agent and tells the service for this agent's current session to cancel the session.
         /// </summary>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -324,19 +458,27 @@ namespace idunno.AtProto
                 return;
             }
 
-            if (Credentials.Did is null || Credentials.Service is null || Credentials.RefreshToken is null)
+            if (Credentials.AuthenticationType != AuthenticationType.UsernamePassword &&
+                Credentials.AuthenticationType != AuthenticationType.UsernamePasswordAuthFactorToken)
             {
-                throw new AtProtoException("agent.Credentials is missing information needed to call DeleteSession");
+                StopTokenRefreshTimer();
+                var unauthenticatedEventArgs = new UnauthenticatedEventArgs(Credentials.Did, Credentials.Service);
+
+                Credentials = null;
+                OnUnauthenticated(unauthenticatedEventArgs);
             }
-
-            Logger.LogoutCalled(_logger, Credentials.Did, Credentials.Service);
-
-            AtProtoHttpResult<EmptyResponse> deleteSessionResult =
-                await AtProtoServer.DeleteSession(Credentials, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
-
-            _credentialReaderWriterLockSlim.EnterWriteLock();
-            try
+            else
             {
+                if (Credentials.Did is null || Credentials.Service is null || Credentials.RefreshToken is null)
+                {
+                    throw new AtProtoException("agent.Credentials is missing information needed to call DeleteSession");
+                }
+
+                Logger.LogoutCalled(_logger, Credentials.Did, Credentials.Service);
+
+                AtProtoHttpResult<EmptyResponse> deleteSessionResult =
+                    await AtProtoServer.DeleteSession(Credentials, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
+
                 StopTokenRefreshTimer();
 
                 if (deleteSessionResult.Succeeded)
@@ -357,20 +499,100 @@ namespace idunno.AtProto
                     };
                 }
             }
-            finally
-            {
-                _credentialReaderWriterLockSlim.ExitWriteLock();
-            }
 
             await Task.CompletedTask.ConfigureAwait(false);
         }
 
         /// <summary>
-        /// Creates a new instance of <see cref="OAuthClient"/>.
+        /// Acquires a new access and refresh token for the agent, and updates the agent <see cref="Credentials"/>.
         /// </summary>
-        public OAuthClient CreateOAuthClient()
+        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="AuthenticationRequiredException">Thrown when agent is not authenticated.</exception>
+        public async Task<bool> RefreshCredentials(CancellationToken cancellationToken = default)
         {
-            return new OAuthClient(ConfigureHttpClient, CreateProxyHttpClientHandler, LoggerFactory);
+            if (!IsAuthenticated)
+            {
+                Logger.RefreshSessionFailedNoSession(_logger);
+                throw new AuthenticationRequiredException();
+            }
+
+            if (Credentials.AuthenticationType == AuthenticationType.UsernamePassword ||
+                Credentials.AuthenticationType == AuthenticationType.UsernamePasswordAuthFactorToken)
+            {
+                return await RefreshSessionIssuedCredentials(Credentials, cancellationToken).ConfigureAwait(false);
+            }
+            else if (Credentials.AuthenticationType == AuthenticationType.OAuth)
+            {
+                if (Credentials is not DPoPAccessCredentials accessCredentials)
+                {
+                    throw new CredentialException("Credential type is OAuth but it cannot be converted to DPoPAccessCredentials.");
+                }
+
+                DPoPRefreshCredential refreshCredential = new (accessCredentials.Service, accessCredentials.RefreshToken, accessCredentials.DPoPProofKey, accessCredentials.DPoPNonce);
+
+                return await RefreshOAuthIssuedCredentials(refreshCredential, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                throw new CredentialException(Credentials);
+            }
+        }
+
+        /// <summary>
+        /// Refreshes the session specified by the <paramref name="refreshCredential"/>.
+        /// </summary>
+        /// <param name="refreshCredential">The refresh token to use to refresh the session.</param>
+        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="refreshCredential"/> is null, or its Uri property is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="refreshCredential"/>'s RefreshToken property is null or whitespace.</exception>
+        /// <exception cref="CredentialException">Thrown when <paramref name="refreshCredential"/> has not be created by <see cref="Login(AccessCredentials, CancellationToken)"/>.</exception>
+        /// <remarks>
+        /// <para>
+        /// Only sessions created with username and password authentication can be updated with <see cref="RefreshSession(RefreshCredential, CancellationToken)"/>.
+        ///
+        /// Oauth credentials should be refreshed by calling <see cref="RefreshCredentials(CancellationToken)"/>.
+        /// </para>
+        /// </remarks>
+        [Obsolete("This method is obsolete. Call RefreshCredentials() instead.", false)]
+        public async Task<bool> RefreshSession(RefreshCredential refreshCredential, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(refreshCredential);
+            ArgumentNullException.ThrowIfNull(refreshCredential.Service);
+
+            ArgumentException.ThrowIfNullOrWhiteSpace(refreshCredential.RefreshToken);
+
+            if (refreshCredential.AuthenticationType != AuthenticationType.UsernamePassword &&
+                refreshCredential.AuthenticationType != AuthenticationType.UsernamePasswordAuthFactorToken)
+            {
+                throw new CredentialException(refreshCredential);
+            }
+
+            if (refreshCredential is IAccessCredential)
+            {
+                refreshCredential = new RefreshCredential(refreshCredential.Service, refreshCredential.AuthenticationType, refreshCredential.RefreshToken);
+            }
+
+            return await RefreshSessionIssuedCredentials(refreshCredential, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Resolves the authorization server <see cref="Uri"/> for the specified <paramref name="handle"/>.
+        /// </summary>
+        /// <param name="handle">The handle of the account to resolve the authorization server for.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="handle"/> is null or white space.</exception>
+        public async Task<Uri?> ResolveAuthorizationServer(string handle, CancellationToken cancellationToken = default)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(handle);
+
+            Did? did = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false) ?? throw new ArgumentException($"{handle} cannot be resolved to a DID", nameof(handle));
+            Uri? pds = await ResolvePds(did, cancellationToken).ConfigureAwait(false) ?? throw new ArgumentException($"PDS cannot be discovered for {handle}.", nameof(handle));
+            Logger.ResolveAuthorizationServerCalled(_logger, pds);
+
+            return await ResolveAuthorizationServer(pds, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -420,6 +642,275 @@ namespace idunno.AtProto
             }
 
             return authorizationServer;
+        }
+
+        private static TimeSpan GetTimeToJwtTokenExpiry(string jwt)
+        {
+            if (string.IsNullOrEmpty(jwt))
+            {
+                throw new ArgumentNullException(nameof(jwt));
+            }
+
+            JsonWebToken token = new(jwt);
+
+            DateTimeOffset validUntil = DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc);
+            TimeSpan validityPeriod = validUntil - DateTimeOffset.UtcNow;
+
+            return validityPeriod;
+        }
+
+        private async Task InternalLogin(AccessCredentials accessCredentials)
+        {
+            ArgumentNullException.ThrowIfNull(accessCredentials);
+            ArgumentNullException.ThrowIfNull(accessCredentials.AccessJwt);
+            ArgumentNullException.ThrowIfNull(accessCredentials.Did);
+            ArgumentNullException.ThrowIfNull(accessCredentials.RefreshToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials.Service);
+
+            Service = accessCredentials.Service;
+            Credentials = accessCredentials;
+
+            _credentialRefreshTimer ??= new();
+            StartTokenRefreshTimer();
+
+            var authenticatedEventArgs = new AuthenticatedEventArgs(accessCredentials);
+
+            OnAuthenticated(authenticatedEventArgs);
+
+            await Task.CompletedTask.ConfigureAwait(false);
+        }
+
+        internal async Task<bool> RefreshOAuthIssuedCredentials(DPoPRefreshCredential refreshCredential, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(refreshCredential);
+            ArgumentNullException.ThrowIfNull(refreshCredential.Service);
+
+            ArgumentException.ThrowIfNullOrWhiteSpace(refreshCredential.RefreshToken);
+
+            if (Options is null || Options.OAuthOptions is null)
+            {
+                throw new OAuthException("OAuthOptions have not been configured.");
+            }
+
+            Options.OAuthOptions.Validate();
+
+            if (refreshCredential.AuthenticationType != AuthenticationType.OAuth)
+            {
+                throw new CredentialException(refreshCredential);
+            }
+
+            string tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(refreshCredential.RefreshToken)));
+
+            // TODO: Add OAuth refresh
+
+            using (_logger.BeginScope($"RefreshOAuthIssuedCredentials() with refresh token #{tokenHash}"))
+            {
+                if (_credentialRefreshTimer is not null)
+                {
+                    StopTokenRefreshTimer();
+                }
+
+                // TODO: Logging
+
+                // Get authorization server
+                Uri? authorizationServer = await ResolveAuthorizationServer(refreshCredential.Service, cancellationToken).ConfigureAwait(false) ??
+                    throw new ArgumentException($"Authorization server cannot be found for {refreshCredential.Service}", nameof(refreshCredential));
+
+                OAuthClient oAuthClient = CreateOAuthClient();
+
+                DPoPAccessCredentials? refreshResult = await oAuthClient.RefreshCredentials(
+                    refreshCredential: refreshCredential,
+                    authority: authorizationServer,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                if (refreshResult is null)
+                {
+                    return false;
+                }
+
+                return false;
+            }
+        }
+
+        internal async Task<bool> RefreshSessionIssuedCredentials(RefreshCredential refreshCredential, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(refreshCredential);
+            ArgumentNullException.ThrowIfNull(refreshCredential.Service);
+
+            ArgumentException.ThrowIfNullOrWhiteSpace(refreshCredential.RefreshToken);
+
+            if (refreshCredential.AuthenticationType != AuthenticationType.UsernamePassword &&
+                refreshCredential.AuthenticationType != AuthenticationType.UsernamePasswordAuthFactorToken)
+            {
+                throw new CredentialException(refreshCredential);
+            }
+
+            if (refreshCredential is IAccessCredential)
+            {
+                refreshCredential = new RefreshCredential(refreshCredential.Service, refreshCredential.AuthenticationType, refreshCredential.RefreshToken);
+            }
+
+            string tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(refreshCredential.RefreshToken)));
+
+            using (_logger.BeginScope($"RefreshSessionIssuedCredentials() with refresh token #{tokenHash}"))
+            {
+                Logger.RefreshSessionCalled(_logger, refreshCredential.Service, tokenHash);
+
+                if (_credentialRefreshTimer is not null)
+                {
+                    StopTokenRefreshTimer();
+                }
+
+                AtProtoHttpResult<RefreshSessionResponse> refreshSessionResult;
+                try
+                {
+                    refreshSessionResult = await AtProtoServer.RefreshSession(
+                        refreshCredential,
+                        HttpClient,
+                        credentialsUpdated: null,
+                        loggerFactory: LoggerFactory,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    Logger.TokenRefreshApiThrew(_logger, e);
+                    throw;
+                }
+
+                if (!refreshSessionResult.Succeeded || refreshSessionResult.Result.AccessJwt is null || refreshSessionResult.Result.RefreshJwt is null)
+                {
+                    Logger.RefreshSessionApiCallFailed(_logger, refreshCredential.Service, tokenHash, refreshSessionResult.StatusCode);
+
+                    var tokenRefreshFailedEventArgs = new TokenRefreshFailedEventArgs(
+                        refreshCredential.RefreshToken,
+                        refreshCredential.Service,
+                        refreshSessionResult.StatusCode,
+                        refreshSessionResult.AtErrorDetail);
+
+                    OnTokenRefreshFailed(tokenRefreshFailedEventArgs);
+                    return false;
+                }
+
+                if (!await ValidateJwtToken(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.Did, refreshCredential.Service).ConfigureAwait(false))
+                {
+                    Logger.RefreshSessionTokenValidationFailed(_logger, refreshSessionResult.Result.Did, refreshCredential.Service);
+
+                    throw new SecurityTokenValidationException("The issued access token could not be validated.");
+                }
+
+                AccessCredentials refreshedCredentials = new(
+                        refreshCredential.Service,
+                        refreshCredential.AuthenticationType,
+                        refreshSessionResult.Result.AccessJwt,
+                        refreshSessionResult.Result.RefreshJwt);
+
+                Logger.RefreshSessionSucceeded(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
+
+                Credentials = refreshedCredentials;
+
+                _credentialRefreshTimer ??= new();
+                StartTokenRefreshTimer();
+
+                var credentialsUpdatedEventArgs = new CredentialsUpdatedEventArgs(
+                    refreshedCredentials.Did,
+                    refreshedCredentials.Service,
+                    refreshedCredentials);
+
+                OnCredentialsUpdated(credentialsUpdatedEventArgs);
+
+                return true;
+            }
+        }
+
+        private void RefreshTimerElapsed(object? sender, ElapsedEventArgs e)
+        {
+            Logger.BackgroundTokenRefreshFired(_logger);
+
+            RefreshCredentials().FireAndForget();
+        }
+
+        private void StartTokenRefreshTimer()
+        {
+            if (_enableTokenRefresh)
+            {
+                if (Credentials is AccessCredentials accessCredentials && !string.IsNullOrEmpty(accessCredentials.AccessJwt))
+                {
+                    TimeSpan accessTokenExpiresIn = GetTimeToJwtTokenExpiry(accessCredentials.AccessJwt);
+
+                    if (accessTokenExpiresIn.TotalSeconds < 60)
+                    {
+                        // As we're about to expire, go refresh the token
+                        RefreshCredentials().FireAndForget();
+                        return;
+                    }
+
+                    TimeSpan refreshIn = _refreshAccessTokenInterval;
+                    if (accessTokenExpiresIn < _refreshAccessTokenInterval)
+                    {
+                        refreshIn = accessTokenExpiresIn - new TimeSpan(0, 1, 0);
+                    }
+
+                    if (_credentialRefreshTimer is not null)
+                    {
+                        _credentialRefreshTimer.Interval = refreshIn.TotalMilliseconds >= int.MaxValue ? int.MaxValue : refreshIn.TotalMilliseconds;
+                        _credentialRefreshTimer.Elapsed += RefreshTimerElapsed;
+                        _credentialRefreshTimer.Enabled = true;
+                        _credentialRefreshTimer.Start();
+
+                        Logger.TokenRefreshTimerStarted(_logger);
+                    }
+                }
+            }
+            else
+            {
+                Logger.TokenRefreshTimerStartCalledButRefreshDisabled(_logger);
+            }
+
+        }
+
+        private void StopTokenRefreshTimer(bool dispose = false)
+        {
+            if (_credentialRefreshTimer is not null)
+            {
+                _credentialRefreshTimer.Stop();
+                Logger.TokenRefreshTimerStopped(_logger);
+
+                if (dispose)
+                {
+                    _credentialRefreshTimer.Dispose();
+                    _credentialRefreshTimer = null;
+                }
+            }
+        }
+
+        [SuppressMessage("Security", "CA5404:Do not disable token validation checks", Justification = "PDSs do not issue JWTs with issuers whose signing key can be retrieved.")]
+        private static async Task<bool> ValidateJwtToken(string jwt, Did did, Uri service)
+        {
+            bool isValid = false;
+
+            // Disable issuer and signature validation because the Bluesky PDS implementation does not expose a
+            // .well-known/openid-configuration endpoint to retrieve the issuer and signing key from.
+            TokenValidationParameters validationParameters = new()
+            {
+                ValidateAudience = true,
+                ValidAudience = $"did:web:{service.Host}",
+                ValidateIssuer = false,
+                ValidateIssuerSigningKey = false,
+                ValidateLifetime = true,
+                IssuerSigningKeyValidator = (securityKey, securityToken, validationParameters) => true,
+                SignatureValidator = (token, validationParameters) => new JsonWebToken(token)
+            };
+
+            JsonWebTokenHandler tokenHandler = new();
+            TokenValidationResult validationResult = await tokenHandler.ValidateTokenAsync(jwt, validationParameters).ConfigureAwait(false);
+
+            if (validationResult.IsValid)
+            {
+                // Validate the subject matches the expected DID.
+                isValid = string.Equals((string?)validationResult.Claims.FirstOrDefault(c => c.Key == "sub").Value, did.ToString(), StringComparison.OrdinalIgnoreCase);
+            }
+
+            return isValid;
         }
     }
 }

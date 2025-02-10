@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
-using idunno.AtProto.Models;
+using idunno.AtProto.Authentication.Models;
 
 namespace idunno.AtProto.Server.Models
 {

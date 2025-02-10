@@ -13,7 +13,7 @@ namespace idunno.AtProto.Authentication
     /// Service credentials only have an Access JWT, and have no refresh token.
     /// </summary>
 
-    public class ServiceCredential : AtProtoCredentials, IAccessCredential
+    public class ServiceCredential : AtProtoCredential, IAccessCredential
     {
         private string _accessToken;
 
@@ -24,7 +24,7 @@ namespace idunno.AtProto.Authentication
         /// <param name="accessJwt">A string representation of the JWT to use when making authenticated access requests.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="accessJwt"/>.</exception>
-        public ServiceCredential(Uri service, string accessJwt) : base(service)
+        public ServiceCredential(Uri service, string accessJwt) : base(service, AuthenticationType.Service)
         {
             ArgumentNullException.ThrowIfNull(service);
             ArgumentException.ThrowIfNullOrWhiteSpace(accessJwt);

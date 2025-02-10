@@ -13,7 +13,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using IdentityModel.OidcClient.DPoP;
 
 using idunno.AtProto.Authentication;
-using System.Net;
 
 namespace idunno.AtProto
 {
@@ -118,7 +117,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
-        /// <param name="credentials">The <see cref="AtProtoCredentials"/> to use when calling <paramref name="service"/>.</param>
+        /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
@@ -129,9 +128,9 @@ namespace idunno.AtProto
         public async Task<AtProtoHttpResult<TResult>> Get(
             Uri service,
             string endpoint,
-            AtProtoCredentials? credentials,
+            AtProtoCredential? credentials,
             HttpClient httpClient,
-            Action<AtProtoCredentials>? onCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated,
             IReadOnlyCollection<NameValueHeaderValue>? requestHeaders = null,
             IEnumerable<Did>? subscribedLabelers = null,
             JsonSerializerOptions? jsonSerializerOptions = null,
@@ -161,7 +160,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
-        /// <param name="credentials">The <see cref="AtProtoCredentials"/> to use when calling <paramref name="service"/>.</param>
+        /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the provided have been updated during the HTTP POST.</param>
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
@@ -171,9 +170,9 @@ namespace idunno.AtProto
         public async Task<AtProtoHttpResult<TResult>> Post(
             Uri service,
             string endpoint,
-            AtProtoCredentials? credentials,
+            AtProtoCredential? credentials,
             HttpClient httpClient,
-            Action<AtProtoCredentials>? onCredentialsUpdated = null,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             IEnumerable<Did>? subscribedLabelers = null,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -232,7 +231,7 @@ namespace idunno.AtProto
         /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
         /// <param name="record">An optional object to serialize to JSON and send as the request body.</param>
-        /// <param name="credentials">The <see cref="AtProtoCredentials"/> to use when calling <paramref name="service"/>.</param>
+        /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the provided have been updated during the HTTP POST.</param>
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
@@ -243,9 +242,9 @@ namespace idunno.AtProto
             Uri service,
             string endpoint,
             TRecord? record,
-            AtProtoCredentials credentials,
+            AtProtoCredential credentials,
             HttpClient httpClient,
-            Action<AtProtoCredentials>? onCredentialsUpdated = null,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             IEnumerable<Did>? subscribedLabelers = null,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -271,7 +270,7 @@ namespace idunno.AtProto
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
         /// <param name="record">An optional record to serialize to JSON and send as the request body.</param>
         /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
-        /// <param name="credentials">The <see cref="AtProtoCredentials"/> to use when calling <paramref name="service"/>.</param>
+        /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the provided have been updated during the HTTP POST.</param>
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
@@ -283,9 +282,9 @@ namespace idunno.AtProto
             string endpoint,
             TRecord? record,
             IReadOnlyCollection<NameValueHeaderValue>? requestHeaders,
-            AtProtoCredentials? credentials,
+            AtProtoCredential? credentials,
             HttpClient httpClient,
-            Action<AtProtoCredentials>? onCredentialsUpdated = null,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             IEnumerable<Did>? subscribedLabelers = null,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -316,7 +315,7 @@ namespace idunno.AtProto
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
         /// <param name="blob">The blob to send as the request body.</param>
         /// <param name="requestHeaders">A collection of HTTP content headers to send with the request.</param>
-        /// <param name="credentials">The <see cref="AtProtoCredentials"/> to use when calling <paramref name="service"/>.</param>
+        /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
@@ -329,9 +328,9 @@ namespace idunno.AtProto
             string endpoint,
             byte[] blob,
             IReadOnlyCollection<NameValueHeaderValue>? requestHeaders,
-            AtProtoCredentials credentials,
+            AtProtoCredential credentials,
             HttpClient httpClient,
-            Action<AtProtoCredentials>? onCredentialsUpdated = null,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
         {
@@ -497,10 +496,10 @@ namespace idunno.AtProto
         }
 
         private void NotifyOnDPoPNonceChange(
-            AtProtoCredentials? credentials,
+            AtProtoCredential? credentials,
             HttpRequestMessage httpRequestMessage,
             HttpResponseMessage httpResponseMessage,
-            Action<AtProtoCredentials>? credentialsUpdated)
+            Action<AtProtoCredential>? credentialsUpdated)
         {
             if (credentials is null || credentialsUpdated is null || credentials is not IAccessCredential)
             {
@@ -530,10 +529,10 @@ namespace idunno.AtProto
             TRecord? record,
             HttpMethod httpMethod,
             IReadOnlyCollection<NameValueHeaderValue>? requestHeaders,
-            AtProtoCredentials? credentials,
+            AtProtoCredential? credentials,
             HttpClient httpClient,
             bool retry = false,
-            Action<AtProtoCredentials>? onCredentialsUpdated = null,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             IEnumerable<Did>? subscribedLabelers = null,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -547,19 +546,26 @@ namespace idunno.AtProto
                 // Add authentication headers
                 credentials?.SetAuthenticationHeaders(httpRequestMessage);
 
-
                 // Request bodies are, in theory, allowed for all methods except TRACE, however they are not commonly used except in PUT, POST and PATCH,
                 // so limit bodies to those methods. AtProto only accepts, for now, GET and POST methods anyway.
-                if (record is not null && record is not EmptyRequestBody && (httpMethod == HttpMethod.Post || httpMethod == HttpMethod.Patch || httpMethod == HttpMethod.Put))
+                if (record is not null &&
+                    record is not EmptyRequestBody &&
+                    (httpMethod == HttpMethod.Post || httpMethod == HttpMethod.Patch || httpMethod == HttpMethod.Put))
                 {
-                    if (record is not byte[] blob)
+                    switch (record)
                     {
-                        string content = JsonSerializer.Serialize(record, jsonSerializerOptions);
-                        httpRequestMessage.Content = new StringContent(content, Encoding.UTF8, MediaTypeNames.Application.Json);
-                    }
-                    else
-                    {
-                        httpRequestMessage.Content = new ByteArrayContent(blob);
+                        case HttpContent httpContent:
+                            httpRequestMessage.Content = httpContent;
+                            break;
+
+                        case byte[] blob:
+                            httpRequestMessage.Content = new ByteArrayContent(blob);
+                            break;
+
+                        default:
+                            string content = JsonSerializer.Serialize(record, jsonSerializerOptions);
+                            httpRequestMessage.Content = new StringContent(content, Encoding.UTF8, MediaTypeNames.Application.Json);
+                            break;
                     }
                 }
 

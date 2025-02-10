@@ -9,13 +9,13 @@ namespace idunno.AtProto.Authentication
     /// <summary>
     /// Encapsulates a refresh token with proof of possession.
     /// </summary>
-    public sealed class DPoPRefreshCredentials : RefreshCredential, IDPoPBoundCredential
+    public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredential
     {
         private string _dPoPProofKey;
         private string _dPoPNonce;
 
         /// <summary>
-        /// Creates a new instance of <see cref="DPoPRefreshCredentials"/> with the specified <paramref name="refreshToken"/>, <paramref name="dPoPProofKey"/> and <paramref name="dPoPNonce"/>.
+        /// Creates a new instance of <see cref="DPoPRefreshCredential"/> with the specified <paramref name="refreshToken"/>, <paramref name="dPoPProofKey"/> and <paramref name="dPoPNonce"/>.
         /// </summary>
         /// <param name="service">The <see cref="Uri"/> of the service the credentials were issued from.</param>
         /// <param name="refreshToken">A string representation of the JWT to use when a new access token is required.</param>
@@ -25,7 +25,7 @@ namespace idunno.AtProto.Authentication
         /// <exception cref="ArgumentException">
         /// Thrown when <paramref name="refreshToken"/> or <paramref name="dPoPProofKey"/>  is null or whitespace.
         /// </exception>
-        public DPoPRefreshCredentials(Uri service, string refreshToken, string dPoPProofKey, string dPoPNonce) : base(service, refreshToken)
+        public DPoPRefreshCredential(Uri service, string refreshToken, string dPoPProofKey, string dPoPNonce) : base(service, AuthenticationType.OAuth, refreshToken)
         {
             ArgumentNullException.ThrowIfNull(service);
             ArgumentException.ThrowIfNullOrWhiteSpace(refreshToken);

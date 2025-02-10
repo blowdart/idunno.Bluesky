@@ -27,7 +27,7 @@ namespace idunno.AtProto.Authentication
         /// <exception cref="ArgumentException">
         /// Thrown when <paramref name="accessJwt"/>, <paramref name="refreshToken"/>, <paramref name="dPoPProofKey"/> or <paramref name="dPoPNonce"/> is null or whitespace.
         /// </exception>
-        public DPoPAccessCredentials(Uri service, string accessJwt, string refreshToken, string dPoPProofKey, string dPoPNonce) : base(service, accessJwt, refreshToken)
+        public DPoPAccessCredentials(Uri service, string accessJwt, string refreshToken, string dPoPProofKey, string dPoPNonce) : base(service, AuthenticationType.OAuth, accessJwt, refreshToken)
         {
             ArgumentNullException.ThrowIfNull(service);
             ArgumentException.ThrowIfNullOrWhiteSpace(accessJwt);

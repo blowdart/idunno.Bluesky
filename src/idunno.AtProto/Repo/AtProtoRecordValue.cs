@@ -37,6 +37,7 @@ namespace idunno.AtProto.Repo
         [NotNull]
         [ExcludeFromCodeCoverage]
         [JsonExtensionData]
+        [SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Needs to be settable for json deserialization")]
         public IDictionary<string, JsonElement>? ExtensionData { get; set; } = new Dictionary<string, JsonElement>();
     }
 }
