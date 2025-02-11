@@ -5,7 +5,7 @@ items:
         href: ../index.md
       - name: Common Terms & Concepts
         href: commonTerms.md
-      - name: Configuring Connections
+      - name: Connecting to Bluesky
         href: configuringConnections.md
 
   - name: Feeds & timelines

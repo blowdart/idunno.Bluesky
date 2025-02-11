@@ -70,20 +70,31 @@ namespace idunno.AtProto
         internal static partial void RestoreSessionSucceeded(ILogger logger, Did did, Uri service);
 
         // Refresh Session logging
-        [LoggerMessage(40, LogLevel.Debug, "RefreshSession called on {service} with token #{tokenHash}")]
-        internal static partial void RefreshSessionCalled(ILogger logger, Uri service, string tokenHash);
+        [LoggerMessage(40, LogLevel.Debug, "RefreshSessionIssuedCredentials called on {service} with token #{tokenHash}")]
+        internal static partial void RefreshSessionIssuedCredentialsCalled(ILogger logger, Uri service, string tokenHash);
 
-        [LoggerMessage(41, LogLevel.Error, "RefreshSession called without an authenticated session")]
-        internal static partial void RefreshSessionFailedNoSession(ILogger logger);
+        [LoggerMessage(41, LogLevel.Error, "RefreshCredentials called without an authenticated session")]
+        internal static partial void RefreshCredentialsFailedNoSession(ILogger logger);
 
         [LoggerMessage(42, LogLevel.Error, "RefreshSession API failed for #{tokenHash} on {service} with {statusCode}")]
         internal static partial void RefreshSessionApiCallFailed(ILogger logger, Uri service, string tokenHash, HttpStatusCode statusCode);
 
-        [LoggerMessage(43, LogLevel.Error, "RefreshSession token validation failed for {did} on {service}")]
-        internal static partial void RefreshSessionTokenValidationFailed(ILogger logger, Did did, Uri service);
+        [LoggerMessage(43, LogLevel.Error, "RefreshSessionIssuedCredentials token validation failed for {did} on {service}")]
+        internal static partial void RefreshSessionIssuedCredentialsTokenValidationFailed(ILogger logger, Did did, Uri service);
 
-        [LoggerMessage(44, LogLevel.Debug, "RefreshSession succeeded for {did} on {service}")]
-        internal static partial void RefreshSessionSucceeded(ILogger logger, Did did, Uri service);
+        [LoggerMessage(44, LogLevel.Debug, "RefreshSessionIssuedCredentials succeeded for {did} on {service}")]
+        internal static partial void RefreshSessionIssuedCredentialsSucceeded(ILogger logger, Did did, Uri service);
+
+        // Refresh OAuth Issued Token logging
+
+        [LoggerMessage(45, LogLevel.Debug, "RefreshOAuthIssuedCredentials called on {service} with token #{tokenHash}")]
+        internal static partial void RefreshOAuthIssuedCredentialsCalled(ILogger logger, Uri service, string tokenHash);
+
+        [LoggerMessage(46, LogLevel.Error, "RefreshSessionIssuedCredentials token validation failed for {did} on {service}")]
+        internal static partial void RefreshOAuthIssuedCredentialsTokenValidationFailed(ILogger logger, Did did, Uri service);
+
+        [LoggerMessage(47, LogLevel.Debug, "RefreshSessionIssuedCredentials succeeded for {did} on {service}")]
+        internal static partial void RefreshOAuthIssuedCredentialsSucceeded(ILogger logger, Did did, Uri service);
 
         // Resolution methods logging
         [LoggerMessage(50, LogLevel.Debug, "ResolveHandle called for {handle}")]
@@ -266,5 +277,15 @@ namespace idunno.AtProto
 
         [LoggerMessage(606, LogLevel.Error, "OAuth login access token issuer {actual} did not match the expected {expected}, correlation {correlation}")]
         internal static partial void OAuthTokenHasMismatchedAuthority(ILogger logger, Uri expected, Uri actual, Guid correlation);
+
+        [LoggerMessage(610, LogLevel.Debug, "OAuthClient refresh called for token issued by {service} against authority {authority}")]
+        internal static partial void OAuthClientRefreshCalled(ILogger logger, Uri service, Uri authority);
+
+        [LoggerMessage(611, LogLevel.Error, "OAuthClient refresh failed with {error} {errorDescription}")]
+        internal static partial void OAuthClientRefreshFailedByAuthority (ILogger logger, string error, string errorDescription);
+
+        [LoggerMessage(612, LogLevel.Debug, "OAuthClient refresh succeeded, token issued by authority {authority}")]
+        internal static partial void OAuthClientRefreshSucceeded(ILogger logger, Uri authority);
+
     }
 }

@@ -38,7 +38,7 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Gets or sets the <see cref="Uri"/> the OAuth server should call back to when it has authenticated the user.
         /// </summary>
-        public Uri? CallbackUri { get; set; } = default!;
+        public Uri? ReturnUri { get; set; } = default!;
 
         /// <summary>
         /// Gets or sets the list of permissions to request.

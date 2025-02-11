@@ -56,7 +56,7 @@ namespace idunno.AtProto.Authentication
             Func<HttpClient, HttpClient> httpClientConfigurator,
             Func<HttpClientHandler> innerHandlerFactory,
             ILoggerFactory? loggerFactory = null,
-            OAuthOptions? options = null) : this(loggerFactory,options)
+            OAuthOptions? options = null) : this(loggerFactory, options)
         {
             ArgumentNullException.ThrowIfNull(httpClientConfigurator);
             ArgumentNullException.ThrowIfNull(innerHandlerFactory);
@@ -89,16 +89,15 @@ namespace idunno.AtProto.Authentication
                 }
             }
 
-            set
+            internal set
             {
-                if (value is not null)
-                {
-                    _authorizeState = value;
-                    _expectedAuthority = new Uri(value.ExpectedAuthority);
-                    _expectedService = new Uri(value.ExpectedService);
-                    _proofKey = value.ProofKey;
-                    _correlationId = value.CorrelationId;
-                }
+                ArgumentNullException.ThrowIfNull(value);
+
+                _authorizeState = value;
+                _expectedAuthority = new Uri(value.ExpectedAuthority);
+                _expectedService = new Uri(value.ExpectedService);
+                _proofKey = value.ProofKey;
+                _correlationId = value.CorrelationId;
             }
         }
 
@@ -107,27 +106,27 @@ namespace idunno.AtProto.Authentication
         /// </summary>
         /// <param name="service">The service to acquire a token for.</param>
         /// <param name="authority">The authorization server to use.</param>
-        /// <param name="redirectUri">The redirect URI where the oauth server should send tokens back to.</param>
+        /// <param name="returnUri">The redirect URI where the oauth server should send tokens back to.</param>
         /// <param name="clientId">The client ID</param>
         /// <param name="scopes">A collection of scopes to request. Defaults to "atproto".</param>
         /// <param name="handle">The handle to acquire a token for.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="clientId"/> is null or white space and no default clientId has been set on options.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="redirectUri"/>, <paramref name="authority"/> or <paramref name="scopes"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="returnUri"/>, <paramref name="authority"/> or <paramref name="scopes"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="scopes"/> is empty.</exception>
         /// <exception cref="OAuthException">Thrown when the authorize state cannot be prepared or encounters an error during preparation.</exception>
         public async Task<Uri> BuildOAuth2LoginUri(
             Uri service,
             Uri authority,
-            Uri redirectUri,
+            Uri returnUri,
             string? clientId = null,
             IEnumerable<string>? scopes = null,
             Handle? handle = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(authority);
-            ArgumentNullException.ThrowIfNull(redirectUri);
+            ArgumentNullException.ThrowIfNull(returnUri);
 
             clientId ??= _options?.ClientId;
             ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
@@ -154,12 +153,12 @@ namespace idunno.AtProto.Authentication
                 clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
             }
 
-            OidcClientOptions oidcOptions = new()
+            OidcClientOptions oidcClientOptions = new()
             {
                 ClientId = clientId,
-                Authority = authority.ToString(),
+                Authority = _expectedAuthority.ToString(),
                 Scope = scopeString,
-                RedirectUri = redirectUri.ToString(),
+                RedirectUri = returnUri.ToString(),
                 LoadProfile = false,
                 DisablePushedAuthorization = false,
                 LoggerFactory = _loggerFactory,
@@ -170,10 +169,10 @@ namespace idunno.AtProto.Authentication
                 }
             };
 
-            oidcOptions.Policy.Discovery.DiscoveryDocumentPath = OAuthDiscoveryDocumentEndpoint;
-            oidcOptions.ConfigureDPoP(_proofKey);
+            oidcClientOptions.Policy.Discovery.DiscoveryDocumentPath = OAuthDiscoveryDocumentEndpoint;
+            oidcClientOptions.ConfigureDPoP(_proofKey);
 
-            _oidcClient = new OidcClient(oidcOptions);
+            _oidcClient = new OidcClient(oidcClientOptions);
 
             Parameters? extraParameters = null;
 
@@ -194,7 +193,7 @@ namespace idunno.AtProto.Authentication
             }
             else
             {
-                Uri startUri = new (_authorizeState.StartUrl);
+                Uri startUri = new(_authorizeState.StartUrl);
 
                 Logger.OAuthLoginUriGenerated(_logger, authority, startUri, _correlationId);
 
@@ -206,19 +205,35 @@ namespace idunno.AtProto.Authentication
         /// Processes the login response received from the client URI generated from CreateOAuth2StartUri().
         /// </summary>
         /// <param name="callbackData">The data returned to the callback URI</param>
+        /// <param name="clientId">The client ID</param>
+        /// <param name="scopes">A collection of scopes to request. Defaults to "atproto".</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="OAuthException">Thrown when the internal state of this instance is faulty.</exception>
-        public async Task<DPoPAccessCredentials?> ProcessOAuth2LoginResponse(string callbackData, CancellationToken cancellationToken = default)
+        public async Task<DPoPAccessCredentials?> ProcessOAuth2LoginResponse(
+            string callbackData,
+            string? clientId = null,
+            IEnumerable<string>? scopes = null,
+            CancellationToken cancellationToken = default)
         {
+            clientId ??= _options?.ClientId;
+            ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+
+            scopes ??= _options?.Scopes;
+            scopes ??= DefaultScopes;
+
+            string scopeString = string.Join(" ", scopes.Where(s => !string.IsNullOrEmpty(s)));
+
+            // Special case the client ID if it matches localhost to add the desired scope as query string parameters.
+            // See Localhost Client Development at https://atproto.com/specs/oauth#clients.
+            if (clientId == "http://localhost")
+            {
+                clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
+            }
+
             if (_proofKey is null)
             {
                 throw new OAuthException("ProofKey is null");
-            }
-
-            if (_oidcClient is null)
-            {
-                throw new OAuthException("Internal _oidcClient is null");
             }
 
             if (_authorizeState is null)
@@ -231,7 +246,15 @@ namespace idunno.AtProto.Authentication
                 throw new OAuthException("Internal _expectedService is null");
             }
 
+            if (_oidcClient is null)
+            {
+                OidcClientOptions oidcClientOptions = BuildOidcClientOptions(clientId, null, scopes);
+                _oidcClient = new OidcClient(oidcClientOptions);
+            }
+
             LoginResult loginResult = await _oidcClient.ProcessResponseAsync(callbackData, _authorizeState, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            // TODO: Error check
 
             if (loginResult.TokenResponse.DPoPNonce is null)
             {
@@ -244,8 +267,6 @@ namespace idunno.AtProto.Authentication
                 Logger.OAuthLoginFailed(_logger, _correlationId, loginResult.Error, loginResult.ErrorDescription);
                 return null;
             }
-
-            Logger.OAuthLoginCompleted(_logger, _correlationId);
 
             JsonWebToken accessToken = new(loginResult.AccessToken);
 
@@ -277,10 +298,6 @@ namespace idunno.AtProto.Authentication
                 throw new OAuthException("Unexpected access token issuer");
             }
 
-            // TODO: Validate JWKS
-
-            // TODO: More logging
-
             AtProtoHttpResult<ServerDescription> serverDescriptionResult;
 
             using (HttpClientHandler handler = _innerFactoryHandler())
@@ -299,7 +316,9 @@ namespace idunno.AtProto.Authentication
                 throw new OAuthException($"Access token audience did not contain {serverDescriptionResult.Result.Did}");
             }
 
-            return new (
+            Logger.OAuthLoginCompleted(_logger, _correlationId);
+
+            return new(
                 _expectedService,
                 loginResult.AccessToken,
                 loginResult.RefreshToken,
@@ -318,10 +337,9 @@ namespace idunno.AtProto.Authentication
         public async Task<DPoPAccessCredentials?> ProcessOAuth2Response(OAuthLoginState state, string callbackData, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(state);
-
             State = state;
 
-            return await ProcessOAuth2LoginResponse(callbackData, cancellationToken).ConfigureAwait(false);
+            return await ProcessOAuth2LoginResponse(callbackData, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -390,51 +408,97 @@ namespace idunno.AtProto.Authentication
 
             OidcClient client = new(oidcOptions);
 
-            RefreshTokenResult refreshResult = await client.RefreshTokenAsync(
-                refreshToken:  refreshCredential.RefreshToken,
-                backChannelParameters : null,
-                scope: scopeString,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+            Guid correlationId = Guid.NewGuid();
 
-            if (refreshResult.IsError)
+            using (_logger.BeginScope($"OAuthClient refresh correlation {correlationId}"))
             {
-                return null;
-            }
-            else
-            {
-                JsonWebToken accessToken = new(refreshResult.AccessToken);
 
-                if (DateTimeOffset.UtcNow < new DateTimeOffset(accessToken.ValidFrom))
+                Logger.OAuthClientRefreshCalled(_logger, refreshCredential.Service, authority);
+
+                RefreshTokenResult refreshResult = await client.RefreshTokenAsync(
+                    refreshToken: refreshCredential.RefreshToken,
+                    backChannelParameters: null,
+                    scope: scopeString,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                if (refreshResult.IsError)
                 {
-                    throw new OAuthException("Issued token is not yet valid.");
-                }
+                    Logger.OAuthClientRefreshFailedByAuthority(_logger, refreshResult.Error, refreshResult.ErrorDescription);
 
-                if (DateTimeOffset.UtcNow > new DateTimeOffset(accessToken.ValidTo))
+                    return null;
+                }
+                else
                 {
-                    throw new OAuthException("Issued token has already expired.");
+                    JsonWebToken accessToken = new(refreshResult.AccessToken);
+
+                    if (DateTimeOffset.UtcNow < new DateTimeOffset(accessToken.ValidFrom))
+                    {
+                        throw new OAuthException("Issued token is not yet valid.");
+                    }
+
+                    if (DateTimeOffset.UtcNow > new DateTimeOffset(accessToken.ValidTo))
+                    {
+                        throw new OAuthException("Issued token has already expired.");
+                    }
+
+                    if (accessToken.Audiences is null || !accessToken.Audiences.Any())
+                    {
+                        throw new OAuthException("Issued token does not contain aud.");
+                    }
+
+                    if (!accessToken.GetClaim("scope").ToString().Contains("atproto", StringComparison.Ordinal))
+                    {
+                        Logger.OAuthTokenDoesNotContainAtProtoScope(_logger, _correlationId);
+                        throw new OAuthException("Issued token does not contain atproto in scope.");
+                    }
+
+                    Uri issuer = new(accessToken.Issuer);
+                    if (!issuer.Equals(authority))
+                    {
+                        Logger.OAuthTokenHasMismatchedAuthority(_logger, issuer, _expectedAuthority!, _correlationId);
+                        throw new OAuthException("Unexpected access token issuer");
+                    }
+
+                    AtProtoHttpResult<ServerDescription> serverDescriptionResult;
+                    using (HttpClientHandler handler = _innerFactoryHandler())
+                    using (var httpClient = new HttpClient(handler))
+                    {
+                        _clientConfigurationHandler(httpClient);
+                        serverDescriptionResult = await AtProtoServer.DescribeServer(refreshCredential.Service, httpClient, _loggerFactory, cancellationToken).ConfigureAwait(false);
+                    }
+
+                    if (!serverDescriptionResult.Succeeded)
+                    {
+                        throw new OAuthException($"Could not get service description for {_expectedService}");
+                    }
+                    else if (!accessToken.Audiences.Contains(serverDescriptionResult.Result.Did.ToString()))
+                    {
+                        throw new OAuthException($"Access token audience did not contain {serverDescriptionResult.Result.Did}");
+                    }
+                    else if (serverDescriptionResult.HttpResponseHeaders is null)
+                    {
+                        throw new OAuthException("DescribeServer() returned no headers");
+                    }
+
+
+                    if (!serverDescriptionResult.Succeeded)
+                    {
+                        throw new OAuthException($"Could not get service description for {_expectedService}");
+                    }
+                    else if (!accessToken.Audiences.Contains(serverDescriptionResult.Result.Did.ToString()))
+                    {
+                        throw new OAuthException($"Access token audience did not contain {serverDescriptionResult.Result.Did}");
+                    }
+
+                    Logger.OAuthClientRefreshSucceeded(_logger, authority);
+
+                    return new(
+                        refreshCredential.Service,
+                        refreshResult.AccessToken,
+                        refreshResult.RefreshToken,
+                        refreshCredential.DPoPProofKey,
+                        refreshCredential.DPoPNonce);
                 }
-
-                if (accessToken.Audiences is null || !accessToken.Audiences.Any())
-                {
-                    throw new OAuthException("Issued token does not contain aud.");
-                }
-
-                if (!accessToken.GetClaim("scope").ToString().Contains("atproto", StringComparison.Ordinal))
-                {
-                    Logger.OAuthTokenDoesNotContainAtProtoScope(_logger, _correlationId);
-                    throw new OAuthException("Issued token does not contain atproto in scope.");
-                }
-
-                Uri issuer = new(accessToken.Issuer);
-                if (!issuer.Equals(authority))
-                {
-                    Logger.OAuthTokenHasMismatchedAuthority(_logger, issuer, _expectedAuthority!, _correlationId);
-                    throw new OAuthException("Unexpected access token issuer");
-                }
-
-                //TODO: Service check
-
-                return null;
             }
         }
 
@@ -462,6 +526,56 @@ namespace idunno.AtProto.Authentication
             {
                 Process.Start("open", uri.ToString());
             }
+        }
+
+        private OidcClientOptions BuildOidcClientOptions(
+            string? clientId = null,
+            Uri? returnUri = null,
+            IEnumerable<string>? scopes = null)
+        {
+            if (_expectedAuthority is null)
+            {
+                throw new OAuthException("_expectedAuthority is null");
+            }
+
+            if (_proofKey is null)
+            {
+                throw new OAuthException("_proofKey is null");
+            }
+
+            OidcClientOptions oidcOptions = new()
+            {
+                Authority = _expectedAuthority.ToString(),
+                LoadProfile = false,
+                DisablePushedAuthorization = false,
+                LoggerFactory = _loggerFactory,
+                HttpClientFactory = (oidcOptions) =>
+                {
+                    var httpClient = new HttpClient(new ProofTokenMessageHandler(_proofKey, _innerFactoryHandler()), true);
+                    return _clientConfigurationHandler(httpClient);
+                }
+            };
+
+            if (clientId is not null)
+            {
+                oidcOptions.ClientId = clientId;
+            }
+
+            if (returnUri is not null)
+            {
+                oidcOptions.RedirectUri = returnUri.ToString();
+            }
+
+            if (scopes is not null)
+            {
+                string scopeString = string.Join(" ", scopes.Where(s => !string.IsNullOrEmpty(s)));
+                oidcOptions.Scope = scopeString;
+            }
+
+            oidcOptions.Policy.Discovery.DiscoveryDocumentPath = OAuthDiscoveryDocumentEndpoint;
+            oidcOptions.ConfigureDPoP(_proofKey);
+
+            return oidcOptions;
         }
     }
 }

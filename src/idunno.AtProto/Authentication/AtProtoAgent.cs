@@ -16,15 +16,6 @@ using idunno.AtProto.Authentication;
 using idunno.AtProto.Authentication.Models;
 using idunno.AtProto.Events;
 using idunno.AtProto.Server.Models;
-using IdentityModel.Client;
-using Microsoft.AspNetCore.WebUtilities;
-using static System.Formats.Asn1.AsnWriter;
-using System.Net.Http.Headers;
-using System.Net.Http;
-using System.Net.Mime;
-using IdentityModel.OidcClient.DPoP;
-using IdentityModel.OidcClient;
-
 
 namespace idunno.AtProto
 {
@@ -141,6 +132,100 @@ namespace idunno.AtProto
         public OAuthClient CreateOAuthClient()
         {
             return new OAuthClient(ConfigureHttpClient, CreateProxyHttpClientHandler, LoggerFactory, Options?.OAuthOptions);
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="OAuthClient"/>.
+        /// </summary>
+        /// <param name="state">The state to restore in the <see cref="OAuthClient"/>.</param>
+        public OAuthClient CreateOAuthClient(OAuthLoginState state)
+        {
+            ArgumentNullException.ThrowIfNull(state);
+
+            var oAuthClient = new OAuthClient(ConfigureHttpClient, CreateProxyHttpClientHandler, LoggerFactory, Options?.OAuthOptions)
+            {
+                State = state
+            };
+
+            return oAuthClient;
+        }
+
+        /// <summary>
+        /// Builds an OAuth authorization URI for starting the OAuth flow.
+        /// </summary>
+        /// <param name="oAuthClient">An instance of <paramref name="oAuthClient"/> to build the URI in.</param>
+        /// <param name="handle">The handle to authorize for.</param>
+        /// <param name="scopes">A collection of scopes to request. Defaults to "atproto".</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <param name="returnUri">The URI the oauth server should post back to when it has authorized the application.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when <paramref name="oAuthClient"/> or <paramref name="handle"/> is null, or
+        /// <paramref name="scopes"/> or <paramref name="returnUri"/>is not specified and is configured on the agent <see cref="Options"/>.
+        /// </exception>
+        /// <exception cref="OAuthException">
+        /// Thrown when the OAuth options on the agent have not been configured, or
+        /// the specified <paramref name="handle"/> cannot be resolved, or
+        /// the PDS for the specified <paramref name="handle"/> cannot be resolved, or
+        /// the authorization server for <paramref name="handle"/> cannot be discovered.
+        /// </exception>
+        public async Task<Uri> BuildOAuth2LoginUri(
+            OAuthClient oAuthClient,
+            Handle handle,
+            IEnumerable<string>? scopes = null,
+            Uri? returnUri = null,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(oAuthClient);
+            ArgumentNullException.ThrowIfNull(handle);
+
+            if (Options is null || Options.OAuthOptions is null)
+            {
+                throw new OAuthException("OAuth options are not configured.");
+            }
+
+            returnUri ??= Options.OAuthOptions.ReturnUri;
+            ArgumentNullException.ThrowIfNull(returnUri);
+
+            Options.OAuthOptions.Validate();
+
+            scopes ??= Options.OAuthOptions.Scopes;
+            ArgumentNullException.ThrowIfNull(scopes);
+
+            Did? did = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException("Could not resolve DID");
+            Uri? pds = await ResolvePds(did, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException($"Could not resolve PDS for {did}.");
+            Uri? authorizationServer = await ResolveAuthorizationServer(pds, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException($"Could not discover authorization server for {handle}.");
+
+            return await oAuthClient.BuildOAuth2LoginUri(
+                service: pds,
+                returnUri: returnUri,
+                authority: authorizationServer,
+                scopes: scopes,
+                handle: handle,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Processes the login response received from the client URI generated from CreateOAuth2StartUri() and sets the agent credentials if successful.
+        /// </summary>
+        /// <param name="oAuthClient">An instance of <paramref name="oAuthClient"/> to build the URI in.</param>
+        /// <param name="callbackData">The data returned to the callback URI</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="OAuthException">Thrown when the internal state of this instance is faulty.</exception>
+        public async Task<bool> ProcessOAuth2LoginResponse(OAuthClient oAuthClient, string callbackData, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(oAuthClient);
+            DPoPAccessCredentials? accessCredentials = await oAuthClient.ProcessOAuth2LoginResponse(callbackData, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (accessCredentials is not null)
+            {
+                return await Login(accessCredentials, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                return false;
+            }
         }
 
         /// <summary>
@@ -513,7 +598,7 @@ namespace idunno.AtProto
         {
             if (!IsAuthenticated)
             {
-                Logger.RefreshSessionFailedNoSession(_logger);
+                Logger.RefreshCredentialsFailedNoSession(_logger);
                 throw new AuthenticationRequiredException();
             }
 
@@ -701,16 +786,14 @@ namespace idunno.AtProto
 
             string tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(refreshCredential.RefreshToken)));
 
-            // TODO: Add OAuth refresh
-
             using (_logger.BeginScope($"RefreshOAuthIssuedCredentials() with refresh token #{tokenHash}"))
             {
+                Logger.RefreshOAuthIssuedCredentialsCalled(_logger, refreshCredential.Service, tokenHash);
+
                 if (_credentialRefreshTimer is not null)
                 {
                     StopTokenRefreshTimer();
                 }
-
-                // TODO: Logging
 
                 // Get authorization server
                 Uri? authorizationServer = await ResolveAuthorizationServer(refreshCredential.Service, cancellationToken).ConfigureAwait(false) ??
@@ -718,17 +801,38 @@ namespace idunno.AtProto
 
                 OAuthClient oAuthClient = CreateOAuthClient();
 
-                DPoPAccessCredentials? refreshResult = await oAuthClient.RefreshCredentials(
+                DPoPAccessCredentials? refreshedCredentials = await oAuthClient.RefreshCredentials(
                     refreshCredential: refreshCredential,
                     authority: authorizationServer,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
-                if (refreshResult is null)
+                if (refreshedCredentials is null)
                 {
                     return false;
                 }
 
-                return false;
+                if (!await ValidateJwtToken(refreshedCredentials.AccessJwt, refreshedCredentials.Did, refreshCredential.Service).ConfigureAwait(false))
+                {
+                    Logger.RefreshOAuthIssuedCredentialsTokenValidationFailed(_logger, refreshedCredentials.Did, refreshCredential.Service);
+
+                    throw new SecurityTokenValidationException("The issued access token could not be validated.");
+                }
+
+                Logger.RefreshOAuthIssuedCredentialsSucceeded(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
+
+                Credentials = refreshedCredentials;
+
+                _credentialRefreshTimer ??= new();
+                StartTokenRefreshTimer();
+
+                var credentialsUpdatedEventArgs = new CredentialsUpdatedEventArgs(
+                    refreshedCredentials.Did,
+                    refreshedCredentials.Service,
+                    refreshedCredentials);
+
+                OnCredentialsUpdated(credentialsUpdatedEventArgs);
+
+                return true;
             }
         }
 
@@ -754,7 +858,7 @@ namespace idunno.AtProto
 
             using (_logger.BeginScope($"RefreshSessionIssuedCredentials() with refresh token #{tokenHash}"))
             {
-                Logger.RefreshSessionCalled(_logger, refreshCredential.Service, tokenHash);
+                Logger.RefreshSessionIssuedCredentialsCalled(_logger, refreshCredential.Service, tokenHash);
 
                 if (_credentialRefreshTimer is not null)
                 {
@@ -793,7 +897,7 @@ namespace idunno.AtProto
 
                 if (!await ValidateJwtToken(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.Did, refreshCredential.Service).ConfigureAwait(false))
                 {
-                    Logger.RefreshSessionTokenValidationFailed(_logger, refreshSessionResult.Result.Did, refreshCredential.Service);
+                    Logger.RefreshSessionIssuedCredentialsTokenValidationFailed(_logger, refreshSessionResult.Result.Did, refreshCredential.Service);
 
                     throw new SecurityTokenValidationException("The issued access token could not be validated.");
                 }
@@ -804,7 +908,7 @@ namespace idunno.AtProto
                         refreshSessionResult.Result.AccessJwt,
                         refreshSessionResult.Result.RefreshJwt);
 
-                Logger.RefreshSessionSucceeded(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
+                Logger.RefreshSessionIssuedCredentialsSucceeded(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
 
                 Credentials = refreshedCredentials;
 
@@ -890,6 +994,9 @@ namespace idunno.AtProto
 
             // Disable issuer and signature validation because the Bluesky PDS implementation does not expose a
             // .well-known/openid-configuration endpoint to retrieve the issuer and signing key from.
+
+            // Oauth token signature validation is done during the oauth flow.
+
             TokenValidationParameters validationParameters = new()
             {
                 ValidateAudience = true,

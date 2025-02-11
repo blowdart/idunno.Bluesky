@@ -14,6 +14,9 @@ using idunno.AtProto.OAuth;
 using idunno.Bluesky;
 
 using Samples.Common;
+using System.Security.Cryptography;
+using System.Text;
+using Microsoft.AspNetCore.Http;
 
 namespace Samples.OAuth
 {
@@ -101,21 +104,24 @@ namespace Samples.OAuth
                 Console.WriteLine($"PDS:                    {pds}");
                 Console.WriteLine($"Authorization Server:   {authorizationServer}");
 
-                AccessCredentials? accessCredentials = null;
+                OAuthLoginState? oAuthLoginState = null;
+                string callbackData;
 
                 await using var callbackServer = new CallbackServer(CallbackServer.GetRandomUnusedPort(), loggerFactory: loggerFactory);
                 {
-                    OAuthClient oAuthClient = agent.CreateOAuthClient();
+                    OAuthClient uriBuilderOAuthClient = agent.CreateOAuthClient();
 
-                    Uri startUri = await oAuthClient.BuildOAuth2LoginUri(
-                        service: pds,
-                        redirectUri: callbackServer.Uri,
-                        authority: authorizationServer,
-                        handle: handle,
-                        cancellationToken: cancellationToken);
+                    Uri startUri = await agent.BuildOAuth2LoginUri(uriBuilderOAuthClient, handle, returnUri: callbackServer.Uri, cancellationToken: cancellationToken);
+
+                    //Uri startUri = await oAuthClient.BuildOAuth2LoginUri(
+                    //    service: pds,
+                    //    returnUri: callbackServer.Uri,
+                    //    authority: authorizationServer,
+                    //    handle: handle,
+                    //    cancellationToken: cancellationToken);
 
                     // Save state to use when processing the response, mimicking what we'd do in a web application.
-                    OAuthLoginState? oAuthLoginState = oAuthClient.State;
+                    oAuthLoginState = uriBuilderOAuthClient.State;
 
                     Console.WriteLine($"Login URI           : {startUri}");
 
@@ -125,69 +131,53 @@ namespace Samples.OAuth
 
                     Console.WriteLine($"Awaiting callback on {callbackServer.Uri}");
 
-                    string queryString = await callbackServer.WaitForCallbackAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                    if (!string.IsNullOrEmpty(queryString))
-                    {
-                        accessCredentials = await oAuthClient.ProcessOAuth2LoginResponse(queryString, cancellationToken: cancellationToken);
-                    }
-                    else
-                    {
-                        ConsoleColor oldColor = Console.ForegroundColor;
-
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine("Received no login response");
-                        Console.ForegroundColor = oldColor;
-                        return;
-                    }
+                    callbackData = await callbackServer.WaitForCallbackAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
                 }
 
-                if (accessCredentials is not null)
+                if (string.IsNullOrEmpty(callbackData))
                 {
-                    Console.WriteLine($"Credentials issued for: {accessCredentials.Service}");
-                    Console.WriteLine($"Access JWT expires on:  {accessCredentials.ExpiresOn:G}");
+                    ConsoleColor oldColor = Console.ForegroundColor;
+
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Received no login response");
+                    Console.ForegroundColor = oldColor;
+                    return;
+                }
+
+                OAuthClient oAuthClient = agent.CreateOAuthClient(oAuthLoginState!);
+                await agent.ProcessOAuth2LoginResponse(oAuthClient, callbackData, cancellationToken);
+
+                Debugger.Break();
+
+                if (agent.IsAuthenticated)
+                {
+                    Console.WriteLine($"Credentials issued for: {agent.Credentials.Service}");
+                    Console.WriteLine($"Access JWT expires on:  {agent.Credentials.ExpiresOn:G}");
                     Console.WriteLine();
 
-                    //var result = await AtProtoServer.CreateRecord(
-                    //    new Post("hello oauth"),
-                    //    CollectionNsid.Post,
-                    //    accessCredentials.Did!,
-                    //    rKey: null,
-                    //    validate: null,
-                    //    swapCommit: null,
-                    //    service: pds,
-                    //    accessCredentials: accessCredentials,
-                    //    httpClient: agent.HttpClient,
-                    //    onCredentialsUpdated: null,
-                    //    cancellationToken: cancellationToken);
+                    string accessCredentialsHash;
 
-                   // Debugger.Break();
+                    accessCredentialsHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(agent.Credentials.AccessJwt)));
 
-                    bool loginResult = await agent.Login(accessCredentials, cancellationToken);
+                    await agent.CreateRecord(new Post($"hello via oauth, token hash {accessCredentialsHash}"), CollectionNsid.Post, cancellationToken: cancellationToken);
 
-                    if (loginResult)
-                    {
-                        // await agent.CreateRecord(new Post("hello oauth, via agent"), CollectionNsid.Post, cancellationToken: cancellationToken);
+                    await agent.RefreshCredentials(cancellationToken: cancellationToken);
 
-                        // Debugger.Break();
+                    accessCredentialsHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(agent.Credentials.AccessJwt)));
 
-                        // Now try refresh operation
+                    await agent.CreateRecord(new Post($"hello via oauth refresh, token hash {accessCredentialsHash}"), CollectionNsid.Post, cancellationToken: cancellationToken);
+                }
+                else
+                {
+                    ConsoleColor oldColor = Console.ForegroundColor;
 
-                        await agent.RefreshCredentials(cancellationToken: cancellationToken);
-                    }
-                    else
-                    {
-                        ConsoleColor oldColor = Console.ForegroundColor;
-
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine("Could not login with oauth credentials");
-                        Console.ForegroundColor = oldColor;
-                        return;
-                    }
-
-                    Debugger.Break();
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Could not login with oauth credentials");
+                    Console.ForegroundColor = oldColor;
+                    return;
                 }
 
+                Debugger.Break();
             }
         }
     }
