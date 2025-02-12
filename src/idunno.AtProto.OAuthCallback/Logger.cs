@@ -4,7 +4,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
-namespace idunno.AtProto.OAuth
+namespace idunno.AtProto.OAuthCallback
 {
     internal static partial class Logger
     {

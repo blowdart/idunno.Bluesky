@@ -412,7 +412,6 @@ namespace idunno.AtProto.Authentication
 
             using (_logger.BeginScope($"OAuthClient refresh correlation {correlationId}"))
             {
-
                 Logger.OAuthClientRefreshCalled(_logger, refreshCredential.Service, authority);
 
                 RefreshTokenResult refreshResult = await client.RefreshTokenAsync(

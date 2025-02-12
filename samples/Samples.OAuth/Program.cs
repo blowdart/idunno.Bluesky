@@ -9,14 +9,13 @@ using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
-using idunno.AtProto.OAuth;
 
 using idunno.Bluesky;
 
 using Samples.Common;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace Samples.OAuth
 {
@@ -107,25 +106,31 @@ namespace Samples.OAuth
                 OAuthLoginState? oAuthLoginState = null;
                 string callbackData;
 
-                await using var callbackServer = new CallbackServer(CallbackServer.GetRandomUnusedPort(), loggerFactory: loggerFactory);
+                await using var callbackServer = new idunno.AtProto.OAuthCallback.CallbackServer(
+                    idunno.AtProto.OAuthCallback.CallbackServer.GetRandomUnusedPort(),
+                    loggerFactory: loggerFactory);
                 {
                     OAuthClient uriBuilderOAuthClient = agent.CreateOAuthClient();
 
                     Uri startUri = await agent.BuildOAuth2LoginUri(uriBuilderOAuthClient, handle, returnUri: callbackServer.Uri, cancellationToken: cancellationToken);
 
-                    //Uri startUri = await oAuthClient.BuildOAuth2LoginUri(
-                    //    service: pds,
-                    //    returnUri: callbackServer.Uri,
-                    //    authority: authorizationServer,
-                    //    handle: handle,
-                    //    cancellationToken: cancellationToken);
-
                     // Save state to use when processing the response, mimicking what we'd do in a web application.
+
+                    if (uriBuilderOAuthClient.State is null)
+                    {
+                        ConsoleColor oldColor = Console.ForegroundColor;
+
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("OAuthClient state is null after building login uri.");
+                        Console.ForegroundColor = oldColor;
+                        return;
+                    }
+
+                    // If you need a primary key you can extract the state parameter from the Uri
+                    // string stateKey = QueryHelpers.ParseQuery(startUri.Query)["state"]!;
                     oAuthLoginState = uriBuilderOAuthClient.State;
 
                     Console.WriteLine($"Login URI           : {startUri}");
-
-                    Console.WriteLine($"Opening browser");
 
                     OAuthClient.OpenBrowser(startUri);
 
@@ -144,7 +149,7 @@ namespace Samples.OAuth
                     return;
                 }
 
-                OAuthClient oAuthClient = agent.CreateOAuthClient(oAuthLoginState!);
+                OAuthClient oAuthClient = agent.CreateOAuthClient(oAuthLoginState);
                 await agent.ProcessOAuth2LoginResponse(oAuthClient, callbackData, cancellationToken);
 
                 Debugger.Break();
@@ -158,14 +163,17 @@ namespace Samples.OAuth
                     string accessCredentialsHash;
 
                     accessCredentialsHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(agent.Credentials.AccessJwt)));
+                    Console.WriteLine($"Access JWT hash      :  {agent.Credentials.ExpiresOn:G}");
 
-                    await agent.CreateRecord(new Post($"hello via oauth, token hash {accessCredentialsHash}"), CollectionNsid.Post, cancellationToken: cancellationToken);
+
+                    //                    await agent.CreateRecord(new Post($"hello via oauth, token hash {accessCredentialsHash}"), CollectionNsid.Post, cancellationToken: cancellationToken);
 
                     await agent.RefreshCredentials(cancellationToken: cancellationToken);
 
                     accessCredentialsHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(agent.Credentials.AccessJwt)));
+                    Console.WriteLine($"Refreshed JWT hash   :  {agent.Credentials.ExpiresOn:G}");
 
-                    await agent.CreateRecord(new Post($"hello via oauth refresh, token hash {accessCredentialsHash}"), CollectionNsid.Post, cancellationToken: cancellationToken);
+                    //                    await agent.CreateRecord(new Post($"hello via oauth refresh, token hash {accessCredentialsHash}"), CollectionNsid.Post, cancellationToken: cancellationToken);
                 }
                 else
                 {
@@ -178,6 +186,8 @@ namespace Samples.OAuth
                 }
 
                 Debugger.Break();
+
+                await agent.Logout(cancellationToken: cancellationToken);
             }
         }
     }

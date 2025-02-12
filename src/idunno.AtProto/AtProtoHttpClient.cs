@@ -74,7 +74,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(headers);
             ArgumentOutOfRangeException.ThrowIfZero(headers.Count);
 
-            _extraHeaders = new List<NameValueHeaderValue>(headers);
+            _extraHeaders = [.. headers];
         }
 
         /// <summary>

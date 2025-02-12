@@ -16,6 +16,10 @@ using idunno.AtProto.Authentication;
 using idunno.AtProto.Authentication.Models;
 using idunno.AtProto.Events;
 using idunno.AtProto.Server.Models;
+using idunno.AtProto.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.WebUtilities;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace idunno.AtProto
 {
@@ -326,7 +330,7 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Resolves the authorization server <see cref="Uri"/> for the specified <paramref name="authorizationServer"/>.
+        /// Resolves the token endpoint <see cref="Uri"/> for the specified <paramref name="authorizationServer"/>.
         /// </summary>
         /// <param name="authorizationServer">The <see cref="Uri"/> of the the authorization server whose token endpoint uri should be retrieved.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -358,7 +362,38 @@ namespace idunno.AtProto
             return tokenEndpoint;
         }
 
+        /// <summary>
+        /// Resolves the revocation endpoint <see cref="Uri"/> for the specified <paramref name="authorizationServer"/>.
+        /// </summary>
+        /// <param name="authorizationServer">The <see cref="Uri"/> of the the authorization server whose token endpoint uri should be retrieved.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="authorizationServer"/> is null.</exception>
+        public async Task<Uri?> GetRevocationEndpoint(Uri authorizationServer, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(authorizationServer);
 
+            Uri? tokenEndpoint = null;
+
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                using (Stream responseStream = await HttpClient.GetStreamAsync(new Uri($"https://{authorizationServer.Host}/.well-known/oauth-authorization-server"), cancellationToken).ConfigureAwait(false))
+                using (JsonDocument protectedResultMetadata = await JsonDocument.ParseAsync(responseStream, cancellationToken: cancellationToken).ConfigureAwait(false))
+                {
+                    if (!cancellationToken.IsCancellationRequested && protectedResultMetadata is not null)
+                    {
+                        string? tokenEndpointValue = protectedResultMetadata.RootElement.GetProperty("revocation_endpoint").GetString();
+
+                        if (!cancellationToken.IsCancellationRequested && !string.IsNullOrWhiteSpace(tokenEndpointValue))
+                        {
+                            tokenEndpoint = new Uri(tokenEndpointValue);
+                        }
+                    }
+                }
+            }
+
+            return tokenEndpoint;
+        }
 
         /// <summary>
         /// Authenticates to and creates a session on the <paramref name="service"/> with the specified <paramref name="identifier"/> and <paramref name="password"/>.
@@ -534,7 +569,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="AtProtoException">Thrown when the current agent authentication state does not have enough information to call the DeleteSession API.</exception>
+        /// <exception cref="CredentialException">Thrown when the current agent authentication state does not have enough information to call the DeleteSession API.</exception>
         /// <exception cref="LogoutException">Thrown when the DeleteSession API call fails.</exception>
         public async Task Logout(CancellationToken cancellationToken = default)
         {
@@ -546,7 +581,93 @@ namespace idunno.AtProto
             if (Credentials.AuthenticationType != AuthenticationType.UsernamePassword &&
                 Credentials.AuthenticationType != AuthenticationType.UsernamePasswordAuthFactorToken)
             {
+                // Call revocation openid-connect endpoint
+                if (Credentials is not DPoPAccessCredentials accessCredentials)
+                {
+                    throw new CredentialException("Credential type is OAuth but it cannot be converted to DPoPAccessCredentials.");
+                }
+
+                Uri? authorizationService = await ResolveAuthorizationServer(accessCredentials.Service, cancellationToken).ConfigureAwait(false) ??
+                    throw new CredentialException($"Could not resolve authorization server for {accessCredentials.Service}");
+
+                Uri? revocationEndpoint = await GetRevocationEndpoint(authorizationService, cancellationToken).ConfigureAwait(false) ??
+                    throw new CredentialException($"Could not resolve revocation endpoint for {authorizationService}");
+
+                if (Options is null || Options.OAuthOptions is null)
+                {
+                    throw new OAuthException("OAuth options are not configured.");
+                }
+
+                Options.OAuthOptions.Validate();
+                string scopeString = string.Join(" ", Options.OAuthOptions.Scopes.Where(s => !string.IsNullOrEmpty(s)));
+
+                string clientId = Options.OAuthOptions.ClientId;
+
+                // Special case the client ID if it matches localhost to add the desired scope as query string parameters.
+                // See Localhost Client Development at https://atproto.com/specs/oauth#clients.
+                if (clientId == "http://localhost")
+                {
+                    clientId = QueryHelpers.AddQueryString(clientId, "scope", scopeString);
+                }
+
+                Logger.LogoutCalled(_logger, Credentials.Did, Credentials.Service);
+
                 StopTokenRefreshTimer();
+
+                AtProtoHttpClient<EmptyResponse> revokeRequest = new(LoggerFactory);
+
+                using (var formData = new FormUrlEncodedContent(
+                [
+                    new KeyValuePair<string, string>("token", accessCredentials.RefreshToken),
+                    new KeyValuePair<string, string>("token_type_hint", "refresh_token"),
+                    new KeyValuePair<string, string>("client_id", clientId),
+                ]))
+                {
+                    AtProtoHttpResult<EmptyResponse> revokeResponse = await revokeRequest.Post(
+                        service: authorizationService,
+                        endpoint: revocationEndpoint.AbsolutePath,
+                        record: formData,
+                        credentials: Credentials,
+                        httpClient: HttpClient,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                    if (!revokeResponse.Succeeded)
+                    {
+                        Logger.RevokeFailed(_logger, Credentials.Did, Credentials.Service, revokeResponse.StatusCode, "refresh_token");
+                        throw new LogoutException()
+                        {
+                            StatusCode = revokeResponse.StatusCode,
+                            Error = revokeResponse.AtErrorDetail
+                        };
+                    }
+                }
+
+                using (var formData = new FormUrlEncodedContent(
+                [
+                    new KeyValuePair<string, string>("token", accessCredentials.AccessJwt),
+                    new KeyValuePair<string, string>("token_type_hint", "access_token"),
+                    new KeyValuePair<string, string>("client_id", clientId),
+                ]))
+                {
+                    AtProtoHttpResult<EmptyResponse> revokeResponse = await revokeRequest.Post(
+                        service: authorizationService,
+                        endpoint: revocationEndpoint.AbsolutePath,
+                        record: formData,
+                        credentials: Credentials,
+                        httpClient: HttpClient,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                    if (!revokeResponse.Succeeded)
+                    {
+                        Logger.RevokeFailed(_logger, Credentials.Did, Credentials.Service, revokeResponse.StatusCode, "access_token");
+                        throw new LogoutException()
+                        {
+                            StatusCode = revokeResponse.StatusCode,
+                            Error = revokeResponse.AtErrorDetail
+                        };
+                    }
+                }
+
                 var unauthenticatedEventArgs = new UnauthenticatedEventArgs(Credentials.Did, Credentials.Service);
 
                 Credentials = null;
@@ -556,15 +677,15 @@ namespace idunno.AtProto
             {
                 if (Credentials.Did is null || Credentials.Service is null || Credentials.RefreshToken is null)
                 {
-                    throw new AtProtoException("agent.Credentials is missing information needed to call DeleteSession");
+                    throw new CredentialException("agent.Credentials is missing information needed to call DeleteSession");
                 }
 
                 Logger.LogoutCalled(_logger, Credentials.Did, Credentials.Service);
 
+                StopTokenRefreshTimer();
+
                 AtProtoHttpResult<EmptyResponse> deleteSessionResult =
                     await AtProtoServer.DeleteSession(Credentials, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
-
-                StopTokenRefreshTimer();
 
                 if (deleteSessionResult.Succeeded)
                 {

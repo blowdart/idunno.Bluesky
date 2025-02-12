@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace idunno.AtProto.OAuth {
+namespace idunno.AtProto.OAuthCallback {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace idunno.AtProto.OAuth {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("idunno.AtProto.OAuth.Resources", typeof(Resources).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("idunno.AtProto.OAuthCallback.Resources", typeof(Resources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;

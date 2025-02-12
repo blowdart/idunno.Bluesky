@@ -43,6 +43,9 @@ namespace idunno.AtProto
         [LoggerMessage(11, LogLevel.Debug, "Logout API returned {statusCode} for {did} on {service}")]
         internal static partial void LogoutFailed(ILogger logger, Did? did, Uri service, HttpStatusCode statusCode);
 
+        [LoggerMessage(12, LogLevel.Debug, "OAuth revoke returned {statusCode} for {tokenType} belonging to {did} on {service}")]
+        internal static partial void RevokeFailed(ILogger logger, Did? did, Uri service, HttpStatusCode statusCode, string tokenType);
+
         // Token refresh logging
         [LoggerMessage(20, LogLevel.Debug, "Token refresh timer started")]
         internal static partial void TokenRefreshTimerStarted(ILogger logger);

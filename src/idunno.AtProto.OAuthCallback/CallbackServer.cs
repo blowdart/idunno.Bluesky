@@ -13,7 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace idunno.AtProto.OAuth
+namespace idunno.AtProto.OAuthCallback
 {
     /// <summary>
     /// Implements a web server running on localhost which responds to OAuth return POSTs.

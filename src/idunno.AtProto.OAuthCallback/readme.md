@@ -1,4 +1,4 @@
-# idunno.AtProto.OAuth
+# idunno.AtProto.OAuthCallback
 
 ## About
 
@@ -6,7 +6,7 @@ OAuth libraries for the [idunno.AtProto](https://www.nuget.org/packages/idunno.A
 
 ## Key Features
 
-* Local callback server for console applications
+* Local callback server for console applications and local testing.
 
 ## How to Use
 

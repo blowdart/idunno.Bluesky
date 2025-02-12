@@ -43,14 +43,13 @@ The [releases page](https://github.com/blowdart/idunno.Bluesky/releases) provide
 
 ## License
 
-`idunno.Bluesky` and `idunno.AtProto` are available under the MIT license, see the [LICENSE](LICENSE) file for more information.
+`idunno.Bluesky`, `idunno.AtProto` and `idunno.AtProto.OAuthCallBack` are available under the MIT license, see the [LICENSE](LICENSE) file for more information.
 
 ## Planned work
 
 ### Major
 
 * Logging in idunno.Bluesky
-* OAuth
 * GIF attaching
 * AOT & trimming support
 * Firehose support

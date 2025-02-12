@@ -93,22 +93,84 @@ var agent = new BlueskyAgent(
     });
 ```
 
-To start an OAuth login process you must first create an instance of `OAuthClient` build a URI to send the user to,
+To start an OAuth login process you must first create an instance of `OAuthClient` build a URI to send the user to, save the state from the
+OAuthClient and then send the user to the URI. The user will log into Bluesky and authorize your application, and then be redirected back to your application
 
 ```c#
 OAuthClient oAuthClient = agent.CreateOAuthClient();
-
 Uri startUri = await agent.BuildOAuth2LoginUri(oAuthClient, handle, cancellationToken: cancellationToken);
+
+// Save the state, and persist it in whatever way is suitable for your application, to be used when the response comes back from the OAuth server.
+OAuthLoginState oAuthLoginState = uriBuilderOAuthClient.State;
 
 // Send the user to the startUri in a way suitable for your application, a redirection for web application or spawning a browser for a desktop application.
 ```
 
-Once the login process has completed you should then call 
+When the user returns to your application you take the callback data returned from the OAuth server and process it
 
+```
+// Create an oauth client using the saved state
+OAuthClient oAuthClient = agent.CreateOAuthClient(oAuthLoginState);
 
+// Process the response
+bool authenticated = await agent.ProcessOAuth2LoginResponse(oAuthClient, callbackData, cancellationToken);
+```
 
+The mechanisms for getting the login callback data, saving the state and restoring it vary due to application type.
+Please consult the documentation for your application architecture. The `Uri` returned by `BuildOAuth2LoginUri` will
+contain a `state` query parameter, which can use as a primary key as needed for persisting the client state. You can extract this using
+`string stateKey = QueryHelpers.ParseQuery(startUri.Query)["state"]!;`.
 
-To generate the OAuth flow start URI create an `OAuthClient` using `CreateOAuthClient()`
+### Testing OAuth locally with localhost
+
+The `idunno.AtProto.OAuthCallback` nuget package contains a simple web server that can be used to test OAuth logins locally. To use it add a reference
+to the package, set the  ClientId in options to "`http://localhost`" but do not set the ReturnUri, then create an instance of the callback server
+before you build the login URI, use the callback server uri when creating the login URI, and finally await the callback,
+which will return the callback data as a string
+
+```c#
+
+var agent = new BlueskyAgent(
+    new BlueskyAgentOptions()
+    {
+        OAuth = new BlueskyOAuthOptions()
+        {
+            ClientId = "http://localhost",
+            Scopes = new[] { "atproto", "transition:generic" },
+        }
+    });
+
+string callbackData;
+
+await using var callbackServer = new CallbackServer(
+    CallbackServer.GetRandomUnusedPort(),
+    loggerFactory: loggerFactory);
+{
+    OAuthClient uriBuilderOAuthClient = agent.CreateOAuthClient();
+
+    // We dynamically set the return URI as the callback server will listen on a random free port.
+    Uri startUri = await agent.BuildOAuth2LoginUri(
+        uriBuilderOAuthClient,
+        handle,
+        returnUri: callbackServer.Uri,
+        cancellationToken: cancellationToken);
+
+    // Start the browser. If you are running Linux you need XDG installed.
+    OAuthClient.OpenBrowser(startUri);
+
+    callbackData = await callbackServer.WaitForCallbackAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+}
+
+if (!string.IsNullOrEmpty(callbackData))
+{
+    await agent.ProcessOAuth2LoginResponse(oAuthClient, callbackData, cancellationToken);
+}
+else
+{
+    // The process timed out, or another error occured.
+}
+
+```
 
 ## Configuring the agent's HTTP settings
 

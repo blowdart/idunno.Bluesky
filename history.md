@@ -1,5 +1,17 @@
 # idunno.Bluesky Version History
 
+## 0.3.0
+
+### Features
+
+#### idunno.AtProto
+
+* OAuth login support
+
+#### idunno.AtProto.OAuthCallback
+
+* Local HTTP server for testing OAuth authentication.
+
 ## 0.2.0
 
 ### Features
