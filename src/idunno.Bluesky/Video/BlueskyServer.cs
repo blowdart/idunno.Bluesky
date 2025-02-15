@@ -64,21 +64,21 @@ namespace idunno.Bluesky
         /// Gets any video upload restrictions placed on the current user 
         /// </summary>
         /// <param name="service">The <see cref="Uri"/> of the service to upload video to.</param>
-        /// <param name="serviceCredentials">AccessCredentials for service access used to authenticate against the <paramref name="service"/>.</param>
+        /// <param name="serviceCredential">A service credential to authenticate against the <paramref name="service"/> with.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="serviceCredentials"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="serviceCredential"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<UploadLimits>> GetVideoUploadStatus(
             Uri service,
-            AccessCredentials serviceCredentials,
+            ServiceCredential serviceCredential,
             HttpClient httpClient,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(serviceCredentials);
+            ArgumentNullException.ThrowIfNull(serviceCredential);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             AtProtoHttpClient<UploadLimits> client = new (loggerFactory);
@@ -86,9 +86,9 @@ namespace idunno.Bluesky
             return await client.Get(
                 service,
                 GetUploadLimitsEndpoint,
-                accessCredentials:serviceCredentials,
+                credentials: serviceCredential,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: null,
+                onCredentialsUpdated: null,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -99,20 +99,20 @@ namespace idunno.Bluesky
         /// <param name="fileName">The filename of the video.</param>
         /// <param name="video">The video to upload.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to upload video to.</param>
-        /// <param name="serviceCredentials">AccessCredentials for service access used to authenticate against the <paramref name="service"/>.</param>
+        /// <param name="serviceCredential">AccessCredentials for service access used to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> is null or empty.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="serviceCredentials"/>, <paramref name="video"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="serviceCredential"/>, <paramref name="video"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="video"/> is empty.</exception>
         public static async Task<AtProtoHttpResult<JobStatus>> UploadVideo(
             Did did,
             string fileName,
             byte[] video,
             Uri service,
-            AccessCredentials serviceCredentials,
+            ServiceCredential serviceCredential,
             HttpClient httpClient,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
@@ -120,12 +120,12 @@ namespace idunno.Bluesky
             ArgumentException.ThrowIfNullOrEmpty(fileName);
             ArgumentNullException.ThrowIfNull(video);
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(serviceCredentials);
+            ArgumentNullException.ThrowIfNull(serviceCredential);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             ArgumentOutOfRangeException.ThrowIfZero(video.Length);
 
-            List<NameValueHeaderValue> requestHeaders =
+            List<NameValueHeaderValue> contentHeaders =
             [
                 new NameValueHeaderValue("Content-Type", "video/mp4")
             ];
@@ -137,10 +137,11 @@ namespace idunno.Bluesky
                     service,
                     $"{UploadVideoEndpoint}?did={Uri.EscapeDataString(did)}&name={Uri.EscapeDataString(fileName)}",
                     video,
-                    requestHeaders,
-                    accessCredentials: serviceCredentials,
+                    requestHeaders: null,
+                    contentHeaders : contentHeaders,
+                    credentials: serviceCredential,
                     httpClient: httpClient,
-                    onAccessCredentialsUpdated: null,
+                    onCredentialsUpdated: null, // Service credentials don't get updates
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
             // Flatten

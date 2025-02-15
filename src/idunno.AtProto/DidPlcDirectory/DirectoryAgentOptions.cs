@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using idunno.AtProto;
+using Microsoft.Extensions.Logging;
 
 namespace idunno.DidPlcDirectory
 {
@@ -23,5 +24,10 @@ namespace idunno.DidPlcDirectory
         /// false if you are using a debugging proxy which does not support CRLs.
         /// </para>
         public HttpClientOptions? HttpClientOptions { get; set; }
+
+        /// <summary>
+        /// Gets or sets the <see cref="ILoggerFactory"/>, if any, to use when creating loggers.
+        /// </summary>
+        public ILoggerFactory? LoggerFactory { get; set; }
     }
 }

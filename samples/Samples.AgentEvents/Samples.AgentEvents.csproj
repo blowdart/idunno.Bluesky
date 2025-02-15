@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -9,7 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\idunno.AtProto\idunno.AtProto.csproj" />
+    <ProjectReference Include="..\..\src\idunno.AtProto.OAuthCallback\idunno.AtProto.OAuthCallback.csproj" />
+    <ProjectReference Include="..\..\src\idunno.Bluesky\idunno.Bluesky.csproj" />
     <ProjectReference Include="..\Samples.Common\Samples.Common.csproj" />
   </ItemGroup>
 

@@ -81,8 +81,7 @@ and the the `ReturnUri` from which your application will process OAuth logins. F
 this is typically a custom uri scheme you have registered with the OS.
 
 ```c#
-var agent = new BlueskyAgent(
-    new BlueskyAgentOptions()
+var agent = new BlueskyAgent(new BlueskyAgentOptions()
     {
         OAuth = new BlueskyOAuthOptions()
         {
@@ -130,8 +129,7 @@ which will return the callback data as a string
 
 ```c#
 
-var agent = new BlueskyAgent(
-    new BlueskyAgentOptions()
+var agent = new BlueskyAgent(new BlueskyAgentOptions()
     {
         OAuth = new BlueskyOAuthOptions()
         {
@@ -169,22 +167,36 @@ else
 {
     // The process timed out, or another error occured.
 }
-
 ```
+
+The [OAuth Sample](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.OAuth) shows how to use the callback server and login,
+and logout with OAuth.
+
+## Logging out
+
+To log the current user off Bluesky call the `Logout()` method. This revokes the refresh token (and, if they authenticated via OAuth, the access token),
+and clears the now revoked credentials from the agent.
 
 ## Configuring the agent's HTTP settings
 
-The constructor for the agents take optional parameters that allow you to configure the underlying
-[HttpClient](https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpclient) used to make requests and receive response.
+The constructor for the Bluesky agents take an instance of `BlueskyOptions` which allows for configuration of the agents. The `BlueskyOptions` class
+contains an `HttpClientOptions` property which allows you to specify options for the underlying
+[HttpClient](https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpclient)s used to make requests and receive responses.
 
 ### <a name="configuringTimeouts">Configuring HTTP timeouts</a>
 
-Use the `timeout` parameter when creating an instance of the agent and provide a [TimeSpan](https://learn.microsoft.com/en-us/dotnet/api/system.timespan)
+Use the `Timeout` options on `HttpClientOptions` when creating an instance of the agent and provide a [TimeSpan](https://learn.microsoft.com/en-us/dotnet/api/system.timespan)
 to set the amount of time to wait before the request times out. For example, the following code will configure the agent to wait one minute for any server
 it makes requests against to respond.
 
 ```c#
-using (var agent = new BlueskyAgent(timeout : new Timeout(0,1,0))
+using (var agent = new BlueskyAgent(new BlueskyAgentOptions()
+  {
+      HttpClientOptions = new HttpClientOptions()
+      {
+          Timeout = TimeSpan.FromMinutes(1)
+      }
+  }))
 {
 }
 ```
@@ -194,17 +206,17 @@ using (var agent = new BlueskyAgent(timeout : new Timeout(0,1,0))
 Each request the agent makes is stamped with a string indicating the identity of the software making the request. By default this value is set to
 `idunno.AtProto/x.x.x`, where x.x.x is the version of the library being used. This is sent as the
 [UserAgent HTTP header](https://datatracker.ietf.org/doc/html/rfc7231#section-5.5.3) in every request.
-You should set the user agent to be a value indicating your own software's identity.
+You should set the `HttpClientOptions` `HttpUserAgent` property to be a value indicating your own software's identity.
 
 ### <a name="usingAProxy">Using a proxy server</a>
 
-The agent constructor `proxyUri` parameter allows you to set an `HttpProxy` to be used by the agent when making outgoing HTTP requests.
+The `HttpClientOptions` `ProxyUri` property allows you to set an proxy to be used by the agent when making outgoing HTTP requests.
 If you are using a debugging proxy such as [Fiddler](https://www.telerik.com/fiddler) or [Burp Suite](https://portswigger.net/burp) it is
-likely that you will also need to set the `checkCertificateRevocationList` to `false`, 
+likely that you will also need to set the `CheckCertificateRevocationList` property to `false`, 
 
 > [!CAUTION]
-> Setting `checkCertificateRevocationList` to `false` is dangerous, as the client will no longer check if the HTTPS certificate on any server
-> it connects to has been revoked.
+> Setting `CheckCertificateRevocationList` property on `HttpClientOptions` to `false` is dangerous, as the client will no longer check if the
+HTTPS certificate on any server it connects to has been revoked.
 > 
 > Only use set this to `false` when you are using a debugging proxy which does not support CRLs.
 
@@ -212,9 +224,14 @@ likely that you will also need to set the `checkCertificateRevocationList` to `f
 // Disabling certification revocation list checks can introduce security vulnerabilities.
 // Only use this setting when using a debugging proxy such as Fiddler or Burp Suite.
 
-using (var agent = new BlueskyAgent(
-    proxyUri : new Uri("http://localhost:8866"),
-    checkCertificateRevocationList: false )
+using (var agent = new BlueskyAgent(new BlueskyAgentOptions()
+    {
+        HttpClientOptions = new HttpClientOptions()
+        {
+            ProxyUri = new Uri("http://localhost:8866"),
+            CheckCertificateRevocationList = false
+        }
+    }))
 {
 }
 ```
@@ -222,7 +239,7 @@ using (var agent = new BlueskyAgent(
 ### <a name="disablingTokenRefresh">Disabling token refresh</a>
 
 If you want to disable automatic authentication token refresh in an agent you can do that by the `EnableTokenRefresh` property in options to false.
-Eventually the access token will expire and APIs will start returning errors. You can call `RefreshToken()` to refresh the access token manually.
+Eventually the access token will expire and APIs will start returning errors. You can call `RefreshCredentials()` to refresh the access token manually.
 
 ```c#
 var options = new BlueskyAgentOptions() { EnableBackgroundTokenRefresh = false };

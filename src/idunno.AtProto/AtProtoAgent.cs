@@ -15,6 +15,7 @@ using idunno.AtProto.Server;
 using idunno.DidPlcDirectory;
 
 using Blob = idunno.AtProto.Repo.Blob;
+using System.Net.Http.Headers;
 
 namespace idunno.AtProto
 {
@@ -33,13 +34,11 @@ namespace idunno.AtProto
         /// Creates a new instance of <see cref="AtProtoAgent"/>
         /// </summary>
         /// <param name="service">The URI of the AtProto service to connect to.</param>
-        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/>, if any, to use when creating loggers.</param>
         /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
         /// <remarks>
         /// </remarks>
         public AtProtoAgent(
             Uri service,
-            ILoggerFactory? loggerFactory = default,
             AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions)
         {
             ArgumentNullException.ThrowIfNull(service);
@@ -53,17 +52,22 @@ namespace idunno.AtProto
                 options.OAuthOptions?.Validate();
 
                 Options = options;
+
+                LoggerFactory = Options.LoggerFactory ?? NullLoggerFactory.Instance;
+            }
+            else
+            {
+                LoggerFactory = NullLoggerFactory.Instance;
             }
 
-            LoggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
             _logger = LoggerFactory.CreateLogger<AtProtoAgent>();
 
             _directoryAgent = new DirectoryAgent(
-                loggerFactory: loggerFactory,
-                new DirectoryAgentOptions()
-                {
-                    HttpClientOptions = options?.HttpClientOptions
-                });
+                    new DirectoryAgentOptions()
+                    {
+                        LoggerFactory = LoggerFactory,
+                        HttpClientOptions = options?.HttpClientOptions
+                    });
 
         }
 
@@ -72,9 +76,8 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="service">The URI of the AtProto service to connect to.</param>
         /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
-        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/>, if any, to use when creating loggers.</param>
         /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
-        public AtProtoAgent(Uri service, IHttpClientFactory httpClientFactory, ILoggerFactory? loggerFactory = default, AtProtoAgentOptions? options = null) : base(httpClientFactory)
+        public AtProtoAgent(Uri service, IHttpClientFactory httpClientFactory, AtProtoAgentOptions? options = null) : base(httpClientFactory)
         {
             ArgumentNullException.ThrowIfNull(service);
 
@@ -83,12 +86,21 @@ namespace idunno.AtProto
             if (options is not null)
             {
                 _enableTokenRefresh = options.EnableBackgroundTokenRefresh;
+                LoggerFactory = options.LoggerFactory ?? NullLoggerFactory.Instance;
+            }
+            else
+            {
+                LoggerFactory = NullLoggerFactory.Instance;
             }
 
-            LoggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
             _logger = LoggerFactory.CreateLogger<AtProtoAgent>();
 
-            _directoryAgent = new DirectoryAgent(httpClientFactory, loggerFactory);
+            _directoryAgent = new DirectoryAgent(
+                new DirectoryAgentOptions()
+                {
+                    LoggerFactory = LoggerFactory,
+                    HttpClientOptions = options?.HttpClientOptions
+                });
         }
 
         /// <summary>
@@ -148,10 +160,10 @@ namespace idunno.AtProto
         /// <param name="handle">The handle to resolve.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="handle"/> is null.</exception>
         public async Task<Did?> ResolveHandle(string handle, CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(handle);
+            ArgumentException.ThrowIfNullOrEmpty(handle);
 
             Logger.ResolveHandleCalled(_logger, handle);
 

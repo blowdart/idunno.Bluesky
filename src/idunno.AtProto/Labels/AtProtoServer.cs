@@ -41,7 +41,7 @@ namespace idunno.AtProto
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AtProtoCredential>? onCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {

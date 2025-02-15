@@ -29,8 +29,8 @@ namespace Samples.AtProto
 
         static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(handle);
-            ArgumentNullException.ThrowIfNullOrEmpty(password);
+            ArgumentException.ThrowIfNullOrEmpty(handle);
+            ArgumentException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
             // proxyUri = new Uri("http://localhost:8866");
@@ -53,7 +53,17 @@ namespace Samples.AtProto
             using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(null))
 
             // Create a new AtProtoAgent
-            using (var agent = new AtProtoAgent(new Uri("https://bsky.social"), proxyUri: proxyUri, checkCertificateRevocationList: checkCertificateRevocationList))
+            using (var agent = new AtProtoAgent(
+                service: new Uri("https://bsky.social"),
+                options: new AtProtoAgentOptions()
+                {
+                    LoggerFactory = loggerFactory,
+                    HttpClientOptions = new HttpClientOptions()
+                    {
+                        ProxyUri = proxyUri,
+                        CheckCertificateRevocationList = checkCertificateRevocationList
+                    }
+                }))
             {
                 AtProtoHttpResult<ServerDescription> blueskyServerDescription = await agent.DescribeServer(new Uri("https://bsky.social"), cancellationToken);
                 DescribeServer(blueskyServerDescription.Result!);

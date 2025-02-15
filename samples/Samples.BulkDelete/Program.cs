@@ -114,8 +114,8 @@ public sealed class Program
         bool whatIf,
         CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNullOrEmpty(handle);
-        ArgumentNullException.ThrowIfNullOrEmpty(password);
+        ArgumentException.ThrowIfNullOrEmpty(handle);
+        ArgumentException.ThrowIfNullOrEmpty(password);
 
         DateTimeOffset runStartedAt = DateTimeOffset.UtcNow;
 
@@ -139,9 +139,18 @@ public sealed class Program
             checkCertificateRevocationList = false;
         }
 
-        using (HttpClient? httpClient = CreateOptionalHttpClient(proxyUri))
         using (ILoggerFactory? loggerFactory = ConfigureConsoleLogging(LogLevel.Error))
-        using (var agent = new BlueskyAgent(proxyUri: proxyUri, checkCertificateRevocationList: checkCertificateRevocationList, loggerFactory: loggerFactory))
+        using (var agent = new BlueskyAgent(
+          new BlueskyAgentOptions()
+          {
+              LoggerFactory = loggerFactory,
+
+              HttpClientOptions = new HttpClientOptions()
+              {
+                  CheckCertificateRevocationList = checkCertificateRevocationList,
+                  ProxyUri = proxyUri
+              }
+          }))
         {
             AtProtoHttpResult<bool> loginResult =
                 await agent.Login(handle, password!, authCode, cancellationToken: cancellationToken);
@@ -310,17 +319,5 @@ public sealed class Program
             configure.AddConsole();
             configure.SetMinimumLevel((LogLevel)level);
         });
-    }
-
-    public static HttpClient? CreateOptionalHttpClient(Uri? proxyUri)
-    {
-        if (proxyUri is not null)
-        {
-            return Agent.CreateConfiguredHttpClient(proxyUri);
-        }
-        else
-        {
-            return null;
-        }
     }
 }

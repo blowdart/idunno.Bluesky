@@ -97,7 +97,6 @@ namespace idunno.Bluesky
             return await CreateRecord(
                 record: threadGate,
                 collection: CollectionNsid.ThreadGate,
-                Did,
                 rkey: threadGate.Post.RecordKey,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -318,7 +317,6 @@ namespace idunno.Bluesky
             return await CreateRecord(
                 record: postGate,
                 collection: CollectionNsid.PostGate,
-                Did,
                 rkey: postGate.Post.RecordKey,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }

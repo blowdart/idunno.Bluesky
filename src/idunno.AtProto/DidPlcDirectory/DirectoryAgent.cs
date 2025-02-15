@@ -21,18 +21,20 @@ namespace idunno.DidPlcDirectory
         /// <summary>
         /// Creates a new instance of <see cref="DirectoryAgent"/>.
         /// </summary>
-        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/>, if any, to use when creating loggers.</param>
         /// <param name="options">Any <see cref="DirectoryAgentOptions"/> to configure this instance with.</param>
         public DirectoryAgent(
-            ILoggerFactory? loggerFactory = default,
             DirectoryAgentOptions? options = null) : base(options?.HttpClientOptions)
         {
             if (options is not null)
             {
                 PlcDirectory = options.PlcDirectoryUri;
+                _loggerFactory = options.LoggerFactory ?? NullLoggerFactory.Instance;
+            }
+            else
+            {
+                _loggerFactory = NullLoggerFactory.Instance;
             }
 
-            _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
             _logger = _loggerFactory.CreateLogger<DirectoryAgent>();
         }
 
@@ -40,11 +42,9 @@ namespace idunno.DidPlcDirectory
         /// Creates a new instance of <see cref="DirectoryAgent"/>.
         /// </summary>
         /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
-        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/>, if any, to use when creating loggers.</param>
         /// <param name="options">Any <see cref="DirectoryAgentOptions"/> to configure this instance with.</param>
         public DirectoryAgent(
             IHttpClientFactory httpClientFactory,
-            ILoggerFactory? loggerFactory = default,
             DirectoryAgentOptions? options = null) : base(httpClientFactory)
         {
             ArgumentNullException.ThrowIfNull(HttpClientFactory);
@@ -52,9 +52,13 @@ namespace idunno.DidPlcDirectory
             if (options is not null)
             {
                 PlcDirectory = options.PlcDirectoryUri;
+                _loggerFactory = options.LoggerFactory ?? NullLoggerFactory.Instance;
+            }
+            else
+            {
+                _loggerFactory = NullLoggerFactory.Instance;
             }
 
-            _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
             _logger = _loggerFactory.CreateLogger<DirectoryAgent>();
         }
 

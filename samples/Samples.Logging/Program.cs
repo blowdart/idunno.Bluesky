@@ -7,7 +7,7 @@ using System.CommandLine.Parsing;
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
-using idunno.AtProto.Server;
+
 using Samples.Common;
 
 namespace Samples.Logging
@@ -27,8 +27,8 @@ namespace Samples.Logging
 
         static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(handle);
-            ArgumentNullException.ThrowIfNullOrEmpty(password);
+            ArgumentException.ThrowIfNullOrEmpty(handle);
+            ArgumentException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
             // proxyUri = new Uri("http://localhost:8866");
@@ -47,21 +47,35 @@ namespace Samples.Logging
                 checkCertificateRevocationList = false;
             }
 
+            Console.WriteLine("Logging in with a logger set");
+
             // Change the log level in the ConfigureConsoleLogging() to enable logging
             using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
             {
-                using (var agentWithLogging = new AtProtoAgent(new("https://bsky.social"), proxyUri: proxyUri, checkCertificateRevocationList: checkCertificateRevocationList, loggerFactory: loggerFactory))
+                using (var agentWithLogging = new AtProtoAgent(new("https://bsky.social"),
+                    new AtProtoAgentOptions()
+                    {
+                        LoggerFactory = loggerFactory,
+                        HttpClientOptions = new HttpClientOptions()
+                        {
+                            ProxyUri = proxyUri,
+                            CheckCertificateRevocationList = checkCertificateRevocationList,
+                        }
+                    }))
                 {
-                    _ = await agentWithLogging.Login(new LoginCredentials(handle, password), cancellationToken: cancellationToken).ConfigureAwait(false);
+                    _ = await agentWithLogging.Login(handle, password, cancellationToken: cancellationToken).ConfigureAwait(false);
                     await agentWithLogging.Logout(cancellationToken: cancellationToken).ConfigureAwait(false);
                 }
+            }
 
-                // Now do it again without a logger to demonstrate no bad side effects
-                using var agentWithoutLogging = new AtProtoAgent(new("https://bsky.social"));
-                {
-                    _ = await agentWithoutLogging.Login(new LoginCredentials(handle, password), cancellationToken: cancellationToken).ConfigureAwait(false);
-                    await agentWithoutLogging.Logout(cancellationToken: cancellationToken).ConfigureAwait(false);
-                }
+            Console.WriteLine();
+            Console.WriteLine("Logging in with no logger");
+
+            // Now do it again without a logger to demonstrate no bad side effects
+            using var agentWithoutLogging = new AtProtoAgent(new("https://bsky.social"));
+            {
+                _ = await agentWithoutLogging.Login(handle, password, cancellationToken: cancellationToken).ConfigureAwait(false);
+                await agentWithoutLogging.Logout(cancellationToken: cancellationToken).ConfigureAwait(false);
             }
 
             return;

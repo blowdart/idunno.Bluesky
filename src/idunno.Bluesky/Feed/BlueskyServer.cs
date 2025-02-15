@@ -89,9 +89,9 @@ namespace idunno.Bluesky
             return await client.Get(
                 generatorUri,
                 DescribeFeedGeneratorEndpoint,
-                accessCredentials: null,
+                credentials: null,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: null,
+                onCredentialsUpdated: null,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -104,7 +104,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -118,7 +118,7 @@ namespace idunno.Bluesky
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials>? onAccessCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
@@ -149,9 +149,9 @@ namespace idunno.Bluesky
             AtProtoHttpResult<GetActorFeedsResponse> response = await client.Get(
                 service,
                 $"{GetActorFeedsEndpoint}?{queryString}",
-                accessCredentials: accessCredentials,
+                credentials: accessCredentials,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
+                onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -184,7 +184,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -198,7 +198,7 @@ namespace idunno.Bluesky
             Uri service,
             AccessCredentials accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials>? onAccessCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
@@ -230,9 +230,9 @@ namespace idunno.Bluesky
             AtProtoHttpResult<GetActorLikesResponse> response = await client.Get(
                 service,
                 $"{GetActorLikesEndpoint}?{queryString}",
-                accessCredentials: accessCredentials,
+                credentials: accessCredentials,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
+                onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -267,7 +267,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the feed from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -283,7 +283,7 @@ namespace idunno.Bluesky
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials>? onAccessCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
@@ -322,9 +322,9 @@ namespace idunno.Bluesky
             AtProtoHttpResult<GetAuthorFeedResponse> response = await client.Get(
                 service,
                 $"{GetAuthorFeedEndpoint}?{queryString}",
-                accessCredentials: accessCredentials,
+                credentials: accessCredentials,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
+                onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -355,7 +355,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the information from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -366,7 +366,7 @@ namespace idunno.Bluesky
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials>? onAccessCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
@@ -380,9 +380,9 @@ namespace idunno.Bluesky
             return await client.Get(
                 service,
                 $"{GetFeedGeneratorEndpoint}?feed={Uri.EscapeDataString(feed.ToString())}",
-                accessCredentials: accessCredentials,
+                credentials: accessCredentials,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
+                onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -395,7 +395,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the information from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -406,7 +406,7 @@ namespace idunno.Bluesky
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials>? onAccessCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
@@ -415,7 +415,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            List<AtUri> feedsList = new(feeds);
+            List<AtUri> feedsList = [.. feeds];
             ArgumentOutOfRangeException.ThrowIfZero(feedsList.Count);
 
             StringBuilder queryStringBuilder = new();
@@ -431,9 +431,9 @@ namespace idunno.Bluesky
             AtProtoHttpResult<GetFeedGeneratorsResponse> response = await client.Get(
                 service,
                 $"{GetFeedGeneratorsEndpoint}?{queryString}",
-                accessCredentials: accessCredentials,
+                credentials: accessCredentials,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
+                onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -466,7 +466,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the feed from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -480,7 +480,7 @@ namespace idunno.Bluesky
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials>? onAccessCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
@@ -512,9 +512,9 @@ namespace idunno.Bluesky
             AtProtoHttpResult<GetFeedResponse> response = await client.Get(
                 service,
                 $"{GetFeedEndpoint}?{queryString}",
-                accessCredentials: accessCredentials,
+                credentials: accessCredentials,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
+                onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -548,7 +548,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the likes from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -562,7 +562,7 @@ namespace idunno.Bluesky
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials>? onAccessCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
@@ -597,9 +597,9 @@ namespace idunno.Bluesky
             AtProtoHttpResult<GetLikesResponse> response = await client.Get(
                 service,
                 $"{GetLikesEndpoint}?{queryString}",
-                accessCredentials: accessCredentials,
+                credentials: accessCredentials,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
+                onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)
@@ -631,7 +631,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the likes from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -645,7 +645,7 @@ namespace idunno.Bluesky
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials>? onAccessCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
@@ -677,10 +677,10 @@ namespace idunno.Bluesky
             AtProtoHttpResult<GetListFeedResponse> response = await client.Get(
                 service,
                 $"{GetListFeedEndpoint}?{queryString}",
-                accessCredentials: accessCredentials,
+                credentials: accessCredentials,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
-                subscribedLabelers,
+                onCredentialsUpdated: onCredentialsUpdated,
+                subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)
@@ -712,7 +712,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the likes from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -726,7 +726,7 @@ namespace idunno.Bluesky
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials>? onAccessCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
@@ -764,9 +764,9 @@ namespace idunno.Bluesky
             AtProtoHttpResult<PostThread> response = await client.Get(
                 service,
                 $"{GetPostThreadEndpoint}?{queryString}",
-                accessCredentials: accessCredentials,
+                credentials: accessCredentials,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
+                onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -780,7 +780,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -792,7 +792,7 @@ namespace idunno.Bluesky
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials>? onAccessCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
@@ -815,9 +815,9 @@ namespace idunno.Bluesky
             AtProtoHttpResult<GetPostsResponse> response = await client.Get(
                 service,
                 $"{GetPostsEndpoint}?{queryString}",
-                accessCredentials: accessCredentials,
+                credentials: accessCredentials,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
+                onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -851,7 +851,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -866,7 +866,7 @@ namespace idunno.Bluesky
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials>? onAccessCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
@@ -903,9 +903,9 @@ namespace idunno.Bluesky
             AtProtoHttpResult<GetQuotesResponse> response = await client.Get(
                 service,
                 $"{GetQuotesEndpoint}?{queryString}",
-                accessCredentials: accessCredentials,
+                credentials: accessCredentials,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
+                onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -939,7 +939,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -954,7 +954,7 @@ namespace idunno.Bluesky
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials>? onAccessCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
@@ -990,9 +990,9 @@ namespace idunno.Bluesky
             AtProtoHttpResult<GetRepostedByResponse> response = await client.Get(
                 service,
                 $"{GetRepostedByEndpoint}?{queryString}",
-                accessCredentials: accessCredentials,
+                credentials: accessCredentials,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
+                onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -1022,7 +1022,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -1032,7 +1032,7 @@ namespace idunno.Bluesky
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials> onAccessCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
@@ -1045,9 +1045,9 @@ namespace idunno.Bluesky
             AtProtoHttpResult<GetSuggestedFeedsResponse> response = await client.Get(
                 service,
                 GetSuggestedFeedsEndpoint,
-                accessCredentials: accessCredentials,
+                credentials: accessCredentials,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
+                onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -1080,7 +1080,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -1094,7 +1094,7 @@ namespace idunno.Bluesky
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials>? onAccessCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
@@ -1133,9 +1133,9 @@ namespace idunno.Bluesky
             AtProtoHttpResult<GetTimelineResponse> response = await client.Get(
                 service,
                 $"{GetTimelineEndpoint}?{queryString}",
-                accessCredentials: accessCredentials,
+                credentials: accessCredentials,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
+                onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -1177,7 +1177,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -1201,7 +1201,7 @@ namespace idunno.Bluesky
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials>? onAccessCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
@@ -1273,9 +1273,9 @@ namespace idunno.Bluesky
             AtProtoHttpResult<SearchPostsResponse> response = await client.Get(
                 service,
                 $"{SearchPostsEndpoint}?{queryString}",
-                accessCredentials: accessCredentials,
+                credentials: accessCredentials,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
+                onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 

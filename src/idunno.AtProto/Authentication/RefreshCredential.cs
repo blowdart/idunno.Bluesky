@@ -10,6 +10,9 @@ namespace idunno.AtProto.Authentication
     /// </summary>
     public class RefreshCredential : AtProtoCredential, IRefreshCredential
     {
+        /// <summary>
+        /// The refresh token value.
+        /// </summary>
         private string _refreshToken;
 
         /// <summary>
@@ -27,6 +30,18 @@ namespace idunno.AtProto.Authentication
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
             _refreshToken = value;
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="RefreshCredential"/> from the specified <paramref name="accessCredentials"/>.
+        /// </summary>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to create the refresh credential from.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/> is null.</exception>
+        public RefreshCredential(AccessCredentials accessCredentials) : this(
+            accessCredentials != null ? accessCredentials.Service : throw new ArgumentNullException(nameof(accessCredentials)),
+            accessCredentials.AuthenticationType,
+            accessCredentials.RefreshToken)
+        {
         }
 
         /// <summary>

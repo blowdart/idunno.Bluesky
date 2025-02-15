@@ -10,12 +10,9 @@ using Microsoft.Extensions.Logging;
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 
-using idunno.Bluesky;
-
 using Samples.Common;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.AspNetCore.WebUtilities;
 
 namespace Samples.OAuth
 {
@@ -24,7 +21,7 @@ namespace Samples.OAuth
         static async Task<int> Main(string[] args)
         {
             // Necessary to render emojis.
-            Console.OutputEncoding = System.Text.Encoding.UTF8;
+            Console.OutputEncoding = Encoding.UTF8;
 
             var parser = Helpers.ConfigureCommandLine(PerformOperations);
             await parser.InvokeAsync(args);
@@ -55,12 +52,12 @@ namespace Samples.OAuth
 
             // Change the log level in the ConfigureConsoleLogging() to enable logging
             using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
-
             using (var agent = new AtProtoAgent(
                 service: new Uri("https://api.bsky.app"),
-                loggerFactory: loggerFactory,
                 options: new AtProtoAgentOptions()
                 {
+                    LoggerFactory = loggerFactory,
+
                     HttpClientOptions = new HttpClientOptions()
                     {
                         CheckCertificateRevocationList = checkCertificateRevocationList,

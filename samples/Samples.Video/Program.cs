@@ -12,6 +12,7 @@ using idunno.Bluesky;
 using idunno.Bluesky.Embed;
 
 using Samples.Common;
+using idunno.AtProto;
 
 namespace Samples.Video
 {
@@ -30,11 +31,11 @@ namespace Samples.Video
 
         static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(handle);
-            ArgumentNullException.ThrowIfNullOrEmpty(password);
+            ArgumentException.ThrowIfNullOrEmpty(handle);
+            ArgumentException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
-            // proxyUri = new Uri("http://localhost:8866");
+            proxyUri = new Uri("http://localhost:8866");
 
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
@@ -54,7 +55,17 @@ namespace Samples.Video
             using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
 
             // Create a new BlueSkyAgent
-            using (var agent = new BlueskyAgent(proxyUri: proxyUri, checkCertificateRevocationList: checkCertificateRevocationList, loggerFactory: loggerFactory))
+            using (var agent = new BlueskyAgent(
+                options: new BlueskyAgentOptions()
+                {
+                    LoggerFactory = loggerFactory,
+
+                    HttpClientOptions = new HttpClientOptions()
+                    {
+                        CheckCertificateRevocationList = checkCertificateRevocationList,
+                        ProxyUri = proxyUri
+                    },
+                }))
             {
                 // Test code goes here.
 
@@ -98,7 +109,7 @@ namespace Samples.Video
 
                 {
                     byte[] videoAsBytes;
-                    using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Samples.Video.Flowers.mp4")!)
+                    using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Samples.Video.DroneBeach.mp4")!)
                     using (MemoryStream memoryStream = new())
                     {
                         resourceStream.CopyTo(memoryStream);
@@ -197,15 +208,17 @@ namespace Samples.Video
 
                     videoUploadResult.EnsureSucceeded();
 
-                    while (videoUploadResult.Result.State == idunno.Bluesky.Video.JobState.InProgress &&
-                        videoUploadResult.Succeeded &&
+                    while (videoUploadResult.Succeeded &&
+                        (videoUploadResult.Result.State == idunno.Bluesky.Video.JobState.Created ||
+                        videoUploadResult.Result.State == idunno.Bluesky.Video.JobState.InProgress) &&
                         !cancellationToken.IsCancellationRequested)
                     {
                         Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} processing, progress {videoUploadResult.Result.Progress}");
                         await Task.Delay(1000, cancellationToken: cancellationToken);
                         videoUploadResult = await agent.GetVideoJobStatus(videoUploadResult.Result.JobId, cancellationToken: cancellationToken);
-                        videoUploadResult.EnsureSucceeded();
                     }
+
+                    videoUploadResult.EnsureSucceeded();
 
                     if (!videoUploadResult.Succeeded ||
                         videoUploadResult.Result.Blob is null ||

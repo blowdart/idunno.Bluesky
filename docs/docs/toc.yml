@@ -6,7 +6,7 @@ items:
       - name: Common Terms & Concepts
         href: commonTerms.md
       - name: Connecting to Bluesky
-        href: configuringConnections.md
+        href: connecting.md
 
   - name: Feeds & timelines
     items:

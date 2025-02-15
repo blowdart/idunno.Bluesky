@@ -42,7 +42,7 @@ namespace idunno.Bluesky.Feed
             ArgumentNullException.ThrowIfNull(cid);
             ArgumentNullException.ThrowIfNull(did);
             ArgumentNullException.ThrowIfNull(creator);
-            ArgumentNullException.ThrowIfNullOrEmpty(displayName);
+            ArgumentException.ThrowIfNullOrEmpty(displayName);
 
             Uri = uri;
             Cid = cid;

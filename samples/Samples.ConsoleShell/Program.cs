@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using idunno.Bluesky;
 
 using Samples.Common;
+using idunno.AtProto;
 
 namespace Samples.ConsoleShell
 {
@@ -52,7 +53,17 @@ namespace Samples.ConsoleShell
             using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
 
             // Create a new BlueSkyAgent
-            using (var agent = new BlueskyAgent(proxyUri: proxyUri, checkCertificateRevocationList: checkCertificateRevocationList, loggerFactory: loggerFactory))
+            using (var agent = new BlueskyAgent(
+                options: new BlueskyAgentOptions()
+                {
+                    LoggerFactory = loggerFactory,
+
+                    HttpClientOptions = new HttpClientOptions()
+                    {
+                        CheckCertificateRevocationList = checkCertificateRevocationList,
+                        ProxyUri = proxyUri
+                    },
+                }))
             {
                 // Test code goes here.
 

@@ -20,7 +20,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> is not valid for an <see cref="AtIdentifier"/>.</exception>
         public static AtIdentifier CreateFrom(string s)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(s);
+            ArgumentException.ThrowIfNullOrEmpty(s);
 
             if (!TryParse(s, out AtIdentifier? returnValue))
             {

@@ -13,6 +13,7 @@ using idunno.Bluesky.Actor;
 using idunno.Bluesky.Chat;
 
 using Samples.Common;
+using idunno.AtProto;
 
 namespace Samples.DirectMessages
 {
@@ -31,8 +32,8 @@ namespace Samples.DirectMessages
 
         static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(handle);
-            ArgumentNullException.ThrowIfNullOrEmpty(password);
+            ArgumentException.ThrowIfNullOrEmpty(handle);
+            ArgumentException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
             // proxyUri = new Uri("http://localhost:8866");
@@ -55,7 +56,16 @@ namespace Samples.DirectMessages
             using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
 
             // Create a new BlueSkyAgent
-            using (var agent = new BlueskyAgent(proxyUri: proxyUri, checkCertificateRevocationList: checkCertificateRevocationList, loggerFactory: loggerFactory))
+            using (var agent = new BlueskyAgent(
+                options: new BlueskyAgentOptions()
+                {
+                    LoggerFactory = loggerFactory,
+                    HttpClientOptions = new HttpClientOptions()
+                    {
+                        ProxyUri = proxyUri,
+                        CheckCertificateRevocationList = checkCertificateRevocationList
+                    }
+                }))
             {
                 var loginResult = await agent.Login(handle, password, authCode, cancellationToken: cancellationToken);
                 if (!loginResult.Succeeded)

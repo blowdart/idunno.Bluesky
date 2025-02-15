@@ -2,15 +2,11 @@
 
 The Bluesky agent provides logging through the standard [.NET logging interface](https://learn.microsoft.com/en-us/dotnet/core/extensions/logging?tabs=command-line).
 
-You can use the logging interface to log structed log messages from the agent.
-
 The log messages come in three categories, the `BlueskyAgent` category for operations specific to Bluesky, such as reading the timeline,
 the `AtProtoAgent` category for operations which are not Bluesky specific and could be used against any AT Proto server, and the
 `DirectoryAgent` category for operations performed by the DirectoryAgent class for any [DID PLC Directory](https://web.plc.directory/) operations.
 
-As the standard `ILoggerFactory` interface is used when creating an agent either the standard dependency injection systems such as WebApplication or
-GenericHost can be used to inject a logger factory into the agent, or you can create a logger factory and pass it to the agent, for applications such
-as console applications.
+To configure a `LoggerFactory` for the agent, set the `LoggerFactory`property  in the `AtProtoAgentOptions` when creating an agent.
 
 ## <a name="configuring">Configuring logging</a>
 
@@ -24,10 +20,14 @@ using ILoggerFactory loggerFactory = LoggerFactory.Create(configure =>
     configure.SetMinimumLevel(LogLevel.Debug);
 });
 
-using var agent = new AtProtoAgent(new("https://bsky.social"), loggerFactory: loggerFactory);
+using var agent = new BlueSkyAgent(
+    options: new BlueskyAgentOptions()
+    {
+        LoggerFactory = loggerFactory
+    }))
 {
-    _ = await agent.Login(new Credentials(handle, password), cancellationToken: cancellationToken).ConfigureAwait(false);
-    await agent.Logout(cancellationToken: cancellationToken).ConfigureAwait(false);
+    await agent.Login(handle, password, cancellationToken: cancellationToken);
+    await agent.Logout(cancellationToken: cancellationToken);
 }
 ```
 

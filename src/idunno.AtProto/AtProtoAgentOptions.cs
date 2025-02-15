@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using Microsoft.Extensions.Logging;
+
 using idunno.AtProto.Authentication;
 
 namespace idunno.AtProto
@@ -10,6 +12,45 @@ namespace idunno.AtProto
     /// </summary>
     public class AtProtoAgentOptions
     {
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoAgentOptions"/>"/>
+        /// </summary>
+        public AtProtoAgentOptions()
+        {
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoAgentOptions"/>"/>
+        /// </summary>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>, if any, to use when creating loggers.</param>
+        /// <param name="enableBackgroundTokenRefresh">Flag indicating whether credential refreshes should happen in the background.</param>
+        /// <param name="plcDirectoryServer">The server to use when resolving plc DIDs.</param>
+        /// <param name="oAuthOptions">Any <see cref="OAuthOptions"/> for the agent.</param>
+        /// <param name="httpClientOptions">The HttpClient options for the agent.</param>
+        public AtProtoAgentOptions(
+            ILoggerFactory? loggerFactory,
+            bool enableBackgroundTokenRefresh = true,
+            Uri? plcDirectoryServer = null,
+            OAuthOptions? oAuthOptions = null,
+            HttpClientOptions? httpClientOptions = null) : this()
+        {
+            LoggerFactory = loggerFactory;
+            EnableBackgroundTokenRefresh = enableBackgroundTokenRefresh;
+
+            if (plcDirectoryServer is not null)
+            {
+                PlcDirectoryServer = plcDirectoryServer;
+            }
+
+            OAuthOptions = oAuthOptions;
+            HttpClientOptions = httpClientOptions;
+        }
+
+        /// <summary>
+        /// Gets or sets the <see cref="ILoggerFactory"/>, if any, to use when creating loggers.
+        /// </summary>
+        public ILoggerFactory? LoggerFactory { get; set; }
+
         /// <summary>
         /// Specifies whether to enable background access token refresh.
         /// </summary>

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Net;
 using System.Text.Json;
 
 using idunno.AtProto;
@@ -77,7 +78,7 @@ namespace idunno.Bluesky
 
             using (_logger.BeginScope($"Getting video upload limits for {Did}"))
             {
-                AtProtoHttpResult<AccessCredentials> getServiceAuthResult = await GetServiceAuth(
+                AtProtoHttpResult<ServiceCredential> getServiceAuthResult = await GetServiceAuth(
                     service: Service,
                     audience: WellKnownDistributedIdentifiers.Video,
                     lxm: GetUploadLimitsLxm,
@@ -95,7 +96,7 @@ namespace idunno.Bluesky
 
                 AtProtoHttpResult<UploadLimits> result = await BlueskyServer.GetVideoUploadStatus(
                     _videoServer,
-                    serviceCredentials: getServiceAuthResult.Result,
+                    serviceCredential: getServiceAuthResult.Result,
                     httpClient: HttpClient,
                     loggerFactory: LoggerFactory,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -152,7 +153,7 @@ namespace idunno.Bluesky
 
                 if (serverDescriptionResult.Succeeded)
                 {
-                    AtProtoHttpResult<AccessCredentials> getServiceAuthResult = await GetServiceAuth(
+                    AtProtoHttpResult<ServiceCredential> getServiceAuthResult = await GetServiceAuth(
                         Service,
                         audience: serverDescriptionResult.Result.Did,
                         lxm: UploadBlobLxm,
@@ -175,10 +176,10 @@ namespace idunno.Bluesky
                         serverDescriptionResult.Result.Did,
                         fileName,
                         video,
-                        _videoServer,
-                        getServiceAuthResult.Result,
-                        HttpClient,
-                        LoggerFactory,
+                        service: _videoServer,
+                        serviceCredential: getServiceAuthResult.Result,
+                        httpClient: HttpClient,
+                        loggerFactory: LoggerFactory,
                         cancellationToken: cancellationToken).ConfigureAwait(false);
 
                     if (result.Succeeded)
@@ -187,7 +188,8 @@ namespace idunno.Bluesky
                     }
                     else
                     {
-                        if (result.AtErrorDetail is not null &&
+                        if (result.StatusCode == HttpStatusCode.Conflict &&
+                            result.AtErrorDetail is not null &&
                             string.Equals("already_exists", result.AtErrorDetail.Error, StringComparison.Ordinal) &&
                             result.AtErrorDetail.ExtensionData is not null &&
                             result.AtErrorDetail.ExtensionData.TryGetValue("jobId", out JsonElement jobIdElement))

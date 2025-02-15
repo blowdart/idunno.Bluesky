@@ -29,9 +29,9 @@ namespace idunno.Bluesky
                 uri,
                 cid,
                 service: AuthenticatedOrUnauthenticatedServiceUri,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 

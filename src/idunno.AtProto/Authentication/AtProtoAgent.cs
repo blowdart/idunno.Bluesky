@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.Json;
 using System.Timers;
 
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
@@ -16,10 +17,7 @@ using idunno.AtProto.Authentication;
 using idunno.AtProto.Authentication.Models;
 using idunno.AtProto.Events;
 using idunno.AtProto.Server.Models;
-using idunno.AtProto.Models;
-using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.WebUtilities;
-using static System.Formats.Asn1.AsnWriter;
+
 
 namespace idunno.AtProto
 {
@@ -84,7 +82,7 @@ namespace idunno.AtProto
                 }
                 finally
                 {
-                    _credentialReaderWriterLockSlim.ExitWriteLock();
+                    _credentialReaderWriterLockSlim.ExitReadLock();
                 }
 
                 return did;
@@ -514,7 +512,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/> or any of its properties are null.</exception>
-        [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Matching other login methods.")]
+        [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Matching other login methods, so keeping cancellationToken for ease of use.")]
         public async Task<bool> Login(
             AccessCredentials accessCredentials,
             CancellationToken cancellationToken = default)
@@ -684,8 +682,11 @@ namespace idunno.AtProto
 
                 StopTokenRefreshTimer();
 
+                // Take the refresh token value from credentials and make it a specific refresh token.
+                RefreshCredential refreshCredential = new(Credentials);
+
                 AtProtoHttpResult<EmptyResponse> deleteSessionResult =
-                    await AtProtoServer.DeleteSession(Credentials, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
+                    await AtProtoServer.DeleteSession(refreshCredential, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
 
                 if (deleteSessionResult.Succeeded)
                 {
@@ -743,6 +744,35 @@ namespace idunno.AtProto
             {
                 throw new CredentialException(Credentials);
             }
+        }
+
+        /// <summary>
+        /// Acquires a new access and refresh token for the specified <paramref name="credential"/>, and updates the agent <see cref="Credentials"/>.
+        /// </summary>
+        /// <param name="credential">The credential to refresh.</param>
+        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="AuthenticationRequiredException">Thrown when agent is not authenticated.</exception>
+        public async Task<bool> RefreshCredentials(AtProtoCredential credential, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(credential);
+
+            // Create refresh credentials if passed access credentials.
+            if (credential is DPoPAccessCredentials dPoPAccessCredentials)
+            {
+                credential = new DPoPRefreshCredential(dPoPAccessCredentials);
+            }
+            else if (credential is AccessCredentials accessCredentials)
+            {
+                credential = new RefreshCredential(accessCredentials);
+            }
+
+            return credential switch
+            {
+                DPoPRefreshCredential dPoPRefreshCredential => await RefreshOAuthIssuedCredentials(dPoPRefreshCredential, cancellationToken).ConfigureAwait(false),
+                RefreshCredential refreshCredential => await RefreshSessionIssuedCredentials(refreshCredential, cancellationToken).ConfigureAwait(false),
+                _ => throw new CredentialException(credential, "Cannot refresh credentials of this type."),
+            };
         }
 
         /// <summary>

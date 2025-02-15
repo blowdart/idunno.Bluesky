@@ -108,6 +108,7 @@ namespace idunno.AtProto.Authentication
             {
                 AccessJwt = accessCredentials.AccessJwt;
                 RefreshToken = accessCredentials.RefreshToken;
+                ExtractJwtProperties(_accessToken);
             }
             finally
             {

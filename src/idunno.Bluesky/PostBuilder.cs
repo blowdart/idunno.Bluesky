@@ -36,14 +36,30 @@ namespace idunno.Bluesky
         /// <summary>
         /// Creates a new instance of a <see cref="PostBuilder"/>.
         /// </summary>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
+        public PostBuilder(DateTimeOffset? createdAt)
+        {
+            DateTimeOffset creationDateTime = DateTimeOffset.UtcNow;
+            if (createdAt is not null)
+            {
+                creationDateTime = createdAt.Value;
+            }
+
+            _postRecord = new Post() { CreatedAt = creationDateTime };
+        }
+
+        /// <summary>
+        /// Creates a new instance of a <see cref="PostBuilder"/>.
+        /// </summary>
         /// <param name="text">The text for the post.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
         /// <param name="images">A collection of <see cref="EmbeddedImage"/>s to attach to the post, if any.</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
         /// <param name="labels">Any self labels to apply to the post.</param>
         /// <exception cref="ArgumentException">Thrown when the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long.</exception>
         /// <exception cref="ArgumentNullException">Thrown when the <paramref name="text"/> is null or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">If the text for the post is too long or too many images are specified.</exception>
-        public PostBuilder(string text, ICollection<EmbeddedImage>? images = null, IList<Facet>? facets = null, PostSelfLabels? labels = null) : this()
+        public PostBuilder(string text, DateTimeOffset? createdAt = null, ICollection<EmbeddedImage>? images = null, IList<Facet>? facets = null, PostSelfLabels? labels = null) : this(createdAt)
         {
             ArgumentNullException.ThrowIfNull(text);
 
@@ -78,7 +94,7 @@ namespace idunno.Bluesky
 
             if (facets is not null)
             {
-                _postRecord.Facets = new List<Facet>(facets);
+                _postRecord.Facets = [.. facets];
             }
 
             if (labels is not null)
@@ -92,8 +108,9 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="text">The text for the post.</param>
         /// <param name="language">The language for the post.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
         /// <param name="labels">Any self labels to apply to the post.</param>
-        public PostBuilder(string text, string language, PostSelfLabels? labels = null) : this(text, languages: new string[] { language }, images: null, facets : null, labels: labels)
+        public PostBuilder(string text, string language, DateTimeOffset? createdAt = null, PostSelfLabels? labels = null) : this(text, languages: [language], createdAt: createdAt, images: null, facets : null, labels: labels)
         {
         }
 
@@ -102,12 +119,14 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="text">The text for the post.</param>
         /// <param name="languages">The languages for the post.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
         /// <param name="images">An optional collection of <see cref="EmbeddedImage"/>s to attach to the post.</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
         /// <param name="labels">Any self labels to apply to the post.</param>
         /// <exception cref="ArgumentNullException">if <paramref name="languages"/> is null</exception>
         /// <exception cref="ArgumentOutOfRangeException">if <paramref name="languages"/> contains no entries.</exception>
-        public PostBuilder(string text, string[] languages, ICollection<EmbeddedImage>? images = null, IList<Facet>? facets = null, PostSelfLabels? labels = null) : this(text, images, facets, labels)
+        public PostBuilder(string text, string[] languages, DateTimeOffset? createdAt = null, ICollection<EmbeddedImage>? images = null, IList<Facet>? facets = null, PostSelfLabels? labels = null) :
+            this(text, createdAt : createdAt, images : images, facets: facets, labels: labels)
         {
             ArgumentNullException.ThrowIfNull(languages);
             ArgumentOutOfRangeException.ThrowIfZero(languages.Length);

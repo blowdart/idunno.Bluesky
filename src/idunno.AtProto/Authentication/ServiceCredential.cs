@@ -100,7 +100,10 @@ namespace idunno.AtProto.Authentication
         private void ExtractJwtProperties(string jwt)
         {
             JsonWebToken token = new(jwt);
-            Did = new Did(token.Subject);
+
+            // Service JWTs don't have subjects, but they do have audiences which is equivalent for services.
+
+            Did = new Did(token.Audiences.First());
             ExpiresOn = DateTime.SpecifyKind(token.ValidTo, DateTimeKind.Utc);
         }
     }

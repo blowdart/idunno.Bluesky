@@ -79,7 +79,7 @@ namespace idunno.AtProto
             Uri service,
             AccessCredentials accessCredentials,
             HttpClient httpClient,
-            Action<AtProtoCredential>? onCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -146,7 +146,7 @@ namespace idunno.AtProto
             Uri service,
             AccessCredentials accessCredentials,
             HttpClient httpClient,
-            Action<AtProtoCredential>? onCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -201,7 +201,7 @@ namespace idunno.AtProto
             Uri service,
             AccessCredentials accessCredentials,
             HttpClient httpClient,
-            Action<AtProtoCredential>? onCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions=null,
             CancellationToken cancellationToken = default)
@@ -286,7 +286,7 @@ namespace idunno.AtProto
             Uri service,
             AccessCredentials accessCredentials,
             HttpClient httpClient,
-            Action<AtProtoCredential>? onCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -341,7 +341,7 @@ namespace idunno.AtProto
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AtProtoCredential>? onCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default) where TRecord: class
@@ -401,7 +401,7 @@ namespace idunno.AtProto
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AtProtoCredential>? onCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
@@ -489,7 +489,7 @@ namespace idunno.AtProto
             Uri service,
             AccessCredentials accessCredentials,
             HttpClient httpClient,
-            Action<AtProtoCredential>? onCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -507,7 +507,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            List<NameValueHeaderValue> requestHeaders =
+            List<NameValueHeaderValue> contentHeaders =
             [
                 new NameValueHeaderValue("Content-Type", mimeType)
             ];
@@ -519,7 +519,8 @@ namespace idunno.AtProto
                     service: service,
                     endpoint: UploadBlobEndpoint,
                     blob: blob,
-                    requestHeaders: requestHeaders,
+                    requestHeaders: null,
+                    contentHeaders: contentHeaders,
                     credentials: accessCredentials,
                     httpClient: httpClient,
                     onCredentialsUpdated: onCredentialsUpdated,

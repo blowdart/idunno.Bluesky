@@ -254,18 +254,16 @@ namespace idunno.AtProto.Authentication
 
             LoginResult loginResult = await _oidcClient.ProcessResponseAsync(callbackData, _authorizeState, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            // TODO: Error check
-
-            if (loginResult.TokenResponse.DPoPNonce is null)
-            {
-                throw new OAuthException("login result has no dPoP nonce");
-            }
-
             if (loginResult.IsError)
             {
                 _proofKey = null;
                 Logger.OAuthLoginFailed(_logger, _correlationId, loginResult.Error, loginResult.ErrorDescription);
                 return null;
+            }
+
+            if (loginResult.TokenResponse.DPoPNonce is null)
+            {
+                throw new OAuthException("login result has no dPoP nonce");
             }
 
             JsonWebToken accessToken = new(loginResult.AccessToken);
@@ -478,7 +476,6 @@ namespace idunno.AtProto.Authentication
                     {
                         throw new OAuthException("DescribeServer() returned no headers");
                     }
-
 
                     if (!serverDescriptionResult.Succeeded)
                     {

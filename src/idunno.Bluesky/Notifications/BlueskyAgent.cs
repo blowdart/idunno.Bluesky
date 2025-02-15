@@ -24,9 +24,9 @@ namespace idunno.Bluesky
             return await BlueskyServer.GetNotificationUnreadCount(
                 seenAt,
                 service: Service,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -75,9 +75,9 @@ namespace idunno.Bluesky
                 cursor,
                 seenAt,
                 service: Service,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken:cancellationToken).ConfigureAwait(false);
@@ -103,9 +103,9 @@ namespace idunno.Bluesky
             return await BlueskyServer.UpdateNotificationSeenAt(
                 (DateTimeOffset)seenAt,
                 service: Service,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }

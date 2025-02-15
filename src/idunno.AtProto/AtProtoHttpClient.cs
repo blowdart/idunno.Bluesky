@@ -130,8 +130,8 @@ namespace idunno.AtProto
             string endpoint,
             AtProtoCredential? credentials,
             HttpClient httpClient,
-            Action<AtProtoCredential>? onCredentialsUpdated,
-            IReadOnlyCollection<NameValueHeaderValue>? requestHeaders = null,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
+            ICollection<NameValueHeaderValue>? requestHeaders = null,
             IEnumerable<Did>? subscribedLabelers = null,
             JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
@@ -146,6 +146,7 @@ namespace idunno.AtProto
                 record: null,
                 httpMethod: HttpMethod.Get,
                 requestHeaders: requestHeaders,
+                contentHeaders: null,
                 credentials: credentials,
                 httpClient: httpClient,
                 retry: true,
@@ -281,7 +282,7 @@ namespace idunno.AtProto
             Uri service,
             string endpoint,
             TRecord? record,
-            IReadOnlyCollection<NameValueHeaderValue>? requestHeaders,
+            ICollection<NameValueHeaderValue>? requestHeaders,
             AtProtoCredential? credentials,
             HttpClient httpClient,
             Action<AtProtoCredential>? onCredentialsUpdated = null,
@@ -299,6 +300,7 @@ namespace idunno.AtProto
                 record: record,
                 httpMethod: HttpMethod.Post,
                 requestHeaders: requestHeaders,
+                contentHeaders: null,
                 credentials: credentials,
                 httpClient: httpClient,
                 retry: true,
@@ -314,7 +316,8 @@ namespace idunno.AtProto
         /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
         /// <param name="blob">The blob to send as the request body.</param>
-        /// <param name="requestHeaders">A collection of HTTP content headers to send with the request.</param>
+        /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
+        /// <param name="contentHeaders">A collection of HTTP content headers to send with the request content.</param>
         /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
@@ -327,7 +330,8 @@ namespace idunno.AtProto
             Uri service,
             string endpoint,
             byte[] blob,
-            IReadOnlyCollection<NameValueHeaderValue>? requestHeaders,
+            ICollection<NameValueHeaderValue>? requestHeaders,
+            ICollection<NameValueHeaderValue>? contentHeaders,
             AtProtoCredential credentials,
             HttpClient httpClient,
             Action<AtProtoCredential>? onCredentialsUpdated = null,
@@ -357,6 +361,7 @@ namespace idunno.AtProto
                 record: blob,
                 httpMethod: HttpMethod.Post,
                 requestHeaders: requestHeaders,
+                contentHeaders: contentHeaders,
                 credentials: credentials,
                 httpClient: httpClient,
                 retry: true,
@@ -448,6 +453,19 @@ namespace idunno.AtProto
             }
         }
 
+        private static void SetContentHeaders(
+            HttpRequestMessage httpRequestMessage,
+            ICollection<NameValueHeaderValue>? headerValues = null)
+        {
+            if (headerValues is not null && httpRequestMessage.Content is not null) 
+            {
+                foreach (NameValueHeaderValue headerValue in headerValues)
+                {
+                    httpRequestMessage.Content.Headers.TryAddWithoutValidation(headerValue.Name, headerValue.Value);
+                }
+            }
+        }
+
         private static RateLimit? ExtractRateLimit(HttpResponseHeaders responseHeaders)
         {
             if (!responseHeaders.TryGetValues("ratelimit-limit", out IEnumerable<string>? limitHeaderValues) ||
@@ -528,7 +546,8 @@ namespace idunno.AtProto
             string endpoint,
             TRecord? record,
             HttpMethod httpMethod,
-            IReadOnlyCollection<NameValueHeaderValue>? requestHeaders,
+            ICollection<NameValueHeaderValue>? requestHeaders,
+            ICollection<NameValueHeaderValue>? contentHeaders,
             AtProtoCredential? credentials,
             HttpClient httpClient,
             bool retry = false,
@@ -567,6 +586,11 @@ namespace idunno.AtProto
                             httpRequestMessage.Content = new StringContent(content, Encoding.UTF8, MediaTypeNames.Application.Json);
                             break;
                     }
+
+                    if (contentHeaders is not null)
+                    {
+                        SetContentHeaders(httpRequestMessage, contentHeaders);
+                    }
                 }
 
                 if (OnSendingRequest is not null)
@@ -604,6 +628,10 @@ namespace idunno.AtProto
                                     responseContent,
                                     jsonSerializerOptions);
                             }
+                            else
+                            {
+                                result.Result = new EmptyResponse() as TResult;
+                            }
                         }
                         else
                         {
@@ -629,6 +657,7 @@ namespace idunno.AtProto
                                         record: record,
                                         httpMethod: httpMethod,
                                         requestHeaders: requestHeaders,
+                                        contentHeaders: contentHeaders,
                                         credentials: credentials,
                                         httpClient: httpClient,
                                         retry: false,

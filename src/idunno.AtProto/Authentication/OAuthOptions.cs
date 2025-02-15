@@ -18,6 +18,23 @@ namespace idunno.AtProto.Authentication
         }
 
         /// <summary>
+        /// Creates a new instance of <see cref="OAuthOptions"/>.
+        /// </summary>
+        public OAuthOptions(string clientId, Uri? returnUri = null, IEnumerable<string>? scopes = null)
+        {
+            ClientId = clientId;
+        
+            ReturnUri = returnUri;
+
+            if (scopes is not null)
+            {
+                Scopes = scopes;
+            }
+        }
+
+
+
+        /// <summary>
         /// Check that the options are valid.
         /// </summary>
         /// <exception cref="ArgumentException">Thrown when <see cref="ClientId"/> is null or white space.</exception>

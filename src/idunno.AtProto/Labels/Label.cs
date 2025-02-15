@@ -31,6 +31,7 @@ namespace idunno.AtProto.Labels
         /// <param name="isNegationLabel">Flag indicating whether the <see cref="Label"/> is a negation label, overwriting a previous label.</param>
         /// <param name="creationTimestamp">Timestamp when the label was created.</param>
         /// <param name="signature">Signature of dag-cbor encoded label.</param>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> is null or empty.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/>, <paramref name="uri"/> or <paramref name="value"/> are null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> has a length &gt; 128 characters.</exception>
         public Label(
@@ -45,7 +46,7 @@ namespace idunno.AtProto.Labels
         {
             ArgumentNullException.ThrowIfNull(source);
             ArgumentNullException.ThrowIfNull(uri);
-            ArgumentNullException.ThrowIfNullOrEmpty(value);
+            ArgumentException.ThrowIfNullOrEmpty(value);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, 128);
 
             Version = version;

@@ -20,7 +20,7 @@ namespace idunno.Bluesky
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="onAccessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -30,7 +30,7 @@ namespace idunno.Bluesky
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
-            Action<AccessCredentials> onAccessCredentialsUpdated,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
@@ -45,7 +45,7 @@ namespace idunno.Bluesky
                 service : service,
                 accessCredentials: accessCredentials,
                 httpClient: httpClient,
-                onAccessCredentialsUpdated: onAccessCredentialsUpdated,
+                onCredentialsUpdated: onCredentialsUpdated,
                 loggerFactory: loggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }

@@ -33,9 +33,9 @@ namespace idunno.Bluesky
                 limit,
                 cursor,
                 service: Service,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -65,9 +65,9 @@ namespace idunno.Bluesky
                 limit,
                 cursor,
                 service: AuthenticatedOrUnauthenticatedServiceUri,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -94,7 +94,7 @@ namespace idunno.Bluesky
             }
 
             return await GetFollowers(
-                Session.Did,
+                Credentials.Did,
                 limit,
                 cursor,
                 subscribedLabelers: subscribedLabelers,
@@ -125,9 +125,9 @@ namespace idunno.Bluesky
                 limit,
                 cursor,
                 service: AuthenticatedOrUnauthenticatedServiceUri,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -154,7 +154,7 @@ namespace idunno.Bluesky
             }
 
             return await GetFollows(
-                Session.Did,
+                Credentials.Did,
                 limit,
                 cursor,
                 subscribedLabelers: subscribedLabelers,
@@ -190,9 +190,9 @@ namespace idunno.Bluesky
                 limit,
                 cursor,
                 service: Service,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -222,9 +222,9 @@ namespace idunno.Bluesky
                 limit,
                 cursor,
                 service: Service,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -254,9 +254,9 @@ namespace idunno.Bluesky
                 limit,
                 cursor,
                 service: Service,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -288,9 +288,9 @@ namespace idunno.Bluesky
                 limit,
                 cursor,
                 service: AuthenticatedOrUnauthenticatedServiceUri,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -321,9 +321,9 @@ namespace idunno.Bluesky
                 limit,
                 cursor,
                 service: AuthenticatedOrUnauthenticatedServiceUri,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -353,9 +353,9 @@ namespace idunno.Bluesky
                 limit,
                 cursor,
                 service: Service,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -381,9 +381,9 @@ namespace idunno.Bluesky
                 actor,
                 others,
                 service: AuthenticatedOrUnauthenticatedServiceUri,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -431,9 +431,9 @@ namespace idunno.Bluesky
             return await BlueskyServer.GetStarterPack(
                 uri,
                 service: AuthenticatedOrUnauthenticatedServiceUri,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -457,9 +457,9 @@ namespace idunno.Bluesky
             return await BlueskyServer.GetStarterPacks(
                 uris,
                 service: AuthenticatedOrUnauthenticatedServiceUri,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -483,9 +483,9 @@ namespace idunno.Bluesky
             return await BlueskyServer.GetSuggestedFollowsByActor(
                 actor,
                 service: AuthenticatedOrUnauthenticatedServiceUri,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -513,9 +513,9 @@ namespace idunno.Bluesky
             return await BlueskyServer.MuteActorList(
                 listUri,
                 service: Service,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -542,9 +542,9 @@ namespace idunno.Bluesky
             return await BlueskyServer.MuteActor(
                 actor,
                 service: Service,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -571,9 +571,9 @@ namespace idunno.Bluesky
             return await BlueskyServer.MuteThread(
                 rootUri,
                 service: Service,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -600,9 +600,9 @@ namespace idunno.Bluesky
             return await BlueskyServer.UnmuteActorList(
                 listUri,
                 service: Service,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -629,9 +629,9 @@ namespace idunno.Bluesky
             return await BlueskyServer.UnmuteActor(
                 actor,
                 service: Service,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -658,9 +658,9 @@ namespace idunno.Bluesky
             return await BlueskyServer.UnmuteThread(
                 rootUri,
                 service: Service,
-                accessCredentials: AccessCredentials,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onAccessCredentialsUpdated: OnAccessCredentialsUpdated,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }

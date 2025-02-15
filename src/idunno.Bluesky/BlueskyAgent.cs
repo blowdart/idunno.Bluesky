@@ -21,31 +21,16 @@ namespace idunno.Bluesky
         /// <summary>
         /// Creates a new instance of <see cref="BlueskyAgent"/>.
         /// </summary>
-        /// <param name="loggerFactory">The logger factory to use for logging messages, if any.</param>
-        /// <param name="proxyUri">The proxy URI to use, if any.</param>
-        /// <param name="checkCertificateRevocationList">Flag indicating whether certificate revocation lists should be checked. Defaults to <see langword="true" />.</param>
-        /// <param name="httpUserAgent">The user agent string to use, if any.</param>
-        /// <param name="timeout">The default HTTP timeout to use, if any.</param>
         /// <param name="options"><see cref="BlueskyAgentOptions"/> for the use in the creation of this instance of <see cref="BlueskyAgent"/>.</param>
         ///<remarks>
         /// <para>
-        /// Settings <paramref name="checkCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
+        /// Setting <see cref="HttpClientOptions.CheckCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
         /// false if you are using a debugging proxy which does not support CRLs.
         /// </para>
         /// </remarks>
         public BlueskyAgent(
-            ILoggerFactory? loggerFactory = default,
-            Uri? proxyUri = null,
-            bool checkCertificateRevocationList = true,
-            string? httpUserAgent = null,
-            TimeSpan? timeout = null,
             BlueskyAgentOptions ? options = null) : base (
                 DefaultServiceUris.BlueskyApiUri,
-                loggerFactory: loggerFactory,
-                proxyUri: proxyUri,
-                checkCertificateRevocationList: checkCertificateRevocationList,
-                httpUserAgent: httpUserAgent,
-                timeout: timeout,
                 options: options)
         {
             if (options is not null && options.PublicAppViewUri is not null)
@@ -62,8 +47,16 @@ namespace idunno.Bluesky
                 _facetExtractor = new DefaultFacetExtractor(ResolveHandle);
             }
 
-            loggerFactory ??= NullLoggerFactory.Instance;
-            _logger = loggerFactory.CreateLogger<BlueskyAgent>();
+            if (options is not null)
+            {
+                LoggerFactory = options.LoggerFactory ?? NullLoggerFactory.Instance;
+            }
+            else
+            {
+                LoggerFactory = NullLoggerFactory.Instance;
+            }
+
+            _logger = LoggerFactory.CreateLogger<BlueskyAgent>();
         }
 
         /// <summary>
