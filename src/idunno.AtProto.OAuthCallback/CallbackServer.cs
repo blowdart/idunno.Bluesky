@@ -18,15 +18,12 @@ namespace idunno.AtProto.OAuthCallback
     /// <summary>
     /// Implements a web server running on localhost which responds to OAuth return POSTs.
     /// </summary>
-    public class CallbackServer : IDisposable, IAsyncDisposable
+    public sealed class CallbackServer : IAsyncDisposable
     {
         private const int DefaultTimeout = 60 * 5; // 5 minutes
 
-
         private readonly ILogger<CallbackServer> _logger;
         private readonly TaskCompletionSource<string> _source = new ();
-
-        private volatile bool _isDisposed;
 
         private WebApplication? _listener;
 
@@ -85,22 +82,22 @@ namespace idunno.AtProto.OAuthCallback
         /// <summary>
         /// Gets a configured logger factory from which to create loggers.
         /// </summary>
-        protected ILoggerFactory LoggerFactory { get; init; }
+        public ILoggerFactory LoggerFactory { get; init; }
 
         /// <summary>
         /// Gets or sets any CSS rendered when a callback has happened.
         /// </summary>
-        protected string? ResponseStyleSheet { get; set; }
+        public string? ResponseStyleSheet { get; set; }
 
         /// <summary>
         /// Gets or sets the HTML rendered when a callback has happened.
         /// </summary>
-        protected string SuccessBody { get; set; }
+        public string SuccessBody { get; set; }
 
         /// <summary>
         /// Gets or sets the page title used when a callback has happened.
         /// </summary>
-        protected string? SuccessTitle { get; set; }
+        public string? SuccessTitle { get; set; }
 
         /// <summary>
         /// Gets the URI of the server.
@@ -135,22 +132,10 @@ namespace idunno.AtProto.OAuthCallback
         }
 
         /// <summary>
-        /// Releases the unmanaged resources used by the <see cref="CallbackServer"/> and optionally disposes of the managed resources.
-        /// </summary>
-        /// <param name="disposing">true to release both managed and unmanaged resources; false to releases only unmanaged resources.</param>
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!_isDisposed)
-            {
-                _isDisposed = true;
-            }
-        }
-
-        /// <summary>
         /// Releases the underlying WebApplication.
         /// </summary>
         /// <returns><see cref="ValueTask"/></returns>
-        protected virtual async ValueTask DisposeAsyncCore()
+        private async ValueTask DisposeAsyncCore()
         {
             if (_listener is not null)
             {
@@ -162,11 +147,13 @@ namespace idunno.AtProto.OAuthCallback
         }
 
         /// <summary>
-        /// Releases the resources held by this Callback object.
+        /// Disposes the Callback object and its underlying WebApplication.
         /// </summary>
-        public void Dispose()
+        /// <returns><see cref="ValueTask"/></returns>
+        public async ValueTask DisposeAsync()
         {
-            Dispose(disposing: true);
+            await DisposeAsyncCore().ConfigureAwait(false);
+
             GC.SuppressFinalize(this);
         }
 
@@ -183,18 +170,6 @@ namespace idunno.AtProto.OAuthCallback
                 listener.Stop();
                 return port;
             }
-        }
-
-        /// <summary>
-        /// Disposes the Callback object and its underlying WebApplication.
-        /// </summary>
-        /// <returns><see cref="ValueTask"/></returns>
-        public async ValueTask DisposeAsync()
-        {
-            await DisposeAsyncCore().ConfigureAwait(false);
-
-            Dispose(disposing: false);
-            GC.SuppressFinalize(this);
         }
 
         [SuppressMessage("Design", "CA1031: Do not catch general exception types", Justification = "Catch all error handling")]
