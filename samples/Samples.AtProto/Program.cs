@@ -8,9 +8,9 @@ using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
-using idunno.AtProto.Server;
 
 using Samples.Common;
+using idunno.AtProto.Server.Models;
 
 namespace Samples.AtProto
 {

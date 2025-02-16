@@ -3,7 +3,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.AtProto.Server
+namespace idunno.AtProto.Authentication
 {
     /// <summary>
     /// The hosting status of a user account.

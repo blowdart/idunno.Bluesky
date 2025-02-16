@@ -14,9 +14,8 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using IdentityModel.Client;
 using IdentityModel.OidcClient;
 using IdentityModel.OidcClient.DPoP;
-
-using idunno.AtProto.Server;
 using IdentityModel.OidcClient.Results;
+using idunno.AtProto.Server.Models;
 
 namespace idunno.AtProto.Authentication
 {

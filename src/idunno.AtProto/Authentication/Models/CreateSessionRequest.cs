@@ -3,7 +3,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.AtProto.Server.Models
+namespace idunno.AtProto.Authentication.Models
 {
     internal sealed class CreateSessionRequest
     {

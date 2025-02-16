@@ -3,7 +3,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.AtProto.Server
+namespace idunno.AtProto.Authentication.Models
 {
     internal record ServiceToken
     {

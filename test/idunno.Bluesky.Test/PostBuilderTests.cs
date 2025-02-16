@@ -61,7 +61,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void SettingALanguagesViaBuilderConstructorShouldSetPostRecordLangs()
         {
-            string[] expected = new string[] { "en-uk", "en-ie" };
+            string[] expected = ["en-uk", "en-ie"];
 
             var builder = new PostBuilder("hello", expected);
 
@@ -74,7 +74,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void SettingLanguagesViaBuilderConstructorShouldReflectInBuilderLanguageProperty()
         {
-            string[] expected = new string[] { "en-uk", "en-ie" };
+            string[] expected = ["en-uk", "en-ie"];
 
             var builder = new PostBuilder("hello", expected);
 
@@ -216,26 +216,26 @@ namespace idunno.Bluesky.Test
         {
             _ = new PostBuilder(
                 "Image Test",
-                new List<EmbeddedImage>()
-                {
+                images:
+                [
                         new (new Blob(new BlobReference("link"), "image/jpg", 1), "alt text"),
                         new (new Blob(new BlobReference("link"), "image/jpg", 1), "alt text"),
                         new (new Blob(new BlobReference("link"), "image/jpg", 1), "alt text"),
                         new (new Blob(new BlobReference("link"), "image/jpg", 1), "alt text"),
-                });
+                ]);
 
             ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>("images", () =>
             {
                 _ = new PostBuilder(
                     "Image Test",
-                    new List<EmbeddedImage>()
-                    {
+                    images:
+                    [
                         new (new Blob(new BlobReference("link"), "image/jpg", 1), "alt text"),
                         new (new Blob(new BlobReference("link"), "image/jpg", 1), "alt text"),
                         new (new Blob(new BlobReference("link"), "image/jpg", 1), "alt text"),
                         new (new Blob(new BlobReference("link"), "image/jpg", 1), "alt text"),
                         new (new Blob(new BlobReference("link"), "image/jpg", 1), "alt text")
-                    });
+                    ]);
             });
         }
     }

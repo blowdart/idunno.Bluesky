@@ -7,6 +7,7 @@ using System.Text.Json;
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Repo;
+using idunno.AtProto.Server.Models;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Video;
 
@@ -149,7 +150,7 @@ namespace idunno.Bluesky
                     throw new AuthenticationRequiredException();
                 }
 
-                AtProtoHttpResult<AtProto.Server.ServerDescription> serverDescriptionResult = await DescribeServer(Service, cancellationToken).ConfigureAwait(false);
+                AtProtoHttpResult<ServerDescription> serverDescriptionResult = await DescribeServer(Service, cancellationToken).ConfigureAwait(false);
 
                 if (serverDescriptionResult.Succeeded)
                 {

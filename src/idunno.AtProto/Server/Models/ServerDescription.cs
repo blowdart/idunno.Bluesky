@@ -3,7 +3,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.AtProto.Server
+namespace idunno.AtProto.Server.Models
 {
     /// <summary>
     /// Information about an AT Proto server
@@ -52,7 +52,7 @@ namespace idunno.AtProto.Server
         /// </summary>
         [JsonInclude]
         [JsonRequired]
-        public IReadOnlyList<string> AvailableUserDomains { get; internal set; } = new List<string>();
+        public IReadOnlyList<string> AvailableUserDomains { get; internal set; } = [];
 
         /// <summary>
         /// Gets any links the server provides with its description.

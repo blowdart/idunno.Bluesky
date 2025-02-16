@@ -57,7 +57,10 @@ namespace Samples.Timeline
             using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
 
             // Create a new BlueSkyAgent
-            using (var agent = new BlueskyAgent(proxyUri: proxyUri, checkCertificateRevocationList: checkCertificateRevocationList, loggerFactory: loggerFactory))
+            using (var agent = new BlueskyAgent(
+                new BlueskyAgentOptions(
+                    loggerFactory,
+                    httpClientOptions : new HttpClientOptions(proxyUri: proxyUri, checkCertificateRevocationList: checkCertificateRevocationList))))
             {
                 // Test code goes here.
 

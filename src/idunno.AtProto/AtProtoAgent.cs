@@ -10,12 +10,12 @@ using idunno.AtProto.Authentication;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
-using idunno.AtProto.Server;
 
 using idunno.DidPlcDirectory;
 
 using Blob = idunno.AtProto.Repo.Blob;
 using System.Net.Http.Headers;
+using idunno.AtProto.Server.Models;
 
 namespace idunno.AtProto
 {

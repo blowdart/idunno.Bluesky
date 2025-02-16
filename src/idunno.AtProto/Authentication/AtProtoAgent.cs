@@ -16,7 +16,6 @@ using Microsoft.IdentityModel.Tokens;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Authentication.Models;
 using idunno.AtProto.Events;
-using idunno.AtProto.Server.Models;
 
 
 namespace idunno.AtProto
@@ -1112,7 +1111,7 @@ namespace idunno.AtProto
                         _credentialRefreshTimer.Enabled = true;
                         _credentialRefreshTimer.Start();
 
-                        Logger.TokenRefreshTimerStarted(_logger);
+                        Logger.TokenRefreshTimerStarted(_logger, _credentialRefreshTimer.Interval);
                     }
                 }
             }

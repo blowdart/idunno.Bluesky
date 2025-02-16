@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Text.Json.Serialization;
-using idunno.AtProto.Server;
 
 namespace idunno.AtProto.Authentication.Models
 {
