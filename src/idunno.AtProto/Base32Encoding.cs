@@ -10,7 +10,7 @@ namespace idunno.AtProto
     {
         public static byte[] ToBytes(string s)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(s);
+            ArgumentException.ThrowIfNullOrEmpty(s);
 
             // remove padding characters
             s = s.TrimEnd('=');

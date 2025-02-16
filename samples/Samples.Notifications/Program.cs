@@ -9,15 +9,14 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
+using idunno.AtProto.Labels;
 using idunno.Bluesky;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Feed;
+using idunno.Bluesky.Graph;
 using idunno.Bluesky.Notifications;
 
 using Samples.Common;
-using idunno.AtProto.Labels;
-using idunno.Bluesky.Graph;
-using idunno.Bluesky.Actions;
 
 namespace Samples.Notifications
 {
@@ -33,13 +32,12 @@ namespace Samples.Notifications
             await parser.InvokeAsync(args);
 
             return 0;
-
         }
 
         static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(handle);
-            ArgumentNullException.ThrowIfNullOrEmpty(password);
+            ArgumentException.ThrowIfNullOrEmpty(handle);
+            ArgumentException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
             // proxyUri = new Uri("http://localhost:8866");
@@ -47,13 +45,30 @@ namespace Samples.Notifications
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
 
-            // Get an HttpClient configured to use a proxy, if proxyUri is not null.
-            using (HttpClient? httpClient = Helpers.CreateOptionalHttpClient(proxyUri))
+            // If a proxy is being used turn off certificate revocation checks.
+            //
+            // WARNING: this setting can introduce security vulnerabilities.
+            // The assumption in these samples is that any proxy is a debugging proxy,
+            // which tend to not support CRLs in the proxy HTTPS certificates they generate.
+            bool checkCertificateRevocationList = true;
+            if (proxyUri is not null)
+            {
+                checkCertificateRevocationList = false;
+            }
 
             // Change the log level in the ConfigureConsoleLogging() to enable logging
             using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
 
-            using (var agent = new BlueskyAgent(httpClient: httpClient, loggerFactory: loggerFactory))
+            using (var agent = new BlueskyAgent(
+                new BlueskyAgentOptions()
+                {
+                    LoggerFactory = loggerFactory,
+                    HttpClientOptions = new HttpClientOptions()
+                    {
+                        ProxyUri = proxyUri,
+                        CheckCertificateRevocationList = checkCertificateRevocationList,
+                    }
+                }))
             {
                 var loginResult = await agent.Login(handle, password, authCode, cancellationToken: cancellationToken);
                 if (!loginResult.Succeeded)
@@ -178,7 +193,7 @@ namespace Samples.Notifications
                                     {
                                         if (notification.Record is Post post)
                                         {
-                                            if (notification.Author.Did != agent.Session!.Did)
+                                            if (notification.Author.Did != agent.Did)
                                             {
                                                 Console.WriteLine($"📟 {notification.Author} mentioned you at {post.CreatedAt.ToLocalTime():G}.");
                                                 PrintLabels(notification.Author);
@@ -196,7 +211,7 @@ namespace Samples.Notifications
                                     {
                                         if (notification.Record is Post post)
                                         {
-                                            if (notification.Author.Did != agent.Session!.Did)
+                                            if (notification.Author.Did != agent.Did)
                                             {
                                                 Console.WriteLine($"🗨️ {notification.Author} quoted your post at {post.CreatedAt.ToLocalTime():G}.");
                                                 PrintLabels(notification.Author);
@@ -245,13 +260,13 @@ namespace Samples.Notifications
 
                                                 if (inReplyToFeedPost.Succeeded)
                                                 {
-                                                    if (inReplyToFeedPost.Result.Author.Did != agent.Session!.Did)
+                                                    if (inReplyToFeedPost.Result.Author.Did != agent.Credentials!.Did)
                                                     {
                                                         parentPostOwner = $"{inReplyToFeedPost.Result.Author}'s";
                                                     }
                                                 }
                                                 Console.WriteLine($"↳ {notification.Author} replied to {parentPostOwner} post at {post.CreatedAt.ToLocalTime():G}.");
-                                                if (notification.Author.Did != agent.Session!.Did)
+                                                if (notification.Author.Did != agent.Did)
                                                 {
                                                     PrintLabels(notification.Author);
                                                 }
@@ -270,7 +285,7 @@ namespace Samples.Notifications
                                             if (repostView.Succeeded)
                                             {
                                                 Console.WriteLine($"♲ {notification.Author} reposted your post at {repostView.Result.Record.CreatedAt.ToLocalTime():G}.");
-                                                if (notification.Author.Did != agent.Session!.Did)
+                                                if (notification.Author.Did != agent.Did)
                                                 {
                                                     PrintLabels(notification.Author);
                                                 }
@@ -306,7 +321,7 @@ namespace Samples.Notifications
 
                                 default:
                                     Console.WriteLine($"{notification.Author} did something unknown to trigger a notification at {notification.IndexedAt.ToLocalTime():G}.");
-                                    if (notification.Author.Did != agent.Session!.Did)
+                                    if (notification.Author.Did != agent.Did)
                                     {
                                         PrintLabels(notification.Author);
                                     }

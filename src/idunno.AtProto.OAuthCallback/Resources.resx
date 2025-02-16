@@ -1,0 +1,134 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="SuccessBody" xml:space="preserve">
+    <value>&lt;h1&gt;&lt;img src="data:image/jpeg;base64,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" width=128 height=128 alt="An outline of a butterfly, filled in purple."  aria-hidden="true" /&gt;Login completed.&lt;/h1&gt;&lt;p&gt;You may now close this window and return to your application.&lt;/p&gt;</value>
+  </data>
+  <data name="StyleSheet" xml:space="preserve">
+    <value>&lt;style&gt;
+* {font-family: "Segoe UI", SegoeUI, "Helvetica Neue", Helvetica, Arial, sans-serif;}
+html, body {background-color: #fff;}
+body {font-size: 1rem;font-weight: 400;line-height: 1.5;margin: auto;width: 50%;padding: 20px;}
+Main &gt; h1 {font-size: 3.5em;} img { float:left; padding-right: 20px;}
+&lt;/style&gt;</value>
+  </data>
+  <data name="SuccessTitle" xml:space="preserve">
+    <value>&lt;title&gt;Login completed&lt;/title&gt;</value>
+  </data>
+</root>

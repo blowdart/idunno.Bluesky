@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using idunno.AtProto;
 using idunno.Bluesky.Notifications;
 using idunno.Bluesky.Notifications.Model;
+using idunno.AtProto.Authentication;
 
 namespace idunno.Bluesky
 {
@@ -28,22 +29,24 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="seenAt">The date and time notifications were last checked.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
-        /// <param name="accessToken">The access token to use to authenticate against the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<int>> GetNotificationUnreadCount(
             DateTimeOffset? seenAt,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             string queryString = string.Empty;
@@ -56,8 +59,9 @@ namespace idunno.Bluesky
             AtProtoHttpResult<UnreadCountResponse> response = await request.Get(
                 service,
                 $"{GetUnreadEndpoint}?{queryString}",
-                accessToken,
-                httpClient,
+                credentials: accessCredentials,
+                httpClient: httpClient,
+                onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             int unreadCount = -1;
@@ -67,7 +71,12 @@ namespace idunno.Bluesky
             }
 
             // Flatten the result a little for ease of use.
-            return new(unreadCount, response.StatusCode,  response.AtErrorDetail);
+            return new(
+                unreadCount,
+                response.StatusCode,
+                response.HttpResponseHeaders,
+                response.AtErrorDetail,
+                response.RateLimit);
         }
 
         /// <summary>
@@ -77,26 +86,28 @@ namespace idunno.Bluesky
         /// <param name="cursor">An optional cursor. See https://atproto.com/specs/xrpc#cursors-and-pagination.</param>
         /// <param name="seenAt">The date and time notifications were last checked.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
-        /// <param name="accessToken">The access token to use to authenticate against the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<NotificationCollection>> ListNotifications(
             int? limit,
             string? cursor,
             DateTimeOffset? seenAt,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             if (limit is not null)
@@ -130,9 +141,10 @@ namespace idunno.Bluesky
             AtProtoHttpResult<ListNotificationsResponse> response = await request.Get(
                 service: service,
                 endpoint: $"{ListNotificationsEndpoint}?{queryString}",
-                accessToken: accessToken,
+                credentials: accessCredentials,
                 httpClient: httpClient,
-                subscribedLabelers : subscribedLabelers,
+                onCredentialsUpdated: onCredentialsUpdated,
+                subscribedLabelers: subscribedLabelers,
                 jsonSerializerOptions: null,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -142,6 +154,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<NotificationCollection>(
                     new NotificationCollection(response.Result.Notifications, response.Result.Cursor, response.Result.Priority, response.Result.SeenAt),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -150,6 +163,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<NotificationCollection>(
                     new(),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -160,22 +174,24 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="seenAt">The date and time notifications were last checked.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
-        /// <param name="accessToken">The access token to use to authenticate against the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="seenAt"/>, <paramref name="service"/>, <paramref name="accessToken"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="seenAt"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<EmptyResponse>> UpdateNotificationSeenAt(
             DateTimeOffset seenAt,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
             ArgumentNullException.ThrowIfNull(seenAt);
 
@@ -186,8 +202,9 @@ namespace idunno.Bluesky
                 service,
                 $"{UpdateSeenEndpoint}",
                 body,
-                accessToken,
-                httpClient,
+                credentials: accessCredentials,
+                httpClient: httpClient,
+                onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
     }

@@ -26,9 +26,9 @@ namespace idunno.Bluesky.Actor
         /// <param name="createdAt">The date and time the actor was created.</param>
         /// <param name="viewer">Metadata about the current user's relationship to the actor.</param>
         /// <param name="labels">Labels applied to the actor.</param>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="did"/> or <paramref name="handle"/> are null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> or <paramref name="handle"/> are null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
-        ///   Thrown if <paramref name="displayName"/> is not null and has a character length greater than 640 or a grapheme length greater than 64.
+        ///   Thrown when <paramref name="displayName"/> is not null and has a character length greater than 640 or a grapheme length greater than 64.
         /// </exception>
         [JsonConstructor]
         public ProfileView(

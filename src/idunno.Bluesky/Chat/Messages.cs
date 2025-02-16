@@ -11,7 +11,7 @@ namespace idunno.Bluesky.Chat
         /// <summary>
         /// Creates a new instance of <see cref="Messages"/> with an empty list and no cursor.
         /// </summary>
-        public Messages() : this(new List<MessageViewBase>(), null)
+        public Messages() : this([], null)
         {
         }
 

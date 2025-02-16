@@ -18,13 +18,15 @@ namespace idunno.Bluesky.Chat
         /// <param name="did">The <see cref="AtProto.Did"/> of the message author.</param>
         /// <param name="conversationId">The conversation identifier.</param>
         /// <param name="messageId">The message identifier.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null, or <paramref name="conversationId"/> or <paramref name="messageId"/> are null or whitespace.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when  <paramref name="conversationId"/> or <paramref name="messageId"/> are null or whitespace.</exception>
         [JsonConstructor]
         public MessageReference(Did did, string conversationId, string messageId)
         {
             ArgumentNullException.ThrowIfNull(did);
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(conversationId);
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(messageId);
+
+            ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
 
             Did = did;
             ConversationId = conversationId;

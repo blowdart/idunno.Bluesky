@@ -22,7 +22,7 @@ var agent = new BlueskyAgent()
     agent.SessionCreated += (sender, args) =>
     {
         Console.WriteLine("Session created");
-        // Now persist the refresh token along with the service URI and DID it belongs to somewhere secure.
+        // Now persist the refresh token and any DPoPKey and DPopNonce, along with the service URI and DID  it belongs to somewhere secure.
         // Optionally you can also persist the handle, in combination with the refresh token, service URI and DID
         // to support multiple accounts within the same application.
     };
@@ -34,7 +34,7 @@ token refresh occurs or you call `RefreshSession()`. `SessionRefreshFailed` even
 `RefreshSession()` fails. `SessionEnded` is raised when you call `Logout()`.
 
 > [!IMPORTANT]
-> In your handler for `SessionCreated` it is suggested you store the refresh token, the URI that issued it and the DID it belongs to securely,
+> In your handler for `SessionCreated` it is suggested you store the refresh token, any DPoPKey and DPopNonce, the URI that issued it and the DID it belongs to securely,
 > in whatever way is appropriate for your platform (for example the
 [Windows Credential Store](https://learn.microsoft.com/en-us/samples/microsoft/windows-universal-samples/passwordvault/),
 or the [Mac/iOS keychain](https://developer.apple.com/documentation/security/keychain-services)). If your application supports

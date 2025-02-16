@@ -15,7 +15,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actor"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
         public async Task<AtProtoHttpResult<ProfileViewDetailed>> GetProfile(
             AtIdentifier actor,
             IEnumerable<Did>? subscribedLabelers = null,
@@ -26,8 +26,9 @@ namespace idunno.Bluesky
             return await BlueskyServer.GetProfile(
                 actor,
                 AuthenticatedOrUnauthenticatedServiceUri,
-                AccessToken,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -40,8 +41,8 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="actors"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="actors"/> is an empty collection or if it contains &gt;25 handles.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actors"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="actors"/> is an empty collection or if it contains &gt;25 handles.</exception>
         public async Task<AtProtoHttpResult<IReadOnlyCollection<ProfileViewDetailed>>> GetProfiles(
             IEnumerable<AtIdentifier> actors,
             IEnumerable<Did>? subscribedLabelers = null,
@@ -60,8 +61,9 @@ namespace idunno.Bluesky
             return await BlueskyServer.GetProfiles(
                 actorList,
                 AuthenticatedOrUnauthenticatedServiceUri,
-                AccessToken,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -73,19 +75,20 @@ namespace idunno.Bluesky
         /// <param name="includeBlueskyModerationLabeler">Flag indicating whether labeler subscriptions should include the default Bluesky moderation labeler.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Preferences>> GetPreferences(bool includeBlueskyModerationLabeler = true, CancellationToken cancellationToken = default)
         {
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.GetPreferences(
                 includeBlueskyModerationLabeler,
                 Service,
-                AccessToken,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -97,7 +100,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>> GetSuggestions(
             string? cursor = null,
             IEnumerable<Did>? subscribedLabelers = null,
@@ -105,7 +108,7 @@ namespace idunno.Bluesky
         {
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await GetSuggestions(50, cursor, subscribedLabelers, cancellationToken).ConfigureAwait(false);
@@ -119,8 +122,8 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is &lt;=0 or &gt;100.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt;=0 or &gt;100.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>> GetSuggestions(
             int? limit,
             string? cursor,
@@ -129,7 +132,7 @@ namespace idunno.Bluesky
         {
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             int limitValue = limit ?? 50;
@@ -142,8 +145,9 @@ namespace idunno.Bluesky
                 limit,
                 cursor,
                 Service,
-                AccessToken,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -158,8 +162,8 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="q" /> is null or empty.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is &lt;=0 or &gt;100.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="q" /> is null or empty.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt;=0 or &gt;100.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>> SearchActors(
             string q,
             int? limit = 50,
@@ -183,8 +187,9 @@ namespace idunno.Bluesky
                 limit,
                 cursor,
                 AuthenticatedOrUnauthenticatedServiceUri,
-                AccessToken,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -198,8 +203,8 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="q" /> is null or empty.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/> is &lt;=0 or &gt;100.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="q" /> is null or empty.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt;=0 or &gt;100.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileViewBasic>>> SearchActorsTypeahead(
             string q,
             int? limit = 10,
@@ -221,8 +226,9 @@ namespace idunno.Bluesky
                 q,
                 limit,
                 AuthenticatedOrUnauthenticatedServiceUri,
-                AccessToken,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);

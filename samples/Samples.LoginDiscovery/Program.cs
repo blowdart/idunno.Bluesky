@@ -5,11 +5,11 @@ using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Help;
 using System.CommandLine.Parsing;
-using System.Net;
 
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
+
 using Samples.Common;
 
 namespace Samples.LoginDiscovery
@@ -30,7 +30,7 @@ namespace Samples.LoginDiscovery
             var handleOption = new Option<string>(
                 name: "--handle",
                 description: "The handle to use when authenticating to the PDS.",
-                getDefaultValue: () => Environment.GetEnvironmentVariable("_BlueskyUserName")!);
+                getDefaultValue: () => Environment.GetEnvironmentVariable("_BlueskyHandle")!);
 
             var passwordOption = new Option<string>(
                 name: "--password",
@@ -62,10 +62,10 @@ namespace Samples.LoginDiscovery
                 .UseHelp(ctx =>
                 {
                     ctx.HelpBuilder.CustomizeSymbol(handleOption,
-                        firstColumnText: "--userName <string>",
-                        secondColumnText: "The username to use when authenticating to Bluesky.\n" +
-                                        "If a username is not specified the username will be\n" +
-                                        "read from the _BlueskyUserName environment variable.");
+                        firstColumnText: "--handle <string>",
+                        secondColumnText: "The handle to use when authenticating to Bluesky.\n" +
+                                        "If a handle is not specified the username will be\n" +
+                                        "read from the _BlueskyHandle environment variable.");
                     ctx.HelpBuilder.CustomizeSymbol(passwordOption,
                         firstColumnText: "--password <string>",
                         secondColumnText: "The password to use when authenticating to Bluesky.\n" +
@@ -96,8 +96,8 @@ namespace Samples.LoginDiscovery
 
         static async Task<int> ResolveHandleAndLogin(bool attemptLogin, string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(handle);
-            ArgumentNullException.ThrowIfNullOrEmpty(password);
+            ArgumentException.ThrowIfNullOrEmpty(handle);
+            ArgumentException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
             // proxyUri = new Uri("http://localhost:8866");
@@ -105,14 +105,31 @@ namespace Samples.LoginDiscovery
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
 
-            // Get an HttpClient configured to use a proxy, if proxyUri is not null.
-            using (HttpClient? httpClient = Helpers.CreateOptionalHttpClient(proxyUri))
+            // If a proxy is being used turn off certificate revocation checks.
+            //
+            // WARNING: this setting can introduce security vulnerabilities.
+            // The assumption in these samples is that any proxy is a debugging proxy,
+            // which tend to not support CRLs in the proxy HTTPS certificates they generate.
+            bool checkCertificateRevocationList = true;
+            if (proxyUri is not null)
+            {
+                checkCertificateRevocationList = false;
+            }
 
             // Change the log level in the ConfigureConsoleLogging() to enable logging
             using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
 
             // The Login APIs on the BlueskyAgent do all this for you behind the scenes, this sample just shows the steps.
-            using (var agent = new AtProtoAgent(new Uri("https://bsky.social"), httpClient: httpClient, loggerFactory : loggerFactory))
+            using (var agent = new AtProtoAgent(new Uri("https://bsky.social"),
+                    new AtProtoAgentOptions()
+                    {
+                        LoggerFactory = loggerFactory,
+                        HttpClientOptions = new HttpClientOptions()
+                        {
+                            ProxyUri = proxyUri,
+                            CheckCertificateRevocationList = checkCertificateRevocationList,
+                        }
+                    }))
             {
                 var did = await agent.ResolveHandle(handle, CancellationToken.None);
 
@@ -177,13 +194,13 @@ namespace Samples.LoginDiscovery
                         }
                     }
 
-                    if (agent.Session is null)
+                    if (agent.Credentials is null)
                     {
-                        Console.WriteLine("Login worked, but a session could not be created.");
+                        Console.WriteLine("Login worked, but a credentials ended up as null.");
                         return 4;
                     }
 
-                    Console.WriteLine($"Login successful, ended up on {agent.Session.Service}.");
+                    Console.WriteLine($"Login successful, ended up on {agent.Credentials.Service}.");
 
                     await agent.Logout(cancellationToken: cancellationToken);
                 }

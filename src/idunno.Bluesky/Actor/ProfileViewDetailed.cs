@@ -37,9 +37,9 @@ namespace idunno.Bluesky.Actor
         /// <param name="postsCount">The number of posts the actor has made.</param>
         /// <param name="joinedViaStarterPack">A view over the start pack the user joined using, if any.</param>
         /// <param name="pinnedPost">A <see cref="StrongReference"/> to the actor's pinned post, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="did"/> or <paramref name="handle"/> are null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> or <paramref name="handle"/> are null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
-        ///   Thrown if <paramref name="displayName"/> is not null and has a character length greater than 640 or a grapheme length greater than 64.
+        ///   Thrown when <paramref name="displayName"/> is not null and has a character length greater than 640 or a grapheme length greater than 64.
         /// </exception>
         [JsonConstructor]
         public ProfileViewDetailed(

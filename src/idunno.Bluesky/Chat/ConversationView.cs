@@ -22,8 +22,9 @@ namespace idunno.Bluesky.Chat
         /// <param name="muted">A flag indicating whether the conversation is muted.</param>
         /// <param name="opened">A flag indicating whether the conversation has been opened.</param>
         /// <param name="unreadCount">A count of the number of unread messages in the conversation.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="id"/>, <paramref name="revision"/> or <paramref name="members"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="members"/> is empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="id"/>, <paramref name="revision"/> is null or whitespace.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="members"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="members"/> is empty.</exception>
         public ConversationView(
             string id,
             string revision,
@@ -33,9 +34,11 @@ namespace idunno.Bluesky.Chat
             bool opened,
             long unreadCount)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(id);
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(revision);
+            ArgumentException.ThrowIfNullOrWhiteSpace(id);
+            ArgumentException.ThrowIfNullOrWhiteSpace(revision);
+
             ArgumentNullException.ThrowIfNull(members);
+
             ArgumentOutOfRangeException.ThrowIfZero(members.Count);
 
             Id = id;

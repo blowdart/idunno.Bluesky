@@ -3,9 +3,12 @@
 
 using System.Globalization;
 using System.Text;
+
+using Microsoft.Extensions.Logging;
+
+using idunno.AtProto.Authentication;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Models;
-using Microsoft.Extensions.Logging;
 
 namespace idunno.AtProto
 {
@@ -22,12 +25,13 @@ namespace idunno.AtProto
         /// <param name="limit">Number of results to return. Should be between 1 and 250.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
         /// <param name="service">The service to create fine the labels on.</param>
-        /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">Optional access credentials to use to authenticate against the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="uriPatterns" /> is null</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uriPatterns" /> is null</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown <paramref name="uriPatterns"/> is empty or if <paramref name="limit"/> is &lt;1 or &gt;250.</exception>
         public static async Task<AtProtoHttpResult<PagedReadOnlyCollection<Label>>> QueryLabels(
             IEnumerable<string> uriPatterns,
@@ -35,8 +39,9 @@ namespace idunno.AtProto
             int? limit,
             string? cursor,
             Uri service,
-            string? accessToken,
+            AccessCredentials? accessCredentials,
             HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
@@ -53,7 +58,7 @@ namespace idunno.AtProto
                 throw new ArgumentOutOfRangeException(nameof(limit), "{limit} must be between 1 and 250.");
             }
 
-            List<Did> sourcesList = new();
+            List<Did> sourcesList = [];
             if (sources is not null)
             {
                 sourcesList.AddRange(sources);
@@ -79,19 +84,28 @@ namespace idunno.AtProto
             AtProtoHttpResult<QueryLabelsResponse> response = await request.Get(
                 service,
                 $"{QueryLabelsEndpoint}{queryStringBuilder}",
-                accessToken,
+                accessCredentials,
                 httpClient,
-                cancellationToken: cancellationToken
-                ).ConfigureAwait(false);
+                onCredentialsUpdated: onCredentialsUpdated,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)
             {
                 return new AtProtoHttpResult<PagedReadOnlyCollection<Label>>(
-                    new PagedReadOnlyCollection<Label>(response.Result.Labels, cursor), response.StatusCode, response.AtErrorDetail, response.RateLimit);
+                    new PagedReadOnlyCollection<Label>(response.Result.Labels, cursor),
+                    response.StatusCode,
+                    response.HttpResponseHeaders,
+                    response.AtErrorDetail,
+                    response.RateLimit);
             }
             else
             {
-                return new AtProtoHttpResult<PagedReadOnlyCollection<Label>>(null, response.StatusCode, response.AtErrorDetail, response.RateLimit);
+                return new AtProtoHttpResult<PagedReadOnlyCollection<Label>>(
+                    null,
+                    response.StatusCode,
+                    response.HttpResponseHeaders,
+                    response.AtErrorDetail,
+                    response.RateLimit);
             }
         }
     }

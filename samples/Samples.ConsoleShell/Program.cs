@@ -3,13 +3,13 @@
 
 using System.CommandLine;
 using System.CommandLine.Parsing;
+using System.Diagnostics;
 
 using Microsoft.Extensions.Logging;
 
 using idunno.Bluesky;
 
 using Samples.Common;
-using idunno.Bluesky.Feed.Gates;
 using idunno.AtProto;
 
 namespace Samples.ConsoleShell
@@ -29,8 +29,8 @@ namespace Samples.ConsoleShell
 
         static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(handle);
-            ArgumentNullException.ThrowIfNullOrEmpty(password);
+            ArgumentException.ThrowIfNullOrEmpty(handle);
+            ArgumentException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
             // proxyUri = new Uri("http://localhost:8866");
@@ -38,14 +38,32 @@ namespace Samples.ConsoleShell
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
 
-            // Get an HttpClient configured to use a proxy, if proxyUri is not null.
-            using (HttpClient? httpClient = Helpers.CreateOptionalHttpClient(proxyUri))
+            // If a proxy is being used turn off certificate revocation checks.
+            //
+            // WARNING: this setting can introduce security vulnerabilities.
+            // The assumption in these samples is that any proxy is a debugging proxy,
+            // which tend to not support CRLs in the proxy HTTPS certificates they generate.
+            bool checkCertificateRevocationList = true;
+            if (proxyUri is not null)
+            {
+                checkCertificateRevocationList = false;
+            }
 
             // Change the log level in the ConfigureConsoleLogging() to enable logging
             using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
 
             // Create a new BlueSkyAgent
-            using (var agent = new BlueskyAgent(httpClient: httpClient, loggerFactory: loggerFactory))
+            using (var agent = new BlueskyAgent(
+                options: new BlueskyAgentOptions()
+                {
+                    LoggerFactory = loggerFactory,
+
+                    HttpClientOptions = new HttpClientOptions()
+                    {
+                        CheckCertificateRevocationList = checkCertificateRevocationList,
+                        ProxyUri = proxyUri
+                    },
+                }))
             {
                 // Test code goes here.
 
@@ -86,6 +104,8 @@ namespace Samples.ConsoleShell
                     }
                 }
                 // END-AUTHENTICATION
+
+                Debugger.Break();
 
             }
             return;

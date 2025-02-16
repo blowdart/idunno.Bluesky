@@ -26,7 +26,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentOutOfRangeException">
         ///   Thrown when <paramref name="rules"/> or <paramref name="hiddenReplies"/> have more than the maximum number of entries.
         /// </exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is unauthenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> AddThreadGate(
             AtUri post,
             ICollection<ThreadGateRule>? rules = null,
@@ -37,7 +37,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             if (post.Repo is null)
@@ -77,7 +77,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="threadGate"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is unauthenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> AddThreadGate(
             ThreadGate threadGate,
             CancellationToken cancellationToken = default)
@@ -86,7 +86,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             if (!await IsRecordOwnedBy(threadGate.Post, Did, cancellationToken: cancellationToken).ConfigureAwait(false))
@@ -97,7 +97,6 @@ namespace idunno.Bluesky
             return await CreateRecord(
                 record: threadGate,
                 collection: CollectionNsid.ThreadGate,
-                Did,
                 rkey: threadGate.Post.RecordKey,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -110,7 +109,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is unauthenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteThreadGate(
             AtUri post,
             CancellationToken cancellationToken = default)
@@ -119,7 +118,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             if (post.RecordKey is null)
@@ -153,7 +152,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentException">
         ///     Thrown when the <paramref name="threadGate"/>'s RecordKey is null, or it does not point to a Post record or it does not belong to the current user.
         /// </exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is unauthenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<PutRecordResponse>> UpdateThreadGate(
             ThreadGate threadGate,
             CancellationToken cancellationToken = default)
@@ -162,7 +161,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             if (threadGate.Post.RecordKey is null)
@@ -196,7 +195,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is unauthenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<ThreadGate>> GetThreadGate(
             AtUri post,
             CancellationToken cancellationToken = default)
@@ -205,7 +204,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             if (post.RecordKey is null)
@@ -231,6 +230,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ThreadGate>(
                     recordResponse.Result.Value,
                     recordResponse.StatusCode,
+                    recordResponse.HttpResponseHeaders,
                     recordResponse.AtErrorDetail,
                     recordResponse.RateLimit);
             }
@@ -239,6 +239,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ThreadGate>(
                     null,
                     recordResponse.StatusCode,
+                    recordResponse.HttpResponseHeaders,
                     recordResponse.AtErrorDetail,
                     recordResponse.RateLimit);
             }
@@ -257,7 +258,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentOutOfRangeException">
         ///   Thrown when <paramref name="rules"/> is empty or has larger than the maximum number of rules allowed, or
         ///   when <paramref name="detachedEmbeddingUris"/> has larger than the number of uris allowed.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is unauthenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> AddPostGate(
             AtUri post,
             ICollection<PostGateRule>? rules = null,
@@ -268,7 +269,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             if (!await IsRecordOwnedBy(post, Did, cancellationToken: cancellationToken).ConfigureAwait(false))
@@ -301,7 +302,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="postGate"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is unauthenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> AddPostGate(
             PostGate postGate,
             CancellationToken cancellationToken = default)
@@ -310,13 +311,12 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await CreateRecord(
                 record: postGate,
                 collection: CollectionNsid.PostGate,
-                Did,
                 rkey: postGate.Post.RecordKey,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -329,7 +329,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is unauthenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeletePostGate(
             AtUri post,
             CancellationToken cancellationToken = default)
@@ -348,7 +348,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             if (!await IsRecordOwnedBy(post, Did, cancellationToken: cancellationToken).ConfigureAwait(false))
@@ -370,7 +370,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is unauthenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<PostGate>> GetPostGate(
             AtUri post,
             CancellationToken cancellationToken = default)
@@ -379,7 +379,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             if (post.RecordKey is null)
@@ -405,6 +405,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PostGate>(
                     recordResponse.Result.Value,
                     recordResponse.StatusCode,
+                    recordResponse.HttpResponseHeaders,
                     recordResponse.AtErrorDetail,
                     recordResponse.RateLimit);
             }
@@ -413,6 +414,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<PostGate>(
                     null,
                     recordResponse.StatusCode,
+                    recordResponse.HttpResponseHeaders,
                     recordResponse.AtErrorDetail,
                     recordResponse.RateLimit);
             }
@@ -428,7 +430,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentException">
         ///     Thrown when the <paramref name="postGate"/>'s RecordKey is null, or it does not point to a Post record or it does not belong to the current user.
         /// </exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown when the current session is unauthenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<PutRecordResponse>> UpdatePostGate(
             PostGate postGate,
             CancellationToken cancellationToken = default)
@@ -437,7 +439,7 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             if (postGate.Post.RecordKey is null)

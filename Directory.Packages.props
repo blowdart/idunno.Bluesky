@@ -22,5 +22,10 @@
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="JunitXml.TestLogger" Version="5.0.0" />
     <PackageVersion Include="OpenGraph-Net" Version="4.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="8.0.1" />
+    <PackageVersion Include="IdentityModel.OidcClient" Version="6.0.0" />
+    <PackageVersion Include="IdentityModel.OidcClient.DPoP" Version="6.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="8.0.12" />
   </ItemGroup>
 </Project>

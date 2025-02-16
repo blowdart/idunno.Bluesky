@@ -35,22 +35,19 @@ The [API status page](https://bluesky.idunno.dev/docs/endpointStatus.html) shows
 
 ![Build Status](https://github.com/blowdart/idunno.Bluesky/actions/workflows/ci-build.yml/badge.svg?branch=main)
 
-![Test Results](https://camo.githubusercontent.com/093a129b50ddc14f2e036c983168963591aa1d67eed31f2ae6e364f012f7dc97/68747470733a2f2f7376672e746573742d73756d6d6172792e636f6d2f64617368626f6172642e7376673f703d36343526663d3026733d30)
-
 ## Release History
 
 The [releases page](https://github.com/blowdart/idunno.Bluesky/releases) provides details of each release and what was added, changed or removed.
 
 ## License
 
-`idunno.Bluesky` and `idunno.AtProto` are available under the MIT license, see the [LICENSE](LICENSE) file for more information.
+`idunno.Bluesky`, `idunno.AtProto` and `idunno.AtProto.OAuthCallBack` are available under the MIT license, see the [LICENSE](LICENSE) file for more information.
 
 ## Planned work
 
 ### Major
 
 * Logging in idunno.Bluesky
-* OAuth
 * GIF attaching
 * AOT & trimming support
 * Firehose support
@@ -70,6 +67,7 @@ first property in the JSON object.
 
 * [Microsoft.Extensions.Logging](https://learn.microsoft.com/en-us/dotnet/core/extensions/logging) - used to provide log messages.
 * [Microsoft.IdentityModel.Tokens](https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet) - used to extract the expiry date and time of the JWT tokens issued by Bluesky.
+* [IdentityModel.OidcClient](https://github.com/IdentityModel/IdentityModel.OidcClient) - used to do the OAuth heavy lifting.
 * [DnsClient](https://dnsclient.michaco.net/) - used in Handle to DID resolution.
 
 ### External analyzers used during builds
@@ -91,3 +89,4 @@ first property in the JSON object.
 * [FishyFlip](https://github.com/drasticactions/FishyFlip)
 * [X.Bluesky](https://github.com/a-gubskiy/X.Bluesky)
 * [atprotosharp](https://github.com/taranasus/atprotosharp)
+* [atompds](https://github.com/PassiveModding/atompds) - an implementation of an AtProto Personal Data Server in C#

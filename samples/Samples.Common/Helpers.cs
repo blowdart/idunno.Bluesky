@@ -6,9 +6,7 @@ using System.CommandLine.Builder;
 using System.CommandLine.Help;
 using System.CommandLine.Parsing;
 
-using idunno.AtProto;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
 
 namespace Samples.Common
 {
@@ -108,23 +106,6 @@ namespace Samples.Common
                 });
                 configure.SetMinimumLevel((LogLevel)level);
             });
-        }
-
-        /// <summary>
-        /// Creates an <see cref="HttpClient"/> if <paramref name="proxyUri"/> is not null.
-        /// </summary>
-        /// <param name="proxyUri">An optional proxy <see cref="Uri"/></param>
-        /// <returns>An <see cref="HttpClient"/> if <paramref name="proxyUri"/> is not null, otherwise null.</returns>
-        public static HttpClient? CreateOptionalHttpClient(Uri? proxyUri)
-        {
-            if (proxyUri is not null)
-            {
-                return Agent.CreateConfiguredHttpClient(proxyUri);
-            }
-            else
-            {
-                return null;
-            }
         }
     }
 }

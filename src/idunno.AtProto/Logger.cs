@@ -2,8 +2,10 @@
 // Licensed under the MIT License.
 
 using System.Net;
-using idunno.AtProto.Repo;
+
 using Microsoft.Extensions.Logging;
+
+using idunno.AtProto.Repo;
 
 namespace idunno.AtProto
 {
@@ -25,12 +27,27 @@ namespace idunno.AtProto
         [LoggerMessage(5, LogLevel.Debug, "CreateSession for {loginIdentifier} created session #{sessionIdentifier} on {service}")]
         internal static partial void SessionCreated(ILogger logger, string loginIdentifier, Guid sessionIdentifier, Uri service);
 
+        [LoggerMessage(6, LogLevel.Debug, "CreateSession with GetSession succeeded with access token for {did} on {service}")]
+        internal static partial void SessionCreatedFromOAuthLogin(ILogger logger, string did, Uri service);
+
+        [LoggerMessage(7, LogLevel.Error, "CreateSession with GetSession failed with access token for {did} on {service}, {statusCode} {error} {message}")]
+        internal static partial void SessionCreatedFromOAuthLoginFailed(ILogger logger, string did, Uri service, HttpStatusCode statusCode, string? error, string? message);
+
+        [LoggerMessage(8, LogLevel.Debug, "Login() called with OAuthCredentials for {did} on {service}.")]
+        internal static partial void AgentAuthenticatedWithOAuthCredentials(ILogger logger, string did, Uri service);
+
+        [LoggerMessage(9, LogLevel.Debug, "Login() called with DPoP bound OAuthCredentials for {did} on {service}.")]
+        internal static partial void AgentAuthenticatedWithDPoPOAuthCredentials(ILogger logger, string did, Uri service);
+
         // Delete session logging
         [LoggerMessage(10, LogLevel.Debug, "Logout called for {did} on {service}")]
         internal static partial void LogoutCalled(ILogger logger, Did? did, Uri service);
 
         [LoggerMessage(11, LogLevel.Debug, "Logout API returned {statusCode} for {did} on {service}")]
         internal static partial void LogoutFailed(ILogger logger, Did? did, Uri service, HttpStatusCode statusCode);
+
+        [LoggerMessage(12, LogLevel.Debug, "OAuth revoke returned {statusCode} for {tokenType} belonging to {did} on {service}")]
+        internal static partial void RevokeFailed(ILogger logger, Did? did, Uri service, HttpStatusCode statusCode, string tokenType);
 
         // Token refresh logging
         [LoggerMessage(20, LogLevel.Debug, "Token refresh timer started, will raise refresh event in {interval} milliseconds")]
@@ -65,20 +82,31 @@ namespace idunno.AtProto
         internal static partial void RestoreSessionSucceeded(ILogger logger, Did did, Uri service);
 
         // Refresh Session logging
-        [LoggerMessage(40, LogLevel.Debug, "RefreshSession called for {did} on {service}")]
-        internal static partial void RefreshSessionCalled(ILogger logger, Did did, Uri service);
+        [LoggerMessage(40, LogLevel.Debug, "RefreshSessionIssuedCredentials called on {service} with token #{tokenHash}")]
+        internal static partial void RefreshSessionIssuedCredentialsCalled(ILogger logger, Uri service, string tokenHash);
 
-        [LoggerMessage(41, LogLevel.Error, "RefreshSession called on {service} without an authenticated session")]
-        internal static partial void RefreshSessionFailedNoSession(ILogger logger, Uri service);
+        [LoggerMessage(41, LogLevel.Error, "RefreshCredentials called without an authenticated session")]
+        internal static partial void RefreshCredentialsFailedNoSession(ILogger logger);
 
-        [LoggerMessage(42, LogLevel.Error, "RefreshSession API failed for {did} on {service} with {statusCode}")]
-        internal static partial void RefreshSessionApiCallFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode);
+        [LoggerMessage(42, LogLevel.Error, "RefreshSession API failed for #{tokenHash} on {service} with {statusCode}")]
+        internal static partial void RefreshSessionApiCallFailed(ILogger logger, Uri service, string tokenHash, HttpStatusCode statusCode);
 
-        [LoggerMessage(43, LogLevel.Error, "RefreshSession token validation failed for {did} on {service}")]
-        internal static partial void RefreshSessionTokenValidationFailed(ILogger logger, Did did, Uri service);
+        [LoggerMessage(43, LogLevel.Error, "RefreshSessionIssuedCredentials token validation failed for {did} on {service}")]
+        internal static partial void RefreshSessionIssuedCredentialsTokenValidationFailed(ILogger logger, Did did, Uri service);
 
-        [LoggerMessage(44, LogLevel.Debug, "RefreshSession succeeded for {did} on {service}")]
-        internal static partial void RefreshSessionSucceeded(ILogger logger, Did did, Uri service);
+        [LoggerMessage(44, LogLevel.Debug, "RefreshSessionIssuedCredentials succeeded for {did} on {service}")]
+        internal static partial void RefreshSessionIssuedCredentialsSucceeded(ILogger logger, Did did, Uri service);
+
+        // Refresh OAuth Issued Token logging
+
+        [LoggerMessage(45, LogLevel.Debug, "RefreshOAuthIssuedCredentials called on {service} with token #{tokenHash}")]
+        internal static partial void RefreshOAuthIssuedCredentialsCalled(ILogger logger, Uri service, string tokenHash);
+
+        [LoggerMessage(46, LogLevel.Error, "RefreshSessionIssuedCredentials token validation failed for {did} on {service}")]
+        internal static partial void RefreshOAuthIssuedCredentialsTokenValidationFailed(ILogger logger, Did did, Uri service);
+
+        [LoggerMessage(47, LogLevel.Debug, "RefreshSessionIssuedCredentials succeeded for {did} on {service}")]
+        internal static partial void RefreshOAuthIssuedCredentialsSucceeded(ILogger logger, Did did, Uri service);
 
         // Resolution methods logging
         [LoggerMessage(50, LogLevel.Debug, "ResolveHandle called for {handle}")]
@@ -160,12 +188,6 @@ namespace idunno.AtProto
         [LoggerMessage(132, LogLevel.Error, "UploadBlob to {service} threw.")]
         internal static partial void UploadBlobThrewHttpRequestException(ILogger logger, Uri service, Exception ex);
 
-        [LoggerMessage(140, LogLevel.Information, "SetTokens called for {did} on {service}")]
-        internal static partial void UpdateTokensCalled(ILogger logger, Did did, Uri service);
-
-        [LoggerMessage(141, LogLevel.Error, "SetTokens for {did} on {service} was passed invalid tokens")]
-        internal static partial void UpdateTokensGivenInvalidTokens(ILogger logger, Did did, Uri service);
-
         [LoggerMessage(150, LogLevel.Debug, "ApplyWrites succeeded, commit id {cid}, revision {revision}  on {service}")]
         internal static partial void ApplyWritesSucceeded(ILogger logger, Cid cid, string revision, Uri service);
 
@@ -194,11 +216,14 @@ namespace idunno.AtProto
         [LoggerMessage(200, LogLevel.Debug, "{method} request to {requestUri} succeeded.")]
         internal static partial void AtProtoClientRequestSucceeded(ILogger logger, Uri requestUri, HttpMethod method);
 
-        [LoggerMessage(201, LogLevel.Error, "{Method} request to {requestUri} failed with status code {status}, \"{error}\" \"{message}\"")]
+        [LoggerMessage(201, LogLevel.Error, "{method} request to {requestUri} failed with status code {status}, \"{error}\" \"{message}\"")]
         internal static partial void AtProtoClientRequestFailed(ILogger logger, Uri requestUri, HttpMethod method, HttpStatusCode status, string? error, string? message);
 
         [LoggerMessage(202, LogLevel.Debug, "{method} request to {requestUri} cancelled.")]
         internal static partial void AtProtoClientRequestCancelled(ILogger logger, Uri requestUri, HttpMethod method);
+
+        [LoggerMessage(203, LogLevel.Debug, "DPoP nonce changed on {method} call to {requestUri}")]
+        internal static partial void AtProtoClientDetectedDPoPNonceChanged(ILogger logger, Uri requestUri, HttpMethod method);
 
         // Service Auth logging
         [LoggerMessage(250, LogLevel.Debug, "Requesting {lxm} service token from {endpoint} for {audience} with a validity of {expires}")]
@@ -212,6 +237,12 @@ namespace idunno.AtProto
 
         [LoggerMessage(260, LogLevel.Error, "Service token acquisition failed for user {user}, for {audience}/{lxm} from {endpoint} with status code {status}, \"{error}\" \"{message}\" ")]
         internal static partial void ServiceAuthTokenAcquisitionFailed(ILogger logger, Uri endpoint, Did user, Did audience, Nsid lxm, HttpStatusCode status, string? error, string? message);
+
+        [LoggerMessage(300, LogLevel.Debug, "Agent credentials updated via OnCredentialsUpdatedCallBack().")]
+        internal static partial void OnCredentialUpdatedCallbackCalled(ILogger logger);
+
+        [LoggerMessage(301, LogLevel.Error, "Agent credentials update via OnCredentialsUpdatedCallBack() ignored, unexpected credentials type.")]
+        internal static partial void OnCredentialUpdatedCallbackCalledWithUnexpectedCredentialType(ILogger logger);
 
         // AtProtoServer logging
 
@@ -237,6 +268,36 @@ namespace idunno.AtProto
         [LoggerMessage(506, LogLevel.Error, "HTTP request for {handle} to {Uri} failed with HTTP status code of {statusCode}")]
         internal static partial void HttpHandleResolutionRequestFailed(ILogger logger, Handle handle, Uri uri, HttpStatusCode statusCode);
 
+        // AtProtoServer auth logging
+        [LoggerMessage(600, LogLevel.Debug, "Generated oauth login {loginUri} for {authority}, correlation {correlation}")]
+        internal static partial void OAuthLoginUriGenerated(ILogger logger, Uri authority, Uri loginUri, Guid correlation);
+
+        [LoggerMessage(601, LogLevel.Debug, "OAuth login completed, correlation {correlation}")]
+        internal static partial void OAuthLoginCompleted(ILogger logger, Guid correlation);
+
+        [LoggerMessage(602, LogLevel.Error, "OAuth login processing failed {error} {errorDescription}, correlation {correlation}")]
+        internal static partial void OAuthLoginFailed(ILogger logger, Guid correlation, string? error, string? errorDescription);
+
+        [LoggerMessage(603, LogLevel.Error, "DPoP header is already present on request to {host}/{path}")]
+        internal static partial void DPoPHeaderAlreadyPresent(ILogger logger, string? host, string? path);
+
+        [LoggerMessage(604, LogLevel.Information, "DPoP header added to request to {host}/{path}")]
+        internal static partial void DPoPHeaderAddedToTokenRequest(ILogger logger, string? host, string? path);
+
+        [LoggerMessage(605, LogLevel.Error, "OAuth login access token did not contain AtProto in scope, correlation {correlation}")]
+        internal static partial void OAuthTokenDoesNotContainAtProtoScope(ILogger logger, Guid correlation);
+
+        [LoggerMessage(606, LogLevel.Error, "OAuth login access token issuer {actual} did not match the expected {expected}, correlation {correlation}")]
+        internal static partial void OAuthTokenHasMismatchedAuthority(ILogger logger, Uri expected, Uri actual, Guid correlation);
+
+        [LoggerMessage(610, LogLevel.Debug, "OAuthClient refresh called for token issued by {service} against authority {authority}")]
+        internal static partial void OAuthClientRefreshCalled(ILogger logger, Uri service, Uri authority);
+
+        [LoggerMessage(611, LogLevel.Error, "OAuthClient refresh failed with {error} {errorDescription}")]
+        internal static partial void OAuthClientRefreshFailedByAuthority (ILogger logger, string error, string errorDescription);
+
+        [LoggerMessage(612, LogLevel.Debug, "OAuthClient refresh succeeded, token issued by authority {authority}")]
+        internal static partial void OAuthClientRefreshSucceeded(ILogger logger, Uri authority);
 
         // Agent flow logging
         [LoggerMessage(750, LogLevel.Debug, "Agent disposing")]

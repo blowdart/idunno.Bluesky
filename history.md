@@ -1,5 +1,66 @@
 # idunno.Bluesky Version History
 
+## 0.3.0
+
+### Features
+
+#### idunno.AtProto
+
+* OAuth support
+
+### Breaking Changes
+
+* Agent constructors no longer take parameters directly. Use the appropriate options class instead.
+
+  For example
+
+  ```c#
+  using (var agent = new BlueskyAgent(
+    proxyUri: proxyUri,
+    checkCertificateRevocationList: checkCertificateRevocationList,
+    loggerFactory: loggerFactory))
+  ```
+
+  becomes
+
+  ```c#
+  using (var agent = new BlueskyAgent(
+    new BlueskyAgentOptions()
+    {
+      LoggerFactory = loggerFactory,
+
+      HttpClientOptions = new HttpClientOptions()
+      {
+        CheckCertificateRevocationList = checkCertificateRevocationList,
+        ProxyUri = proxyUri
+      }
+    }))
+  ```
+
+* Authentication has be reworked to support OAuth.
+  * `agent.Login(Credentials)` has been removed.
+     Use `agent.Login(Login(string identifier, string password, string? authFactorToken = null)` instead.
+
+* The `Session` property on an agent has been removed.
+
+  `Credentials` can be accessed by the `Credentials` property.
+
+  The DID for the authenticated user, if any, can be accessed by the `Did` property.
+
+* The agent events for changes in session state have been replaced with events for changes in authentication state.
+
+  The `SessionChanged` event has been removed, replaced by the `Authenicated` event.
+
+  The `SessionEnded` event has been removed, replaced by the `Unauthenticated` events.
+
+  Event arguments have changed to support OAuth credentials. If you are saving authentication state please see the AgentEvents sample for details.
+
+* `RefreshToken()` has been removed, to manually refresh the agent credentials use `agent.RefreshCredentials()`.
+
+#### idunno.AtProto.OAuthCallback
+
+* Local HTTP server for testing OAuth authentication.
+
 ## 0.2.1
 
 ### Features

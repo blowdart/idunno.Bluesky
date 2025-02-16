@@ -35,7 +35,9 @@ If we take an `AT URI` for example, `at://sinclairinat0r.com/app.bsky.feed.post/
 * A collection of `app.bsky.feed.post`, the NSID of the collection the record is in. In this case it's in my post repository, which contains all my posts.
 * A record key of `3jwdwj2ctlk26`, a key to an individual post in the record collection.
 
+<!-- markdown-link-check-disable -->
 [Tom Sherman](https://bsky.app/profile/tom.frontpage.team) has written an [AT URI](https://atproto-browser.vercel.app/) browser, where you can retrieve the [record](https://atproto-browser.vercel.app/at/did:plc:qkulxlxgznoyw4vdy7nu2mof/app.bsky.feed.post/3l5ptjwzotx2h) referred to in an AT URI and see their structure.
+<!-- markdown-link-check-enable -->
 
 ## <a name="actorsHandlesDids">Actors, handles and DIDs</a>
 

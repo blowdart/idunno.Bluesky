@@ -31,6 +31,7 @@ atprotosharp
 xunit
 oauth
 openid
+oidc
 cbor
 curatelist
 modlist
@@ -43,3 +44,4 @@ ratelimit
 fullsize
 nuget
 Pexels
+dpop

@@ -72,6 +72,10 @@ namespace idunno.Bluesky.Video
                 {
                     return JobState.Failed;
                 }
+                else if (string.Equals(StateAsString, "JOB_STATE_CREATED", StringComparison.Ordinal))
+                {
+                    return JobState.Created;
+                }
                 else
                 {
                     return JobState.InProgress;
@@ -115,6 +119,11 @@ namespace idunno.Bluesky.Video
     /// </summary>
     public enum JobState
     {
+        /// <summary>
+        /// The video processing job was created
+        /// </summary>
+        Created,
+
         /// <summary>
         /// The video upload is in progress.
         /// </summary>

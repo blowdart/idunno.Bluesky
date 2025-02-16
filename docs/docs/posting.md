@@ -423,7 +423,7 @@ if (graph.Url is not null)
     pageUri = graph.Url;
 }
 ```
-The example in the [Embedded Card](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.EmbeddedCard) sample shows how to use
+The [Embedded Card sample](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.EmbeddedCard) shows how to use
 OpenGraph.Net to extract the metadata, and to retrieve a preview image and use it, if the metadata has an image property.
 
 Posts with an embedded card don't need any post text.

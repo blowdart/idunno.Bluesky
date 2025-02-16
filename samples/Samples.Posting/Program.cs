@@ -8,13 +8,13 @@ using System.Reflection;
 
 using Microsoft.Extensions.Logging;
 
-using Samples.Common;
-
 using idunno.AtProto;
 using idunno.AtProto.Repo;
 using idunno.Bluesky;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.RichText;
+
+using Samples.Common;
 
 namespace Samples.Posting
 {
@@ -33,8 +33,8 @@ namespace Samples.Posting
 
         static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(handle);
-            ArgumentNullException.ThrowIfNullOrEmpty(password);
+            ArgumentException.ThrowIfNullOrEmpty(handle);
+            ArgumentException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
             // proxyUri = new Uri("http://localhost:8866");
@@ -42,14 +42,32 @@ namespace Samples.Posting
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
 
-            // Get an HttpClient configured to use a proxy, if proxyUri is not null.
-            using (HttpClient? httpClient = Helpers.CreateOptionalHttpClient(proxyUri))
+            // If a proxy is being used turn off certificate revocation checks.
+            //
+            // WARNING: this setting can introduce security vulnerabilities.
+            // The assumption in these samples is that any proxy is a debugging proxy,
+            // which tend to not support CRLs in the proxy HTTPS certificates they generate.
+            bool checkCertificateRevocationList = true;
+            if (proxyUri is not null)
+            {
+                checkCertificateRevocationList = false;
+            }
 
             // Change the log level in the ConfigureConsoleLogging() to enable logging
             using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
 
             // Create a new BlueSkyAgent
-            using (var agent = new BlueskyAgent(httpClient: httpClient, loggerFactory: loggerFactory))
+            using (var agent = new BlueskyAgent(
+                options: new BlueskyAgentOptions()
+                {
+                    LoggerFactory = loggerFactory,
+
+                    HttpClientOptions = new HttpClientOptions()
+                    {
+                        CheckCertificateRevocationList = checkCertificateRevocationList,
+                        ProxyUri = proxyUri
+                    },
+                }))
             {
                 var loginResult = await agent.Login(handle, password, authCode, cancellationToken: cancellationToken);
                 if (!loginResult.Succeeded)
@@ -101,6 +119,32 @@ namespace Samples.Posting
                     Debugger.Break();
 
                    // Delete the post we just made
+                    AtProtoHttpResult<Commit> delete = await agent.DeletePost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
+                    if (!delete.Succeeded)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"{delete.StatusCode} occurred when deleting the post.");
+                        return;
+                    }
+                }
+
+                {
+                    // In the past post creation and deletion.
+                    DateTimeOffset past = DateTimeOffset.UtcNow.AddDays(-1);
+
+                    AtProtoHttpResult<CreateRecordResponse> createPostResult = await agent.Post("Hello world from the past", createdAt: past, cancellationToken: cancellationToken);
+                    if (!createPostResult.Succeeded)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"{createPostResult.StatusCode} occurred when creating the post.");
+                        return;
+                    }
+
+                    Console.WriteLine("Post created");
+                    Console.WriteLine($"  {createPostResult.Result.StrongReference}");
+                    Debugger.Break();
+
+                    // Delete the post we just made
                     AtProtoHttpResult<Commit> delete = await agent.DeletePost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
                     if (!delete.Succeeded)
                     {
@@ -373,13 +417,8 @@ namespace Samples.Posting
 
                 {
                     // facets - mentions, hashtags and links, using a PostBuilder.
-                    if (agent.Session is null)
-                    {
-                        Console.WriteLine("Session went missing.");
-                        return;
-                    }
 
-                    var userToTag = agent.Session.Handle;
+                    var userToTag = handle;
                     var userDidToTag = await agent.ResolveHandle(userToTag, cancellationToken: cancellationToken);
                     if (userDidToTag is null)
                     {

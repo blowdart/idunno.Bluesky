@@ -9,11 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DnsClient"/>
-  </ItemGroup>
-
-  <ItemGroup>
+    <ProjectReference Include="..\..\src\idunno.AtProto.OAuthCallback\idunno.AtProto.OAuthCallback.csproj" />
+    <ProjectReference Include="..\..\src\idunno.AtProto\idunno.AtProto.csproj" />
     <ProjectReference Include="..\..\src\idunno.Bluesky\idunno.Bluesky.csproj" />
+    <ProjectReference Include="..\Samples.Common\Samples.Common.csproj" />
   </ItemGroup>
 
 </Project>

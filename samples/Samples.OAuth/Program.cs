@@ -1,202 +1,191 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Security.Cryptography;
-using System.Text.Json;
+using System.CommandLine;
+using System.CommandLine.Parsing;
+using System.Diagnostics;
 
-using Microsoft.IdentityModel.Tokens;
-
-using DnsClient;
+using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
-using idunno.DidPlcDirectory;
+using idunno.AtProto.Authentication;
 
+using Samples.Common;
+using System.Security.Cryptography;
+using System.Text;
 
-using var cts = new CancellationTokenSource();
+namespace Samples.OAuth
 {
-    Console.CancelKeyPress += (sender, e) =>
+    public sealed class Program
     {
-        e.Cancel = true;
-        cts.Cancel();
-    };
-
-    Console.Write("Please enter your Bluesky username: ");
-    var userName = Console.ReadLine();
-
-    if (string.IsNullOrEmpty(userName))
-    {
-        return;
-    }
-
-    // This function is also exposed via the BlueskyAgent class,
-    // BlueskyAgent.ResolveHandle();
-    // For the purposes of this demo the code is mirrored here for clarity.
-
-    Did? did = await ResolveHandle(userName, cts.Token);
-
-    if (did is null)
-    {
-        Console.WriteLine("Could not resolve DID");
-        return;
-    }
-
-    // This function is also exposed via the BlueskyAgent class,
-    // BlueskyAgent.ResolvePds();
-    // For the purposes of this demo the code is mirrored here for clarity.
-
-    Uri? pds = await ResolvePds(did, cts.Token);
-
-    if (pds is null)
-    {
-        Console.WriteLine($"Could not resolve PDS for {did}.");
-        return;
-    }
-
-    // This function is also exposed via the BlueskyAgent class,
-    // BlueskyAgent.ResolveAuthorizationServer();
-    // For the purposes of this demo the code is mirrored here for clarity.
-
-    Uri? authorizationServer = await ResolveAuthorizationServer(pds, cts.Token);
-
-    if (authorizationServer is null)
-    {
-        Console.WriteLine($"Could not discover authorization server for {pds}.");
-        return;
-    }
-
-    Console.WriteLine($"Username:             {userName}");
-    Console.WriteLine($"DID:                  {did}");
-    Console.WriteLine($"PDS:                  {pds}");
-    Console.WriteLine($"Authorization Server: {authorizationServer}");
-
-    // Now we have all the information needed to kick off an OAuth authorization request.
-
-    var dPoPJwk = GenerateDPopKey();
-
-}
-
-static async Task<Did?> ResolveHandle(string userName, CancellationToken cancellationToken = default)
-{
-    Did? did = null;
-
-    ArgumentNullException.ThrowIfNullOrEmpty(userName);
-
-    if (Uri.CheckHostName(userName) != UriHostNameType.Dns)
-    {
-        throw new ArgumentOutOfRangeException(nameof(userName), "userName is not a valid DNS name.");
-    }
-
-    LookupClient lookupClient = new(new LookupClientOptions()
-    {
-        ContinueOnDnsError = true,
-        ContinueOnEmptyResponse = true,
-        ThrowDnsErrors = false,
-        Timeout = TimeSpan.FromSeconds(15),
-        UseCache = true
-    });
-
-
-    // First try DNS lookup
-    var didTxtRecordHost = $"_atproto.{userName}";
-    const string didTextRecordPrefix = "did=";
-
-    var dnsLookupResult = await lookupClient.QueryAsync(didTxtRecordHost, QueryType.TXT, QueryClass.IN, cancellationToken);
-    if (!cancellationToken.IsCancellationRequested && !dnsLookupResult.HasError)
-    {
-        foreach (var textRecord in dnsLookupResult.Answers.TxtRecords())
+        static async Task<int> Main(string[] args)
         {
-            foreach (var text in textRecord.Text)
+            // Necessary to render emojis.
+            Console.OutputEncoding = Encoding.UTF8;
+
+            var parser = Helpers.ConfigureCommandLine(PerformOperations);
+            await parser.InvokeAsync(args);
+
+            return 0;
+        }
+
+        static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(handle);
+
+            // Uncomment the next line to route all requests through Fiddler Everywhere
+            proxyUri = new Uri("http://localhost:8866");
+
+            // Uncomment the next line to route all requests  through Fiddler Classic
+            // proxyUri = new Uri("http://localhost:8888");
+
+            // If a proxy is being used turn off certificate revocation checks.
+            //
+            // WARNING: this setting can introduce security vulnerabilities.
+            // The assumption in these samples is that any proxy is a debugging proxy,
+            // which tend to not support CRLs in the proxy HTTPS certificates they generate.
+            bool checkCertificateRevocationList = true;
+            if (proxyUri is not null)
             {
-                if (text.StartsWith(didTextRecordPrefix, StringComparison.InvariantCulture))
+                checkCertificateRevocationList = false;
+            }
+
+            // Change the log level in the ConfigureConsoleLogging() to enable logging
+            using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
+            using (var agent = new AtProtoAgent(
+                service: new Uri("https://api.bsky.app"),
+                options: new AtProtoAgentOptions()
                 {
-                    did = new Did(text.Substring(didTextRecordPrefix.Length));
-                }
-            }
-        }
-    }
+                    LoggerFactory = loggerFactory,
 
-    if (!cancellationToken.IsCancellationRequested && did is null)
-    {
-        // Fall back to /well-known/did.json
-        using (var httpClient = new HttpClient())
-        {
-            httpClient.Timeout = TimeSpan.FromSeconds(15);
-            var httpResult = await httpClient.GetStringAsync($"https://{userName}/.well-known/atproto-did", cancellationToken);
-            if (!string.IsNullOrEmpty(httpResult))
-            {
-                did = new Did(httpResult);
-            }
-        }
-    }
-
-    return did;
-}
-
-static async Task<Uri?> ResolvePds(Did did, CancellationToken cancellationToken = default)
-{
-    Uri? pds = null;
-
-    if (!cancellationToken.IsCancellationRequested)
-    {
-        var directoryAgent = new DirectoryAgent();
-        var didDocumentResult = await directoryAgent.ResolveDidDocument(did, cancellationToken: cancellationToken);
-
-        if (didDocumentResult.Succeeded && didDocumentResult.Result is not null)
-        {
-            var didDocument = didDocumentResult.Result;
-
-            if (didDocument.Services is not null)
-            {
-                pds = didDocument.Services!.Where(s => s.Id == @"#atproto_pds").FirstOrDefault()!.ServiceEndpoint;
-            }
-        }
-    }
-
-    return pds;
-}
-
-static async Task<Uri?> ResolveAuthorizationServer(Uri pds, CancellationToken cancellationToken = default)
-{
-    Uri? authorizationServer = null;
-
-    if (!cancellationToken.IsCancellationRequested)
-    {
-        Uri oauthProtectedResourceUri = new($"https://{pds.Host}/.well-known/oauth-protected-resource");
-
-        using (var httpClient = new HttpClient())
-        {
-            httpClient.Timeout = TimeSpan.FromSeconds(15);
-
-            using (var protectedResourceMetadata =
-                await JsonDocument.ParseAsync(
-                    await httpClient.GetStreamAsync(oauthProtectedResourceUri, cancellationToken),
-                    cancellationToken: cancellationToken))
-            {
-                if (!cancellationToken.IsCancellationRequested)
-                {
-                    var authorizationServers = protectedResourceMetadata.RootElement.GetProperty("authorization_servers").EnumerateArray();
-
-                    if (!cancellationToken.IsCancellationRequested && authorizationServers.Any())
+                    HttpClientOptions = new HttpClientOptions()
                     {
-                        var serverUri = authorizationServers.First(s => !string.IsNullOrEmpty(s.GetString())).ToString();
+                        CheckCertificateRevocationList = checkCertificateRevocationList,
+                        ProxyUri = proxyUri
+                    },
 
-                        if (!string.IsNullOrEmpty(serverUri))
-                        {
-                            authorizationServer = new Uri(serverUri);
-                        }
+                    OAuthOptions = new OAuthOptions()
+                    {
+                        ClientId = "http://localhost",
+                        Scopes = ["atproto", "transition:generic"]
                     }
+                }))
+            {
+                Did? did = await agent.ResolveHandle(handle, cancellationToken);
+
+                if (did is null)
+                {
+                    Console.WriteLine("Could not resolve DID");
+                    return;
                 }
+
+                Uri? pds = await agent.ResolvePds(did, cancellationToken);
+
+                if (pds is null)
+                {
+                    Console.WriteLine($"Could not resolve PDS for {did}.");
+                    return;
+                }
+
+                Uri? authorizationServer = await agent.ResolveAuthorizationServer(handle, cancellationToken);
+
+                if (authorizationServer is null)
+                {
+                    Console.WriteLine($"Could not discover authorization server for {pds}.");
+                    return;
+                }
+
+                Console.WriteLine($"Username:               {handle}");
+                Console.WriteLine($"DID:                    {did}");
+                Console.WriteLine($"PDS:                    {pds}");
+                Console.WriteLine($"Authorization Server:   {authorizationServer}");
+
+                OAuthLoginState? oAuthLoginState = null;
+                string callbackData;
+
+                await using var callbackServer = new idunno.AtProto.OAuthCallback.CallbackServer(
+                    idunno.AtProto.OAuthCallback.CallbackServer.GetRandomUnusedPort(),
+                    loggerFactory: loggerFactory);
+                {
+                    OAuthClient uriBuilderOAuthClient = agent.CreateOAuthClient();
+
+                    Uri startUri = await agent.BuildOAuth2LoginUri(uriBuilderOAuthClient, handle, returnUri: callbackServer.Uri, cancellationToken: cancellationToken);
+
+                    // Save state to use when processing the response, mimicking what we'd do in a web application.
+
+                    if (uriBuilderOAuthClient.State is null)
+                    {
+                        ConsoleColor oldColor = Console.ForegroundColor;
+
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("OAuthClient state is null after building login uri.");
+                        Console.ForegroundColor = oldColor;
+                        return;
+                    }
+
+                    // If you need a primary key you can extract the state parameter from the Uri
+                    // string stateKey = QueryHelpers.ParseQuery(startUri.Query)["state"]!;
+                    oAuthLoginState = uriBuilderOAuthClient.State;
+
+                    Console.WriteLine($"Login URI           : {startUri}");
+
+                    OAuthClient.OpenBrowser(startUri);
+
+                    Console.WriteLine($"Awaiting callback on {callbackServer.Uri}");
+
+                    callbackData = await callbackServer.WaitForCallbackAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+                }
+
+                if (string.IsNullOrEmpty(callbackData))
+                {
+                    ConsoleColor oldColor = Console.ForegroundColor;
+
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Received no login response");
+                    Console.ForegroundColor = oldColor;
+                    return;
+                }
+
+                OAuthClient oAuthClient = agent.CreateOAuthClient(oAuthLoginState);
+                await agent.ProcessOAuth2LoginResponse(oAuthClient, callbackData, cancellationToken);
+
+                Debugger.Break();
+
+                if (agent.IsAuthenticated)
+                {
+                    Console.WriteLine($"Credentials issued for: {agent.Credentials.Service}");
+                    Console.WriteLine($"Access JWT expires on:  {agent.Credentials.ExpiresOn:G}");
+                    Console.WriteLine();
+
+                    string accessCredentialsHash;
+
+                    accessCredentialsHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(agent.Credentials.AccessJwt)));
+                    Console.WriteLine($"Access JWT hash      :  {agent.Credentials.ExpiresOn:G}");
+
+
+                    //                    await agent.CreateRecord(new Post($"hello via oauth, token hash {accessCredentialsHash}"), CollectionNsid.Post, cancellationToken: cancellationToken);
+
+                    await agent.RefreshCredentials(cancellationToken: cancellationToken);
+
+                    accessCredentialsHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(agent.Credentials.AccessJwt)));
+                    Console.WriteLine($"Refreshed JWT hash   :  {agent.Credentials.ExpiresOn:G}");
+
+                    //                    await agent.CreateRecord(new Post($"hello via oauth refresh, token hash {accessCredentialsHash}"), CollectionNsid.Post, cancellationToken: cancellationToken);
+                }
+                else
+                {
+                    ConsoleColor oldColor = Console.ForegroundColor;
+
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Could not login with oauth credentials");
+                    Console.ForegroundColor = oldColor;
+                    return;
+                }
+
+                Debugger.Break();
+
+                await agent.Logout(cancellationToken: cancellationToken);
             }
         }
     }
-
-    return authorizationServer;
-}
-
-static string GenerateDPopKey()
-{
-    RsaSecurityKey rsaKey = new(RSA.Create(2048));
-    JsonWebKey jwkKey = JsonWebKeyConverter.ConvertFromSecurityKey(rsaKey);
-    jwkKey.Alg = "PS256";
-    return JsonSerializer.Serialize(jwkKey);
 }

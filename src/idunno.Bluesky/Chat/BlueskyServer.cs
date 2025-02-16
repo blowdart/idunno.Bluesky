@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using idunno.AtProto;
 using idunno.Bluesky.Chat;
 using idunno.Bluesky.Chat.Model;
+using idunno.AtProto.Authentication;
 
 namespace idunno.Bluesky
 {
@@ -61,28 +62,32 @@ namespace idunno.Bluesky
         /// <param name="conversationId">The conversation identifier to delete the message identified by <paramref name="messageId"/> from.</param>
         /// <param name="messageId">The message identifier to delete from <paramref name="conversationId"/>.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to delete the message from.</param>
-        /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">
+        /// Thrown when <paramref name="conversationId"/> or <paramref name="messageId"/> is null or whitespace.</exception>
         /// <exception cref="ArgumentNullException">
-        ///   Thrown when <paramref name="conversationId"/> or <paramref name="messageId"/> is null or whitespace,
-        ///   or <paramref name="accessToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
         public static async Task<AtProtoHttpResult<DeletedMessageView>> DeleteMessageForSelf(
             string conversationId,
             string messageId,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(conversationId);
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(messageId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
+
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             AtProtoHttpClient<DeletedMessageView> client = new(ChatProxy, loggerFactory);
@@ -93,8 +98,9 @@ namespace idunno.Bluesky
                 service,
                 DeleteMessageForSelfEndpoint,
                 request,
-                accessToken,
-                httpClient,
+                credentials: accessCredentials,
+                httpClient: httpClient,
+                onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return response;
@@ -105,26 +111,28 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="members">The <see cref="Did"/>s of the conversation members.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the conversation from.</param>
-        /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        ///   Thrown when <paramref name="members"/>, <paramref name="accessToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        ///   Thrown when <paramref name="members"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="members"/> is empty or has greater than the maximum number of conversation members.</exception>
         public static async Task<AtProtoHttpResult<ConversationView>> GetConversationForMembers(
             ICollection<Did> members,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(members);
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             ArgumentOutOfRangeException.ThrowIfZero(members.Count);
@@ -144,8 +152,9 @@ namespace idunno.Bluesky
             AtProtoHttpResult<ConversationResponse> response = await client.Get(
                 service,
                 $"{GetConvoForMembersEndpoint}?{queryString}",
-                accessToken,
-                httpClient,
+                credentials: accessCredentials,
+                httpClient: httpClient,
+                onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)
@@ -153,6 +162,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ConversationView>(
                     response.Result.Conversation,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -161,6 +171,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ConversationView>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -172,24 +183,26 @@ namespace idunno.Bluesky
         /// <param name="limit">The number of conversations to return.</param>
         /// <param name="cursor">A cursor used for pagination.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the conversations from.</param>
-        /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accessToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="limit"/>is &lt;1 or &gt; the maximum number of conversations to list.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/>is &lt;1 or &gt; the maximum number of conversations to list.</exception>
         public static async Task<AtProtoHttpResult<Conversations>> ListConversations(
             int? limit,
             string? cursor,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             int limitValue = limit ?? 50;
@@ -216,8 +229,9 @@ namespace idunno.Bluesky
             AtProtoHttpResult<ListConvosResponse> response = await client.Get(
                 service,
                 $"{ListConvosEndpoint}?{queryString}",
-                accessToken,
-                httpClient,
+                credentials: accessCredentials,
+                httpClient: httpClient,
+                onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)
@@ -225,6 +239,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<Conversations>(
                     new Conversations(response.Result.Conversations),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -233,6 +248,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<Conversations>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -243,23 +259,26 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="id">The conversation identifier.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the conversation from.</param>
-        /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="id"/>, <paramref name="accessToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is null or whitespace.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<ConversationView>> GetConversation(
             string id,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(id);
+            ArgumentException.ThrowIfNullOrWhiteSpace(id);
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             AtProtoHttpClient<ConversationResponse> client = new(ChatProxy, loggerFactory);
@@ -267,8 +286,9 @@ namespace idunno.Bluesky
             AtProtoHttpResult<ConversationResponse> response = await client.Get(
                 service,
                 $"{GetConvoEndpoint}?convoId={Uri.EscapeDataString(id)}",
-                accessToken,
-                httpClient,
+                credentials: accessCredentials,
+                httpClient: httpClient,
+                onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)
@@ -276,6 +296,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ConversationView>(
                     response.Result.Conversation,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -284,6 +305,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ConversationView>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -294,22 +316,24 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="cursor">An optional cursor used for pagination.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the conversation log from.</param>
-        /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="accessToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         public static async Task<AtProtoHttpResult<Logs>> GetConversationLog(
             string? cursor,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             string queryString = string.Empty;
@@ -323,8 +347,9 @@ namespace idunno.Bluesky
             AtProtoHttpResult<GetLogResponse> response = await client.Get(
                 service,
                 $"{GetLogEndpoint}{queryString}",
-                accessToken,
-                httpClient,
+                credentials: accessCredentials,
+                httpClient: httpClient,
+                onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)
@@ -332,6 +357,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<Logs>(
                     new Logs(response.Result.Logs, response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -340,6 +366,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<Logs>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -352,27 +379,33 @@ namespace idunno.Bluesky
         /// <param name="limit">An optional limit on the number of messages to retrieve in each page.</param>
         /// <param name="cursor">An optional cursor used for pagination.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the conversation messages from.</param>
-        /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">
+        /// Thrown when <paramref name="id"/> is null or empty.
+        /// </exception>
         /// <exception cref="ArgumentNullException">
-        /// Thrown if <paramref name="id"/> is null or empty, or <paramref name="accessToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
         public static async Task<AtProtoHttpResult<Messages>> GetMessages(
             string id,
             int? limit,
             string? cursor,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(id);
+            ArgumentException.ThrowIfNullOrEmpty(id);
+
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             if (limit is not null)
@@ -401,8 +434,9 @@ namespace idunno.Bluesky
             AtProtoHttpResult<GetMessagesResponse> response = await client.Get(
                 service,
                 $"{GetMessagesEndpoint}?{queryString}",
-                accessToken,
-                httpClient,
+                credentials: accessCredentials,
+                httpClient: httpClient,
+                onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)
@@ -410,6 +444,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<Messages>(
                     new Messages(response.Result.Messages, response.Result.Cursor),
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -418,6 +453,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<Messages>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -428,25 +464,31 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="id">The conversation identifier to leave.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to leave the conversation on.</param>
-        /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">
+        /// Thrown when <paramref name="id"/> is null or empty.
+        /// </exception>
         /// <exception cref="ArgumentNullException">
-        /// Thrown if <paramref name="id"/> is null or empty, or <paramref name="accessToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
         public static async Task<AtProtoHttpResult<ConversationReference>> LeaveConversation(
             string id,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(id);
+            ArgumentException.ThrowIfNullOrEmpty(id);
+
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             AtProtoHttpClient<ConversationReference> client = new(ChatProxy, loggerFactory);
@@ -457,8 +499,9 @@ namespace idunno.Bluesky
                 service,
                 $"{LeaveConvoEndpoint}",
                 request,
-                accessToken,
-                httpClient,
+                credentials: accessCredentials,
+                httpClient:httpClient,
+                onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)
@@ -470,6 +513,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ConversationReference>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -480,25 +524,31 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="id">The conversation identifier to mute.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to mute the conversation on.</param>
-        /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">
+        /// Thrown when <paramref name="id"/> is null or empty.
+        /// </exception>
         /// <exception cref="ArgumentNullException">
-        /// Thrown if <paramref name="id"/> is null or empty, or <paramref name="accessToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="id"/> is null or empty, or <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
         public static async Task<AtProtoHttpResult<ConversationView>> MuteConversation(
             string id,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(id);
+            ArgumentException.ThrowIfNullOrEmpty(id);
+
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             AtProtoHttpClient<ConversationResponse> client = new(ChatProxy, loggerFactory);
@@ -509,8 +559,9 @@ namespace idunno.Bluesky
                 service,
                 $"{MuteConvoEndpoint}",
                 request,
-                accessToken,
-                httpClient,
+                credentials: accessCredentials,
+                httpClient: httpClient,
+                onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)
@@ -518,6 +569,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ConversationView>(
                     response.Result.Conversation,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -526,6 +578,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ConversationView>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -536,26 +589,28 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="batchedMessages">The collection of <see cref="BatchedMessage"/>s to send.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to unmute the conversation on.</param>
-        /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown if <paramref name="batchedMessages"/>, <paramref name="accessToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="batchedMessages"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="batchedMessages"/> is empty or has greater than the maximum allowed number of messages.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="batchedMessages"/> is empty or has greater than the maximum allowed number of messages.</exception>
         public static async Task<AtProtoHttpResult<ICollection<MessageView>>> SendMessageBatch(
             ICollection<BatchedMessage> batchedMessages,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(batchedMessages);
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             ArgumentOutOfRangeException.ThrowIfZero(batchedMessages.Count);
@@ -569,8 +624,9 @@ namespace idunno.Bluesky
                 service,
                 $"{SendMessageBatchEndpoint}",
                 request,
-                accessToken,
-                httpClient,
+                credentials: accessCredentials,
+                httpClient: httpClient,
+                onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)
@@ -578,6 +634,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ICollection<MessageView>>(
                     response.Result.Items,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -586,6 +643,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ICollection<MessageView>>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -598,27 +656,33 @@ namespace idunno.Bluesky
         /// <param name="id">The conversation identifier to send the <paramref name="message"/> to.</param>
         /// <param name="message">The <see cref="MessageInput"/> to send.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to unmute the conversation on.</param>
-        /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">
+        /// Thrown when <paramref name="id"/> is null or empty.
+        /// </exception>
         /// <exception cref="ArgumentNullException">
-        /// Thrown if <paramref name="id"/> is null or empty, or <paramref name="message"/>, <paramref name="accessToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="message"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
         public static async Task<AtProtoHttpResult<MessageView>> SendMessage(
             string id,
             MessageInput message,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(id);
+            ArgumentException.ThrowIfNullOrEmpty(id);
+
             ArgumentNullException.ThrowIfNull(message);
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             AtProtoHttpClient<MessageView> client = new(ChatProxy, loggerFactory);
@@ -629,8 +693,9 @@ namespace idunno.Bluesky
                 service,
                 $"{SendMessageEndpoint}",
                 request,
-                accessToken,
-                httpClient,
+                credentials: accessCredentials,
+                httpClient: httpClient,
+                onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)
@@ -642,6 +707,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<MessageView>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -652,25 +718,31 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="id">The conversation identifier to unmute.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to unmute the conversation on.</param>
-        /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">
+        /// Thrown when <paramref name="id"/> is null or empty.
+        /// </exception>
         /// <exception cref="ArgumentNullException">
-        /// Thrown if <paramref name="id"/> is null or empty, or <paramref name="accessToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
         public static async Task<AtProtoHttpResult<ConversationView>> UnmuteConversation(
             string id,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(id);
+            ArgumentException.ThrowIfNullOrEmpty(id);
+
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             AtProtoHttpClient<ConversationResponse> client = new(ChatProxy, loggerFactory);
@@ -681,8 +753,9 @@ namespace idunno.Bluesky
                 service,
                 $"{UnmuteConvoEndpoint}",
                 request,
-                accessToken,
-                httpClient,
+                credentials: accessCredentials,
+                httpClient: httpClient,
+                onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)
@@ -690,6 +763,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ConversationView>(
                     response.Result.Conversation,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -698,6 +772,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ConversationView>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -709,33 +784,37 @@ namespace idunno.Bluesky
         /// <param name="conversationId">The conversation identifier to mark as read.</param>
         /// <param name="messageId">The message identifier in the conversation identified by <paramref name="conversationId"/> to mark as read.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to mark the conversation on.</param>
-        /// <param name="accessToken">An optional access token to use to authenticate against the <paramref name="service"/>.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">
+        /// Thrown when <paramref name="conversationId"/> is null or whitespace, <paramref name="messageId"/> is empty or whitespace,
+        /// </exception>
         /// <exception cref="ArgumentNullException">
-        /// Thrown if <paramref name="conversationId"/> is null or whitespace, <paramref name="messageId"/> is empty or whitespace,
-        /// or <paramref name="accessToken"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when  <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
         public static async Task<AtProtoHttpResult<ConversationView>> UpdateRead(
             string conversationId,
             string? messageId,
             Uri service,
-            string accessToken,
+            AccessCredentials accessCredentials,
             HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(conversationId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
 
             if (messageId is not null)
             {
-                ArgumentNullException.ThrowIfNullOrWhiteSpace(messageId);
+                ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
             }
 
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(accessToken);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
             AtProtoHttpClient<ConversationResponse> client = new(ChatProxy, loggerFactory);
@@ -746,8 +825,9 @@ namespace idunno.Bluesky
                 service,
                 $"{UpdateReadEndpoint}",
                 request,
-                accessToken,
-                httpClient,
+                credentials: accessCredentials,
+                httpClient: httpClient,
+                onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)
@@ -755,6 +835,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ConversationView>(
                     response.Result.Conversation,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }
@@ -763,6 +844,7 @@ namespace idunno.Bluesky
                 return new AtProtoHttpResult<ConversationView>(
                     null,
                     response.StatusCode,
+                    response.HttpResponseHeaders,
                     response.AtErrorDetail,
                     response.RateLimit);
             }

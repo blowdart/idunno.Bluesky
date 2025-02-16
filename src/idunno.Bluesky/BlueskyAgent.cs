@@ -21,13 +21,17 @@ namespace idunno.Bluesky
         /// <summary>
         /// Creates a new instance of <see cref="BlueskyAgent"/>.
         /// </summary>
-        /// <param name="httpClient">An optional <see cref="HttpClient"/> to use when making requests.</param>
-        /// <param name="loggerFactory">The logger factory to use for logging messages, if any.</param>
         /// <param name="options"><see cref="BlueskyAgentOptions"/> for the use in the creation of this instance of <see cref="BlueskyAgent"/>.</param>
+        ///<remarks>
+        /// <para>
+        /// Setting <see cref="HttpClientOptions.CheckCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
+        /// false if you are using a debugging proxy which does not support CRLs.
+        /// </para>
+        /// </remarks>
         public BlueskyAgent(
-            HttpClient? httpClient = null,
-            ILoggerFactory? loggerFactory = default,
-            BlueskyAgentOptions ? options = null) : base (DefaultServiceUris.BlueskyApiUri, httpClient, loggerFactory, options)
+            BlueskyAgentOptions ? options = null) : base (
+                DefaultServiceUris.BlueskyApiUri,
+                options: options)
         {
             if (options is not null && options.PublicAppViewUri is not null)
             {
@@ -43,8 +47,16 @@ namespace idunno.Bluesky
                 _facetExtractor = new DefaultFacetExtractor(ResolveHandle);
             }
 
-            loggerFactory ??= NullLoggerFactory.Instance;
-            _logger = loggerFactory.CreateLogger<BlueskyAgent>();
+            if (options is not null)
+            {
+                LoggerFactory = options.LoggerFactory ?? NullLoggerFactory.Instance;
+            }
+            else
+            {
+                LoggerFactory = NullLoggerFactory.Instance;
+            }
+
+            _logger = LoggerFactory.CreateLogger<BlueskyAgent>();
         }
 
         /// <summary>
@@ -82,8 +94,8 @@ namespace idunno.Bluesky
         /// <remarks>
         /// <para>This method makes outgoing web requests to resolve the handle in a Bluesky URI to a <see cref="AtProto.Did"/>.</para>
         /// </remarks>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> is in an unexpected format.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an unexpected format.</exception>
         public async Task<AtUri> BuildAtUriFromBlueskyWebUri(Uri uri, CancellationToken cancellationToken = default)
         {
             // Bluesky web client URIs should be in the format
@@ -144,8 +156,8 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="atUri">The <see cref="AtUri"/> to generate a web URI for.</param>
         /// <returns>A URI for the Bluesky Web Client which will display the record specified by the <paramref name="atUri"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="atUri"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown if <paramref name="atUri"/> is in an unexpected format or collection.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="atUri"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="atUri"/> is in an unexpected format or collection.</exception>
         public static Uri BuildBlueskyPostUriFromAtUri(AtUri atUri)
         {
             ArgumentNullException.ThrowIfNull(atUri);

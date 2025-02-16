@@ -16,29 +16,30 @@ namespace idunno.Bluesky
         /// <param name="messageId">The message identifier to delete from <paramref name="conversationId"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">
+        /// <exception cref="ArgumentException">
         ///   Thrown when <paramref name="conversationId"/> or <paramref name="messageId"/> is null or whitespace,
         /// </exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<DeletedMessageView>> DeleteMessageForSelf(
             string conversationId,
             string messageId,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(conversationId);
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(messageId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.DeleteMessageForSelf(
                 conversationId,
                 messageId,
-                Service,
-                AccessToken,
+                service: Service,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -51,7 +52,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="members"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="members"/> is empty or has greater than the maximum number of conversation members.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ConversationView>> GetConversationForMembers(
             ICollection<Did> members,
             CancellationToken cancellationToken = default)
@@ -63,14 +64,15 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.GetConversationForMembers(
                 members,
-                Service,
-                AccessToken,
+                service: Service,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -82,7 +84,7 @@ namespace idunno.Bluesky
         /// <param name="cursor">A cursor used for pagination.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Conversations>> ListConversations(
             int? limit = null,
             string? cursor = null,
@@ -90,15 +92,16 @@ namespace idunno.Bluesky
         {
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.ListConversations(
                 limit,
                 cursor,
-                Service,
-                AccessToken,
+                service: Service,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -109,24 +112,25 @@ namespace idunno.Bluesky
         /// <param name="id">The conversation identifier.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="id"/>is null or white space.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="id"/>is null or white space.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ConversationView>> GetConversation(
             string id,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(id);
+            ArgumentException.ThrowIfNullOrWhiteSpace(id);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.GetConversation(
                 id,
-                Service,
-                AccessToken,
+                service: Service,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -137,21 +141,22 @@ namespace idunno.Bluesky
         /// <param name="cursor">A cursor used for pagination.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Logs>> GetConversationLog(
             string? cursor = null,
             CancellationToken cancellationToken = default)
         {
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.GetConversationLog(
                 cursor,
-                AuthenticatedOrUnauthenticatedServiceUri,
-                AccessToken,
+                service: Service,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -164,28 +169,29 @@ namespace idunno.Bluesky
         /// <param name="cursor">An optional cursor used for pagination.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="id"/> is null or white space.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is null or white space.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Messages>> GetMessages(
             string id,
             int? limit = null,
             string? cursor = null,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(id);
+            ArgumentException.ThrowIfNullOrWhiteSpace(id);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.GetMessages(
                 id,
                 limit,
                 cursor,
-                Service,
-                AccessToken,
+                service: Service,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -196,24 +202,25 @@ namespace idunno.Bluesky
         /// <param name="id">The conversation identifier to leave.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="id"/> is null or white space.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is null or white space.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ConversationReference>> LeaveConversation(
             string id,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(id);
+            ArgumentException.ThrowIfNullOrWhiteSpace(id);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.LeaveConversation(
                 id,
-                Service,
-                AccessToken,
+                service: Service,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -224,24 +231,25 @@ namespace idunno.Bluesky
         /// <param name="id">The conversation identifier to mute.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="id"/> is null or white space.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is null or white space.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ConversationView>> MuteConversation(
             string id,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(id);
+            ArgumentException.ThrowIfNullOrWhiteSpace(id);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.MuteConversation(
                 id,
-                Service,
-                AccessToken,
+                service: Service,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -252,9 +260,9 @@ namespace idunno.Bluesky
         /// <param name="batchedMessages">The collection of <see cref="BatchedMessage"/>s to send.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="batchedMessages"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="batchedMessages"/> is empty or has greater than the maximum allowed number of messages.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="batchedMessages"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="batchedMessages"/> is empty or has greater than the maximum allowed number of messages.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ICollection<MessageView>>> SendMessageBatch(
             ICollection<BatchedMessage> batchedMessages,
             CancellationToken cancellationToken = default)
@@ -265,14 +273,15 @@ namespace idunno.Bluesky
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.SendMessageBatch(
                 batchedMessages,
-                Service,
-                AccessToken,
+                service: Service,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -285,20 +294,22 @@ namespace idunno.Bluesky
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="message" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="id"/> is null or white space, or <paramref name="message"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is null or white space.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<MessageView>> SendMessage(
             string id,
             string message,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(id);
+            ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
             ArgumentNullException.ThrowIfNull(message);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             MessageInput messageInput;
@@ -325,27 +336,30 @@ namespace idunno.Bluesky
         /// <param name="message">The <see cref="MessageInput"/> to send.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="id"/> is null or white space, or <paramref name="message"/> is null.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is null or white space.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<MessageView>> SendMessage(
             string id,
             MessageInput message,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(id);
+            ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
             ArgumentNullException.ThrowIfNull(message);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.SendMessage(
                 id,
                 message,
-                Service,
-                AccessToken,
+                service: Service,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -356,24 +370,25 @@ namespace idunno.Bluesky
         /// <param name="id">The conversation identifier to unmute.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="id"/> is null or white space.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is null or white space.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ConversationView>> UnmuteConversation(
             string id,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(id);
+            ArgumentException.ThrowIfNullOrWhiteSpace(id);
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.UnmuteConversation(
                 id,
-                Service,
-                AccessToken,
+                service: Service,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -385,31 +400,32 @@ namespace idunno.Bluesky
         /// <param name="messageId">The message identifier in the conversation identified by <paramref name="conversationId"/> to mark as read.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="conversationId"/> is null or white space or <paramref name="messageId"/> is empty or white space.</exception>
-        /// <exception cref="AuthenticatedSessionRequiredException">Thrown if the current session is not authenticated.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/> is null or white space or <paramref name="messageId"/> is empty or white space.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ConversationView>> UpdateRead(
             string conversationId,
             string? messageId = null,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(conversationId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
 
             if (messageId is not null)
             {
-                ArgumentNullException.ThrowIfNullOrWhiteSpace(messageId);
+                ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
             }
 
             if (!IsAuthenticated)
             {
-                throw new AuthenticatedSessionRequiredException();
+                throw new AuthenticationRequiredException();
             }
 
             return await BlueskyServer.UpdateRead(
                 conversationId,
                 messageId,
-                Service,
-                AccessToken,
+                service: Service,
+                accessCredentials: Credentials,
                 httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }

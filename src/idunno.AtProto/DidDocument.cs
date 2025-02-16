@@ -21,7 +21,7 @@ namespace idunno.AtProto
         /// <param name="alsoKnownAs">One or more alternative identifiers for the subject of the <see cref="DidDocument"/>.</param>
         /// <param name="verificationMethods">A list of verification methods for the <paramref name="id">subject</paramref> or associated parties.</param>
         /// <param name="services">Ways of communicating with the <paramref name="id">subject</paramref> or associated entities</param>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="id"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="id"/> is null.</exception>
         [JsonConstructor]
         internal DidDocument(
             Did id,

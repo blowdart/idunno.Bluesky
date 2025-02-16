@@ -17,10 +17,10 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="s">The string to create an <see cref="AtIdentifier"/> from.</param>
         /// <returns>An <see cref="AtIdentifier" /> from the specified string</returns>
-        /// <exception cref="ArgumentException">Thrown if <paramref name="s"/> is not valid for an <see cref="AtIdentifier"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> is not valid for an <see cref="AtIdentifier"/>.</exception>
         public static AtIdentifier CreateFrom(string s)
         {
-            ArgumentNullException.ThrowIfNullOrEmpty(s);
+            ArgumentException.ThrowIfNullOrEmpty(s);
 
             if (!TryParse(s, out AtIdentifier? returnValue))
             {

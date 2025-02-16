@@ -13,8 +13,8 @@ namespace idunno.Bluesky.Chat
         [JsonConstructor]
         internal ConversationReference(string conversationId, string revision)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(conversationId);
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(revision);
+            ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(revision);
 
             ConversationId = conversationId;
             Revision = revision;
