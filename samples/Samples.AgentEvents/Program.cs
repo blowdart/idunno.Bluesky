@@ -429,7 +429,7 @@ namespace Samples.AgentEvents
                         }
                     };
 
-                    using (var callbackServer = new idunno.AtProto.OAuthCallback.CallbackServer(
+                    await using (var callbackServer = new idunno.AtProto.OAuthCallback.CallbackServer(
                         idunno.AtProto.OAuthCallback.CallbackServer.GetRandomUnusedPort(),
                         loggerFactory: loggerFactory))
                     {
@@ -486,7 +486,7 @@ namespace Samples.AgentEvents
 
                     // Login again
                     Console.WriteLine("Logging in again");
-                    using (var callbackServer = new idunno.AtProto.OAuthCallback.CallbackServer(
+                    await using (var callbackServer = new idunno.AtProto.OAuthCallback.CallbackServer(
                         idunno.AtProto.OAuthCallback.CallbackServer.GetRandomUnusedPort(),
                         loggerFactory: loggerFactory))
                     {
