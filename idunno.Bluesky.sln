@@ -126,8 +126,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{E2B63F0A-9892-45AA-8453-4E5A23017D63}"
 	ProjectSection(SolutionItems) = preProject
 		docs\docs\commonTerms.md = docs\docs\commonTerms.md
-		docs\docs\conversationsAndMessages.md = docs\docs\conversationsAndMessages.md
 		docs\docs\connecting.md = docs\docs\connecting.md
+		docs\docs\conversationsAndMessages.md = docs\docs\conversationsAndMessages.md
 		docs\docs\cursorsAndPagination.md = docs\docs\cursorsAndPagination.md
 		docs\docs\endpointStatus.md = docs\docs\endpointStatus.md
 		docs\docs\index.md = docs\docs\index.md
@@ -260,7 +260,6 @@ Global
 		{AEC1CC8B-59B6-4160-A80A-AF5CBC929679}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AEC1CC8B-59B6-4160-A80A-AF5CBC929679}.Release|Any CPU.Build.0 = Release|Any CPU
 		{29B74A2D-58C0-ADD4-D2F8-F7ACCB8C387F}.CodeQL|Any CPU.ActiveCfg = CodeQL|Any CPU
-		{29B74A2D-58C0-ADD4-D2F8-F7ACCB8C387F}.CodeQL|Any CPU.Build.0 = CodeQL|Any CPU
 		{29B74A2D-58C0-ADD4-D2F8-F7ACCB8C387F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{29B74A2D-58C0-ADD4-D2F8-F7ACCB8C387F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{29B74A2D-58C0-ADD4-D2F8-F7ACCB8C387F}.Release|Any CPU.ActiveCfg = Release|Any CPU
