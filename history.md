@@ -2,6 +2,12 @@
 
 ## 0.3.0
 
+### Features
+
+#### idunno.AtProto
+
+* OAuth support
+
 ### Breaking Changes
 
 * Agent constructors no longer take parameters directly. Use the appropriate options class instead.
@@ -51,15 +57,28 @@
 
 * `RefreshToken()` has been removed, to manually refresh the agent credentials use `agent.RefreshCredentials()`.
 
+#### idunno.AtProto.OAuthCallback
+
+* Local HTTP server for testing OAuth authentication.
+
+## 0.2.1
+
 ### Features
 
 #### idunno.AtProto
 
-* OAuth login support
+* Extra logging in token refresh
 
-#### idunno.AtProto.OAuthCallback
+### Bug Fixes
 
-* Local HTTP server for testing OAuth authentication.
+#### idunno.AtProto
+
+* Fixed incorrect JWT DateTime comparison - thank you [alexmg](https://github.com/alexmg)
+* Fixed json deserialization errors in GetSessionResponse
+
+#### Samples
+
+* Added catch in Samples.SessionEvents when a bad token is being set on purpose - thank you [peteraritchie](https://github.com/peteraritchie)
 
 ## 0.2.0
 

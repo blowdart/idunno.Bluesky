@@ -12,6 +12,7 @@ namespace idunno.AtProto.Authentication.Models
     [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Skip)]
     public sealed record GetSessionResponse : BaseSessionResponse
     {
+        [JsonConstructor]
         internal GetSessionResponse(
             Handle handle,
             Did did,
@@ -30,16 +31,19 @@ namespace idunno.AtProto.Authentication.Models
         /// <summary>
         /// The email associated with <see cref="Handle">Handle</see> the newly created session belongs to.
         /// </summary>
+        [JsonInclude]
         public string? Email { get; init; }
 
         /// <summary>
         /// A flag indicating whether the <see cref="Email"/> is confirmed or not.
         /// </summary>
+        [JsonInclude]
         public bool? EmailConfirmed { get; init; }
 
         /// <summary>
         /// A flag indicating whether the newly created session required an email based authentication token.
         /// </summary>
+        [JsonInclude]
         public bool? EmailAuthFactor { get; init; }
     }
 }
