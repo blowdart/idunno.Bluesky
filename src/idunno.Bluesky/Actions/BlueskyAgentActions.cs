@@ -11,6 +11,7 @@ using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.RichText;
 using idunno.Bluesky.Actions;
+using idunno.Bluesky.Actor;
 
 namespace idunno.Bluesky
 {
@@ -399,6 +400,7 @@ namespace idunno.Bluesky
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -411,6 +413,7 @@ namespace idunno.Bluesky
             DateTimeOffset? createdAt = null,
             ICollection<ThreadGateRule>? threadGateRules = null,
             ICollection<PostGateRule>? postGateRules = null,
+            InteractionPreferences? interactionPreferences = null,
             PostSelfLabels? labels = null,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
@@ -429,6 +432,16 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
+            if (threadGateRules is null && interactionPreferences is not null)
+            {
+                threadGateRules = interactionPreferences.ThreadGateAllowRules;
+            }
+
+            if (postGateRules is null && interactionPreferences is not null)
+            {
+                postGateRules = interactionPreferences.PostGateEmbeddingRules;
+            }
+
             return await Post(
                 text,
                 images: null,
@@ -441,7 +454,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Creates a Bluesky post record.
+        /// Creates a Bluesky post record with an image.
         /// </summary>
         /// <param name="text">The text of the post record to create.</param>
         /// <param name="image">The image to attach to the post.</param>
@@ -498,7 +511,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Creates a Bluesky post record.
+        /// Creates a Bluesky post record. with multiple images.
         /// </summary>
         /// <param name="text">The text of the post record to create.</param>
         /// <param name="images">Any images to attach to the post.</param>
@@ -517,10 +530,10 @@ namespace idunno.Bluesky
         /// </exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
             string text,
-            DateTimeOffset? createdAt,
             ICollection<EmbeddedImage>? images,
-            ICollection<ThreadGateRule>? threadGateRules,
-            ICollection<PostGateRule>? postGateRules,
+            DateTimeOffset? createdAt = null,
+            ICollection<ThreadGateRule>? threadGateRules = null,
+            ICollection<PostGateRule>? postGateRules = null,
             PostSelfLabels? labels = null,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
@@ -592,7 +605,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Creates a Bluesky post record.
+        /// Creates a Bluesky post record with a video
         /// </summary>
         /// <param name="text">The text of the post record to create.</param>
         /// <param name="video">The video to embed in the post.</param>
@@ -700,7 +713,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Creates a Bluesky post record containing a external Open Graph embedded card.
+        /// Creates a Bluesky post record containing text and an external Open Graph embedded card.
         /// </summary>
         /// <param name="text">The text of the post record to create.</param>
         /// <param name="externalCard">An Open Graph embedded card.</param>

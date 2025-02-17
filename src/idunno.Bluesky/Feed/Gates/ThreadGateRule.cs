@@ -10,6 +10,7 @@ namespace idunno.Bluesky.Feed.Gates
     /// </summary>
     [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = false, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]
     [JsonDerivedType(typeof(MentionRule), typeDiscriminator: "app.bsky.feed.threadgate#mentionRule")]
+    [JsonDerivedType(typeof(FollowerRule), typeDiscriminator: "app.bsky.feed.threadgate#followerRule")]
     [JsonDerivedType(typeof(FollowingRule), typeDiscriminator: "app.bsky.feed.threadgate#followingRule")]
     [JsonDerivedType(typeof(ListRule), typeDiscriminator: "app.bsky.feed.threadgate#listRule")]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S2094:Classes should not be empty", Justification = "Needed to discriminate on json type discriminator")]

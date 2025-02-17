@@ -296,8 +296,8 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
         public async Task<AtProtoHttpResult<PostThread>> GetPostThread(
             AtUri uri,
-            int? depth,
-            int? parentHeight,
+            int? depth = 6,
+            int? parentHeight = 80,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {

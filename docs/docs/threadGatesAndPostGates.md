@@ -23,7 +23,9 @@ await agent.AddThreadGate(
     cancellationToken: cancellationToken);
 ```
 
-The three types of thread gate rules are `FollowingRule`, `MentionRule` and `ListRule`. Note that adding, or updating a thread gate replaces any gate already in place. If you want to update rules or hidden posts first get any existing rule with `GetThreadGate()`, if that is successful update the returned`ThreadGate` class then apply it with with `UpdateThreadGate()`.
+The four types of thread gate rules are `FollowerRule`, `FollowingRule`, `MentionRule` and `ListRule`. Note that adding,
+or updating a thread gate replaces any gate already in place. If you want to update rules or hidden posts first get any existing rule
+with `GetThreadGate()`, if that is successful update the returned`ThreadGate` class then apply it with with `UpdateThreadGate()`.
 
 You can use `GetPostThread()` to see a view over a thread, including replies.
 
@@ -51,4 +53,31 @@ await agent.Post("New gated post",
     postGateRules: new List<PostGateRule>() { new DisableEmbeddingRule() },
     cancellationToken: cancellationToken);
 ```
+
+## Default user preferences for post and thread gates.
+
+Bluesky allows the users to set a default preference for post. and thread gates. You can retrieve these preferences with `agent.GetPreferences()`.
+
+```c#
+InteractionPreferences? interactionPreferences = null;
+var userPreferences = await agent.GetPreferences(cancellationToken: cancellationToken);
+if (userPreferences.Succeeded)
+{
+    interactionPreferences = userPreferences.Result.InteractionPreferences;
+}
+```
+
+You can then past this into `agent.Post()`
+
+```c#
+await agent.Post(
+    "Sample text, using default preferences",
+    interactionPreferences: interactionPreferences,
+    cancellationToken: cancellationToken);
+```
+
+Note that the Bluesky application allows a user to override their preferences on a post by post basis.
+If you specify a `threadGateRules` or `postGateRules` value to `agent.Post()` they will take precedence.
+
+If you are using a `PostBuilder` you can apply the user preferences to the builder with `PostBuilder.ApplyInteractionPreferences()`.
 

@@ -28,5 +28,7 @@ namespace idunno.Bluesky.Actor
         public const string Labelers = "app.bsky.actor.defs#labelersPref";
 
         public const string BlueskyAppState = "app.bsky.actor.defs#bskyAppStatePref";
+
+        public const string PostInteraction = "app.bsky.actor.defs#postInteractionSettingsPref";
     }
 }
