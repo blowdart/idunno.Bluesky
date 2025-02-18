@@ -448,6 +448,7 @@ namespace idunno.Bluesky
                 createdAt: createdAt,
                 threadGateRules: threadGateRules,
                 postGateRules: postGateRules,
+                interactionPreferences: interactionPreferences,
                 labels: labels,
                 extractFacets: extractFacets,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -461,6 +462,7 @@ namespace idunno.Bluesky
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -474,6 +476,7 @@ namespace idunno.Bluesky
             DateTimeOffset? createdAt = null,
             ICollection<ThreadGateRule>? threadGateRules = null,
             ICollection<PostGateRule>? postGateRules = null,
+            InteractionPreferences? interactionPreferences = null,
             PostSelfLabels? labels = null,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
@@ -505,6 +508,7 @@ namespace idunno.Bluesky
                 createdAt: createdAt,
                 threadGateRules: threadGateRules,
                 postGateRules: postGateRules,
+                interactionPreferences: interactionPreferences,
                 labels: labels,
                 extractFacets: extractFacets,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -518,6 +522,7 @@ namespace idunno.Bluesky
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -534,6 +539,7 @@ namespace idunno.Bluesky
             DateTimeOffset? createdAt = null,
             ICollection<ThreadGateRule>? threadGateRules = null,
             ICollection<PostGateRule>? postGateRules = null,
+            InteractionPreferences? interactionPreferences = null,
             PostSelfLabels? labels = null,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
@@ -601,7 +607,12 @@ namespace idunno.Bluesky
                 post.SetSelfLabels(labels);
             }
 
-            return await CreatePost(post, threadGateRules, postGateRules, cancellationToken).ConfigureAwait(false);
+            return await CreatePost(
+                post,
+                threadGateRules: threadGateRules,
+                postGateRules: postGateRules,
+                interactionPreferences : interactionPreferences,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -612,6 +623,7 @@ namespace idunno.Bluesky
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -624,6 +636,7 @@ namespace idunno.Bluesky
             DateTimeOffset? createdAt = null,
             ICollection<ThreadGateRule>? threadGateRules = null,
             ICollection<PostGateRule>? postGateRules = null,
+            InteractionPreferences? interactionPreferences = null,
             PostSelfLabels? labels = null,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
@@ -675,7 +688,12 @@ namespace idunno.Bluesky
                 post.SetSelfLabels(labels);
             }
 
-            return await CreatePost(post, threadGateRules, postGateRules, cancellationToken).ConfigureAwait(false);
+            return await CreatePost(
+                post,
+                threadGateRules: threadGateRules,
+                postGateRules: postGateRules,
+                interactionPreferences: interactionPreferences,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -686,6 +704,7 @@ namespace idunno.Bluesky
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -696,6 +715,7 @@ namespace idunno.Bluesky
             DateTimeOffset? createdAt = null,
             ICollection<ThreadGateRule>? threadGateRules = null,
             ICollection<PostGateRule>? postGateRules = null,
+            InteractionPreferences? interactionPreferences = null,
             PostSelfLabels? labels = null,
             CancellationToken cancellationToken = default)
         {
@@ -707,6 +727,7 @@ namespace idunno.Bluesky
                 createdAt: createdAt,
                 threadGateRules: threadGateRules,
                 postGateRules: postGateRules,
+                interactionPreferences: interactionPreferences,
                 extractFacets: false,
                 labels: labels,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -720,6 +741,7 @@ namespace idunno.Bluesky
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -733,6 +755,7 @@ namespace idunno.Bluesky
             DateTimeOffset? createdAt = null,
             ICollection<ThreadGateRule>? threadGateRules = null,
             ICollection<PostGateRule>? postGateRules = null,
+            InteractionPreferences? interactionPreferences = null,
             PostSelfLabels? labels = null,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
@@ -763,6 +786,11 @@ namespace idunno.Bluesky
 
             postBuilder.EmbedRecord(externalCard);
 
+            if (interactionPreferences is not null)
+            {
+                postBuilder.ApplyInteractionPreferences(interactionPreferences);
+            }
+
             if (threadGateRules is not null)
             {
                 postBuilder.ThreadGateRules = [.. threadGateRules];
@@ -786,11 +814,19 @@ namespace idunno.Bluesky
         /// Creates a post record from the specified <paramref name="post"/>.
         /// </summary>
         /// <param name="post">The post to create the record from.</param>
+        /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
+        /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(Post post, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
+            Post post,
+            ICollection<ThreadGateRule>? threadGateRules = null,
+            ICollection<PostGateRule>? postGateRules = null,
+            InteractionPreferences? interactionPreferences = null,
+            CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(post);
 
@@ -799,7 +835,12 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            AtProtoHttpResult<CreateRecordResponse> result = await CreatePost(post, cancellationToken: cancellationToken).ConfigureAwait(false);
+            AtProtoHttpResult<CreateRecordResponse> result = await CreatePost(
+                post,
+                threadGateRules: threadGateRules,
+                postGateRules: postGateRules,
+                interactionPreferences: interactionPreferences,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (result.Succeeded)
             {
@@ -838,6 +879,8 @@ namespace idunno.Bluesky
             {
                 post = postBuilder.ToPostRecord();
 
+                // The post builder already did the work in taking the default gating preferences and applying them.
+
                 if (postBuilder.ThreadGateRules is not null)
                 {
                     threadGateRules = [.. postBuilder.ThreadGateRules];
@@ -851,8 +894,9 @@ namespace idunno.Bluesky
 
             return await CreatePost(
                 post,
-                threadGateRules,
-                postGateRules,
+                threadGateRules: threadGateRules,
+                postGateRules: postGateRules,
+                interactionPreferences: null, 
                 cancellationToken).ConfigureAwait(false);
         }
 
@@ -1510,8 +1554,9 @@ namespace idunno.Bluesky
         }
         private async Task<AtProtoHttpResult<CreateRecordResponse>> CreatePost(
             Post post,
-            ICollection<ThreadGateRule>? threadGateRules = null,
-            ICollection<PostGateRule>? postGateRules = null,
+            ICollection<ThreadGateRule>? threadGateRules,
+            ICollection<PostGateRule>? postGateRules,
+            InteractionPreferences? interactionPreferences,
             CancellationToken cancellationToken = default)
         {
             if (!IsAuthenticated)
@@ -1519,7 +1564,7 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            if ((threadGateRules is null && postGateRules is null) && !string.IsNullOrEmpty(post.Text))
+            if ((threadGateRules is null && postGateRules is null && interactionPreferences is null) && !string.IsNullOrEmpty(post.Text))
             {
                 return await CreateRecord(
                     post,
@@ -1538,6 +1583,16 @@ namespace idunno.Bluesky
                 AtUri postUri = new($"at://{Did}/{CollectionNsid.Post}/{rKey}");
 
                 writeRequests.Add(new ApplyWritesCreate(CollectionNsid.Post, rKey, post));
+
+                if (threadGateRules is null && interactionPreferences is not null)
+                {
+                    threadGateRules = interactionPreferences.ThreadGateAllowRules;
+                }
+
+                if (postGateRules is null && interactionPreferences is not null)
+                {
+                    postGateRules = interactionPreferences.PostGateEmbeddingRules;
+                }
 
                 if (threadGateRules is not null)
                 {

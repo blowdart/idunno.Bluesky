@@ -1,5 +1,13 @@
 # idunno.Bluesky Version History
 
+## 0.4.0
+
+### Features
+
+#### idunno.Bluesky
+
+Support for user thread gate and post gate preference settings.
+
 ## 0.3.0
 
 ### Features
