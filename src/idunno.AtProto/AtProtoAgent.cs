@@ -317,7 +317,7 @@ namespace idunno.AtProto
         /// Thrown when <paramref name="writeRequests"/> or <paramref name="repo" /> is null.
         /// </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="writeRequests"/> is an empty collection.</exception>
-        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ApplyWritesResponse>> ApplyWrites(
             ICollection<ApplyWritesRequestValueBase> writeRequests,
             Did repo,
@@ -376,7 +376,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns><para>The task object representing the asynchronous operation.</para></returns>
         /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="record"/> or <paramref name="collection"/> is null.</para></exception>
-        /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current session is not authenticated.</para></exception>
+        /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
         public async Task<AtProtoHttpResult<CreateRecordResponse>> CreateRecord<TRecord>(
             TRecord record,
             Nsid collection,
@@ -583,7 +583,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">
         ///     <para>Thrown when <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/> or <paramref name="rKey"/> is null.</para>
         /// </exception>
-        /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current session is not authenticated.</para></exception>
+        /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
         public async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord(
             object record,
             Nsid collection,

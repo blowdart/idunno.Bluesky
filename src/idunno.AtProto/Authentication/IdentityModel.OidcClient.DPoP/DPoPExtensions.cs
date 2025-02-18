@@ -3,6 +3,7 @@
 
 namespace IdentityModel.OidcClient.DPoP;
 
+/// <exclude />
 /// <summary>
 /// Extensions for HTTP request/response messages
 /// </summary>

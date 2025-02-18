@@ -19,7 +19,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentException">
         ///   Thrown when <paramref name="conversationId"/> or <paramref name="messageId"/> is null or whitespace,
         /// </exception>
-        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<DeletedMessageView>> DeleteMessageForSelf(
             string conversationId,
             string messageId,
@@ -52,7 +52,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="members"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="members"/> is empty or has greater than the maximum number of conversation members.</exception>
-        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ConversationView>> GetConversationForMembers(
             ICollection<Did> members,
             CancellationToken cancellationToken = default)
@@ -84,7 +84,7 @@ namespace idunno.Bluesky
         /// <param name="cursor">A cursor used for pagination.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Conversations>> ListConversations(
             int? limit = null,
             string? cursor = null,
@@ -113,7 +113,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="id"/>is null or white space.</exception>
-        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ConversationView>> GetConversation(
             string id,
             CancellationToken cancellationToken = default)
@@ -141,7 +141,7 @@ namespace idunno.Bluesky
         /// <param name="cursor">A cursor used for pagination.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Logs>> GetConversationLog(
             string? cursor = null,
             CancellationToken cancellationToken = default)
@@ -170,7 +170,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is null or white space.</exception>
-        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Messages>> GetMessages(
             string id,
             int? limit = null,
@@ -203,7 +203,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is null or white space.</exception>
-        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ConversationReference>> LeaveConversation(
             string id,
             CancellationToken cancellationToken = default)
@@ -232,7 +232,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is null or white space.</exception>
-        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ConversationView>> MuteConversation(
             string id,
             CancellationToken cancellationToken = default)
@@ -262,7 +262,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="batchedMessages"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="batchedMessages"/> is empty or has greater than the maximum allowed number of messages.</exception>
-        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ICollection<MessageView>>> SendMessageBatch(
             ICollection<BatchedMessage> batchedMessages,
             CancellationToken cancellationToken = default)
@@ -296,7 +296,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is null or white space.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is null.</exception>
-        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<MessageView>> SendMessage(
             string id,
             string message,
@@ -338,7 +338,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is null or white space.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is null.</exception>
-        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<MessageView>> SendMessage(
             string id,
             MessageInput message,
@@ -371,7 +371,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is null or white space.</exception>
-        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ConversationView>> UnmuteConversation(
             string id,
             CancellationToken cancellationToken = default)
@@ -401,7 +401,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/> is null or white space or <paramref name="messageId"/> is empty or white space.</exception>
-        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ConversationView>> UpdateRead(
             string conversationId,
             string? messageId = null,

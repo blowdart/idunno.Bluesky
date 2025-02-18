@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace IdentityModel.OidcClient.DPoP
 {
+    /// <exclude />
     [JsonSourceGenerationOptions(
         WriteIndented = false,
         PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,

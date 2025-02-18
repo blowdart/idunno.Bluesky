@@ -1,6 +1,6 @@
 # Thread Gates and Post Gates
 
-## Thread Gates
+## <a name="threadGates">Thread Gates</a>
 
 Thread gates allow the original author of a thread to control who can reply to the thread, allowing people mentioned in the root post to reply,
 people the author is following to reply, replies from actors in a list or allow no replies at all.
@@ -29,7 +29,7 @@ with `GetThreadGate()`, if that is successful update the returned`ThreadGate` cl
 
 You can use `GetPostThread()` to see a view over a thread, including replies.
 
-## Post Gates
+## <a name="postGates">Post Gates</a>
 
 Post gates allow the post author to remove it from someone else's post quoting their post, and also to disable embedding on a post.
 

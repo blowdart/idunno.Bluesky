@@ -1,7 +1,3 @@
----
-uid: commonTerms
----
-
 # Concepts & Common Terms 
 
 Before we go any further lets take a little time to explain some common terms that you will see when discussing AT Protocol and Bluesky APIs.

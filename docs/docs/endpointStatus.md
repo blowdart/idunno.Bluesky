@@ -8,6 +8,7 @@
 | | [app.bsky.actor.getProfiles](https://docs.bsky.app/docs/api/app-bsky-actor-get-profiles) | `BlueskyAgent.GetProfiles()` | ✔ |
 | | [app.bsky.actor.getPreferences](https://docs.bsky.app/docs/api/app-bsky-actor-get-preferences) | `BlueskyAgent.GetPreferences()` | ✔ |
 | | [app.bsky.actor.getSuggestions](https://docs.bsky.app/docs/api/app-bsky-actor-get-suggestions) | `BlueskyAgent.GetSuggestions()` | ✔ |
+| | [app.bsky.actor.putPreferences](https://docs.bsky.app/docs/api/app-bsky-actor-put-preferences) | `BlueskyAgent.PutPreferences()` | ✔ |
 | | [app.bsky.actor.searchActors](https://docs.bsky.app/docs/api/app-bsky-actor-search-actors) | `BlueskyAgent.SearchActors()` | ✔ |
 | | [app.bsky.actor.searchActorsTypeahead](https://docs.bsky.app/docs/api/app-bsky-actor-search-actors-typeahead) | `BlueskyAgent.SearchActorsTypeahead()` | ✔ |
 | **Feed** | [app.bsky.feed.DescribeFeedGenerator](https://docs.bsky.app/docs/api/app-bsky-feed-describe-feed-generator) | `BlueskyAgent.DescribeFeedGenerator()` | ✔ |

@@ -10,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace IdentityModel.OidcClient.DPoP;
 
+/// <exclude />
 /// <summary>
 /// Used to create DPoP proof tokens.
 /// </summary>

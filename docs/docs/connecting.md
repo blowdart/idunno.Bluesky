@@ -99,10 +99,12 @@ OAuthClient and then send the user to the URI. The user will log into Bluesky an
 OAuthClient oAuthClient = agent.CreateOAuthClient();
 Uri startUri = await agent.BuildOAuth2LoginUri(oAuthClient, handle, cancellationToken: cancellationToken);
 
-// Save the state, and persist it in whatever way is suitable for your application, to be used when the response comes back from the OAuth server.
+// Save the state, and persist it in whatever way is suitable for your application,
+// to be used when the response comes back from the OAuth server.
 OAuthLoginState oAuthLoginState = uriBuilderOAuthClient.State;
 
-// Send the user to the startUri in a way suitable for your application, a redirection for web application or spawning a browser for a desktop application.
+// Send the user to the startUri in a way suitable for your application,
+// a redirection for web application or spawning a browser for a desktop application.
 ```
 
 When the user returns to your application you take the callback data returned from the OAuth server and process it

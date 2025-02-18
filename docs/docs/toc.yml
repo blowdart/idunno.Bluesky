@@ -26,6 +26,8 @@ items:
 
   - name: Users
     items:
+      - name: User Preferences
+        href: userPreferences.md
       - name: Conversations & Messages
         href: conversationsAndMessages.md
       - name: Editing a user profile

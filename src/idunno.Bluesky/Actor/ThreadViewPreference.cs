@@ -16,7 +16,7 @@ namespace idunno.Bluesky.Actor
         /// <param name="sortingMode">The user's preferred sorting mode for threads.</param>
         /// <param name="prioritizeFollowedUsers">Flag indicating whether to show followed users at the top of all replies.</param>
         [JsonConstructor]
-        public ThreadViewPreference(ThreadSortingMode sortingMode, bool prioritizeFollowedUsers)
+        public ThreadViewPreference(ThreadSortingMode? sortingMode = null, bool? prioritizeFollowedUsers = null)
         {
             SortingMode = sortingMode;
             PrioritizeFollowedUsers = prioritizeFollowedUsers;
@@ -26,13 +26,15 @@ namespace idunno.Bluesky.Actor
         /// The user's preferred sorting mode for threads.
         /// </summary>
         [JsonInclude]
-        public ThreadSortingMode SortingMode { get; init; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public ThreadSortingMode? SortingMode { get; init; }
 
         /// <summary>
         /// Flag indicating whether to show followed users at the top of all replies.
         /// </summary>
         [JsonInclude]
-        public bool PrioritizeFollowedUsers { get; init; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? PrioritizeFollowedUsers { get; init; }
         
     }
 

@@ -26,6 +26,9 @@ namespace idunno.Bluesky
         // https://docs.bsky.app/docs/api/app-bsky-actor-get-suggestions
         private const string GetSuggestionsEndpoint = "/xrpc/app.bsky.actor.getSuggestions";
 
+        // https://docs.bsky.app/docs/api/app-bsky-actor-put-preferences
+        private const string PutPreferencesEndpoint = "/xrpc/app.bsky.actor.putPreferences";
+
         // https://docs.bsky.app/docs/api/app-bsky-actor-search-actors
         private const string SearchActorsEndpoint = "/xrpc/app.bsky.actor.searchActors";
 
@@ -259,6 +262,47 @@ namespace idunno.Bluesky
                     response.AtErrorDetail,
                     response.RateLimit);
             }
+        }
+
+        /// <summary>
+        /// Gets the preferences for the requesting account.
+        /// </summary>
+        /// <param name="preferences">The preferences to update</param>
+        /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
+        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>,<paramref name="accessCredentials"/> or <paramref name="httpClient"/> are null.</exception>
+        public static async Task<AtProtoHttpResult<EmptyResponse>> PutPreferences(
+            IList<Preference> preferences,
+            Uri service,
+            AccessCredentials accessCredentials,
+            HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
+            ILoggerFactory? loggerFactory = default,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
+            ArgumentNullException.ThrowIfNull(httpClient);
+
+            AtProtoHttpClient<EmptyResponse> client = new(loggerFactory);
+
+            PutPreferencesRequest request = new(preferences);
+
+            AtProtoHttpResult<EmptyResponse> response = await client.Post(
+                service,
+                PutPreferencesEndpoint,
+                request,
+                credentials: accessCredentials,
+                httpClient: httpClient,
+                onCredentialsUpdated: onCredentialsUpdated,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            return response;
         }
 
         /// <summary>

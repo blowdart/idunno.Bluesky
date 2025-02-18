@@ -3,6 +3,7 @@
 
 namespace IdentityModel.OidcClient.DPoP;
 
+/// <exclude />
 /// <summary>
 /// Message handler to create and send DPoP proof tokens.
 /// </summary>

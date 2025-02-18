@@ -18,10 +18,11 @@ namespace idunno.Bluesky.Actor
         /// <param name="label">The label name.</param>
         /// <param name="labelerDid">The <see cref="Did"/> of the labeler. If null this preference applies globally.</param>
         /// <param name="visibility">How the label should be treated in a UI.</param>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="label"/> is null or white space.</exception>
         [JsonConstructor]
         public ContentLabelPreference(string label, Did? labelerDid, LabelVisibility visibility)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(label);
+            ArgumentException.ThrowIfNullOrWhiteSpace(label);
 
             Label = label;
             LabelerDid = labelerDid;

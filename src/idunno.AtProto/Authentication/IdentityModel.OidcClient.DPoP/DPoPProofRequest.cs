@@ -3,6 +3,7 @@
 
 namespace IdentityModel.OidcClient.DPoP;
 
+/// <exclude />
 /// <summary>
 /// Models the request information to create a DPoP proof token
 /// </summary>

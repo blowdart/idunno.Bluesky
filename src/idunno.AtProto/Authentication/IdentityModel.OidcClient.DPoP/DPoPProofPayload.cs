@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace IdentityModel.OidcClient.DPoP;
 
+/// <exclude />
 /// <summary>
 ///  Internal class to aid serialization of DPoP proof token payloads. Giving
 ///  each claim a property allows us to add this type to the source generated

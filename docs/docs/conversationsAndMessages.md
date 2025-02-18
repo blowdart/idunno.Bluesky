@@ -5,6 +5,8 @@
 > [!IMPORTANT]
 > If you or your users are using app passwords they must select the option to "Allow access to your direct messages" when creating the app password for
 > any of the conversation apis to work.
+>
+> If you are using [OAuth](connecting.md#oauth) you must request the `transition:chat.bsky` scope.
 
 To get a list of conversations for the authenticated user use the `ListConversations()` api:
 

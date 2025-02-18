@@ -3,6 +3,7 @@
 
 namespace IdentityModel.OidcClient.DPoP;
 
+/// <exclude />
 /// <summary>
 /// Extension methods to configure DPoP
 /// </summary>
