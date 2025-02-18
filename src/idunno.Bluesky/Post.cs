@@ -54,12 +54,12 @@ namespace idunno.Bluesky
 
                 if (postRecord.Facets is not null)
                 {
-                    Facets = new List<Facet>(postRecord.Facets);
+                    Facets = [.. postRecord.Facets];
                 }
 
                 if (postRecord.Langs is not null)
                 {
-                    Langs = new List<string>(postRecord.Langs);
+                    Langs = [.. postRecord.Langs];
                 }
 
                 if (postRecord.Labels is not null)
@@ -69,7 +69,7 @@ namespace idunno.Bluesky
 
                 if (postRecord.Tags is not null)
                 {
-                    Tags = new List<string>(postRecord.Tags);
+                    Tags = [.. postRecord.Tags];
                 }
             }
         }
@@ -83,7 +83,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentException">Thrown when <paramref name="lang" /> is empty.</exception>
         public Post(
             string text,
-            string lang) : this(text: text, langs: new List<string>() { lang })
+            string lang) : this(text: text, langs: [lang])
         {
             ArgumentException.ThrowIfNullOrEmpty(text);
             ArgumentException.ThrowIfNullOrEmpty(lang);
@@ -420,7 +420,7 @@ namespace idunno.Bluesky
         /// </summary>
         [JsonIgnore]
         [JsonPropertyName("$type")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Cannot be static as it won't be serialized.")]
+        [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Cannot be static as it won't be serialized.")]
         public string Type => RecordType.Post;
 
         /// <summary>

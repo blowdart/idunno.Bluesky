@@ -21,14 +21,14 @@ namespace idunno.Bluesky.Actor
         {
             ArgumentNullException.ThrowIfNull(list);
 
-            List<Did> labelerPreferenceList = new();
-            List<ContentLabelPreference> contentLabelPreferenceList = new();
-            List<SavedFeedPreference> savedFeedPreferenceList = new();
-            List<SavedFeedPreference2> savedFeedPreference2List = new();
-            List<AtUri> hiddenPostUris = new();
-            List<string> interestTags = new();
-            Dictionary<string, FeedViewPreference> feedViewPreferences = new();
-            List<MutedWord> mutedWords = new();
+            List<Did> labelerPreferenceList = [];
+            List<ContentLabelPreference> contentLabelPreferenceList = [];
+            List<SavedFeedPreference> savedFeedPreferenceList = [];
+            List<SavedFeedPreference2> savedFeedPreference2List = [];
+            List<AtUri> hiddenPostUris = [];
+            List<string> interestTags = [];
+            Dictionary<string, FeedViewPreference> feedViewPreferences = [];
+            List<MutedWord> mutedWords = [];
 
             foreach (Preference preference in this)
             {
@@ -81,6 +81,10 @@ namespace idunno.Bluesky.Actor
                         ThreadViewPreference = threadViewPreference;
                         break;
 
+                    case InteractionPreferences postInteractionSettingsPreference:
+                        InteractionPreferences = postInteractionSettingsPreference;
+                        break;
+
                     // As this is only meant for official Bluesky apps we'll just skip doing anything with it
                     // and not expose it as a Preferences property.
                     case BlueskyAppStatePreference:
@@ -110,7 +114,7 @@ namespace idunno.Bluesky.Actor
         /// Creates a new instance of <see cref="Preferences"/>.
         /// </summary>
         /// <param name="enableBlueskyModerationLabeler">A flag indicating whether the Bluesky moderation labeler should be enabled as part of the actor's subscribed labelers.</param>
-        public Preferences(bool enableBlueskyModerationLabeler = true) : this(new List<Preference>(), enableBlueskyModerationLabeler)
+        public Preferences(bool enableBlueskyModerationLabeler = true) : this([], enableBlueskyModerationLabeler)
         {
         }
 
@@ -119,7 +123,7 @@ namespace idunno.Bluesky.Actor
         /// </summary>
         /// <param name="preferences">An enumerable collection of actor preferences.</param>
         /// <param name="enableBlueskyModerationLabeler">A flag indicating whether the Bluesky moderation labeler should be enabled as part of the actor's subscribed labelers.</param>
-        public Preferences(IEnumerable<Preference> preferences, bool enableBlueskyModerationLabeler = true) : this(new List<Preference>(preferences), enableBlueskyModerationLabeler)
+        public Preferences(IEnumerable<Preference> preferences, bool enableBlueskyModerationLabeler = true) : this([.. preferences], enableBlueskyModerationLabeler)
         {
         }
 
@@ -177,5 +181,10 @@ namespace idunno.Bluesky.Actor
         /// Preferences for displaying how threads are viewed.
         /// </summary>
         public ThreadViewPreference? ThreadViewPreference { get; }
+
+        /// <summary>
+        /// Default gate settings for posts and threads.
+        /// </summary>
+        public InteractionPreferences? InteractionPreferences { get; }
     }
 }

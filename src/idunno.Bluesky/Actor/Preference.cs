@@ -23,6 +23,7 @@ namespace idunno.Bluesky.Actor
     [JsonDerivedType(typeof(MutedWordPreferences), typeDiscriminator: PreferenceTypeDiscriminators.MutedWords)]
     [JsonDerivedType(typeof(ThreadViewPreference), typeDiscriminator: PreferenceTypeDiscriminators.ThreadView)]
     [JsonDerivedType(typeof(BlueskyAppStatePreference), typeDiscriminator: PreferenceTypeDiscriminators.BlueskyAppState)]
+    [JsonDerivedType(typeof(InteractionPreferences), typeDiscriminator: PreferenceTypeDiscriminators.PostInteraction)]
     public record Preference
     {
         /// <summary>

@@ -17,13 +17,15 @@ namespace idunno.Bluesky.Feed
         /// <param name="parent">The <see cref="PostViewBase"/> of the parent of the <paramref name="post"/>, if any.</param>
         /// <param name="replies">The collection of <see cref="PostViewBase"/> of replies to the <paramref name="post"/>, if any.</param>
         /// <param name="threadGate">The <see cref="ThreadGateView"/> over the thread gate applied to the post, if any.</param>
+        /// <param name="threadContext">The <see cref="ThreadContext"/> for the post, if any.</param>
         [JsonConstructor]
-        internal ThreadViewPost(PostView post, PostViewBase? parent, IReadOnlyList<PostViewBase>? replies, ThreadGateView? threadGate)
+        internal ThreadViewPost(PostView post, PostViewBase? parent, IReadOnlyList<PostViewBase>? replies, ThreadGateView? threadGate, ThreadContext? threadContext)
         {
             Post = post;
             Parent = parent;
             Replies = replies;
             ThreadGate = threadGate;
+            ThreadContext = threadContext;
         }
 
         /// <summary>
@@ -51,5 +53,11 @@ namespace idunno.Bluesky.Feed
         [JsonInclude]
         [JsonPropertyName("threadgate")]
         public ThreadGateView? ThreadGate { get; init; }
+
+        /// <summary>
+        /// Gets the <see cref="ThreadContext"/> for the post, if any.
+        /// </summary>
+        [JsonInclude]
+        public ThreadContext? ThreadContext { get; init; }
     }
 }
