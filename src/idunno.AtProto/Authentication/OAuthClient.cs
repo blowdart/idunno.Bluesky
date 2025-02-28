@@ -11,10 +11,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using Microsoft.IdentityModel.JsonWebTokens;
 
-using IdentityModel.Client;
-using IdentityModel.OidcClient;
-using IdentityModel.OidcClient.DPoP;
-using IdentityModel.OidcClient.Results;
+using Duende.IdentityModel.Client;
+using Duende.IdentityModel.OidcClient;
+using Duende.IdentityModel.OidcClient.DPoP;
+using Duende.IdentityModel.OidcClient.Results;
+
 using idunno.AtProto.Server.Models;
 
 namespace idunno.AtProto.Authentication

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Microsoft.Extensions.Logging;
+
 using idunno.AtProto.Server.Models;
 
 namespace idunno.AtProto
@@ -12,7 +13,7 @@ namespace idunno.AtProto
     public static partial class AtProtoServer
     {
         // https://docs.bsky.app/docs/api/com-atproto-server-describe-server
-        private const string DescribeEndpoint = "/xrpc/com.atproto.server.describeServer";
+        internal const string DescribeServerEndpoint = "/xrpc/com.atproto.server.describeServer";
 
 
         /// <summary>
@@ -36,7 +37,7 @@ namespace idunno.AtProto
 
             AtProtoHttpClient<ServerDescription> request = new(loggerFactory);
 
-            AtProtoHttpResult<ServerDescription> result = await request.Get(service, DescribeEndpoint, httpClient, cancellationToken).ConfigureAwait(false);
+            AtProtoHttpResult<ServerDescription> result = await request.Get(service, DescribeServerEndpoint, httpClient, cancellationToken).ConfigureAwait(false);
 
             if (result.Succeeded &&
                 (result.Result.AvailableUserDomains is null || result.Result.AvailableUserDomains.Count == 0))

@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using IdentityModel.OidcClient;
+using Duende.IdentityModel.OidcClient;
 
 namespace idunno.AtProto.Authentication
 {
