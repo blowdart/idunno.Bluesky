@@ -34,7 +34,7 @@ namespace Samples.OAuth
             ArgumentException.ThrowIfNullOrEmpty(handle);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
-            proxyUri = new Uri("http://localhost:8866");
+            // proxyUri = new Uri("http://localhost:8866");
 
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
@@ -163,14 +163,10 @@ namespace Samples.OAuth
                     Console.WriteLine($"Access JWT hash      :  {agent.Credentials.ExpiresOn:G}");
 
 
-                    //                    await agent.CreateRecord(new Post($"hello via oauth, token hash {accessCredentialsHash}"), CollectionNsid.Post, cancellationToken: cancellationToken);
-
                     await agent.RefreshCredentials(cancellationToken: cancellationToken);
 
                     accessCredentialsHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(agent.Credentials.AccessJwt)));
                     Console.WriteLine($"Refreshed JWT hash   :  {agent.Credentials.ExpiresOn:G}");
-
-                    //                    await agent.CreateRecord(new Post($"hello via oauth refresh, token hash {accessCredentialsHash}"), CollectionNsid.Post, cancellationToken: cancellationToken);
                 }
                 else
                 {
