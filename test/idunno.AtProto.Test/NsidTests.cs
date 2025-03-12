@@ -1,9 +1,6 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
-using Xunit;
-
 namespace idunno.AtProto.Test
 {
     [ExcludeFromCodeCoverage]
@@ -19,6 +16,7 @@ namespace idunno.AtProto.Test
 
         // valid examples
         [InlineData("com.example.fooBar")]
+        [InlineData("com.example.fooBarV2")]
         [InlineData("net.users.bob.ping")]
         [InlineData("a.b.c")]
         [InlineData("m.xn--masekowski-d0b.pl")]
@@ -31,6 +29,8 @@ namespace idunno.AtProto.Test
         [InlineData("a01.thing.record")]
         [InlineData("a.0.c")]
         [InlineData("xn--fiqs8s.xn--fiqa61au8b7zsevnm8ak20mc4a87e.record.two")]
+        [InlineData("a0.b1.c3")]
+        [InlineData("com.example.f00")]
 
         //  allows onion (Tor) NSIDs
         [InlineData("onion.expyuzz4wqqyqhjn.spec.getThing")]
@@ -57,11 +57,9 @@ namespace idunno.AtProto.Test
         [InlineData("com.example.foo.*")]
         [InlineData("com.example.foo.blah*")]
         [InlineData("com.example.foo.* blah")]
-        [InlineData("com.example.f00")]
         [InlineData("com.exa💩ple.thing")]
         [InlineData("a -0.b-1.c-3")]
         [InlineData("a -0.b-1.c-o")]
-        [InlineData("a0.b1.c3")]
         [InlineData("1.0.0.127.record")]
         [InlineData("0two.example.foo")]
         [InlineData("example.com")]
@@ -78,6 +76,8 @@ namespace idunno.AtProto.Test
         [InlineData("com.atproto.feed.po#t")]
         [InlineData("com.atproto.feed.p!ot")]
         [InlineData("com.example-.foo")]
+        [InlineData("com.example.3")]
+        [InlineData("com.example.fooBar.2")]
         public void TryParseShouldReturnFalseOnInvalidNsids(string nsid)
         {
             Assert.False(Nsid.TryParse(nsid, out Nsid? _));

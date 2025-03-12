@@ -20,7 +20,7 @@ namespace idunno.AtProto
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private readonly string _value;
 
-        [GeneratedRegex(@"^[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(\.[a-zA-Z]([a-zA-Z]{0,61}[a-zA-Z])?)$", RegexOptions.CultureInvariant, 5000)]
+        [GeneratedRegex(@"^[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(\.[a-zA-Z]([a-zA-Z0-9]{0,62})?)$", RegexOptions.CultureInvariant, 5000)]
         private static partial Regex s_validationRegex();
 
         [GeneratedRegex("^[a-zA-Z0-9.-]*$", RegexOptions.Compiled | RegexOptions.CultureInvariant, 5000)]
@@ -309,11 +309,11 @@ namespace idunno.AtProto
                     }
                 }
 
-                if (i + 1 == labels.Length && !label.IsOnlyAsciiLetters())
+                if (i + 1 == labels.Length && !label.IsOnlyAsciiLettersAndNumbers())
                 {
                     if (throwOnError)
                     {
-                        throw new NsidFormatException($"NSID name part must be only letters.");
+                        throw new NsidFormatException($"NSID name part must be only letters and numbers.");
                     }
                     else
                     {
