@@ -54,6 +54,10 @@ The [releases page](https://github.com/blowdart/idunno.Bluesky/releases) provide
 * Wider test coverage
 * More deserialization tests with captured responses
 
+### Missing APIs
+
+* [moderation.createReport](https://docs.bsky.app/docs/api/com-atproto-moderation-create-report)
+
 ### Awaiting external
 
 * Automatic Open Graph card generation when link facets detected.
@@ -84,9 +88,10 @@ first property in the JSON object.
 * [sign](https://github.com/dotnet/sign) - used to code sign assemblies and nuget packages.
 * [docfx](https://dotnet.github.io/docfx/) - used to generate the documentation site.
 
-## Other .NET Bluesky libraries
+## Other .NET Bluesky libraries and projects
 
 * [FishyFlip](https://github.com/drasticactions/FishyFlip)
 * [X.Bluesky](https://github.com/a-gubskiy/X.Bluesky)
 * [atprotosharp](https://github.com/taranasus/atprotosharp)
 * [atompds](https://github.com/PassiveModding/atompds) - an implementation of an AtProto Personal Data Server in C#
+* [AppViewLite](https://github.com/alnkesq/AppViewLite) - an implementation of the Bluesky AppView in C# focused on low resource consumption
