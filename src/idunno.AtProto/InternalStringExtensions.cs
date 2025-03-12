@@ -67,5 +67,32 @@ namespace idunno.AtProto
 
             return true;
         }
+
+        /// <summary>
+        /// Gets a flag indicating whether the string only consists of ASCII letters and numbers.
+        /// </summary>
+        /// <param name="s">The string to check.</param>
+        /// <returns>True if the string only consists of ASCII letters, otherwise false.</returns>
+        public static bool IsOnlyAsciiLettersAndNumbers(this string s)
+        {
+            if (string.IsNullOrEmpty(s))
+            {
+                return true;
+            }
+
+            foreach (char item in s)
+            {
+                if (item is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9')
+                {
+                    continue;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
     }
 }
