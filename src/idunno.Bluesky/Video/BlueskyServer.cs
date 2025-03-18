@@ -130,9 +130,9 @@ namespace idunno.Bluesky
                 new NameValueHeaderValue("Content-Type", "video/mp4")
             ];
 
-            AtProtoHttpClient<JobStatusResponse> client = new(loggerFactory);
+            AtProtoHttpClient<JobStatus> client = new(loggerFactory);
 
-            AtProtoHttpResult<JobStatusResponse> response =
+            AtProtoHttpResult<JobStatus> response =
                 await client.PostBlob(
                     service,
                     $"{UploadVideoEndpoint}?did={Uri.EscapeDataString(did)}&name={Uri.EscapeDataString(fileName)}",
@@ -144,13 +144,7 @@ namespace idunno.Bluesky
                     onCredentialsUpdated: null, // Service credentials don't get updates
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            // Flatten
-            return new AtProtoHttpResult<JobStatus>(
-                response.Result?.JobStatus,
-                response.StatusCode,
-                response.HttpResponseHeaders,
-                response.AtErrorDetail,
-                response.RateLimit);
+            return response;
         }
     }
 }

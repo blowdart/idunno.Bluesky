@@ -22,8 +22,8 @@ var videoUploadResult = await agent.UploadVideo(
 videoUploadResult.EnsureSucceeded();
 
 // Wait for processing to finish.
-while (videoUploadResult.Result.State == idunno.Bluesky.Video.JobState.InProgress &&
-    videoUploadResult.Succeeded)
+while (videoUploadResult.Succeeded &&
+       (videoUploadResult.Result.State == idunno.Bluesky.Video.JobState.Created || videoUploadResult.Result.State == idunno.Bluesky.Video.JobState.InProgress))
 {
     // Give the user some feedback
     Console.WriteLine(

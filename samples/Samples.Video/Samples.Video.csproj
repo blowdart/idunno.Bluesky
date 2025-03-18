@@ -17,9 +17,6 @@
   <ItemGroup>
     <EmbeddedResource Include="captions.vtt" />
     <EmbeddedResource Include="DroneBeach.mp4" />
-  </ItemGroup>
-
-  <ItemGroup>
     <EmbeddedResource Include="Flowers.mp4" />
   </ItemGroup>
 

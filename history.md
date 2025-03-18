@@ -1,5 +1,13 @@
 # idunno.Bluesky Version History
 
+## 0.4.1
+
+### Bug Fixes
+
+#### idunno.Bluesky
+
+Fix video uploading code, sample and documentation
+
 ## 0.4.0
 
 ### Features

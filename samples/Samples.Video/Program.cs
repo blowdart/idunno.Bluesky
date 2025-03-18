@@ -8,11 +8,12 @@ using System.Reflection;
 
 using Microsoft.Extensions.Logging;
 
+using idunno.AtProto;
 using idunno.Bluesky;
 using idunno.Bluesky.Embed;
 
 using Samples.Common;
-using idunno.AtProto;
+using idunno.Bluesky.Video;
 
 namespace Samples.Video
 {
@@ -108,8 +109,10 @@ namespace Samples.Video
                 // END-AUTHENTICATION
 
                 {
+                    const string fileName = "Samples.Video.DroneBeach.mp4";
+
                     byte[] videoAsBytes;
-                    using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Samples.Video.DroneBeach.mp4")!)
+                    using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream(fileName)!)
                     using (MemoryStream memoryStream = new())
                     {
                         resourceStream.CopyTo(memoryStream);
@@ -135,15 +138,15 @@ namespace Samples.Video
 
                     // We're using a random file name here, because if a video upload with the same name already exists the upload fails.
                     var videoUploadResult = await agent.UploadVideo(
-                        Path.GetRandomFileName() + ".mp4",
+                        fileName,
                         videoAsBytes,
                         cancellationToken: cancellationToken);
 
                     // Quick fail - you'd want to be more graceful in handling errors.
                     videoUploadResult.EnsureSucceeded();
 
-                    while (videoUploadResult.Result.State == idunno.Bluesky.Video.JobState.InProgress &&
-                        videoUploadResult.Succeeded &&
+                    while (videoUploadResult.Succeeded &&
+                        (videoUploadResult.Result.State == JobState.Created || videoUploadResult.Result.State == JobState.InProgress) &&
                         !cancellationToken.IsCancellationRequested)
                     {
                         Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} processing, progress {videoUploadResult.Result.Progress}");
@@ -154,7 +157,7 @@ namespace Samples.Video
 
                     if (!videoUploadResult.Succeeded ||
                         videoUploadResult.Result.Blob is null ||
-                        videoUploadResult.Result.State != idunno.Bluesky.Video.JobState.Completed)
+                        videoUploadResult.Result.State != JobState.Completed)
                     {
                         ConsoleColor oldColor = Console.ForegroundColor;
                         Console.ForegroundColor = ConsoleColor.Red;
@@ -209,8 +212,7 @@ namespace Samples.Video
                     videoUploadResult.EnsureSucceeded();
 
                     while (videoUploadResult.Succeeded &&
-                        (videoUploadResult.Result.State == idunno.Bluesky.Video.JobState.Created ||
-                        videoUploadResult.Result.State == idunno.Bluesky.Video.JobState.InProgress) &&
+                        (videoUploadResult.Result.State == JobState.Created || videoUploadResult.Result.State == JobState.InProgress) &&
                         !cancellationToken.IsCancellationRequested)
                     {
                         Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} processing, progress {videoUploadResult.Result.Progress}");
@@ -222,7 +224,7 @@ namespace Samples.Video
 
                     if (!videoUploadResult.Succeeded ||
                         videoUploadResult.Result.Blob is null ||
-                        videoUploadResult.Result.State != idunno.Bluesky.Video.JobState.Completed)
+                        videoUploadResult.Result.State != JobState.Completed)
                     {
                         ConsoleColor oldColor = Console.ForegroundColor;
                         Console.ForegroundColor = ConsoleColor.Red;
