@@ -23,7 +23,7 @@ namespace idunno.DidPlcDirectory
         /// </summary>
         /// <param name="options">Any <see cref="DirectoryAgentOptions"/> to configure this instance with.</param>
         public DirectoryAgent(
-            DirectoryAgentOptions? options = null) : base(options?.HttpClientOptions)
+            DirectoryAgentOptions? options = null) : base(options?.HttpClientOptions, null)
         {
             if (options is not null)
             {
@@ -45,7 +45,7 @@ namespace idunno.DidPlcDirectory
         /// <param name="options">Any <see cref="DirectoryAgentOptions"/> to configure this instance with.</param>
         public DirectoryAgent(
             IHttpClientFactory httpClientFactory,
-            DirectoryAgentOptions? options = null) : base(httpClientFactory)
+            DirectoryAgentOptions? options = null) : base(httpClientFactory, null)
         {
             ArgumentNullException.ThrowIfNull(HttpClientFactory);
 
@@ -71,7 +71,7 @@ namespace idunno.DidPlcDirectory
         /// <remarks>
         /// <para>This directory is ignored if the DID is a web DID.</para>
         /// </remarks>
-        private Uri PlcDirectory { get; } = s_defaultDirectoryServer;
+        internal Uri PlcDirectory { get; } = s_defaultDirectoryServer;
 
         /// <summary>
         /// Gets the DID document for a DID.
@@ -88,7 +88,12 @@ namespace idunno.DidPlcDirectory
 
             Logger.ResolveDidDocumentCalled(_logger, did, directory);
 
-            AtProtoHttpResult<DidDocument> result = await DirectoryServer.ResolveDidDocument(did, directory, HttpClient, _loggerFactory, cancellationToken).ConfigureAwait(false);
+            AtProtoHttpResult<DidDocument> result = await DirectoryServer.ResolveDidDocument(
+                did: did,
+                directory: directory,
+                httpClient: HttpClient,
+                loggerFactory: _loggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (!result.Succeeded)
             {

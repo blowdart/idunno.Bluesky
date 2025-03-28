@@ -3,7 +3,7 @@
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
-
+using idunno.AtProto.Repo.Models;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.Feed.Gates.Model;
 
@@ -180,9 +180,8 @@ namespace idunno.Bluesky
             }
 
             return await PutRecord(
-                record: threadGate,
+                recordValue: threadGate,
                 collection: CollectionNsid.ThreadGate,
-                creator: Did,
                 rKey: threadGate.Post.RecordKey,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -458,9 +457,8 @@ namespace idunno.Bluesky
             }
 
             return await PutRecord(
-                record: postGate,
+                recordValue: postGate,
                 collection: CollectionNsid.PostGate,
-                creator: Did,
                 rKey: postGate.Post.RecordKey,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }

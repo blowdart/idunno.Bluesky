@@ -9,10 +9,13 @@ using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.RichText;
 
+//TODO: Fix in reply to, and make it actually usable (taking a single strong reference or AtUri)
+//TODO: Make more buildery. Add a create method. Add implicit cast to post.
+
 namespace idunno.Bluesky
 {
     /// <summary>
-    /// A class to allow building of a Post record in a more friendly manner.
+    /// A builder to allow building of a Post record in a more friendly manner.
     /// </summary>
     public sealed class PostBuilder
     {

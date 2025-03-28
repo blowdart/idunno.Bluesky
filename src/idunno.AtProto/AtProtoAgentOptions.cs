@@ -27,12 +27,14 @@ namespace idunno.AtProto
         /// <param name="plcDirectoryServer">The server to use when resolving plc DIDs.</param>
         /// <param name="oAuthOptions">Any <see cref="OAuthOptions"/> for the agent.</param>
         /// <param name="httpClientOptions">The HttpClient options for the agent.</param>
+        /// <param name="httpJsonOptions">Any <see cref="JsonOptions"/> to use during serialization and deserialization.</param>
         public AtProtoAgentOptions(
             ILoggerFactory? loggerFactory,
             bool enableBackgroundTokenRefresh = true,
             Uri? plcDirectoryServer = null,
             OAuthOptions? oAuthOptions = null,
-            HttpClientOptions? httpClientOptions = null) : this()
+            HttpClientOptions? httpClientOptions = null,
+            JsonOptions? httpJsonOptions = null) : this()
         {
             LoggerFactory = loggerFactory;
             EnableBackgroundTokenRefresh = enableBackgroundTokenRefresh;
@@ -44,6 +46,7 @@ namespace idunno.AtProto
 
             OAuthOptions = oAuthOptions;
             HttpClientOptions = httpClientOptions;
+            HttpJsonOptions = httpJsonOptions;
         }
 
         /// <summary>
@@ -60,6 +63,11 @@ namespace idunno.AtProto
         /// Specifies the server to use when resolving plc DIDs.
         /// </summary>
         public Uri PlcDirectoryServer { get; set; } = new("https://plc.directory");
+
+        /// <summary>
+        /// Gets or sets any <see cref="JsonOptions"/> to use during serialization and deserialization."/>
+        /// </summary>
+        public JsonOptions? HttpJsonOptions { get; set; }
 
         /// <summary>
         /// Gets or sets any OAuth options for the agent.

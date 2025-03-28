@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Labels;
-using idunno.AtProto.Models;
+using idunno.AtProto.Labels.Models;
 
 namespace idunno.AtProto
 {
@@ -79,6 +79,7 @@ namespace idunno.AtProto
                 queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor)}");
             }
 
+
             AtProtoHttpClient<QueryLabelsResponse> request = new(loggerFactory);
 
             AtProtoHttpResult<QueryLabelsResponse> response = await request.Get(
@@ -87,6 +88,7 @@ namespace idunno.AtProto
                 accessCredentials,
                 httpClient,
                 onCredentialsUpdated: onCredentialsUpdated,
+                jsonSerializerOptions: SelfContainedJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)

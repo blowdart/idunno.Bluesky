@@ -84,7 +84,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(generatorUri);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<FeedGeneratorDescription> client = new(loggerFactory);
+            AtProtoHttpClient<FeedGeneratorDescription> client = new(AppViewProxy, loggerFactory);
 
             return await client.Get(
                 generatorUri,
@@ -145,7 +145,7 @@ namespace idunno.Bluesky
             }
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetActorFeedsResponse> client = new(loggerFactory);
+            AtProtoHttpClient<GetActorFeedsResponse> client = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<GetActorFeedsResponse> response = await client.Get(
                 service,
                 $"{GetActorFeedsEndpoint}?{queryString}",
@@ -226,7 +226,7 @@ namespace idunno.Bluesky
             }
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetActorLikesResponse> client = new(loggerFactory);
+            AtProtoHttpClient<GetActorLikesResponse> client = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<GetActorLikesResponse> response = await client.Get(
                 service,
                 $"{GetActorLikesEndpoint}?{queryString}",
@@ -318,7 +318,7 @@ namespace idunno.Bluesky
             }
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetAuthorFeedResponse> client = new(loggerFactory);
+            AtProtoHttpClient<GetAuthorFeedResponse> client = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<GetAuthorFeedResponse> response = await client.Get(
                 service,
                 $"{GetAuthorFeedEndpoint}?{queryString}",
@@ -375,7 +375,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<FeedGenerator> client = new(loggerFactory);
+            AtProtoHttpClient<FeedGenerator> client = new(AppViewProxy, loggerFactory);
 
             return await client.Get(
                 service,
@@ -427,7 +427,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetFeedGeneratorsResponse> client = new(loggerFactory);
+            AtProtoHttpClient<GetFeedGeneratorsResponse> client = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<GetFeedGeneratorsResponse> response = await client.Get(
                 service,
                 $"{GetFeedGeneratorsEndpoint}?{queryString}",
@@ -508,7 +508,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetFeedResponse> client = new(loggerFactory);
+            AtProtoHttpClient<GetFeedResponse> client = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<GetFeedResponse> response = await client.Get(
                 service,
                 $"{GetFeedEndpoint}?{queryString}",
@@ -593,7 +593,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetLikesResponse> client = new(loggerFactory);
+            AtProtoHttpClient<GetLikesResponse> client = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<GetLikesResponse> response = await client.Get(
                 service,
                 $"{GetLikesEndpoint}?{queryString}",
@@ -673,7 +673,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetListFeedResponse> client = new(loggerFactory);
+            AtProtoHttpClient<GetListFeedResponse> client = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<GetListFeedResponse> response = await client.Get(
                 service,
                 $"{GetListFeedEndpoint}?{queryString}",
@@ -760,7 +760,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<PostThread> client = new(loggerFactory);
+            AtProtoHttpClient<PostThread> client = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<PostThread> response = await client.Get(
                 service,
                 $"{GetPostThreadEndpoint}?{queryString}",
@@ -811,7 +811,7 @@ namespace idunno.Bluesky
 
             string queryString = string.Join("&", uriList.Select(uri => $"uris={Uri.EscapeDataString(uri.ToString())}"));
 
-            AtProtoHttpClient<GetPostsResponse> client = new(loggerFactory);
+            AtProtoHttpClient<GetPostsResponse> client = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<GetPostsResponse> response = await client.Get(
                 service,
                 $"{GetPostsEndpoint}?{queryString}",
@@ -899,7 +899,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetQuotesResponse> client = new(loggerFactory);
+            AtProtoHttpClient<GetQuotesResponse> client = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<GetQuotesResponse> response = await client.Get(
                 service,
                 $"{GetQuotesEndpoint}?{queryString}",
@@ -986,7 +986,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetRepostedByResponse> client = new(loggerFactory);
+            AtProtoHttpClient<GetRepostedByResponse> client = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<GetRepostedByResponse> response = await client.Get(
                 service,
                 $"{GetRepostedByEndpoint}?{queryString}",
@@ -1041,7 +1041,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<GetSuggestedFeedsResponse> client = new(loggerFactory);
+            AtProtoHttpClient<GetSuggestedFeedsResponse> client = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<GetSuggestedFeedsResponse> response = await client.Get(
                 service,
                 GetSuggestedFeedsEndpoint,
@@ -1128,7 +1128,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<GetTimelineResponse> client = new(loggerFactory);
+            AtProtoHttpClient<GetTimelineResponse> client = new(AppViewProxy, loggerFactory);
 
             AtProtoHttpResult<GetTimelineResponse> response = await client.Get(
                 service,
@@ -1269,7 +1269,7 @@ namespace idunno.Bluesky
 
             string queryString = queryStringBuilder.ToString();
 
-            AtProtoHttpClient<SearchPostsResponse> client = new(loggerFactory);
+            AtProtoHttpClient<SearchPostsResponse> client = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<SearchPostsResponse> response = await client.Get(
                 service,
                 $"{SearchPostsEndpoint}?{queryString}",

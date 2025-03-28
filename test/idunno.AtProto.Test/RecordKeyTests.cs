@@ -1,9 +1,6 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
-using Xunit;
-
 namespace idunno.AtProto.Test
 {
     [ExcludeFromCodeCoverage]
@@ -28,7 +25,7 @@ namespace idunno.AtProto.Test
         [InlineData(":lang")]
         // very long: 'o'.repeat(512)
         [InlineData("oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo")]
-        void ValidRecordKeysShouldConstructWithoutError(string value)
+        public void ValidRecordKeysShouldConstructWithoutError(string value)
         {
             RecordKey recordKey = new (value);
             Assert.NotNull(recordKey);
@@ -51,7 +48,7 @@ namespace idunno.AtProto.Test
         [InlineData("dHJ1ZQ==")]
         // too long: 'o'.repeat(513)
         [InlineData("ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo")]
-        void InvalidRecordKeysShouldThrowOnConstruction(string value)
+        public void InvalidRecordKeysShouldThrowOnConstruction(string value)
         {
             Assert.Throws<RecordKeyFormatException>((Action)(() =>
             {

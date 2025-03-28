@@ -35,7 +35,7 @@ namespace idunno.AtProto.Repo.Models
         /// Gets the <see cref="ValidationStatus"/> of the record, if any.
         /// </summary>
         [JsonInclude]
-        public ValidationStatus? ValidationStatus { get; set; }
+        public ValidationStatus? ValidationStatus { get; init; }
 
         /// <summary>
         /// The <see cref="StrongReference"/> of the record the write operation created.

@@ -5,6 +5,8 @@ updates:
   schedule:
     interval: daily
   ignore:
+    - dependency-name: "Microsoft.AspNetCore.TestHost"
+      update-types: ["version-update:semver-major"]
     - dependency-name: "Microsoft.Extensions.DependencyInjection"
       update-types: ["version-update:semver-major"]
     - dependency-name: "Microsoft.Extensions.Logging"

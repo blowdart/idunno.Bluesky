@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using idunno.AtProto;
 using idunno.Bluesky.RichText;
+using idunno.DidPlcDirectory;
 
 namespace idunno.Bluesky
 {
@@ -28,11 +29,45 @@ namespace idunno.Bluesky
         /// false if you are using a debugging proxy which does not support CRLs.
         /// </para>
         /// </remarks>
-        public BlueskyAgent(
-            BlueskyAgentOptions ? options = null) : base (
-                DefaultServiceUris.BlueskyApiUri,
-                options: options)
+        public BlueskyAgent(BlueskyAgentOptions ? options = null) :
+            base (DefaultServiceUris.BlueskyApiUri, options: options)
         {
+            if (options is not null && options.PublicAppViewUri is not null)
+            {
+                ReadOnlyServiceUri = options.PublicAppViewUri;
+            }
+
+            if (options is not null && options.FacetExtractor is not null)
+            {
+                _facetExtractor = options.FacetExtractor;
+            }
+            else
+            {
+                _facetExtractor = new DefaultFacetExtractor(ResolveHandle);
+            }
+
+            if (options is not null)
+            {
+                LoggerFactory = options.LoggerFactory ?? NullLoggerFactory.Instance;
+            }
+            else
+            {
+                LoggerFactory = NullLoggerFactory.Instance;
+            }
+
+            _logger = LoggerFactory.CreateLogger<BlueskyAgent>();
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="BlueskyAgent"/>
+        /// </summary>
+        /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
+        /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
+        public BlueskyAgent(IHttpClientFactory httpClientFactory, BlueskyAgentOptions? options = null) :
+            base(DefaultServiceUris.BlueskyApiUri, httpClientFactory, options)
+        {
+            ArgumentNullException.ThrowIfNull(httpClientFactory);
+
             if (options is not null && options.PublicAppViewUri is not null)
             {
                 ReadOnlyServiceUri = options.PublicAppViewUri;
@@ -83,6 +118,12 @@ namespace idunno.Bluesky
                 return Service;
             }
         }
+
+        /// <summary>
+        /// Creates a new <see cref="BlueskyAgentBuilder"/>.
+        /// </summary>
+        /// <returns>A new <see cref="BlueskyAgentBuilder"/></returns>
+        public static new BlueskyAgentBuilder CreateBuilder() => BlueskyAgentBuilder.Create();
 
         /// <summary>
         /// Generates an AT URI from the specified Uri.

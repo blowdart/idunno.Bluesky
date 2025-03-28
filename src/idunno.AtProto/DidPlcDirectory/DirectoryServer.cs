@@ -8,6 +8,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using idunno.AtProto;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace idunno.DidPlcDirectory
 {
@@ -17,6 +19,16 @@ namespace idunno.DidPlcDirectory
     [SuppressMessage("Performance", "CA1812", Justification = "Used in DID resolution.")]
     internal static class DirectoryServer
     {
+        // DirectoryServer's json classes are encapsulated in the default source generation context, we can hard code this.
+        private static readonly JsonSerializerOptions s_jsonSerializerOptions = new(JsonSerializerDefaults.Web)
+        {
+            AllowOutOfOrderMetadataProperties = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            IgnoreReadOnlyProperties = false,
+            TypeInfoResolver = SourceGenerationContext.Default,
+            UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip
+        };
+
         // https://web.plc.directory/api/redoc#operation/ResolveDid
 
         /// <summary>
@@ -47,12 +59,13 @@ namespace idunno.DidPlcDirectory
                 {
                     Logger.ResolvingPlcDid(logger, did, directory);
 
-                    AtProtoHttpClient<DidDocument> request = new(loggerFactory);
+                    AtProtoHttpClient<DidDocument> request = new(serviceProxy: null, loggerFactory: loggerFactory);
 
                     return await request.Get(
                         directory,
                         $"/{did}",
                         httpClient: httpClient,
+                        jsonSerializerOptions: s_jsonSerializerOptions,
                         cancellationToken: cancellationToken).ConfigureAwait(false);
                 }
                 else if (did.ToString().StartsWith(webDidPrefix, StringComparison.InvariantCulture))
@@ -63,12 +76,13 @@ namespace idunno.DidPlcDirectory
 
                     Logger.ResolvingWebDid(logger, did, service);
 
-                    AtProtoHttpClient<DidDocument> request = new(loggerFactory);
+                    AtProtoHttpClient<DidDocument> request = new(serviceProxy: null, loggerFactory: loggerFactory);
 
                     return await request.Get(
                         service,
                         $"/.well-known/did.json",
                         httpClient: httpClient,
+                        jsonSerializerOptions: s_jsonSerializerOptions,
                         cancellationToken: cancellationToken).ConfigureAwait(false);
                 }
                 else

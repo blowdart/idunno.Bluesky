@@ -18,7 +18,7 @@ namespace idunno.AtProto
         /// <param name="s">The string to create an <see cref="AtIdentifier"/> from.</param>
         /// <returns>An <see cref="AtIdentifier" /> from the specified string</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> is not valid for an <see cref="AtIdentifier"/>.</exception>
-        public static AtIdentifier CreateFrom(string s)
+        public static AtIdentifier Create(string s)
         {
             ArgumentException.ThrowIfNullOrEmpty(s);
 

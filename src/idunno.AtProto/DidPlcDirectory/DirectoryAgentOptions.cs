@@ -1,8 +1,11 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using idunno.AtProto;
+using System.Diagnostics.CodeAnalysis;
+
 using Microsoft.Extensions.Logging;
+
+using idunno.AtProto;
 
 namespace idunno.DidPlcDirectory
 {
@@ -11,10 +14,30 @@ namespace idunno.DidPlcDirectory
     /// </summary>
     public sealed class DirectoryAgentOptions
     {
+        private Uri _plcdirectoryUri = DirectoryAgent.s_defaultDirectoryServer;
+
         /// <summary>
         /// Specifies the server to use when resolving plc DIDs.
         /// </summary>
-        public Uri PlcDirectoryUri { get; set; } = DirectoryAgent.s_defaultDirectoryServer;
+        public Uri PlcDirectoryUri
+        {
+            get
+            {
+                return _plcdirectoryUri;
+            }
+
+            set
+            {
+                ArgumentNullException.ThrowIfNull(value);
+
+                if (value.Scheme != Uri.UriSchemeHttps)
+                {
+                    throw new ArgumentException("The PLC directory server must be an HTTPS URI.", nameof(value));
+                }
+
+                _plcdirectoryUri = value;
+            }
+        }
 
         /// <summary>
         /// Gets or sets any HttpClient options for the agent.

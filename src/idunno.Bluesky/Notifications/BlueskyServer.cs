@@ -55,7 +55,7 @@ namespace idunno.Bluesky
                 queryString = $"{seenAt.Value.UtcDateTime.ToString("o", CultureInfo.InvariantCulture)}";
             }
 
-            AtProtoHttpClient<UnreadCountResponse> request = new(loggerFactory);
+            AtProtoHttpClient<UnreadCountResponse> request = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<UnreadCountResponse> response = await request.Get(
                 service,
                 $"{GetUnreadEndpoint}?{queryString}",
@@ -137,7 +137,7 @@ namespace idunno.Bluesky
                 queryString.Remove(queryString.Length - 1, 1);
             }
 
-            AtProtoHttpClient<ListNotificationsResponse> request = new(loggerFactory);
+            AtProtoHttpClient<ListNotificationsResponse> request = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<ListNotificationsResponse> response = await request.Get(
                 service: service,
                 endpoint: $"{ListNotificationsEndpoint}?{queryString}",
@@ -145,7 +145,6 @@ namespace idunno.Bluesky
                 httpClient: httpClient,
                 onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
-                jsonSerializerOptions: null,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             // Flatten
@@ -197,7 +196,7 @@ namespace idunno.Bluesky
 
             UpdateSeenRequest body = new() { SeenAt = seenAt };
 
-            AtProtoHttpClient<EmptyResponse> request = new(loggerFactory);
+            AtProtoHttpClient<EmptyResponse> request = new(AppViewProxy, loggerFactory);
             return await request.Post(
                 service,
                 $"{UpdateSeenEndpoint}",

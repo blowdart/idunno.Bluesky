@@ -41,6 +41,8 @@ items:
         href: savingAndRestoringAuthentication.md
       - name: Configuring logging
         href: logging.md
+      - name: Json Source Generation and Native AOT
+        href: sourceGeneration.md
 
   - name: Reference
     items:

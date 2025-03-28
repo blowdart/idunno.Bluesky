@@ -3,7 +3,7 @@
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
-
+using idunno.AtProto.Repo.Models;
 using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky
@@ -122,26 +122,24 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            if (profileRecord.Uri.Authority is not Did _)
+            if (profileRecord.Uri.Authority is not Did recordDid)
             {
                 throw new ArgumentException("Uri authority is not a DID", nameof(profileRecord));
             }
 
-            if (profileRecord.Uri.Authority is Did recordDid && recordDid != Did)
+            if (recordDid != Did)
             {
                 throw new ArgumentException("Uri authority does not match the current user", nameof(profileRecord));
             }
 
             return await PutRecord(
-                profileRecord.Value,
+                recordValue: profileRecord.Value,
                 collection: CollectionNsid.Profile,
-                creator: Did,
                 rKey: "self",
                 validate: null,
                 swapCommit: null,
                 swapRecord: profileRecord.Cid,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
-
     }
 }

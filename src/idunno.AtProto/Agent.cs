@@ -20,23 +20,25 @@ namespace idunno.AtProto
 
         private readonly ServiceProvider? _serviceProvider;
 
-        private readonly HttpClientOptions? _httpClientOptions;
+        internal HttpClientOptions? _httpClientOptions;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Agent"/> class.
         /// </summary>
-        /// <param name="httpClientOptions">Any options for the internal http client used to make HTTP requests.</param>
+        /// <param name="httpClientOptions">Any <see cref="HttpClientOptions"/> for the internal http client used to make HTTP requests.</param>
+        /// <param name="jsonOptions">Any <see cref="JsonOptions"/> to use during serialization and deserialization.</param>
         /// <remarks>
         /// <para>
         /// Setting <see cref="HttpClientOptions.CheckCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
         /// false if you are using a debugging proxy which does not support CRLs.
         /// </para>
         /// </remarks>
-        protected Agent(HttpClientOptions? httpClientOptions)
+        protected Agent(HttpClientOptions? httpClientOptions, JsonOptions? jsonOptions)
         {
-            _httpClientOptions = httpClientOptions;
-
-            IServiceCollection services = new ServiceCollection();
+            if (jsonOptions is not null)
+            {
+                JsonOptions = jsonOptions;
+            }
 
             bool checkCrl;
             if (httpClientOptions is null)
@@ -48,8 +50,11 @@ namespace idunno.AtProto
                 checkCrl = httpClientOptions.CheckCertificateRevocationList;
             }
 
+            IServiceCollection services = new ServiceCollection();
+            _httpClientOptions = httpClientOptions;
+
             services
-            .AddHttpClient(HttpClientName, client => InternalConfigureHttpClient(client, _httpClientOptions?.HttpUserAgent, _httpClientOptions?.Timeout))
+                .AddHttpClient(HttpClientName, client => InternalConfigureHttpClient(client, _httpClientOptions?.HttpUserAgent, _httpClientOptions?.Timeout))
                 .ConfigurePrimaryHttpMessageHandler(() => BuildProxyClientHandler(_httpClientOptions?.ProxyUri, checkCrl));
 
             _serviceProvider = services.BuildServiceProvider();
@@ -60,12 +65,19 @@ namespace idunno.AtProto
         /// Initializes a new instance of the <see cref="Agent"/> class.
         /// </summary>
         /// <param name="httpClientFactory">An <see cref="IHttpClientFactory"/> to use to create HTTP clients.</param>
+        /// <param name="jsonOptions">Any <see cref="JsonOptions"/> to use during serialization and deserialization.</param>
         /// <remarks>
         /// <para>The agent will request a named HttpClient with a name of "idunno.AtProto".</para>
         /// </remarks>
-        protected Agent(IHttpClientFactory httpClientFactory)
+        protected Agent(IHttpClientFactory httpClientFactory, JsonOptions? jsonOptions)
         {
             ArgumentNullException.ThrowIfNull(httpClientFactory);
+
+            if (jsonOptions is not null)
+            {
+                JsonOptions = jsonOptions;
+            }
+
             HttpClientFactory = httpClientFactory;
         }
 
@@ -96,6 +108,11 @@ namespace idunno.AtProto
                 return BuildProxyClientHandler(_httpClientOptions?.ProxyUri, checkCrl);
             }
         }
+
+        /// <summary>
+        /// Gets the <see cref="JsonOptions"/> for the agent.
+        /// </summary>
+        public JsonOptions JsonOptions { get; } = new JsonOptions();
 
         /// <summary>
         /// Gets an <see cref="HttpClient"/> to use when making requests.

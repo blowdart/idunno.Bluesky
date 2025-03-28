@@ -3,23 +3,23 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.AtProto.Repo
+namespace idunno.AtProto.Repo.Models
 {
     /// <summary>
-    /// Encapsulates data returned by the putRecord API call.
+    /// Encapsulates data returned by the CreateRecord API call.
     /// </summary>
     [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Skip)]
-    public sealed record PutRecordResponse
+    public sealed record CreateRecordResponse
     {
         /// <summary>
-        /// Creates a new instance of PutRecordResponse.
+        /// Creates a new instance of CreateRecordResponse.
         /// </summary>
         /// <param name="uri">The <see cref="AtUri"/> for the newly created record.</param>
         /// <param name="cid">The <see cref="AtProto.Cid"/> for the newly created record.</param>
         /// <param name="commit">The <see cref="Commit"/> the record was created in.</param>
         /// <param name="validationStatus">The <see cref="ValidationStatus"/> used during creation.</param>
         [JsonConstructor]
-        public PutRecordResponse(AtUri uri, Cid cid, Commit? commit, ValidationStatus? validationStatus)
+        public CreateRecordResponse(AtUri uri, Cid cid, Commit? commit, ValidationStatus? validationStatus)
         {
             ArgumentNullException.ThrowIfNull("uri");
             ArgumentNullException.ThrowIfNull("cid");

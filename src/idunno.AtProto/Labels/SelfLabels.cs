@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Text.Json.Serialization;
 
@@ -19,7 +20,7 @@ namespace idunno.AtProto.Labels
         /// </summary>
         public SelfLabels()
         {
-            Values = new List<SelfLabel>().AsReadOnly();
+            Values = ReadOnlyCollection<SelfLabel>.Empty;
         }
 
         /// <summary>
@@ -27,12 +28,12 @@ namespace idunno.AtProto.Labels
         /// </summary>
         /// <param name="values">The collection of labels applied to the record.</param>
         [JsonConstructor]
-        public SelfLabels(IReadOnlyCollection<SelfLabel> values)
+        public SelfLabels(ReadOnlyCollection<SelfLabel> values)
         {
             ArgumentNullException.ThrowIfNull(values);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(values.Count, 10);
 
-            Values = new List<SelfLabel>(values).AsReadOnly();
+            Values = values;
         }
 
         /// <summary>
@@ -48,7 +49,7 @@ namespace idunno.AtProto.Labels
         /// </summary>
         [JsonInclude]
         [JsonRequired]
-        public IReadOnlyCollection<SelfLabel> Values { get; private set; }
+        public ReadOnlyCollection<SelfLabel> Values { get; internal set; }
 
         /// <summary>
         /// Returns a flag indicating whether the specified <paramref name="label"/> is present.
@@ -74,12 +75,9 @@ namespace idunno.AtProto.Labels
             {
                 if (!Contains(name))
                 {
-                    List<string> values = new(from existingLabel in Values select existingLabel.Value)
-                    {
-                        name
-                    };
+                    List<string> values = [.. from existingLabel in Values select existingLabel.Value, name];
 
-                    List<SelfLabel> updatedLabels = new();
+                    List<SelfLabel> updatedLabels = [];
                     foreach (string value in values)
                     {
                         updatedLabels.Add(new SelfLabel(value));
@@ -100,10 +98,10 @@ namespace idunno.AtProto.Labels
             {
                 if (Contains(name))
                 {
-                    List<string> values = new(from existingLabel in Values select existingLabel.Value);
+                    List<string> values = [.. from existingLabel in Values select existingLabel.Value];
                     values.Remove(name);
 
-                    List<SelfLabel> updatedLabels = new();
+                    List<SelfLabel> updatedLabels = [];
                     foreach (string value in values)
                     {
                         updatedLabels.Add(new SelfLabel(value));

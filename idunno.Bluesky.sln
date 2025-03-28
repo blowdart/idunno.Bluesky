@@ -1,4 +1,3 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34701.34
@@ -52,6 +51,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{DDB6FAB2-1
 		docs\docicon.png = docs\docicon.png
 		docs\favicon.ico = docs\favicon.ico
 		docs\favicon.png = docs\favicon.png
+		docs\filter.yml = docs\filter.yml
 		docs\index.md = docs\index.md
 		docs\toc.yml = docs\toc.yml
 	EndProjectSection
@@ -138,6 +138,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{E2B63F0A-9
 		docs\docs\profileEditing.md = docs\docs\profileEditing.md
 		docs\docs\savingAndRestoringAuthentication.md = docs\docs\savingAndRestoringAuthentication.md
 		docs\docs\threadGatesAndPostGates.md = docs\docs\threadGatesAndPostGates.md
+		docs\docs\sourceGeneration.md = docs\docs\sourceGeneration.md
 		docs\docs\timeline.md = docs\docs\timeline.md
 		docs\docs\toc.yml = docs\docs\toc.yml
 		docs\docs\userPreferences.md = docs\docs\userPreferences.md
@@ -154,6 +155,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "idunno.AtProto.OAuthCallback", "src\idunno.AtProto.OAuthCallback\idunno.AtProto.OAuthCallback.csproj", "{AEC1CC8B-59B6-4160-A80A-AF5CBC929679}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.AgentEvents", "samples\Samples.AgentEvents\Samples.AgentEvents.csproj", "{29B74A2D-58C0-ADD4-D2F8-F7ACCB8C387F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "idunno.AtProto.Integration.Test", "test\idunno.AtProto.Integration.Test\idunno.AtProto.Integration.Test.csproj", "{15E0FD9F-AC5E-017E-1F89-E5B7A7DE41E7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -264,6 +267,11 @@ Global
 		{29B74A2D-58C0-ADD4-D2F8-F7ACCB8C387F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{29B74A2D-58C0-ADD4-D2F8-F7ACCB8C387F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{29B74A2D-58C0-ADD4-D2F8-F7ACCB8C387F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{15E0FD9F-AC5E-017E-1F89-E5B7A7DE41E7}.CodeQL|Any CPU.ActiveCfg = Debug|Any CPU
+		{15E0FD9F-AC5E-017E-1F89-E5B7A7DE41E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{15E0FD9F-AC5E-017E-1F89-E5B7A7DE41E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{15E0FD9F-AC5E-017E-1F89-E5B7A7DE41E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{15E0FD9F-AC5E-017E-1F89-E5B7A7DE41E7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -296,6 +304,7 @@ Global
 		{55550FC6-B850-4C60-834A-9EF80E980000} = {B1A49FA3-07AB-4D78-BC16-FF7FB5857840}
 		{AEC1CC8B-59B6-4160-A80A-AF5CBC929679} = {C94F8041-6886-4D0F-82DC-8AF2B41FF649}
 		{29B74A2D-58C0-ADD4-D2F8-F7ACCB8C387F} = {B1A49FA3-07AB-4D78-BC16-FF7FB5857840}
+		{15E0FD9F-AC5E-017E-1F89-E5B7A7DE41E7} = {ACED7B7D-7BBE-4086-937F-7ECEE6A3F6B4}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2B9F8C2-975D-4E3A-B05E-48FDF4BCE3E6}

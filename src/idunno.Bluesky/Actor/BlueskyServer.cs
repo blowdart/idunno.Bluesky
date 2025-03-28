@@ -65,7 +65,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<ProfileViewDetailed> request = new(loggerFactory);
+            AtProtoHttpClient<ProfileViewDetailed> request = new(AppViewProxy, loggerFactory);
 
             return await request.Get(
                 service,
@@ -117,7 +117,7 @@ namespace idunno.Bluesky
 
             string queryString = string.Join("&", actorList.Select(uri => $"actors={Uri.EscapeDataString(uri.ToString())}"));
 
-            AtProtoHttpClient<GetProfilesResponse> request = new(loggerFactory);
+            AtProtoHttpClient<GetProfilesResponse> request = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<GetProfilesResponse> response =  await request.Get(
                 service,
                 $"{GetProfilesEndpoint}?{queryString}",
@@ -172,7 +172,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<GetPreferencesResponse> request = new(loggerFactory);
+            AtProtoHttpClient<GetPreferencesResponse> request = new(AppViewProxy, loggerFactory);
 
             AtProtoHttpResult<GetPreferencesResponse> response = await request.Get(
                 service,
@@ -233,7 +233,7 @@ namespace idunno.Bluesky
             ArgumentOutOfRangeException.ThrowIfZero(limitValue);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, Maximum.SuggestedActors);
 
-            AtProtoHttpClient<GetSuggestionsResponse> request = new(loggerFactory);
+            AtProtoHttpClient<GetSuggestionsResponse> request = new(AppViewProxy, loggerFactory);
 
             AtProtoHttpResult<GetSuggestionsResponse> response = await request.Get(
                 service,
@@ -289,7 +289,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<EmptyResponse> client = new(loggerFactory);
+            AtProtoHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
 
             PutPreferencesRequest request = new(preferences);
 
@@ -343,7 +343,7 @@ namespace idunno.Bluesky
             ArgumentOutOfRangeException.ThrowIfZero(limitValue);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100);
 
-            AtProtoHttpClient<SearchActorsResponse> request = new(loggerFactory);
+            AtProtoHttpClient<SearchActorsResponse> request = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<SearchActorsResponse> response = await request.Get(
                 service,
                 $"{SearchActorsEndpoint}?q={Uri.EscapeDataString(q)}&limit={limit}&cursor={cursor}",
@@ -410,7 +410,7 @@ namespace idunno.Bluesky
             ArgumentOutOfRangeException.ThrowIfZero(limitValue);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100);
 
-            AtProtoHttpClient<SearchActorsResponse> request = new(loggerFactory);
+            AtProtoHttpClient<SearchActorsResponse> request = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<SearchActorsResponse> response = await request.Get(
                 service,
                 $"{SearchActorsTypeAheadEndpoint}?q={Uri.EscapeDataString(q)}&limit={limit}",

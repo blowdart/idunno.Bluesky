@@ -30,15 +30,18 @@ namespace idunno.Bluesky
         /// <param name="facetExtractor">The facet extractor to use when extracting facets from post or message texts.</param>
         /// <param name="oAuthOptions">Any <see cref="OAuthOptions"/> for the agent.</param>
         /// <param name="httpClientOptions">The HttpClient options for the agent.</param>
+        /// <param name="httpJsonOptions">Any <see cref="JsonOptions"/> to use during serialization and deserialization.</param>
         public BlueskyAgentOptions(ILoggerFactory? loggerFactory,
             bool enableBackgroundTokenRefresh = true,
             Uri? publicAppViewUri = null,
             IFacetExtractor? facetExtractor = null,
             OAuthOptions? oAuthOptions = null,
-            HttpClientOptions? httpClientOptions = null) : base(
+            HttpClientOptions? httpClientOptions = null,
+            JsonOptions? httpJsonOptions = null) : base(
                 loggerFactory: loggerFactory,
                 enableBackgroundTokenRefresh: enableBackgroundTokenRefresh,
-                oAuthOptions: oAuthOptions, httpClientOptions: httpClientOptions)
+                oAuthOptions: oAuthOptions,
+                httpClientOptions: httpClientOptions)
         {
             LoggerFactory = loggerFactory;
 
@@ -50,6 +53,17 @@ namespace idunno.Bluesky
             if (facetExtractor is not null)
             {
                 FacetExtractor = facetExtractor;
+            }
+
+            // Insert the Bluesky source generation context at the start of the type info resolver chain.
+            if (httpJsonOptions is not null)
+            {
+                httpJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
+            }
+            else
+            {
+                httpJsonOptions = new JsonOptions();
+                httpJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
             }
         }
 

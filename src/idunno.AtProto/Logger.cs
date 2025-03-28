@@ -306,5 +306,7 @@ namespace idunno.AtProto
         [LoggerMessage(751, LogLevel.Debug, "Stopping session refresh timer")]
         internal static partial void AgentDisposeStoppingRefreshTimer(ILogger logger);
 
+        [LoggerMessage(800, LogLevel.Warning, "AtProtoHttpClient is making a call to {endpoint} but no atproxy-header was supplied")]
+        internal static partial void AtProtoHttpClientMakingCallToNoneComAtProtoEndpointWithoutProxyHeader(ILogger logger, string endpoint);
     }
 }

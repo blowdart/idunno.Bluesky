@@ -1,0 +1,8 @@
+### YamlMime:ManagedReference
+apiRules:
+- exclude:
+    uidRegex: ^System\.Object
+    type: member # Avoid list of inherited Object members for each type.
+- exclude:
+    uidRegex: ^idunno(.*)\.Logger
+    type: class # Ignore logger classes

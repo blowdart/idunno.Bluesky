@@ -8,7 +8,7 @@ namespace idunno.AtProto.Repo.Models
     /// <summary>
     /// Represents request of a batch transaction of repository creates, updates, and deletes.
     /// </summary>
-    public sealed record ApplyWritesRequest
+    internal sealed record ApplyWritesRequest
     {
         /// <summary>
         /// Creates a new instance of <see cref="ApplyWritesRequest"/>.

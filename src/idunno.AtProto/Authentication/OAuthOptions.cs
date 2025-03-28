@@ -32,13 +32,11 @@ namespace idunno.AtProto.Authentication
             }
         }
 
-
-
         /// <summary>
         /// Check that the options are valid.
         /// </summary>
-        /// <exception cref="ArgumentException">Thrown when <see cref="ClientId"/> is null or white space.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <see cref="Scopes"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <see cref="ClientId"/> is white space.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <see cref="ClientId"/> or <see cref="Scopes"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <see cref="Scopes"/> is empty.</exception>
         public void Validate()
         {

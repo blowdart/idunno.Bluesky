@@ -14,8 +14,9 @@ using idunno.AtProto.Repo.Models;
 using idunno.DidPlcDirectory;
 
 using Blob = idunno.AtProto.Repo.Blob;
-using System.Net.Http.Headers;
 using idunno.AtProto.Server.Models;
+using System.Text.Json;
+using System.Diagnostics.CodeAnalysis;
 
 namespace idunno.AtProto
 {
@@ -25,10 +26,9 @@ namespace idunno.AtProto
     public partial class AtProtoAgent : Agent
     {
         private volatile bool _disposed;
-
-        private readonly DirectoryAgent _directoryAgent;
-
         private readonly ILogger<AtProtoAgent> _logger;
+
+        internal readonly DirectoryAgent _directoryAgent;
 
         /// <summary>
         /// Creates a new instance of <see cref="AtProtoAgent"/>
@@ -39,7 +39,7 @@ namespace idunno.AtProto
         /// </remarks>
         public AtProtoAgent(
             Uri service,
-            AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions)
+            AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions)
         {
             ArgumentNullException.ThrowIfNull(service);
 
@@ -65,6 +65,7 @@ namespace idunno.AtProto
             _directoryAgent = new DirectoryAgent(
                     new DirectoryAgentOptions()
                     {
+                        PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
                         LoggerFactory = LoggerFactory,
                         HttpClientOptions = options?.HttpClientOptions
                     });
@@ -77,9 +78,10 @@ namespace idunno.AtProto
         /// <param name="service">The URI of the AtProto service to connect to.</param>
         /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
         /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
-        public AtProtoAgent(Uri service, IHttpClientFactory httpClientFactory, AtProtoAgentOptions? options = null) : base(httpClientFactory)
+        public AtProtoAgent(Uri service, IHttpClientFactory httpClientFactory, AtProtoAgentOptions? options = null) : base(httpClientFactory, options?.HttpJsonOptions)
         {
             ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(httpClientFactory);
 
             Service = service;
 
@@ -96,22 +98,23 @@ namespace idunno.AtProto
             _logger = LoggerFactory.CreateLogger<AtProtoAgent>();
 
             _directoryAgent = new DirectoryAgent(
+                httpClientFactory,
                 new DirectoryAgentOptions()
                 {
+                    PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
                     LoggerFactory = LoggerFactory,
-                    HttpClientOptions = options?.HttpClientOptions
                 });
         }
 
         /// <summary>
         /// Gets a configured logger factory from which to create loggers.
         /// </summary>
-        protected ILoggerFactory LoggerFactory { get; init; }
+        protected internal ILoggerFactory LoggerFactory { get; init; }
 
         /// <summary>
         /// Gets the configuration options for the agent.
         /// </summary>
-        protected AtProtoAgentOptions? Options { get; init; }
+        protected internal AtProtoAgentOptions? Options { get; init; }
 
         /// <summary>
         /// Gets the <see cref="Uri"/> for the AT Proto service the agent is issuing requests against.
@@ -153,6 +156,12 @@ namespace idunno.AtProto
 
             _disposed = true;
         }
+
+        /// <summary>
+        /// Creates a new <see cref="AtProtoAgentBuilder"/>.
+        /// </summary>
+        /// <returns>A new <see cref="AtProtoAgentBuilder"/></returns>
+        public static AtProtoAgentBuilder CreateBuilder() => AtProtoAgentBuilder.Create();
 
         /// <summary>
         /// Resolves a handle (domain name) to a DID.
@@ -293,10 +302,12 @@ namespace idunno.AtProto
             return await AtProtoServer.DescribeServer(server, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
         }
 
+        // TODO: Support serialization options
         /// <summary>
         /// Apply a batch transaction of repository creates, updates, and deletes. Requires authentication.
         /// </summary>
-        /// <param name="writeRequests"><para>A collection of write requests to apply.</para></param>
+        /// <param name="operations"><para>A collection of write requests to apply.</para></param>
+        /// <param name="jsonSerializerOptions"><para>The <see cref="JsonSerializerOptions"/> to use when serializing the record values within an create or update operation.</para></param>
         /// <param name="repo"><para>The <see cref="AtProto.Did"/> of the repository to write to.</para></param>
         /// <param name="validate">
         ///   <para>Gets a flag indicating what validation will be performed, if any.</para>
@@ -311,21 +322,24 @@ namespace idunno.AtProto
         ///     Used to prevent conflicting repo mutations.
         ///   </para>
         ///</param>
+        /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="writeRequests"/> or <paramref name="repo" /> is null.
+        /// Thrown when <paramref name="operations"/> or <paramref name="repo" /> is null.
         /// </exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="writeRequests"/> is an empty collection.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="operations"/> is an empty collection.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ApplyWritesResponse>> ApplyWrites(
-            ICollection<ApplyWritesRequestValueBase> writeRequests,
+            ICollection<WriteOperation> operations,
+            JsonSerializerOptions jsonSerializerOptions,
             Did repo,
             bool? validate,
             Cid? cid = null,
+            string? serviceProxy = null,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNull(writeRequests);
+            ArgumentNullException.ThrowIfNull(operations);
             ArgumentNullException.ThrowIfNull(repo);
 
             if (!IsAuthenticated)
@@ -335,14 +349,16 @@ namespace idunno.AtProto
             }
 
             AtProtoHttpResult<ApplyWritesResponse> applyWritesResult = await AtProtoServer.ApplyWrites(
-                writeRequests,
-                repo,
-                validate,
-                cid,
+                operations: operations,
+                jsonSerializerOptions: jsonSerializerOptions,
+                repo: repo,
+                validate: validate,
+                cid: cid,
                 service: Service,
                 accessCredentials: Credentials,
                 httpClient: HttpClient,
-                onCredentialsUpdated : InternalOnCredentialsUpdatedCallBack,
+                serviceProxy: serviceProxy,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -373,17 +389,20 @@ namespace idunno.AtProto
         ///   <para>Defaults to <keyword>true</keyword>.</para>
         /// </param>
         /// <param name="swapCommit"><para>Compare and swap with the previous commit by CID.</para></param>
+        /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns><para>The task object representing the asynchronous operation.</para></returns>
         /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="record"/> or <paramref name="collection"/> is null.</para></exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
+        [RequiresDynamicCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<CreateRecordResponse>> CreateRecord<TRecord>(
             TRecord record,
             Nsid collection,
             RecordKey? rkey = null,
             bool? validate = true,
             Cid? swapCommit = null,
-            CancellationToken cancellationToken = default)
+            string? serviceProxy = null,
+            CancellationToken cancellationToken = default) where TRecord : AtProtoRecordValue
         {
             ArgumentNullException.ThrowIfNull(record);
             ArgumentNullException.ThrowIfNull(collection);
@@ -404,7 +423,81 @@ namespace idunno.AtProto
                 service: Service,
                 accessCredentials: Credentials,
                 httpClient: HttpClient,
+                serviceProxy: serviceProxy,
                 onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+                loggerFactory: LoggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (result.Succeeded)
+            {
+                Logger.CreateRecordSucceeded(_logger, result.Result.Uri, result.Result.Cid, collection, Service);
+            }
+            else if (result.StatusCode == HttpStatusCode.OK && result.Result is null)
+            {
+                Logger.CreateRecordSucceededButNullResult(_logger, Service);
+            }
+            else
+            {
+                Logger.CreateRecordFailed(_logger, result.StatusCode, collection, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message, Service);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Creates a record in the specified collection belonging to the current user.
+        /// </summary>
+        /// <typeparam name="TRecord">The type of record to create.</typeparam>
+        /// <param name="record"><para>The record to be created.</para></param>
+        /// <param name="jsonSerializerOptions"><para>The <see cref="JsonSerializerOptions"/> to apply during serialization of <typeparamref name="TRecord"/>.</para></param>
+        /// <param name="collection"><para>The collection the record should be created in.</para></param>
+        /// <param name="rkey"><para>An optional <see cref="RecordKey"/> to create the record with.</para></param>
+        /// <param name="validate">
+        ///   <para>Gets a flag indicating what validation will be performed, if any.</para>
+        ///   <para>A value of <keyword>true</keyword> requires lexicon schema validation of record data.</para>
+        ///   <para>A value of <keyword>false</keyword> will skip Lexicon schema validation of record data.</para>
+        ///   <para>A value of <keyword>null</keyword> to validate record data only for known lexicons.</para>
+        ///   <para>Defaults to <keyword>true</keyword>.</para>
+        /// </param>
+        /// <param name="swapCommit"><para>Compare and swap with the previous commit by CID.</para></param>
+        /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
+        /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
+        /// <returns><para>The task object representing the asynchronous operation.</para></returns>
+        /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="record"/> or <paramref name="collection"/> is null.</para></exception>
+        /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
+        [RequiresDynamicCode("Use a Get overload which takes JsonSerializerOptions instead.")]
+        public async Task<AtProtoHttpResult<CreateRecordResponse>> CreateRecord<TRecord>(
+            TRecord record,
+            JsonSerializerOptions jsonSerializerOptions,
+            Nsid collection,
+            RecordKey? rkey = null,
+            bool? validate = true,
+            Cid? swapCommit = null,
+            string? serviceProxy = null,
+            CancellationToken cancellationToken = default) where TRecord : AtProtoRecordValue
+        {
+            ArgumentNullException.ThrowIfNull(record);
+            ArgumentNullException.ThrowIfNull(collection);
+
+            if (!IsAuthenticated)
+            {
+                Logger.CreateRecordFailedAsSessionIsAnonymous(_logger);
+                throw new AuthenticationRequiredException();
+            }
+
+            AtProtoHttpResult<CreateRecordResponse> result = await AtProtoServer.CreateRecord(
+                record: record,
+                collection: collection,
+                creator: Credentials.Did,
+                rKey: rkey,
+                validate: validate,
+                swapCommit: swapCommit,
+                service: Service,
+                accessCredentials: Credentials,
+                httpClient: HttpClient,
+                serviceProxy: serviceProxy,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+                jsonSerializerOptions: jsonSerializerOptions,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -429,6 +522,7 @@ namespace idunno.AtProto
         /// <param name="rKey">The record key, identifying the record to be deleted.</param>
         /// <param name="swapRecord">Specified if the operation should compare and swap with the previous record by cid.</param>
         /// <param name="swapCommit">Specified if the operation should compare and swap with the previous commit by cid.</param>
+        /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="collection"/> or <paramref name="rKey"/> is null.</exception>
@@ -438,6 +532,7 @@ namespace idunno.AtProto
             RecordKey rKey,
             Cid? swapRecord = null,
             Cid? swapCommit = null,
+            string? serviceProxy = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(collection);
@@ -449,13 +544,14 @@ namespace idunno.AtProto
                 throw new AuthenticationRequiredException();
             }
 
-            return await DeleteRecord(Did, collection, rKey, swapRecord, swapCommit, cancellationToken).ConfigureAwait(false);
+            return await DeleteRecord(Did, collection, rKey, swapRecord, swapCommit, serviceProxy, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>Deletes a record, identified by the repo, collection and rKey from the specified service.</summary>
         /// <param name="strongReference">The <see cref="StrongReference"/> to the record to be deleted.</param>
         /// <param name="swapRecord">Specified if the operation should compare and swap with the previous record by cid.</param>
         /// <param name="swapCommit">Specified if the operation should compare and swap with the previous commit by cid.</param>
+        /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null, </exception>
@@ -464,6 +560,7 @@ namespace idunno.AtProto
             StrongReference strongReference,
             Cid? swapRecord = null,
             Cid? swapCommit = null,
+            string? serviceProxy = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
@@ -484,6 +581,7 @@ namespace idunno.AtProto
                 strongReference.Uri.RecordKey,
                 swapRecord,
                 swapCommit,
+                serviceProxy,
                 cancellationToken).ConfigureAwait(false);
         }
 
@@ -493,6 +591,7 @@ namespace idunno.AtProto
         /// <param name="rKey">The record key, identifying the record to be deleted.</param>
         /// <param name="swapRecord">Specified if the operation should compare and swap with the previous record by cid.</param>
         /// <param name="swapCommit">Specified if the operation should compare and swap with the previous commit by cid.</param>
+        /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticationRequiredException">Throw when the current session is not an authenticated session.</exception>
@@ -503,6 +602,7 @@ namespace idunno.AtProto
             RecordKey rKey,
             Cid? swapRecord = null,
             Cid? swapCommit = null,
+            string? serviceProxy = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(repo);
@@ -525,6 +625,7 @@ namespace idunno.AtProto
                     service: Service,
                     accessCredentials: Credentials,
                     httpClient: HttpClient,
+                    serviceProxy: serviceProxy,
                     onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                     loggerFactory: LoggerFactory,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -565,9 +666,9 @@ namespace idunno.AtProto
         /// <summary>
         /// Updates or creates a record in the specified collection belonging to the current user.
         /// </summary>
-        /// <param name="record"><para>The record to be updated or created.</para></param>
+        /// <typeparam name="TRecordValue">The type of the record value to be updated</typeparam>
+        /// <param name="recordValue"><para>The record to be updated or created.</para></param>
         /// <param name="collection"><para>The collection the record should be updated or created in.</para></param>
-        /// <param name="creator"><para>The <see cref="Did"/> of the actor whose collection the record should be created in. Typically this is the Did of the current user.</para></param>
         /// <param name="rKey"><para>The <see cref="RecordKey"/> of the record to update, otherwise the record key that will be used for the new record.</para></param>
         /// <param name="validate">
         ///   <para>Gets a flag indicating what validation will be performed, if any.</para>
@@ -578,25 +679,26 @@ namespace idunno.AtProto
         /// </param>
         /// <param name="swapCommit"><para>Compare and swap with the previous commit by CID.</para></param>
         /// <param name="swapRecord"><para>The <see cref="Cid"/> of the record, if any, to compare and swap with.</para></param>
+        /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns><para>The task object representing the asynchronous operation.</para></returns>
         /// <exception cref="ArgumentNullException">
-        ///     <para>Thrown when <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/> or <paramref name="rKey"/> is null.</para>
+        ///     <para>Thrown when <paramref name="recordValue"/>, <paramref name="collection"/> or <paramref name="rKey"/> is null.</para>
         /// </exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
-        public async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord(
-            object record,
+        [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
+        public async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
+            TRecordValue recordValue,
             Nsid collection,
-            Did creator,
             RecordKey rKey,
             bool? validate = true,
             Cid? swapCommit = null,
             Cid? swapRecord = null,
-            CancellationToken cancellationToken = default)
+            string? serviceProxy = null,
+            CancellationToken cancellationToken = default) where TRecordValue : AtProtoRecordValue
         {
-            ArgumentNullException.ThrowIfNull(record);
+            ArgumentNullException.ThrowIfNull(recordValue);
             ArgumentNullException.ThrowIfNull(collection);
-            ArgumentNullException.ThrowIfNull(creator);
             ArgumentNullException.ThrowIfNull(rKey);
 
             if (!IsAuthenticated)
@@ -606,9 +708,9 @@ namespace idunno.AtProto
             }
 
             AtProtoHttpResult<PutRecordResponse> result = await AtProtoServer.PutRecord(
-                record: record,
+                recordValue: recordValue,
                 collection: collection,
-                creator: creator,
+                creator: Did,
                 rKey: rKey,
                 validate: validate,
                 swapCommit: swapCommit,
@@ -616,6 +718,7 @@ namespace idunno.AtProto
                 service: Service,
                 accessCredentials: Credentials,
                 httpClient: HttpClient,
+                serviceProxy: serviceProxy,
                 onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -636,6 +739,225 @@ namespace idunno.AtProto
             return result;
         }
 
+        /// <summary>
+        /// Updates or creates a record in the specified collection belonging to the current user.
+        /// </summary>
+        /// <typeparam name="TRecordValue">The type of the record value to be updated</typeparam>
+        /// <param name="recordValue"><para>The record to be updated or created.</para></param>
+        /// <param name="jsonSerializerOptions"><para><see cref="JsonSerializerOptions"/> to use during serialization of <paramref name="recordValue"/>.</para></param>
+        /// <param name="collection"><para>The collection the record should be updated or created in.</para></param>
+        /// <param name="rKey"><para>The <see cref="RecordKey"/> of the record to update, otherwise the record key that will be used for the new record.</para></param>
+        /// <param name="validate">
+        ///   <para>Gets a flag indicating what validation will be performed, if any.</para>
+        ///   <para>A value of <keyword>true</keyword> requires lexicon schema validation of record data.</para>
+        ///   <para>A value of <keyword>false</keyword> will skip Lexicon schema validation of record data.</para>
+        ///   <para>A value of <keyword>null</keyword> to validate record data only for known lexicons.</para>
+        ///   <para>Defaults to <keyword>true</keyword>.</para>
+        /// </param>
+        /// <param name="swapCommit"><para>Compare and swap with the previous commit by CID.</para></param>
+        /// <param name="swapRecord"><para>The <see cref="Cid"/> of the record, if any, to compare and swap with.</para></param>
+        /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
+        /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
+        /// <returns><para>The task object representing the asynchronous operation.</para></returns>
+        /// <exception cref="ArgumentNullException">
+        ///     <para>Thrown when <paramref name="recordValue"/>, <paramref name="collection"/> or <paramref name="rKey"/> is null.</para>
+        /// </exception>
+        /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
+        public async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
+            TRecordValue recordValue,
+            JsonSerializerOptions jsonSerializerOptions,
+            Nsid collection,
+            RecordKey rKey,
+            bool? validate = true,
+            Cid? swapCommit = null,
+            Cid? swapRecord = null,
+            string? serviceProxy = null,
+            CancellationToken cancellationToken = default) where TRecordValue : AtProtoRecordValue
+        {
+            ArgumentNullException.ThrowIfNull(recordValue);
+            ArgumentNullException.ThrowIfNull(collection);
+            ArgumentNullException.ThrowIfNull(rKey);
+
+            if (!IsAuthenticated)
+            {
+                Logger.PutRecordFailedAsSessionIsAnonymous(_logger);
+                throw new AuthenticationRequiredException();
+            }
+
+            AtProtoHttpResult<PutRecordResponse> result = await AtProtoServer.PutRecord(
+                recordValue: recordValue,
+                collection: collection,
+                creator: Did,
+                rKey: rKey,
+                validate: validate,
+                swapCommit: swapCommit,
+                swapRecord: swapRecord,
+                service: Service,
+                accessCredentials: Credentials,
+                httpClient: HttpClient,
+                serviceProxy: serviceProxy,
+                jsonSerializerOptions: jsonSerializerOptions,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+                loggerFactory: LoggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (result.Succeeded)
+            {
+                Logger.PutRecordSucceeded(_logger, result.Result.Uri, result.Result.Cid, collection, Service);
+            }
+            else if (result.StatusCode == HttpStatusCode.OK && result.Result is null)
+            {
+                Logger.PutRecordSucceededButNullResult(_logger, Service);
+            }
+            else
+            {
+                Logger.PutRecordFailed(_logger, result.StatusCode, collection, rKey, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message, Service);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Updates a record in the specified collection belonging to the current user.
+        /// </summary>
+        /// <typeparam name="TRecordValue">The type of the value of record to update.</typeparam>
+        /// <param name="record"><para>The record to be updated.</para></param>
+        /// <param name="validate">
+        ///   <para>Gets a flag indicating what validation will be performed, if any.</para>
+        ///   <para>A value of <keyword>true</keyword> requires lexicon schema validation of record data.</para>
+        ///   <para>A value of <keyword>false</keyword> will skip Lexicon schema validation of record data.</para>
+        ///   <para>A value of <keyword>null</keyword> to validate record data only for known lexicons.</para>
+        ///   <para>Defaults to <keyword>true</keyword>.</para>
+        /// </param>
+        /// <param name="swapCommit"><para>Compare and swap with the previous commit by CID.</para></param>
+        /// <param name="swapRecord"><para>The <see cref="Cid"/> of the record, if any, to compare and swap with.</para></param>
+        /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
+        /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
+        /// <returns><para>The task object representing the asynchronous operation.</para></returns>
+        /// <exception cref="ArgumentNullException">
+        ///     <para>Thrown when <paramref name="record"/> is null.</para>
+        /// </exception>
+        /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
+        [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
+        public async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
+            AtProtoRecord<TRecordValue> record,
+            bool? validate = true,
+            Cid? swapCommit = null,
+            Cid? swapRecord = null,
+            string? serviceProxy = null,
+            CancellationToken cancellationToken = default) where TRecordValue : AtProtoRecordValue
+        {
+            ArgumentNullException.ThrowIfNull(record);
+            ArgumentNullException.ThrowIfNull(record.Value);
+            ArgumentNullException.ThrowIfNull(record.Uri.Collection);
+            ArgumentNullException.ThrowIfNull(record.Uri.RecordKey);
+
+            if (!IsAuthenticated)
+            {
+                Logger.PutRecordFailedAsSessionIsAnonymous(_logger);
+                throw new AuthenticationRequiredException();
+            }
+
+            AtProtoHttpResult<PutRecordResponse> result = await AtProtoServer.PutRecord(
+                record: record,
+                validate: validate,
+                swapCommit: swapCommit,
+                swapRecord: swapRecord,
+                service: Service,
+                accessCredentials: Credentials,
+                httpClient: HttpClient,
+                serviceProxy: serviceProxy,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+                loggerFactory: LoggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (result.Succeeded)
+            {
+                Logger.PutRecordSucceeded(_logger, result.Result.Uri, result.Result.Cid, record.Uri.Collection, Service);
+            }
+            else if (result.StatusCode == HttpStatusCode.OK && result.Result is null)
+            {
+                Logger.PutRecordSucceededButNullResult(_logger, Service);
+            }
+            else
+            {
+                Logger.PutRecordFailed(_logger, result.StatusCode, record.Uri.Collection, record.Uri.RecordKey, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message, Service);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Updates a record in the specified collection belonging to the current user.
+        /// </summary>
+        /// <typeparam name="TRecordValue">The type of the value of record to update.</typeparam>
+        /// <param name="record"><para>The record to be updated.</para></param>
+        /// <param name="jsonSerializerOptions"><para>The <see cref="JsonSerializerOptions"/> to use when serializing <paramref name="record"/></para></param>
+        /// <param name="validate">
+        ///   <para>Gets a flag indicating what validation will be performed, if any.</para>
+        ///   <para>A value of <keyword>true</keyword> requires lexicon schema validation of record data.</para>
+        ///   <para>A value of <keyword>false</keyword> will skip Lexicon schema validation of record data.</para>
+        ///   <para>A value of <keyword>null</keyword> to validate record data only for known lexicons.</para>
+        ///   <para>Defaults to <keyword>true</keyword>.</para>
+        /// </param>
+        /// <param name="swapCommit"><para>Compare and swap with the previous commit by CID.</para></param>
+        /// <param name="swapRecord"><para>The <see cref="Cid"/> of the record, if any, to compare and swap with.</para></param>
+        /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
+        /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
+        /// <returns><para>The task object representing the asynchronous operation.</para></returns>
+        /// <exception cref="ArgumentNullException">
+        ///     <para>Thrown when <paramref name="record"/> is null.</para>
+        /// </exception>
+        /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
+        public async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
+            AtProtoRecord<TRecordValue> record,
+            JsonSerializerOptions jsonSerializerOptions,
+            bool? validate = true,
+            Cid? swapCommit = null,
+            Cid? swapRecord = null,
+            string? serviceProxy = null,
+            CancellationToken cancellationToken = default) where TRecordValue : AtProtoRecordValue
+        {
+            ArgumentNullException.ThrowIfNull(record);
+            ArgumentNullException.ThrowIfNull(record.Value);
+            ArgumentNullException.ThrowIfNull(record.Uri.Collection);
+            ArgumentNullException.ThrowIfNull(record.Uri.RecordKey);
+
+            if (!IsAuthenticated)
+            {
+                Logger.PutRecordFailedAsSessionIsAnonymous(_logger);
+                throw new AuthenticationRequiredException();
+            }
+
+            AtProtoHttpResult<PutRecordResponse> result = await AtProtoServer.PutRecord(
+                record: record,
+                validate: validate,
+                swapCommit: swapCommit,
+                swapRecord: swapRecord,
+                service: Service,
+                accessCredentials: Credentials,
+                httpClient: HttpClient,
+                serviceProxy: serviceProxy,
+                jsonSerializerOptions: jsonSerializerOptions,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+                loggerFactory: LoggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (result.Succeeded)
+            {
+                Logger.PutRecordSucceeded(_logger, result.Result.Uri, result.Result.Cid, record.Uri.Collection, Service);
+            }
+            else if (result.StatusCode == HttpStatusCode.OK && result.Result is null)
+            {
+                Logger.PutRecordSucceededButNullResult(_logger, Service);
+            }
+            else
+            {
+                Logger.PutRecordFailed(_logger, result.StatusCode, record.Uri.Collection, record.Uri.RecordKey, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message, Service);
+            }
+
+            return result;
+        }
 
         /// <summary>
         /// Gets information about a repository, including the list of collections.
@@ -666,14 +988,17 @@ namespace idunno.AtProto
         /// <param name="uri">The <see cref="AtUri"/> of the record to retrieve.</param>
         /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
         /// <param name="service">The service to retrieve the record from.</param>
+        /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an incorrect format.</exception>
+        [RequiresDynamicCode("Use a GetRecord overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<T>> GetRecord<T>(
             AtUri uri,
             Cid? cid = null,
             Uri? service = null,
+            string? serviceProxy = null,
             CancellationToken cancellationToken = default) where T : class
         {
             ArgumentNullException.ThrowIfNull(uri);
@@ -693,7 +1018,7 @@ namespace idunno.AtProto
                 throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
             }
 
-            return await GetRecord<T>(uri.Repo, uri.Collection, uri.RecordKey, cid, service, cancellationToken).ConfigureAwait(false);
+            return await GetRecord<T>(uri.Repo, uri.Collection, uri.RecordKey, cid, service, serviceProxy, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -705,15 +1030,18 @@ namespace idunno.AtProto
         /// <param name="rKey">The record key, identifying the record to be retrieved.</param>
         /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
         /// <param name="service">The service to retrieve the record from.</param>
+        /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/>, <paramref name="collection"/> is null or empty.</exception>
+        [RequiresDynamicCode("Use a GetRecord overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<T>> GetRecord<T>(
             AtIdentifier repo,
             Nsid collection,
             RecordKey rKey,
             Cid? cid = null,
             Uri? service = null,
+            string? serviceProxy = null,
             CancellationToken cancellationToken = default) where T:class
         {
             ArgumentNullException.ThrowIfNull(repo);
@@ -740,7 +1068,115 @@ namespace idunno.AtProto
                     service: service,
                     accessCredentials: accessCredentials,
                     httpClient: HttpClient,
+                    serviceProxy: serviceProxy,
                     onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+                    loggerFactory: LoggerFactory,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (!result.Succeeded)
+            {
+                Logger.GetRecordFailed(_logger, result.StatusCode, repo, collection, rKey, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message, service);
+            }
+            else if (result.Result is null && result.StatusCode == HttpStatusCode.OK)
+            {
+                Logger.GetRecordSucceededButReturnedNullResult(_logger, repo, collection, rKey, service);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Gets the record specified by the identifying parameters.
+        /// </summary>
+        /// <typeparam name="T">The type of record to get.</typeparam>
+        /// <param name="uri">The <see cref="AtUri"/> of the record to retrieve.</param>
+        /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use when deserializing <typeparamref name="T"/>.</param>
+        /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
+        /// <param name="service">The service to retrieve the record from.</param>
+        /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an incorrect format.</exception>
+        public async Task<AtProtoHttpResult<T>> GetRecord<T>(
+            AtUri uri,
+            JsonSerializerOptions jsonSerializerOptions,
+            Cid? cid = null,
+            Uri? service = null,
+            string? serviceProxy = null,
+            CancellationToken cancellationToken = default) where T : class
+        {
+            ArgumentNullException.ThrowIfNull(uri);
+
+            if (uri.Repo is null)
+            {
+                throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
+            }
+
+            if (uri.Collection is null)
+            {
+                throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+            }
+
+            if (uri.RecordKey is null)
+            {
+                throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+            }
+
+            return await GetRecord<T>(uri.Repo, uri.Collection, uri.RecordKey, jsonSerializerOptions, cid, service, serviceProxy, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Gets the record specified by the identifying parameters.
+        /// </summary>
+        /// <typeparam name="T">The type of record to get.</typeparam>
+        /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the record from.</param>
+        /// <param name="collection">The NSID of the collection the record should be retrieved from.</param>
+        /// <param name="rKey">The record key, identifying the record to be retrieved.</param>
+        /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
+        /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use when deserializing <typeparamref name="T"/>.</param>
+        /// <param name="service">The service to retrieve the record from.</param>
+        /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/>, <paramref name="collection"/> is null or empty.</exception>
+        public async Task<AtProtoHttpResult<T>> GetRecord<T>(
+            AtIdentifier repo,
+            Nsid collection,
+            RecordKey rKey,
+            JsonSerializerOptions jsonSerializerOptions,
+            Cid? cid = null,
+            Uri? service = null,
+            string? serviceProxy = null,
+            CancellationToken cancellationToken = default) where T : class
+        {
+            ArgumentNullException.ThrowIfNull(repo);
+            ArgumentNullException.ThrowIfNull(collection);
+            ArgumentNullException.ThrowIfNull(rKey);
+
+            service ??= Service;
+
+            Logger.GetRecordCalled(_logger, repo, collection, rKey, service);
+
+            AccessCredentials? accessCredentials = null;
+
+            if (IsAuthenticated)
+            {
+                accessCredentials = Credentials;
+            }
+
+            AtProtoHttpResult<T> result =
+                await AtProtoServer.GetRecord<T>(
+                    repo: repo,
+                    collection: collection,
+                    rKey: rKey,
+                    cid: cid,
+                    service: service,
+                    accessCredentials: accessCredentials,
+                    httpClient: HttpClient,
+                    serviceProxy: serviceProxy,
+                    onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+                    jsonSerializerOptions: jsonSerializerOptions,
                     loggerFactory: LoggerFactory,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -759,22 +1195,26 @@ namespace idunno.AtProto
         /// <summary>
         /// Gets a page of records in the specified <paramref name="collection"/> for the current user.
         /// </summary>
+        /// <typeparam name="TRecordValue">The tyepe of the record value to get.</typeparam>
         /// <param name="collection">The NSID of the collection the records should be retrieved from.</param>
         /// <param name="limit">The number of records to return in each page.</param>
         /// <param name="cursor">The cursor position to start retrieving records from.</param>
         /// <param name="reverse">A flag indicating if records should be listed in reverse order.</param>
         /// <param name="service">The service to retrieve the record from.</param>
+        /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="collection"/> is null or empty.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        public async Task<AtProtoHttpResult<PagedReadOnlyCollection<T>>> ListRecords<T>(
+        [RequiresDynamicCode("Use a ListRecords overload which takes JsonSerializerOptions instead.")]
+        public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>>> ListRecords<TRecordValue>(
             Nsid collection,
             int? limit = 50,
             string? cursor = null,
             bool reverse = false,
             Uri? service = null,
-            CancellationToken cancellationToken = default) where T : AtProtoRecord
+            string? serviceProxy = null,
+            CancellationToken cancellationToken = default) where TRecordValue : AtProtoRecordValue
         {
             ArgumentNullException.ThrowIfNull(collection);
 
@@ -783,37 +1223,42 @@ namespace idunno.AtProto
                 throw new AuthenticationRequiredException();
             }
 
-            return await ListRecords<T>(
-                Credentials.Did,
-                collection,
-                limit,
-                cursor,
-                reverse,
-                service,
+            return await ListRecords<TRecordValue>(
+                repo: Credentials.Did,
+                collection: collection,
+                limit: limit,
+                cursor: cursor,
+                reverse: reverse,
+                service: service,
+                serviceProxy: serviceProxy,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Gets a page of records in the specified <paramref name="collection"/>.
         /// </summary>
+        /// <typeparam name="TRecordValue">The tyepe of the record value to get.</typeparam>
         /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the records from.</param>
         /// <param name="collection">The NSID of the collection the records should be retrieved from.</param>
         /// <param name="limit">The number of records to return in each page.</param>
         /// <param name="cursor">The cursor position to start retrieving records from.</param>
         /// <param name="reverse">A flag indicating if records should be listed in reverse order.</param>
         /// <param name="service">The service to retrieve the record from.</param>
+        /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/> or <paramref name="collection"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
-        public async Task<AtProtoHttpResult<PagedReadOnlyCollection<T>>> ListRecords<T>(
+        [RequiresDynamicCode("Use a ListRecords overload which takes JsonSerializerOptions instead.")]
+        public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>>> ListRecords<TRecordValue>(
             AtIdentifier repo,
             Nsid collection,
             int? limit = 50,
             string? cursor = null,
             bool reverse = false,
             Uri? service = null,
-            CancellationToken cancellationToken = default) where T : AtProtoRecord
+            string? serviceProxy = null,
+            CancellationToken cancellationToken = default) where TRecordValue : AtProtoRecordValue
         {
             ArgumentNullException.ThrowIfNull(repo);
             ArgumentNullException.ThrowIfNull(collection);
@@ -829,7 +1274,7 @@ namespace idunno.AtProto
 
             Logger.ListRecordsCalled(_logger, repo, collection, service);
 
-            AtProtoHttpResult<PagedReadOnlyCollection<T>> result = await AtProtoServer.ListRecords<T>(
+            AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>> result = await AtProtoServer.ListRecords<TRecordValue>(
                 repo: repo,
                 collection: collection,
                 limit: limit,
@@ -839,6 +1284,119 @@ namespace idunno.AtProto
                 accessCredentials: accessCredentials,
                 onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 httpClient: HttpClient,
+                serviceProxy: serviceProxy,
+                loggerFactory: LoggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (!result.Succeeded)
+            {
+                Logger.ListRecordsFailed(_logger, result.StatusCode, repo, collection, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message, service);
+            }
+            else if (result.Result is null)
+            {
+                Logger.ListRecordsSucceededButReturnedNullResult(_logger, repo, collection, service);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Gets a page of records in the specified <paramref name="collection"/> for the current user.
+        /// </summary>
+        /// <typeparam name="TRecordValue">The tyepe of the record value to get.</typeparam>
+        /// <param name="collection">The NSID of the collection the records should be retrieved from.</param>
+        /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use when deserializing <typeparamref name="TRecordValue"/>.</param>
+        /// <param name="limit">The number of records to return in each page.</param>
+        /// <param name="cursor">The cursor position to start retrieving records from.</param>
+        /// <param name="reverse">A flag indicating if records should be listed in reverse order.</param>
+        /// <param name="service">The service to retrieve the record from.</param>
+        /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="collection"/> is null or empty.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>>> ListRecords<TRecordValue>(
+            Nsid collection,
+            JsonSerializerOptions jsonSerializerOptions,
+            int? limit = 50,
+            string? cursor = null,
+            bool reverse = false,
+            Uri? service = null,
+            string? serviceProxy = null,
+            CancellationToken cancellationToken = default) where TRecordValue : AtProtoRecordValue
+        {
+            ArgumentNullException.ThrowIfNull(collection);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            return await ListRecords<TRecordValue>(
+                repo: Credentials.Did,
+                collection: collection,
+                jsonSerializerOptions: jsonSerializerOptions,
+                limit: limit,
+                cursor: cursor,
+                reverse: reverse,
+                service: service,
+                serviceProxy: serviceProxy,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Gets a page of records in the specified <paramref name="collection"/>.
+        /// </summary>
+        /// <typeparam name="TRecordValue">The tyepe of the record value to get.</typeparam>
+        /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the records from.</param>
+        /// <param name="collection">The NSID of the collection the records should be retrieved from.</param>
+        /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use when deserializing <typeparamref name="TRecordValue"/>.</param>
+        /// <param name="limit">The number of records to return in each page.</param>
+        /// <param name="cursor">The cursor position to start retrieving records from.</param>
+        /// <param name="reverse">A flag indicating if records should be listed in reverse order.</param>
+        /// <param name="service">The service to retrieve the record from.</param>
+        /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/> or <paramref name="collection"/> is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
+        public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>>> ListRecords<TRecordValue>(
+            AtIdentifier repo,
+            Nsid collection,
+            JsonSerializerOptions jsonSerializerOptions,
+            int? limit = 50,
+            string? cursor = null,
+            bool reverse = false,
+            Uri? service = null,
+            string? serviceProxy = null,
+            CancellationToken cancellationToken = default) where TRecordValue : AtProtoRecordValue
+        {
+            ArgumentNullException.ThrowIfNull(repo);
+            ArgumentNullException.ThrowIfNull(collection);
+
+            service ??= Service;
+
+            AccessCredentials? accessCredentials = null;
+
+            if (IsAuthenticated)
+            {
+                accessCredentials = Credentials;
+            }
+
+            Logger.ListRecordsCalled(_logger, repo, collection, service);
+
+            AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>> result = await AtProtoServer.ListRecords<TRecordValue>(
+                repo: repo,
+                collection: collection,
+                limit: limit,
+                cursor: cursor,
+                reverse: reverse,
+                service: service,
+                accessCredentials: accessCredentials,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+                httpClient: HttpClient,
+                jsonSerializerOptions: jsonSerializerOptions,
+                serviceProxy: serviceProxy,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -860,6 +1418,7 @@ namespace idunno.AtProto
         /// <param name="blob">The blob to upload.</param>
         /// <param name="mimeType">The mime type of the blob to upload.</param>
         /// <param name="service">The service to upload the blob to.</param>
+        /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="blob"/> has a zero length or if <paramref name="mimeType"/> is null or empty.</exception>
@@ -868,6 +1427,7 @@ namespace idunno.AtProto
             byte[] blob,
             string mimeType,
             Uri? service = null,
+            string? serviceProxy = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(blob);
@@ -896,6 +1456,7 @@ namespace idunno.AtProto
                     service: service,
                     accessCredentials: Credentials,
                     httpClient: HttpClient,
+                    serviceProxy: serviceProxy,
                     onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                     loggerFactory: LoggerFactory,
                     cancellationToken: cancellationToken).ConfigureAwait(false);

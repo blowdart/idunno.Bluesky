@@ -30,21 +30,18 @@ namespace idunno.AtProto.Repo
         /// <summary>
         /// Gets the <see cref="AtUri"/> of the record.
         /// </summary>
-        [JsonInclude]
         [JsonRequired]
         public AtUri Uri {get; init;}
 
         /// <summary>
         /// Gets the <see cref="AtProto.Cid">Content Identifier</see> of the record.
         /// </summary>
-        [JsonInclude]
         [JsonRequired]
         public Cid Cid { get; init; }
 
         /// <summary>
         /// Gets a <see cref="StrongReference"/> for the record.
         /// </summary>
-        [JsonIgnore]
         public StrongReference StrongReference { get; }
     }
 }

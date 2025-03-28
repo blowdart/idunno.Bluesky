@@ -1,17 +1,14 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
-using idunno.AtProto.Labels;
 
-namespace idunno.AtProto.Models
+namespace idunno.AtProto.Labels.Models
 {
-    [SuppressMessage("Performance", "CA1812", Justification = "Used in QueryLabels.")]
     internal sealed record QueryLabelsResponse
     {
         [JsonConstructor]
-        public QueryLabelsResponse(IEnumerable<Label> labels, string? cursor)
+        public QueryLabelsResponse(List<Label> labels, string? cursor)
         {
             Labels = labels;
             Cursor = cursor;
@@ -19,7 +16,7 @@ namespace idunno.AtProto.Models
 
         [JsonInclude]
         [JsonRequired]
-        public IEnumerable<Label> Labels { get; init; } = null!;
+        public List<Label> Labels { get; init; } = null!;
 
         [JsonInclude]
         public string? Cursor { get; init; }

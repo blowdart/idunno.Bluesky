@@ -6,20 +6,20 @@ using System.Text.Json.Serialization;
 namespace idunno.AtProto.Repo.Models
 {
     /// <summary>
-    /// Base record for transactions for the applyWrites API.
+    /// Base DTOs for transactions for the applyWrites API.
     /// </summary>
     [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = false, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]
     [JsonDerivedType(typeof(ApplyWritesCreate), typeDiscriminator: "com.atproto.repo.applyWrites#create")]
     [JsonDerivedType(typeof(ApplyWritesUpdate), typeDiscriminator: "com.atproto.repo.applyWrites#update")]
     [JsonDerivedType(typeof(ApplyWritesDelete), typeDiscriminator: "com.atproto.repo.applyWrites#delete")]
-    public record ApplyWritesRequestValueBase
+    internal abstract record ApplyWritesRequestValueBase
     {
         /// <summary>
         /// Creates a new instance of <see cref="ApplyWritesRequestValueBase"/>
         /// </summary>
         /// <param name="collection"></param>
         /// <param name="rkey"></param>
-        protected ApplyWritesRequestValueBase(Nsid collection, RecordKey rkey)
+        protected ApplyWritesRequestValueBase(Nsid collection, RecordKey? rkey)
         {
             Collection = collection;
             Rkey = rkey;
@@ -37,6 +37,6 @@ namespace idunno.AtProto.Repo.Models
         /// </summary>
         [JsonInclude]
         [JsonRequired]
-        public RecordKey Rkey { get; init; }
+        public RecordKey? Rkey { get; init; }
     }
 }

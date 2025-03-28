@@ -1,7 +1,6 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -10,8 +9,7 @@ namespace idunno.AtProto.Json
     /// <summary>
     /// Converts an AT CID to or from JSON.
     /// </summary>
-    [SuppressMessage("Performance", "CA1812", Justification = "Applied by attribute in Cid class.")]
-    internal sealed class CidConverter : JsonConverter<Cid>
+    public sealed class CidConverter : JsonConverter<Cid>
     {
         /// <summary>
         /// Reads and converts JSON to an <see cref="Cid"/>.
@@ -48,8 +46,12 @@ namespace idunno.AtProto.Json
         /// <param name="writer">The writer to write to.</param>
         /// <param name="cid">The <see cref="Cid"/> to convert to JSON.</param>
         /// <param name="options">An object that specifies serialization options to use.</param>
+        /// <exception cref="ArgumentNullException">Throws when <paramref name="writer"/> or <paramref name="cid"/> is null.</exception>
         public override void Write(Utf8JsonWriter writer, Cid cid, JsonSerializerOptions options)
         {
+            ArgumentNullException.ThrowIfNull(writer);
+            ArgumentNullException.ThrowIfNull(cid);
+
             writer.WriteStringValue(cid.Value);
         }
     }

@@ -73,8 +73,9 @@ namespace idunno.Bluesky
             FollowRecordValue follow = new(did);
 
             AtProtoHttpResult<CreateRecordResponse> result = await CreateRecord(
-                follow,
-                CollectionNsid.Follow,
+                record: follow,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
+                collection: CollectionNsid.Follow,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (result.Succeeded)
@@ -149,7 +150,7 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            AtProtoHttpResult<Actor.ProfileViewDetailed> userProfileResult = await GetProfile(did, cancellationToken: cancellationToken).ConfigureAwait(false);
+            AtProtoHttpResult<ProfileViewDetailed> userProfileResult = await GetProfile(did, cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (!userProfileResult.Succeeded)
             {
@@ -251,8 +252,9 @@ namespace idunno.Bluesky
             BlockRecordValue block = new(did);
 
             return await CreateRecord(
-                block,
-                CollectionNsid.Block,
+                record: block,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
+                collection: CollectionNsid.Block,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -311,7 +313,7 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            AtProtoHttpResult<Actor.ProfileViewDetailed> userProfileResult = await GetProfile(did, cancellationToken: cancellationToken).ConfigureAwait(false);
+            AtProtoHttpResult<ProfileViewDetailed> userProfileResult = await GetProfile(did, cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (!userProfileResult.Succeeded)
             {
@@ -1383,11 +1385,12 @@ namespace idunno.Bluesky
                     new EmbeddedRecordWithMedia(new EmbeddedRecord(strongReference), new EmbeddedImages(images));
             }
 
-            ApplyWritesCreate applyWritesCreate = new(CollectionNsid.Post, TimestampIdentifier.Generate(), postRecord);
+            CreateOperation createOperation = new(CollectionNsid.Post, TimestampIdentifier.Generate(), postRecord);
 
             AtProtoHttpResult<ApplyWritesResponse> result = await ApplyWrites(
-                [applyWritesCreate],
-                Did,
+                operations: [createOperation],
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
+                repo: Did,
                 cid: null,
                 validate: true,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1567,8 +1570,9 @@ namespace idunno.Bluesky
             if ((threadGateRules is null && postGateRules is null && interactionPreferences is null) && !string.IsNullOrEmpty(post.Text))
             {
                 return await CreateRecord(
-                    post,
-                    CollectionNsid.Post,
+                    record: post,
+                    jsonSerializerOptions: BlueskyJsonSerializerOptions,
+                    collection: CollectionNsid.Post,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
             }
             else
@@ -1576,13 +1580,13 @@ namespace idunno.Bluesky
                 // If a post has no text (which is possible if there are embedded records
                 // or it has gates and creating the post and gates need to be atomic
                 // we have to use ApplyWrites() rather than CreateRecord()
-                List<ApplyWritesRequestValueBase> writeRequests = [];
+                List<WriteOperation> writeRequests = [];
 
                 // We need to generate a record key to hang it all together.
                 RecordKey rKey = TimestampIdentifier.Generate();
                 AtUri postUri = new($"at://{Did}/{CollectionNsid.Post}/{rKey}");
 
-                writeRequests.Add(new ApplyWritesCreate(CollectionNsid.Post, rKey, post));
+                writeRequests.Add(new CreateOperation(CollectionNsid.Post, rKey, post));
 
                 if (threadGateRules is null && interactionPreferences is not null)
                 {
@@ -1596,7 +1600,7 @@ namespace idunno.Bluesky
 
                 if (threadGateRules is not null)
                 {
-                    writeRequests.Add(new ApplyWritesCreate(
+                    writeRequests.Add(new CreateOperation(
                         CollectionNsid.ThreadGate,
                         rKey,
                         new ThreadGate(postUri, threadGateRules)));
@@ -1604,14 +1608,19 @@ namespace idunno.Bluesky
 
                 if (postGateRules is not null)
                 {
-                    writeRequests.Add(new ApplyWritesCreate(
+                    writeRequests.Add(new CreateOperation(
                         CollectionNsid.PostGate,
                         rKey,
                         new PostGate(postUri, postGateRules)));
                 }
 
                 AtProtoHttpResult<ApplyWritesResponse> response =
-                    await ApplyWrites(writeRequests, repo: Did, validate: true, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    await ApplyWrites(
+                        writeRequests,
+                        jsonSerializerOptions: BlueskyJsonSerializerOptions,
+                        repo: Did,
+                        validate: true,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
 
                 if (response.Succeeded)
                 {

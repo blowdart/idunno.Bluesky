@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace idunno.AtProto.Repo.Models
@@ -8,11 +9,10 @@ namespace idunno.AtProto.Repo.Models
     /// <summary>
     /// Encapsulates the information needed to make a put record request.
     /// </summary>
-    /// <typeparam name="TRecord">The type of the record to update.</typeparam>
-    public sealed record PutRecordRequest<TRecord>
+    internal sealed record PutRecordRequest
     {
         /// <summary>
-        /// Creates a new instance of <see cref="PutRecordRequest{TRecord}"/>
+        /// Creates a new instance of <see cref="PutRecordRequest"/>
         /// </summary>
         /// <param name="record">The record to update or create.</param>
         /// <param name="collection">The <see cref="Nsid"/> of the collection the record will be created in.</param>
@@ -22,9 +22,9 @@ namespace idunno.AtProto.Repo.Models
         /// <param name="swapCommit">The <see cref="Cid"/> of the commit, if any, to compare and swap with.</param>
         /// <param name="swapRecord">The <see cref="Cid"/> of the record, if any, to compare and swap with.</param>
         public PutRecordRequest(
-            TRecord record,
+            JsonNode record,
             Nsid collection,
-            Did repo,
+            AtIdentifier repo,
             RecordKey rKey,
             bool? validate = true,
             Cid? swapCommit = null,
@@ -53,10 +53,10 @@ namespace idunno.AtProto.Repo.Models
         public Nsid? Collection { get; init; }
 
         /// <summary>
-        /// Gets the <see cref="Did"/> of the repo the record will be created in. This would be the DID of the current authenticated user.
+        /// Gets the <see cref="AtIdentifier"/> of the repo the record will be created in. This would normally be the DID of the current authenticated user.
         /// </summary>
         [JsonRequired]
-        public Did Repo { get; init; }
+        public AtIdentifier Repo { get; init; }
 
         /// <summary>
         /// Gets the record key, if any, of the record to be created.
@@ -86,9 +86,9 @@ namespace idunno.AtProto.Repo.Models
         public Cid? SwapCommit { get; init; }
 
         /// <summary>
-        /// Gets the record to create.
+        /// Gets the record to put.
         /// </summary>
         [JsonRequired]
-        public TRecord Record { get; init; }
+        public JsonNode Record { get; init; }
     }
 }

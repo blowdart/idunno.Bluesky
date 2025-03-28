@@ -15,7 +15,6 @@ namespace idunno.AtProto
         // https://docs.bsky.app/docs/api/com-atproto-server-describe-server
         internal const string DescribeServerEndpoint = "/xrpc/com.atproto.server.describeServer";
 
-
         /// <summary>
         /// Describes the server's account creation requirements and capabilities.
         /// </summary>
@@ -37,7 +36,12 @@ namespace idunno.AtProto
 
             AtProtoHttpClient<ServerDescription> request = new(loggerFactory);
 
-            AtProtoHttpResult<ServerDescription> result = await request.Get(service, DescribeServerEndpoint, httpClient, cancellationToken).ConfigureAwait(false);
+            AtProtoHttpResult<ServerDescription> result = await request.Get(
+                service: service,
+                endpoint: DescribeServerEndpoint,
+                httpClient: httpClient,
+                jsonSerializerOptions: SelfContainedJsonSerializerOptions,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (result.Succeeded &&
                 (result.Result.AvailableUserDomains is null || result.Result.AvailableUserDomains.Count == 0))

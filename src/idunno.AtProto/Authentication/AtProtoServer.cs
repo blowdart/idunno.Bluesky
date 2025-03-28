@@ -58,13 +58,14 @@ namespace idunno.AtProto
 
             AtProtoHttpClient<CreateSessionResponse> request = new(loggerFactory);
 
-            CreateSessionRequest loginRequestRecord = new(identifier, password, authFactorToken);
+            CreateSessionRequest loginRequestRecord = new() { Identifier = identifier, Password = password, AuthFactorToken = authFactorToken };
 
             AtProtoHttpResult<CreateSessionResponse> result = await request.Post(
                 service,
                 CreateSessionEndpoint,
                 loginRequestRecord,
                 httpClient: httpClient,
+                jsonSerializerOptions: SelfContainedJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return result;
@@ -99,6 +100,7 @@ namespace idunno.AtProto
                 endpoint: DeleteSessionEndpoint,
                 credentials: refreshCredential,
                 httpClient: httpClient,
+                jsonSerializerOptions: SelfContainedJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return result;
@@ -135,6 +137,7 @@ namespace idunno.AtProto
                 credentials: refreshCredential,
                 httpClient: httpClient,
                 onCredentialsUpdated: credentialsUpdated,
+                jsonSerializerOptions: SelfContainedJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return result;
@@ -169,6 +172,7 @@ namespace idunno.AtProto
                 accessCredentials,
                 httpClient: httpClient,
                 onCredentialsUpdated: credentialsUpdated,
+                jsonSerializerOptions: SelfContainedJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -234,6 +238,7 @@ namespace idunno.AtProto
                 accessCredentials,
                 httpClient: httpClient,
                 onCredentialsUpdated: accessCredentialsUpdated,
+                jsonSerializerOptions: SelfContainedJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (result.Succeeded)

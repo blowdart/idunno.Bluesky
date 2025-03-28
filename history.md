@@ -1,12 +1,25 @@
 # idunno.Bluesky Version History
 
+## 0.5.0
+
+### idunno.AtProto
+
+* Add support for JSON source generation
+* Add builder for `AtProtoAgent`
+
+### idunno.Bluesky
+
+* Add support for JSON source generation
+* Add builder for `BlueskyAgent`
+* Wire up `at-proxy` support for Bluesky API endpoints due to upcoming [automatic forwarding deprecation](https://docs.bsky.app/blog/2025-protocol-roadmap-spring).
+
 ## 0.4.1
 
 ### Bug Fixes
 
 #### idunno.Bluesky
 
-Fix video uploading code, sample and documentation
+* *Fix video uploading code, sample and documentation
 
 ## 0.4.0
 
@@ -14,7 +27,7 @@ Fix video uploading code, sample and documentation
 
 #### idunno.Bluesky
 
-Support for user thread gate and post gate preference settings.
+* *Support for user thread gate and post gate preference settings.
 
 ## 0.3.0
 

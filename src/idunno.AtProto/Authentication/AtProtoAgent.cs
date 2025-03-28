@@ -25,7 +25,7 @@ namespace idunno.AtProto
         private readonly ReaderWriterLockSlim _credentialReaderWriterLockSlim = new();
         private AccessCredentials? _credentials;
 
-        private readonly bool _enableTokenRefresh = true;
+        internal readonly bool _enableTokenRefresh = true;
         private readonly TimeSpan _refreshAccessTokenInterval = new(1, 0, 0);
         private System.Timers.Timer? _credentialRefreshTimer;
 
@@ -111,14 +111,19 @@ namespace idunno.AtProto
         {
             ArgumentNullException.ThrowIfNull(credentials);
 
-            Debug.Assert(credentials is not AccessCredentials);
-
             if (credentials is AccessCredentials accessCredentials)
             {
                 Credentials = accessCredentials;
                 Logger.OnCredentialUpdatedCallbackCalled(_logger);
 
                 OnCredentialsUpdated(new CredentialsUpdatedEventArgs(accessCredentials.Did, accessCredentials.Service, accessCredentials));
+            }
+            else if (credentials is DPoPAccessCredentials dPopAccessCredentials)
+            {
+                Credentials = dPopAccessCredentials;
+                Logger.OnCredentialUpdatedCallbackCalled(_logger);
+
+                OnCredentialsUpdated(new CredentialsUpdatedEventArgs(dPopAccessCredentials.Did, dPopAccessCredentials.Service, dPopAccessCredentials));
             }
             else
             {

@@ -154,6 +154,7 @@ public sealed class Program
         {
             AtProtoHttpResult<bool> loginResult =
                 await agent.Login(handle, password!, authCode, cancellationToken: cancellationToken);
+
             if (!loginResult.Succeeded &&
                 loginResult.AtErrorDetail is not null &&
                 string.Equals(loginResult.AtErrorDetail.Error!, "AuthFactorTokenRequired", StringComparison.OrdinalIgnoreCase))
@@ -196,8 +197,8 @@ public sealed class Program
                 long collectionRecordsProcessed = 0;
                 int recordLimit = 10;
 
-                AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord>> listRecordsResult =
-                    await agent.ListRecords<AtProtoRecord>(collection, recordLimit, cancellationToken: cancellationToken).ConfigureAwait(false);
+                AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<AtProtoRecordValue>>> listRecordsResult =
+                    await agent.ListRecords<AtProtoRecordValue>(collection, recordLimit, cancellationToken: cancellationToken).ConfigureAwait(false);
 
                 do
                 {
@@ -206,7 +207,7 @@ public sealed class Program
                         Console.Write($"Processing {collection} records {collectionRecordsProcessed + 1} - ");
                         Console.WriteLine($"{collectionRecordsProcessed + listRecordsResult.Result.Count}");
 
-                        foreach (AtProtoRecord record in listRecordsResult.Result)
+                        foreach (AtProtoRecord<AtProtoRecordValue> record in listRecordsResult.Result)
                         {
                             if (cancellationToken.IsCancellationRequested)
                             {
@@ -279,7 +280,7 @@ public sealed class Program
 
                         if (!cancellationToken.IsCancellationRequested && !string.IsNullOrEmpty(listRecordsResult.Result.Cursor))
                         {
-                            listRecordsResult = await agent.ListRecords<AtProtoRecord>(collection, recordLimit, listRecordsResult.Result.Cursor, cancellationToken: cancellationToken);
+                            listRecordsResult = await agent.ListRecords<AtProtoRecordValue>(collection, recordLimit, listRecordsResult.Result.Cursor, cancellationToken: cancellationToken);
                         }
                     }
                 } while (!cancellationToken.IsCancellationRequested &&

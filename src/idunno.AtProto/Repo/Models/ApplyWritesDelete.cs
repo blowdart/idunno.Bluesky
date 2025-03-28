@@ -6,7 +6,7 @@ namespace idunno.AtProto.Repo.Models
     /// <summary>
     /// Encapsulates a delete operation for the repo.applyWrites api
     /// </summary>
-    public sealed record ApplyWritesDelete : ApplyWritesRequestValueBase
+    internal sealed record ApplyWritesDelete : ApplyWritesRequestValueBase
     {
         /// <summary>
         /// Creates a new instance of <see cref="ApplyWritesDelete"/>.

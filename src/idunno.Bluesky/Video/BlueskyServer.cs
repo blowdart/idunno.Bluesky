@@ -45,7 +45,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<JobStatusResponse> client = new(loggerFactory);
+            AtProtoHttpClient<JobStatusResponse> client = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<JobStatusResponse> response = await client.Get(
                 service, $"{GetJobStatusEndpoint}?jobId={Uri.EscapeDataString(jobId)}",
                 httpClient: httpClient,
@@ -81,7 +81,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(serviceCredential);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<UploadLimits> client = new (loggerFactory);
+            AtProtoHttpClient<UploadLimits> client = new (AppViewProxy, loggerFactory);
 
             return await client.Get(
                 service,
@@ -130,7 +130,7 @@ namespace idunno.Bluesky
                 new NameValueHeaderValue("Content-Type", "video/mp4")
             ];
 
-            AtProtoHttpClient<JobStatus> client = new(loggerFactory);
+            AtProtoHttpClient<JobStatus> client = new(AppViewProxy, loggerFactory);
 
             AtProtoHttpResult<JobStatus> response =
                 await client.PostBlob(

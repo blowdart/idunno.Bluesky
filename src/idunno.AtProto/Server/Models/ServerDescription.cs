@@ -14,9 +14,19 @@ namespace idunno.AtProto.Server.Models
         /// Creates a new instance of <see cref="ServerDescription"/>.
         /// </summary>
         /// <param name="did">The DID of the server whose description this belongs to.</param>
+        /// <param name="inviteCodeRequired">Flag indicating whether an invite code is required to create an account on this server.</param>
+        /// <param name="phoneVerificationRequired">Flag indicating whether supplemental verification is required to create an account on this server.</param>
+        /// <param name="availableUserDomains">A list of domains that users can create handles with on this server.</param>
+        /// <param name="links">Any links the server provides with its description.</param>
         /// <param name="contact">A contact for the server.</param>
         [JsonConstructor]
-        internal ServerDescription(Did did, Contact? contact)
+        internal ServerDescription(
+            Did did,
+            bool inviteCodeRequired,
+            bool phoneVerificationRequired,
+            IReadOnlyList<string> availableUserDomains,
+            Links? links,
+            Contact? contact)
         {
             ArgumentNullException.ThrowIfNull(did);
 
@@ -26,6 +36,15 @@ namespace idunno.AtProto.Server.Models
             {
                 Contact = contact;
             }
+
+            if (links is not null && (links.PrivacyPolicy is not null || links.TermsOfService is not null))
+            {
+                Links = links;
+            }
+
+            AvailableUserDomains = availableUserDomains;
+            InviteCodeRequired = inviteCodeRequired;
+            PhoneVerificationRequired = phoneVerificationRequired;
         }
 
         /// <summary>
@@ -50,8 +69,6 @@ namespace idunno.AtProto.Server.Models
         /// <summary>
         /// Gets a list of one or more domains that users can create handles with on this server.
         /// </summary>
-        [JsonInclude]
-        [JsonRequired]
         public IReadOnlyList<string> AvailableUserDomains { get; internal set; } = [];
 
         /// <summary>

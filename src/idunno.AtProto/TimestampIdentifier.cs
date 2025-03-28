@@ -48,9 +48,6 @@ namespace idunno.AtProto
             // Encode to base32, and trim the padding.
             string base32Encoded = Base32Encoding.ToString(timeStampAsBytes).TrimEnd('=').ToLowerInvariant();
 
-            // string length should always be 13, so this should never happen.
-            Debug.Assert(base32Encoded.Length == 13);
-
             return base32Encoded;
         }
     }

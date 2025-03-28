@@ -9,6 +9,7 @@ using System.Reflection;
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
+using idunno.AtProto.Repo.Models;
 using idunno.AtProto.Repo;
 using idunno.Bluesky;
 using idunno.Bluesky.Embed;

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace idunno.AtProto
@@ -81,8 +82,9 @@ namespace idunno.AtProto
         /// <remarks>
         /// <para>See https://www.w3.org/TR/did-core/#also-known-as for details.</para>
         /// </remarks>
+        [NotNull]
         [JsonInclude]
-        public IReadOnlyList<string>? AlsoKnownAs { get; init; } = new List<string>();
+        public IReadOnlyList<string>? AlsoKnownAs { get; init; } = [];
 
         /// <summary>
         /// Gets verification methods, such as cryptographic public keys, which can be used to authenticate or authorize
@@ -91,9 +93,10 @@ namespace idunno.AtProto
         ///<remarks>
         /// <para>See https://www.w3.org/TR/did-core/#verification-methods for details.</para>
         /// </remarks>
+        [NotNull]
         [JsonInclude]
         [JsonPropertyName("verificationMethod")]
-        public IReadOnlyList<VerificationMethod>? VerificationMethods { get; init; } = new List<VerificationMethod>();
+        public IReadOnlyList<VerificationMethod>? VerificationMethods { get; init; } = [];
 
         /// <summary>
         /// Gets ways of communicating with the <see cref="Did"/> subject or associated entities
@@ -101,9 +104,10 @@ namespace idunno.AtProto
         /// <remarks>
         /// <para>See https://www.w3.org/TR/did-core/#services for details.</para>
         /// </remarks>
+        [NotNull]
         [JsonInclude]
         [JsonPropertyName("service")]
-        public IReadOnlyList<DidDocService>? Services { get; init; } = new List<DidDocService>();
+        public IReadOnlyList<DidDocService>? Services { get; init; } = [];
     }
 
     /// <summary>
@@ -124,7 +128,7 @@ namespace idunno.AtProto
         /// <param name="type">The type of the <see cref="VerificationMethod"/>.</param>
         /// <param name="controller">The <see cref="Did"/> of the controller for the <see cref="VerificationMethod"/>.</param>
         [JsonConstructor]
-        internal VerificationMethod(Uri id, string type, Did controller)
+        internal VerificationMethod(string id, string type, Did controller)
         {
             Id = id;
             Type = type;
@@ -134,7 +138,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Gets the ID for this <see cref="VerificationMethod"/>.
         /// </summary>
-        public Uri Id { get; init; }
+        public string Id { get; init; }
 
         /// <summary>
         /// Gets the type of the <see cref="VerificationMethod"/>.

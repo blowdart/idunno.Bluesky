@@ -4,6 +4,7 @@
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
+using idunno.AtProto.Repo;
 
 namespace idunno.Bluesky.Feed.Gates
 {
@@ -12,7 +13,7 @@ namespace idunno.Bluesky.Feed.Gates
     /// The record key (rkey) of the threadgate record must match the record key of the thread's root post,
     /// and that record must be in the same repository
     /// </summary>
-    public sealed record ThreadGate
+    public sealed record ThreadGate : AtProtoRecordValue
     {
         /// <summary>
         /// Creates a new instance of <see cref="ThreadGate"/>.

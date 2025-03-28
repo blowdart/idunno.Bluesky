@@ -238,7 +238,7 @@ namespace idunno.Bluesky
                 createdAt: DateTimeOffset.UtcNow,
                 facets: facets,
                 langs: langs,
-                new EmbeddedImages(new List<EmbeddedImage>() { image }),
+                new EmbeddedImages([image]),
                 reply: reply,
                 labels: labels,
                 tags: tags)
@@ -271,7 +271,7 @@ namespace idunno.Bluesky
                 createdAt: createdAt,
                 facets: facets,
                 langs: langs,
-                new EmbeddedImages(new List<EmbeddedImage>() { image }),
+                new EmbeddedImages([image]),
                 reply : reply,
                 labels: labels,
                 tags: tags)

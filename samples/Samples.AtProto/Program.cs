@@ -11,6 +11,7 @@ using idunno.AtProto.Repo;
 
 using Samples.Common;
 using idunno.AtProto.Server.Models;
+using idunno.Bluesky;
 
 namespace Samples.AtProto
 {
@@ -104,7 +105,7 @@ namespace Samples.AtProto
 
                 string? cursor = null;
 
-                var listRecordsResult = await agent.ListRecords<AtProtoRecord> (
+                var listRecordsResult = await agent.ListRecords<AtProtoRecordValue> (
                     did,
                     collection: "app.bsky.feed.post",
                     cursor: cursor,

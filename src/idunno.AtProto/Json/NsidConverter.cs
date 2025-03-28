@@ -1,7 +1,6 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -10,8 +9,7 @@ namespace idunno.AtProto.Json
     /// <summary>
     /// Converts a NSID to or from JSON.
     /// </summary>
-    [SuppressMessage("Performance", "CA1812", Justification = "Applied by attribute in Nsid class.")]
-    internal sealed class NsidConverter : JsonConverter<Nsid>
+    public sealed class NsidConverter : JsonConverter<Nsid>
     {
         /// <summary>
         /// Reads and converts JSON to an <see cref="Nsid"/>
@@ -56,8 +54,12 @@ namespace idunno.AtProto.Json
         /// <param name="writer">The writer to write to.</param>
         /// <param name="nsid">The <see cref="Cid"/> to convert to JSON.</param>
         /// <param name="options">An object that specifies serialization options to use.</param>
+        /// <exception cref="ArgumentNullException">Throws when <paramref name="writer"/> or <paramref name="nsid"/> is null.</exception>
         public override void Write(Utf8JsonWriter writer, Nsid nsid, JsonSerializerOptions options)
         {
+            ArgumentNullException.ThrowIfNull(writer);
+            ArgumentNullException.ThrowIfNull(nsid);
+
             writer.WriteStringValue(nsid.ToString());
         }
     }

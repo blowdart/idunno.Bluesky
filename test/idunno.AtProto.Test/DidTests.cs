@@ -1,9 +1,6 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
-using Xunit;
-
 namespace idunno.AtProto.Test
 {
     [ExcludeFromCodeCoverage]
@@ -159,7 +156,7 @@ namespace idunno.AtProto.Test
             Assert.NotNull(did);
             Assert.Equal(value, did.Value);
 
-            AtIdentifier did2 = Did.CreateFrom(value);
+            AtIdentifier did2 = Did.Create(value);
             Assert.NotNull(did2);
             Assert.Equal(value, did2.Value);
             Assert.Equal(did, did2);

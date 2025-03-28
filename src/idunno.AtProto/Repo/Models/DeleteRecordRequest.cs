@@ -8,7 +8,7 @@ namespace idunno.AtProto.Repo.Models
     /// <summary>
     /// Encapsulates the information needed to make a delete record request.
     /// </summary>
-    public sealed record DeleteRecordRequest
+    internal sealed record DeleteRecordRequest
     {
         /// <summary>
         /// Creates a new instance of <see cref="DeleteRecordRequest"/>.
