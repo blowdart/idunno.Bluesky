@@ -22,6 +22,10 @@ namespace idunno.AtProto
             TypeInfoResolver = JsonSerializer.IsReflectionEnabledByDefault ? CreateDefaultTypeResolver() : JsonTypeInfoResolver.Combine(SourceGenerationContext.Default)
         };
 
+#pragma warning disable IL2026 // Members attributed with RequiresUnreferencedCode may break when trimming
+#pragma warning disable IL3050 // Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.
         private static DefaultJsonTypeInfoResolver CreateDefaultTypeResolver() => new ();
+#pragma warning restore IL3050 // Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.
+#pragma warning restore IL2026 // Members attributed with RequiresUnreferencedCode may break when trimming
     }
 }

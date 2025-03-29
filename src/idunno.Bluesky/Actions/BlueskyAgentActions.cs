@@ -12,6 +12,8 @@ using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.RichText;
 using idunno.Bluesky.Actions;
 using idunno.Bluesky.Actor;
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 
 namespace idunno.Bluesky
 {
@@ -61,6 +63,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Follow(Did did, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(did);
@@ -240,6 +246,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Block(Did did, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(did);
@@ -1082,6 +1092,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Repost(StrongReference post, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(post);
@@ -1099,8 +1113,9 @@ namespace idunno.Bluesky
             RepostRecordValue repostRecord = new(post);
 
             return await CreateRecord(
-                repostRecord,
-                CollectionNsid.Repost,
+                record: repostRecord,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
+                collection: CollectionNsid.Repost,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -1163,6 +1178,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Like(StrongReference strongReference, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
@@ -1175,8 +1194,9 @@ namespace idunno.Bluesky
             LikeRecordValue likeRecord = new(strongReference);
 
             return await CreateRecord(
-                likeRecord,
-                CollectionNsid.Like,
+                record: likeRecord,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
+                collection: CollectionNsid.Like,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -1353,6 +1373,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to ApplyWrites().")]
         public async Task<AtProtoHttpResult<CreateRecordResponse>> Quote(
             StrongReference strongReference,
             ICollection<EmbeddedImage>? images = null,
@@ -1555,6 +1579,11 @@ namespace idunno.Bluesky
                 return null;
             }
         }
+
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
         private async Task<AtProtoHttpResult<CreateRecordResponse>> CreatePost(
             Post post,
             ICollection<ThreadGateRule>? threadGateRules,

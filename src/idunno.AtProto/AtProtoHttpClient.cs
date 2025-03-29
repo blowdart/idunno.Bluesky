@@ -152,6 +152,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         [RequiresDynamicCode("Use a Get overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a Get overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<TResult>> Get(
             Uri service,
             string endpoint,
@@ -177,6 +178,7 @@ namespace idunno.AtProto
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<TResult>> Get(
             Uri service,
             string endpoint,
@@ -208,6 +210,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         [RequiresDynamicCode("Use a Get overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a Get overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<TResult>> Get(
             Uri service,
             string endpoint,
@@ -234,7 +237,7 @@ namespace idunno.AtProto
                 retry: true,
                 onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
-                jsonSerializerOptions: null,
+                jsonSerializerOptions: _jsonSerializationOptionsDefault,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -251,6 +254,7 @@ namespace idunno.AtProto
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<TResult>> Get(
             Uri service,
             string endpoint,
@@ -294,7 +298,8 @@ namespace idunno.AtProto
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        [RequiresDynamicCode("Use the Post overload which takes JsonSerializerOptions instead.")]
+        [RequiresDynamicCode("Use a Post overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a Post overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<TResult>> Post(
             Uri service,
             string endpoint,
@@ -328,6 +333,7 @@ namespace idunno.AtProto
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<TResult>> Post(
             Uri service,
             string endpoint,
@@ -362,7 +368,8 @@ namespace idunno.AtProto
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        [RequiresDynamicCode("Use the Post overload which takes JsonSerializerOptions instead.")]
+        [RequiresDynamicCode("Use a Post overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a the Post overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<TResult>> Post<TRecord>(
             Uri service,
             string endpoint,
@@ -395,6 +402,7 @@ namespace idunno.AtProto
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<TResult>> Post<TRecord>(
             Uri service,
             string endpoint,
@@ -430,7 +438,8 @@ namespace idunno.AtProto
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        [RequiresDynamicCode("Use the Post overload which takes JsonSerializerOptions instead.")]
+        [RequiresDynamicCode("Use a Post overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a Post overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<TResult>> Post<TRecord>(
             Uri service,
             string endpoint,
@@ -467,6 +476,7 @@ namespace idunno.AtProto
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<TResult>> Post<TRecord>(
             Uri service,
             string endpoint,
@@ -505,7 +515,8 @@ namespace idunno.AtProto
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        [RequiresDynamicCode("Use the Post overload which takes JsonSerializerOptions instead.")]
+        [RequiresDynamicCode("Use a Post overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a Post overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<TResult>> Post<TRecord>(
             Uri service,
             string endpoint,
@@ -533,7 +544,7 @@ namespace idunno.AtProto
                 retry: true,
                 onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
-                jsonSerializerOptions: null,
+                jsonSerializerOptions: _jsonSerializationOptionsDefault,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -552,6 +563,7 @@ namespace idunno.AtProto
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<TResult>> Post<TRecord>(
             Uri service,
             string endpoint,
@@ -600,7 +612,8 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="blob"/> is an empty array.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClient"/> or <paramref name="credentials"/> is null.</exception>
-        [RequiresDynamicCode("Use the PostBlob overload which takes JsonSerializerOptions instead.")]
+        [RequiresDynamicCode("Use a PostBlob overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a PostBlob overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<TResult>> PostBlob(
             Uri service,
             string endpoint,
@@ -641,7 +654,7 @@ namespace idunno.AtProto
                 retry: true,
                 onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: null,
-                jsonSerializerOptions: null,
+                jsonSerializerOptions: _jsonSerializationOptionsDefault,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -661,6 +674,7 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="blob"/> is an empty array.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClient"/> or <paramref name="credentials"/> is null.</exception>
+        [RequiresUnreferencedCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<TResult>> PostBlob(
             Uri service,
             string endpoint,
@@ -711,7 +725,6 @@ namespace idunno.AtProto
         private static async Task<AtErrorDetail> ExtractErrorDetailFromResponse(
             HttpRequestMessage request,
             HttpResponseMessage responseMessage,
-            JsonSerializerOptions jsonSerializerOptions,
             CancellationToken cancellationToken = default)
         {
             AtErrorDetail? errorDetail = new()
@@ -732,7 +745,7 @@ namespace idunno.AtProto
                     {
                         AtErrorDetail? responseAtErrorDetail = JsonSerializer.Deserialize<AtErrorDetail>(
                             responseContent,
-                            jsonSerializerOptions);
+                            SourceGenerationContext.Default.AtErrorDetail);
 
                         if (responseAtErrorDetail is not null)
                         {
@@ -908,10 +921,12 @@ namespace idunno.AtProto
             return requestHeaders;
         }
 
+        [RequiresUnreferencedCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
         private async Task<AtProtoHttpResult<TResult>> MakeRequest<TRecord>(
             Uri service,
             string endpoint,
             TRecord? record,
+            JsonSerializerOptions jsonSerializerOptions,
             HttpMethod httpMethod,
             ICollection<NameValueHeaderValue>? requestHeaders,
             ICollection<NameValueHeaderValue>? contentHeaders,
@@ -920,12 +935,8 @@ namespace idunno.AtProto
             bool retry = false,
             Action<AtProtoCredential>? onCredentialsUpdated = null,
             IEnumerable<Did>? subscribedLabelers = null,
-            JsonSerializerOptions? jsonSerializerOptions = null,
             CancellationToken cancellationToken = default)
         {
-            // If we don't have any json serializer options specified fall back to our own defaults with no type resolvers and allowing out of order metadata properties.
-            jsonSerializerOptions ??= _jsonSerializationOptionsDefault;
-
             // The Bluesky 2025 Protocol roadmap announced that the default PDS implementation would stop forwarding app.bsky.* endpoints to the the Bluesky API server
             // at some future point, so log a warning if a request is made to any API endpoint not that is not a PDS endpoint (com.atproto.*).
             // https://docs.bsky.app/blog/2025-protocol-roadmap-spring
@@ -961,7 +972,8 @@ namespace idunno.AtProto
                             break;
 
                         default:
-                            string content = JsonSerializer.Serialize(record, jsonSerializerOptions);
+                            string content = JsonSerializer.Serialize(record, typeof(TRecord), jsonSerializerOptions);
+
                             httpRequestMessage.Content = new StringContent(content, Encoding.UTF8, MediaTypeNames.Application.Json);
                             break;
                     }
@@ -1005,9 +1017,10 @@ namespace idunno.AtProto
 
                                 try
                                 {
-                                    result.Result = JsonSerializer.Deserialize<TResult>(
+                                    result.Result = JsonSerializer.Deserialize(
                                         responseContent,
-                                        jsonSerializerOptions);
+                                        typeof(TResult),
+                                        jsonSerializerOptions) as TResult;
                                 }
                                 catch (JsonException)
                                 {
@@ -1021,7 +1034,7 @@ namespace idunno.AtProto
                         }
                         else
                         {
-                            AtErrorDetail atErrorDetail = await ExtractErrorDetailFromResponse(httpRequestMessage, httpResponseMessage, jsonSerializerOptions, cancellationToken).ConfigureAwait(false);
+                            AtErrorDetail atErrorDetail = await ExtractErrorDetailFromResponse(httpRequestMessage, httpResponseMessage, cancellationToken).ConfigureAwait(false);
 
                             // Retry if the error returned is there has been a DPoP nonce change and we're sending a DPoP authenticated request.
                             if (credentials is IDPoPBoundCredential dPoPBoundCredential &&

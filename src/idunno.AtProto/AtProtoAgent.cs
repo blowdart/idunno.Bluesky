@@ -302,7 +302,6 @@ namespace idunno.AtProto
             return await AtProtoServer.DescribeServer(server, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
         }
 
-        // TODO: Support serialization options
         /// <summary>
         /// Apply a batch transaction of repository creates, updates, and deletes. Requires authentication.
         /// </summary>
@@ -330,6 +329,7 @@ namespace idunno.AtProto
         /// </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="operations"/> is an empty collection.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+        [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<ApplyWritesResponse>> ApplyWrites(
             ICollection<WriteOperation> operations,
             JsonSerializerOptions jsonSerializerOptions,
@@ -395,6 +395,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="record"/> or <paramref name="collection"/> is null.</para></exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
         [RequiresDynamicCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<CreateRecordResponse>> CreateRecord<TRecord>(
             TRecord record,
             Nsid collection,
@@ -466,6 +467,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="record"/> or <paramref name="collection"/> is null.</para></exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
         [RequiresDynamicCode("Use a Get overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a Get overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<CreateRecordResponse>> CreateRecord<TRecord>(
             TRecord record,
             JsonSerializerOptions jsonSerializerOptions,
@@ -687,6 +689,7 @@ namespace idunno.AtProto
         /// </exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
         [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
             TRecordValue recordValue,
             Nsid collection,
@@ -763,6 +766,7 @@ namespace idunno.AtProto
         ///     <para>Thrown when <paramref name="recordValue"/>, <paramref name="collection"/> or <paramref name="rKey"/> is null.</para>
         /// </exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
+        [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
             TRecordValue recordValue,
             JsonSerializerOptions jsonSerializerOptions,
@@ -839,6 +843,7 @@ namespace idunno.AtProto
         /// </exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
         [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
             AtProtoRecord<TRecordValue> record,
             bool? validate = true,
@@ -909,6 +914,7 @@ namespace idunno.AtProto
         ///     <para>Thrown when <paramref name="record"/> is null.</para>
         /// </exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
+        [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
             AtProtoRecord<TRecordValue> record,
             JsonSerializerOptions jsonSerializerOptions,
@@ -994,6 +1000,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an incorrect format.</exception>
         [RequiresDynamicCode("Use a GetRecord overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a GetRecord overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<T>> GetRecord<T>(
             AtUri uri,
             Cid? cid = null,
@@ -1035,6 +1042,7 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/>, <paramref name="collection"/> is null or empty.</exception>
         [RequiresDynamicCode("Use a GetRecord overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a GetRecord overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<T>> GetRecord<T>(
             AtIdentifier repo,
             Nsid collection,
@@ -1098,6 +1106,7 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an incorrect format.</exception>
+        [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<T>> GetRecord<T>(
             AtUri uri,
             JsonSerializerOptions jsonSerializerOptions,
@@ -1140,6 +1149,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/>, <paramref name="collection"/> is null or empty.</exception>
+        [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<T>> GetRecord<T>(
             AtIdentifier repo,
             Nsid collection,
@@ -1207,6 +1217,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="collection"/> is null or empty.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         [RequiresDynamicCode("Use a ListRecords overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a ListRecords overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>>> ListRecords<TRecordValue>(
             Nsid collection,
             int? limit = 50,
@@ -1250,6 +1261,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/> or <paramref name="collection"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
         [RequiresDynamicCode("Use a ListRecords overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a ListRecords overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>>> ListRecords<TRecordValue>(
             AtIdentifier repo,
             Nsid collection,
@@ -1315,6 +1327,7 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="collection"/> is null or empty.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+        [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>>> ListRecords<TRecordValue>(
             Nsid collection,
             JsonSerializerOptions jsonSerializerOptions,
@@ -1360,6 +1373,7 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/> or <paramref name="collection"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
+        [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>>> ListRecords<TRecordValue>(
             AtIdentifier repo,
             Nsid collection,

@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Labels.Models;
+using System.Diagnostics.CodeAnalysis;
 
 namespace idunno.AtProto
 {
@@ -33,6 +34,10 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="uriPatterns" /> is null</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown <paramref name="uriPatterns"/> is empty or if <paramref name="limit"/> is &lt;1 or &gt;250.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<PagedReadOnlyCollection<Label>>> QueryLabels(
             IEnumerable<string> uriPatterns,
             IEnumerable<Did>? sources,

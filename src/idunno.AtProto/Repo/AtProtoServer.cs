@@ -75,7 +75,7 @@ namespace idunno.AtProto
         /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="operations"/> is an empty collection.</exception>
-        [RequiresDynamicCode("Use a ApplyWrites overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a ApplyWrites overload which takes JsonSerializerOptions instead.")]
         public static async Task<AtProtoHttpResult<ApplyWritesResponse>> ApplyWrites(
             ICollection<WriteOperation> operations,
             Did repo,
@@ -186,6 +186,7 @@ namespace idunno.AtProto
         /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="operations"/> is an empty collection.</exception>
+        [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public static async Task<AtProtoHttpResult<ApplyWritesResponse>> ApplyWrites(
             ICollection<WriteOperation> operations,
             JsonSerializerOptions jsonSerializerOptions,
@@ -296,7 +297,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">
         /// Thrown when <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
-        [RequiresDynamicCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
         public static async Task<AtProtoHttpResult<CreateRecordResponse>> CreateRecord<TRecord>(
             TRecord record,
             Nsid collection,
@@ -372,6 +373,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">
         /// Thrown when <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
+        [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public static async Task<AtProtoHttpResult<CreateRecordResponse>> CreateRecord<TRecord>(
             TRecord record,
             JsonSerializerOptions jsonSerializerOptions,
@@ -443,6 +445,10 @@ namespace idunno.AtProto
         /// Thrown when <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="rKey"/>, <paramref name="service"/>,
         /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<Commit>> DeleteRecord(
             AtIdentifier repo,
             Nsid collection,
@@ -532,7 +538,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">
         /// Thrown when <paramref name="record"/>, <paramref name="service"/>, <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
-        [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
         public static async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
             AtProtoRecord<TRecordValue> record,
             bool? validate,
@@ -601,7 +607,7 @@ namespace idunno.AtProto
         /// Thrown when <paramref name="recordValue"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="rKey"/>, <paramref name="service"/>,
         /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
-        [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
         public static async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
             TRecordValue recordValue,
             Nsid collection,
@@ -680,6 +686,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">
         /// Thrown when <paramref name="record"/>, <paramref name="service"/>, <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
+        [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public static async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
             AtProtoRecord<TRecordValue> record,
             JsonSerializerOptions jsonSerializerOptions,
@@ -751,6 +758,7 @@ namespace idunno.AtProto
         /// Thrown when <paramref name="recordValue"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="rKey"/>, <paramref name="service"/>,
         /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
+        [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public static async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
             TRecordValue recordValue,
             JsonSerializerOptions jsonSerializerOptions,
@@ -824,7 +832,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">
         /// Thrown when <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="rKey"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
-        [RequiresDynamicCode("Use a Get overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a Get overload which takes JsonSerializerOptions instead.")]
         public static async Task<AtProtoHttpResult<TRecord>> GetRecord<TRecord>(
             AtIdentifier repo,
             Nsid collection,
@@ -891,6 +899,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">
         /// Thrown when <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="rKey"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
+        [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public static async Task<AtProtoHttpResult<TRecord>> GetRecord<TRecord>(
             AtIdentifier repo,
             Nsid collection,
@@ -960,7 +969,7 @@ namespace idunno.AtProto
         /// Thrown when <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is not &gt;0 and &lt;=100.</exception>
-        [RequiresDynamicCode("Use a Get overload which takes JsonSerializerOptions instead.")]
+        [RequiresUnreferencedCode("Use a Get overload which takes JsonSerializerOptions instead.")]
         public static async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>>> ListRecords<TRecordValue>(
             AtIdentifier repo,
             Nsid collection,
@@ -1086,6 +1095,7 @@ namespace idunno.AtProto
         /// Thrown when <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is not &gt;0 and &lt;=100.</exception>
+        [RequiresUnreferencedCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
         public static async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>>> ListRecords<TRecordValue>(
             AtIdentifier repo,
             Nsid collection,
@@ -1163,7 +1173,10 @@ namespace idunno.AtProto
                 {
                     string jsonString = record.ToJsonString();
 
-                    AtProtoRecord<TRecordValue>? atProtoRecord = JsonSerializer.Deserialize<AtProtoRecord<TRecordValue>>(jsonString, jsonSerializerOptions);
+                    AtProtoRecord<TRecordValue>? atProtoRecord = JsonSerializer.Deserialize(
+                        jsonString,
+                        typeof(AtProtoRecord <TRecordValue>),
+                        jsonSerializerOptions) as AtProtoRecord<TRecordValue>;
 
                     if (atProtoRecord is not null)
                     {
@@ -1215,6 +1228,10 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="blob"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="blob"/> is a zero length array.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="mimeType"/> is empty or not in the type/subtype format.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<Blob>> UploadBlob(
             byte[] blob,
             string mimeType,
@@ -1300,6 +1317,10 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">
         /// Thrown when <paramref name="repo"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<RepoDescription>> DescribeRepo(
             AtIdentifier repo,
             Uri service,
