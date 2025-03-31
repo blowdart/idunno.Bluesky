@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
+
 using idunno.AtProto;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
@@ -90,6 +92,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public async Task<AtProtoHttpResult<ProfileRecord>> GetProfileRecord(
             CancellationToken cancellationToken = default)
         {
@@ -100,7 +106,11 @@ namespace idunno.Bluesky
 
             AtUri profileUri = new($"at://{Did}/{CollectionNsid.Profile}/self");
 
-            return await GetRecord<ProfileRecord>(profileUri, service: Service, cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await GetRecord<ProfileRecord>(
+                profileUri,
+                service: Service,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -110,6 +120,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
         public async Task<AtProtoHttpResult<PutRecordResponse>> UpdateProfileRecord(
             ProfileRecord profileRecord,
             CancellationToken cancellationToken = default)
@@ -134,6 +148,7 @@ namespace idunno.Bluesky
 
             return await PutRecord(
                 recordValue: profileRecord.Value,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Profile,
                 rKey: "self",
                 validate: null,

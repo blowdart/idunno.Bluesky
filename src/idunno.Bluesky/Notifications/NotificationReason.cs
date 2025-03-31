@@ -8,7 +8,7 @@ namespace idunno.Bluesky.Notifications
     /// <summary>
     /// Reasons for a notification.
     /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<NotificationReason>))]
     public enum NotificationReason
     {
         /// <summary>

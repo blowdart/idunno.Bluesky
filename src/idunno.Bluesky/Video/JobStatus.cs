@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
+using idunno.Bluesky.Notifications;
 
 namespace idunno.Bluesky.Video
 {
@@ -108,15 +109,19 @@ namespace idunno.Bluesky.Video
         [JsonInclude]
         public string? Message { get; init; }
 
+        /// <summary>
+        /// Gets the state of the job, as a string.
+        /// </summary>
         [JsonInclude]
         [JsonRequired]
         [JsonPropertyName("state")]
-        private string? StateAsString { get; set; }
+        public string? StateAsString { get; set; }
     }
 
     /// <summary>
     /// Represents the state of a video upload.
     /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<JobState>))]
     public enum JobState
     {
         /// <summary>

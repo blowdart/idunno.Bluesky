@@ -4,6 +4,7 @@
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto.Server.Models;
+using System.Diagnostics.CodeAnalysis;
 
 namespace idunno.AtProto
 {
@@ -25,6 +26,10 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ResponseParseException">Thrown when the response from the service cannot be parsed or does not pass validation.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<ServerDescription>> DescribeServer(
             Uri service,
             HttpClient httpClient,

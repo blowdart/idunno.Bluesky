@@ -78,7 +78,7 @@ namespace idunno.Bluesky.Actor
     /// <summary>
     /// Values indicating what type of feed the preference applies to.
     /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<SavedFeedPreferenceType>))]
     public enum SavedFeedPreferenceType
     {
         /// <summary>

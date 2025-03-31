@@ -116,7 +116,7 @@ namespace idunno.Bluesky.Record
         /// </remarks>
         [NotNull]
         [JsonInclude]
-        public SelfLabels? Labels { get; private set; }
+        public SelfLabels? Labels { get; init; }
 
         /// <summary>
         /// Gets or sets a flag indicating whether applications should be discouraged from showing this profile and this

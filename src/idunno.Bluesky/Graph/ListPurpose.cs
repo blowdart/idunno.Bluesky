@@ -11,7 +11,7 @@ namespace idunno.Bluesky.Graph
     /// <remarks>
     ///<para>See https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/graph/defs.json</para>
     /// </remarks>
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<ListPurpose>))]
     public enum ListPurpose
     {
         /// <summary>

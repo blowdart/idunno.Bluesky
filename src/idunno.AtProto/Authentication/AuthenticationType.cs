@@ -2,11 +2,14 @@
 // Licensed under the MIT License.
 
 
+using System.Text.Json.Serialization;
+
 namespace idunno.AtProto.Authentication
 {
     /// <summary>
     /// The authentication type of an <see cref="AtProtoCredential"/> instance.
     /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<AuthenticationType>))]
     public enum AuthenticationType
     {
         /// <summary>
@@ -18,7 +21,6 @@ namespace idunno.AtProto.Authentication
         /// The credentials came from the CreateSession api with a username and password.
         /// </summary>
         UsernamePassword = 1,
-
 
         /// <summary>
         /// The credentials came from the CreateSession api with a username, password and auth token.

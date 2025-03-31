@@ -13,7 +13,7 @@ namespace idunno.AtProto
         /// Gets a <see cref="JsonSerializerOptions"/> configured to use Json source generation for AtProto classes without
         /// any chaining to external resolvers.
         /// </summary>
-        private static JsonSerializerOptions SelfContainedJsonSerializerOptions => new(JsonSerializerDefaults.Web)
+        internal static JsonSerializerOptions SelfContainedJsonSerializerOptions => new(JsonSerializerDefaults.Web)
         {
             AllowOutOfOrderMetadataProperties = true,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
@@ -25,7 +25,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Gets a <see cref="JsonSerializerOptions"/> without a type resolver.
         /// </summary>
-        private static JsonSerializerOptions DefaultJsonSerializerOptionsWithNoTypeResolution => new(JsonSerializerDefaults.Web)
+        internal static JsonSerializerOptions DefaultJsonSerializerOptionsWithNoTypeResolution => new(JsonSerializerDefaults.Web)
         {
             AllowOutOfOrderMetadataProperties = true,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,

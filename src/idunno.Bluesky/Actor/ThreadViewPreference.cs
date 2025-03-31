@@ -41,7 +41,7 @@ namespace idunno.Bluesky.Actor
     /// <summary>
     /// Groups of users to apply the muted word to.
     /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<ThreadSortingMode>))]
     public enum ThreadSortingMode
     {
         /// <summary>

@@ -22,6 +22,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		readme.md = readme.md
 		SECURITY.md = SECURITY.md
 		THIRD-PARTY-NOTICES.txt = THIRD-PARTY-NOTICES.txt
+		trimTest.ps1 = trimTest.ps1
 		version.json = version.json
 	EndProjectSection
 EndProject
@@ -158,6 +159,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.AgentEvents", "samp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "idunno.AtProto.Integration.Test", "test\idunno.AtProto.Integration.Test\idunno.AtProto.Integration.Test.csproj", "{15E0FD9F-AC5E-017E-1F89-E5B7A7DE41E7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrimmingTestApp", "test\TrimmingTestApp\TrimmingTestApp.csproj", "{EC08D6BB-22D7-4F5E-BE21-FCBEA5956084}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "trimming", "trimming", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "idunno.TrimmingTest", "trimming\idunno.TrimmingTest.csproj", "{DAF76BD2-70AF-33B6-84C9-61C277D5DFF2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		CodeQL|Any CPU = CodeQL|Any CPU
@@ -272,6 +279,18 @@ Global
 		{15E0FD9F-AC5E-017E-1F89-E5B7A7DE41E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{15E0FD9F-AC5E-017E-1F89-E5B7A7DE41E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{15E0FD9F-AC5E-017E-1F89-E5B7A7DE41E7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EC08D6BB-22D7-4F5E-BE21-FCBEA5956084}.CodeQL|Any CPU.ActiveCfg = Debug|Any CPU
+		{EC08D6BB-22D7-4F5E-BE21-FCBEA5956084}.CodeQL|Any CPU.Build.0 = Debug|Any CPU
+		{EC08D6BB-22D7-4F5E-BE21-FCBEA5956084}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EC08D6BB-22D7-4F5E-BE21-FCBEA5956084}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EC08D6BB-22D7-4F5E-BE21-FCBEA5956084}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EC08D6BB-22D7-4F5E-BE21-FCBEA5956084}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DAF76BD2-70AF-33B6-84C9-61C277D5DFF2}.CodeQL|Any CPU.ActiveCfg = Debug|Any CPU
+		{DAF76BD2-70AF-33B6-84C9-61C277D5DFF2}.CodeQL|Any CPU.Build.0 = Debug|Any CPU
+		{DAF76BD2-70AF-33B6-84C9-61C277D5DFF2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DAF76BD2-70AF-33B6-84C9-61C277D5DFF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DAF76BD2-70AF-33B6-84C9-61C277D5DFF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DAF76BD2-70AF-33B6-84C9-61C277D5DFF2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -305,6 +324,8 @@ Global
 		{AEC1CC8B-59B6-4160-A80A-AF5CBC929679} = {C94F8041-6886-4D0F-82DC-8AF2B41FF649}
 		{29B74A2D-58C0-ADD4-D2F8-F7ACCB8C387F} = {B1A49FA3-07AB-4D78-BC16-FF7FB5857840}
 		{15E0FD9F-AC5E-017E-1F89-E5B7A7DE41E7} = {ACED7B7D-7BBE-4086-937F-7ECEE6A3F6B4}
+		{EC08D6BB-22D7-4F5E-BE21-FCBEA5956084} = {ACED7B7D-7BBE-4086-937F-7ECEE6A3F6B4}
+		{DAF76BD2-70AF-33B6-84C9-61C277D5DFF2} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2B9F8C2-975D-4E3A-B05E-48FDF4BCE3E6}

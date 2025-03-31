@@ -7,8 +7,8 @@ using idunno.AtProto;
 
 namespace idunno.Bluesky
 {
-    public partial class BlueskyAgent
+    public partial class BlueskyServer
     {
-        private static JsonSerializerOptions BlueskyJsonSerializerOptions { get; } = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(SourceGenerationContext.Default);
+        internal static JsonSerializerOptions BlueskyJsonSerializerOptions { get; } = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(SourceGenerationContext.Default);
     }
 }

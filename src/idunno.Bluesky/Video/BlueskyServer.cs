@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Headers;
 
 using Microsoft.Extensions.Logging;
@@ -34,6 +35,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="jobId"/> is null or whitespace.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<JobStatus>> GetVideoJobStatus(
             string jobId,
             Uri service,
@@ -49,6 +54,7 @@ namespace idunno.Bluesky
             AtProtoHttpResult<JobStatusResponse> response = await client.Get(
                 service, $"{GetJobStatusEndpoint}?jobId={Uri.EscapeDataString(jobId)}",
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             // Flatten
@@ -70,6 +76,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="serviceCredential"/> or <paramref name="httpClient"/> is null.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<UploadLimits>> GetVideoUploadStatus(
             Uri service,
             ServiceCredential serviceCredential,
@@ -88,6 +98,7 @@ namespace idunno.Bluesky
                 GetUploadLimitsEndpoint,
                 credentials: serviceCredential,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: null,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -107,6 +118,10 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> is null or empty.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="serviceCredential"/>, <paramref name="video"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="video"/> is empty.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<JobStatus>> UploadVideo(
             Did did,
             string fileName,
@@ -141,6 +156,7 @@ namespace idunno.Bluesky
                     contentHeaders : contentHeaders,
                     credentials: serviceCredential,
                     httpClient: httpClient,
+                    jsonSerializerOptions: BlueskyJsonSerializerOptions,
                     onCredentialsUpdated: null, // Service credentials don't get updates
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 

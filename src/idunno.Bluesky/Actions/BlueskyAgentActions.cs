@@ -1,7 +1,9 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Text.Json;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
@@ -12,8 +14,6 @@ using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.RichText;
 using idunno.Bluesky.Actions;
 using idunno.Bluesky.Actor;
-using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
 
 namespace idunno.Bluesky
 {
@@ -80,7 +80,7 @@ namespace idunno.Bluesky
 
             AtProtoHttpResult<CreateRecordResponse> result = await CreateRecord(
                 record: follow,
-                jsonSerializerOptions: BlueskyJsonSerializerOptions,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Follow,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -263,7 +263,7 @@ namespace idunno.Bluesky
 
             return await CreateRecord(
                 record: block,
-                jsonSerializerOptions: BlueskyJsonSerializerOptions,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Block,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -1114,7 +1114,7 @@ namespace idunno.Bluesky
 
             return await CreateRecord(
                 record: repostRecord,
-                jsonSerializerOptions: BlueskyJsonSerializerOptions,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Repost,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -1195,7 +1195,7 @@ namespace idunno.Bluesky
 
             return await CreateRecord(
                 record: likeRecord,
-                jsonSerializerOptions: BlueskyJsonSerializerOptions,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Like,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -1413,7 +1413,7 @@ namespace idunno.Bluesky
 
             AtProtoHttpResult<ApplyWritesResponse> result = await ApplyWrites(
                 operations: [createOperation],
-                jsonSerializerOptions: BlueskyJsonSerializerOptions,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 repo: Did,
                 cid: null,
                 validate: true,
@@ -1600,7 +1600,7 @@ namespace idunno.Bluesky
             {
                 return await CreateRecord(
                     record: post,
-                    jsonSerializerOptions: BlueskyJsonSerializerOptions,
+                    jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                     collection: CollectionNsid.Post,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
             }
@@ -1646,7 +1646,7 @@ namespace idunno.Bluesky
                 AtProtoHttpResult<ApplyWritesResponse> response =
                     await ApplyWrites(
                         writeRequests,
-                        jsonSerializerOptions: BlueskyJsonSerializerOptions,
+                        jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                         repo: Did,
                         validate: true,
                         cancellationToken: cancellationToken).ConfigureAwait(false);

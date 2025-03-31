@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
+
 using idunno.AtProto;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
@@ -11,6 +13,8 @@ namespace idunno.Bluesky
 {
     public partial class BlueskyAgent
     {
+        //TODO: Move to server statics and wrap
+
         /// <summary>
         /// Creates a thread gate record in the current user's repository for the specified <paramref name="post"/>
         /// </summary>
@@ -78,6 +82,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="threadGate"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public async Task<AtProtoHttpResult<CreateRecordResponse>> AddThreadGate(
             ThreadGate threadGate,
             CancellationToken cancellationToken = default)
@@ -96,6 +104,7 @@ namespace idunno.Bluesky
 
             return await CreateRecord(
                 record: threadGate,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.ThreadGate,
                 rkey: threadGate.Post.RecordKey,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -153,6 +162,10 @@ namespace idunno.Bluesky
         ///     Thrown when the <paramref name="threadGate"/>'s RecordKey is null, or it does not point to a Post record or it does not belong to the current user.
         /// </exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public async Task<AtProtoHttpResult<PutRecordResponse>> UpdateThreadGate(
             ThreadGate threadGate,
             CancellationToken cancellationToken = default)
@@ -181,6 +194,7 @@ namespace idunno.Bluesky
 
             return await PutRecord(
                 recordValue: threadGate,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.ThreadGate,
                 rKey: threadGate.Post.RecordKey,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -195,6 +209,10 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public async Task<AtProtoHttpResult<ThreadGate>> GetThreadGate(
             AtUri post,
             CancellationToken cancellationToken = default)
@@ -220,8 +238,9 @@ namespace idunno.Bluesky
                 repo: Did,
                 collection: CollectionNsid.ThreadGate,
                 rKey: post.RecordKey,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 cid: null,
-                Service,
+                service: Service,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (recordResponse.Succeeded)
@@ -302,6 +321,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="postGate"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
+        [UnconditionalSuppressMessage(
+             "Trimming",
+             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+             Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public async Task<AtProtoHttpResult<CreateRecordResponse>> AddPostGate(
             PostGate postGate,
             CancellationToken cancellationToken = default)
@@ -315,6 +338,7 @@ namespace idunno.Bluesky
 
             return await CreateRecord(
                 record: postGate,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.PostGate,
                 rkey: postGate.Post.RecordKey,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -370,6 +394,10 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
+        [UnconditionalSuppressMessage(
+             "Trimming",
+             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+             Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public async Task<AtProtoHttpResult<PostGate>> GetPostGate(
             AtUri post,
             CancellationToken cancellationToken = default)
@@ -396,7 +424,8 @@ namespace idunno.Bluesky
                 collection: CollectionNsid.PostGate,
                 rKey: post.RecordKey,
                 cid: null,
-                Service,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
+                service: Service,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (recordResponse.Succeeded)
@@ -430,6 +459,10 @@ namespace idunno.Bluesky
         ///     Thrown when the <paramref name="postGate"/>'s RecordKey is null, or it does not point to a Post record or it does not belong to the current user.
         /// </exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
+        [UnconditionalSuppressMessage(
+             "Trimming",
+             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+             Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public async Task<AtProtoHttpResult<PutRecordResponse>> UpdatePostGate(
             PostGate postGate,
             CancellationToken cancellationToken = default)
@@ -460,6 +493,7 @@ namespace idunno.Bluesky
                 recordValue: postGate,
                 collection: CollectionNsid.PostGate,
                 rKey: postGate.Post.RecordKey,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 

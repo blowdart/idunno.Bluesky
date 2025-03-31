@@ -1,8 +1,6 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Collections.Specialized;
-using System.Runtime.Caching;
 using System.Text.RegularExpressions;
 
 using idunno.AtProto;
@@ -12,19 +10,9 @@ namespace idunno.Bluesky.RichText
     /// <summary>
     /// Extracts facets from a supplied string.
     /// </summary>
-    public sealed partial class DefaultFacetExtractor : IFacetExtractor, IDisposable
+    public sealed partial class DefaultFacetExtractor : IFacetExtractor
     {
         // Regexes and logic taken from https://docs.bsky.app/docs/advanced-guides/post-richtext
-
-        private volatile bool _disposed;
-
-        private static readonly NameValueCollection s_cacheConfig = new()
-        {
-            { "cacheMemoryLimitMegabytes", "5" },
-            { "pollingInterval", "00:05:00" }
-        };
-
-        private readonly MemoryCache _handleResolutionCache = new("idunno.Bluesky.handleResolutionCache", s_cacheConfig);
 
         private readonly Func<string, CancellationToken, Task<Did?>> _resolveHandle;
 
@@ -49,15 +37,6 @@ namespace idunno.Bluesky.RichText
         }
 
         /// <summary>
-        /// Releases all resources that are used by the current instance of the DefaultFacetExtractor class.
-        /// </summary>
-        public void Dispose()
-        {
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
-
-        /// <summary>
         /// Extracts facets from the specified <paramref name="text"/>.
         /// </summary>
         /// <param name="text">The text to extract any facets from.</param>
@@ -65,7 +44,7 @@ namespace idunno.Bluesky.RichText
         /// <returns>The task object representing the asynchronous operation.</returns>
         public async Task<IList<Facet>> ExtractFacets(string text, CancellationToken cancellationToken = default)
         {
-            List<Facet> facets = new();
+            List<Facet> facets = [];
 
             List<Facet> hashTagFacets = ExtractHashTags(text);
             if (hashTagFacets.Count > 0)
@@ -79,7 +58,7 @@ namespace idunno.Bluesky.RichText
                 facets.AddRange(linkFacets);
             }
 
-            List<Facet> mentionFacets = await ExtractMentionsAndResolveHandles(text, _resolveHandle, _handleResolutionCache, cancellationToken).ConfigureAwait(false);
+            List<Facet> mentionFacets = await ExtractMentionsAndResolveHandles(text, _resolveHandle, cancellationToken).ConfigureAwait(false);
             if (mentionFacets.Count > 0)
             {
                 facets.AddRange(mentionFacets);
@@ -88,22 +67,9 @@ namespace idunno.Bluesky.RichText
             return facets;
         }
 
-        private void Dispose(bool disposing)
-        {
-            if (!_disposed)
-            {
-                if (disposing)
-                {
-                    _handleResolutionCache.Dispose();
-                }
-
-                _disposed = true;
-            }
-        }
-
         private static List<Facet> ExtractHashTags(string text)
         {
-            List<Facet> hashTags = new();
+            List<Facet> hashTags = [];
             MatchCollection matches = s_HashTagRegex().Matches(text);
 
             foreach (Match match in matches)
@@ -140,7 +106,7 @@ namespace idunno.Bluesky.RichText
                 TagFacetFeature tagFacetFeature = new(extractedTag[1..]);
 
                 ByteSlice index = new(text.GetUtf8BytePosition(match.Index + offset), text.GetUtf8BytePosition(match.Index + offset + extractedTag.Length));
-                hashTags.Add(new Facet(index, new List<FacetFeature> { tagFacetFeature }));
+                hashTags.Add(new Facet(index, [tagFacetFeature]));
             }
 
             return hashTags;
@@ -148,14 +114,14 @@ namespace idunno.Bluesky.RichText
 
         private static List<Facet> ExtractUris(string text)
         {
-            List<Facet> links = new();
+            List<Facet> links = [];
             MatchCollection matches = s_UrlRegex().Matches(text);
 
             foreach (Match match in matches)
             {
                 LinkFacetFeature tagFacetFeature = new(new Uri(match.Value));
                 ByteSlice index = new(text.GetUtf8BytePosition(match.Index), text.GetUtf8BytePosition(match.Index + match.Length));
-                links.Add(new Facet(index, new List<FacetFeature> { tagFacetFeature }));
+                links.Add(new Facet(index, [tagFacetFeature]));
             }
 
             return links;
@@ -164,10 +130,9 @@ namespace idunno.Bluesky.RichText
         private static async Task<List<Facet>> ExtractMentionsAndResolveHandles(
             string text,
             Func<string, CancellationToken, Task<Did?>> resolveHandle,
-            MemoryCache cache,
             CancellationToken cancellationToken = default)
         {
-            List<Facet> mentions = new();
+            List<Facet> mentions = [];
             MatchCollection matches = s_MentionRegex().Matches(text);
 
             foreach(Match match in matches)
@@ -176,39 +141,13 @@ namespace idunno.Bluesky.RichText
 
                 if (Handle.TryParse(handle, out _))
                 {
-                    // Memory Cache doesn't allow null values, so convert the DID to a string if found, or use string.Empty if not.
-                    string? didAsString;
+                    Did? did = await resolveHandle(handle, cancellationToken).ConfigureAwait(false);
 
-                    if (!cache.Contains(handle))
+                    if (did is not null)
                     {
-                        Did? did = await resolveHandle(handle, cancellationToken).ConfigureAwait(false);
-
-                        if (did is not null)
-                        {
-                            didAsString = did.ToString();
-                        }
-                        else
-                        {
-                            didAsString = string.Empty;
-                        }
-
-                        CacheItemPolicy cachePolicy = new()
-                        {
-                            AbsoluteExpiration = DateTimeOffset.Now.AddMinutes(5)
-                        };
-
-                        cache.Add(new CacheItem(handle, didAsString), cachePolicy);
-                    }
-                    else
-                    {
-                        didAsString = cache[handle] as string;
-                    }
-
-                    if (!string.IsNullOrEmpty(didAsString))
-                    {
-                        MentionFacetFeature mentionFacetFeature = new(new Did(didAsString));
+                        MentionFacetFeature mentionFacetFeature = new(did);
                         ByteSlice index = new(text.GetUtf8BytePosition(match.Index), text.GetUtf8BytePosition(match.Index + match.Length));
-                        mentions.Add(new Facet(index, new List<FacetFeature> { mentionFacetFeature }));
+                        mentions.Add(new Facet(index, [mentionFacetFeature]));
                     }
                 }
             }

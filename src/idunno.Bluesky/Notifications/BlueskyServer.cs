@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 
@@ -36,6 +37,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<int>> GetNotificationUnreadCount(
             DateTimeOffset? seenAt,
             Uri service,
@@ -61,6 +66,7 @@ namespace idunno.Bluesky
                 $"{GetUnreadEndpoint}?{queryString}",
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -94,6 +100,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<NotificationCollection>> ListNotifications(
             int? limit,
             string? cursor,
@@ -143,6 +153,7 @@ namespace idunno.Bluesky
                 endpoint: $"{ListNotificationsEndpoint}?{queryString}",
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -180,6 +191,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="seenAt"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<EmptyResponse>> UpdateNotificationSeenAt(
             DateTimeOffset seenAt,
             Uri service,
@@ -201,6 +216,7 @@ namespace idunno.Bluesky
                 service,
                 $"{UpdateSeenEndpoint}",
                 body,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 credentials: accessCredentials,
                 httpClient: httpClient,
                 onCredentialsUpdated: onCredentialsUpdated,

@@ -764,7 +764,8 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="query" /> is null or whitespace</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="query" /> is whitespace</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="query" /> is null</exception>
         public async Task<AtProtoHttpResult<SearchResults>> SearchPosts(
             string query,
             DateTimeOffset since ,
@@ -781,10 +782,10 @@ namespace idunno.Bluesky
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(query);
+            ArgumentException.ThrowIfNullOrWhiteSpace(query);
 
-            string? sinceSerialized = JsonSerializer.Serialize(since).Replace("\"", string.Empty, StringComparison.InvariantCultureIgnoreCase);
-            string? untilSerialized = JsonSerializer.Serialize(until).Replace("\"", string.Empty, StringComparison.InvariantCultureIgnoreCase);
+            string? sinceSerialized = JsonSerializer.Serialize(since, SourceGenerationContext.Default.DateTimeOffset).Replace("\"", string.Empty, StringComparison.InvariantCultureIgnoreCase);
+            string? untilSerialized = JsonSerializer.Serialize(until, SourceGenerationContext.Default.DateTimeOffset).Replace("\"", string.Empty, StringComparison.InvariantCultureIgnoreCase);
 
             return await BlueskyServer.SearchPosts(
                 query,
@@ -826,7 +827,8 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="query" /> is null or whitespace</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="query" /> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="query" /> is whitespace.</exception>
         public async Task<AtProtoHttpResult<SearchResults>> SearchPosts(
             string query,
             DateOnly since,
@@ -843,10 +845,10 @@ namespace idunno.Bluesky
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(query);
+            ArgumentException.ThrowIfNullOrWhiteSpace(query);
 
-            string? sinceSerialized = JsonSerializer.Serialize(since).Replace("\"", string.Empty, StringComparison.InvariantCultureIgnoreCase);
-            string? untilSerialized = JsonSerializer.Serialize(until).Replace("\"", string.Empty, StringComparison.InvariantCultureIgnoreCase);
+            string? sinceSerialized = JsonSerializer.Serialize(since, SourceGenerationContext.Default.DateTimeOffset).Replace("\"", string.Empty, StringComparison.InvariantCultureIgnoreCase);
+            string? untilSerialized = JsonSerializer.Serialize(until, SourceGenerationContext.Default.DateTimeOffset).Replace("\"", string.Empty, StringComparison.InvariantCultureIgnoreCase);
 
             return await BlueskyServer.SearchPosts(
                 query,

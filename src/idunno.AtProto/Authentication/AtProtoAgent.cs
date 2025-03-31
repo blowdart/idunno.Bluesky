@@ -573,6 +573,10 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="CredentialException">Thrown when the current agent authentication state does not have enough information to call the DeleteSession API.</exception>
         /// <exception cref="LogoutException">Thrown when the DeleteSession API call fails.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public async Task Logout(CancellationToken cancellationToken = default)
         {
             if (Credentials is null)
@@ -629,6 +633,7 @@ namespace idunno.AtProto
                         service: authorizationService,
                         endpoint: revocationEndpoint.AbsolutePath,
                         record: formData,
+                        jsonSerializerOptions: AtProtoServer.SelfContainedJsonSerializerOptions,
                         credentials: Credentials,
                         httpClient: HttpClient,
                         cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -655,6 +660,7 @@ namespace idunno.AtProto
                         service: authorizationService,
                         endpoint: revocationEndpoint.AbsolutePath,
                         record: formData,
+                        jsonSerializerOptions: AtProtoServer.SelfContainedJsonSerializerOptions,
                         credentials: Credentials,
                         httpClient: HttpClient,
                         cancellationToken: cancellationToken).ConfigureAwait(false);

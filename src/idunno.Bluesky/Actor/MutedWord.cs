@@ -63,7 +63,7 @@ namespace idunno.Bluesky.Actor
     /// <summary>
     /// The intended targets of the muted word.
     /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<MutedWordTarget>))]
     public enum MutedWordTarget
     {
         /// <summary>
@@ -80,7 +80,7 @@ namespace idunno.Bluesky.Actor
     /// <summary>
     /// Groups of users to apply the muted word to.
     /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<MutedWordActorTarget>))]
     public enum MutedWordActorTarget
     {
         /// <summary>

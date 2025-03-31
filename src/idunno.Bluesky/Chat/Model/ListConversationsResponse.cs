@@ -7,10 +7,10 @@ using System.Text.Json.Serialization;
 namespace idunno.Bluesky.Chat.Model
 {
     [SuppressMessage("Performance", "CA1812", Justification = "Used in ListConversations.")]
-    internal sealed record ListConvosResponse
+    internal sealed record ListConversationsResponse
     {
         [JsonConstructor]
-        public ListConvosResponse(ICollection<ConversationView> conversations, string? cursor)
+        public ListConversationsResponse(ICollection<ConversationView> conversations, string? cursor)
         {
             Conversations = conversations;
             Cursor = cursor;

@@ -3,7 +3,7 @@
 
 using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
-
+using idunno.AtProto.Authentication;
 using idunno.AtProto.Authentication.Models;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Labels.Models;
@@ -27,6 +27,8 @@ namespace idunno.AtProto
 
     [JsonSerializable(typeof(AtErrorDetail))]
 
+    [JsonSerializable(typeof(EmptyResponse))]
+
     [JsonSerializable(typeof(AtIdentifier))]
     [JsonSerializable(typeof(AtUri))]
     [JsonSerializable(typeof(Cid))]
@@ -46,7 +48,6 @@ namespace idunno.AtProto
     [JsonSerializable(typeof(ServerDescription))]
     [JsonSerializable(typeof(Links))]
     [JsonSerializable(typeof(Contact))]
-
 
     [JsonSerializable(typeof(RepoDescription))]
     [JsonSerializable(typeof(Blob))]
@@ -74,6 +75,12 @@ namespace idunno.AtProto
     [JsonSerializable(typeof(ApplyWritesUpdateResult))]
     [JsonSerializable(typeof(CreateBlobResponse))]
     [JsonSerializable(typeof(ListRecordsResponse))]
+
+    [JsonSerializable(typeof(AccountStatus))]
+    [JsonSerializable(typeof(ValidationStatus))]
+
+
+    [JsonSerializable(typeof(ServiceToken))]
     internal partial class SourceGenerationContext : JsonSerializerContext
     {
     }

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 
@@ -88,6 +89,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>> GetBlocks(
             int? limit,
             string? cursor,
@@ -124,10 +129,11 @@ namespace idunno.Bluesky
 
             AtProtoHttpClient<GetBlocksResponse> client = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<GetBlocksResponse> response = await client.Get(
-                service,
-                $"{GetBlocksEndpoint}?{queryString}",
+                service: service,
+                endpoint: $"{GetBlocksEndpoint}?{queryString}",
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -171,6 +177,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<Followers>> GetFollowers(
             AtIdentifier actor,
             int? limit,
@@ -210,10 +220,11 @@ namespace idunno.Bluesky
 
             AtProtoHttpClient<GetFollowersResponse> client = new(AppViewProxy, loggerFactory);
             AtProtoHttpResult<GetFollowersResponse> response = await client.Get(
-                service,
-                $"{GetFollowersEndpoint}?{queryString}",
+                service: service,
+                endpoint: $"{GetFollowersEndpoint}?{queryString}",
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -257,6 +268,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<Follows>> GetFollows(
             AtIdentifier actor,
             int? limit,
@@ -300,6 +315,7 @@ namespace idunno.Bluesky
                 $"{GetFollowsEndpoint}?{queryString}",
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions : BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -343,6 +359,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<Followers>> GetKnownFollowers(
             AtIdentifier actor,
             int? limit,
@@ -387,6 +407,7 @@ namespace idunno.Bluesky
                 $"{GetKnownFollowersEndpoint}?{queryString}",
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -429,6 +450,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>> GetListBlocks(
             int? limit,
             string? cursor,
@@ -469,6 +494,7 @@ namespace idunno.Bluesky
                 $"{GetListBlocksEndpoint}?{queryString}",
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -508,6 +534,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>> GetListMutes(
             int? limit,
             string? cursor,
@@ -548,6 +578,7 @@ namespace idunno.Bluesky
                 $"{GetListMutesEndpoint}?{queryString}",
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -588,6 +619,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<ListViewWithItems>> GetList(
             AtUri list,
             int? limit,
@@ -632,6 +667,7 @@ namespace idunno.Bluesky
                 $"{GetListEndpoint}?{queryString}",
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -672,6 +708,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>> GetLists(
             AtIdentifier actor,
             int? limit,
@@ -715,6 +755,7 @@ namespace idunno.Bluesky
                 $"{GetListsEndpoint}?{queryString}",
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -754,6 +795,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>> GetMutes(
             int? limit,
             string? cursor,
@@ -800,6 +845,7 @@ namespace idunno.Bluesky
                 $"{GetMutesEndpoint}?{queryString}",
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -840,6 +886,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="others"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="others"/> is empty, or has &gt; 30 entries.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<ActorRelationships>> GetRelationships(
             Did actor,
             ICollection<Did> others,
@@ -874,6 +924,7 @@ namespace idunno.Bluesky
                 $"{GetRelationshipsEndpoint}?{queryString}",
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -920,6 +971,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<StarterPackView>> GetStarterPack(
             AtUri uri,
             Uri service,
@@ -940,6 +995,7 @@ namespace idunno.Bluesky
                 $"{GetStarterPackEndpoint}?starterPack={Uri.EscapeDataString(uri.ToString())}",
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -978,6 +1034,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="uris"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when number <paramref name="uris"/> is &lt; 1 or &gt; 25.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<IReadOnlyList<StarterPackViewBasic>>> GetStarterPacks(
             ICollection<AtUri> uris,
             Uri service,
@@ -1010,6 +1070,7 @@ namespace idunno.Bluesky
                 $"{GetStarterPacksEndpoint}?{queryString}",
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1047,6 +1108,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<SuggestedActors>> GetSuggestedFollowsByActor(
             AtIdentifier actor,
             Uri service,
@@ -1067,6 +1132,7 @@ namespace idunno.Bluesky
                 $"{GetSuggestedFollowsByActorEndpoint}?actor={Uri.EscapeDataString(actor.ToString())}",
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1086,6 +1152,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<EmptyResponse>> MuteActorList(
             AtUri listUri,
             Uri service,
@@ -1107,6 +1177,7 @@ namespace idunno.Bluesky
                 new MuteActorListRequest(listUri),
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -1125,6 +1196,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<EmptyResponse>> MuteActor(
             AtIdentifier actor,
             Uri service,
@@ -1146,6 +1221,7 @@ namespace idunno.Bluesky
                 new MuteActorRequest(actor),
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -1164,6 +1240,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="rootUri"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<EmptyResponse>> MuteThread(
             AtUri rootUri,
             Uri service,
@@ -1185,6 +1265,7 @@ namespace idunno.Bluesky
                 new MuteThreadRequest(rootUri),
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -1203,6 +1284,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<EmptyResponse>> UnmuteActorList(
             AtUri listUri,
             Uri service,
@@ -1224,6 +1309,7 @@ namespace idunno.Bluesky
                 new MuteActorListRequest(listUri),
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -1242,6 +1328,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<EmptyResponse>> UnmuteActor(
             AtIdentifier actor,
             Uri service,
@@ -1263,6 +1353,7 @@ namespace idunno.Bluesky
                 new MuteActorRequest(actor),
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -1281,6 +1372,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="rootUri"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<EmptyResponse>> UnmuteThread(
             AtUri rootUri,
             Uri service,
@@ -1302,6 +1397,7 @@ namespace idunno.Bluesky
                 new MuteThreadRequest(rootUri),
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 

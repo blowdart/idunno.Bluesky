@@ -54,7 +54,7 @@ namespace idunno.Bluesky.Actor
     /// <summary>
     /// Label effect values.
     /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<LabelVisibility>))]
     public enum LabelVisibility
     {
         /// <summary>
@@ -70,8 +70,8 @@ namespace idunno.Bluesky.Actor
         /// <summary>
         /// The user should be warned about the labelled content, and presented a way to display the content.
         /// </summary>
-
         Warn,
+
         /// <summary>
         /// The content should be hidden from the user.
         /// </summary>
