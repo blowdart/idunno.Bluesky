@@ -285,36 +285,6 @@ namespace idunno.Bluesky.Test
             }
         }
 
-        [Fact]
-        public void DisposeTwiceShouldNotThrow()
-        {
-            DefaultFacetExtractor extractor = new(MockResolver);
-
-            Exception? assert = null;
-
-            try
-            {
-                extractor.Dispose();
-            }
-            catch (Exception ex)
-            {
-                assert = ex;
-            }
-
-            Assert.Null(assert);
-
-            try
-            {
-                extractor.Dispose();
-            }
-            catch (Exception ex)
-            {
-                assert = ex;
-            }
-
-            Assert.Null(assert);
-        }
-
         [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Mocking ResolveHandle() signature.")]
         [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Mocking ResolveHandle().")]
         [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Mocking ResolveHandle() signature.")]

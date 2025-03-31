@@ -159,8 +159,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.AgentEvents", "samp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "idunno.AtProto.Integration.Test", "test\idunno.AtProto.Integration.Test\idunno.AtProto.Integration.Test.csproj", "{15E0FD9F-AC5E-017E-1F89-E5B7A7DE41E7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrimmingTestApp", "test\TrimmingTestApp\TrimmingTestApp.csproj", "{EC08D6BB-22D7-4F5E-BE21-FCBEA5956084}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "trimming", "trimming", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "idunno.TrimmingTest", "trimming\idunno.TrimmingTest.csproj", "{DAF76BD2-70AF-33B6-84C9-61C277D5DFF2}"
