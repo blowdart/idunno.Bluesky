@@ -44,15 +44,15 @@ namespace idunno.AtProto.Json
         /// Writes the specified <see cref="Cid"></see> as JSON.
         /// </summary>
         /// <param name="writer">The writer to write to.</param>
-        /// <param name="cid">The <see cref="Cid"/> to convert to JSON.</param>
+        /// <param name="value">The <see cref="Cid"/> to convert to JSON.</param>
         /// <param name="options">An object that specifies serialization options to use.</param>
-        /// <exception cref="ArgumentNullException">Throws when <paramref name="writer"/> or <paramref name="cid"/> is null.</exception>
-        public override void Write(Utf8JsonWriter writer, Cid cid, JsonSerializerOptions options)
+        /// <exception cref="ArgumentNullException">Throws when <paramref name="writer"/> or <paramref name="value"/> is null.</exception>
+        public override void Write(Utf8JsonWriter writer, Cid value, JsonSerializerOptions options)
         {
             ArgumentNullException.ThrowIfNull(writer);
-            ArgumentNullException.ThrowIfNull(cid);
+            ArgumentNullException.ThrowIfNull(value);
 
-            writer.WriteStringValue(cid.Value);
+            writer.WriteStringValue(value.Value);
         }
     }
 }

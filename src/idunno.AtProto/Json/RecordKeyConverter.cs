@@ -52,15 +52,15 @@ namespace idunno.AtProto.Json
         /// Writes the specified <see cref="RecordKey" /> as JSON.
         /// </summary>
         /// <param name="writer">The writer to write to.</param>
-        /// <param name="recordKey">The <see cref="Cid"/> to convert to JSON.</param>
+        /// <param name="value">The <see cref="Cid"/> to convert to JSON.</param>
         /// <param name="options">An object that specifies serialization options to use.</param>
-        /// <exception cref="ArgumentNullException">Throws when <paramref name="writer"/> or <paramref name="recordKey"/> is null.</exception>
-        public override void Write(Utf8JsonWriter writer, RecordKey recordKey, JsonSerializerOptions options)
+        /// <exception cref="ArgumentNullException">Throws when <paramref name="writer"/> or <paramref name="value"/> is null.</exception>
+        public override void Write(Utf8JsonWriter writer, RecordKey value, JsonSerializerOptions options)
         {
             ArgumentNullException.ThrowIfNull(writer);
-            ArgumentNullException.ThrowIfNull(recordKey);
+            ArgumentNullException.ThrowIfNull(value);
 
-            writer.WriteStringValue(recordKey.ToString());
+            writer.WriteStringValue(value.ToString());
         }
     }
 }
