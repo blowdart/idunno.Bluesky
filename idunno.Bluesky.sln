@@ -138,8 +138,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{E2B63F0A-9
 		docs\docs\posting.md = docs\docs\posting.md
 		docs\docs\profileEditing.md = docs\docs\profileEditing.md
 		docs\docs\savingAndRestoringAuthentication.md = docs\docs\savingAndRestoringAuthentication.md
-		docs\docs\threadGatesAndPostGates.md = docs\docs\threadGatesAndPostGates.md
 		docs\docs\sourceGeneration.md = docs\docs\sourceGeneration.md
+		docs\docs\threadGatesAndPostGates.md = docs\docs\threadGatesAndPostGates.md
 		docs\docs\timeline.md = docs\docs\timeline.md
 		docs\docs\toc.yml = docs\docs\toc.yml
 		docs\docs\userPreferences.md = docs\docs\userPreferences.md
@@ -286,11 +286,9 @@ Global
 		{EC08D6BB-22D7-4F5E-BE21-FCBEA5956084}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EC08D6BB-22D7-4F5E-BE21-FCBEA5956084}.Release|Any CPU.Build.0 = Release|Any CPU
 		{DAF76BD2-70AF-33B6-84C9-61C277D5DFF2}.CodeQL|Any CPU.ActiveCfg = Debug|Any CPU
-		{DAF76BD2-70AF-33B6-84C9-61C277D5DFF2}.CodeQL|Any CPU.Build.0 = Debug|Any CPU
 		{DAF76BD2-70AF-33B6-84C9-61C277D5DFF2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DAF76BD2-70AF-33B6-84C9-61C277D5DFF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DAF76BD2-70AF-33B6-84C9-61C277D5DFF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DAF76BD2-70AF-33B6-84C9-61C277D5DFF2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
