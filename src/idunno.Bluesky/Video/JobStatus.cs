@@ -2,11 +2,10 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
-using idunno.Bluesky.Notifications;
+using idunno.Bluesky.Video.Model;
 
 namespace idunno.Bluesky.Video
 {
@@ -15,134 +14,72 @@ namespace idunno.Bluesky.Video
     /// </summary>
     public sealed record JobStatus
     {
-        [JsonConstructor]
-        internal JobStatus(
-            string jobId,
-            Did did,
-            string? stateAsString,
-            int? progress,
-            Blob? blob,
-            string? error,
-            string? message)
+        internal JobStatus(JobStatusWireFormat jobStatusWireFormat)
         {
-            JobId = jobId;
-            Did = did;
-            StateAsString = stateAsString;
-            Blob = blob;
-            Error = error;
-            Message = message;
+            JobId = jobStatusWireFormat.JobId;
+            Did = jobStatusWireFormat.Did;
+            Blob = jobStatusWireFormat.Blob;
+            Error = jobStatusWireFormat.Error;
+            Message = jobStatusWireFormat.Message;
 
-            if (progress is not null)
+            if (jobStatusWireFormat.StateAsString is not null)
             {
-                Progress = progress;
+                switch (jobStatusWireFormat.StateAsString.ToUpperInvariant())
+                {
+                    case "JOB_STATE_COMPLETED":
+                        State = JobState.Completed;
+                        break;
+
+                    case "JOB_STATE_FAILED":
+                        State = JobState.Failed;
+                        break;
+
+                    case "JOB_STATE_CREATED":
+                        State = JobState.Created;
+                        break;
+                }
+            }
+
+            if (jobStatusWireFormat.Progress is not null)
+            {
+                Progress = (int)jobStatusWireFormat.Progress;
             }
         }
 
         /// <summary>
         /// Gets the job identifier.
         /// </summary>
-        [JsonInclude]
-        [JsonRequired]
         public string JobId { get; init; }
 
         /// <summary>
         /// Gets the <see cref="AtProto.Did"/> the job belongs to.
         /// </summary>
-        [JsonInclude]
-        [JsonRequired]
         public Did Did { get; init; }
 
         /// <summary>
         /// Gets the current <see cref="JobState"/>.
         /// </summary>
-        [JsonIgnore]
-        public JobState State {
-            get
-            {
-                // Shortcut the most common state.
-                if (StateAsString is null)
-                {
-                    return JobState.InProgress;
-                }
-
-                if (string.Equals(StateAsString, "JOB_STATE_COMPLETED", StringComparison.Ordinal))
-                {
-                    return JobState.Completed;
-                }
-                else if (string.Equals(StateAsString, "JOB_STATE_FAILED", StringComparison.Ordinal))
-                {
-                    return JobState.Failed;
-                }
-                else if (string.Equals(StateAsString, "JOB_STATE_CREATED", StringComparison.Ordinal))
-                {
-                    return JobState.Created;
-                }
-                else
-                {
-                    return JobState.InProgress;
-                }
-            }
-        }
+        public JobState State { get; init; } = JobState.InProgress;
 
         /// <summary>
         /// Gets the progress of the job.
         /// </summary>
         [NotNull]
-        [JsonInclude]
-        public int? Progress { get; init; } = 0;
+        public int Progress { get; init; } = 0;
 
         /// <summary>
         /// Gets a reference to the <see cref="Blob"/> containing the video if <see cref="State"/> is <see cref="JobState.Completed"/>.
         /// </summary>
-        [JsonInclude]
         public Blob? Blob { get; init; }
 
         /// <summary>
         /// Gets a description of any error that happened during processing.
         /// </summary>
-        [JsonInclude]
         public string? Error { get; init; }
 
         /// <summary>
         /// Gets a description of any error that happened during processing.
         /// </summary>
-        [JsonInclude]
         public string? Message { get; init; }
-
-        /// <summary>
-        /// Gets the state of the job, as a string.
-        /// </summary>
-        [JsonInclude]
-        [JsonRequired]
-        [JsonPropertyName("state")]
-        public string? StateAsString { get; set; }
     }
-
-    /// <summary>
-    /// Represents the state of a video upload.
-    /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter<JobState>))]
-    public enum JobState
-    {
-        /// <summary>
-        /// The video processing job was created
-        /// </summary>
-        Created,
-
-        /// <summary>
-        /// The video upload is in progress.
-        /// </summary>
-        InProgress,
-
-        /// <summary>
-        /// The video upload has completed successfully.
-        /// </summary>
-        Completed,
-
-        /// <summary>
-        /// The video upload failed.
-        /// </summary>
-        Failed
-    }
-
 }

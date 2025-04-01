@@ -57,9 +57,16 @@ namespace idunno.Bluesky
                 jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
+            JobStatus? result = null;
+
+            if (response.Result is not null && response.Result.JobStatus is not null)
+            {
+                result = new JobStatus(response.Result.JobStatus);
+            }
+
             // Flatten
             return new AtProtoHttpResult<JobStatus>(
-                response.Result?.JobStatus,
+                result,
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -145,9 +152,9 @@ namespace idunno.Bluesky
                 new NameValueHeaderValue("Content-Type", "video/mp4")
             ];
 
-            AtProtoHttpClient<JobStatus> client = new(AppViewProxy, loggerFactory);
+            AtProtoHttpClient<JobStatusWireFormat> client = new(AppViewProxy, loggerFactory);
 
-            AtProtoHttpResult<JobStatus> response =
+            AtProtoHttpResult<JobStatusWireFormat> response =
                 await client.PostBlob(
                     service,
                     $"{UploadVideoEndpoint}?did={Uri.EscapeDataString(did)}&name={Uri.EscapeDataString(fileName)}",
@@ -160,7 +167,19 @@ namespace idunno.Bluesky
                     onCredentialsUpdated: null, // Service credentials don't get updates
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            return response;
+            JobStatus? result = null;
+
+            if (response.Result is not null)
+            {
+                result = new JobStatus(response.Result);
+            }
+
+            return new AtProtoHttpResult<JobStatus>(
+                result,
+                response.StatusCode,
+                response.HttpResponseHeaders,
+                response.AtErrorDetail,
+                response.RateLimit);
         }
     }
 }

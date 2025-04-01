@@ -8,12 +8,12 @@ namespace idunno.Bluesky.Video.Model
     internal sealed record JobStatusResponse
     {
         [JsonConstructor]
-        public JobStatusResponse(JobStatus jobStatus)
+        public JobStatusResponse(JobStatusWireFormat jobStatus)
         {
             JobStatus = jobStatus;
         }
 
         [JsonInclude]
-        public JobStatus JobStatus { get; init; }
+        public JobStatusWireFormat JobStatus { get; init; }
     }
 }

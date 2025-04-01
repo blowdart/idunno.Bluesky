@@ -231,7 +231,7 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(TagFacetFeature))]
 
     [JsonSerializable(typeof(JobStatusResponse))]
-    [JsonSerializable(typeof(JobStatus))]
+    [JsonSerializable(typeof(JobStatusWireFormat))]
     [JsonSerializable(typeof(UploadLimits))]
 
     [JsonSerializable(typeof(Post))]
