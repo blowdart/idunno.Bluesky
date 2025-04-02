@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+      uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
       with:
         egress-policy: audit
 
@@ -109,7 +109,7 @@ jobs:
         Get-ChildItem -Path ${{ env.nupkgDirectory }} -Include *.nupkg -Recurse -Force
 
     - name: Authenticate to Azure
-      uses: azure/login@a65d910e8af852a8061c627c456678983e180302 # 2.2.0
+      uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # 2.3.0
       with:
         allow-no-subscriptions : true
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -138,7 +138,7 @@ jobs:
       id-token: write
     steps:
     - name: 'Harden Runner'
-      uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+      uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
       with:
         egress-policy: audit
 
