@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto.Repo;
@@ -37,7 +38,7 @@ namespace idunno.Bluesky.Actions
         /// </summary>
         [JsonInclude]
         [JsonPropertyName("$type")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Cannot be static as it won't be serialized.")]
+        [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needs to an instance property for json serialization.")]
         public string Type => RecordType.Repost;
 
         /// <summary>

@@ -64,7 +64,7 @@ namespace idunno.Bluesky.Record
         /// </summary>
         [JsonInclude]
         [JsonPropertyName("$type")]
-        [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Can't be static as it needs to be included in the json serialized value.")]
+        [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needs to an instance property for json serialization.")]
         public string Type => RecordType.Profile;
 
         /// <summary>

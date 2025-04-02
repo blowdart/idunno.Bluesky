@@ -418,9 +418,9 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets the JSON record type for this instance.
         /// </summary>
-        [JsonIgnore]
+        [JsonInclude]
         [JsonPropertyName("$type")]
-        [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Cannot be static as it won't be serialized.")]
+        [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needs to an instance property for json serialization.")]
         public string Type => RecordType.Post;
 
         /// <summary>

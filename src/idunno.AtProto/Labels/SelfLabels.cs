@@ -3,6 +3,7 @@
 
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace idunno.AtProto.Labels
@@ -41,7 +42,7 @@ namespace idunno.AtProto.Labels
         /// </summary>
         [JsonInclude]
         [JsonPropertyName("$type")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needs to an instance property for json serialization.")]
+        [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needs to an instance property for json serialization.")]
         public string Type => "com.atproto.label.defs#selfLabels";
 
         /// <summary>

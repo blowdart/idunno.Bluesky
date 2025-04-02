@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace idunno.AtProto.Repo
@@ -31,7 +32,8 @@ namespace idunno.AtProto.Repo
         /// </summary>
         [JsonInclude]
         [JsonPropertyName("$type")]
-        public static string Type => "blob";
+        [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needs to an instance property for json serialization.")]
+        public string Type => "blob";
 
         /// <summary>
         /// The reference to the blob.
