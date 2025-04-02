@@ -3,10 +3,13 @@
 
 using System.Security.Cryptography;
 using System.Text.Json;
+
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
-namespace idunno.AtProto.Integration.Test
+using idunno.AtProto;
+
+namespace idunno.Bluesky.Integration.Test
 {
     internal class JwtBuilder
     {

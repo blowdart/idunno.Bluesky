@@ -31,7 +31,7 @@ namespace idunno.AtProto.Repo
         /// </summary>
         [JsonInclude]
         [JsonPropertyName("$type")]
-        public string Type { get; internal set; } = "blob";
+        public static string Type => "blob";
 
         /// <summary>
         /// The reference to the blob.

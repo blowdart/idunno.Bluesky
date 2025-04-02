@@ -20,6 +20,11 @@
         idunno.Bluesky.Serialization.Test, PublicKey=0024000004800000940000000602000000240000525341310004000001000100b55ee04d2e74aa85252df54b0fdd9a8bc5068a5cadf4c380dcfb1bca7ec39d090a04c8731e299ec690d44080073e7725ac766a5620e2b81e72b834bea2bcf0bb5f9ceb36dd35319eaa9e0a4ec1144aac1fcb6bec2bc08ae0b7317e899f4f9663eb358ed41cc8b912a4261d172ec1f631e1de09ed00604b21ead6b8a5ae64a3e9
       </_Parameter1>
     </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>
+        idunno.Bluesky.Integration.Test, PublicKey=0024000004800000940000000602000000240000525341310004000001000100b55ee04d2e74aa85252df54b0fdd9a8bc5068a5cadf4c380dcfb1bca7ec39d090a04c8731e299ec690d44080073e7725ac766a5620e2b81e72b834bea2bcf0bb5f9ceb36dd35319eaa9e0a4ec1144aac1fcb6bec2bc08ae0b7317e899f4f9663eb358ed41cc8b912a4261d172ec1f631e1de09ed00604b21ead6b8a5ae64a3e9
+      </_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 
   <ItemGroup>

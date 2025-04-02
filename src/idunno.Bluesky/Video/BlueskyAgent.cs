@@ -150,6 +150,7 @@ namespace idunno.Bluesky
                     throw new AuthenticationRequiredException();
                 }
 
+                // Get the server description so we can get the DID of the server.
                 AtProtoHttpResult<ServerDescription> serverDescriptionResult = await DescribeServer(Service, cancellationToken).ConfigureAwait(false);
 
                 if (serverDescriptionResult.Succeeded)

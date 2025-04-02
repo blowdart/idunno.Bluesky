@@ -119,7 +119,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Gets the <see cref="Uri"/> for the AT Proto service the agent is issuing requests against.
         /// </summary>
-        public Uri Service { get; protected set; }
+        public Uri Service { get; protected internal set; }
 
         /// <summary>
         /// Releases the unmanaged resources used by the <see cref="AtProtoAgent"/> and optionally disposes of the managed resources.
