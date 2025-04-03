@@ -1,9 +1,0 @@
-{
-    "jobStatus": {
-        "did": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
-        "error": "already_exists",
-        "jobId": "cvcaag996ogs72sgc1p0",
-        "message": "Video already processed",
-        "state": "JOB_STATE_COMPLETED"
-    }
-}
