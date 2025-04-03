@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Collections;
-using System.Diagnostics;
 using System.Security.Cryptography;
 
 namespace idunno.AtProto
@@ -26,8 +25,10 @@ namespace idunno.AtProto
             // The top bit is always 0
             timeStamp.Set(0, false);
 
+            TimeSpan duration = DateTimeOffset.UtcNow - DateTimeOffset.UnixEpoch;
+            long microsecondsSinceEpoch = duration.Ticks / 10;
+
             // The next 53 bits represent microseconds since the UNIX epoch.
-            long microsecondsSinceEpoch = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
             BitArray microsecondsSinceEpochAsBits = new (BitConverter.GetBytes(microsecondsSinceEpoch));
             for (int i = 0; i <53; i++)
             {
