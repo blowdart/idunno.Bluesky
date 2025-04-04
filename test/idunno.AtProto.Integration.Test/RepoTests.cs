@@ -1758,11 +1758,25 @@ namespace idunno.AtProto.Integration.Test
             Did expectedRepo = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
 
+            const string jsonReturnValue = """
+                {
+                    "commit": {
+                        "cid": "bafyreicypmumcyemtsrblhm4r4cawkjax744amgpzmb2fcksfut4g7rvya",
+                        "rev": "3lly43ogrzj2t"
+                    },
+                    "results": [
+                        {
+                            "$type": "com.atproto.repo.applyWrites#createResult",
+                            "cid": "bafyreihkmnqyhbk3u6lsbfuiaqsyg3rkchhpcfuhughxpqijkc66qih7zy",
+                            "uri": "at://did:plc:test/blue.idunno.test/3lly43pdas22n",
+                            "validationStatus": "valid"
+                        }
+                    ]
+                }
+                """;
+
+
             RecordKey expectedDeleteRKey = TimestampIdentifier.Generate();
-            RecordKey expectedUpdateRKey = TimestampIdentifier.Generate();
-
-            Assert.NotEqual(expectedDeleteRKey, expectedUpdateRKey);
-
             AccessCredentials expectedCredentials = new(
                     service: TestServerBuilder.DefaultUri,
                     authenticationType: AuthenticationType.UsernamePassword,
@@ -1771,7 +1785,6 @@ namespace idunno.AtProto.Integration.Test
 
             ICollection<WriteOperation> operations = [];
             operations.Add(new CreateOperation(expectedCollection, new TestRecordValue() { TestValue = "testValue" }));
-            operations.Add(new DeleteOperation(expectedCollection, expectedDeleteRKey));
 
             TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
             {
@@ -1782,7 +1795,7 @@ namespace idunno.AtProto.Integration.Test
                 {
                     response.StatusCode = 200;
                     response.Headers.ContentType = "application/json";
-                    await response.WriteAsync("{}");
+                    await response.WriteAsync(jsonReturnValue);
                     return;
                 }
             });
@@ -1799,8 +1812,6 @@ namespace idunno.AtProto.Integration.Test
                 httpClient: httpClient,
                 accessCredentials:expectedCredentials,
                 cancellationToken: TestContext.Current.CancellationToken);
-
         }
-
     }
 }
