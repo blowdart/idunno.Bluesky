@@ -1015,10 +1015,17 @@ namespace idunno.AtProto
                             {
                                 string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
-                                result.Result = JsonSerializer.Deserialize(
-                                    responseContent,
-                                    typeof(TResult),
-                                    jsonSerializerOptions) as TResult;
+                                try
+                                {
+                                    result.Result = JsonSerializer.Deserialize(
+                                        responseContent,
+                                        typeof(TResult),
+                                        jsonSerializerOptions) as TResult;
+                                }
+                                catch (JsonException ex)
+                                {
+                                    Logger.AtProtoClientResponseDeserializationThrew(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, ex);
+                                }
                             }
                             else
                             {

@@ -6,6 +6,7 @@ using System.Net;
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto.Repo;
+using System.Text.Json;
 
 namespace idunno.AtProto
 {
@@ -224,6 +225,9 @@ namespace idunno.AtProto
 
         [LoggerMessage(203, LogLevel.Debug, "DPoP nonce changed on {method} call to {requestUri}")]
         internal static partial void AtProtoClientDetectedDPoPNonceChanged(ILogger logger, Uri requestUri, HttpMethod method);
+
+        [LoggerMessage(204, LogLevel.Error, "AtProtoHttpClient threw when deserializing the response from {method} call to {requestUri}")]
+        internal static partial void AtProtoClientResponseDeserializationThrew(ILogger logger, Uri requestUri, HttpMethod method, Exception exception);
 
         // Service Auth logging
         [LoggerMessage(250, LogLevel.Debug, "Requesting {lxm} service token from {endpoint} for {audience} with a validity of {expires}")]
