@@ -153,7 +153,7 @@ namespace idunno.AtProto
                 accessCredentials,
                 httpClient,
                 onCredentialsUpdated: onCredentialsUpdated,
-                jsonSerializerOptions: SelfContainedJsonSerializerOptions,
+                jsonSerializerOptions: AtProtoJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -266,7 +266,7 @@ namespace idunno.AtProto
                 accessCredentials,
                 httpClient,
                 onCredentialsUpdated: onCredentialsUpdated,
-                jsonSerializerOptions: SelfContainedJsonSerializerOptions,
+                jsonSerializerOptions: AtProtoJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -490,7 +490,7 @@ namespace idunno.AtProto
                 accessCredentials,
                 httpClient,
                 onCredentialsUpdated: onCredentialsUpdated,
-                jsonSerializerOptions : SelfContainedJsonSerializerOptions,
+                jsonSerializerOptions : AtProtoJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)
@@ -791,7 +791,7 @@ namespace idunno.AtProto
             PutRecordRequest request = new(serializedRecord, collection, creator, rKey, validate, swapCommit, swapRecord);
 
             AtProtoHttpClient<PutRecordResponse> client;
-            jsonSerializerOptions ??= SelfContainedJsonSerializerOptions;
+            jsonSerializerOptions ??= AtProtoJsonSerializerOptions;
 
             if (string.IsNullOrWhiteSpace(serviceProxy))
             {

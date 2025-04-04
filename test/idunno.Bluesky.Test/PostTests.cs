@@ -25,15 +25,6 @@ namespace idunno.Bluesky.Test
             Assert.True(post.CreatedAt <= end);
         }
 
-
-        [Fact]
-        public void PolymorphicTypeIsExpected()
-        {
-            var post = new Post("text");
-
-            Assert.Equal("app.bsky.feed.post", post.Type);
-        }
-
         [Fact]
         public void TextOnlyConstructorSetsText()
         {
@@ -74,7 +65,7 @@ namespace idunno.Bluesky.Test
         public void TextAndLanguagesConstructorSetsTextAndLanguages()
         {
             const string postText = "post text";
-            List<string> expectedLanguages = new() { "en-gb", "en-us" };
+            List<string> expectedLanguages = ["en-gb", "en-us"];
 
             var post = new Post(postText, langs: expectedLanguages);
             Assert.Equal(postText, post.Text);
@@ -89,13 +80,13 @@ namespace idunno.Bluesky.Test
             const string postText = "post text";
             StrongReference strongReference = new(new AtUri("at://foo.com/com.example.foo/123"), new Cid("\"bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"));
 
-            List<string> expectedLanguages = new() { "en-gb", "en-us" };
-            List<Facet> expectedFacets = new() { new Facet(new ByteSlice(0, 1), new List<FacetFeature>() { new MentionFacetFeature(new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk")) }) };
+            List<string> expectedLanguages = ["en-gb", "en-us"];
+            List<Facet> expectedFacets = [new Facet(new ByteSlice(0, 1), [new MentionFacetFeature(new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk"))])];
             EmbeddedBase expectedEmbedded = new EmbeddedRecord(strongReference);
             ReplyReferences expectedReplyReferences = new(strongReference, strongReference);
             SelfLabels expectedLabels = new();
             expectedLabels.AddLabel("labelTest");
-            List<string> expectedTags = new() { "selfTag" };
+            List<string> expectedTags = ["selfTag"];
 
             var post = new Post(
                 postText,
@@ -123,13 +114,13 @@ namespace idunno.Bluesky.Test
             StrongReference strongReference = new(new AtUri("at://foo.com/com.example.foo/123"), new Cid("\"bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"));
 
             DateTimeOffset expectedDate = DateTimeOffset.UtcNow;
-            List<string> expectedLanguages = new() { "en-gb", "en-us" };
-            List<Facet> expectedFacets = new() { new Facet(new ByteSlice(0, 1), new List<FacetFeature>() { new MentionFacetFeature(new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk")) }) };
+            List<string> expectedLanguages = ["en-gb", "en-us"];
+            List<Facet> expectedFacets = [new Facet(new ByteSlice(0, 1), [new MentionFacetFeature(new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk"))])];
             EmbeddedBase expectedEmbedded = new EmbeddedRecord(strongReference);
             ReplyReferences expectedReplyReferences = new(strongReference, strongReference);
             SelfLabels expectedLabels = new();
             expectedLabels.AddLabel("labelTest");
-            List<string> expectedTags = new() { "selfTag" };
+            List<string> expectedTags = ["selfTag"];
 
             var post = new Post(
                 postText,
@@ -159,13 +150,13 @@ namespace idunno.Bluesky.Test
             StrongReference strongReference = new(new AtUri("at://foo.com/com.example.foo/123"), new Cid("\"bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"));
 
             DateTimeOffset expectedDate = DateTimeOffset.UtcNow;
-            List<string> expectedLanguages = new() { "en-gb", "en-us" };
-            List<Facet> expectedFacets = new() { new Facet(new ByteSlice(0, 1), new List<FacetFeature>() { new MentionFacetFeature(new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk")) }) };
+            List<string> expectedLanguages = ["en-gb", "en-us"];
+            List<Facet> expectedFacets = [new Facet(new ByteSlice(0, 1), [new MentionFacetFeature(new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk"))])];
             EmbeddedBase expectedEmbedded = new EmbeddedRecord(strongReference);
             ReplyReferences expectedReplyReferences = new(strongReference, strongReference);
             SelfLabels expectedLabels = new();
             expectedLabels.AddLabel("labelTest");
-            List<string> expectedTags = new() { "selfTag" };
+            List<string> expectedTags = ["selfTag"];
 
             var originalPost = new Post(
                 postText,
@@ -185,6 +176,7 @@ namespace idunno.Bluesky.Test
             Assert.Equal(expectedLanguages, post.Langs);
             Assert.Equal(expectedEmbedded, post.EmbeddedRecord);
             Assert.Equal(expectedReplyReferences, post.Reply);
+            Assert.NotNull(post.Labels);
             Assert.Equal(expectedLabels.Values, post.Labels.Values);
             Assert.Equal(expectedTags, post.Tags);
         }
@@ -208,7 +200,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void TextLangsConstructorThrowsIfTextIsEmpty()
         {
-            ArgumentNullException caughtException = Assert.Throws<ArgumentNullException>(() => new Post(string.Empty, new List<string>() { "en-gb" }));
+            ArgumentNullException caughtException = Assert.Throws<ArgumentNullException>(() => new Post(string.Empty, ["en-gb"]));
 
             Assert.Equal("text", caughtException.ParamName);
         }
@@ -216,7 +208,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void TextLangsConstructorThrowsIfLangsIsEmpty()
         {
-            ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("text", new List<string>()));
+            ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("text", []));
 
             Assert.Equal("langs.Count", caughtException.ParamName);
         }
@@ -294,7 +286,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void ConstructorThrowsWhenTheMaximumNumberOfAllowedTagsIsExceeded()
         {
-            List<string> tags = new ();
+            List<string> tags = [];
 
             for (int i=0; i<= Maximum.ExternalTagsInPost; i++)
             {
@@ -309,7 +301,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void ConstructorThrowsWhenAnEmptyTagIsPassed()
         {
-            List<string> tags = new() { string.Empty };
+            List<string> tags = [string.Empty];
 
             ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post("text", tags: tags));
 
@@ -319,7 +311,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void ConstructorThrowsWhenAnTooLongTagInGraphemesIsPassed()
         {
-            List<string> tags = new() { new('x', Maximum.TagLengthInGraphemes + 1) };
+            List<string> tags = [new('x', Maximum.TagLengthInGraphemes + 1)];
 
             ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post("text", tags: tags));
 
@@ -329,7 +321,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void ConstructorThrowsWhenAnTooLongTagInCharactersIsPassed()
         {
-            List<string> tags = new() { new('x', Maximum.TagLengthInCharacters + 1) };
+            List<string> tags = [new('x', Maximum.TagLengthInCharacters + 1)];
 
             ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post("text", tags: tags));
 
@@ -409,7 +401,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void ConstructorThrowsWhenImagesIsEmpty()
         {
-            List<EmbeddedImage> images = new();
+            List<EmbeddedImage> images = [];
 
             ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("text", images: images));
 
@@ -419,7 +411,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void ConstructorThrowsWhenImagesIsEmptyAndCreatedAtProvided()
         {
-            List<EmbeddedImage> images = new();
+            List<EmbeddedImage> images = [];
 
             ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("text", createdAt: DateTimeOffset.UtcNow, images: images));
 
@@ -429,7 +421,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void ConstructorThrowsWhenImagesIsHasTooManyImages()
         {
-            List<EmbeddedImage> images = new();
+            List<EmbeddedImage> images = [];
 
             for (int i = 0; i <= Maximum.ImagesInPost; i++)
             {
@@ -444,7 +436,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void ConstructorDoesNotThrowsWhenImagesIsHasEnoughImages()
         {
-            List<EmbeddedImage> images = new();
+            List<EmbeddedImage> images = [];
 
             for (int i = 0; i < Maximum.ImagesInPost; i++)
             {
@@ -464,7 +456,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void ConstructorThrowsWhenImagesIsHasTooManyImagesAndCreatedAtProvided()
         {
-            List<EmbeddedImage> images = new();
+            List<EmbeddedImage> images = [];
 
             for (int i = 0; i <= Maximum.ImagesInPost; i++)
             {
@@ -479,7 +471,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void ConstructorDoesNotThrowsWhenImagesIsHasEnoughImagesAndCreatedAtIsProvided()
         {
-            List<EmbeddedImage> images = new();
+            List<EmbeddedImage> images = [];
 
             for (int i = 0; i < Maximum.ImagesInPost; i++)
             {
@@ -510,7 +502,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void ConstructorDoesNotThrowWhenTextAndLangsAreProvided()
         {
-            Post post = new("text", new List<string> { "en-gb", "en-us" });
+            Post post = new("text", ["en-gb", "en-us"]);
 
             Assert.Equal("text", post.Text);
             Assert.NotNull(post.Langs);
@@ -524,6 +516,7 @@ namespace idunno.Bluesky.Test
         {
             Post post = new("Flags");
             Assert.Null(post.Tags);
+            Assert.Null(post.Labels);
             Assert.False(post.ContainsPorn);
             Assert.False(post.ContainsSexualContent);
             Assert.False(post.ContainsGraphicMedia);
@@ -633,7 +626,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void LengthPropertiesAreZeroWhenTextIsNull()
         {
-            List<EmbeddedImage> images = new();
+            List<EmbeddedImage> images = [];
 
             for (int i = 0; i < Maximum.ImagesInPost; i++)
             {

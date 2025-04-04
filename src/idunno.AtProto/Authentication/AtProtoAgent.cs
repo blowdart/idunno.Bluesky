@@ -633,7 +633,7 @@ namespace idunno.AtProto
                         service: authorizationService,
                         endpoint: revocationEndpoint.AbsolutePath,
                         record: formData,
-                        jsonSerializerOptions: AtProtoServer.SelfContainedJsonSerializerOptions,
+                        jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
                         credentials: Credentials,
                         httpClient: HttpClient,
                         cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -660,7 +660,7 @@ namespace idunno.AtProto
                         service: authorizationService,
                         endpoint: revocationEndpoint.AbsolutePath,
                         record: formData,
-                        jsonSerializerOptions: AtProtoServer.SelfContainedJsonSerializerOptions,
+                        jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
                         credentials: Credentials,
                         httpClient: HttpClient,
                         cancellationToken: cancellationToken).ConfigureAwait(false);

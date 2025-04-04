@@ -1,7 +1,6 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
@@ -21,7 +20,7 @@ namespace idunno.AtProto.Labels
         /// </summary>
         public SelfLabels()
         {
-            Values = ReadOnlyCollection<SelfLabel>.Empty;
+            Values = [];
         }
 
         /// <summary>
@@ -29,18 +28,17 @@ namespace idunno.AtProto.Labels
         /// </summary>
         /// <param name="values">The collection of labels applied to the record.</param>
         [JsonConstructor]
-        public SelfLabels(ReadOnlyCollection<SelfLabel> values)
+        public SelfLabels(IReadOnlyList<SelfLabel> values)
         {
             ArgumentNullException.ThrowIfNull(values);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(values.Count, 10);
 
-            Values = values;
+            Values = new List<SelfLabel>(values).AsReadOnly();
         }
 
         /// <summary>
         /// The type discriminator for the class.
         /// </summary>
-        [JsonInclude]
         [JsonPropertyName("$type")]
         [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needs to an instance property for json serialization.")]
         public string Type => "com.atproto.label.defs#selfLabels";
@@ -50,7 +48,7 @@ namespace idunno.AtProto.Labels
         /// </summary>
         [JsonInclude]
         [JsonRequired]
-        public ReadOnlyCollection<SelfLabel> Values { get; internal set; }
+        public IReadOnlyList<SelfLabel> Values { get; internal set; }
 
         /// <summary>
         /// Returns a flag indicating whether the specified <paramref name="label"/> is present.

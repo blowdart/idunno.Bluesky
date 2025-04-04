@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using idunno.Bluesky.Actor;
@@ -19,9 +20,10 @@ namespace idunno.Bluesky.Chat
         /// <param name="revision">The conversation revision.</param>
         /// <param name="members">The <see cref="ProfileViewBasic"/> of the members of the conversation.</param>
         /// <param name="lastMessage">A view over the last message in the conversation, if any.</param>
+        /// <param name="lastReaction">A view of the last message and reaction to it in a conversation, if any.</param>
         /// <param name="muted">A flag indicating whether the conversation is muted.</param>
-        /// <param name="opened">A flag indicating whether the conversation has been opened.</param>
         /// <param name="unreadCount">A count of the number of unread messages in the conversation.</param>
+        /// <param name="status">The status of the conversation. If null defaults to <see cref="ConversationStatus.Requested"/></param>
         /// <exception cref="ArgumentException">Thrown when <paramref name="id"/>, <paramref name="revision"/> is null or whitespace.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="members"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="members"/> is empty.</exception>
@@ -30,9 +32,10 @@ namespace idunno.Bluesky.Chat
             string revision,
             IReadOnlyCollection<ProfileViewBasic> members,
             MessageViewBase? lastMessage,
+            MessageAndReactionView? lastReaction,
             bool muted,
-            bool opened,
-            long unreadCount)
+            long unreadCount,
+            ConversationStatus? status)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(id);
             ArgumentException.ThrowIfNullOrWhiteSpace(revision);
@@ -45,9 +48,18 @@ namespace idunno.Bluesky.Chat
             Revision = revision;
             Members = new List<ProfileViewBasic>(members).AsReadOnly();
             LastMessage = lastMessage;
+            LastReaction = lastReaction;
             Muted = muted;
-            Opened = opened;
             UnreadCount = unreadCount;
+
+            if (status is not null)
+            {
+                Status = (ConversationStatus)status;
+            }
+            else
+            {
+                Status = ConversationStatus.Requested;
+            }
         }
 
         /// <summary>
@@ -79,6 +91,12 @@ namespace idunno.Bluesky.Chat
         public MessageViewBase? LastMessage { get; init; }
 
         /// <summary>
+        /// Gets a <see cref="MessageAndReactionView"/> of the last reaction to a conversation, if any.
+        /// </summary>
+        [JsonInclude]
+        public MessageAndReactionView? LastReaction { get; init; }
+
+        /// <summary>
         /// Gets a flag indicating whether the conversation is muted.
         /// </summary>
         [JsonInclude]
@@ -86,17 +104,17 @@ namespace idunno.Bluesky.Chat
         public bool Muted { get; init; }
 
         /// <summary>
-        /// Gets a flag indicating whether the conversation has been opened.
-        /// </summary>
-        [JsonInclude]
-        [JsonRequired]
-        public bool Opened { get; init; }
-
-        /// <summary>
         /// Gets a count of the number of unread messages in the conversation.
         /// </summary>
         [JsonInclude]
         [JsonRequired]
         public long UnreadCount { get; init; }
+
+        /// <summary>
+        /// Gets the status of the conversation
+        /// </summary>
+        [JsonInclude]
+        [NotNull]
+        public ConversationStatus? Status { get; init; }
     }
 }

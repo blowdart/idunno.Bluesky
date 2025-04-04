@@ -33,13 +33,6 @@ namespace idunno.Bluesky.Actions
             Subject = subject;
         }
 
-        /// <summary>
-        /// The record type for a repost record.
-        /// </summary>
-        [JsonInclude]
-        [JsonPropertyName("$type")]
-        [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needs to an instance property for json serialization.")]
-        public string Type => RecordType.Like;
 
         /// <summary>
         /// Gets the <see cref="StrongReference"/> to the record to be reposted.

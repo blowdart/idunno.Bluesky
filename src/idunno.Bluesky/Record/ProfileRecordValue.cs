@@ -62,7 +62,6 @@ namespace idunno.Bluesky.Record
         /// <summary>
         /// Gets the json discriminator value for the record.
         /// </summary>
-        [JsonInclude]
         [JsonPropertyName("$type")]
         [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needs to an instance property for json serialization.")]
         public string Type => RecordType.Profile;

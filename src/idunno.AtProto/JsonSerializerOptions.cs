@@ -10,16 +10,15 @@ namespace idunno.AtProto
     public partial class AtProtoServer
     {
         /// <summary>
-        /// Gets a <see cref="JsonSerializerOptions"/> configured to use Json source generation for AtProto classes without
-        /// any chaining to external resolvers.
+        /// Gets a <see cref="JsonSerializerOptions"/> configured to use Json source generation for AtProto classes
         /// </summary>
-        internal static JsonSerializerOptions SelfContainedJsonSerializerOptions => new(JsonSerializerDefaults.Web)
+        internal static JsonSerializerOptions AtProtoJsonSerializerOptions => new(JsonSerializerDefaults.Web)
         {
             AllowOutOfOrderMetadataProperties = true,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             IgnoreReadOnlyProperties = false,
             TypeInfoResolver = SourceGenerationContext.Default,
-            UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip
+            UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip,
         };
 
         /// <summary>
@@ -55,7 +54,7 @@ namespace idunno.AtProto
         {
             ArgumentNullException.ThrowIfNull(jsonTypeInfoResolver);
 
-            JsonSerializerOptions options = SelfContainedJsonSerializerOptions;
+            JsonSerializerOptions options = AtProtoJsonSerializerOptions;
 
             options.TypeInfoResolverChain.Insert(0, jsonTypeInfoResolver);
 

@@ -93,7 +93,7 @@ namespace idunno.AtProto
                 accessCredentials,
                 httpClient,
                 onCredentialsUpdated: onCredentialsUpdated,
-                jsonSerializerOptions: SelfContainedJsonSerializerOptions,
+                jsonSerializerOptions: AtProtoJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (response.Succeeded)

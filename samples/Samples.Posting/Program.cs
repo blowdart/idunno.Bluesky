@@ -276,7 +276,14 @@ namespace Samples.Posting
 
                     var replyWithImageResult = await agent.ReplyTo(createPostResult.Result.StrongReference, "Reply with an image.", imageUploadResult.Result!, cancellationToken: cancellationToken);
 
-                    using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Samples.Posting.BlueskyLogoRotated90.jpg")!)
+                    if (!replyWithImageResult.Succeeded)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"{createPostResult.StatusCode} occurred when creating the post.");
+                        return;
+                    }
+
+                    using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Samples.Posting.BlueskyLogo.jpg")!)
                     using (MemoryStream memoryStream = new())
                     {
                         resourceStream.CopyTo(memoryStream);
@@ -286,11 +293,63 @@ namespace Samples.Posting
                     imageUploadResult = await agent.UploadImage(
                         imageAsBytes,
                         "image/jpg",
+                        "The Bluesky Logo",
+                        new AspectRatio(1000, 1000),
+                        cancellationToken: cancellationToken);
+
+                    using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Samples.Posting.BlueskyLogoRotated90.jpg")!)
+                    using (MemoryStream memoryStream = new())
+                    {
+                        resourceStream.CopyTo(memoryStream);
+                        imageAsBytes = memoryStream.ToArray();
+                    }
+                    var rotated90UploadResult= await agent.UploadImage(
+                        imageAsBytes,
+                        "image/jpg",
                         "The Bluesky Logo, rotated 90°",
                         new AspectRatio(1000, 1000),
                         cancellationToken: cancellationToken);
 
-                    if (!replyWithImageResult.Succeeded)
+                    using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Samples.Posting.BlueskyLogoRotated180.jpg")!)
+                    using (MemoryStream memoryStream = new())
+                    {
+                        resourceStream.CopyTo(memoryStream);
+                        imageAsBytes = memoryStream.ToArray();
+                    }
+                    var rotated180UploadResult = await agent.UploadImage(
+                        imageAsBytes,
+                        "image/jpg",
+                        "The Bluesky Logo, rotated 180°",
+                        new AspectRatio(1000, 1000),
+                        cancellationToken: cancellationToken);
+
+                    using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Samples.Posting.BlueskyLogoRotated270.jpg")!)
+                    using (MemoryStream memoryStream = new())
+                    {
+                        resourceStream.CopyTo(memoryStream);
+                        imageAsBytes = memoryStream.ToArray();
+                    }
+                    var rotated270UploadResult = await agent.UploadImage(
+                        imageAsBytes,
+                        "image/jpg",
+                        "The Bluesky Logo, rotated 270°",
+                        new AspectRatio(1000, 1000),
+                        cancellationToken: cancellationToken);
+
+
+                    AtProtoHttpResult<CreateRecordResponse> multipleImagePostResult = await agent.Post(
+                        "Hello world with multiple images",
+                        [
+                            imageUploadResult.Result!,
+                            rotated90UploadResult.Result!,
+                            rotated180UploadResult.Result!,
+                            rotated270UploadResult.Result!,
+                        ],
+                        cancellationToken: cancellationToken);
+
+                    Debugger.Break();
+
+                    if (!multipleImagePostResult.Succeeded)
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
                         Console.WriteLine($"{createPostResult.StatusCode} occurred when creating the post.");
@@ -299,9 +358,11 @@ namespace Samples.Posting
 
                     Debugger.Break();
 
-                    // Delete the post we just made, the image will eventually get cleaned up by the backend.
+                    // Delete the post we just made, the images will eventually get cleaned up by the backend.
                     await agent.DeletePost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
                     await agent.DeletePost(replyWithImageResult.Result.StrongReference, cancellationToken: cancellationToken);
+                    await agent.DeletePost(multipleImagePostResult.Result.StrongReference, cancellationToken: cancellationToken);
+
                 }
 
                 {
@@ -367,7 +428,7 @@ namespace Samples.Posting
                 }
 
                 {
-                    // quote
+                    // Quote
                     AtProtoHttpResult<CreateRecordResponse> createPostResult = await agent.Post("Another test post, for quoting.", cancellationToken: cancellationToken);
                     if (createPostResult.Succeeded)
                     {
@@ -445,7 +506,6 @@ namespace Samples.Posting
 
                     var hashTag = new HashTag("beans");
                     postBuilder.Append(hashTag);
-
 
                     byte[] imageAsBytes;
                     using (Stream resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Samples.Posting.bean.png")!)

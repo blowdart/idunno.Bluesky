@@ -36,7 +36,7 @@ namespace Samples.DirectMessages
             ArgumentException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
-            // proxyUri = new Uri("http://localhost:8866");
+            proxyUri = new Uri("http://localhost:8866");
 
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
@@ -123,9 +123,9 @@ namespace Samples.DirectMessages
                             }
                             conversationMembers.Length -= 3;
 
-                            if (!conversation.Opened)
+                            if (conversation.Status == ConversationStatus.Requested)
                             {
-                                Console.Write("\u001b[1mUnopened ");
+                                Console.Write("\u001b[1mRequested ");
                             }
 
                             Console.Write($"Conversation #{conversation.Id} between {conversationMembers}");
@@ -135,7 +135,7 @@ namespace Samples.DirectMessages
                                 Console.Write($" {conversation.UnreadCount} unread");
                             }
 
-                            if (!conversation.Opened)
+                            if (conversation.Status == ConversationStatus.Requested)
                             {
                                 Console.Write("\u001b[22m");
                             }

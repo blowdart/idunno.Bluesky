@@ -19,6 +19,11 @@ namespace idunno.Bluesky
     /// </summary>
     public static partial class BlueskyServer
     {
+        // https://docs.bsky.app/docs/api/chat-bsky-convo-accept-convo
+        private const string AcceptConvoEndpoint = "/xrpc/chat.bsky.convo.acceptConvo";
+
+        private const string AddReactionEndpoint = "/xrpc/chat.bsky.convo.addReaction";
+
         // https://docs.bsky.app/docs/api/chat-bsky-convo-delete-message-for-self
         private const string DeleteMessageForSelfEndpoint = "/xrpc/chat.bsky.convo.deleteMessageForSelf";
 
@@ -43,6 +48,8 @@ namespace idunno.Bluesky
         // https://docs.bsky.app/docs/api/chat-bsky-convo-mute-convo
         private const string MuteConvoEndpoint = "/xrpc/chat.bsky.convo.muteConvo";
 
+        private const string RemoveReactionEndpoint = "/xrpc/chat.bsky.convo.removeReaction";
+
         // https://docs.bsky.app/docs/api/chat-bsky-convo-send-message-batch
         private const string SendMessageBatchEndpoint = "/xrpc/chat.bsky.convo.sendMessageBatch";
 
@@ -52,10 +59,140 @@ namespace idunno.Bluesky
         // https://docs.bsky.app/docs/api/chat-bsky-convo-unmute-convo
         private const string UnmuteConvoEndpoint = "/xrpc/chat.bsky.convo.unmuteConvo";
 
+        // https://docs.bsky.app/docs/api/chat-bsky-convo-update-all-read
+        private const string UpdateAllReadEndpoint = "/xrpc/chat.bsky.convo.updateRead";
+
         // https://docs.bsky.app/docs/api/chat-bsky-convo-update-read
         private const string UpdateReadEndpoint = "/xrpc/chat.bsky.convo.updateRead";
 
         private const string ChatProxy = "did:web:api.bsky.chat#bsky_chat";
+
+        /// <summary>
+        /// Accepts the conversation specified by the <paramref name="conversationId"/> for the authenticated user.
+        /// </summary>
+        /// <param name="conversationId">The conversation identifier to accept.</param>
+        /// <param name="service">The <see cref="Uri"/> of the service to accept the concersation on.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
+        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">
+        /// Thrown when <paramref name="conversationId"/> is whitespace.</exception>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when <paramref name="conversationId"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// </exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+        public static async Task<AtProtoHttpResult<AcceptConversationResponse>> AcceptConversation(
+            string conversationId,
+            Uri service,
+            AccessCredentials accessCredentials,
+            HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
+            ILoggerFactory? loggerFactory = default,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
+            ArgumentNullException.ThrowIfNull(httpClient);
+
+            AcceptConversationRequest request = new (conversationId);
+
+            AtProtoHttpClient<AcceptConversationResponse> client = new(ChatProxy, loggerFactory);
+
+            AtProtoHttpResult<AcceptConversationResponse> response = await client.Post(
+                service,
+                AcceptConvoEndpoint,
+                request,
+                credentials: accessCredentials,
+                httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
+                onCredentialsUpdated: onCredentialsUpdated,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            return response;
+        }
+
+        /// <summary>
+        /// Adds a reaction to the message identified by <paramref name="messageId"/> from the conversation identified by <paramref name="conversationId"/> for the authenticated user.
+        /// </summary>
+        /// <param name="conversationId">The conversation identifier to add the reaction to identified by <paramref name="messageId"/> from.</param>
+        /// <param name="messageId">The message identifier to add the reaction to from <paramref name="conversationId"/>.</param>
+        /// <param name="value">The reaction to add.</param>
+        /// <param name="service">The <see cref="Uri"/> of the service to delete the message from.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
+        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/>, <paramref name="messageId"/> or <paramref name="value"/> is whitespace.</exception>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when <paramref name="conversationId"/>, <paramref name="messageId"/>, <paramref name="value"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> has a grapheme length that does not equal 1.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+        public static async Task<AtProtoHttpResult<MessageView>> AddReaction(
+            string conversationId,
+            string messageId,
+            string value,
+            Uri service,
+            AccessCredentials accessCredentials,
+            HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
+            ILoggerFactory? loggerFactory = default,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(value.GetGraphemeLength(), 1);
+
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
+            ArgumentNullException.ThrowIfNull(httpClient);
+
+            AtProtoHttpClient<AddReactionResponse> client = new(ChatProxy, loggerFactory);
+
+            AddReactionRequest request = new(conversationId, messageId, value);
+            AtProtoHttpResult<AddReactionResponse> response = await client.Post(
+                service,
+                AddReactionEndpoint,
+                request,
+                credentials: accessCredentials,
+                httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
+                onCredentialsUpdated: onCredentialsUpdated,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (response.Succeeded)
+            {
+                return new AtProtoHttpResult<MessageView>(
+                    response.Result.Message,
+                    statusCode: response.StatusCode,
+                    httpResponseHeaders: response.HttpResponseHeaders,
+                    atErrorDetail: response.AtErrorDetail,
+                    rateLimit: response.RateLimit);
+            }
+            else
+            {
+                return new AtProtoHttpResult<MessageView>(
+                    null,
+                    statusCode: response.StatusCode,
+                    httpResponseHeaders: response.HttpResponseHeaders,
+                    atErrorDetail: response.AtErrorDetail,
+                    rateLimit: response.RateLimit);
+            }
+        }
 
         /// <summary>
         /// Deletes the message specified by <paramref name="messageId"/> from the conversation identified by <paramref name="conversationId"/> for the authenticated user.
@@ -70,9 +207,9 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">
-        /// Thrown when <paramref name="conversationId"/> or <paramref name="messageId"/> is null or whitespace.</exception>
+        /// Thrown when <paramref name="conversationId"/> or <paramref name="messageId"/> is whitespace.</exception>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="conversationId"/> or <paramref name="messageId"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -626,6 +763,81 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
+        /// Removes the specified reaction to the message identified by <paramref name="messageId"/> from the conversation identified by <paramref name="conversationId"/> for the authenticated user.
+        /// </summary>
+        /// <param name="conversationId">The conversation identifier to remove the reaction to identified by <paramref name="messageId"/> from.</param>
+        /// <param name="messageId">The message identifier to remove the reaction to from <paramref name="conversationId"/>.</param>
+        /// <param name="value">The reaction to remove.</param>
+        /// <param name="service">The <see cref="Uri"/> of the service to delete the message from.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
+        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/>, <paramref name="messageId"/> or <paramref name="value"/> is whitespace.</exception>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when <paramref name="conversationId"/>, <paramref name="messageId"/>, <paramref name="value"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> has a grapheme length that does not equal 1.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+        public static async Task<AtProtoHttpResult<MessageView>> RemoveReaction(
+            string conversationId,
+            string messageId,
+            string value,
+            Uri service,
+            AccessCredentials accessCredentials,
+            HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
+            ILoggerFactory? loggerFactory = default,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(value.GetGraphemeLength(), 1);
+
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
+            ArgumentNullException.ThrowIfNull(httpClient);
+
+            AtProtoHttpClient<RemoveReactionResponse> client = new(ChatProxy, loggerFactory);
+
+            RemoveReactionRequest request = new(conversationId, messageId, value);
+            AtProtoHttpResult<RemoveReactionResponse> response = await client.Post(
+                service,
+                RemoveReactionEndpoint,
+                request,
+                credentials: accessCredentials,
+                httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
+                onCredentialsUpdated: onCredentialsUpdated,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (response.Succeeded)
+            {
+                return new AtProtoHttpResult<MessageView>(
+                    response.Result.Message,
+                    statusCode: response.StatusCode,
+                    httpResponseHeaders: response.HttpResponseHeaders,
+                    atErrorDetail: response.AtErrorDetail,
+                    rateLimit: response.RateLimit);
+            }
+            else
+            {
+                return new AtProtoHttpResult<MessageView>(
+                    null,
+                    statusCode: response.StatusCode,
+                    httpResponseHeaders: response.HttpResponseHeaders,
+                    atErrorDetail: response.AtErrorDetail,
+                    rateLimit: response.RateLimit);
+            }
+        }
+
+        /// <summary>
         /// Sends the specified <paramref name="batchedMessages"/>.
         /// </summary>
         /// <param name="batchedMessages">The collection of <see cref="BatchedMessage"/>s to send.</param>
@@ -835,6 +1047,73 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
+        /// Marks all conversations with the specified <paramref name="status"/> as read.
+        /// </summary>
+        /// <param name="status">The <see cref="ConversationStatus"/> of the conversations to mark as read.</param>
+        /// <param name="service">The <see cref="Uri"/> of the service to mark the conversation on.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
+        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when <paramref name="status"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// </exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+        public static async Task<AtProtoHttpResult<ulong>> UpdateAllRead(
+            ConversationStatus status,
+            Uri service,
+            AccessCredentials accessCredentials,
+            HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
+            ILoggerFactory? loggerFactory = default,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(status);
+
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(accessCredentials);
+            ArgumentNullException.ThrowIfNull(httpClient);
+
+            AtProtoHttpClient<UpdateAllReadResponse> client = new(ChatProxy, loggerFactory);
+
+            UpdateAllReadRequest request = new(status);
+
+            AtProtoHttpResult<UpdateAllReadResponse> response = await client.Post(
+                service,
+                $"{UpdateAllReadEndpoint}",
+                request,
+                credentials: accessCredentials,
+                httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
+                onCredentialsUpdated: onCredentialsUpdated,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (response.Succeeded)
+            {
+                return new AtProtoHttpResult<ulong>(
+                    response.Result.UpdatedCount,
+                    response.StatusCode,
+                    response.HttpResponseHeaders,
+                    response.AtErrorDetail,
+                    response.RateLimit);
+            }
+            else
+            {
+                return new AtProtoHttpResult<ulong>(
+                    0,
+                    response.StatusCode,
+                    response.HttpResponseHeaders,
+                    response.AtErrorDetail,
+                    response.RateLimit);
+            }
+        }
+
+        /// <summary>
         /// Marks a conversation, and optionally a message, as read.
         /// </summary>
         /// <param name="conversationId">The conversation identifier to mark as read.</param>
@@ -850,7 +1129,7 @@ namespace idunno.Bluesky
         /// Thrown when <paramref name="conversationId"/> is null or whitespace, <paramref name="messageId"/> is empty or whitespace,
         /// </exception>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when  <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
         /// </exception>
         [UnconditionalSuppressMessage(
             "Trimming",

@@ -29,7 +29,7 @@ namespace idunno.Bluesky.Chat
         /// </summary>
         /// <param name="collection">A collection of <see cref="ConversationView"/> to create this instance of <see cref="Conversations"/> from.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
-        public Conversations(ICollection<ConversationView> collection, string? cursor = null) : this(new List<ConversationView>(collection), cursor)
+        public Conversations(ICollection<ConversationView> collection, string? cursor = null) : this([.. collection], cursor)
         {
         }
     }

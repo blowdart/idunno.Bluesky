@@ -19,7 +19,6 @@ namespace idunno.AtProto.Repo
         /// <param name="reference">Reference information for linking to the blob in a post.</param>
         /// <param name="mimeType">The mime type of the blob.</param>
         /// <param name="size">The size of the blob in bytes.</param>
-        [JsonConstructor]
         public Blob(BlobReference reference, string mimeType, int size)
         {
             Reference = reference;
@@ -30,7 +29,6 @@ namespace idunno.AtProto.Repo
         /// <summary>
         /// The json type data for a blob object
         /// </summary>
-        [JsonInclude]
         [JsonPropertyName("$type")]
         [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needs to an instance property for json serialization.")]
         public string Type => "blob";
@@ -40,18 +38,18 @@ namespace idunno.AtProto.Repo
         /// </summary>
         [JsonInclude]
         [JsonPropertyName("ref")]
-        public BlobReference Reference { get; internal set;}
+        public BlobReference Reference { get; init;}
 
         /// <summary>
         /// The MIME type for the blob.
         /// </summary>
         [JsonInclude]
-        public string MimeType { get; internal set;}
+        public string MimeType { get; init;}
 
         /// <summary>
         /// The size of the blob, in bytes.
         /// </summary>
         [JsonInclude]
-        public int Size { get; internal set;}
+        public int Size { get; init;}
     }
 }

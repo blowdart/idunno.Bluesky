@@ -70,7 +70,7 @@ namespace idunno.AtProto
                 CreateSessionEndpoint,
                 loginRequestRecord,
                 httpClient: httpClient,
-                jsonSerializerOptions: SelfContainedJsonSerializerOptions,
+                jsonSerializerOptions: AtProtoJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return result;
@@ -109,7 +109,7 @@ namespace idunno.AtProto
                 endpoint: DeleteSessionEndpoint,
                 credentials: refreshCredential,
                 httpClient: httpClient,
-                jsonSerializerOptions: SelfContainedJsonSerializerOptions,
+                jsonSerializerOptions: AtProtoJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return result;
@@ -150,7 +150,7 @@ namespace idunno.AtProto
                 credentials: refreshCredential,
                 httpClient: httpClient,
                 onCredentialsUpdated: credentialsUpdated,
-                jsonSerializerOptions: SelfContainedJsonSerializerOptions,
+                jsonSerializerOptions: AtProtoJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return result;
@@ -189,7 +189,7 @@ namespace idunno.AtProto
                 accessCredentials,
                 httpClient: httpClient,
                 onCredentialsUpdated: credentialsUpdated,
-                jsonSerializerOptions: SelfContainedJsonSerializerOptions,
+                jsonSerializerOptions: AtProtoJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -259,7 +259,7 @@ namespace idunno.AtProto
                 accessCredentials,
                 httpClient: httpClient,
                 onCredentialsUpdated: accessCredentialsUpdated,
-                jsonSerializerOptions: SelfContainedJsonSerializerOptions,
+                jsonSerializerOptions: AtProtoJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (result.Succeeded)

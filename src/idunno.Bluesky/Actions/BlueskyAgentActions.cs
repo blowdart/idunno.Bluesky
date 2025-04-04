@@ -14,6 +14,7 @@ using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.RichText;
 using idunno.Bluesky.Actions;
 using idunno.Bluesky.Actor;
+using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky
 {
@@ -78,7 +79,8 @@ namespace idunno.Bluesky
 
             FollowRecordValue follow = new(did);
 
-            AtProtoHttpResult<CreateRecordResponse> result = await CreateRecord(
+            // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
+            AtProtoHttpResult<CreateRecordResponse> result = await CreateRecord<BlueskyTimestampedRecordValue>(
                 record: follow,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Follow,
@@ -261,7 +263,8 @@ namespace idunno.Bluesky
 
             BlockRecordValue block = new(did);
 
-            return await CreateRecord(
+            // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
+            return await CreateRecord<BlueskyTimestampedRecordValue>(
                 record: block,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Block,
@@ -889,7 +892,7 @@ namespace idunno.Bluesky
 
             lock (postBuilder)
             {
-                post = postBuilder.ToPostRecord();
+                post = postBuilder.ToPost();
 
                 // The post builder already did the work in taking the default gating preferences and applying them.
 
@@ -1112,7 +1115,8 @@ namespace idunno.Bluesky
 
             RepostRecordValue repostRecord = new(post);
 
-            return await CreateRecord(
+            // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
+            return await CreateRecord<BlueskyTimestampedRecordValue>(
                 record: repostRecord,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Repost,
@@ -1193,7 +1197,8 @@ namespace idunno.Bluesky
 
             LikeRecordValue likeRecord = new(strongReference);
 
-            return await CreateRecord(
+            // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
+            return await CreateRecord<BlueskyTimestampedRecordValue>(
                 record: likeRecord,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Like,
@@ -1365,7 +1370,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Creates an Bluesky post record  quoting the post identified by <see cref="StrongReference"/>.
+        /// Creates an Bluesky post record quoting the post identified by <see cref="StrongReference"/>.
         /// </summary>
         /// <param name="strongReference">A <see cref="StrongReference"/> to the post to be quoted.</param>
         /// <param name="images">Any images to attach to the post.</param>
@@ -1395,7 +1400,6 @@ namespace idunno.Bluesky
             }
 
             // This is a special case as there is no post text, it cannot go through the normal post APIs, it must go through the repo.ApplyWrites() api.
-
             Post postRecord = new()
             {
                 EmbeddedRecord = new EmbeddedRecord(strongReference),
@@ -1568,7 +1572,7 @@ namespace idunno.Bluesky
         {
             ArgumentException.ThrowIfNullOrEmpty(did);
 
-            AtProtoHttpResult<Actor.ProfileViewDetailed> result = await GetProfile(did, cancellationToken: cancellationToken).ConfigureAwait(false);
+            AtProtoHttpResult<ProfileViewDetailed> result = await GetProfile(did, cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (result.Succeeded)
             {
@@ -1598,7 +1602,8 @@ namespace idunno.Bluesky
 
             if ((threadGateRules is null && postGateRules is null && interactionPreferences is null) && !string.IsNullOrEmpty(post.Text))
             {
-                return await CreateRecord(
+                // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
+                return await CreateRecord<BlueskyTimestampedRecordValue>(
                     record: post,
                     jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                     collection: CollectionNsid.Post,

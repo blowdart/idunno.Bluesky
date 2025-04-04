@@ -10,6 +10,40 @@ namespace idunno.Bluesky
     public partial class BlueskyAgent
     {
         /// <summary>
+        /// Accepts the conversation specified by the <paramref name="conversationId"/> for the authenticated user.
+        /// </summary>
+        /// <param name="conversationId">The conversation identifier to accept.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">
+        ///   Thrown when <paramref name="conversationId"/> is whitespace
+        /// </exception>
+        /// <exception cref="ArgumentNullException">
+        ///   Thrown when <paramref name="conversationId"/> is null.
+        /// </exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<AcceptConversationResponse>> AcceptConversation(
+            string conversationId,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            return await BlueskyServer.AcceptConversation(
+                conversationId,
+                service: Service,
+                accessCredentials: Credentials,
+                httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+                loggerFactory: LoggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
         /// Deletes the message specified by <paramref name="messageId"/> from the conversation identified by <paramref name="conversationId"/> for the authenticated user.
         /// </summary>
         /// <param name="conversationId">The conversation identifier to delete the message identified by <paramref name="messageId"/> from.</param>
@@ -17,7 +51,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">
-        ///   Thrown when <paramref name="conversationId"/> or <paramref name="messageId"/> is null or whitespace,
+        ///   Thrown when <paramref name="conversationId"/> or <paramref name="messageId"/> is whitespace,
+        /// </exception>
+        /// <exception cref="ArgumentNullException">
+        ///   Thrown when <paramref name="conversationId"/> or <paramref name="messageId"/> is whitespace,
         /// </exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<DeletedMessageView>> DeleteMessageForSelf(
@@ -36,6 +73,47 @@ namespace idunno.Bluesky
             return await BlueskyServer.DeleteMessageForSelf(
                 conversationId,
                 messageId,
+                service: Service,
+                accessCredentials: Credentials,
+                httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+                loggerFactory: LoggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Adds a reaction to the message identified by <paramref name="messageId"/> from the conversation identified by <paramref name="conversationId"/> for the authenticated user.
+        /// </summary>
+        /// <param name="conversationId">The conversation identifier to add the reaction to identified by <paramref name="messageId"/> from.</param>
+        /// <param name="messageId">The message identifier to add the reaction to from <paramref name="conversationId"/>.</param>
+        /// <param name="value">The reaction to add.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/>, <paramref name="messageId"/> or <paramref name="value"/> is whitespace.</exception>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when <paramref name="conversationId"/>, <paramref name="messageId"/> or <paramref name="value"/> is null.
+        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> has a grapheme length that does not equal 1.</exception>
+        public async Task<AtProtoHttpResult<MessageView>> AddReaction(
+            string conversationId,
+            string messageId,
+            string value,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(value.GetGraphemeLength(), 1);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            return await BlueskyServer.AddReaction(
+                conversationId,
+                messageId,
+                value,
                 service: Service,
                 accessCredentials: Credentials,
                 httpClient: HttpClient,
@@ -246,6 +324,47 @@ namespace idunno.Bluesky
 
             return await BlueskyServer.MuteConversation(
                 id,
+                service: Service,
+                accessCredentials: Credentials,
+                httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+                loggerFactory: LoggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Removes a reaction to the message identified by <paramref name="messageId"/> from the conversation identified by <paramref name="conversationId"/> for the authenticated user.
+        /// </summary>
+        /// <param name="conversationId">The conversation identifier to add the reaction to identified by <paramref name="messageId"/> from.</param>
+        /// <param name="messageId">The message identifier to add the reaction to from <paramref name="conversationId"/>.</param>
+        /// <param name="value">The reaction to add.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/>, <paramref name="messageId"/> or <paramref name="value"/> is whitespace.</exception>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when <paramref name="conversationId"/>, <paramref name="messageId"/> or <paramref name="value"/> is null.
+        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> has a grapheme length that does not equal 1.</exception>
+        public async Task<AtProtoHttpResult<MessageView>> RemoveReaction(
+            string conversationId,
+            string messageId,
+            string value,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(value.GetGraphemeLength(), 1);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            return await BlueskyServer.RemoveReaction(
+                conversationId,
+                messageId,
+                value,
                 service: Service,
                 accessCredentials: Credentials,
                 httpClient: HttpClient,

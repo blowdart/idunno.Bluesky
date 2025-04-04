@@ -17,7 +17,7 @@ namespace idunno.Bluesky.Test
             const string expected = "Test Text";
 
             PostBuilder builder = new(expected);
-            Post postRecord = builder.ToPostRecord();
+            Post postRecord = builder.ToPost();
 
             Assert.Equal(expected, postRecord.Text);
         }
@@ -39,7 +39,7 @@ namespace idunno.Bluesky.Test
 
             var builder = new PostBuilder("hello", expected);
 
-            Post postRecord = builder.ToPostRecord();
+            Post postRecord = builder.ToPost();
 
             Assert.NotNull(postRecord.Langs);
             Assert.Single(postRecord.Langs);
@@ -65,7 +65,7 @@ namespace idunno.Bluesky.Test
 
             var builder = new PostBuilder("hello", expected);
 
-            Post postRecord = builder.ToPostRecord();
+            Post postRecord = builder.ToPost();
 
             Assert.NotNull(postRecord.Langs);
             Assert.Equal(expected, postRecord.Langs);
@@ -104,7 +104,7 @@ namespace idunno.Bluesky.Test
 
             Assert.Equal("hello world", builder.Text);
 
-            Post postRecord = builder.ToPostRecord();
+            Post postRecord = builder.ToPost();
 
             Assert.Equal("hello world", postRecord.Text);
         }
@@ -117,7 +117,7 @@ namespace idunno.Bluesky.Test
 
             Assert.Equal("hello!", builder.Text);
 
-            Post postRecord = builder.ToPostRecord();
+            Post postRecord = builder.ToPost();
 
             Assert.Equal("hello!", postRecord.Text);
         }
@@ -130,7 +130,7 @@ namespace idunno.Bluesky.Test
 
             Assert.Equal("hello world", builder.Text);
 
-            Post postRecord = builder.ToPostRecord();
+            Post postRecord = builder.ToPost();
 
             Assert.Equal("hello world", postRecord.Text);
         }
@@ -143,7 +143,7 @@ namespace idunno.Bluesky.Test
 
             Assert.Equal("!", builder.Text);
 
-            Post postRecord = builder.ToPostRecord();
+            Post postRecord = builder.ToPost();
 
             Assert.Equal("!", postRecord.Text);
         }
@@ -154,7 +154,7 @@ namespace idunno.Bluesky.Test
             var builder = new PostBuilder("");
             Assert.Throws<PostBuilderException>(() =>
             {
-                _ = builder.ToPostRecord();
+                _ = builder.ToPost();
             });
         }
 
@@ -169,7 +169,7 @@ namespace idunno.Bluesky.Test
 
         };
 
-            _ = builder.ToPostRecord();
+            _ = builder.ToPost();
         }
 
         [Fact]
@@ -187,7 +187,7 @@ namespace idunno.Bluesky.Test
 
             };
 
-            _ = builder.ToPostRecord();
+            _ = builder.ToPost();
         }
 
         [Fact]
@@ -207,7 +207,7 @@ namespace idunno.Bluesky.Test
 
             Assert.Throws<PostBuilderException>(() =>
             {
-                _ = builder.ToPostRecord();
+                _ = builder.ToPost();
             });
         }
 

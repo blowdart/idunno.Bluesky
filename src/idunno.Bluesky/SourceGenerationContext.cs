@@ -34,8 +34,7 @@ namespace idunno.Bluesky
         NumberHandling = JsonNumberHandling.AllowReadingFromString,
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
-        WriteIndented = false,
-        UseStringEnumConverter = true)]
+        WriteIndented = false)]
 
     [JsonSerializable(typeof(BlockRecordValue))]
     [JsonSerializable(typeof(FollowRecordValue))]
@@ -100,6 +99,16 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(MessageView))]
     [JsonSerializable(typeof(MessageViewBase))]
     [JsonSerializable(typeof(MessageViewSender))]
+    [JsonSerializable(typeof(ReactionView))]
+    [JsonSerializable(typeof(ReactionViewSender))]
+    [JsonSerializable(typeof(MessageAndReactionView))]
+    [JsonSerializable(typeof(ConversationStatus))]
+    [JsonSerializable(typeof(AddReactionRequest))]
+    [JsonSerializable(typeof(AddReactionResponse))]
+    [JsonSerializable(typeof(RemoveReactionRequest))]
+    [JsonSerializable(typeof(RemoveReactionResponse))]
+    [JsonSerializable(typeof(UpdateAllReadRequest))]
+    [JsonSerializable(typeof(UpdateAllReadResponse))]
 
     [JsonSerializable(typeof(AspectRatio))]
     [JsonSerializable(typeof(EmbeddedBase))]

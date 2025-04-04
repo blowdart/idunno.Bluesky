@@ -84,7 +84,7 @@ namespace idunno.AtProto
                 _supressProxyHeaderCheck = true;
             }
 
-                loggerFactory ??= NullLoggerFactory.Instance;
+            loggerFactory ??= NullLoggerFactory.Instance;
             _logger = loggerFactory.CreateLogger<AtProtoHttpClient<TResult>>();
         }
 
@@ -1015,17 +1015,10 @@ namespace idunno.AtProto
                             {
                                 string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
-                                try
-                                {
-                                    result.Result = JsonSerializer.Deserialize(
-                                        responseContent,
-                                        typeof(TResult),
-                                        jsonSerializerOptions) as TResult;
-                                }
-                                catch (JsonException)
-                                {
-                                    result.Result = null;
-                                }
+                                result.Result = JsonSerializer.Deserialize(
+                                    responseContent,
+                                    typeof(TResult),
+                                    jsonSerializerOptions) as TResult;
                             }
                             else
                             {

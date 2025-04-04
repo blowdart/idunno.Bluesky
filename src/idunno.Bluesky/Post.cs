@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto.Labels;
@@ -13,7 +12,7 @@ using idunno.Bluesky.RichText;
 namespace idunno.Bluesky
 {
     /// <summary>
-    /// Encapsulates a Bluesky post.
+    /// Encapsulates a Bluesky post record value.
     /// </summary>
     /// <remarks>
     /// <para>See <see href="https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/feed/post.json">post.json</see> for the lexicon definition.</para>
@@ -40,36 +39,36 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Creates a new instance of <see cref="Post"/> from the specified <paramref name="postRecord"/>.
+        /// Creates a new instance of <see cref="Post"/> from the specified <paramref name="post"/>.
         /// </summary>
-        /// <param name="postRecord">The <see cref="Post"/> to create the new instance from.</param>
-        public Post(Post postRecord) : base(postRecord)
+        /// <param name="post">The <see cref="Post"/> to create the new instance from.</param>
+        public Post(Post post) : base(post)
         {
-            if (postRecord is not null)
+            if (post is not null)
             {
-                Text = postRecord.Text;
-                CreatedAt = postRecord.CreatedAt;
-                EmbeddedRecord = postRecord.EmbeddedRecord;
-                Reply = postRecord.Reply;
+                Text = post.Text;
+                CreatedAt = post.CreatedAt;
+                EmbeddedRecord = post.EmbeddedRecord;
+                Reply = post.Reply;
 
-                if (postRecord.Facets is not null)
+                if (post.Facets is not null)
                 {
-                    Facets = [.. postRecord.Facets];
+                    Facets = [.. post.Facets];
                 }
 
-                if (postRecord.Langs is not null)
+                if (post.Langs is not null)
                 {
-                    Langs = [.. postRecord.Langs];
+                    Langs = [.. post.Langs];
                 }
 
-                if (postRecord.Labels is not null)
+                if (post.Labels is not null)
                 {
-                    Labels = new SelfLabels(postRecord.Labels.Values);
+                    Labels = new SelfLabels(post.Labels.Values);
                 }
 
-                if (postRecord.Tags is not null)
+                if (post.Tags is not null)
                 {
-                    Tags = [.. postRecord.Tags];
+                    Tags = [.. post.Tags];
                 }
             }
         }
@@ -416,14 +415,6 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Gets the JSON record type for this instance.
-        /// </summary>
-        [JsonInclude]
-        [JsonPropertyName("$type")]
-        [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needs to an instance property for json serialization.")]
-        public string Type => RecordType.Post;
-
-        /// <summary>
         /// Gets the text for the post, if any.
         /// </summary>
         [JsonInclude]
@@ -467,8 +458,7 @@ namespace idunno.Bluesky
         /// </remarks>
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        [NotNull]
-        public SelfLabels? Labels { get; internal set; } = new SelfLabels();
+        public SelfLabels? Labels { get; internal set; }
 
         /// <summary>
         /// Gets the collection of tags to apply to the post, if any.
@@ -543,11 +533,19 @@ namespace idunno.Bluesky
         {
             get
             {
-                return Labels.Contains(PornLabelName);
+                if (Labels is not null)
+                {
+                    return Labels.Contains(PornLabelName);
+                }
+                else
+                {
+                    return false;
+                }
             }
 
             set
             {
+                Labels ??= new SelfLabels();
                 if (value)
                 {
                     Labels.AddLabel(PornLabelName);
@@ -568,11 +566,19 @@ namespace idunno.Bluesky
         {
             get
             {
-                return Labels.Contains(SexualLabelName);
+                if (Labels is not null)
+                {
+                    return Labels.Contains(SexualLabelName);
+                }
+                else
+                {
+                    return false;
+                }
             }
 
             set
             {
+                Labels ??= new SelfLabels();
                 if (value)
                 {
                     Labels.AddLabel(SexualLabelName);
@@ -593,11 +599,17 @@ namespace idunno.Bluesky
         {
             get
             {
+                if (Labels is null)
+                {
+                    return false;
+                }
+
                 return Labels.Contains(GraphicMediaLabelName);
             }
 
             set
             {
+                Labels ??= new SelfLabels();
                 if (value)
                 {
                     Labels.AddLabel(GraphicMediaLabelName);
@@ -618,11 +630,18 @@ namespace idunno.Bluesky
         {
             get
             {
+                if (Labels is null)
+                {
+                    return false;
+                }
+
                 return Labels.Contains(NudityLabelName);
             }
 
             set
             {
+                Labels ??= new SelfLabels();
+
                 if (value)
                 {
                     Labels.AddLabel(NudityLabelName);

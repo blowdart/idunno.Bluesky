@@ -4,13 +4,11 @@
 using System.Diagnostics.CodeAnalysis;
 
 using idunno.AtProto.Repo;
+
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.RichText;
-
-//TODO: Fix in reply to, and make it actually usable (taking a single strong reference or AtUri)
-//TODO: Make more buildery. Add a create method. Add implicit cast to post.
 
 namespace idunno.Bluesky
 {
@@ -21,7 +19,7 @@ namespace idunno.Bluesky
     {
         private readonly object _syncLock = new ();
 
-        private readonly Post _postRecord;
+        private readonly Post _post;
         private readonly List<EmbeddedImage> _embeddedImages = [];
         private EmbeddedVideo? _embeddedVideo;
         private List<ThreadGateRule>? _threadGateRules;
@@ -34,7 +32,7 @@ namespace idunno.Bluesky
         /// </summary>
         public PostBuilder()
         {
-            _postRecord = new Post() { CreatedAt = DateTimeOffset.UtcNow };
+            _post = new Post() { CreatedAt = DateTimeOffset.UtcNow };
         }
 
         /// <summary>
@@ -49,7 +47,7 @@ namespace idunno.Bluesky
                 creationDateTime = createdAt.Value;
             }
 
-            _postRecord = new Post() { CreatedAt = creationDateTime };
+            _post = new Post() { CreatedAt = creationDateTime };
         }
 
         /// <summary>
@@ -89,7 +87,7 @@ namespace idunno.Bluesky
                     $"cannot have more than {Maximum.ImagesInPost} images.");
             }
 
-            _postRecord.Text = text;
+            _post.Text = text;
 
             if (images is not null)
             {
@@ -98,12 +96,12 @@ namespace idunno.Bluesky
 
             if (facets is not null)
             {
-                _postRecord.Facets = [.. facets];
+                _post.Facets = [.. facets];
             }
 
             if (labels is not null)
             {
-                _postRecord.SetSelfLabels(labels);
+                _post.SetSelfLabels(labels);
             }
         }
 
@@ -146,14 +144,14 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(languages);
             ArgumentOutOfRangeException.ThrowIfZero(languages.Length);
 
-            _postRecord.Langs = languages;
+            _post.Langs = languages;
         }
 
         /// <summary>
         /// Gets a flag indicating whether this instance has any record text.
         /// </summary>
         [MemberNotNullWhen(true, nameof(Length))]
-        public bool HasText => _postRecord.Text is not null && !string.IsNullOrEmpty(_postRecord.Text);
+        public bool HasText => _post.Text is not null && !string.IsNullOrEmpty(_post.Text);
 
         /// <summary>
         /// Gets the length of the post text, in characters.
@@ -164,7 +162,7 @@ namespace idunno.Bluesky
             {
                 lock (_syncLock)
                 {
-                    return _postRecord.Length;
+                    return _post.Length;
                 }
             }
         }
@@ -178,7 +176,7 @@ namespace idunno.Bluesky
             {
                 lock (_syncLock)
                 {
-                    return _postRecord.Utf8Length;
+                    return _post.Utf8Length;
                 }
             }
         }
@@ -192,7 +190,7 @@ namespace idunno.Bluesky
             {
                 lock (_syncLock)
                 {
-                    return _postRecord.GraphemeLength;
+                    return _post.GraphemeLength;
                 }
             }
         }
@@ -227,7 +225,7 @@ namespace idunno.Bluesky
             {
                 lock (_syncLock)
                 {
-                    return _postRecord.Text;
+                    return _post.Text;
                 }
             }
 
@@ -242,11 +240,11 @@ namespace idunno.Bluesky
                             $"text cannot have be longer than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
                     }
 
-                    _postRecord.Text = value;
+                    _post.Text = value;
                 }
                 else
                 {
-                    _postRecord.Langs = null;
+                    _post.Langs = null;
                 }
             }
         }
@@ -260,13 +258,13 @@ namespace idunno.Bluesky
             {
                 lock (_syncLock)
                 {
-                    if (_postRecord.Langs is null)
+                    if (_post.Langs is null)
                     {
                         return null;
                     }
                     else
                     {
-                        return new List<string>(_postRecord.Langs).AsReadOnly();
+                        return new List<string>(_post.Langs).AsReadOnly();
                     }
                 }
             }
@@ -277,11 +275,11 @@ namespace idunno.Bluesky
                 {
                     if (value is not null)
                     {
-                        _postRecord.Langs = [.. value];
+                        _post.Langs = [.. value];
                     }
                     else
                     {
-                        _postRecord.Langs = null;
+                        _post.Langs = null;
                     }
                 }
             }
@@ -296,13 +294,13 @@ namespace idunno.Bluesky
             {
                 lock (_syncLock)
                 {
-                    if (_postRecord.Facets is null)
+                    if (_post.Facets is null)
                     {
                         return [];
                     }
                     else
                     {
-                        return [.. _postRecord.Facets];
+                        return [.. _post.Facets];
                     }
                 }
             }
@@ -311,7 +309,7 @@ namespace idunno.Bluesky
             {
                 lock (_syncLock)
                 {
-                    _postRecord.Facets = [.. value];
+                    _post.Facets = [.. value];
                 }
             }
         }
@@ -405,7 +403,7 @@ namespace idunno.Bluesky
             {
                 lock (_syncLock)
                 {
-                    return _postRecord.Reply;
+                    return _post.Reply;
                 }
             }
 
@@ -418,9 +416,9 @@ namespace idunno.Bluesky
                         throw new ArgumentException("Cannot set InReplyTo if ThreadGateRules is not null.");
                     }
 
-                    _postRecord.Reply = value;
+                    _post.Reply = value;
 
-                    if (value is not null && (_postRecord.EmbeddedRecord is EmbeddedRecord || _postRecord.EmbeddedRecord is EmbeddedRecordWithMedia))
+                    if (value is not null && (_post.EmbeddedRecord is EmbeddedRecord || _post.EmbeddedRecord is EmbeddedRecordWithMedia))
                     {
                         // Being a reply post excludes being a quote post.
                         QuotePost = null;
@@ -444,7 +442,7 @@ namespace idunno.Bluesky
             {
                 lock (_syncLock)
                 {
-                    if (_postRecord.EmbeddedRecord is EmbeddedRecord embeddedRecord)
+                    if (_post.EmbeddedRecord is EmbeddedRecord embeddedRecord)
                     {
                         return embeddedRecord.Record;
                     }
@@ -459,16 +457,16 @@ namespace idunno.Bluesky
             {
                 lock (_syncLock)
                 {
-                    if (value is null && _postRecord.EmbeddedRecord is null)
+                    if (value is null && _post.EmbeddedRecord is null)
                     {
                         // Nothing to do
                     }
                     else if (value is null)
                     {
-                        if (_postRecord.EmbeddedRecord is EmbeddedRecord || _postRecord.EmbeddedRecord is EmbeddedRecordWithMedia)
+                        if (_post.EmbeddedRecord is EmbeddedRecord || _post.EmbeddedRecord is EmbeddedRecordWithMedia)
                         {
                             // We already have a quote record, so let's just delete it.
-                            _postRecord.EmbeddedRecord = null;
+                            _post.EmbeddedRecord = null;
                         }
                         else
                         {
@@ -477,7 +475,7 @@ namespace idunno.Bluesky
                     }
                     else
                     {
-                        _postRecord.EmbeddedRecord = new EmbeddedRecord(value);
+                        _post.EmbeddedRecord = new EmbeddedRecord(value);
                     }
                 }
             }
@@ -637,7 +635,7 @@ namespace idunno.Bluesky
         {
             get
             {
-                return _postRecord.EmbeddedRecord;
+                return _post.EmbeddedRecord;
             }
 
             set
@@ -646,7 +644,7 @@ namespace idunno.Bluesky
                 {
                     if (value is null)
                     {
-                        _postRecord.EmbeddedRecord = null;
+                        _post.EmbeddedRecord = null;
                     }
                     else
                     {
@@ -713,7 +711,7 @@ namespace idunno.Bluesky
         public void EmbedRecord(EmbeddedBase embeddedRecord)
         {
             ArgumentNullException.ThrowIfNull(embeddedRecord);
-            _postRecord.EmbeddedRecord = embeddedRecord;
+            _post.EmbeddedRecord = embeddedRecord;
         }
 
         /// <summary>
@@ -736,14 +734,14 @@ namespace idunno.Bluesky
                     throw new ArgumentOutOfRangeException(nameof(value), $"string cannot have a length greater than {MaxCapacity} characters, or {MaxCapacityGraphemes} graphemes.");
                 }
 
-                if (_postRecord.Text is null)
+                if (_post.Text is null)
                 {
-                    _postRecord.Text = value;
+                    _post.Text = value;
                     return this;
                 }
 
-                int newLength = value.Length + _postRecord.Text.Length;
-                int newGraphemeLength = value.GetGraphemeLength() + _postRecord.Text.GetGraphemeLength();
+                int newLength = value.Length + _post.Text.Length;
+                int newGraphemeLength = value.GetGraphemeLength() + _post.Text.GetGraphemeLength();
 
                 if (newLength > MaxCapacity || newGraphemeLength > MaxCapacityGraphemes)
                 {
@@ -751,7 +749,7 @@ namespace idunno.Bluesky
                 }
                 else
                 {
-                    _postRecord.Text += value;
+                    _post.Text += value;
                     return this;
                 }
             }
@@ -771,8 +769,8 @@ namespace idunno.Bluesky
 
             lock (_syncLock)
             {
-                ByteSlice byteSlice = GetFacetPosition(_postRecord.Text, mention.Text);
-                _postRecord.Text += mention.Text;
+                ByteSlice byteSlice = GetFacetPosition(_post.Text, mention.Text);
+                _post.Text += mention.Text;
 
                 MentionFacetFeature mentionFacetFeature = new(mention.Did);
                 List<FacetFeature> features =
@@ -780,8 +778,8 @@ namespace idunno.Bluesky
                         mentionFacetFeature
                     ];
 
-                _postRecord.Facets ??= [];
-                _postRecord.Facets.Add(new Facet(byteSlice, features));
+                _post.Facets ??= [];
+                _post.Facets.Add(new Facet(byteSlice, features));
 
                 return this;
             }
@@ -829,8 +827,8 @@ namespace idunno.Bluesky
 
             lock (_syncLock)
             {
-                ByteSlice byteSlice = GetFacetPosition(_postRecord.Text, hashTag.Text);
-                _postRecord.Text += hashTag.Text;
+                ByteSlice byteSlice = GetFacetPosition(_post.Text, hashTag.Text);
+                _post.Text += hashTag.Text;
 
                 TagFacetFeature tagFacetFeature = new(hashTag.Tag);
                 List<FacetFeature> features =
@@ -838,8 +836,8 @@ namespace idunno.Bluesky
                         tagFacetFeature
                     ];
 
-                _postRecord.Facets ??= [];
-                _postRecord.Facets.Add(new Facet(byteSlice, features));
+                _post.Facets ??= [];
+                _post.Facets.Add(new Facet(byteSlice, features));
 
                 return this;
             }
@@ -859,8 +857,8 @@ namespace idunno.Bluesky
 
             lock (_syncLock)
             {
-                ByteSlice byteSlice = GetFacetPosition(_postRecord.Text, link.Text);
-                _postRecord.Text += link.Text;
+                ByteSlice byteSlice = GetFacetPosition(_post.Text, link.Text);
+                _post.Text += link.Text;
 
                 LinkFacetFeature linkFacetFeature = new(link.Uri);
                 List<FacetFeature> features =
@@ -868,8 +866,8 @@ namespace idunno.Bluesky
                         linkFacetFeature
                     ];
 
-                _postRecord.Facets ??= [];
-                _postRecord.Facets.Add(new Facet(byteSlice, features));
+                _post.Facets ??= [];
+                _post.Facets.Add(new Facet(byteSlice, features));
 
                 return this;
             }
@@ -1236,14 +1234,14 @@ namespace idunno.Bluesky
         {
             ArgumentNullException.ThrowIfNull(labels);
 
-            _postRecord.SetSelfLabels(labels);
+            _post.SetSelfLabels(labels);
         }
 
         /// <summary>
         /// Converts the value of this instance to a <see cref="Post"/>.
         /// </summary>
         /// <returns>A <see cref="Post"/> whose value is the same as this instance.</returns>
-        public Post ToPostRecord()
+        public Post ToPost()
         {
             lock (_syncLock)
             {
@@ -1267,17 +1265,17 @@ namespace idunno.Bluesky
                     if (InReplyTo is null && QuotePost is null)
                     {
                         // Plain old post
-                        _postRecord.EmbeddedRecord = new EmbeddedImages(_embeddedImages);
+                        _post.EmbeddedRecord = new EmbeddedImages(_embeddedImages);
                     }
                     else if (QuotePost is not null)
                     {
                         // Quote post, so we need fix up the embedded record to include images.
-                        _postRecord.EmbeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), new EmbeddedImages(_embeddedImages));
+                        _post.EmbeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), new EmbeddedImages(_embeddedImages));
                     }
                     else
                     {
                         // Reply post
-                        _postRecord.EmbeddedRecord = new EmbeddedImages(_embeddedImages);
+                        _post.EmbeddedRecord = new EmbeddedImages(_embeddedImages);
                     }
                 }
 
@@ -1286,22 +1284,74 @@ namespace idunno.Bluesky
                     if (InReplyTo is null && QuotePost is null)
                     {
                         // Plain old post
-                        _postRecord.EmbeddedRecord = _embeddedVideo;
+                        _post.EmbeddedRecord = _embeddedVideo;
                     }
                     else if (QuotePost is not null)
                     {
                         // Quote post, so we need fix up the embedded record to include the video.
-                        _postRecord.EmbeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), Video);
+                        _post.EmbeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), Video);
                     }
                     else
                     {
                         // Reply post
-                        _postRecord.EmbeddedRecord = _embeddedVideo;
+                        _post.EmbeddedRecord = _embeddedVideo;
                     }
                 }
 
-                return new Post(_postRecord);
+                return new Post(_post);
             }
+        }
+
+        /// <summary>
+        /// Converts the specified <paramref name="postBuilder"/> to a <see cref="Post"/>.
+        /// </summary>
+        /// <param name="postBuilder">The <see cref="PostBuilder"/> to convert.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is null.</exception>
+        public static implicit operator Post(PostBuilder postBuilder)
+        {
+            ArgumentNullException.ThrowIfNull(postBuilder);
+            return postBuilder.ToPost();
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="PostBuilder"/>.
+        /// </summary>
+        /// <returns>A new instance of <see cref="PostBuilder"/>.</returns>
+        public static PostBuilder Create()
+        {
+            return new PostBuilder();
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="PostBuilder"/>.
+        /// </summary>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> for the creation date and time of the post.</param>
+        /// <returns>A new instance of <see cref="PostBuilder"/>.</returns>
+        public static PostBuilder Create(DateTimeOffset createdAt)
+        {
+            return new PostBuilder(createdAt);
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="PostBuilder"/>.
+        /// </summary>
+        /// <param name="text">The text for the post.</param>
+        /// <param name="language">The language of the post, as an ISO language code.</param>
+        /// <returns>A new instance of <see cref="PostBuilder"/>.</returns>
+        public static PostBuilder Create(string text, string language)
+        {
+            return new PostBuilder(text, language);
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="PostBuilder"/>.
+        /// </summary>
+        /// <param name="text">The text for the post.</param>
+        /// <param name="languages">The languages the post contains, as ISO language codes.</param>
+        /// <returns>A new instance of <see cref="PostBuilder"/>.</returns>
+        public static PostBuilder Create(string text, string[] languages)
+        {
+            return new PostBuilder(text, languages);
         }
 
         /// <summary>
@@ -1309,7 +1359,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="obj">The object to compare with the current object.</param>
         /// <returns><see langword="true"/> if the specified object is equal to the current object; otherwise, <see langword="false"/>.</returns>
-        public override bool Equals(object? obj) => obj is PostBuilder builder && EqualityComparer<Post>.Default.Equals(_postRecord, builder._postRecord) && EqualityComparer<List<EmbeddedImage>>.Default.Equals(_embeddedImages, builder._embeddedImages) && EqualityComparer<List<ThreadGateRule>?>.Default.Equals(_threadGateRules, builder._threadGateRules) && EqualityComparer<List<PostGateRule>?>.Default.Equals(_postGateRules, builder._postGateRules) && _disableEmbedding == builder._disableEmbedding;
+        public override bool Equals(object? obj) => obj is PostBuilder builder && EqualityComparer<Post>.Default.Equals(_post, builder._post) && EqualityComparer<List<EmbeddedImage>>.Default.Equals(_embeddedImages, builder._embeddedImages) && EqualityComparer<List<ThreadGateRule>?>.Default.Equals(_threadGateRules, builder._threadGateRules) && EqualityComparer<List<PostGateRule>?>.Default.Equals(_postGateRules, builder._postGateRules) && _disableEmbedding == builder._disableEmbedding;
 
         /// <summary>
         /// Determines whether two specified <see cref="PostBuilder"/>s the same value."/>
@@ -1353,7 +1403,7 @@ namespace idunno.Bluesky
 
             lock (_syncLock)
             {
-                Post postRecord = new (_postRecord);
+                Post postRecord = new (_post);
 
                 if (_embeddedImages is not null)
                 {

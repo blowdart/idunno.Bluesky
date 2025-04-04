@@ -20,8 +20,9 @@ namespace idunno.Bluesky.Chat
         /// <param name="id">The message ID.</param>
         /// <param name="revision">The message revision.</param>
         /// <param name="text">The text of the message.</param>
-        /// <param name="facets">Any facets to apply to the message <paramref name="text"/>.</param>
+        /// <param name="facets">Facets to apply to the message <paramref name="text"/>, if any.</param>
         /// <param name="embed">A view over the embedded record in the message, if any.</param>
+        /// <param name="reactions">Reactions to the message <paramref name="text"/>, if any.</param>
         /// <param name="sender">A view over the message author.</param>
         /// <param name="sentAt">The <see cref="DateTimeOffset"/> the message was sent on.</param>
         /// <exception cref="ArgumentException">
@@ -34,9 +35,10 @@ namespace idunno.Bluesky.Chat
             string id,
             string revision,
             string text,
-            IReadOnlyCollection<Facet> facets,
-            MessageViewSender sender,
+            IReadOnlyCollection<Facet>? facets,
             EmbeddedRecordView embed,
+            IReadOnlyCollection<ReactionView>? reactions,
+            MessageViewSender sender,
             DateTimeOffset sentAt) : base(id, revision, sender, sentAt)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(id);
@@ -57,6 +59,16 @@ namespace idunno.Bluesky.Chat
             {
                 Facets = new List<Facet>(facets).AsReadOnly();
             }
+
+            if (reactions == null)
+            {
+                Reactions = new List<ReactionView>().AsReadOnly();
+            }
+            else
+            {
+                Reactions = new List<ReactionView>(reactions).AsReadOnly();
+            }
+
         }
 
         /// <summary>
@@ -71,12 +83,18 @@ namespace idunno.Bluesky.Chat
         /// </summary>
         [JsonInclude]
         [NotNull]
-        public IReadOnlyCollection<Facet>? Facets { get; init; }
+        public IReadOnlyCollection<Facet> Facets { get; init; }
 
         /// <summary>
         /// Gets a view over the embedded record, if any.
         /// </summary>
         [JsonInclude]
         public EmbeddedRecordView? Embed { get; init; }
+
+        /// <summary>
+        /// Gets reactions to the message, in ascending order of creation time.
+        /// </summary>
+        [JsonInclude]
+        public IReadOnlyCollection<ReactionView> Reactions { get; init; }
     }
 }

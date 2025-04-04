@@ -45,7 +45,7 @@ namespace idunno.AtProto
                 service: service,
                 endpoint: DescribeServerEndpoint,
                 httpClient: httpClient,
-                jsonSerializerOptions: SelfContainedJsonSerializerOptions,
+                jsonSerializerOptions: AtProtoJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (result.Succeeded &&
