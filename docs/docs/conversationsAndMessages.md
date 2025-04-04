@@ -78,6 +78,11 @@ var startConversation = await agent.GetConversationForMembers(conversationMember
 
 `StartConversation()` returns a `ConversationView` which includes the conversation ID, which you can then use to send messages to the chat.
 
+## <a name="accepting">Accepting a conversation</a>
+
+A conversation has two states, `Requested` and `Accepted`, indicated by the `Status` field in the `ConversationView`.
+To accept a requested conversation use the `AcceptConversation` method and pass the `conversationId` of the conversation you wish to accept.
+
 ## <a name="leaving">Leaving a conversation</a>
 
 To leave a conversation call `LeaveConversation()` with the conversation identifier.

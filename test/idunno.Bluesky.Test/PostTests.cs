@@ -208,7 +208,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void TextLangsConstructorThrowsIfLangsIsEmpty()
         {
-            ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("text", []));
+            ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("text", langs: []));
 
             Assert.Equal("langs.Count", caughtException.ParamName);
         }
