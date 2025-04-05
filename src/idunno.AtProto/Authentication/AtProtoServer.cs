@@ -42,6 +42,9 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Throw if <paramref name="identifier"/> or <paramref name="password"/> is null.</exception>
         /// <exception cref="ArgumentNullException">Throw if <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -91,6 +94,9 @@ namespace idunno.AtProto
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
             Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<EmptyResponse>> DeleteSession(
             RefreshCredential refreshCredential,
             HttpClient httpClient,
@@ -129,6 +135,9 @@ namespace idunno.AtProto
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<RefreshSessionResponse>> RefreshSession(
             RefreshCredential refreshCredential,
@@ -169,7 +178,10 @@ namespace idunno.AtProto
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
-            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<GetSessionResponse>> GetSession(
             AccessCredentials accessCredentials,
             HttpClient httpClient,
@@ -215,6 +227,9 @@ namespace idunno.AtProto
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<ServiceCredential>> GetServiceAuth(
             Did audience,

@@ -329,6 +329,7 @@ namespace idunno.AtProto
         /// </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="operations"/> is an empty collection.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+        [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<ApplyWritesResponse>> ApplyWrites(
             ICollection<WriteOperation> operations,
@@ -766,6 +767,7 @@ namespace idunno.AtProto
         ///     <para>Thrown when <paramref name="recordValue"/>, <paramref name="collection"/> or <paramref name="rKey"/> is null.</para>
         /// </exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
+        [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
             TRecordValue recordValue,
@@ -914,6 +916,7 @@ namespace idunno.AtProto
         ///     <para>Thrown when <paramref name="record"/> is null.</para>
         /// </exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
+        [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
             AtProtoRecord<TRecordValue> record,
@@ -1106,6 +1109,7 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an incorrect format.</exception>
+        [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<T>> GetRecord<T>(
             AtUri uri,
@@ -1149,6 +1153,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/>, <paramref name="collection"/> is null or empty.</exception>
+        [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<T>> GetRecord<T>(
             AtIdentifier repo,
@@ -1327,6 +1332,7 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="collection"/> is null or empty.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+        [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>>> ListRecords<TRecordValue>(
             Nsid collection,
@@ -1373,6 +1379,7 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/> or <paramref name="collection"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
+        [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>>> ListRecords<TRecordValue>(
             AtIdentifier repo,

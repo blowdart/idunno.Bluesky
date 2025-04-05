@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using idunno.AtProto;
 using idunno.Bluesky.RichText;
-using idunno.DidPlcDirectory;
 
 namespace idunno.Bluesky
 {

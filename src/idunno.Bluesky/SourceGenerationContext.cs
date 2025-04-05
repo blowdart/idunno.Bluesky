@@ -3,7 +3,6 @@
 
 using System.Text.Json.Serialization;
 using idunno.AtProto.Labels;
-using idunno.AtProto.Repo;
 using idunno.Bluesky.Actions;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Actor.Model;

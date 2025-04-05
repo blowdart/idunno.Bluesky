@@ -87,6 +87,9 @@ namespace idunno.Bluesky
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
             Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<AcceptConversationResponse>> AcceptConversation(
             string conversationId,
             Uri service,
@@ -140,6 +143,9 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<MessageView>> AddReaction(
             string conversationId,
@@ -215,6 +221,9 @@ namespace idunno.Bluesky
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
             Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<DeletedMessageView>> DeleteMessageForSelf(
             string conversationId,
             string messageId,
@@ -267,6 +276,9 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<ConversationView>> GetConversationForMembers(
             ICollection<Did> members,
@@ -342,6 +354,9 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<Conversations>> ListConversations(
             int? limit,
@@ -424,6 +439,9 @@ namespace idunno.Bluesky
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
             Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<ConversationView>> GetConversation(
             string id,
             Uri service,
@@ -484,6 +502,9 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<Logs>> GetConversationLog(
             string? cursor,
@@ -557,6 +578,9 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<Messages>> GetMessages(
             string id,
@@ -648,6 +672,9 @@ namespace idunno.Bluesky
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
             Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<ConversationReference>> LeaveConversation(
             string id,
             Uri service,
@@ -712,6 +739,9 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<ConversationView>> MuteConversation(
             string id,
@@ -783,6 +813,9 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<MessageView>> RemoveReaction(
             string conversationId,
@@ -856,6 +889,9 @@ namespace idunno.Bluesky
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
             Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<ICollection<MessageView>>> SendMessageBatch(
             ICollection<BatchedMessage> batchedMessages,
             Uri service,
@@ -907,7 +943,6 @@ namespace idunno.Bluesky
             }
         }
 
-
         /// <summary>
         /// Sends the specified <see cref="MessageInput"/> to the conversation identified by <paramref name="id"/>.
         /// </summary>
@@ -929,6 +964,9 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<MessageView>> SendMessage(
             string id,
@@ -997,6 +1035,9 @@ namespace idunno.Bluesky
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
             Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<ConversationView>> UnmuteConversation(
             string id,
             Uri service,
@@ -1063,6 +1104,9 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<ulong>> UpdateAllRead(
             ConversationStatus status,
@@ -1134,6 +1178,9 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<ConversationView>> UpdateRead(
             string conversationId,

@@ -15,7 +15,7 @@
     <!-- Always treat "S1133 Deprecated code should be removed" as a warning -->
     <!-- Always treat "S1135 Complete the task associated to this 'TODO'" as a warning -->
     <WarningsNotAsErrors>S1133,S1135</WarningsNotAsErrors>
-    <IsTrimmable>true</IsTrimmable>
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
   
   <Choose>

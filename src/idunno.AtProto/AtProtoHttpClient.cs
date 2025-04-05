@@ -179,6 +179,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
+        [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<TResult>> Get(
             Uri service,
             string endpoint,
@@ -255,6 +256,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
+        [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<TResult>> Get(
             Uri service,
             string endpoint,
@@ -334,6 +336,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
+        [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<TResult>> Post(
             Uri service,
             string endpoint,
@@ -403,6 +406,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
+        [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<TResult>> Post<TRecord>(
             Uri service,
             string endpoint,
@@ -477,6 +481,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
+        [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<TResult>> Post<TRecord>(
             Uri service,
             string endpoint,
@@ -564,6 +569,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
+        [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<TResult>> Post<TRecord>(
             Uri service,
             string endpoint,
@@ -675,6 +681,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentException">Thrown when <paramref name="blob"/> is an empty array.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClient"/> or <paramref name="credentials"/> is null.</exception>
         [RequiresUnreferencedCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
+        [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<TResult>> PostBlob(
             Uri service,
             string endpoint,
@@ -922,6 +929,7 @@ namespace idunno.AtProto
         }
 
         [RequiresUnreferencedCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
+        [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
         private async Task<AtProtoHttpResult<TResult>> MakeRequest<TRecord>(
             Uri service,
             string endpoint,
