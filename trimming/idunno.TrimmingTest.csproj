@@ -18,11 +18,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\samples\Samples.Common\Samples.Common.csproj" />
     <ProjectReference Include="..\src\idunno.AtProto.OAuthCallback\idunno.AtProto.OAuthCallback.csproj" />
+    <ProjectReference Include="..\src\idunno.AtProto\idunno.AtProto.csproj" />
+    <TrimmerRootAssembly Include="idunno.AtProto" />
     <TrimmerRootAssembly Include="idunno.AtProto.OAuthCallback" />
-    <ProjectReference Include="..\src\idunno.Bluesky\idunno.Bluesky.csproj" />
-    <TrimmerRootAssembly Include="idunno.Bluesky" />
   </ItemGroup>
 
 </Project>

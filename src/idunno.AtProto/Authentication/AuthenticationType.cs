@@ -9,7 +9,6 @@ namespace idunno.AtProto.Authentication
     /// <summary>
     /// The authentication type of an <see cref="AtProtoCredential"/> instance.
     /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter<AuthenticationType>))]
     public enum AuthenticationType
     {
         /// <summary>

@@ -27,14 +27,12 @@ namespace idunno.AtProto
         /// <param name="plcDirectoryServer">The server to use when resolving plc DIDs.</param>
         /// <param name="oAuthOptions">Any <see cref="OAuthOptions"/> for the agent.</param>
         /// <param name="httpClientOptions">The HttpClient options for the agent.</param>
-        /// <param name="httpJsonOptions">Any <see cref="JsonOptions"/> to use during serialization and deserialization.</param>
         public AtProtoAgentOptions(
             ILoggerFactory? loggerFactory,
             bool enableBackgroundTokenRefresh = true,
             Uri? plcDirectoryServer = null,
             OAuthOptions? oAuthOptions = null,
-            HttpClientOptions? httpClientOptions = null,
-            JsonOptions? httpJsonOptions = null) : this()
+            HttpClientOptions? httpClientOptions = null) : this()
         {
             LoggerFactory = loggerFactory;
             EnableBackgroundTokenRefresh = enableBackgroundTokenRefresh;
@@ -46,6 +44,25 @@ namespace idunno.AtProto
 
             OAuthOptions = oAuthOptions;
             HttpClientOptions = httpClientOptions;
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoAgentOptions"/>"/>
+        /// </summary>
+        /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>, if any, to use when creating loggers.</param>
+        /// <param name="httpJsonOptions">Any <see cref="JsonOptions"/> to use during serialization and deserialization.</param>
+        /// <param name="oAuthOptions">Any <see cref="OAuthOptions"/> for the agent.</param>
+        /// <param name="httpClientOptions">The HttpClient options for the agent.</param>
+        /// <param name="enableBackgroundTokenRefresh">Flag indicating whether credential refreshes should happen in the background.</param>
+        /// <param name="plcDirectoryServer">The server to use when resolving plc DIDs.</param>
+        public AtProtoAgentOptions(
+            ILoggerFactory? loggerFactory,
+            JsonOptions httpJsonOptions,
+            OAuthOptions? oAuthOptions = null,
+            HttpClientOptions? httpClientOptions = null,
+            bool enableBackgroundTokenRefresh = true,
+            Uri? plcDirectoryServer = null) : this(loggerFactory, enableBackgroundTokenRefresh, plcDirectoryServer, oAuthOptions, httpClientOptions)
+        {
             HttpJsonOptions = httpJsonOptions;
         }
 

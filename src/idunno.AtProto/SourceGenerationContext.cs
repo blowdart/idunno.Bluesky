@@ -23,8 +23,7 @@ namespace idunno.AtProto
         NumberHandling = JsonNumberHandling.AllowReadingFromString,
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
-        WriteIndented = false,
-        UseStringEnumConverter = true)]
+        WriteIndented = false)]
 
     [JsonSerializable(typeof(AtErrorDetail))]
 
@@ -80,8 +79,8 @@ namespace idunno.AtProto
     [JsonSerializable(typeof(AccountStatus))]
     [JsonSerializable(typeof(ValidationStatus))]
 
-
     [JsonSerializable(typeof(ServiceToken))]
+
     internal partial class SourceGenerationContext : JsonSerializerContext
     {
     }
