@@ -15,7 +15,8 @@
     <!-- Always treat "S1133 Deprecated code should be removed" as a warning -->
     <!-- Always treat "S1135 Complete the task associated to this 'TODO'" as a warning -->
     <WarningsNotAsErrors>S1133,S1135</WarningsNotAsErrors>
-    <IsAotCompatible>true</IsAotCompatible>
+    <!-- Remove until https://github.com/dotnet/runtime/issues/114307 -->
+    <!--<IsAotCompatible>true</IsAotCompatible>-->
   </PropertyGroup>
   
   <Choose>
@@ -47,7 +48,7 @@
   </Choose>
 
   <!-- Debug configuration
-       Include documentation analysers, which can't be included in a release build because they're a a prerelease dependency.-->
+       Include documentation analysers, which can't be included in a release build because they're a prerelease dependency.-->
   <Choose>
     <When Condition="'$(Configuration)' == 'Debug'">
       <ItemGroup>

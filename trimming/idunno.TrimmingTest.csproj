@@ -20,7 +20,6 @@
   <ItemGroup>
     <ProjectReference Include="..\src\idunno.AtProto\idunno.AtProto.csproj" />
     <TrimmerRootAssembly Include="idunno.AtProto" />
-    <TrimmerRootAssembly Include="idunno.AtProto.OAuthCallback" />
   </ItemGroup>
 
 </Project>

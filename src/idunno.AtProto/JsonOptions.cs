@@ -29,11 +29,11 @@ namespace idunno.AtProto
             TypeInfoResolver = JsonSerializer.IsReflectionEnabledByDefault ? CreateDefaultTypeResolver() : JsonTypeInfoResolver.Combine(SourceGenerationContext.Default)
         };
 
-        [SuppressMessage(
+        [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
             Justification = "Combined with TypeResolver above.")]
-        [SuppressMessage(
+        [UnconditionalSuppressMessage(
             "AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "Combined with TypeResolver above.")]

@@ -172,6 +172,13 @@ namespace Samples.DirectMessages
                                                                  throw new InvalidOperationException("Cannot find message sender in conversation view");
 
                                                     Console.WriteLine($"{sender}: {view.Text} {view.SentAt:g}");
+
+                                                    foreach (ReactionView reaction in view.Reactions)
+                                                    {
+                                                        var reactionSender = getConversation.Result.Members.FirstOrDefault(m => m.Did == view.Sender.Did) ??
+                                                            throw new InvalidOperationException("Cannot find message sender in conversation view");
+                                                        Console.WriteLine($"{reactionSender}: {reaction.Value} {reaction.CreatedAt:g}");
+                                                    }
                                                 }
                                                 else if (message is DeletedMessageView _)
                                                 {
