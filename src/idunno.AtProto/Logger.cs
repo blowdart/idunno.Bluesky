@@ -6,7 +6,6 @@ using System.Net;
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto.Repo;
-using System.Text.Json;
 
 namespace idunno.AtProto
 {

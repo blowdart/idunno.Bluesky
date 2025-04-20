@@ -29,26 +29,27 @@ From there, you use the `SubscribedLabelers` property and pass that into any API
 For example, to get a user's notifications with labels applied:
 
 ```c#
-AtProtoHttpResult<NotificationsList> notificationsList =
+var notificationsList =
     await agent.ListNotifications(
       limit: pageSize,
       cursor: cursor,
-      subscribedLabelers: userPreferences.SubscribedLabelers).ConfigureAwait(false);
+      subscribedLabelers: userPreferences.SubscribedLabelers);
 ```
 
-For notifications labels are applied to the `Author` property and the `PostView` property. You can iterate through the collection, and act on it
+For notifications labels are applied to the `Author` property and the `PostView` property. You can iterate through the collection, and act on it.
+For example, to display labels applied to the author of a notification:
 
 ```c#
 foreach (Notification notification in notificationsList.Result)
 {
     StringBuilder labelDisplayBuilder = new ();
-    foreach (Label label in author.Labels)
+    foreach (var label in notification.Author.Labels)
     {
         labelDisplayBuilder.Append(CultureInfo.InvariantCulture, $"[{label.Value}] ");
     }
     labelDisplayBuilder.Length--;
 
-    Console.WriteLine($"Author: {author} {labelDisplayBuilder}");
+    Console.WriteLine($"Author: {notification.Author} {labelDisplayBuilder}");
 }
 ```
 

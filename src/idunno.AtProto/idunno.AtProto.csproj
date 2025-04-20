@@ -57,4 +57,8 @@
     <PackageReference Include="Duende.IdentityModel.OidcClient" />
     <PackageReference Include="Duende.IdentityModel.OidcClient.Extensions" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Records\" />
+  </ItemGroup>
 </Project>

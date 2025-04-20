@@ -60,7 +60,7 @@ namespace idunno.Bluesky.Actor
         /// <summary>
         /// The label should be ignored and not shown to the user
         /// </summary>
-        Ignore,
+        Ignore = 0,
 
         /// <summary>
         /// The label should be shown to the user, but it should not affect the labelled content.

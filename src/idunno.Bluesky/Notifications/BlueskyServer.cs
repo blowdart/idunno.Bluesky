@@ -69,6 +69,7 @@ namespace idunno.Bluesky
                 $"{GetUnreadEndpoint}?{queryString}",
                 credentials: accessCredentials,
                 httpClient: httpClient,
+               
                 jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);

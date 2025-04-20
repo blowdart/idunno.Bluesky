@@ -15,6 +15,8 @@ using idunno.Bluesky.Feed.Gates.Model;
 using idunno.Bluesky.Feed.Model;
 using idunno.Bluesky.Graph;
 using idunno.Bluesky.Graph.Model;
+using idunno.Bluesky.Labeler;
+using idunno.Bluesky.Labeler.Model;
 using idunno.Bluesky.Notifications;
 using idunno.Bluesky.Notifications.Model;
 using idunno.Bluesky.Record;
@@ -251,6 +253,12 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(SavedFeedPreferenceType))]
     [JsonSerializable(typeof(ThreadSortingMode))]
     [JsonSerializable(typeof(ListPurpose))]
+
+    [JsonSerializable(typeof(GetServicesResponse))]
+    [JsonSerializable(typeof(LabelerView))]
+    [JsonSerializable(typeof(LabelerViewDetailed))]
+    [JsonSerializable(typeof(LabelerViewerState))]
+    [JsonSerializable(typeof(LabelerDeclarationRecordValue))]
 
     [JsonSerializable(typeof(DateTimeOffset))]
     internal partial class SourceGenerationContext : JsonSerializerContext

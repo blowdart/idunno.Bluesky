@@ -196,9 +196,9 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClient<GetPreferencesResponse> request = new(AppViewProxy, loggerFactory);
+            AtProtoHttpClient<GetPreferencesResponse> client = new(AppViewProxy, loggerFactory);
 
-            AtProtoHttpResult<GetPreferencesResponse> response = await request.Get(
+            AtProtoHttpResult<GetPreferencesResponse> response = await client.Get(
                 service,
                 GetPreferencesEndpoint,
                 credentials: accessCredentials,

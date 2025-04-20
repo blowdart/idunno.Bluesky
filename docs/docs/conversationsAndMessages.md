@@ -65,9 +65,44 @@ You can send multiple messages into multiple conversations using `SendMessageBat
 
 To delete a message in a conversation use `DeleteMessageForSelf()`, passing the conversation id and the message id.
 
+## <a name="reacting">Message reactions</a>
+
+Bluesky allows for simple message reactions in conversations. The `MessageView` you get from `getMessages` has a `Reactions` property which is a collection of `ReactionView`. To display reactions
+you might adjust the code above for display a message to include reactions like this:
+
+```
+foreach (MessageViewBase message in getMessages.Result)
+{
+    if (message is MessageView view)
+    {
+        var sender = getConversation.Result.Members.FirstOrDefault(m => m.Did == view.Sender.Did) ??
+            throw new InvalidOperationException("Cannot find message sender in conversation view");
+
+        Console.WriteLine($"{sender}: {view.Text} {view.SentAt:g}");
+
+        foreach (ReactionView reaction in view.Reactions)
+        {
+            var reactionSender = getConversation.Result.Members.FirstOrDefault(m => m.Did == view.Sender.Did) ??
+                throw new InvalidOperationException("Cannot find message sender in conversation view");
+
+            Console.WriteLine($"{reactionSender}: {reaction.Value} {reaction.CreatedAt:g}");
+        }
+    }
+    else if (message is DeletedMessageView _)
+    {
+        Console.WriteLine("Deleted Message");
+    }
+}
+```
+
+To add a reaction to a message call `AddReaction()`. This requires the conversation id and the message id, and the reaction you want to add. A reaction is an single emoji grapheme.
+To delete a reaction call `RemoveReaction()` with the same parameters with which you added a reaction.
+
+
 ## <a name="creating">Starting a conversation</a>
 
-To start a conversation you will need the DIDs of the conversation members, which you pass a collection to `GetConversationForMembers()`. If the user has left a conversation with these DIDs it will be restored in the direct message list.
+To start a conversation you will need the DIDs of the conversation members, which you pass a collection to `GetConversationForMembers()`. If the user has left a conversation with these DIDs
+it will be restored in the direct message list.
 
 ```c#
 var memberDid = await agent.ResolveHandle("example.invalid.handle", cancellationToken);

@@ -106,5 +106,7 @@ namespace idunno.Bluesky
         [LoggerMessage(81, LogLevel.Error, "GetJobStatus failed with {statusCode} error {error} message {message}")]
         internal static partial void GetJobStatusFailed(ILogger logger, HttpStatusCode statusCode, string? error, string? message);
 
+        [LoggerMessage(90, LogLevel.Error, "GetLabelerServices failed because GetUserPreferencesFailed with {statusCode} error {error} message {message}")]
+        internal static partial void GetUserPreferencesFailedInGetLabelerServices(ILogger logger, HttpStatusCode statusCode, string? error, string? message);
     }
 }

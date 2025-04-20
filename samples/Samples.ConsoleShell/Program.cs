@@ -11,6 +11,8 @@ using idunno.Bluesky;
 
 using Samples.Common;
 using idunno.AtProto;
+using idunno.AtProto.Repo;
+using idunno.Bluesky.Moderation;
 
 namespace Samples.ConsoleShell
 {
@@ -33,7 +35,7 @@ namespace Samples.ConsoleShell
             ArgumentException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
-            // proxyUri = new Uri("http://localhost:8866");
+            proxyUri = new Uri("http://localhost:8866");
 
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
@@ -104,6 +106,16 @@ namespace Samples.ConsoleShell
                     }
                 }
                 // END-AUTHENTICATION
+
+                var post = await agent.GetPost("at://did:plc:g2p3bnbzcvcbohfpvjxfazqv/app.bsky.feed.post/3ln3n4uaipc2h", cancellationToken: cancellationToken);
+                post.EnsureSucceeded();
+
+                var reportResult = await agent.CreateModerationReport(
+                    labelerDid: "did:plc:newitj5jo3uel7o4mnf3vj2o",
+                    subject: post.Result.StrongReference,
+                    reportType: ReportType.Other,
+                    reason: "Bluesky not twitter",
+                    cancellationToken: cancellationToken);
 
                 Debugger.Break();
 

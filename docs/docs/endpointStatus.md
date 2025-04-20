@@ -47,10 +47,12 @@
 | | [app.bsky.graph.unmuteActorList](https://docs.bsky.app/docs/api/app-bsky-graph-unmute-actor-list) | `BlueskyAgent.UnmuteActorList()` | ✔ |
 | | [app.bsky.graph.unmuteActor](https://docs.bsky.app/docs/api/app-bsky-graph-unmute-actor) | `BlueskyAgent.UmnuteActor()` | ✔ |
 | | [app.bsky.graph.unmuteThread](https://docs.bsky.app/docs/api/app-bsky-graph-unmute-thread) | `BlueskyAgent.UnmuteThread()` | ✔ |
+| **Labelers** | [app.bsky.labeler.getServices](https://docs.bsky.app/docs/api/app-bsky-labeler-get-services) | `BlueskyAgent.GetLabelerServices()` | ✔ |
 | **Notifications** | [app.bsky.notification.getUnreadCount](https://docs.bsky.app/docs/api/app-bsky-notification-get-unread-count) | `BlueskyAgent.GetNotificationUnreadCount()` | ✔ |
 | | [app.bsky.notification.listNotifications](https://docs.bsky.app/docs/api/app-bsky-notification-list-notifications) | `BlueskyAgent.ListNotifications()` | ✔ |
 | | [app.bsky.notification.updateSeen](https://docs.bsky.app/docs/api/app-bsky-notification-update-seen) | `BlueskyAgent.UpdateNotificationSeenAt()` | ✔ |
-| **Direct Messages** | [chat.bsky.convo.deleteMessageForSelf](https://docs.bsky.app/docs/api/chat-bsky-convo-delete-message-for-self) | `BlueskyAgent.DeleteMessageForSelf()` | ✔ |
+| **Direct Messages** | chat.bsky.convo.AddReaction | `BlueskyAgent.AddReaction()` | ✔ |
+| | [chat.bsky.convo.deleteMessageForSelf](https://docs.bsky.app/docs/api/chat-bsky-convo-delete-message-for-self) | `BlueskyAgent.DeleteMessageForSelf()` | ✔ |
 | | [chat.bsky.convo.getConvoForMembers](https://docs.bsky.app/docs/api/chat-bsky-convo-get-convo-for-members) | `BlueskyAgent.GetConversationForMembers()` | ✔ |
 | | [chat.bsky.convo.getConvo](https://docs.bsky.app/docs/api/chat-bsky-convo-get-convo) | `BlueskyAgent.GetConversation()` | ✔ |
 | | [chat.bsky.convo.getLog](https://docs.bsky.app/docs/api/chat-bsky-convo-get-log) | `BlueskyAgent.GetConversationLog()` | ✔ |
@@ -60,6 +62,7 @@
 | | [chat.bsky.convo.muteConvos](https://docs.bsky.app/docs/api/chat-bsky-convo-mute-convo) | `BlueskyAgent.MuteConversation()` | ✔ |
 | | [chat.bsky.convo.sendMessageBatch](https://docs.bsky.app/docs/api/chat-bsky-convo-send-message-batch) | `BlueskyAgent.SendMessageBatch()` | ✔ |
 | | [chat.bsky.convo.sendMessage](https://docs.bsky.app/docs/api/chat-bsky-convo-send-message) | `BlueskyAgent.SendMessage()` | ✔ |
+| | chat.bsky.convo.RemoveReaction | `BlueskyAgent.AddReaction()` | ✔ |
 | | [chat.bsky.convo.unmuteConvos](https://docs.bsky.app/docs/api/chat-bsky-convo-unmute-convo) | `BlueskyAgent.UnmuteConversation()` | ✔ |
 | | [chat.bsky.convo.updateAllRead](https://docs.bsky.app/docs/api/chat-bsky-convo-update-all-read) | `BlueskyAgent.UpdateRead()` | ✔ |
 | | [chat.bsky.convo.updateRead](https://docs.bsky.app/docs/api/chat-bsky-convo-update-read) | `BlueskyAgent.UpdateRead()` | ✔ |
@@ -69,6 +72,7 @@
 | ------------ | ------------------------------------------------------------ | ----------------------------- | ------ |
 | **Identity** | * _Uses DNS and .well-known endpoint resolution not the API  | `AtProtoAgent.ResolveHandle()` | ✔ |
 | **Labels**   | [com.atproto.label.queryLabels](https://docs.bsky.app/docs/api/com-atproto-label-query-labels) | `AtProtoAgent.QueryLabels()` | ✔ |
+| **Moderation**   | [com.atproto.moderation.createReport](https://docs.bsky.app/docs/api/com-atproto-moderation-create-report) | `AtProtoAgent.CreateModerationReport()` | ✔ |
 | **Repo**     | [com.atproto.repo.applyWrites](https://docs.bsky.app/docs/api/com-atproto-repo-apply-writes) | `AtProtoAgent.ApplyWrites()` | ✔ |
 | | [com.atproto.repo.createRecord](https://docs.bsky.app/docs/api/com-atproto-repo-create-record) | `AtProtoAgent.CreateRecord()` | ✔ |
 | | [com.atproto.repo.deleteRecord](https://docs.bsky.app/docs/api/com-atproto-repo-delete-record) | `AtProtoAgent.DeleteRecord()` | ✔ |

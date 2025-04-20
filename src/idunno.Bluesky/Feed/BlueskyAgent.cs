@@ -317,7 +317,47 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Gets the <see cref="FeedViewPost"/>s for a specified list of posts (by <see cref="AtUri"/>).
+        /// Gets the <see cref="PostView"/> for the post specified by <paramref name="uri"/>.
+        /// </summary>
+        /// <param name="uri">An <see cref="AtUri" /> to return the <see cref="PostView" /> for.</param>
+        /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
+        public async Task<AtProtoHttpResult<PostView>> GetPost(
+            AtUri uri,
+            IEnumerable<Did>? subscribedLabelers = null,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(uri);
+
+            AtProtoHttpResult<IReadOnlyCollection<PostView>> postsView = await GetPosts(
+                [uri],
+                subscribedLabelers: subscribedLabelers,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (postsView.Succeeded && postsView.Result.Count == 1)
+            {
+                return new AtProtoHttpResult<PostView>(
+                    postsView.Result.First(),
+                    statusCode: postsView.StatusCode,
+                    httpResponseHeaders: postsView.HttpResponseHeaders,
+                    atErrorDetail: postsView.AtErrorDetail,
+                    rateLimit: postsView.RateLimit);
+            }
+            else
+            {
+                return new AtProtoHttpResult<PostView>(
+                    null,
+                    statusCode: postsView.StatusCode,
+                    httpResponseHeaders: postsView.HttpResponseHeaders,
+                    atErrorDetail: postsView.AtErrorDetail,
+                    rateLimit: postsView.RateLimit);
+            }
+       }
+
+        /// <summary>
+        /// Gets the <see cref="PostView"/>s for a specified list of posts (by <see cref="AtUri"/>).
         /// </summary>
         /// <param name="uris">List of post <see cref="AtUri" /> to return views for.</param>
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>

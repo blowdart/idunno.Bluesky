@@ -3,11 +3,13 @@
 
 using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
-
+using idunno.AtProto.Admin;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Authentication.Models;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Labels.Models;
+using idunno.AtProto.Moderation;
+using idunno.AtProto.Moderation.Model;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
 using idunno.AtProto.Server.Models;
@@ -38,8 +40,12 @@ namespace idunno.AtProto
     [JsonSerializable(typeof(Nsid))]
     [JsonSerializable(typeof(RecordKey))]
 
+    [JsonSerializable(typeof(StrongReference))]
+    [JsonSerializable(typeof(RepoReference))]
+
     [JsonSerializable(typeof(Label))]
     [JsonSerializable(typeof(List<Label>))]
+    [JsonSerializable(typeof(LabelValueDefinition))]
     [JsonSerializable(typeof(ReadOnlyCollection<SelfLabel>))]
     [JsonSerializable(typeof(SelfLabel))]
     [JsonSerializable(typeof(SelfLabels))]
@@ -78,6 +84,10 @@ namespace idunno.AtProto
 
     [JsonSerializable(typeof(AccountStatus))]
     [JsonSerializable(typeof(ValidationStatus))]
+
+    [JsonSerializable(typeof(CreateReportRequest))]
+    [JsonSerializable(typeof(ModerationReport))]
+    [JsonSerializable(typeof(SubjectType))]
 
     [JsonSerializable(typeof(ServiceToken))]
 

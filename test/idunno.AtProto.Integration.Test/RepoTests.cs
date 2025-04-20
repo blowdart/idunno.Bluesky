@@ -10,8 +10,6 @@ using Microsoft.AspNetCore.TestHost;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
-using Microsoft.Extensions.Options;
-using System.Net.Http;
 
 namespace idunno.AtProto.Integration.Test
 {

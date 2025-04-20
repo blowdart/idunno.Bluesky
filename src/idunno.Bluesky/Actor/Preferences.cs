@@ -95,9 +95,9 @@ namespace idunno.Bluesky.Actor
                 }
             }
 
-            if (enableBlueskyModerationLabeler && !labelerPreferenceList.Contains(WellKnownDistributedIdentifiers.ModerationLabeler))
+            if (enableBlueskyModerationLabeler && !labelerPreferenceList.Contains(WellKnownDistributedIdentifiers.BlueskyModerationLabeler))
             {
-                labelerPreferenceList.Insert(0, WellKnownDistributedIdentifiers.ModerationLabeler);
+                labelerPreferenceList.Insert(0, WellKnownDistributedIdentifiers.BlueskyModerationLabeler);
             }
 
             SubscribedLabelers = labelerPreferenceList.AsReadOnly();

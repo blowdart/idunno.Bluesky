@@ -119,7 +119,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// The <see cref="Did"/> for at://moderation.bsky.app.
         /// </summary>
-        public static Did ModerationLabeler => new(@"did:plc:ar7c4by46qjdydhdevvrndac");
+        public static Did BlueskyModerationLabeler => new(@"did:plc:ar7c4by46qjdydhdevvrndac");
 
         /// <summary>
         /// The <see cref="Did"/> for the video processing system.
@@ -246,7 +246,10 @@ namespace idunno.Bluesky
         /// </summary>
         public const string StarterPack = "app.bsky.graph.starterpack";
 
-
+        /// <summary>
+        /// Indicates the declaration report for a labeler.
+        /// </summary>
+        public const string LabelerDeclaration = "app.bsky.labeler.service";
     }
 
     /// <summary>

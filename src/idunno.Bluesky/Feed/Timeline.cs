@@ -8,7 +8,7 @@ namespace idunno.Bluesky.Feed
     /// </summary>
     public class Timeline : PagedViewReadOnlyCollection<FeedViewPost>
     {
-        internal Timeline() : this(new List<FeedViewPost>(), null)
+        internal Timeline() : this([], null)
         {
         }
 
@@ -16,7 +16,7 @@ namespace idunno.Bluesky.Feed
         {
         }
 
-        internal Timeline(ICollection<FeedViewPost> collection, string? cursor = null) : this(new List<FeedViewPost>(collection), cursor)
+        internal Timeline(ICollection<FeedViewPost> collection, string? cursor = null) : this([.. collection], cursor)
         {
         }
     }

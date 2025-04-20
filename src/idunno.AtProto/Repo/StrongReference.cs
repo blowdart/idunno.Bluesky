@@ -2,13 +2,14 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
+using idunno.AtProto.Moderation;
 
 namespace idunno.AtProto.Repo
 {
     /// <summary>
     /// Represents a strong reference to a record, consisting of an AT URI and a content-hash fingerprint.
     /// </summary>
-    public record StrongReference
+    public sealed record StrongReference : SubjectType
     {
         /// <summary>
         /// Creates a new <see cref="StrongReference"/> with the specified AT URI and CID.

@@ -6,14 +6,14 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
-using idunno.Bluesky.Record;
 using idunno.AtProto.Authentication;
+
+using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky
 {
     public static partial class BlueskyServer
     {
-
         /// <summary>
         /// Gets the record for the <see cref="Post"/> identified by <paramref name="uri"/> and, optional <paramref name="cid"/>.
         /// </summary>
