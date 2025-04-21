@@ -72,6 +72,8 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(SavedFeedPreference))]
     [JsonSerializable(typeof(SavedFeedPreference2))]
     [JsonSerializable(typeof(ThreadViewPreference))]
+    [JsonSerializable(typeof(VerificationState))]
+    [JsonSerializable(typeof(VerificationView))]
 
     [JsonSerializable(typeof(BeginConversation))]
     [JsonSerializable(typeof(CreateMessage))]
@@ -230,6 +232,9 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(ProfileRecordValue))]
     [JsonSerializable(typeof(SelfLabels))]
     [JsonSerializable(typeof(StarterPackRecordValue))]
+    [JsonSerializable(typeof(VerificationRecord))]
+    [JsonSerializable(typeof(VerificationRecordValue))]
+
 
     [JsonSerializable(typeof(ByteSlice))]
     [JsonSerializable(typeof(Facet))]

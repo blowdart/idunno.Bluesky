@@ -55,15 +55,14 @@ and passing in the `JsonSerializerOptions.Default` from your code where you have
 
 ### Annotating your own classes for json source generation
 
-The reference `AtProto` implementation is quite laissez faire about where the `$type` property appears in serialized JSON. Make sure that the `AllowOutOfOrderMetadataProperties` is set
-to `true`` in your `JsonSourceGenerationOptions` on your `SourceGenerationContext` class. For example,
+The reference `AtProto` implementation is quite laissez faire about where the `$type` property appears in serialized JSON. Make sure that the
+`AllowOutOfOrderMetadataProperties` is set to `true`` in your `JsonSourceGenerationOptions` on your `SourceGenerationContext` class. For example,
 
 ```c#
     [JsonSourceGenerationOptions(
         AllowOutOfOrderMetadataProperties = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         IgnoreReadOnlyProperties = false,
-        GenerationMode = JsonSourceGenerationMode.Metadata,
         NumberHandling = JsonNumberHandling.AllowReadingFromString,
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
@@ -71,8 +70,8 @@ to `true`` in your `JsonSourceGenerationOptions` on your `SourceGenerationContex
         UseStringEnumConverter = true)]
 ```
 
-You must also ensure both your record classes (those deriving from `AtProtoRecord`) and your record value classes (those deriving from `AtProtoRecordValue`) are marked as `JsonSerializable` in your
-`JsonSerializerContext`. Additionally you must also add the `AtProtoRecord<YourRecordValue>` class to the context.
+You must also ensure both your record classes (those deriving from `AtProtoRecord`) and your record value classes (those deriving from `AtProtoRecordValue`) are marked
+as `JsonSerializable` in your `JsonSerializerContext`. Additionally you must also add the `AtProtoRecord<YourRecordValue>` class to the context.
 
 For example, if you have a custom `AtProtoRecordValue` and corresponding `AtProtoRecord<TRecordValue>` it should look something like the following.
 
@@ -93,7 +92,6 @@ For example, if you have a custom `AtProtoRecordValue` and corresponding `AtProt
         AllowOutOfOrderMetadataProperties = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         IgnoreReadOnlyProperties = false,
-        GenerationMode = JsonSourceGenerationMode.Metadata,
         NumberHandling = JsonNumberHandling.AllowReadingFromString,
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
@@ -119,3 +117,6 @@ Native AOT has benefits:
 * Reduced memory usage: Native AOT apps can show reduced memory demands, depending on the work it does.
 
 If you wish to use AOT with your own classes you must enable JSON Source Generation for your `AtProtoRecordValue` and `AtProtoRecord` records and follow the guidance above.
+
+> [!WARNING]
+> Trimming is not currently supported due to a bug in the [linker](https://github.com/dotnet/runtime/issues/114307).

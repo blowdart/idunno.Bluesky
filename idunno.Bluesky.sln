@@ -137,6 +137,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{E2B63F0A-9
 		docs\docs\notifications.md = docs\docs\notifications.md
 		docs\docs\posting.md = docs\docs\posting.md
 		docs\docs\profileEditing.md = docs\docs\profileEditing.md
+		docs\docs\profiles.md = docs\docs\profiles.md
 		docs\docs\savingAndRestoringAuthentication.md = docs\docs\savingAndRestoringAuthentication.md
 		docs\docs\sourceGeneration.md = docs\docs\sourceGeneration.md
 		docs\docs\threadGatesAndPostGates.md = docs\docs\threadGatesAndPostGates.md

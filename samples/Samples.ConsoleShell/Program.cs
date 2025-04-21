@@ -7,12 +7,10 @@ using System.Diagnostics;
 
 using Microsoft.Extensions.Logging;
 
-using idunno.Bluesky;
-
 using Samples.Common;
+
 using idunno.AtProto;
-using idunno.AtProto.Repo;
-using idunno.Bluesky.Moderation;
+using idunno.Bluesky;
 
 namespace Samples.ConsoleShell
 {
@@ -35,7 +33,7 @@ namespace Samples.ConsoleShell
             ArgumentException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
-            proxyUri = new Uri("http://localhost:8866");
+            // proxyUri = new Uri("http://localhost:8866");
 
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");

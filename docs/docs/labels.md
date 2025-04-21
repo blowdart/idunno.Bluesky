@@ -14,7 +14,7 @@ the agent has authenticated.
 using Bluesky.Agent;
 
 Preferences userPreferences;
-AtProtoHttpResult<Preferences> userPreferencesResult = await agent.GetPreferences();
+var userPreferencesResult = await agent.GetPreferences();
 if (userPreferencesResult.Succeeded)
 {
     userPreferences = userPreferencesResult.Result;
@@ -52,6 +52,9 @@ foreach (Notification notification in notificationsList.Result)
     Console.WriteLine($"Author: {notification.Author} {labelDisplayBuilder}");
 }
 ```
+
+Many APIs will take a `subscribedLabelers` parameters, including `GetProfile`, `GetSuggestions`, `SearchActors`, `GetFeed`, `GetTimeline` and so on.
+It is recommended you cache the user's subscribed labelers and provide them to any API that accepts them.
 
 By default idunno.Bluesky will return the Bluesky moderation labeler as part of a user's labeler subscriptions. This can be controlled
 with the `includeBlueskyModerationLabeler` parameter on the `GetPreferences` method.

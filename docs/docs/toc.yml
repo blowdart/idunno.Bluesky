@@ -26,6 +26,8 @@ items:
 
   - name: Users
     items:
+      - name: Viewing user profiles
+        href: profiles.md
       - name: User Preferences
         href: userPreferences.md
       - name: Conversations & Messages

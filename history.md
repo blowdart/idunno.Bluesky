@@ -1,5 +1,13 @@
 # Version History
 
+## 0.6.0
+
+### Features
+
+#### idunno.Bluesky
+
+* Add support for verification, `VerificationView` is added to `ProfileViewBasic`, `ProfileView` and `ProfileViewDetailed`.
+
 ## 0.5.0
 
 ### Bug Fixes

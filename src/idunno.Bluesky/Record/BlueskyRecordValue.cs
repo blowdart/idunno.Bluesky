@@ -5,7 +5,6 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Actions;
-using idunno.Bluesky.Labeler;
 
 namespace idunno.Bluesky.Record
 {
@@ -22,6 +21,7 @@ namespace idunno.Bluesky.Record
     [JsonDerivedType(typeof(ProfileRecordValue), RecordType.Profile)]
     [JsonDerivedType(typeof(StarterPackRecordValue), RecordType.StarterPack)]
     [JsonDerivedType(typeof(LabelerDeclarationRecordValue), RecordType.LabelerDeclaration)]
+    [JsonDerivedType(typeof(VerificationRecordValue), RecordType.Verification)]
     public record BlueskyRecordValue : AtProtoRecordValue
     {
         /// <summary>

@@ -174,6 +174,11 @@ namespace idunno.Bluesky
         /// The NSID for an actor's profile.
         /// </summary>
         public static Nsid Profile { get; } = new Nsid("app.bsky.actor.profile");
+
+        /// <summary>
+        /// The NSID for a user's verification collection.
+        /// </summary>
+        public static Nsid Verification { get; } = new Nsid("app.bsky.graph.verification");
     }
 
     /// <summary>
@@ -250,6 +255,11 @@ namespace idunno.Bluesky
         /// Indicates the declaration report for a labeler.
         /// </summary>
         public const string LabelerDeclaration = "app.bsky.labeler.service";
+
+        /// <summary>
+        /// Indicates a verification record.
+        /// </summary>
+        public const string Verification = "app.bsky.graph.verification";
     }
 
     /// <summary>

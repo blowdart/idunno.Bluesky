@@ -30,6 +30,7 @@ namespace idunno.Bluesky.Actor
         /// <param name="viewer">Metadata about the current user's relationship to the actor.</param>
         /// <param name="labels">Labels applied to the actor.</param>
         /// <param name="createdAt">The date and time the actor was created.</param>
+        /// <param name="verification">The <see cref="VerificationState"/> of the actor, if any.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> or <paramref name="handle"/> are null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///   Thrown when <paramref name="displayName"/> is not null and has a character length greater than 640 or a grapheme length greater than 64.
@@ -43,7 +44,8 @@ namespace idunno.Bluesky.Actor
             ProfileAssociated? associated,
             ActorViewerState? viewer,
             IReadOnlyCollection<Label>? labels,
-            DateTimeOffset? createdAt)
+            DateTimeOffset? createdAt,
+            VerificationState? verification)
         {
             ArgumentNullException.ThrowIfNull(did);
             ArgumentNullException.ThrowIfNull(handle);
@@ -61,6 +63,7 @@ namespace idunno.Bluesky.Actor
             Associated = associated;
             Viewer = viewer;
             CreatedAt = createdAt;
+            Verification = verification;
 
             if (labels is null)
             {
@@ -107,20 +110,25 @@ namespace idunno.Bluesky.Actor
         public ActorViewerState? Viewer { get; init; }
 
         /// <summary>
-        /// Any labels applied to the actor.
+        /// Gets any labels applied to the actor.
         /// </summary>
         /// <remarks>
         ///<para>
-        ///Labels will only be populated if a list of subscribed labelers from a user's <see cref="Preferences"/>
-        ///is passed into an API which returns this class.
+        /// Labels will only be populated if a list of subscribed labelers from a user's <see cref="Preferences"/>
+        /// is passed into an API which returns this class.
         ///</para>
         /// </remarks>
         public IReadOnlyCollection<Label> Labels { get; init; }
 
         /// <summary>
-        /// The date and time the actor was created at.
+        /// Gets the date and time the actor was created at.
         /// </summary>
         public DateTimeOffset? CreatedAt { get; init; }
+
+        /// <summary>
+        /// Gets the <see cref="VerificationState"/> of the actor, if any.
+        /// </summary>
+        public VerificationState? Verification { get; init; }
 
         /// <summary>
         /// Gets a string representation of the <see cref="ProfileView"/>.
