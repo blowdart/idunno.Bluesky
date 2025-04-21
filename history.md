@@ -1,17 +1,41 @@
-# idunno.Bluesky Version History
+# Version History
 
 ## 0.5.0
 
-### idunno.AtProto
+### Bug Fixes
 
-* Add support for JSON source generation
-* Add builder for `AtProtoAgent`
+#### idunno.Bluesky
 
-### idunno.Bluesky
+* Fix [direct message support](https://github.com/blowdart/idunno.Bluesky/issues/135).
 
-* Add support for JSON source generation
-* Add builder for `BlueskyAgent`
+### Features
+
+#### idunno.AtProto
+
+* Add support for JSON source generation.
+* Add builder for `AtProtoAgent`.
+* Add support for `CreateModerationReport()`.
+* Removed previously marked obsolete `RefreshSession()`, use `RefreshCredentials()` instead.
+
+#### idunno.Bluesky
+
+* Add support for JSON source generation.
+* Add builder for `BlueskyAgent.`
 * Wire up `at-proxy` support for Bluesky API endpoints due to upcoming [automatic forwarding deprecation](https://docs.bsky.app/blog/2025-protocol-roadmap-spring).
+* Add support for adding and reading reactions to and from direct messages.
+* Add support for `GetLabelerDeclaration()` and `GetLabelerServices()`.
+* Add support for `CreateModerationReport()`, including well-known constants.
+
+### Breaking Changes
+
+#### idunno.AtProto
+
+* Repo operations now return `*Result` records (`ApplyWritesCreateResult`, `ApplyWritesDeleteResult`, `ApplyWritesUpdateResult`, `CreateRecordResult`, `PutRecordResult`). 
+  If you are using unwrapped repo operations you will need to update your type declarations, if not using `var`.
+
+#### idunno.Bluesky
+
+* Mirror `idunno.AtProto` return types.
 
 ## 0.4.1
 
@@ -19,7 +43,7 @@
 
 #### idunno.Bluesky
 
-* *Fix video uploading code, sample and documentation
+* Fix video uploading code, sample and documentation.
 
 ## 0.4.0
 
@@ -27,7 +51,7 @@
 
 #### idunno.Bluesky
 
-* *Support for user thread gate and post gate preference settings.
+* Support for user thread gate and post gate preference settings.
 
 ## 0.3.0
 
@@ -35,7 +59,7 @@
 
 #### idunno.AtProto
 
-* OAuth support
+* OAuth support.
 
 ### Breaking Changes
 
@@ -102,12 +126,12 @@
 
 #### idunno.AtProto
 
-* Fixed incorrect JWT DateTime comparison - thank you [alexmg](https://github.com/alexmg)
-* Fixed json deserialization errors in GetSessionResponse
+* Fixed incorrect JWT DateTime comparison - thank you [alexmg](https://github.com/alexmg).
+* Fixed json deserialization errors in `GetSessionResponse`.
 
 #### Samples
 
-* Added catch in Samples.SessionEvents when a bad token is being set on purpose - thank you [peteraritchie](https://github.com/peteraritchie)
+* Added catch in Samples.SessionEvents when a bad token is being set on purpose - thank you [peteraritchie](https://github.com/peteraritchie).
 
 ## 0.2.0
 
@@ -115,11 +139,11 @@
 
 #### idunno.AtProto
 
-* Add support for GetServiceAuth()
+* Add support for `GetServiceAuth()`.
 
 #### idunno.Bluesky
 
-* Add support for video
+* Add support for video.
 
 ## 0.1.3
 
@@ -127,18 +151,24 @@
 
 #### idunno.Bluesky
 
-* Add self labels for posts
-* *Breaking* - Consolidation of record value classes
+* Add self labels for posts.
+* *Breaking* - Consolidation of record value classes.
 
 ### Bug fixes
 
 #### idunno.Bluesky
 
-* Fixed facet positioning
+* Fixed facet positioning.
+
+### Breaking changes
+
+#### idunno.Bluesky
+
+*  Consolidation of record value classes.
 
 ### Docs
 
-* Add Profile editing sample
+* Add Profile editing sample.
 
 ## 0.1.2
 
@@ -146,13 +176,13 @@
 
 #### idunno.Bluesky
 
-* Adds Profile editing
+* Adds Profile editing.
 
 ### Bug fixes
 
 #### idunno.Bluesky
 
-* Fixed positioning bug for PostBuilder facets
+* Fixed positioning bug for `PostBuilder` facets.
 * Removed incorrect link length check.
 
 ## 0.1.1
@@ -169,21 +199,21 @@
 
 #### idunno.AtProto
 
-* PDS authentication and session management
-* List, Create, Get, Put, Delete records
-* Blob uploads
-* Handle and PDS resolution
+* PDS authentication and session management.
+* List, Create, Get, Put, Delete records.
+* Blob uploads.
+* Handle and PDS resolution.
 
 #### idunno.Bluesky
 
-* Viewing feeds
-* Viewing a user's timeline and notifications
-* Viewing threads
-* Creating and deleting posts
-* Gating threads and posts
-* Likes, quotes, and reposts
-* Viewing user profiles
-* Following and unfollowing users
-* Muting and blocking users
-* Sending, receiving, and deleting messages
+* Viewing feeds.
+* Viewing a user's timeline and notifications.
+* Viewing threads.
+* Creating and deleting posts.
+* Gating threads and posts.
+* Likes, quotes, and reposts.
+* Viewing user profiles.
+* Following and unfollowing users.
+* Muting and blocking users.
+* Sending, receiving, and deleting messages.
 

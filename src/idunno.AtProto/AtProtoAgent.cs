@@ -1,7 +1,9 @@
 ﻿// Copyright(c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Text.Json;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -9,15 +11,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
-using idunno.AtProto.Repo.Models;
-
-using idunno.DidPlcDirectory;
-
 using Blob = idunno.AtProto.Repo.Blob;
 using idunno.AtProto.Server.Models;
-using System.Text.Json;
-using System.Diagnostics.CodeAnalysis;
-using Duende.IdentityModel.OidcClient;
+using idunno.DidPlcDirectory;
+
+
 
 namespace idunno.AtProto
 {

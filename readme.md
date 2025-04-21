@@ -1,4 +1,4 @@
-# ![The Bluesky butterfly logo, except in purple](docs/docicon.png)idunno.Bluesky
+﻿# ![The Bluesky butterfly logo, except in purple](docs/docicon.png)idunno.Bluesky
 
 [if you want me to wear 37 pieces of flair, like your pretty boy over there, Brian, why don't you just make the minimum 37 pieces of flair?]: #
 
@@ -49,7 +49,7 @@ The [releases page](https://github.com/blowdart/idunno.Bluesky/releases) provide
 
 * Logging in idunno.Bluesky
 * GIF attaching
-* AOT & trimming support
+* AOT & trimming support (Contingent on [linker bug](https://github.com/dotnet/runtime/issues/114307))
 * Firehose support
 * Wider test coverage
 * More deserialization tests with captured responses

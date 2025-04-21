@@ -20,10 +20,11 @@ namespace idunno.AtProto
         AllowOutOfOrderMetadataProperties = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         IgnoreReadOnlyProperties = false,
-        GenerationMode = JsonSourceGenerationMode.Metadata,
+        GenerationMode = JsonSourceGenerationMode.Default,
         NumberHandling = JsonNumberHandling.AllowReadingFromString,
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+        UseStringEnumConverter = true,
         WriteIndented = false)]
 
     [JsonSerializable(typeof(AtErrorDetail))]
@@ -88,7 +89,6 @@ namespace idunno.AtProto
     [JsonSerializable(typeof(ModerationReport))]
 
     [JsonSerializable(typeof(ServiceToken))]
-
     internal partial class SourceGenerationContext : JsonSerializerContext
     {
     }

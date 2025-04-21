@@ -789,44 +789,6 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Refreshes the session specified by the <paramref name="refreshCredential"/>.
-        /// </summary>
-        /// <param name="refreshCredential">The refresh token to use to refresh the session.</param>
-        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="refreshCredential"/> is null, or its Uri property is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="refreshCredential"/>'s RefreshToken property is null or whitespace.</exception>
-        /// <exception cref="CredentialException">Thrown when <paramref name="refreshCredential"/> has not be created by <see cref="Login(AccessCredentials, CancellationToken)"/>.</exception>
-        /// <remarks>
-        /// <para>
-        /// Only sessions created with username and password authentication can be updated with <see cref="RefreshSession(RefreshCredential, CancellationToken)"/>.
-        ///
-        /// Oauth credentials should be refreshed by calling <see cref="RefreshCredentials(CancellationToken)"/>.
-        /// </para>
-        /// </remarks>
-        [Obsolete("This method is obsolete. Call RefreshCredentials() instead.", false)]
-        public async Task<bool> RefreshSession(RefreshCredential refreshCredential, CancellationToken cancellationToken = default)
-        {
-            ArgumentNullException.ThrowIfNull(refreshCredential);
-            ArgumentNullException.ThrowIfNull(refreshCredential.Service);
-
-            ArgumentException.ThrowIfNullOrWhiteSpace(refreshCredential.RefreshToken);
-
-            if (refreshCredential.AuthenticationType != AuthenticationType.UsernamePassword &&
-                refreshCredential.AuthenticationType != AuthenticationType.UsernamePasswordAuthFactorToken)
-            {
-                throw new CredentialException(refreshCredential);
-            }
-
-            if (refreshCredential is IAccessCredential)
-            {
-                refreshCredential = new RefreshCredential(refreshCredential.Service, refreshCredential.AuthenticationType, refreshCredential.RefreshToken);
-            }
-
-            return await RefreshSessionIssuedCredentials(refreshCredential, cancellationToken).ConfigureAwait(false);
-        }
-
-        /// <summary>
         /// Resolves the authorization server <see cref="Uri"/> for the specified <paramref name="handle"/>.
         /// </summary>
         /// <param name="handle">The handle of the account to resolve the authorization server for.</param>

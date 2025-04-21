@@ -5,7 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
-using idunno.AtProto.Repo.Models;
+
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.Feed.Gates.Model;
 
@@ -13,8 +13,6 @@ namespace idunno.Bluesky
 {
     public partial class BlueskyAgent
     {
-        //TODO: Move to server statics and wrap
-
         /// <summary>
         /// Creates a thread gate record in the current user's repository for the specified <paramref name="post"/>
         /// </summary>

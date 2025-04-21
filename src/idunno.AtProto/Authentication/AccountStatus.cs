@@ -14,12 +14,12 @@ namespace idunno.AtProto.Authentication
         Takendown,
 
         /// <summary>
-        /// The account his been suspended.
+        /// The account is suspended.
         /// </summary>
         Suspended,
 
         /// <summary>
-        /// The account deactivated.
+        /// The account is deactivated.
         /// </summary>
         Deactivated
     }
