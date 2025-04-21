@@ -27,7 +27,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Follow(Handle handle, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Follow(Handle handle, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(handle);
 
@@ -45,7 +45,7 @@ namespace idunno.Bluesky
 
             if (didResolutionResult is null || cancellationToken.IsCancellationRequested)
             {
-                return new AtProtoHttpResult<CreateRecordResponse>(
+                return new AtProtoHttpResult<CreateRecordResult>(
                     null,
                     HttpStatusCode.NotFound,
                     null,
@@ -70,7 +70,7 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage("AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Follow(Did did, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Follow(Did did, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(did);
 
@@ -82,7 +82,7 @@ namespace idunno.Bluesky
             FollowRecordValue follow = new(did);
 
             // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
-            AtProtoHttpResult<CreateRecordResponse> result = await CreateRecord<BlueskyTimestampedRecordValue>(
+            AtProtoHttpResult<CreateRecordResult> result = await CreateRecord<BlueskyTimestampedRecordValue>(
                 record: follow,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Follow,
@@ -257,7 +257,7 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage("AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Block(Did did, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Block(Did did, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(did);
 
@@ -428,7 +428,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is null, empty or whitespace.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
             string text,
             DateTimeOffset? createdAt = null,
             ICollection<ThreadGateRule>? threadGateRules = null,
@@ -490,7 +490,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is null, empty or whitespace.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
             string text,
             EmbeddedImage image,
             DateTimeOffset? createdAt = null,
@@ -553,7 +553,7 @@ namespace idunno.Bluesky
         ///   if <paramref name="text"/> length is greater than the maximum number of characters or graphemes, or
         ///   <paramref name="images"/> contains more than the maximum allowed number of images.
         /// </exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
             string text,
             ICollection<EmbeddedImage>? images,
             DateTimeOffset? createdAt = null,
@@ -650,7 +650,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
             string? text,
             EmbeddedVideo video,
             DateTimeOffset? createdAt = null,
@@ -730,7 +730,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="externalCard"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
             EmbeddedExternal externalCard,
             DateTimeOffset? createdAt = null,
             ICollection<ThreadGateRule>? threadGateRules = null,
@@ -769,7 +769,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="externalCard"/> is null, empty or whitespace.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
             string text,
             EmbeddedExternal externalCard,
             DateTimeOffset? createdAt = null,
@@ -841,7 +841,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
             Post post,
             ICollection<ThreadGateRule>? threadGateRules = null,
             ICollection<PostGateRule>? postGateRules = null,
@@ -855,7 +855,7 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            AtProtoHttpResult<CreateRecordResponse> result = await CreatePost(
+            AtProtoHttpResult<CreateRecordResult> result = await CreatePost(
                 post,
                 threadGateRules: threadGateRules,
                 postGateRules: postGateRules,
@@ -882,7 +882,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Post(PostBuilder postBuilder, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Post(PostBuilder postBuilder, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(postBuilder);
 
@@ -981,7 +981,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/> or <paramref name="text"/> is nul.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> ReplyTo(StrongReference parent, string text, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResult>> ReplyTo(StrongReference parent, string text, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(text);
             ArgumentNullException.ThrowIfNull(parent);
@@ -1012,7 +1012,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/>, <paramref name="text"/> or <paramref name="image"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> ReplyTo(StrongReference parent, string text, EmbeddedImage image, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResult>> ReplyTo(StrongReference parent, string text, EmbeddedImage image, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(text);
             ArgumentNullException.ThrowIfNull(parent);
@@ -1047,7 +1047,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> ReplyTo(StrongReference parent, string text, ICollection<EmbeddedImage>? images, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResult>> ReplyTo(StrongReference parent, string text, ICollection<EmbeddedImage>? images, CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrEmpty(text);
             ArgumentNullException.ThrowIfNull(parent);
@@ -1071,7 +1071,7 @@ namespace idunno.Bluesky
 
             if (!replyReferencesResult.Succeeded)
             {
-                return new AtProtoHttpResult<CreateRecordResponse>(
+                return new AtProtoHttpResult<CreateRecordResult>(
                     null,
                     replyReferencesResult.StatusCode,
                     replyReferencesResult.HttpResponseHeaders,
@@ -1107,7 +1107,7 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage("AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Repost(StrongReference post, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Repost(StrongReference post, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(post);
 
@@ -1197,7 +1197,7 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage("AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Like(StrongReference strongReference, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Like(StrongReference strongReference, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
 
@@ -1277,7 +1277,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is longer than the maximum permitted.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Quote(StrongReference strongReference, string text, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(StrongReference strongReference, string text, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
 
@@ -1296,7 +1296,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Quote(StrongReference strongReference, string text, EmbeddedImage image, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(StrongReference strongReference, string text, EmbeddedImage image, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
             ArgumentException.ThrowIfNullOrEmpty(text);
@@ -1316,7 +1316,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null or <paramref name="text"/> is null or empty.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Quote(StrongReference strongReference, string text, ICollection<EmbeddedImage>? images, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(StrongReference strongReference, string text, ICollection<EmbeddedImage>? images, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
             ArgumentNullException.ThrowIfNull(text);
@@ -1365,7 +1365,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is null</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Quote(
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(
             StrongReference strongReference,
             EmbeddedImage image,
             CancellationToken cancellationToken = default)
@@ -1396,7 +1396,7 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage("AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to ApplyWrites().")]
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> Quote(
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(
             StrongReference strongReference,
             ICollection<EmbeddedImage>? images = null,
             CancellationToken cancellationToken = default)
@@ -1429,7 +1429,7 @@ namespace idunno.Bluesky
 
             CreateOperation createOperation = new(CollectionNsid.Post, TimestampIdentifier.Generate(), postRecord);
 
-            AtProtoHttpResult<ApplyWritesResponse> result = await ApplyWrites(
+            AtProtoHttpResult<ApplyWritesResults> result = await ApplyWrites(
                 operations: [createOperation],
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 repo: Did,
@@ -1452,8 +1452,8 @@ namespace idunno.Bluesky
                     throw new InvalidOperationException($"ApplyWrites() result was not of type ApplyWritesCreateResult.");
                 }
 
-                return new AtProtoHttpResult<CreateRecordResponse>(
-                    new CreateRecordResponse(
+                return new AtProtoHttpResult<CreateRecordResult>(
+                    new CreateRecordResult(
                         recordResult.Uri,
                         recordResult.Cid,
                         result.Result.Commit,
@@ -1465,7 +1465,7 @@ namespace idunno.Bluesky
             }
             else
             {
-                return new AtProtoHttpResult<CreateRecordResponse>(
+                return new AtProtoHttpResult<CreateRecordResult>(
                     null,
                     result.StatusCode,
                     result.HttpResponseHeaders,
@@ -1605,7 +1605,7 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage("AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
-        private async Task<AtProtoHttpResult<CreateRecordResponse>> CreatePost(
+        private async Task<AtProtoHttpResult<CreateRecordResult>> CreatePost(
             Post post,
             ICollection<ThreadGateRule>? threadGateRules,
             ICollection<PostGateRule>? postGateRules,
@@ -1665,7 +1665,7 @@ namespace idunno.Bluesky
                         new PostGate(postUri, postGateRules)));
                 }
 
-                AtProtoHttpResult<ApplyWritesResponse> response =
+                AtProtoHttpResult<ApplyWritesResults> response =
                     await ApplyWrites(
                         writeRequests,
                         jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
@@ -1677,26 +1677,25 @@ namespace idunno.Bluesky
                 {
                     Logger.CreatePostWithGatesSucceeded(_logger, rKey, Did);
 
-                    CreateRecordResponse? createRecordResponse = null;
+                    CreateRecordResult? createRecordResult = null;
 
-                    foreach (ApplyWritesResultBase result in response.Result.Results)
+                    foreach (IApplyWritesResult result in response.Result.Results)
                     {
                         if (result is ApplyWritesCreateResult createResult && createResult.Uri == postUri)
                         {
-                            createRecordResponse = new CreateRecordResponse(postUri, createResult.Cid, validationStatus: createResult.ValidationStatus, commit: response.Result.Commit);
+                            createRecordResult = new CreateRecordResult(postUri, createResult.Cid, validationStatus: createResult.ValidationStatus, commit: response.Result.Commit);
                             break;
                         }
                     }
 
-                    return new AtProtoHttpResult<CreateRecordResponse>(createRecordResponse, response.StatusCode, response.HttpResponseHeaders, response.AtErrorDetail, response.RateLimit);
+                    return new AtProtoHttpResult<CreateRecordResult>(createRecordResult, response.StatusCode, response.HttpResponseHeaders, response.AtErrorDetail, response.RateLimit);
                 }
                 else
                 {
                     Logger.CreatePostWithGatesFailed(_logger, response.StatusCode, Did, response.AtErrorDetail?.Error, response.AtErrorDetail?.Message);
-                    return new AtProtoHttpResult<CreateRecordResponse>(null, response.StatusCode, response.HttpResponseHeaders, response.AtErrorDetail, response.RateLimit);
+                    return new AtProtoHttpResult<CreateRecordResult>(null, response.StatusCode, response.HttpResponseHeaders, response.AtErrorDetail, response.RateLimit);
                 }
             }
         }
-
     }
 }

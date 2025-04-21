@@ -9,7 +9,7 @@ namespace idunno.AtProto.Repo.Models
     /// Encapsulates data returned by the CreateRecord API call.
     /// </summary>
     [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Skip)]
-    public sealed record CreateRecordResponse
+    internal sealed record CreateRecordResponse
     {
         /// <summary>
         /// Creates a new instance of CreateRecordResponse.
@@ -19,7 +19,7 @@ namespace idunno.AtProto.Repo.Models
         /// <param name="commit">The <see cref="Commit"/> the record was created in.</param>
         /// <param name="validationStatus">The <see cref="ValidationStatus"/> used during creation.</param>
         [JsonConstructor]
-        public CreateRecordResponse(AtUri uri, Cid cid, Commit? commit, ValidationStatus? validationStatus)
+        internal CreateRecordResponse(AtUri uri, Cid cid, Commit? commit, string? validationStatus)
         {
             ArgumentNullException.ThrowIfNull("uri");
             ArgumentNullException.ThrowIfNull("cid");
@@ -56,7 +56,7 @@ namespace idunno.AtProto.Repo.Models
         /// Gets the <see cref="ValidationStatus"/>, if any, for the creation operation.
         /// </summary>
         [JsonInclude]
-        public ValidationStatus? ValidationStatus { get; init; }
+        public string? ValidationStatus { get; init; }
 
         /// <summary>
         /// Gets a <see cref="StrongReference"/> to the newly created record.

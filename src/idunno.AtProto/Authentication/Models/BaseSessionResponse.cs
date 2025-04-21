@@ -15,7 +15,7 @@ namespace idunno.AtProto.Authentication.Models
             Did did,
             DidDocument? didDoc,
             bool? active,
-            AccountStatus? accountStatus)
+            string? accountStatus)
         {
             ArgumentNullException.ThrowIfNull(handle);
             ArgumentNullException.ThrowIfNull(did);
@@ -57,6 +57,6 @@ namespace idunno.AtProto.Authentication.Models
         /// <para>If <see cref="Active"/> and no status is supplied, then the host makes no claim for why the repository is no longer being hosted.</para>
         /// </remarks>
         [JsonPropertyName("status")]
-        public AccountStatus? Status { get; init; }
+        public string? Status { get; init; }
     }
 }

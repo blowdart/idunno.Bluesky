@@ -9,15 +9,15 @@ namespace idunno.AtProto.Repo.Models
     /// <summary>
     /// Encapsulates an update operation for the repo.applyWrites api
     /// </summary>
-    internal sealed record ApplyWritesUpdate : ApplyWritesRequestValueBase
+    internal sealed record ApplyWritesUpdateRequest : ApplyWritesRequestValueBase
     {
         /// <summary>
-        /// Creates a new instance of <see cref="ApplyWritesUpdate"/>.
+        /// Creates a new instance of <see cref="ApplyWritesUpdateRequest"/>.
         /// </summary>
         /// <param name="collection">The collection the record will be updated in.</param>
         /// <param name="rkey">The <see cref="RecordKey"/> of the record to be updated.</param>
         /// <param name="value">The new value for the record.</param>
-        public ApplyWritesUpdate(Nsid collection, RecordKey rkey, JsonNode value) : base(collection, rkey)
+        public ApplyWritesUpdateRequest(Nsid collection, RecordKey rkey, JsonNode value) : base(collection, rkey)
         {
             Value = value;
         }

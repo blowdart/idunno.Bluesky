@@ -17,6 +17,7 @@ using Blob = idunno.AtProto.Repo.Blob;
 using idunno.AtProto.Server.Models;
 using System.Text.Json;
 using System.Diagnostics.CodeAnalysis;
+using Duende.IdentityModel.OidcClient;
 
 namespace idunno.AtProto
 {
@@ -331,7 +332,7 @@ namespace idunno.AtProto
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
-        public async Task<AtProtoHttpResult<ApplyWritesResponse>> ApplyWrites(
+        public async Task<AtProtoHttpResult<ApplyWritesResults>> ApplyWrites(
             ICollection<WriteOperation> operations,
             JsonSerializerOptions jsonSerializerOptions,
             Did repo,
@@ -349,7 +350,7 @@ namespace idunno.AtProto
                 throw new AuthenticationRequiredException();
             }
 
-            AtProtoHttpResult<ApplyWritesResponse> applyWritesResult = await AtProtoServer.ApplyWrites(
+            AtProtoHttpResult<ApplyWritesResults> applyWritesResult = await AtProtoServer.ApplyWrites(
                 operations: operations,
                 jsonSerializerOptions: jsonSerializerOptions,
                 repo: repo,
@@ -397,7 +398,7 @@ namespace idunno.AtProto
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
         [RequiresDynamicCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> CreateRecord<TRecord>(
+        public async Task<AtProtoHttpResult<CreateRecordResult>> CreateRecord<TRecord>(
             TRecord record,
             Nsid collection,
             RecordKey? rkey = null,
@@ -415,7 +416,7 @@ namespace idunno.AtProto
                 throw new AuthenticationRequiredException();
             }
 
-            AtProtoHttpResult<CreateRecordResponse> result = await AtProtoServer.CreateRecord(
+            AtProtoHttpResult<CreateRecordResult> result = await AtProtoServer.CreateRecord(
                 record: record,
                 collection: collection,
                 creator: Credentials.Did,
@@ -469,7 +470,7 @@ namespace idunno.AtProto
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
         [RequiresDynamicCode("Use a Get overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a Get overload which takes JsonSerializerOptions instead.")]
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> CreateRecord<TRecord>(
+        public async Task<AtProtoHttpResult<CreateRecordResult>> CreateRecord<TRecord>(
             TRecord record,
             JsonSerializerOptions jsonSerializerOptions,
             Nsid collection,
@@ -488,7 +489,7 @@ namespace idunno.AtProto
                 throw new AuthenticationRequiredException();
             }
 
-            AtProtoHttpResult<CreateRecordResponse> result = await AtProtoServer.CreateRecord(
+            AtProtoHttpResult<CreateRecordResult> result = await AtProtoServer.CreateRecord(
                 record: record,
                 collection: collection,
                 creator: Credentials.Did,
@@ -691,7 +692,7 @@ namespace idunno.AtProto
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
         [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
-        public async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
+        public async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecordValue>(
             TRecordValue recordValue,
             Nsid collection,
             RecordKey rKey,
@@ -711,7 +712,7 @@ namespace idunno.AtProto
                 throw new AuthenticationRequiredException();
             }
 
-            AtProtoHttpResult<PutRecordResponse> result = await AtProtoServer.PutRecord(
+            AtProtoHttpResult<PutRecordResult> result = await AtProtoServer.PutRecord(
                 recordValue: recordValue,
                 collection: collection,
                 creator: Did,
@@ -769,7 +770,7 @@ namespace idunno.AtProto
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
-        public async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
+        public async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecordValue>(
             TRecordValue recordValue,
             JsonSerializerOptions jsonSerializerOptions,
             Nsid collection,
@@ -790,7 +791,7 @@ namespace idunno.AtProto
                 throw new AuthenticationRequiredException();
             }
 
-            AtProtoHttpResult<PutRecordResponse> result = await AtProtoServer.PutRecord(
+            AtProtoHttpResult<PutRecordResult> result = await AtProtoServer.PutRecord(
                 recordValue: recordValue,
                 collection: collection,
                 creator: Did,
@@ -846,7 +847,7 @@ namespace idunno.AtProto
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
         [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
-        public async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
+        public async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecordValue>(
             AtProtoRecord<TRecordValue> record,
             bool? validate = true,
             Cid? swapCommit = null,
@@ -865,7 +866,7 @@ namespace idunno.AtProto
                 throw new AuthenticationRequiredException();
             }
 
-            AtProtoHttpResult<PutRecordResponse> result = await AtProtoServer.PutRecord(
+            AtProtoHttpResult<PutRecordResult> result = await AtProtoServer.PutRecord(
                 record: record,
                 validate: validate,
                 swapCommit: swapCommit,
@@ -918,7 +919,7 @@ namespace idunno.AtProto
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
-        public async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
+        public async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecordValue>(
             AtProtoRecord<TRecordValue> record,
             JsonSerializerOptions jsonSerializerOptions,
             bool? validate = true,
@@ -938,7 +939,7 @@ namespace idunno.AtProto
                 throw new AuthenticationRequiredException();
             }
 
-            AtProtoHttpResult<PutRecordResponse> result = await AtProtoServer.PutRecord(
+            AtProtoHttpResult<PutRecordResult> result = await AtProtoServer.PutRecord(
                 record: record,
                 validate: validate,
                 swapCommit: swapCommit,
@@ -966,6 +967,7 @@ namespace idunno.AtProto
             }
 
             return result;
+
         }
 
         /// <summary>

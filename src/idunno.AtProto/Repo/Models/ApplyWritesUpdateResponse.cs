@@ -8,11 +8,10 @@ namespace idunno.AtProto.Repo.Models
     /// <summary>
     /// Encapsulates the result from a update operation to the applyWrites API.
     /// </summary>
-
-    public sealed record ApplyWritesUpdateResult : ApplyWritesResultBase
+    internal sealed record ApplyWritesUpdateResponse : ApplyWritesResponseBase
     {
         [JsonConstructor]
-        internal ApplyWritesUpdateResult(AtUri uri, Cid cid)
+        internal ApplyWritesUpdateResponse(AtUri uri, Cid cid)
         {
             Uri = uri;
             Cid = cid;

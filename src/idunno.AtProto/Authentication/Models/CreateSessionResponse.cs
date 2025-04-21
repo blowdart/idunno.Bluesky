@@ -9,7 +9,7 @@ namespace idunno.AtProto.Authentication.Models
     /// The results of a CreateSession API call.
     /// </summary>
     [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Skip)]
-    public sealed record CreateSessionResponse : BaseSessionResponse
+    internal sealed record CreateSessionResponse : BaseSessionResponse
     {
         [JsonConstructor]
         internal CreateSessionResponse(
@@ -22,7 +22,7 @@ namespace idunno.AtProto.Authentication.Models
             bool? emailConfirmed = null,
             bool? emailAuthFactor = null,
             bool? active = null,
-            AccountStatus? status = null) : base(handle, did, didDoc, active, status)
+            string? status = null) : base(handle, did, didDoc, active, status)
         {
             AccessJwt = accessJwt;
             RefreshJwt = refreshJwt;

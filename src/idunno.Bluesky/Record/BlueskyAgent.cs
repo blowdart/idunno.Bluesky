@@ -130,7 +130,7 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage("AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
-        public async Task<AtProtoHttpResult<PutRecordResponse>> UpdateProfileRecord(
+        public async Task<AtProtoHttpResult<PutRecordResult>> UpdateProfileRecord(
             ProfileRecord profileRecord,
             CancellationToken cancellationToken = default)
         {

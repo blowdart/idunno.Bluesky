@@ -9,10 +9,10 @@ namespace idunno.AtProto.Authentication.Models
     /// The results of a RefreshSession API call.
     /// </summary>
     [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Skip)]
-    public sealed record RefreshSessionResponse : BaseSessionResponse
+    internal sealed record RefreshSessionResponse : BaseSessionResponse
     {
         [JsonConstructor]
-        internal RefreshSessionResponse(string accessJwt, string refreshJwt, Handle handle, Did did, DidDocument? didDoc, bool? active, AccountStatus? status)
+        internal RefreshSessionResponse(string accessJwt, string refreshJwt, Handle handle, Did did, DidDocument? didDoc, bool? active, string? status)
             : base(handle, did, didDoc, active, status)
         {
             AccessJwt = accessJwt;

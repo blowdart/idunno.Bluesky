@@ -9,7 +9,7 @@ namespace idunno.AtProto.Authentication.Models
     /// The results of a GetSession API call.
     /// </summary>
     [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Skip)]
-    public sealed record GetSessionResponse : BaseSessionResponse
+    internal sealed record GetSessionResponse : BaseSessionResponse
     {
         [JsonConstructor]
         internal GetSessionResponse(
@@ -20,7 +20,7 @@ namespace idunno.AtProto.Authentication.Models
             bool? emailAuthFactor,
             DidDocument? didDoc,
             bool? active,
-            AccountStatus? status) : base(handle, did, didDoc, active, status)
+            string? status) : base(handle, did, didDoc, active, status)
         {
             Email = email;
             EmailConfirmed = emailConfirmed;

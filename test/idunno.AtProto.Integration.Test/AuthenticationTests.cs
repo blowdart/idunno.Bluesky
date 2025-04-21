@@ -201,7 +201,7 @@ namespace idunno.AtProto.Integration.Test
                         uri: new($"at://{(string?)requestJson["repo"]}/{(string ?)requestJson["collection"]}/rkey"),
                         cid: new("bafyreihd3v4j"),
                         commit: null,
-                        validationStatus: ValidationStatus.Valid);
+                        validationStatus: "valid");
 
                     await response.WriteAsJsonAsync(createRecordResponse, _jsonSerializerOptions);
                     return;
@@ -327,7 +327,7 @@ namespace idunno.AtProto.Integration.Test
                         uri: new($"at://{(string?)requestJson["repo"]}/{(string?)requestJson["collection"]}/rkey"),
                         cid: new("bafyreihd3v4j"),
                         commit: null,
-                        validationStatus: ValidationStatus.Valid);
+                        validationStatus: "valid");
 
                     await response.WriteAsJsonAsync(createRecordResponse, _jsonSerializerOptions);
                     return;

@@ -9,7 +9,7 @@ namespace idunno.AtProto.Repo.Models
     /// Encapsulates data returned by the DeleteRecord API call.
     /// </summary>
     [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Skip)]
-    public record DeleteRecordResponse
+    internal record DeleteRecordResponse
     {
         /// <summary>
         /// Creates a new instance of <see cref="DeleteRecordResponse"/>

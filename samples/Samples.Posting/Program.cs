@@ -107,7 +107,7 @@ namespace Samples.Posting
 
                 {
                     // Simple post creation and deletion.
-                    AtProtoHttpResult<CreateRecordResponse> createPostResult = await agent.Post("Hello world", cancellationToken: cancellationToken);
+                    AtProtoHttpResult<CreateRecordResult> createPostResult = await agent.Post("Hello world", cancellationToken: cancellationToken);
                     if (!createPostResult.Succeeded)
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
@@ -133,7 +133,7 @@ namespace Samples.Posting
                     // In the past post creation and deletion.
                     DateTimeOffset past = DateTimeOffset.UtcNow.AddDays(-1);
 
-                    AtProtoHttpResult<CreateRecordResponse> createPostResult = await agent.Post("Hello world from the past", createdAt: past, cancellationToken: cancellationToken);
+                    AtProtoHttpResult<CreateRecordResult> createPostResult = await agent.Post("Hello world from the past", createdAt: past, cancellationToken: cancellationToken);
                     if (!createPostResult.Succeeded)
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
@@ -157,7 +157,7 @@ namespace Samples.Posting
 
                 {
                     // Simple post creation with a detected hashtag.
-                    AtProtoHttpResult<CreateRecordResponse> createPostResult = await agent.Post("Hello world #helloWorld", cancellationToken: cancellationToken);
+                    AtProtoHttpResult<CreateRecordResult> createPostResult = await agent.Post("Hello world #helloWorld", cancellationToken: cancellationToken);
                     if (!createPostResult.Succeeded)
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
@@ -181,13 +181,13 @@ namespace Samples.Posting
 
                 {
                     // Simple post creation and reply post creation.
-                    AtProtoHttpResult<CreateRecordResponse> createPostResult = await agent.Post("Another test post, this time to check replying.", cancellationToken: cancellationToken);
+                    AtProtoHttpResult<CreateRecordResult> createPostResult = await agent.Post("Another test post, this time to check replying.", cancellationToken: cancellationToken);
                     if (createPostResult.Succeeded)
                     {
                         // Let's pretend we didn't just create the post, and we just have the strong reference of the post we want to reply to.
                         StrongReference postToReplyTo = createPostResult.Result.StrongReference;
 
-                        AtProtoHttpResult<CreateRecordResponse> replyToHttpResult = await agent.ReplyTo(postToReplyTo, "This is a reply.", cancellationToken: cancellationToken);
+                        AtProtoHttpResult<CreateRecordResult> replyToHttpResult = await agent.ReplyTo(postToReplyTo, "This is a reply.", cancellationToken: cancellationToken);
                         if (!replyToHttpResult.Succeeded)
                         {
                             Console.ForegroundColor = ConsoleColor.Red;
@@ -195,7 +195,7 @@ namespace Samples.Posting
                             return;
                         }
 
-                        AtProtoHttpResult<CreateRecordResponse> replyToReplyHttpResult = await agent.ReplyTo(replyToHttpResult.Result!.StrongReference, "This is a reply to the reply.", cancellationToken: cancellationToken);
+                        AtProtoHttpResult<CreateRecordResult> replyToReplyHttpResult = await agent.ReplyTo(replyToHttpResult.Result!.StrongReference, "This is a reply to the reply.", cancellationToken: cancellationToken);
                         Debugger.Break();
 
                         if (!replyToReplyHttpResult.Succeeded)
@@ -247,7 +247,7 @@ namespace Samples.Posting
                         return;
                     }
 
-                    AtProtoHttpResult<CreateRecordResponse> createPostResult = await agent.Post("Hello world with an image.", imageUploadResult.Result, cancellationToken: cancellationToken);
+                    AtProtoHttpResult<CreateRecordResult> createPostResult = await agent.Post("Hello world with an image.", imageUploadResult.Result, cancellationToken: cancellationToken);
                     Debugger.Break();
 
                     if (!createPostResult.Succeeded)
@@ -337,7 +337,7 @@ namespace Samples.Posting
                         cancellationToken: cancellationToken);
 
 
-                    AtProtoHttpResult<CreateRecordResponse> multipleImagePostResult = await agent.Post(
+                    AtProtoHttpResult<CreateRecordResult> multipleImagePostResult = await agent.Post(
                         "Hello world with multiple images",
                         [
                             imageUploadResult.Result!,
@@ -367,10 +367,10 @@ namespace Samples.Posting
 
                 {
                     // Repost
-                    AtProtoHttpResult<CreateRecordResponse> createPostResult = await agent.Post("Another test post, for reposting.", cancellationToken: cancellationToken);
+                    AtProtoHttpResult<CreateRecordResult> createPostResult = await agent.Post("Another test post, for reposting.", cancellationToken: cancellationToken);
                     if (createPostResult.Succeeded)
                     {
-                        AtProtoHttpResult<CreateRecordResponse> repostResult = await agent.Repost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
+                        AtProtoHttpResult<CreateRecordResult> repostResult = await agent.Repost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
                         Debugger.Break();
 
                         if (!repostResult.Succeeded)
@@ -398,10 +398,10 @@ namespace Samples.Posting
 
                 {
                     // Like
-                    AtProtoHttpResult<CreateRecordResponse> createPostResult = await agent.Post("Another test post, for liking.", cancellationToken: cancellationToken);
+                    AtProtoHttpResult<CreateRecordResult> createPostResult = await agent.Post("Another test post, for liking.", cancellationToken: cancellationToken);
                     if (createPostResult.Succeeded)
                     {
-                        AtProtoHttpResult<CreateRecordResponse> likeResult = await agent.Like(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
+                        AtProtoHttpResult<CreateRecordResult> likeResult = await agent.Like(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
                         Debugger.Break();
 
                         if (!likeResult.Succeeded)
@@ -429,7 +429,7 @@ namespace Samples.Posting
 
                 {
                     // Quote
-                    AtProtoHttpResult<CreateRecordResponse> createPostResult = await agent.Post("Another test post, for quoting.", cancellationToken: cancellationToken);
+                    AtProtoHttpResult<CreateRecordResult> createPostResult = await agent.Post("Another test post, for quoting.", cancellationToken: cancellationToken);
                     if (createPostResult.Succeeded)
                     {
                         var quoteResponse = await agent.Quote(createPostResult.Result.StrongReference, "Quote Dunk!", cancellationToken: cancellationToken);
@@ -451,7 +451,7 @@ namespace Samples.Posting
                                                     new AspectRatio(1000, 1000),
                                                     cancellationToken: cancellationToken);
 
-                        AtProtoHttpResult<CreateRecordResponse> imageDunkQuoteResponse = await agent.Quote(
+                        AtProtoHttpResult<CreateRecordResult> imageDunkQuoteResponse = await agent.Quote(
                             createPostResult.Result.StrongReference,
                             "Dunk with an image",
                             imageUploadResult.Result!,
@@ -523,7 +523,7 @@ namespace Samples.Posting
 
                     postBuilder += imageUploadResult.Result!;
 
-                    AtProtoHttpResult<CreateRecordResponse> facetedCreatePostResponse = await agent.Post(postBuilder, cancellationToken: cancellationToken);
+                    AtProtoHttpResult<CreateRecordResult> facetedCreatePostResponse = await agent.Post(postBuilder, cancellationToken: cancellationToken);
                     Debugger.Break();
 
                     if (facetedCreatePostResponse.Succeeded)

@@ -8,10 +8,10 @@ namespace idunno.AtProto.Repo.Models
     /// <summary>
     /// Encapsulates the result from a create operation to the applyWrites API.
     /// </summary>
-    public sealed record ApplyWritesCreateResult : ApplyWritesResultBase
+    internal sealed record ApplyWritesCreateResponse : ApplyWritesResponseBase
     {
         [JsonConstructor]
-        internal ApplyWritesCreateResult(AtUri uri, Cid cid, ValidationStatus? validationStatus)
+        internal ApplyWritesCreateResponse(AtUri uri, Cid cid, string? validationStatus)
         {
             Uri = uri;
             Cid = cid;
@@ -35,7 +35,7 @@ namespace idunno.AtProto.Repo.Models
         /// Gets the <see cref="ValidationStatus"/> of the record, if any.
         /// </summary>
         [JsonInclude]
-        public ValidationStatus? ValidationStatus { get; init; }
+        public string? ValidationStatus { get; init; }
 
         /// <summary>
         /// The <see cref="StrongReference"/> of the record the write operation created.

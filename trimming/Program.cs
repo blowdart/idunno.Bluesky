@@ -16,7 +16,6 @@ namespace idunno.TrimmingTest
 
             using (var cancellationTokenSource = new CancellationTokenSource())
             {
-
                 Console.CancelKeyPress += (sender, args) =>
                 {
                     args.Cancel = true;
@@ -24,7 +23,6 @@ namespace idunno.TrimmingTest
                 };
 
                 CancellationToken cancellationToken = cancellationTokenSource.Token;
-
 
                 // Change the log level in the ConfigureConsoleLogging() to enable logging
                 using (var agent = new AtProtoAgent(new Uri("https://api.bsky.app")))

@@ -8,10 +8,10 @@ namespace idunno.AtProto.Repo.Models
     /// <summary>
     /// Encapsulates the result from a delete operation to the applyWrites API.
     /// </summary>
-    public sealed record ApplyWritesDeleteResult : ApplyWritesResultBase
+    internal sealed record ApplyWritesDeleteResponse : ApplyWritesResponseBase
     {
         [JsonConstructor]
-        internal ApplyWritesDeleteResult()
+        internal ApplyWritesDeleteResponse()
         {
         }
     }

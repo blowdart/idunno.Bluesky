@@ -5,8 +5,7 @@
 Let's start off by creating a simple post with the `CreatePost()` method.
 
 ```c#
-AtProtoHttpResult<CreateRecordResponse> postResult = 
-    await agent.Post("Hello world!");
+var postResult = await agent.Post("Hello world!");
 
 if (postResult.Succeeded)
 {
@@ -63,7 +62,7 @@ If its false, the `StatusCode` property will contain the HTTP status code return
 error information the API returned.
 
 ```c#
-AtProtoHttpResult<CreateRecordResponse> postResult =  await agent.Post("Hello world!");
+var postResult =  await agent.Post("Hello world!");
 
 if (postResult.Succeeded)
 {
@@ -88,7 +87,7 @@ For example, to delete the post you just made using the first code snippet above
 you got from creating the post, or the strong reference itself.
 
 ```c#
-HttpResult<Commit> deleteResult = await agent.DeletePost(postResult.Result.StrongReference.Uri);
+var deleteResult = await agent.DeletePost(postResult.Result.StrongReference.Uri);
 if (!deleteResult.Succeeded)
 {
     Console.ForegroundColor = ConsoleColor.Red;
@@ -128,23 +127,22 @@ var likeResult = await agent.Like(postStrongReference);
 Liking a post will return a `StrongReference` to the record for your like. You can use this strong reference to delete your like with `UndoLike()`.
 
 ```c#
-HttpResult<bool> undoResult = await agent.UndoLike(likeResult.Result);
+var undoResult = await agent.UndoLike(likeResult.Result);
 ```
 
 Reposting works in just the same way.
 
 ```c#
-HttpResult<StrongReference> repostResult = await agent.Repost(postReference);
-HttpResult<bool> undoRepostResult = await agent.UndoRepost(repostResult.Result);
+var repostResult = await agent.Repost(postReference);
+var undoRepostResult = await agent.UndoRepost(repostResult.Result);
 ```
 
 Quoting a post requires both the post strong reference, and the text you the quote post to contain.
 Deleting a post quoting another post is like deleting a regular post, you call `DeletePost`;
 
 ```c#
-HttpResult<StrongReference> quoteResult = 
-    await agent.Quote(postReference, "This is a quote of a post.");
-HttpResult<bool> deleteResult = await agent.DeleteQuote(quoteResult.Result!);
+var quoteResult = await agent.Quote(postReference, "This is a quote of a post.");
+var deleteResult = await agent.DeleteQuote(quoteResult.Result!);
 ```
 
 ## <a name="postRelationships">Getting your relationships with a post</a>
@@ -168,8 +166,7 @@ The majority of the `Post()` APIs will try to detect links, mentions and hashtag
 `extractFacets` parameter to `false`. For example:
 
 ```c#
-var postResult = 
-    await agent.Post("Hello #beans");
+var postResult =  await agent.Post("Hello #beans");
 ```
 
 This will result in a hashtag of beans being added to the post. Detection works for hashtags, @ mentions and for uris which begin with either
@@ -275,7 +272,7 @@ postBuilder.Append('.');
 var hashTag = new HashTag("beans");
 postBuilder.Append(hashTag);
 
-AtProtoHttpResult<CreateRecordResponse> facetedCreatePostResponse =
+var facetedCreatePostResponse =
     await agent.Post(postBuilder, cancellationToken: cancellationToken);
 ```
 
@@ -311,7 +308,7 @@ using (MemoryStream ms = new())
 Once you have your byte array upload it using `UploadImage`:
 
 ```c#
-AtProtoHttpResult<EmbeddedImage> imageUploadResult = await agent.UploadImage(
+var imageUploadResult = await agent.UploadImage(
     imageAsBytes,
     "image/jpg",
     "The Bluesky Logo",
@@ -343,7 +340,7 @@ You can, of course, add images to a `PostBuilder`:
 ```c#
 PostBuilder postBuilder = new("A reply with an image.");
 
-AtProtoHttpResult<EmbeddedImage> imageUploadResult = await agent.UploadImage(
+var imageUploadResult = await agent.UploadImage(
     imageAsBytes,
     "image/jpg",
     "The Bluesky Logo",

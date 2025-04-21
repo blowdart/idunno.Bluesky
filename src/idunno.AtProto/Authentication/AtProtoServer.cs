@@ -49,7 +49,7 @@ namespace idunno.AtProto
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
             Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
-        public static async Task<AtProtoHttpResult<CreateSessionResponse>> CreateSession(
+        public static async Task<AtProtoHttpResult<Session>> CreateSession(
             string identifier,
             string password,
             string? authFactorToken,
@@ -68,7 +68,7 @@ namespace idunno.AtProto
 
             CreateSessionRequest loginRequestRecord = new() { Identifier = identifier, Password = password, AuthFactorToken = authFactorToken };
 
-            AtProtoHttpResult<CreateSessionResponse> result = await request.Post(
+            AtProtoHttpResult<CreateSessionResponse> createSessionResponse = await request.Post(
                 service,
                 CreateSessionEndpoint,
                 loginRequestRecord,
@@ -76,7 +76,24 @@ namespace idunno.AtProto
                 jsonSerializerOptions: AtProtoJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            return result;
+            if (createSessionResponse.Succeeded)
+            {
+                return new AtProtoHttpResult<Session>(
+                    result: new Session(createSessionResponse.Result),
+                    statusCode: createSessionResponse.StatusCode,
+                    httpResponseHeaders: createSessionResponse.HttpResponseHeaders,
+                    atErrorDetail: createSessionResponse.AtErrorDetail,
+                    rateLimit: createSessionResponse.RateLimit);
+            }
+            else
+            {
+                return new AtProtoHttpResult<Session>(
+                    null,
+                    statusCode: createSessionResponse.StatusCode,
+                    httpResponseHeaders: createSessionResponse.HttpResponseHeaders,
+                    atErrorDetail: createSessionResponse.AtErrorDetail,
+                    rateLimit: createSessionResponse.RateLimit);
+            }
         }
 
         /// <summary>
@@ -139,7 +156,7 @@ namespace idunno.AtProto
         [UnconditionalSuppressMessage("AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
-        public static async Task<AtProtoHttpResult<RefreshSessionResponse>> RefreshSession(
+        public static async Task<AtProtoHttpResult<Session>> RefreshSession(
             RefreshCredential refreshCredential,
             HttpClient httpClient,
             Action<AtProtoCredential>? credentialsUpdated = null,
@@ -153,7 +170,7 @@ namespace idunno.AtProto
 
             AtProtoHttpClient<RefreshSessionResponse> request = new(loggerFactory);
 
-            AtProtoHttpResult<RefreshSessionResponse> result = await request.Post(
+            AtProtoHttpResult<RefreshSessionResponse> refreshSessionResponse = await request.Post(
                 service: refreshCredential.Service,
                 endpoint: RefreshSessionEndpoint,
                 credentials: refreshCredential,
@@ -162,7 +179,27 @@ namespace idunno.AtProto
                 jsonSerializerOptions: AtProtoJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            return result;
+            if (!refreshSessionResponse.Succeeded)
+            {
+                return new AtProtoHttpResult<Session>(
+                    null,
+                    statusCode: refreshSessionResponse.StatusCode,
+                    httpResponseHeaders: refreshSessionResponse.HttpResponseHeaders,
+                    atErrorDetail: refreshSessionResponse.AtErrorDetail,
+                    rateLimit: refreshSessionResponse.RateLimit);
+            }
+
+            // As a refreshSession call leaves out some session information, take the results and call GetSession to fill it out.
+            return await GetSession(
+                accessCredentials: new AccessCredentials(
+                    refreshCredential.Service,
+                    refreshCredential.AuthenticationType,
+                    refreshSessionResponse.Result.AccessJwt,
+                    refreshSessionResponse.Result.RefreshJwt),
+                httpClient: httpClient,
+                credentialsUpdated: credentialsUpdated,
+                loggerFactory: loggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -182,7 +219,7 @@ namespace idunno.AtProto
         [UnconditionalSuppressMessage("AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-        public static async Task<AtProtoHttpResult<GetSessionResponse>> GetSession(
+        public static async Task<AtProtoHttpResult<Session>> GetSession(
             AccessCredentials accessCredentials,
             HttpClient httpClient,
             Action<AtProtoCredential>? credentialsUpdated = null,
@@ -195,7 +232,7 @@ namespace idunno.AtProto
 
             AtProtoHttpClient<GetSessionResponse> request = new(loggerFactory);
 
-            return await request.Get(
+            AtProtoHttpResult<GetSessionResponse> getSessionResponse = await request.Get(
                 accessCredentials.Service,
                 GetSessionEndpoint,
                 accessCredentials,
@@ -203,6 +240,25 @@ namespace idunno.AtProto
                 onCredentialsUpdated: credentialsUpdated,
                 jsonSerializerOptions: AtProtoJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (getSessionResponse.Succeeded)
+            {
+                return new AtProtoHttpResult<Session>(
+                    result: new Session(getSessionResponse.Result, accessCredentials),
+                    statusCode: getSessionResponse.StatusCode,
+                    httpResponseHeaders: getSessionResponse.HttpResponseHeaders,
+                    atErrorDetail: getSessionResponse.AtErrorDetail,
+                    rateLimit: getSessionResponse.RateLimit);
+            }
+            else
+            {
+                return new AtProtoHttpResult<Session>(
+                    null,
+                    statusCode: getSessionResponse.StatusCode,
+                    httpResponseHeaders: getSessionResponse.HttpResponseHeaders,
+                    atErrorDetail: getSessionResponse.AtErrorDetail,
+                    rateLimit: getSessionResponse.RateLimit);
+            }
         }
 
         /// <summary>

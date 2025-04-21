@@ -321,7 +321,7 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when the <paramref name="accessCredentials"/> is null.</exception>
         /// <exception cref="ArgumentNullException">Thrown when the <paramref name="accessCredentials"/>'s AccessJwt is null or empty.</exception>
-        public async Task<AtProtoHttpResult<GetSessionResponse>> GetSession(
+        public async Task<AtProtoHttpResult<Session>> GetSession(
             AccessCredentials accessCredentials,
             CancellationToken cancellationToken = default)
         {
@@ -450,7 +450,7 @@ namespace idunno.AtProto
 
                 Logger.CreateSessionCalled(_logger, identifier, service);
 
-                AtProtoHttpResult<CreateSessionResponse> createSessionResult =
+                AtProtoHttpResult<Session> createSessionResult =
                     await AtProtoServer.CreateSession(
                         identifier,
                         password,
@@ -1029,7 +1029,7 @@ namespace idunno.AtProto
                     StopTokenRefreshTimer();
                 }
 
-                AtProtoHttpResult<RefreshSessionResponse> refreshSessionResult;
+                AtProtoHttpResult<Session> refreshSessionResult;
                 try
                 {
                     refreshSessionResult = await AtProtoServer.RefreshSession(

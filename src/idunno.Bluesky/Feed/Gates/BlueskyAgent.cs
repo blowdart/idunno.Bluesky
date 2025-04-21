@@ -31,7 +31,7 @@ namespace idunno.Bluesky
         ///   Thrown when <paramref name="rules"/> or <paramref name="hiddenReplies"/> have more than the maximum number of entries.
         /// </exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> AddThreadGate(
+        public async Task<AtProtoHttpResult<CreateRecordResult>> AddThreadGate(
             AtUri post,
             ICollection<ThreadGateRule>? rules = null,
             ICollection<AtUri>? hiddenReplies = null,
@@ -89,7 +89,7 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage("AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> AddThreadGate(
+        public async Task<AtProtoHttpResult<CreateRecordResult>> AddThreadGate(
             ThreadGate threadGate,
             CancellationToken cancellationToken = default)
         {
@@ -172,7 +172,7 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage("AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
-        public async Task<AtProtoHttpResult<PutRecordResponse>> UpdateThreadGate(
+        public async Task<AtProtoHttpResult<PutRecordResult>> UpdateThreadGate(
             ThreadGate threadGate,
             CancellationToken cancellationToken = default)
         {
@@ -286,7 +286,7 @@ namespace idunno.Bluesky
         ///   Thrown when <paramref name="rules"/> is empty or has larger than the maximum number of rules allowed, or
         ///   when <paramref name="detachedEmbeddingUris"/> has larger than the number of uris allowed.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> AddPostGate(
+        public async Task<AtProtoHttpResult<CreateRecordResult>> AddPostGate(
             AtUri post,
             ICollection<PostGateRule>? rules = null,
             ICollection<AtUri>? detachedEmbeddingUris = null,
@@ -337,7 +337,7 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage("AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-        public async Task<AtProtoHttpResult<CreateRecordResponse>> AddPostGate(
+        public async Task<AtProtoHttpResult<CreateRecordResult>> AddPostGate(
             PostGate postGate,
             CancellationToken cancellationToken = default)
         {
@@ -481,7 +481,7 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage("AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
-        public async Task<AtProtoHttpResult<PutRecordResponse>> UpdatePostGate(
+        public async Task<AtProtoHttpResult<PutRecordResult>> UpdatePostGate(
             PostGate postGate,
             CancellationToken cancellationToken = default)
         {

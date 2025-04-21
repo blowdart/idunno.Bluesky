@@ -14,6 +14,7 @@ using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
 using idunno.AtProto.Authentication;
 using System;
+using Duende.IdentityModel.OidcClient;
 
 
 namespace idunno.AtProto
@@ -77,7 +78,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentException">Thrown when <paramref name="operations"/> is an empty collection.</exception>
         [RequiresUnreferencedCode("Use a ApplyWrites overload which takes JsonSerializerOptions instead.")]
         [RequiresDynamicCode("Use a ApplyWrites overload which takes JsonSerializerOptions instead.")]
-        public static async Task<AtProtoHttpResult<ApplyWritesResponse>> ApplyWrites(
+        public static async Task<AtProtoHttpResult<ApplyWritesResults>> ApplyWrites(
             ICollection<WriteOperation> operations,
             Did repo,
             bool? validate,
@@ -112,7 +113,7 @@ namespace idunno.AtProto
                             JsonNode? value = JsonNode.Parse(JsonSerializer.Serialize(createOperation.RecordValue, DefaultJsonSerializerOptionsWithNoTypeResolution));
                             if (value is not null)
                             {
-                                mappedOperations.Add(new ApplyWritesCreate(createOperation.Collection, createOperation.RecordKey, value));
+                                mappedOperations.Add(new ApplyWritesCreateRequest(createOperation.Collection, createOperation.RecordKey, value));
                             }
                             break;
                         }
@@ -122,13 +123,13 @@ namespace idunno.AtProto
                             JsonNode? value = JsonNode.Parse(JsonSerializer.Serialize(putOperation.RecordValue, DefaultJsonSerializerOptionsWithNoTypeResolution));
                             if (value is not null)
                             {
-                                mappedOperations.Add(new ApplyWritesUpdate(putOperation.Collection, putOperation.RecordKey!, value));
+                                mappedOperations.Add(new ApplyWritesUpdateRequest(putOperation.Collection, putOperation.RecordKey!, value));
                             }
                             break;
                         }
 
                     case DeleteOperation deleteOperation:
-                        mappedOperations.Add(new ApplyWritesDelete(deleteOperation.Collection, deleteOperation.RecordKey!));
+                        mappedOperations.Add(new ApplyWritesDeleteRequest(deleteOperation.Collection, deleteOperation.RecordKey!));
                         break;
 
                 }
@@ -147,7 +148,7 @@ namespace idunno.AtProto
                 client = new(serviceProxy, loggerFactory);
             }
 
-            return await client.Post(
+            AtProtoHttpResult<ApplyWritesResponse> response = await client.Post(
                 service,
                 ApplyWritesEndpoint,
                 request,
@@ -156,6 +157,25 @@ namespace idunno.AtProto
                 onCredentialsUpdated: onCredentialsUpdated,
                 jsonSerializerOptions: AtProtoJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (response.Succeeded)
+            {
+                return new AtProtoHttpResult<ApplyWritesResults>(
+                    result: new ApplyWritesResults(response.Result),
+                    statusCode: response.StatusCode,
+                    httpResponseHeaders: response.HttpResponseHeaders,
+                    atErrorDetail: response.AtErrorDetail,
+                    rateLimit: response.RateLimit);
+            }
+            else
+            {
+                return new AtProtoHttpResult<ApplyWritesResults>(
+                    result: null,
+                    statusCode: response.StatusCode,
+                    httpResponseHeaders: response.HttpResponseHeaders,
+                    atErrorDetail: response.AtErrorDetail,
+                    rateLimit: response.RateLimit);
+            }
         }
 
         /// <summary>
@@ -189,7 +209,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentException">Thrown when <paramref name="operations"/> is an empty collection.</exception>
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
-        public static async Task<AtProtoHttpResult<ApplyWritesResponse>> ApplyWrites(
+        public static async Task<AtProtoHttpResult<ApplyWritesResults>> ApplyWrites(
             ICollection<WriteOperation> operations,
             JsonSerializerOptions jsonSerializerOptions,
             Did repo,
@@ -226,7 +246,7 @@ namespace idunno.AtProto
                             JsonNode? value = JsonNode.Parse(JsonSerializer.Serialize(createOperation.RecordValue, jsonSerializerOptions));
                             if (value is not null)
                             {
-                                mappedOperations.Add(new ApplyWritesCreate(createOperation.Collection, createOperation.RecordKey, value));
+                                mappedOperations.Add(new ApplyWritesCreateRequest(createOperation.Collection, createOperation.RecordKey, value));
                             }
                             break;
                         }
@@ -236,15 +256,14 @@ namespace idunno.AtProto
                             JsonNode? value = JsonNode.Parse(JsonSerializer.Serialize(putOperation.RecordValue, jsonSerializerOptions));
                             if (value is not null)
                             {
-                                mappedOperations.Add(new ApplyWritesUpdate(putOperation.Collection, putOperation.RecordKey!, value));
+                                mappedOperations.Add(new ApplyWritesUpdateRequest(putOperation.Collection, putOperation.RecordKey!, value));
                             }
                             break;
                         }
 
                     case DeleteOperation deleteOperation:
-                        mappedOperations.Add(new ApplyWritesDelete(deleteOperation.Collection, deleteOperation.RecordKey!));
+                        mappedOperations.Add(new ApplyWritesDeleteRequest(deleteOperation.Collection, deleteOperation.RecordKey!));
                         break;
-
                 }
             }
 
@@ -261,7 +280,7 @@ namespace idunno.AtProto
                 client = new(serviceProxy, loggerFactory);
             }
 
-            return await client.Post(
+            AtProtoHttpResult<ApplyWritesResponse> response = await client.Post(
                 service,
                 ApplyWritesEndpoint,
                 request,
@@ -270,6 +289,25 @@ namespace idunno.AtProto
                 onCredentialsUpdated: onCredentialsUpdated,
                 jsonSerializerOptions: AtProtoJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (response.Succeeded)
+            {
+                return new AtProtoHttpResult<ApplyWritesResults>(
+                    result: new ApplyWritesResults(response.Result),
+                    statusCode: response.StatusCode,
+                    httpResponseHeaders: response.HttpResponseHeaders,
+                    atErrorDetail: response.AtErrorDetail,
+                    rateLimit: response.RateLimit);
+            }
+            else
+            {
+                return new AtProtoHttpResult<ApplyWritesResults>(
+                    result: null,
+                    statusCode: response.StatusCode,
+                    httpResponseHeaders: response.HttpResponseHeaders,
+                    atErrorDetail: response.AtErrorDetail,
+                    rateLimit: response.RateLimit);
+            }
         }
 
         /// <summary>
@@ -301,7 +339,7 @@ namespace idunno.AtProto
         /// </exception>
         [RequiresDynamicCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
-        public static async Task<AtProtoHttpResult<CreateRecordResponse>> CreateRecord<TRecord>(
+        public static async Task<AtProtoHttpResult<CreateRecordResult>> CreateRecord<TRecord>(
             TRecord record,
             Nsid collection,
             Did creator,
@@ -338,7 +376,7 @@ namespace idunno.AtProto
                 client = new(serviceProxy, loggerFactory);
             }
 
-            return await client.Post(
+            AtProtoHttpResult<CreateRecordResponse> response = await client.Post(
                 service,
                 CreateRecordEndpoint,
                 request,
@@ -346,6 +384,25 @@ namespace idunno.AtProto
                 httpClient,
                 onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (response.Succeeded)
+            {
+                return new AtProtoHttpResult<CreateRecordResult>(
+                    result: new CreateRecordResult(response.Result),
+                    statusCode: response.StatusCode,
+                    httpResponseHeaders: response.HttpResponseHeaders,
+                    atErrorDetail: response.AtErrorDetail,
+                    rateLimit: response.RateLimit);
+            }
+            else
+            {
+                return new AtProtoHttpResult<CreateRecordResult>(
+                    result: null,
+                    statusCode: response.StatusCode,
+                    httpResponseHeaders: response.HttpResponseHeaders,
+                    atErrorDetail: response.AtErrorDetail,
+                    rateLimit: response.RateLimit);
+            }
         }
 
         /// <summary>
@@ -378,7 +435,7 @@ namespace idunno.AtProto
         /// </exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
-        public static async Task<AtProtoHttpResult<CreateRecordResponse>> CreateRecord<TRecord>(
+        public static async Task<AtProtoHttpResult<CreateRecordResult>> CreateRecord<TRecord>(
             TRecord record,
             JsonSerializerOptions jsonSerializerOptions,
             Nsid collection,
@@ -418,7 +475,7 @@ namespace idunno.AtProto
                 client = new(serviceProxy, loggerFactory);
             }
 
-            return await client.Post(
+            AtProtoHttpResult<CreateRecordResponse> response = await client.Post(
                 service,
                 CreateRecordEndpoint,
                 request,
@@ -427,6 +484,25 @@ namespace idunno.AtProto
                 onCredentialsUpdated: onCredentialsUpdated,
                 jsonSerializerOptions: jsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (response.Succeeded)
+            {
+                return new AtProtoHttpResult<CreateRecordResult>(
+                    result: new CreateRecordResult(response.Result),
+                    statusCode: response.StatusCode,
+                    httpResponseHeaders: response.HttpResponseHeaders,
+                    atErrorDetail: response.AtErrorDetail,
+                    rateLimit: response.RateLimit);
+            }
+            else
+            {
+                return new AtProtoHttpResult<CreateRecordResult>(
+                    result: null,
+                    statusCode: response.StatusCode,
+                    httpResponseHeaders: response.HttpResponseHeaders,
+                    atErrorDetail: response.AtErrorDetail,
+                    rateLimit: response.RateLimit);
+            }
         }
 
         /// <summary>
@@ -548,7 +624,7 @@ namespace idunno.AtProto
         /// </exception>
         [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
-        public static async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
+        public static async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecordValue>(
             AtProtoRecord<TRecordValue> record,
             bool? validate,
             Cid? swapCommit,
@@ -618,7 +694,7 @@ namespace idunno.AtProto
         /// </exception>
         [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
-        public static async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
+        public static async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecordValue>(
             TRecordValue recordValue,
             Nsid collection,
             AtIdentifier creator,
@@ -660,7 +736,7 @@ namespace idunno.AtProto
                 client = new(serviceProxy, loggerFactory);
             }
 
-            return await client.Post(
+            AtProtoHttpResult<PutRecordResponse> response =await client.Post(
                 service,
                 PutRecordEndpoint,
                 request,
@@ -668,6 +744,25 @@ namespace idunno.AtProto
                 httpClient,
                 onCredentialsUpdated: onCredentialsUpdated,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (response.Succeeded)
+            {
+                return new AtProtoHttpResult<PutRecordResult>(
+                    result: new PutRecordResult(response.Result),
+                    statusCode: response.StatusCode,
+                    httpResponseHeaders: response.HttpResponseHeaders,
+                    atErrorDetail: response.AtErrorDetail,
+                    rateLimit: response.RateLimit);
+            }
+            else
+            {
+                return new AtProtoHttpResult<PutRecordResult>(
+                    result: null,
+                    statusCode: response.StatusCode,
+                    httpResponseHeaders: response.HttpResponseHeaders,
+                    atErrorDetail: response.AtErrorDetail,
+                    rateLimit: response.RateLimit);
+            }
         }
 
         /// <summary>
@@ -698,7 +793,7 @@ namespace idunno.AtProto
         /// </exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
-        public static async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
+        public static async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecordValue>(
             AtProtoRecord<TRecordValue> record,
             JsonSerializerOptions jsonSerializerOptions,
             bool? validate,
@@ -771,7 +866,7 @@ namespace idunno.AtProto
         /// </exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
-        public static async Task<AtProtoHttpResult<PutRecordResponse>> PutRecord<TRecordValue>(
+        public static async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecordValue>(
             TRecordValue recordValue,
             JsonSerializerOptions jsonSerializerOptions,
             Nsid collection,
@@ -814,7 +909,7 @@ namespace idunno.AtProto
                 client = new(serviceProxy, loggerFactory);
             }
 
-            return await client.Post(
+            AtProtoHttpResult<PutRecordResponse> response = await client.Post(
                 service,
                 PutRecordEndpoint,
                 request,
@@ -823,6 +918,25 @@ namespace idunno.AtProto
                 onCredentialsUpdated: onCredentialsUpdated,
                 jsonSerializerOptions: jsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (response.Succeeded)
+            {
+                return new AtProtoHttpResult<PutRecordResult>(
+                    result: new PutRecordResult(response.Result),
+                    statusCode: response.StatusCode,
+                    httpResponseHeaders: response.HttpResponseHeaders,
+                    atErrorDetail: response.AtErrorDetail,
+                    rateLimit: response.RateLimit);
+            }
+            else
+            {
+                return new AtProtoHttpResult<PutRecordResult>(
+                    result: null,
+                    statusCode: response.StatusCode,
+                    httpResponseHeaders: response.HttpResponseHeaders,
+                    atErrorDetail: response.AtErrorDetail,
+                    rateLimit: response.RateLimit);
+            }
         }
 
         /// <summary>

@@ -43,8 +43,13 @@ namespace idunno.AtProto
         ///     Labeler declarations can be retrieved 
         /// </para>
         /// </remarks>
-        [RequiresUnreferencedCode("Use a ApplyWrites overload which takes JsonSerializerOptions instead.")]
-        [RequiresDynamicCode("Use a ApplyWrites overload which takes JsonSerializerOptions instead.")]
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
         public static async Task<AtProtoHttpResult<ModerationReport>> CreateModerationReport(
             Did labelerDid,
             SubjectType subject,

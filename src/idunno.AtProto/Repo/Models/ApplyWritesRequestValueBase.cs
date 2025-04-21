@@ -9,9 +9,9 @@ namespace idunno.AtProto.Repo.Models
     /// Base DTOs for transactions for the applyWrites API.
     /// </summary>
     [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = false, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]
-    [JsonDerivedType(typeof(ApplyWritesCreate), typeDiscriminator: "com.atproto.repo.applyWrites#create")]
-    [JsonDerivedType(typeof(ApplyWritesUpdate), typeDiscriminator: "com.atproto.repo.applyWrites#update")]
-    [JsonDerivedType(typeof(ApplyWritesDelete), typeDiscriminator: "com.atproto.repo.applyWrites#delete")]
+    [JsonDerivedType(typeof(ApplyWritesCreateRequest), typeDiscriminator: "com.atproto.repo.applyWrites#create")]
+    [JsonDerivedType(typeof(ApplyWritesUpdateRequest), typeDiscriminator: "com.atproto.repo.applyWrites#update")]
+    [JsonDerivedType(typeof(ApplyWritesDeleteRequest), typeDiscriminator: "com.atproto.repo.applyWrites#delete")]
     internal abstract record ApplyWritesRequestValueBase
     {
         /// <summary>

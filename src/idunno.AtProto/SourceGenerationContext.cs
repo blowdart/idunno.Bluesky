@@ -4,7 +4,6 @@
 using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 using idunno.AtProto.Admin;
-using idunno.AtProto.Authentication;
 using idunno.AtProto.Authentication.Models;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Labels.Models;
@@ -40,8 +39,10 @@ namespace idunno.AtProto
     [JsonSerializable(typeof(Nsid))]
     [JsonSerializable(typeof(RecordKey))]
 
+    [JsonSerializable(typeof(SubjectType))]
     [JsonSerializable(typeof(StrongReference))]
     [JsonSerializable(typeof(RepoReference))]
+    [JsonSerializable(typeof(Commit))]
 
     [JsonSerializable(typeof(Label))]
     [JsonSerializable(typeof(List<Label>))]
@@ -58,8 +59,8 @@ namespace idunno.AtProto
     [JsonSerializable(typeof(RepoDescription))]
     [JsonSerializable(typeof(Blob))]
     [JsonSerializable(typeof(BlobReference))]
-    [JsonSerializable(typeof(Commit))]
 
+    [JsonSerializable(typeof(BaseSessionResponse))]
     [JsonSerializable(typeof(CreateSessionRequest))]
     [JsonSerializable(typeof(CreateSessionResponse))]
     [JsonSerializable(typeof(GetSessionResponse))]
@@ -71,23 +72,20 @@ namespace idunno.AtProto
     [JsonSerializable(typeof(DeleteRecordResponse))]
     [JsonSerializable(typeof(PutRecordRequest))]
     [JsonSerializable(typeof(PutRecordResponse))]
-    [JsonSerializable(typeof(ApplyWritesCreate))]
-    [JsonSerializable(typeof(ApplyWritesCreateResult))]
-    [JsonSerializable(typeof(ApplyWritesDelete))]
-    [JsonSerializable(typeof(ApplyWritesDeleteResult))]
+    [JsonSerializable(typeof(ApplyWritesCreateRequest))]
+    [JsonSerializable(typeof(ApplyWritesCreateResponse))]
+    [JsonSerializable(typeof(ApplyWritesDeleteRequest))]
+    [JsonSerializable(typeof(ApplyWritesDeleteResponse))]
     [JsonSerializable(typeof(ApplyWritesRequest))]
+    [JsonSerializable(typeof(ApplyWritesResponseBase))]
     [JsonSerializable(typeof(ApplyWritesResponse))]
-    [JsonSerializable(typeof(ApplyWritesUpdate))]
-    [JsonSerializable(typeof(ApplyWritesUpdateResult))]
+    [JsonSerializable(typeof(ApplyWritesUpdateRequest))]
+    [JsonSerializable(typeof(ApplyWritesUpdateResponse))]
     [JsonSerializable(typeof(CreateBlobResponse))]
     [JsonSerializable(typeof(ListRecordsResponse))]
 
-    [JsonSerializable(typeof(AccountStatus))]
-    [JsonSerializable(typeof(ValidationStatus))]
-
     [JsonSerializable(typeof(CreateReportRequest))]
     [JsonSerializable(typeof(ModerationReport))]
-    [JsonSerializable(typeof(SubjectType))]
 
     [JsonSerializable(typeof(ServiceToken))]
 

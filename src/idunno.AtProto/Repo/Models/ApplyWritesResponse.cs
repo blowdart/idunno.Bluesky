@@ -8,10 +8,10 @@ namespace idunno.AtProto.Repo.Models
     /// <summary>
     /// Encapsulates the response from an applyWrites API call.
     /// </summary>
-    public record ApplyWritesResponse
+    internal sealed record ApplyWritesResponse
     {
         [JsonConstructor]
-        internal ApplyWritesResponse(Commit commit, IReadOnlyCollection<ApplyWritesResultBase> results)
+        internal ApplyWritesResponse(Commit commit, IReadOnlyCollection<ApplyWritesResponseBase> results)
         {
             Commit = commit;
             Results = results;
@@ -29,6 +29,6 @@ namespace idunno.AtProto.Repo.Models
         /// </summary>
         [JsonInclude]
         [JsonRequired]
-        public IReadOnlyCollection<ApplyWritesResultBase> Results { get; init; }
+        public IReadOnlyCollection<ApplyWritesResponseBase> Results { get; init; }
     }
 }
