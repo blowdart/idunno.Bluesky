@@ -54,10 +54,6 @@ The [releases page](https://github.com/blowdart/idunno.Bluesky/releases) provide
 * Wider test coverage
 * More deserialization tests with captured responses
 
-### Missing APIs
-
-* [moderation.createReport](https://docs.bsky.app/docs/api/com-atproto-moderation-create-report)
-
 ### Awaiting external
 
 * Automatic Open Graph card generation when link facets detected.
