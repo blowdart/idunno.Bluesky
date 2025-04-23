@@ -109,7 +109,6 @@ namespace Samples.ConsoleShell
 
                 Debugger.Break();
             }
-            return;
         }
     }
 }

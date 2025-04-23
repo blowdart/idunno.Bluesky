@@ -13,6 +13,7 @@ using idunno.AtProto.OAuthCallback;
 using idunno.Bluesky;
 
 using Samples.Common;
+using System.Diagnostics;
 
 namespace Samples.ConsoleShellOAuth
 {
@@ -134,9 +135,8 @@ namespace Samples.ConsoleShellOAuth
 
                 // Your code goes here.
 
-            }
-
-            await agent.Logout(cancellationToken: cancellationToken);
+                Debugger.Break();
+                await agent.Logout(cancellationToken: cancellationToken);
             }
         }
     }
