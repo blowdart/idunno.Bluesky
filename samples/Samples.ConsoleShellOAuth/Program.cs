@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.CommandLine.Parsing;
-using System.Diagnostics;
 using System.Text;
 
 using Microsoft.Extensions.Logging;
@@ -12,10 +11,8 @@ using idunno.AtProto.Authentication;
 using idunno.AtProto.OAuthCallback;
 
 using idunno.Bluesky;
-using idunno.Bluesky.Record;
 
 using Samples.Common;
-using idunno.AtProto.Repo;
 
 namespace Samples.ConsoleShellOAuth
 {
@@ -135,44 +132,11 @@ namespace Samples.ConsoleShellOAuth
                     return;
                 }
 
-                Debugger.Break();
+                // Your code goes here.
 
-                StrongReference sr = new ("at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.graph.verification/3lnhd6cqgys27", "bafyreihgag4aasij5jmccta4vwapnw5qel6phjx5pk6kaga3tbtkoaqism");
-                await agent.DeleteRecord(sr, cancellationToken: cancellationToken);
+            }
 
-                var validationRecords = await agent.ListRecords<VerificationRecordValue>(CollectionNsid.Verification, cancellationToken: cancellationToken);
-
-                var handle = "jcsalterego.bsky.social";
-
-                var did = await agent.ResolveHandle(handle, cancellationToken: cancellationToken);
-                if (did is not null)
-                {
-                    var profileResult = await agent.GetProfile(did, cancellationToken: cancellationToken);
-
-                    if (profileResult.Succeeded && profileResult.Result.DisplayName is not null)
-                    {
-                        var verificationRecordValue = new VerificationRecordValue(
-                            handle: handle,
-                            subject: did,
-                            displayName: profileResult.Result.DisplayName,
-                            createdAt: DateTimeOffset.Now);
-
-                        var recordCreateResult = await agent.CreateBlueskyRecord(
-                            recordValue: verificationRecordValue,
-                            collection: CollectionNsid.Verification,
-                            validate: false,
-                            cancellationToken: cancellationToken);
-
-                        if (recordCreateResult.Succeeded)
-                        {
-                            Console.WriteLine(recordCreateResult.Result.StrongReference);
-                        }
-
-                        Debugger.Break();
-                    }
-                }
-
-                await agent.Logout(cancellationToken: cancellationToken);
+            await agent.Logout(cancellationToken: cancellationToken);
             }
         }
     }

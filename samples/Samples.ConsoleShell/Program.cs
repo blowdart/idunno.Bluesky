@@ -11,8 +11,6 @@ using Samples.Common;
 
 using idunno.AtProto;
 using idunno.Bluesky;
-using idunno.Bluesky.Record;
-using idunno.AtProto.Repo;
 
 namespace Samples.ConsoleShell
 {
@@ -107,41 +105,9 @@ namespace Samples.ConsoleShell
                 }
                 // END-AUTHENTICATION
 
-                StrongReference record = new("at://did:plc:ec72yg6n2sydzjvtovvdlxrk/app.bsky.graph.verification/3lngr7btff72l", "bafyreih56rvgklkg5eedqyfzinxjzgxgkymfqxespqq6x5eo4dwr5hs3he");
-                await agent.DeleteRecord(record, cancellationToken: cancellationToken);
-
-                var handle = "jcsalterego.bsky.social";
-
-                var did = await agent.ResolveHandle(handle, cancellationToken: cancellationToken);
-                if (did is not null)
-                {
-                    var profileResult = await agent.GetProfile(did, cancellationToken: cancellationToken);
-
-                    if (profileResult.Succeeded && profileResult.Result.DisplayName is not null)
-                    {
-                        var verificationRecordValue = new VerificationRecordValue(
-                            handle: handle,
-                            subject: did,
-                            displayName: profileResult.Result.DisplayName,
-                            createdAt: DateTimeOffset.Now);
-
-                        var recordCreateResult = await agent.CreateRecord<BlueskyRecordValue>(
-                            recordValue: verificationRecordValue,
-                            collection: CollectionNsid.Verification,
-                            validate: false,
-                            serviceProxy: "did:web:api.bsky.app#bsky_appview",
-                            cancellationToken: cancellationToken);
-
-                        if (recordCreateResult.Succeeded)
-                        {
-                            Console.WriteLine(recordCreateResult.Result.StrongReference);
-                        }
-                    }
-                }
-
+                // Your code goes here.
 
                 Debugger.Break();
-
             }
             return;
         }
