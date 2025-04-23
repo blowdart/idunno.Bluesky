@@ -183,7 +183,12 @@ namespace idunno.AtProto.Integration.Test
                     }
 
                     response.StatusCode = 200;
-                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid, new Commit(expectedCid, "revision"), "valid");
+                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid)
+                    {
+                        Commit = new (expectedCid, "revision"),
+                        ValidationStatus = "valid"
+                    };
+
                     await response.WriteAsJsonAsync(serverDescription);
                 }
             });
@@ -275,7 +280,11 @@ namespace idunno.AtProto.Integration.Test
                     }
 
                     response.StatusCode = 200;
-                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid, new Commit(expectedCid, "revision"), "valid");
+                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid)
+                    {
+                        Commit = new (expectedCid, "revision"),
+                        ValidationStatus = "valid"
+                    };
                     await response.WriteAsJsonAsync(serverDescription);
                 }
             });
@@ -363,7 +372,12 @@ namespace idunno.AtProto.Integration.Test
                     }
 
                     response.StatusCode = 200;
-                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid, new Commit(expectedCid, "revision"), "valid");
+                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid)
+                    {
+                        Commit = new(expectedCid, "revision"),
+                        ValidationStatus = "valid"
+                    };
+
                     await response.WriteAsJsonAsync(serverDescription);
                 }
             });
@@ -375,7 +389,7 @@ namespace idunno.AtProto.Integration.Test
                 TestRecordValue recordValue = new() { TestValue = "test" };
 
                 AtProtoHttpResult<CreateRecordResult> response = await agent.CreateRecord(
-                    record: recordValue,
+                    recordValue: recordValue,
                     collection: expectedCollection,
                     validate: true,
                     swapCommit: null,
@@ -445,7 +459,11 @@ namespace idunno.AtProto.Integration.Test
                     }
 
                     response.StatusCode = 200;
-                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid, new Commit(expectedCid, "revision"), "valid");
+                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid)
+                    {
+                        Commit = new (expectedCid, "revision"),
+                        ValidationStatus = "valid"
+                    };
                     await response.WriteAsJsonAsync(serverDescription);
                 }
             });
@@ -466,7 +484,7 @@ namespace idunno.AtProto.Integration.Test
                 TestRecordValue recordValue = new() { TestValue = "test" };
 
                 AtProtoHttpResult<CreateRecordResult> response = await agent.CreateRecord(
-                    record: recordValue,
+                    recordValue: recordValue,
                     collection: expectedCollection,
                     validate: true,
                     swapCommit: null,
@@ -502,7 +520,12 @@ namespace idunno.AtProto.Integration.Test
                 if (request.Path == AtProtoServer.CreateRecordEndpoint)
                 {
                     response.StatusCode = 200;
-                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid, new Commit(expectedCid, "revision"), "valid");
+                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid)
+                    {
+                        Commit = new (expectedCid, "revision"),
+                        ValidationStatus = "valid"
+                    };
+
                     await response.WriteAsJsonAsync(serverDescription);
                 }
             });
@@ -512,7 +535,7 @@ namespace idunno.AtProto.Integration.Test
                 TestRecordValue recordValue = new() { TestValue = "test" };
 
                 await Assert.ThrowsAsync<AuthenticationRequiredException>(() => agent.CreateRecord(
-                    record: recordValue,
+                    recordValue: recordValue,
                     collection: expectedCollection,
                     validate: true,
                     swapCommit: null,
@@ -577,7 +600,12 @@ namespace idunno.AtProto.Integration.Test
                     }
 
                     response.StatusCode = 200;
-                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid, new Commit(expectedCid, "revision"), "valid");
+                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                    {
+                        Commit = new(expectedCid, "revision"),
+                        ValidationStatus = "valid"
+                    };
+
                     await response.WriteAsJsonAsync(serverDescription);
                 }
             });
@@ -670,7 +698,12 @@ namespace idunno.AtProto.Integration.Test
                     }
 
                     response.StatusCode = 200;
-                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid, new Commit(expectedCid, "revision"), "valid");
+                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                    {
+                        Commit = new(expectedCid, "revision"),
+                        ValidationStatus = "valid"
+                    };
+
                     await response.WriteAsJsonAsync(serverDescription);
                 }
             });
@@ -765,7 +798,12 @@ namespace idunno.AtProto.Integration.Test
                     }
 
                     response.StatusCode = 200;
-                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid, new Commit(expectedCid, "revision"), "valid");
+                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                    {
+                        Commit = new(expectedCid, "revision"),
+                        ValidationStatus = "valid"
+                    };
+
                     await response.WriteAsJsonAsync(serverDescription);
                 }
             });
@@ -854,7 +892,12 @@ namespace idunno.AtProto.Integration.Test
                     }
 
                     response.StatusCode = 200;
-                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid, new Commit(expectedCid, "revision"), "valid");
+                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                    {
+                        Commit = new(expectedCid, "revision"),
+                        ValidationStatus = "valid"
+                    };
+
                     await response.WriteAsJsonAsync(serverDescription);
                 }
             });
@@ -952,7 +995,12 @@ namespace idunno.AtProto.Integration.Test
                     }
 
                     response.StatusCode = 200;
-                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid, new Commit(expectedCid, "revision"), "valid");
+                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                    {
+                        Commit = new(expectedCid, "revision"),
+                        ValidationStatus = "valid"
+                    };
+
                     await response.WriteAsJsonAsync(serverDescription);
                 }
             });
@@ -1043,7 +1091,12 @@ namespace idunno.AtProto.Integration.Test
                     }
 
                     response.StatusCode = 200;
-                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid, new Commit(expectedCid, "revision"), "valid");
+                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                    {
+                        Commit = new(expectedCid, "revision"),
+                        ValidationStatus = "valid"
+                    };
+
                     await response.WriteAsJsonAsync(serverDescription);
                 }
             });
@@ -1096,7 +1149,12 @@ namespace idunno.AtProto.Integration.Test
                 if (request.Path == AtProtoServer.CreateRecordEndpoint)
                 {
                     response.StatusCode = 200;
-                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid, new Commit(expectedCid, "revision"), "valid");
+                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                    {
+                        Commit = new(expectedCid, "revision"),
+                        ValidationStatus = "valid"
+                    };
+
                     await response.WriteAsJsonAsync(serverDescription);
                 }
             });
@@ -1131,7 +1189,12 @@ namespace idunno.AtProto.Integration.Test
                 if (request.Path == AtProtoServer.CreateRecordEndpoint)
                 {
                     response.StatusCode = 200;
-                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid, new Commit(expectedCid, "revision"), "valid");
+                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                    {
+                        Commit = new(expectedCid, "revision"),
+                        ValidationStatus = "valid"
+                    };
+
                     await response.WriteAsJsonAsync(serverDescription);
                 }
             });

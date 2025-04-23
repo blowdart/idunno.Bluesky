@@ -18,6 +18,7 @@ namespace idunno.Bluesky.Record
     [JsonDerivedType(typeof(LikeRecordValue), RecordType.Like)]
     [JsonDerivedType(typeof(BlockRecordValue), RecordType.Block)]
     [JsonDerivedType(typeof(StarterPackRecordValue), RecordType.StarterPack)]
+    [JsonDerivedType(typeof(VerificationRecordValue), RecordType.Verification)]
     public record BlueskyTimestampedRecordValue : BlueskyRecordValue
     {
         /// <summary>
@@ -35,7 +36,7 @@ namespace idunno.Bluesky.Record
         [JsonConstructor]
         public BlueskyTimestampedRecordValue(DateTimeOffset createdAt) : base()
         {
-            CreatedAt = createdAt;
+            CreatedAt = createdAt.ToUniversalTime();
         }
 
         /// <summary>
@@ -46,7 +47,7 @@ namespace idunno.Bluesky.Record
         {
             if (record is not null)
             {
-                CreatedAt = record.CreatedAt;
+                CreatedAt = record.CreatedAt.ToUniversalTime();
             }
         }
 

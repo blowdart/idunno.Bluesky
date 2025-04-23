@@ -1,67 +1,12 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Text.Json.Serialization;
-
 namespace idunno.AtProto.Repo.Models
 {
-    /// <summary>
-    /// Encapsulates data returned by the CreateRecord API call.
-    /// </summary>
-    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Skip)]
-    internal sealed record CreateRecordResponse
+    internal sealed record CreateRecordResponse(AtUri Uri, Cid Cid)
     {
-        /// <summary>
-        /// Creates a new instance of CreateRecordResponse.
-        /// </summary>
-        /// <param name="uri">The <see cref="AtUri"/> for the newly created record.</param>
-        /// <param name="cid">The <see cref="AtProto.Cid"/> for the newly created record.</param>
-        /// <param name="commit">The <see cref="Commit"/> the record was created in.</param>
-        /// <param name="validationStatus">The <see cref="ValidationStatus"/> used during creation.</param>
-        [JsonConstructor]
-        internal CreateRecordResponse(AtUri uri, Cid cid, Commit? commit, string? validationStatus)
-        {
-            ArgumentNullException.ThrowIfNull("uri");
-            ArgumentNullException.ThrowIfNull("cid");
-
-            Uri = uri;
-            Cid = cid;
-            StrongReference = new(uri, cid);
-
-            Commit = commit;
-            ValidationStatus = validationStatus;
-        }
-
-        /// <summary>
-        /// Gets the <see cref="AtUri"/> for the newly created record.
-        /// </summary>
-        [JsonInclude]
-        [JsonRequired]
-        public AtUri Uri { get; init; }
-
-        /// <summary>
-        /// Gets the <see cref="Cid"/> for the newly created record.
-        /// </summary>
-        [JsonInclude]
-        [JsonRequired]
-        public Cid Cid { get; init; }
-
-        /// <summary>
-        /// Gets the <see cref="Commit"/> for the creation operation.
-        /// </summary>
-        [JsonInclude]
         public Commit? Commit { get; init; }
 
-        /// <summary>
-        /// Gets the <see cref="ValidationStatus"/>, if any, for the creation operation.
-        /// </summary>
-        [JsonInclude]
         public string? ValidationStatus { get; init; }
-
-        /// <summary>
-        /// Gets a <see cref="StrongReference"/> to the newly created record.
-        /// </summary>
-        [JsonIgnore]
-        public StrongReference StrongReference { get; }
     }
 }

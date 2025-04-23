@@ -166,6 +166,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "idunno.TrimmingTest", "trim
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "idunno.Bluesky.Integration.Test", "test\idunno.Bluesky.Integration.Test\idunno.Bluesky.Integration.Test.csproj", "{7501CBAC-D086-80A2-6449-FAC4607CED55}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.ConsoleShellOAuth", "samples\Samples.ConsoleShellOAuth\Samples.ConsoleShellOAuth.csproj", "{97B78C32-1BBA-4E61-ACEC-32D98A97AE82}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		CodeQL|Any CPU = CodeQL|Any CPU
@@ -289,6 +291,10 @@ Global
 		{7501CBAC-D086-80A2-6449-FAC4607CED55}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7501CBAC-D086-80A2-6449-FAC4607CED55}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7501CBAC-D086-80A2-6449-FAC4607CED55}.Release|Any CPU.Build.0 = Release|Any CPU
+		{97B78C32-1BBA-4E61-ACEC-32D98A97AE82}.CodeQL|Any CPU.ActiveCfg = Debug|Any CPU
+		{97B78C32-1BBA-4E61-ACEC-32D98A97AE82}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{97B78C32-1BBA-4E61-ACEC-32D98A97AE82}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{97B78C32-1BBA-4E61-ACEC-32D98A97AE82}.Release|Any CPU.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -324,6 +330,7 @@ Global
 		{15E0FD9F-AC5E-017E-1F89-E5B7A7DE41E7} = {ACED7B7D-7BBE-4086-937F-7ECEE6A3F6B4}
 		{DAF76BD2-70AF-33B6-84C9-61C277D5DFF2} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{7501CBAC-D086-80A2-6449-FAC4607CED55} = {ACED7B7D-7BBE-4086-937F-7ECEE6A3F6B4}
+		{97B78C32-1BBA-4E61-ACEC-32D98A97AE82} = {B1A49FA3-07AB-4D78-BC16-FF7FB5857840}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2B9F8C2-975D-4E3A-B05E-48FDF4BCE3E6}

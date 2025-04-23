@@ -198,10 +198,12 @@ namespace idunno.AtProto.Integration.Test
                     response.ContentType = "application/json";
 
                     var createRecordResponse = new CreateRecordResponse(
-                        uri: new($"at://{(string?)requestJson["repo"]}/{(string ?)requestJson["collection"]}/rkey"),
-                        cid: new("bafyreihd3v4j"),
-                        commit: null,
-                        validationStatus: "valid");
+                        new($"at://{(string?)requestJson["repo"]}/{(string?)requestJson["collection"]}/rkey"),
+                        new("bafyreihd3v4j"))
+                    {
+                        Commit = null,
+                        ValidationStatus = "valid"
+                    };
 
                     await response.WriteAsJsonAsync(createRecordResponse, _jsonSerializerOptions);
                     return;
@@ -311,8 +313,8 @@ namespace idunno.AtProto.Integration.Test
 
                     if (returnBadRequest)
                     {
-                        // Simulate a DPoP nonce rotation in a bad request
-                        response.StatusCode = 400;
+                        // Simulate a DPoP nonce rotation response
+                        response.StatusCode = 401;
                         response.ContentType = "application/json";
                         string responseBody = " {\r\n  \"error\": \"use_dpop_nonce\",\r\n  \"error_description\":\r\n    \"Authorization server requires nonce in DPoP proof\"\r\n }";
                         response.Headers.Append("DPoP-Nonce", "newNonce");
@@ -324,10 +326,12 @@ namespace idunno.AtProto.Integration.Test
                     response.ContentType = "application/json";
 
                     var createRecordResponse = new CreateRecordResponse(
-                        uri: new($"at://{(string?)requestJson["repo"]}/{(string?)requestJson["collection"]}/rkey"),
-                        cid: new("bafyreihd3v4j"),
-                        commit: null,
-                        validationStatus: "valid");
+                        new($"at://{(string?)requestJson["repo"]}/{(string?)requestJson["collection"]}/rkey"),
+                        new("bafyreihd3v4j"))
+                        {
+                            Commit = null,
+                            ValidationStatus = "valid"
+                        };
 
                     await response.WriteAsJsonAsync(createRecordResponse, _jsonSerializerOptions);
                     return;

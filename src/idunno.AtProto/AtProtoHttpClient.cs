@@ -1045,10 +1045,11 @@ namespace idunno.AtProto
                             AtErrorDetail atErrorDetail = await ExtractErrorDetailFromResponse(httpRequestMessage, httpResponseMessage, cancellationToken).ConfigureAwait(false);
 
                             // Retry if the error returned is there has been a DPoP nonce change and we're sending a DPoP authenticated request.
+                            // BadRequest comes from an authorization server, Unauthorized comes from a resource server (the PDS).
                             if (credentials is IDPoPBoundCredential dPoPBoundCredential &&
-                                string.Equals(DPoPNonceRetryError, atErrorDetail.Error, StringComparison.OrdinalIgnoreCase) &&
-                                httpResponseMessage.StatusCode == HttpStatusCode.BadRequest &&
-                                retry)
+                                (httpResponseMessage.StatusCode == HttpStatusCode.Unauthorized || httpResponseMessage.StatusCode == HttpStatusCode.BadRequest) &&
+                                retry &&
+                                string.Equals(DPoPNonceRetryError, atErrorDetail.Error, StringComparison.OrdinalIgnoreCase))
                             {
                                 // Update nonce
 

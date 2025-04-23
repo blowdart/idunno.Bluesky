@@ -1,27 +1,30 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Diagnostics;
+using System.Text;
 
 using Microsoft.Extensions.Logging;
 
-using Samples.Common;
-
 using idunno.AtProto;
+using idunno.AtProto.Authentication;
+using idunno.AtProto.OAuthCallback;
+
 using idunno.Bluesky;
 using idunno.Bluesky.Record;
+
+using Samples.Common;
 using idunno.AtProto.Repo;
 
-namespace Samples.ConsoleShell
+namespace Samples.ConsoleShellOAuth
 {
     public sealed class Program
     {
         static async Task<int> Main(string[] args)
         {
             // Necessary to render emojis.
-            Console.OutputEncoding = System.Text.Encoding.UTF8;
+            Console.OutputEncoding = Encoding.UTF8;
 
             var parser = Helpers.ConfigureCommandLine(PerformOperations);
             await parser.InvokeAsync(args);
@@ -29,10 +32,11 @@ namespace Samples.ConsoleShell
             return 0;
         }
 
-        static async Task PerformOperations(string? userHandle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
+        static async Task PerformOperations(string? loginHandle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
         {
-            ArgumentException.ThrowIfNullOrEmpty(userHandle);
-            ArgumentException.ThrowIfNullOrEmpty(password);
+            ArgumentException.ThrowIfNullOrEmpty(loginHandle);
+
+            loginHandle = "blowdart.me";
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
             proxyUri = new Uri("http://localhost:8866");
@@ -53,8 +57,6 @@ namespace Samples.ConsoleShell
 
             // Change the log level in the ConfigureConsoleLogging() to enable logging
             using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
-
-            // Create a new BlueSkyAgent
             using (var agent = new BlueskyAgent(
                 options: new BlueskyAgentOptions()
                 {
@@ -65,50 +67,80 @@ namespace Samples.ConsoleShell
                         CheckCertificateRevocationList = checkCertificateRevocationList,
                         ProxyUri = proxyUri
                     },
+
+                    OAuthOptions = new OAuthOptions()
+                    {
+                        ClientId = "http://localhost",
+                        Scopes = ["atproto", "transition:generic"]
+                    }
                 }))
             {
-                // Test code goes here.
 
-                // Delete if your test code does not require authentication
-                // START-AUTHENTICATION
-                var loginResult = await agent.Login(userHandle, password, authCode, cancellationToken: cancellationToken);
-                if (!loginResult.Succeeded)
+                await using var callbackServer = new CallbackServer(
+                    CallbackServer.GetRandomUnusedPort(),
+                    loggerFactory: loggerFactory);
                 {
-                    if (loginResult.AtErrorDetail is not null &&
-                        string.Equals(loginResult.AtErrorDetail.Error!, "AuthFactorTokenRequired", StringComparison.OrdinalIgnoreCase))
+                    string callbackData;
+
+                    OAuthClient oAuthClient = agent.CreateOAuthClient();
+
+                    Uri startUri = await agent.BuildOAuth2LoginUri(oAuthClient, loginHandle, returnUri: callbackServer.Uri, cancellationToken: cancellationToken);
+
+                    if (oAuthClient.State is null)
                     {
                         ConsoleColor oldColor = Console.ForegroundColor;
 
                         Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine("Login requires an authentication code.");
-                        Console.WriteLine("Check your email and use --authCode to specify the authentication code.");
+                        Console.WriteLine("OAuthClient state is null after building login uri.");
                         Console.ForegroundColor = oldColor;
-
                         return;
                     }
-                    else
+
+                    OAuthClient.OpenBrowser(startUri);
+
+                    callbackData = await callbackServer.WaitForCallbackAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                    if (string.IsNullOrEmpty(callbackData))
                     {
                         ConsoleColor oldColor = Console.ForegroundColor;
 
                         Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine("Login failed.");
+                        Console.WriteLine("Received no login response");
                         Console.ForegroundColor = oldColor;
-
-                        if (loginResult.AtErrorDetail is not null)
-                        {
-                            Console.ForegroundColor = ConsoleColor.Red;
-
-                            Console.WriteLine($"Server returned {loginResult.AtErrorDetail.Error} / {loginResult.AtErrorDetail.Message}");
-                            Console.ForegroundColor = oldColor;
-
-                            return;
-                        }
+                        return;
                     }
-                }
-                // END-AUTHENTICATION
 
-                StrongReference record = new("at://did:plc:ec72yg6n2sydzjvtovvdlxrk/app.bsky.graph.verification/3lngr7btff72l", "bafyreih56rvgklkg5eedqyfzinxjzgxgkymfqxespqq6x5eo4dwr5hs3he");
-                await agent.DeleteRecord(record, cancellationToken: cancellationToken);
+                    await agent.ProcessOAuth2LoginResponse(oAuthClient, callbackData, cancellationToken);
+
+                    if (string.IsNullOrEmpty(callbackData))
+                    {
+                        ConsoleColor oldColor = Console.ForegroundColor;
+
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("Received no login response");
+                        Console.ForegroundColor = oldColor;
+                        return;
+                    }
+
+                    await agent.ProcessOAuth2LoginResponse(oAuthClient, callbackData, cancellationToken);
+                }
+
+                if (!agent.IsAuthenticated)
+                {
+                    ConsoleColor oldColor = Console.ForegroundColor;
+
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Could not login with oauth credentials");
+                    Console.ForegroundColor = oldColor;
+                    return;
+                }
+
+                Debugger.Break();
+
+                StrongReference sr = new ("at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.graph.verification/3lnhd6cqgys27", "bafyreihgag4aasij5jmccta4vwapnw5qel6phjx5pk6kaga3tbtkoaqism");
+                await agent.DeleteRecord(sr, cancellationToken: cancellationToken);
+
+                var validationRecords = await agent.ListRecords<VerificationRecordValue>(CollectionNsid.Verification, cancellationToken: cancellationToken);
 
                 var handle = "jcsalterego.bsky.social";
 
@@ -125,25 +157,23 @@ namespace Samples.ConsoleShell
                             displayName: profileResult.Result.DisplayName,
                             createdAt: DateTimeOffset.Now);
 
-                        var recordCreateResult = await agent.CreateRecord<BlueskyRecordValue>(
+                        var recordCreateResult = await agent.CreateBlueskyRecord(
                             recordValue: verificationRecordValue,
                             collection: CollectionNsid.Verification,
                             validate: false,
-                            serviceProxy: "did:web:api.bsky.app#bsky_appview",
                             cancellationToken: cancellationToken);
 
                         if (recordCreateResult.Succeeded)
                         {
                             Console.WriteLine(recordCreateResult.Result.StrongReference);
                         }
+
+                        Debugger.Break();
                     }
                 }
 
-
-                Debugger.Break();
-
+                await agent.Logout(cancellationToken: cancellationToken);
             }
-            return;
         }
     }
 }

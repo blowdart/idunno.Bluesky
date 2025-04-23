@@ -104,10 +104,10 @@ namespace idunno.Bluesky
             }
 
             return await CreateRecord(
-                record: threadGate,
+                recordValue: threadGate,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.ThreadGate,
-                rkey: threadGate.Post.RecordKey,
+                rKey: threadGate.Post.RecordKey,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -347,10 +347,10 @@ namespace idunno.Bluesky
             }
 
             return await CreateRecord(
-                record: postGate,
+                recordValue: postGate,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.PostGate,
-                rkey: postGate.Post.RecordKey,
+                rKey: postGate.Post.RecordKey,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 

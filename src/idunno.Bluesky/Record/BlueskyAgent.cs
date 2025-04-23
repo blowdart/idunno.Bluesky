@@ -5,13 +5,62 @@ using System.Diagnostics.CodeAnalysis;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
-using idunno.AtProto.Repo.Models;
 using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky
 {
     public partial class BlueskyAgent
     {
+        /// <summary>
+        /// Creates a record in the specified collection belonging to the current user.
+        /// </summary>
+        /// <typeparam name="TRecordValue">The type of record to create.</typeparam>
+        /// <param name="recordValue"><para>The record to be created.</para></param>
+        /// <param name="collection"><para>The collection the record should be created in.</para></param>
+        /// <param name="rkey"><para>An optional <see cref="RecordKey"/> to create the record with.</para></param>
+        /// <param name="validate">
+        ///   <para>Gets a flag indicating what validation will be performed, if any.</para>
+        ///   <para>A value of <keyword>true</keyword> requires lexicon schema validation of record data.</para>
+        ///   <para>A value of <keyword>false</keyword> will skip Lexicon schema validation of record data.</para>
+        ///   <para>A value of <keyword>null</keyword> to validate record data only for known lexicons.</para>
+        ///   <para>Defaults to <keyword>true</keyword>.</para>
+        /// </param>
+        /// <param name="swapCommit"><para>Compare and swap with the previous commit by CID.</para></param>
+        /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
+        /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
+        /// <returns><para>The task object representing the asynchronous operation.</para></returns>
+        /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="recordValue"/> or <paramref name="collection"/> is null.</para></exception>
+        /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
+        public async Task<AtProtoHttpResult<CreateRecordResult>> CreateBlueskyRecord<TRecordValue>(
+            TRecordValue recordValue,
+            Nsid collection,
+            RecordKey? rkey = null,
+            bool? validate = true,
+            Cid? swapCommit = null,
+            string? serviceProxy = null,
+            CancellationToken cancellationToken = default) where TRecordValue : BlueskyRecordValue
+        {
+            ArgumentNullException.ThrowIfNull(recordValue);
+            ArgumentNullException.ThrowIfNull(collection);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            AtProtoHttpResult<CreateRecordResult> result = await CreateRecord<BlueskyRecordValue>(
+                recordValue: recordValue,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
+                collection: collection,
+                rKey: rkey,
+                validate: validate,
+                swapCommit: swapCommit,
+                serviceProxy: serviceProxy,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            return result;
+        }
+
         /// <summary>
         /// Gets the post record for the specified <see cref="StrongReference"/>.
         /// </summary>

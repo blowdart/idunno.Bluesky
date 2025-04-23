@@ -1,5 +1,25 @@
 # Version History
 
+## 0.6.1
+
+### Bug Fixes
+
+#### idunno.AtProto
+
+* Fix DPoP nonce handling for resource providers.
+
+#### idunno.Bluesky
+
+* Update `BlueskyTimestampedRecordValue` to use UTC DateTimeOffsets.
+* Add `CreateBlueskyRecord` to make manually creating known Bluesky records easier.
+* Make `VerificationRecordValue` public so everyone can create vanity verification records for [Jerry Chen](https://bsky.app/profile/did:plc:vc7f4oafdgxsihk4cry2xpze).
+
+### Breaking Changes
+
+#### idunno.AtProto
+
+* Change `CreateRecord` record parameter name from `record` to `recordValue` to more accurately reflect what the parameter type.
+
 ## 0.6.0
 
 ### Features

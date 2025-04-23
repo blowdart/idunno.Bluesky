@@ -5,16 +5,12 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
-using System.Text.Json.Serialization.Metadata;
 
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
 using idunno.AtProto.Authentication;
-using System;
-using Duende.IdentityModel.OidcClient;
 
 
 namespace idunno.AtProto

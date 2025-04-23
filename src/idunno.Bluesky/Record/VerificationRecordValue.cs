@@ -10,10 +10,17 @@ namespace idunno.Bluesky.Record
     /// <summary>
     /// Encapsulates a verification record.
     /// </summary>
-    public sealed record VerificationRecordValue : BlueskyRecordValue
+    public sealed record VerificationRecordValue : BlueskyTimestampedRecordValue
     {
+        /// <summary>
+        /// Creates a new instance of <see cref="VerificationRecordValue"/>.
+        /// </summary>
+        /// <param name="handle">The <see cref="AtProto.Handle"/> to verify.</param>
+        /// <param name="subject">The <see cref="Did"/> to verify.</param>
+        /// <param name="displayName">The display name to verify.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the record value was created at.</param>
         [JsonConstructor]
-        internal VerificationRecordValue(Handle handle, Did subject, DateTimeOffset createdAt, string displayName)
+        public VerificationRecordValue(Handle handle, Did subject, DateTimeOffset createdAt, string displayName)
         {
             Handle = handle;
             Subject = subject;
@@ -34,13 +41,6 @@ namespace idunno.Bluesky.Record
         [JsonInclude]
         [JsonRequired]
         public Did Subject { get; init; }
-
-        /// <summary>
-        /// Gets <see cref="DateTimeOffset"/> the record was created at.
-        /// </summary>
-        [JsonInclude]
-        [JsonRequired]
-        public DateTimeOffset CreatedAt { get; init; }
 
         /// <summary>
         /// Gets the display name of the actor the verification record refers to.

@@ -6,7 +6,6 @@ using System.Net;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
-using idunno.AtProto.Repo.Models;
 
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed.Gates;
@@ -83,7 +82,7 @@ namespace idunno.Bluesky
 
             // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
             AtProtoHttpResult<CreateRecordResult> result = await CreateRecord<BlueskyTimestampedRecordValue>(
-                record: follow,
+                recordValue: follow,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Follow,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -270,7 +269,7 @@ namespace idunno.Bluesky
 
             // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
             return await CreateRecord<BlueskyTimestampedRecordValue>(
-                record: block,
+                recordValue: block,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Block,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -607,7 +606,7 @@ namespace idunno.Bluesky
             DateTimeOffset creationDateTime = DateTimeOffset.UtcNow;
             if (createdAt is not null)
             {
-                creationDateTime = createdAt.Value;
+                creationDateTime = createdAt.Value.ToUniversalTime();
             }
 
             Post post = new(
@@ -688,7 +687,7 @@ namespace idunno.Bluesky
             DateTimeOffset creationDateTime = DateTimeOffset.UtcNow;
             if (createdAt is not null)
             {
-                creationDateTime = createdAt.Value;
+                creationDateTime = createdAt.Value.ToUniversalTime();
             }
 
             Post post = new(
@@ -1125,7 +1124,7 @@ namespace idunno.Bluesky
 
             // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
             return await CreateRecord<BlueskyTimestampedRecordValue>(
-                record: repostRecord,
+                recordValue: repostRecord,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Repost,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1210,7 +1209,7 @@ namespace idunno.Bluesky
 
             // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
             return await CreateRecord<BlueskyTimestampedRecordValue>(
-                record: likeRecord,
+                recordValue: likeRecord,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Like,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1621,7 +1620,7 @@ namespace idunno.Bluesky
             {
                 // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
                 return await CreateRecord<BlueskyTimestampedRecordValue>(
-                    record: post,
+                    recordValue: post,
                     jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                     collection: CollectionNsid.Post,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
