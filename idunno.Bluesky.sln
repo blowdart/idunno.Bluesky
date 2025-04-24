@@ -70,7 +70,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 		.github\workflows\codeql-analysis.yml = .github\workflows\codeql-analysis.yml
 		.github\workflows\dependency-review.yml = .github\workflows\dependency-review.yml
 		.github\workflows\generate-publish-docs.yml = .github\workflows\generate-publish-docs.yml
-		.github\workflows\markdown-link-check.yml = .github\workflows\markdown-link-check.yml
 		.github\workflows\upload-coverage-report.yml = .github\workflows\upload-coverage-report.yml
 	EndProjectSection
 EndProject
