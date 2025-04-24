@@ -2,14 +2,14 @@
 
 Let's make your first post to Bluesky via the API in under 5 minutes.
 
-## Create a .NET project and add the idunno.Bluesky
+## Create a .NET project with the idunno.Bluesky nuget package
 
 # [Command Line](#tab/commandlineProjectCreate)
 
 1. At the command line run the following commands
    ```PowerShell
    dotnet new console -n HelloBluesky
-   cd HellowBluesky
+   cd HelloBluesky
    dotnet add package idunno.Bluesky --prerelease
    ```
 
@@ -74,7 +74,7 @@ ___
 
 # [Command Line](#tab/commandlinePostCreate)
 
-1. Continue to change `Program.cs` by adding an additional call to make a post.
+1. Continue to change `Program.cs` by adding an additional line to create a post.
    [!code-csharp[](docs/code/helloWorld.cs?highlight=5)]
 1. Save the changed file and exit your editor.
 1. Compile and run your project with the following command
@@ -83,20 +83,20 @@ ___
    ```
 
 # [Visual Studio](#tab/visualStudioPostCreate)
-1. Continue to change `Program.cs` by adding an additional call to make a post.
+1. Continue to change `Program.cs` by adding an additional line to create a post.
    [!code-csharp[](docs/code/helloWorld.cs?highlight=5)]
 1. Save the changed file.
 1. Run the project by pressing **F5** or choosing **Start Debugging** under the Debug menu.
 
 # [Visual Studio Code](#tab/vsCodePostCreate)
-1. Continue to change `Program.cs` by addint an additional call to make a post.
+1. Continue to change `Program.cs` by adding an additional line to create a post.
    [!code-csharp[](docs/code/helloWorld.cs?highlight=5)]
 1. Save the changed file.
 1. Run the project by pressing **F5** or choosing **Start Debugging** under the Run menu.
 
 ---
 
-The program should run without any errors and if you check your own profile (click the Profile link in the app, or on [bsky.app](https://bsky.app/))
+The program should run without any errors, and if you check your own profile (click the Profile link in the app, or on [bsky.app](https://bsky.app/))
 you should see a post that says "Hello World from idunno.Bluesky".
 
 Congratulations, you've just posted from code!
