@@ -29,7 +29,8 @@
             {
                 "files": [
                     "**/images/**",
-                    "**/media/**"
+                    "**/media/**",
+                    "**/code/*.cs"
                 ]
             },
             {

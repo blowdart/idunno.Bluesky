@@ -1,70 +1,111 @@
-# <a name="gettingStarted">Hello World</a>
+﻿# Get started
 
-```c#
-using idunno.Bluesky.
+Let's make your first post to Bluesky via the API in under 5 minutes.
 
-using (BlueskyAgent agent = new ())
-{
-    var loginResult = await agent.Login(username, password);
-    if (loginResult.Succeeded)
-    {
-        var response = 
-            await agent.Post("Hello World");
+## Create a .NET project and add the idunno.Bluesky
 
-       if (response.Succeeded)
-       {
-          // It worked.
-       }
-   }
-}
-```
+# [Command Line](#tab/commandlineProjectCreate)
 
-## <a name="makingRequests">Making requests to Bluesky</a>
+1. At the command line run the following commands
+   ```PowerShell
+   dotnet new console -n HelloBluesky
+   cd HellowBluesky
+   dotnet add package idunno.Bluesky --prerelease
+   ```
 
-All the supported Bluesky operations are contained in the `BlueskyAgent` class, which takes care of session management for you.
+# [Visual Studio](#tab/visualStudioProjectCreate)
 
-Most requests to Bluesky are made over [HTTP](https://docs.bsky.app/docs/category/http-reference) and the results are wrapped up in an `HttpResult` instance,
-which contains the HTTP status code returned by the API, and any result or error returned.
+1. Create a new .NET Command Line project by opening the File menu, and choosing **New ▶ Project**.
+1. In the "**Create a new project**" dialog select C# as the language, choose **Console App** as the project type then click Next.
+   ![The Create a new project dialog in Visual Studio 2022, with C# selected as the language and Console App project type highlighted.](docs/media/vs-CreateNewConsoleApp.png)
+1. In the "**Configure your new project**" dialog name the project `HelloBluesky` and click Next.
+1. In the "**Additional information**" dialog choose a Framework of .NET 8.0, uncheck the "Do not use top level statements" check box then click **Create**.
+   ![The Additional information dialog in Visual Studio 2022, with .NET 8.0 selected as the framework and Do not use top level statements unchecked.](docs/media/vs-CreateNewConsoleApp.png)
+1. Under the **Project** menu Select **Manage nuget packages**, select the *Browse* tab, ensure that the Include prelease checkbox is checked. Search for `idunno.Bluesky`, and click **Install**.
+1. Close the **Manage nuget packages** dialog.
 
-## <a name="understandingResults">Understanding AtProtoHttpResult&lt;T&gt;</a>
+# [Visual Studio Code](#tab/vsCodeProjectCreate)
 
-Every API call through an agent returns an `AtProtoHttpResult<T>`. This approach, which you may recognize from ASP.NET,
-avoids the use of exceptions should the HTTP call fail, and allows you to view any extra error information the Bluesky APIs may return.
+First configure VS Code to [allow pre-release nuget packages](https://code.visualstudio.com/docs/csharp/package-management#_include-prerelease-package-versions).
 
-If a request is successful the API return value will be in the `Result` property of the `AtProtoHttpResult<T>` and
-the `Succeeded` property will be `true`. The `StatusCode` property will be `HttpStatusCode.OK`.
+1. Create a new .NET Command Line project by opening the Command Palette (**Ctrl + Shift + P**) and search for **.NET New Project**
+1. In the Create a new .NET Project template search for and select **Console App**
+1. Select the folder you want to save your poject in
+1. Name your project `HelloBlusky`
+1. Choose the solution format you prefer.
+1. Press *Enter* to create the solution.
+1. Select the HelloWorld.csproj file in Explorer window.
+1. Opening the Command Palette (Ctrl + Shift + P) and search for **Nuget: Add**
+1. Enter `idunno.Bluesky` in the package search dialog and choose the latest version.
 
-If a request has failed, either at the HTTP or the API layer then the `Succeeded` property will be `false`, and
-the `Result` property will likely be `null`. You can check the `StatusCode` property to see what HTTP status code was
-encountered during the API call, and, if the API call reached the API endpoint the `Error` property will contain any
-error message returned by the endpoint.
+---
 
-For example, a login call returns an `AtProtoHttpResult<bool>`. To check the operation succeeded you would
+### Create a session
 
-1. Check the that the `Succeeded` property is true, which indicates the underlying request returned a `HttpStatusCode.OK` status code, and an available result.
-2. If `Succeeded` is `true`, you can use the `Result` property and continue on your way.
+# [Command Line](#tab/commandlineSessionCreate)
 
-   If `Succeeded` is `false` you use the `StatusCode` property to examine the HTTP status code returned by the API, then
-   1. If the `StatusCode` property is `HttpStatusCode.OK` then the API call succeeded but no result was returned.
-   2. If the `Error` property to view any extended error information returned by the API, which may have an `Error` and a `Message` set.
+1. Open the `Program.cs` file in your editor of choice and change its contents to the following code, replacing
+the `"handle"` and `"password"` parameters in the `agent.Login()` call with your Bluesky handle and password.
+  [!code-csharp[](docs/code/createASession.cs?highlight=4)]
+2. Save the changed file.
 
-When calling an API you use the following pattern to check for errors.
+# [Visual Studio](#tab/visualStudioSessionCreate)
 
-```c#
-// Make an API call to get the timeline for the current user.
-var result = await agent.GetTimeline();
+1. Open the `Program.cs` file from the Solution Explorer window and change its contents to the following code, replacing
+the `"handle"` and `"password"` parameters for in the `agent.Login()` call with your Bluesky handle and password.
+  [!code-csharp[](docs/code/createASession.cs?highlight=4)]
+2. Save the changed file.
 
-if (result.Succeeded)
-{
-    // Everything was successful, continue on with your code
-}
-else
-{
-    // React to the error.
-    // Check the StatusCode property to check if there were any HTTP errors
-    // And the Error property to check if the API returned any errors.
-}
-```
+# [Visual Studio Code](#tab/vsCodeSessionCreate)
 
-The `EnsureSucceeded()` method on `AtProtoHttpResult<T>` will throw an `AtProtoHttpRequestException` if the `Succeeded` property is false.
+1. Open the `Program.cs` file from the Explorer window and change its contents to the following code, replacing
+the `"handle"` and `"password"` parameters for the `agent.Login()` method with your Bluesky handle and password.
+  [!code-csharp[](docs/code/createASession.cs?highlight=4)]
+2. Save the changed file.
+
+___
+
+> [!TIP]
+> You can create and use an [App password](https://bsky.app/settings/app-passwords) instead of your login password.
+>
+> App Passwords are safer as they allow sign in without granting full access to your Bluesky account.
+
+### Create a post
+
+# [Command Line](#tab/commandlinePostCreate)
+
+1. Continue to change `Program.cs` by adding an additional call to make a post.
+   [!code-csharp[](docs/code/helloWorld.cs?highlight=5)]
+1. Save the changed file and exit your editor.
+1. Compile and run your project with the following command
+   ```PowerShell
+   dotnet run
+   ```
+
+# [Visual Studio](#tab/visualStudioPostCreate)
+1. Continue to change `Program.cs` by adding an additional call to make a post.
+   [!code-csharp[](docs/code/helloWorld.cs?highlight=5)]
+1. Save the changed file.
+1. Run the project by pressing **F5** or choosing **Start Debugging** under the Debug menu.
+
+# [Visual Studio Code](#tab/vsCodePostCreate)
+1. Continue to change `Program.cs` by addint an additional call to make a post.
+   [!code-csharp[](docs/code/helloWorld.cs?highlight=5)]
+1. Save the changed file.
+1. Run the project by pressing **F5** or choosing **Start Debugging** under the Run menu.
+
+---
+
+The program should run without any errors and if you check your own profile (click the Profile link in the app, or on [bsky.app](https://bsky.app/))
+you should see a post that says "Hello World from idunno.Bluesky".
+
+Congratulations, you've just posted from code!
+
+You can @ someone in the post text, add hashtags, or http/https links and they will all get turned into the right type of link. Try it and check in the app.
+
+### Next Steps
+
+* [Understand how to make API calls and check their results and handle errors](docs/requestsAndResponses.md)
+* [Make richer posts](docs/posting.md)
+* [Read your timeline](docs/timeline.md)
 

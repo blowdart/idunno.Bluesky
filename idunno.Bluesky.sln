@@ -138,6 +138,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{E2B63F0A-9
 		docs\docs\posting.md = docs\docs\posting.md
 		docs\docs\profileEditing.md = docs\docs\profileEditing.md
 		docs\docs\profiles.md = docs\docs\profiles.md
+		docs\docs\requestsAndResponses.md = docs\docs\requestsAndResponses.md
 		docs\docs\savingAndRestoringAuthentication.md = docs\docs\savingAndRestoringAuthentication.md
 		docs\docs\sourceGeneration.md = docs\docs\sourceGeneration.md
 		docs\docs\threadGatesAndPostGates.md = docs\docs\threadGatesAndPostGates.md
@@ -150,6 +151,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "media", "media", "{5BDA46D6-18E0-4F11-9F0E-EE5E503D64F0}"
 	ProjectSection(SolutionItems) = preProject
 		docs\docs\images\embeddedCard.png = docs\docs\images\embeddedCard.png
+		docs\docs\media\vs-AdditionalInformation.png = docs\docs\media\vs-AdditionalInformation.png
+		docs\docs\media\vs-CreateNewConsoleApp.png = docs\docs\media\vs-CreateNewConsoleApp.png
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.Video", "samples\Samples.Video\Samples.Video.csproj", "{55550FC6-B850-4C60-834A-9EF80E980000}"
@@ -167,6 +170,13 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "idunno.Bluesky.Integration.Test", "test\idunno.Bluesky.Integration.Test\idunno.Bluesky.Integration.Test.csproj", "{7501CBAC-D086-80A2-6449-FAC4607CED55}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.ConsoleShellOAuth", "samples\Samples.ConsoleShellOAuth\Samples.ConsoleShellOAuth.csproj", "{97B78C32-1BBA-4E61-ACEC-32D98A97AE82}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "code", "code", "{33B6F64E-9C4F-494A-9F11-DF35C4630BAC}"
+	ProjectSection(SolutionItems) = preProject
+		docs\docs\code\createASession.cs = docs\docs\code\createASession.cs
+		docs\docs\code\helloWorld.cs = docs\docs\code\helloWorld.cs
+		docs\docs\code\helloWorldErrorChecked.cs = docs\docs\code\helloWorldErrorChecked.cs
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -331,6 +341,7 @@ Global
 		{DAF76BD2-70AF-33B6-84C9-61C277D5DFF2} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{7501CBAC-D086-80A2-6449-FAC4607CED55} = {ACED7B7D-7BBE-4086-937F-7ECEE6A3F6B4}
 		{97B78C32-1BBA-4E61-ACEC-32D98A97AE82} = {B1A49FA3-07AB-4D78-BC16-FF7FB5857840}
+		{33B6F64E-9C4F-494A-9F11-DF35C4630BAC} = {E2B63F0A-9892-45AA-8453-4E5A23017D63}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2B9F8C2-975D-4E3A-B05E-48FDF4BCE3E6}

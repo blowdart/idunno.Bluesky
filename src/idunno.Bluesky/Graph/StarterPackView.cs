@@ -56,7 +56,7 @@ namespace idunno.Bluesky.Graph
             }
             else
             {
-                ListItemsSample = new List<ListItemView>();
+                ListItemsSample = [];
             }
 
             if (feeds is not null)

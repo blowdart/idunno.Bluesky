@@ -30,5 +30,7 @@ namespace idunno.Bluesky.Actor
         public const string BlueskyAppState = "app.bsky.actor.defs#bskyAppStatePref";
 
         public const string PostInteraction = "app.bsky.actor.defs#postInteractionSettingsPref";
+
+        public const string Verification = "app.bsky.actor.defs#verificationPrefs";
     }
 }

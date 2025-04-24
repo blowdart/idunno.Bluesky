@@ -3,7 +3,9 @@ items:
     items:
       - name: Getting Started
         href: ../index.md
-      - name: Common Terms & Concepts
+      - name: Requests, responses and errors
+        href: requestsAndResponses.md
+      - name: Common Terms and Concepts
         href: commonTerms.md
       - name: Connecting to Bluesky
         href: connecting.md

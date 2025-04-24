@@ -24,6 +24,7 @@ namespace idunno.Bluesky.Actor
     [JsonDerivedType(typeof(ThreadViewPreference), typeDiscriminator: PreferenceTypeDiscriminators.ThreadView)]
     [JsonDerivedType(typeof(BlueskyAppStatePreference), typeDiscriminator: PreferenceTypeDiscriminators.BlueskyAppState)]
     [JsonDerivedType(typeof(InteractionPreferences), typeDiscriminator: PreferenceTypeDiscriminators.PostInteraction)]
+    [JsonDerivedType(typeof(VerificationPreferences), typeDiscriminator: PreferenceTypeDiscriminators.Verification)]
     public record Preference
     {
         /// <summary>

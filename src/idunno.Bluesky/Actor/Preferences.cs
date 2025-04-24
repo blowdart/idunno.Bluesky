@@ -85,14 +85,18 @@ namespace idunno.Bluesky.Actor
                         InteractionPreferences = postInteractionSettingsPreference;
                         break;
 
+                    case VerificationPreferences verificationPreferences:
+                        VerificationPreferences = verificationPreferences;
+                        break;
+
                     // As this is only meant for official Bluesky apps we'll just skip doing anything with it
                     // and not expose it as a Preferences property.
                     case BlueskyAppStatePreference:
-                        break;
+                            break;
 
-                    default:
-                        break;
-                }
+                        default:
+                            break;
+                        }
             }
 
             if (enableBlueskyModerationLabeler && !labelerPreferenceList.Contains(WellKnownDistributedIdentifiers.BlueskyModerationLabeler))
@@ -186,5 +190,10 @@ namespace idunno.Bluesky.Actor
         /// Default gate settings for posts and threads.
         /// </summary>
         public InteractionPreferences? InteractionPreferences { get; }
+
+        /// <summary>
+        /// Preferences for how verified accounts appear in an app.
+        /// </summary>
+        public VerificationPreferences? VerificationPreferences { get; }
     }
 }

@@ -2,14 +2,14 @@
 
 ## <a name="usernamesAndPasswords">Authenticating with handles and passwords</a>
 
-As you can see from the [Hello World](../index.md#gettingStarted) example connecting to Bluesky consists of creating an instance of a `BlueskyAgent`
+As you can see from the [Hello World](../index.md) example connecting to Bluesky consists of creating an instance of a `BlueskyAgent`
 and then calling the login method.
 
 ```c#
 using (BlueskyAgent agent = new ())
 {
-    var loginResult =  await agent.Login(handles, password);
-    if (loginResult.Succeeded && agent.Session is not null)
+    var loginResult =  await agent.Login(handle, password);
+    if (loginResult.Succeeded)
     {
         // Do your Bluesky thing
     }
