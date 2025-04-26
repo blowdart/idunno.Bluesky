@@ -13,6 +13,7 @@ using idunno.Bluesky.RichText;
 using idunno.Bluesky.Actions;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Record;
+using System;
 
 namespace idunno.Bluesky
 {
@@ -417,6 +418,44 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="text">The text of the post record to create.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
+        /// <param name="langs">The languages the post was written in.</param>
+        /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
+        /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
+        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
+        /// <param name="labels">Optional self label settings for the post media content.</param>
+        /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is null, empty or whitespace.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
+            string text,
+            string langs,
+            DateTimeOffset? createdAt = null,
+            ICollection<ThreadGateRule>? threadGateRules = null,
+            ICollection<PostGateRule>? postGateRules = null,
+            InteractionPreferences? interactionPreferences = null,
+            PostSelfLabels? labels = null,
+            bool extractFacets = true,
+            CancellationToken cancellationToken = default)
+        {
+            string[]? langsArray = null;
+
+            if (langs is not null)
+            {
+                langsArray = [langs];
+            }
+
+            return await Post(text, createdAt, langsArray, threadGateRules, postGateRules, interactionPreferences, labels, extractFacets, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Creates a Bluesky post record.
+        /// </summary>
+        /// <param name="text">The text of the post record to create.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
+        /// <param name="langs">The languages the post was written in.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
         /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
@@ -430,6 +469,7 @@ namespace idunno.Bluesky
         public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
             string text,
             DateTimeOffset? createdAt = null,
+            ICollection<string>? langs = null,
             ICollection<ThreadGateRule>? threadGateRules = null,
             ICollection<PostGateRule>? postGateRules = null,
             InteractionPreferences? interactionPreferences = null,
@@ -465,6 +505,7 @@ namespace idunno.Bluesky
                 text,
                 images: null,
                 createdAt: createdAt,
+                langs: langs,
                 threadGateRules: threadGateRules,
                 postGateRules: postGateRules,
                 interactionPreferences: interactionPreferences,
@@ -479,6 +520,7 @@ namespace idunno.Bluesky
         /// <param name="text">The text of the post record to create.</param>
         /// <param name="image">The image to attach to the post.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
+        /// <param name="langs">The languages the post was written in.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
         /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
@@ -493,6 +535,7 @@ namespace idunno.Bluesky
             string text,
             EmbeddedImage image,
             DateTimeOffset? createdAt = null,
+            ICollection<string>? langs = null,
             ICollection<ThreadGateRule>? threadGateRules = null,
             ICollection<PostGateRule>? postGateRules = null,
             InteractionPreferences? interactionPreferences = null,
@@ -525,6 +568,7 @@ namespace idunno.Bluesky
                 text,
                 images: images,
                 createdAt: createdAt,
+                langs: langs,
                 threadGateRules: threadGateRules,
                 postGateRules: postGateRules,
                 interactionPreferences: interactionPreferences,
@@ -539,9 +583,10 @@ namespace idunno.Bluesky
         /// <param name="text">The text of the post record to create.</param>
         /// <param name="images">Any images to attach to the post.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
-        /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
-        /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
-        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
+        /// <param name="langs">The languages the post was written in.</param>
+        /// <param name="threadGateRules">Any thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
+        /// <param name="postGateRules">Any post gating rules to apply to the post, if any.</param>
+        /// <param name="interactionPreferences">Any default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -556,6 +601,7 @@ namespace idunno.Bluesky
             string text,
             ICollection<EmbeddedImage>? images,
             DateTimeOffset? createdAt = null,
+            ICollection<string>? langs = null,
             ICollection<ThreadGateRule>? threadGateRules = null,
             ICollection<PostGateRule>? postGateRules = null,
             InteractionPreferences? interactionPreferences = null,
@@ -612,7 +658,7 @@ namespace idunno.Bluesky
             Post post = new(
                 text,
                 createdAt: creationDateTime,
-                langs : [Thread.CurrentThread.CurrentUICulture.Name],
+                langs : langs,
                 embeddedRecord: embeddedImages);
 
             if (extractFacets)
@@ -640,6 +686,7 @@ namespace idunno.Bluesky
         /// <param name="text">The text of the post record to create.</param>
         /// <param name="video">The video to embed in the post.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
+        /// <param name="langs">The languages the post was written in.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
         /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
@@ -653,6 +700,7 @@ namespace idunno.Bluesky
             string? text,
             EmbeddedVideo video,
             DateTimeOffset? createdAt = null,
+            ICollection<string>? langs = null,
             ICollection<ThreadGateRule>? threadGateRules = null,
             ICollection<PostGateRule>? postGateRules = null,
             InteractionPreferences? interactionPreferences = null,
@@ -693,7 +741,7 @@ namespace idunno.Bluesky
             Post post = new(
                 text,
                 createdAt: creationDateTime,
-                langs: [Thread.CurrentThread.CurrentUICulture.Name],
+                langs: langs,
                 embeddedRecord: video);
 
             if (extractFacets && text is not null)
@@ -721,6 +769,7 @@ namespace idunno.Bluesky
         /// <remarks><para>Posts containing an embedded card do not require post text.</para></remarks>
         /// <param name="externalCard">An Open Graph embedded card.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
+        /// <param name="langs">The languages the post was written in.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
         /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
@@ -732,6 +781,7 @@ namespace idunno.Bluesky
         public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
             EmbeddedExternal externalCard,
             DateTimeOffset? createdAt = null,
+            ICollection<string>? langs = null,
             ICollection<ThreadGateRule>? threadGateRules = null,
             ICollection<PostGateRule>? postGateRules = null,
             InteractionPreferences? interactionPreferences = null,
@@ -744,6 +794,7 @@ namespace idunno.Bluesky
                 text: string.Empty,
                 externalCard: externalCard,
                 createdAt: createdAt,
+                langs: langs,
                 threadGateRules: threadGateRules,
                 postGateRules: postGateRules,
                 interactionPreferences: interactionPreferences,
@@ -758,6 +809,7 @@ namespace idunno.Bluesky
         /// <param name="text">The text of the post record to create.</param>
         /// <param name="externalCard">An Open Graph embedded card.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
+        /// <param name="langs">The languages the post was written in.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
         /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
@@ -772,6 +824,7 @@ namespace idunno.Bluesky
             string text,
             EmbeddedExternal externalCard,
             DateTimeOffset? createdAt = null,
+            ICollection<string>? langs = null,
             ICollection<ThreadGateRule>? threadGateRules = null,
             ICollection<PostGateRule>? postGateRules = null,
             InteractionPreferences? interactionPreferences = null,
@@ -801,7 +854,7 @@ namespace idunno.Bluesky
                 facets = await _facetExtractor.ExtractFacets(text, cancellationToken).ConfigureAwait(false);
             }
 
-            var postBuilder = new PostBuilder(text, createdAt : createdAt, facets: facets);
+            var postBuilder = new PostBuilder(text, createdAt : createdAt, langs: langs, facets: facets);
 
             postBuilder.EmbedRecord(externalCard);
 
@@ -1078,9 +1131,9 @@ namespace idunno.Bluesky
                     replyReferencesResult.RateLimit);
             }
 
-            PostBuilder postBuilder = new(text)
+            PostBuilder postBuilder = new(text: text, langs: null, createdAt: null, labels: null)
             {
-                InReplyTo = replyReferencesResult.Result
+                InReplyTo = replyReferencesResult.Result,
             };
 
             if (images is not null)
@@ -1187,7 +1240,8 @@ namespace idunno.Bluesky
         /// <param name="strongReference">A <see cref="StrongReference"/> to the record to be liked.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or the strongReference uri collection is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="strongReference"/> does not point to a post.</exception>
         /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -1205,6 +1259,9 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
+            ArgumentNullException.ThrowIfNull(strongReference.Uri.Collection);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(strongReference.Uri.Collection, CollectionNsid.Post);
+
             LikeRecordValue likeRecord = new(strongReference);
 
             // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
@@ -1216,7 +1273,33 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Deletes the like record specified by its <see cref="Uri"/>.
+        /// Creates a like record in the current user's repo for the post pointed to by the <paramref name="uri"/> and <paramref name="cid"/>.
+        /// </summary>
+        /// <param name="uri">An <see cref="AtUri"/> to the record to be liked.</param>
+        /// <param name="cid">The <see cref="idunno.AtProto.Cid"/> of the record to be liked.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, the uri collection, or <paramref name="cid"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="uri"/> does not point to a post.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Like(AtUri uri, Cid cid, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(uri);
+            ArgumentNullException.ThrowIfNull(cid);
+
+            ArgumentNullException.ThrowIfNull(uri.Collection);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(uri.Collection, CollectionNsid.Post);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            return await Like(new StrongReference(uri, cid), cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Deletes the like record for the post refered to by <paramref name="uri"/>.
         /// </summary>
         /// <param name="uri">The <see cref="AtUri"/> of the like record to delete.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -1233,9 +1316,9 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            if (uri.Collection != CollectionNsid.Like)
+            if (uri.Collection != CollectionNsid.Post)
             {
-                throw new ArgumentException($"uri does not point to an {CollectionNsid.Like} record", nameof(uri));
+                throw new ArgumentException($"uri does not point to an {CollectionNsid.Post} record", nameof(uri));
             }
 
             if (uri.RecordKey is null)
@@ -1243,13 +1326,49 @@ namespace idunno.Bluesky
                 throw new ArgumentException("uri RecordKey is null", nameof(uri));
             }
 
-            return await DeleteRecord(uri.Collection, uri.RecordKey, cancellationToken: cancellationToken).ConfigureAwait(false);
+            // Get the post view for the specified post so we can get the like record uri if one exists.
+            AtProtoHttpResult<Feed.PostView> postViewResult = await GetPostView(uri, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (postViewResult.StatusCode != HttpStatusCode.OK)
+            {
+                return new AtProtoHttpResult<Commit>(
+                    null,
+                    statusCode: postViewResult.StatusCode,
+                    httpResponseHeaders: postViewResult.HttpResponseHeaders,
+                    atErrorDetail: postViewResult.AtErrorDetail,
+                    rateLimit: postViewResult.RateLimit);
+            }
+
+            if (postViewResult.Result is null)
+            {
+                return new AtProtoHttpResult<Commit>(
+                    null,
+                    statusCode: HttpStatusCode.NotFound,
+                    httpResponseHeaders: postViewResult.HttpResponseHeaders,
+                    atErrorDetail: new AtErrorDetail("NotFound", "Post was found."),
+                    rateLimit: postViewResult.RateLimit);
+            }
+            else if (postViewResult.Result.Viewer is null ||
+                postViewResult.Result.Viewer.Like is null)
+            {
+                return new AtProtoHttpResult<Commit>(
+                    null,
+                    statusCode: HttpStatusCode.NotFound,
+                    httpResponseHeaders: postViewResult.HttpResponseHeaders,
+                    atErrorDetail: new AtErrorDetail("NotFound", "No like record for the post was found."),
+                    rateLimit: postViewResult.RateLimit);
+            }
+
+            return await DeleteRecord(
+                collection: CollectionNsid.Like,
+                rKey: postViewResult.Result.Viewer.Like.RecordKey!,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
-        /// Deletes like record specified by its <see cref="StrongReference"/>.
+        /// Deletes like record for the post specified by <see cref="StrongReference"/>.
         /// </summary>
-        /// <param name="strongReference">The <see cref="StrongReference"/> of the like record to delete.</param>
+        /// <param name="strongReference">The <see cref="StrongReference"/> of the post whose like should be deleted.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
@@ -1344,7 +1463,7 @@ namespace idunno.Bluesky
             {
                 QuotePost = strongReference,
                 Text = text,
-                Languages = [Thread.CurrentThread.CurrentUICulture.Name]
+                Langs = [Thread.CurrentThread.CurrentUICulture.Name]
             };
 
             if (images is not null)
