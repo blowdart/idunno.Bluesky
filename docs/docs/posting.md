@@ -118,22 +118,22 @@ methods returns an `HttpResult<CreateRecordResponse>` just like creating a post 
 
 ## <a name="likeRepostQuote">Liking, reposting and quote posting posts</a>
 
-To like a post, once again, you need a post's AT URI, or its `StrongReference`, which you then pass to `agent.Like()`.
+To like a post you need its `StrongReference`, which you then pass to `agent.Like()`.
 
 ```c#
 var likeResult = await agent.Like(postStrongReference);
 ```
 
-Liking a post will return a `StrongReference` to the record for your like. You can use this strong reference to delete your like with `UndoLike()`.
+To unlike a post call delete like with the AT-URI of the post to unlike.
 
 ```c#
-var undoResult = await agent.UndoLike(likeResult.Result);
+var undoResult = await agent.DeleteLike(postUri);
 ```
 
 Reposting works in just the same way.
 
 ```c#
-var repostResult = await agent.Repost(postReference);
+var repostResult = await agent.Repost(postStrongReference);
 var undoRepostResult = await agent.UndoRepost(repostResult.Result);
 ```
 
@@ -141,7 +141,7 @@ Quoting a post requires both the post strong reference, and the text you the quo
 Deleting a post quoting another post is like deleting a regular post, you call `DeletePost`;
 
 ```c#
-var quoteResult = await agent.Quote(postReference, "This is a quote of a post.");
+var quoteResult = await agent.Quote(postStrongReference, "This is a quote of a post.");
 var deleteResult = await agent.DeleteQuote(quoteResult.Result!);
 ```
 
@@ -300,8 +300,8 @@ byte[] imageAsBytes;
 using (FileStream fs = File.OpenRead(pathToImage))
 using (MemoryStream ms = new())
 {
-    fs.CopyTo(memoryStream);
-    imageAsBytes = memoryStream.ToArray();
+    fs.CopyTo(ms);
+    imageAsBytes = ms.ToArray();
 }
 ```
 

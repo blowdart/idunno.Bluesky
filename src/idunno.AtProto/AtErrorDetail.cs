@@ -13,6 +13,22 @@ namespace idunno.AtProto
     [Serializable]
     public sealed class AtErrorDetail
     {
+        [JsonConstructor]
+        internal AtErrorDetail()
+        {
+        }
+        
+        /// <summary>
+        /// Creates an new instance of <see cref="AtErrorDetail"/>
+        /// </summary>
+        /// <param name="error">The error</param>
+        /// <param name="message">Any message associated with the error.</param>
+        public AtErrorDetail(string? error, string? message)
+        {
+            Error = error;
+            Message = message;
+        }
+
         /// <summary>
         /// The title of the error returned from an API call.
         /// </summary>

@@ -32,28 +32,39 @@ namespace idunno.Bluesky
         /// </summary>
         public PostBuilder()
         {
-            _post = new Post() { CreatedAt = DateTimeOffset.UtcNow };
-        }
-
-        /// <summary>
-        /// Creates a new instance of a <see cref="PostBuilder"/>.
-        /// </summary>
-        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
-        public PostBuilder(DateTimeOffset? createdAt)
-        {
-            DateTimeOffset creationDateTime = DateTimeOffset.UtcNow;
-            if (createdAt is not null)
-            {
-                creationDateTime = createdAt.Value;
-            }
-
-            _post = new Post() { CreatedAt = creationDateTime };
+            _post = new Post();
         }
 
         /// <summary>
         /// Creates a new instance of a <see cref="PostBuilder"/>.
         /// </summary>
         /// <param name="text">The text for the post.</param>
+        /// <param name="lang">The languages for the post.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
+        /// <param name="images">A collection of <see cref="EmbeddedImage"/>s to attach to the post, if any.</param>
+        /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
+        /// <param name="labels">Any self labels to apply to the post.</param>
+        public PostBuilder(
+            string? text,
+            string lang,
+            DateTimeOffset? createdAt = null,
+            ICollection<EmbeddedImage>? images = null,
+            ICollection<Facet>? facets = null,
+            PostSelfLabels? labels = null) : this(
+                text: text,
+                langs: [lang],
+                createdAt: createdAt,
+                images: images,
+                facets: facets,
+                labels: labels)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new instance of a <see cref="PostBuilder"/>.
+        /// </summary>
+        /// <param name="text">The text for the post.</param>
+        /// <param name="langs">The languages for the post.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
         /// <param name="images">A collection of <see cref="EmbeddedImage"/>s to attach to the post, if any.</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
@@ -61,24 +72,41 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentException">Thrown when the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long.</exception>
         /// <exception cref="ArgumentNullException">Thrown when the <paramref name="text"/> is null or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when text for the post is too long or too many images are specified.</exception>
-        public PostBuilder(string text, DateTimeOffset? createdAt = null, ICollection<EmbeddedImage>? images = null, IList<Facet>? facets = null, PostSelfLabels? labels = null) : this(createdAt)
+        public PostBuilder(
+            string? text,
+            ICollection<string>? langs = null,
+            DateTimeOffset? createdAt = null,
+            ICollection<EmbeddedImage>? images = null,
+            ICollection<Facet>? facets = null,
+            PostSelfLabels? labels = null)
         {
-            ArgumentNullException.ThrowIfNull(text);
+            DateTimeOffset postDate;
 
-            if (text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
+            if (createdAt is null)
             {
-                throw new ArgumentOutOfRangeException(
-                    nameof(text),
-                    $"Cannot be longer than {Maximum.PostLengthInGraphemes} graphemes.");
+                postDate = DateTimeOffset.UtcNow;
+            }
+            else
+            {
+                postDate = createdAt.Value;
             }
 
-            if (text.Length > Maximum.PostLengthInCharacters)
+            if (text is not null)
             {
-                throw new ArgumentOutOfRangeException(
-                    nameof(text),
-                    $"Cannot be longer than {Maximum.PostLengthInCharacters} characters.");
-            }
+                if (text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
+                {
+                    throw new ArgumentOutOfRangeException(
+                        nameof(text),
+                        $"Cannot be longer than {Maximum.PostLengthInGraphemes} graphemes.");
+                }
 
+                if (text.Length > Maximum.PostLengthInCharacters)
+                {
+                    throw new ArgumentOutOfRangeException(
+                        nameof(text),
+                        $"Cannot be longer than {Maximum.PostLengthInCharacters} characters.");
+                }
+            }
 
             if (images is not null && images.Count > Maximum.ImagesInPost)
             {
@@ -87,7 +115,24 @@ namespace idunno.Bluesky
                     $"cannot have more than {Maximum.ImagesInPost} images.");
             }
 
-            _post.Text = text;
+            if (langs is not null)
+            {
+                ArgumentOutOfRangeException.ThrowIfZero(langs.Count);
+            }
+
+            if (!string.IsNullOrEmpty(text))
+            {
+                _post = new Post(text, createdAt: postDate);
+            }
+            else
+            {
+                // We need to create a Post instance with text, then blank it out again due to Post's validation/
+                // The setter for Text is internal.
+                _post = new Post("__NULL__", createdAt: postDate)
+                {
+                    Text = text
+                };
+            }
 
             if (images is not null)
             {
@@ -103,49 +148,13 @@ namespace idunno.Bluesky
             {
                 _post.SetSelfLabels(labels);
             }
+
+            if (langs is not null)
+            {
+                _post.Langs = langs;
+            }
         }
 
-        /// <summary>
-        /// Creates a new instance of a <see cref="PostBuilder"/>.
-        /// </summary>
-        /// <param name="text">The text for the post.</param>
-        /// <param name="language">The language for the post.</param>
-        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
-        /// <param name="labels">Any self labels to apply to the post.</param>
-        public PostBuilder(
-            string text,
-            string language,
-            DateTimeOffset? createdAt = null,
-            PostSelfLabels? labels = null) :
-            this(text, languages: [language], createdAt: createdAt, images: null, facets : null, labels: labels)
-        {
-        }
-
-        /// <summary>
-        /// Creates a new instance of a <see cref="PostBuilder"/>.
-        /// </summary>
-        /// <param name="text">The text for the post.</param>
-        /// <param name="languages">The languages for the post.</param>
-        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
-        /// <param name="images">An optional collection of <see cref="EmbeddedImage"/>s to attach to the post.</param>
-        /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
-        /// <param name="labels">Any self labels to apply to the post.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="languages"/> is null</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="languages"/> contains no entries.</exception>
-        public PostBuilder(
-            string text,
-            string[] languages,
-            DateTimeOffset? createdAt = null,
-            ICollection<EmbeddedImage>? images = null,
-            IList<Facet>? facets = null,
-            PostSelfLabels? labels = null) :
-            this(text, createdAt : createdAt, images : images, facets: facets, labels: labels)
-        {
-            ArgumentNullException.ThrowIfNull(languages);
-            ArgumentOutOfRangeException.ThrowIfZero(languages.Length);
-
-            _post.Langs = languages;
-        }
 
         /// <summary>
         /// Gets a flag indicating whether this instance has any record text.
@@ -252,7 +261,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets a copy of the list of languages for the post.
         /// </summary>
-        public IReadOnlyList<string>? Languages
+        public IEnumerable<string>? Langs
         {
             get
             {
@@ -288,7 +297,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets a list of facets for the post.
         /// </summary>
-        public IList<Facet> Facets
+        public IReadOnlyCollection<Facet> Facets
         {
             get
             {
@@ -324,7 +333,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets a readonly list of the images for the post.
         /// </summary>
-        public IReadOnlyList<EmbeddedImage> Images
+        public IReadOnlyCollection<EmbeddedImage> Images
         {
             get
             {
@@ -1329,29 +1338,29 @@ namespace idunno.Bluesky
         /// <returns>A new instance of <see cref="PostBuilder"/>.</returns>
         public static PostBuilder Create(DateTimeOffset createdAt)
         {
-            return new PostBuilder(createdAt);
+            return new PostBuilder(text: null, createdAt: createdAt);
         }
 
         /// <summary>
         /// Creates a new <see cref="PostBuilder"/>.
         /// </summary>
         /// <param name="text">The text for the post.</param>
-        /// <param name="language">The language of the post, as an ISO language code.</param>
+        /// <param name="lang">The language of the post, as an ISO language code.</param>
         /// <returns>A new instance of <see cref="PostBuilder"/>.</returns>
-        public static PostBuilder Create(string text, string language)
+        public static PostBuilder Create(string text, string lang)
         {
-            return new PostBuilder(text, language);
+            return new PostBuilder(text, lang: lang);
         }
 
         /// <summary>
         /// Creates a new <see cref="PostBuilder"/>.
         /// </summary>
         /// <param name="text">The text for the post.</param>
-        /// <param name="languages">The languages the post contains, as ISO language codes.</param>
+        /// <param name="langs">The languages the post contains, as ISO language codes.</param>
         /// <returns>A new instance of <see cref="PostBuilder"/>.</returns>
-        public static PostBuilder Create(string text, string[] languages)
+        public static PostBuilder Create(string text, string[] langs)
         {
-            return new PostBuilder(text, languages);
+            return new PostBuilder(text, langs: langs);
         }
 
         /// <summary>

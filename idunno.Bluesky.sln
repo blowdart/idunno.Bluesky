@@ -177,6 +177,20 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "code", "code", "{33B6F64E-9
 		docs\docs\code\helloWorldErrorChecked.cs = docs\docs\code\helloWorldErrorChecked.cs
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tutorials", "tutorials", "{A95171BB-EF1B-42B0-8001-1AEAF832734C}"
+	ProjectSection(SolutionItems) = preProject
+		docs\docs\tutorials\creatingAPost.md = docs\docs\tutorials\creatingAPost.md
+		docs\docs\tutorials\likingAndReposting.md = docs\docs\tutorials\likingAndReposting.md
+		docs\docs\tutorials\toc.yml = docs\docs\tutorials\toc.yml
+		docs\docs\tutorials\viewingFeeds.md = docs\docs\tutorials\viewingFeeds.md
+		docs\docs\tutorials\viewingThreads.md = docs\docs\tutorials\viewingThreads.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "code", "code", "{481AD9A1-E768-4787-8D78-B2B9600800E8}"
+	ProjectSection(SolutionItems) = preProject
+		docs\docs\tutorials\code\helloWorld.cs = docs\docs\tutorials\code\helloWorld.cs
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		CodeQL|Any CPU = CodeQL|Any CPU
@@ -341,6 +355,8 @@ Global
 		{7501CBAC-D086-80A2-6449-FAC4607CED55} = {ACED7B7D-7BBE-4086-937F-7ECEE6A3F6B4}
 		{97B78C32-1BBA-4E61-ACEC-32D98A97AE82} = {B1A49FA3-07AB-4D78-BC16-FF7FB5857840}
 		{33B6F64E-9C4F-494A-9F11-DF35C4630BAC} = {E2B63F0A-9892-45AA-8453-4E5A23017D63}
+		{A95171BB-EF1B-42B0-8001-1AEAF832734C} = {E2B63F0A-9892-45AA-8453-4E5A23017D63}
+		{481AD9A1-E768-4787-8D78-B2B9600800E8} = {A95171BB-EF1B-42B0-8001-1AEAF832734C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2B9F8C2-975D-4E3A-B05E-48FDF4BCE3E6}

@@ -1145,7 +1145,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Creates a repost record for the specified <paramref name="post"/> in the current user's repo.
+        /// Creates a repost record in the current user's repo for the post referred to by the specified <paramref name="post"/>.
         /// </summary>
         /// <param name="post">A <see cref="StrongReference"/> to the post to be reposted.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -1184,9 +1184,35 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Deletes the repost record specified by its <see cref="Uri"/>.
+        /// Creates a repost record in the current user's repo for the post referred to by the specified <paramref name="uri"/> and <paramref name="cid"/>.
         /// </summary>
-        /// <param name="uri">The <see cref="AtUri"/> of the repost record to delete.</param>
+        /// <param name="uri">An <see cref="AtUri"/> to the record to be reposted.</param>
+        /// <param name="cid">The <see cref="idunno.AtProto.Cid"/> of the record to be reposted.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, the uri collection, or <paramref name="cid"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="uri"/> does not point to a post.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Repost(AtUri uri, Cid cid, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(uri);
+            ArgumentNullException.ThrowIfNull(cid);
+
+            ArgumentNullException.ThrowIfNull(uri.Collection);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(uri.Collection, CollectionNsid.Post);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            return await Repost(new StrongReference(uri, cid), cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Deletes the repost record for the post referenced by <see cref="Uri"/>.
+        /// </summary>
+        /// <param name="uri">The <see cref="AtUri"/> of the post to unreposted.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is null.</exception>
@@ -1195,29 +1221,58 @@ namespace idunno.Bluesky
         public async Task<AtProtoHttpResult<Commit>> DeleteRepost(AtUri uri, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uri);
+            ArgumentNullException.ThrowIfNull(uri.Collection);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(uri.Collection, CollectionNsid.Post);
+            ArgumentNullException.ThrowIfNull(uri.RecordKey);
 
             if (!IsAuthenticated)
             {
                 throw new AuthenticationRequiredException();
             }
 
-            if (uri.Collection != CollectionNsid.Repost)
+            // Get the post view for the specified post so we can get the repost record uri if one exists.
+            AtProtoHttpResult<Feed.PostView> postViewResult = await GetPostView(uri, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (postViewResult.StatusCode != HttpStatusCode.OK)
             {
-                throw new ArgumentException($"uri does not point to an {CollectionNsid.Repost} record", nameof(uri));
+                return new AtProtoHttpResult<Commit>(
+                    null,
+                    statusCode: postViewResult.StatusCode,
+                    httpResponseHeaders: postViewResult.HttpResponseHeaders,
+                    atErrorDetail: postViewResult.AtErrorDetail,
+                    rateLimit: postViewResult.RateLimit);
             }
 
-            if (uri.RecordKey is null)
+            if (postViewResult.Result is null)
             {
-                throw new ArgumentException("uri RecordKey is null", nameof(uri));
+                return new AtProtoHttpResult<Commit>(
+                    null,
+                    statusCode: HttpStatusCode.NotFound,
+                    httpResponseHeaders: postViewResult.HttpResponseHeaders,
+                    atErrorDetail: new AtErrorDetail("NotFound", "Post was found."),
+                    rateLimit: postViewResult.RateLimit);
+            }
+            else if (postViewResult.Result.Viewer is null ||
+                postViewResult.Result.Viewer.Repost is null)
+            {
+                return new AtProtoHttpResult<Commit>(
+                    null,
+                    statusCode: HttpStatusCode.NotFound,
+                    httpResponseHeaders: postViewResult.HttpResponseHeaders,
+                    atErrorDetail: new AtErrorDetail("NotFound", "No like record for the post was found."),
+                    rateLimit: postViewResult.RateLimit);
             }
 
-            return await DeleteRecord(uri.Collection, uri.RecordKey, cancellationToken:cancellationToken).ConfigureAwait(false);
+            return await DeleteRecord(
+                collection: CollectionNsid.Repost,
+                rKey: postViewResult.Result.Viewer.Repost.RecordKey!,
+                cancellationToken:cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
-        /// Deletes the repost record specified by its <see cref="StrongReference"/>.
+        /// Deletes the repost record post referenced by <see cref="StrongReference"/>.
         /// </summary>
-        /// <param name="strongReference">The <see cref="StrongReference"/> of the repost record to delete.</param>
+        /// <param name="strongReference">The <see cref="StrongReference"/> of the post to unreposted.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
@@ -1310,20 +1365,13 @@ namespace idunno.Bluesky
         public async Task<AtProtoHttpResult<Commit>> DeleteLike(AtUri uri, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uri);
+            ArgumentNullException.ThrowIfNull(uri.Collection);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(uri.Collection, CollectionNsid.Post);
+            ArgumentNullException.ThrowIfNull(uri.RecordKey);
 
             if (!IsAuthenticated)
             {
                 throw new AuthenticationRequiredException();
-            }
-
-            if (uri.Collection != CollectionNsid.Post)
-            {
-                throw new ArgumentException($"uri does not point to an {CollectionNsid.Post} record", nameof(uri));
-            }
-
-            if (uri.RecordKey is null)
-            {
-                throw new ArgumentException("uri RecordKey is null", nameof(uri));
             }
 
             // Get the post view for the specified post so we can get the like record uri if one exists.

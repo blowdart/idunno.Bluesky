@@ -1,10 +1,8 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
 using idunno.AtProto;
 using idunno.AtProto.Repo;
-using idunno.Bluesky.Embed;
 
 namespace idunno.Bluesky.Test
 {
@@ -37,13 +35,13 @@ namespace idunno.Bluesky.Test
         {
             const string expected = "en-uk";
 
-            var builder = new PostBuilder("hello", expected);
+            var builder = new PostBuilder("hello", lang: expected);
 
             Post postRecord = builder.ToPost();
 
             Assert.NotNull(postRecord.Langs);
             Assert.Single(postRecord.Langs);
-            Assert.Equal(expected, postRecord.Langs[0]);
+            Assert.Equal(expected, postRecord.Langs.ElementAt(0));
         }
 
         [Fact]
@@ -51,11 +49,11 @@ namespace idunno.Bluesky.Test
         {
             const string expected = "en-uk";
 
-            var builder = new PostBuilder("hello", expected);
+            var builder = new PostBuilder("hello", lang: expected);
 
-            Assert.NotNull(builder.Languages);
-            Assert.Single(builder.Languages);
-            Assert.Equal(expected, builder.Languages[0]);
+            Assert.NotNull(builder.Langs);
+            Assert.Single(builder.Langs);
+            Assert.Equal(expected, builder.Langs.ElementAt(0));
         }
 
         [Fact]
@@ -76,10 +74,10 @@ namespace idunno.Bluesky.Test
         {
             string[] expected = ["en-uk", "en-ie"];
 
-            var builder = new PostBuilder("hello", expected);
+            var builder = new PostBuilder("hello", langs: expected);
 
-            Assert.NotNull(builder.Languages);
-            Assert.Equal(expected, builder.Languages);
+            Assert.NotNull(builder.Langs);
+            Assert.Equal(expected, builder.Langs);
         }
 
         [Fact]

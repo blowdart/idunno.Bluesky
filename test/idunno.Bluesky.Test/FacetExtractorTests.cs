@@ -15,7 +15,8 @@ namespace idunno.Bluesky.Test
         {
             { "handle.invalid", null },
             { "blowdart.me", new Did("did:plc:hfgp6pj3akhqxntgqwramlbg") },
-            { "bot.idunno.blue", new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk") }
+            { "bot.idunno.blue", new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk") },
+            { "sinclairinat0r.com", new Did("did:plc:qkulxlxgznoyw4vdy7nu2mof") }
         };
 
 
@@ -47,7 +48,7 @@ namespace idunno.Bluesky.Test
                 Assert.NotNull(facet.Features);
                 Assert.Single(facet.Features);
 
-                Assert.Equal(typeof(TagFacetFeature), facet.Features[0].GetType());
+                Assert.IsType<TagFacetFeature>(facet.Features[0]);
             }
         }
 
@@ -82,7 +83,7 @@ namespace idunno.Bluesky.Test
             {
                 Assert.NotNull(facet.Features);
                 Assert.Single(facet.Features);
-                Assert.Equal(typeof(TagFacetFeature), facet.Features[0].GetType());
+                Assert.IsType<TagFacetFeature>(facet.Features[0]);
                 Assert.Equal(facet.Index.ByteStart, expectedStartPosition);
                 Assert.Equal(facet.Index.ByteEnd, expectedEndPosition);
             }
@@ -111,7 +112,7 @@ namespace idunno.Bluesky.Test
             {
                 Assert.NotNull(facet.Features);
                 Assert.Single(facet.Features);
-                Assert.Equal(typeof(TagFacetFeature), facet.Features[0].GetType());
+                Assert.IsType<TagFacetFeature>(facet.Features[0]);
 
                 TagFacetFeature tagFeature = (TagFacetFeature)facet.Features[0];
 
@@ -143,7 +144,7 @@ namespace idunno.Bluesky.Test
                 Assert.NotNull(facet.Features);
                 Assert.Single(facet.Features);
 
-                Assert.Equal(typeof(LinkFacetFeature), facet.Features[0].GetType());
+                Assert.IsType<LinkFacetFeature>(facet.Features[0]);
             }
         }
 
@@ -151,9 +152,9 @@ namespace idunno.Bluesky.Test
         [InlineData("http://example.org", "http://example.org")]
         [InlineData("http://example.org/path", "http://example.org/path")]
         [InlineData("http://example.org/path/", "http://example.org/path/")]
-        [InlineData("http://example.org/path?queryString", "http://example.org/path?queryString")]
-        [InlineData("http://example.org/path?queryString=1", "http://example.org/path?queryString=1")]
-        [InlineData("http://example.org/path?queryString=1&two=2", "http://example.org/path?queryString=1&two=2")]
+        [InlineData("http://example.org/path?queryString", "http://example.org/path")]
+        [InlineData("http://example.org/path?queryString=1", "http://example.org/path")]
+        [InlineData("http://example.org/path?queryString=1&two=2", "http://example.org/path")]
         [InlineData("https://example.org", "https://example.org")]
         [InlineData("https://example.org ", "https://example.org")]
         [InlineData(" https://example.org", "https://example.org")]
@@ -172,7 +173,7 @@ namespace idunno.Bluesky.Test
             {
                 Assert.NotNull(facet.Features);
                 Assert.Single(facet.Features);
-                Assert.Equal(typeof(LinkFacetFeature), facet.Features[0].GetType());
+                Assert.IsType<LinkFacetFeature>(facet.Features[0]);
 
                 LinkFacetFeature linkFeature = (LinkFacetFeature)facet.Features[0];
 
@@ -200,7 +201,7 @@ namespace idunno.Bluesky.Test
             {
                 Assert.NotNull(facet.Features);
                 Assert.Single(facet.Features);
-                Assert.Equal(typeof(LinkFacetFeature), facet.Features[0].GetType());
+                Assert.IsType<LinkFacetFeature>(facet.Features[0]);
                 Assert.Equal(facet.Index.ByteStart, expectedStartPosition);
                 Assert.Equal(facet.Index.ByteEnd, expectedEndPosition);
             }
@@ -230,7 +231,7 @@ namespace idunno.Bluesky.Test
                 Assert.NotNull(facet.Features);
                 Assert.Single(facet.Features);
 
-                Assert.Equal(typeof(MentionFacetFeature), facet.Features[0].GetType());
+                Assert.IsType<MentionFacetFeature>(facet.Features[0]);
             }
         }
 
@@ -254,7 +255,7 @@ namespace idunno.Bluesky.Test
             {
                 Assert.NotNull(facet.Features);
                 Assert.Single(facet.Features);
-                Assert.Equal(typeof(MentionFacetFeature), facet.Features[0].GetType());
+                Assert.IsType<MentionFacetFeature>(facet.Features[0]);
                 Assert.Equal(facet.Index.ByteStart, expectedStartPosition);
                 Assert.Equal(facet.Index.ByteEnd, expectedEndPosition);
             }
@@ -277,13 +278,72 @@ namespace idunno.Bluesky.Test
             {
                 Assert.NotNull(facet.Features);
                 Assert.Single(facet.Features);
-                Assert.Equal(typeof(MentionFacetFeature), facet.Features[0].GetType());
+                Assert.IsType<MentionFacetFeature>(facet.Features[0]);
 
                 MentionFacetFeature mentionFeature = (MentionFacetFeature)facet.Features[0];
 
                 Assert.Equal(new Did(expectedDid), mentionFeature.Did);
             }
         }
+
+        [Fact]
+        public async Task CombinationsShouldCreateTheCorrectFacets()
+        {
+            const string text =
+                "Hello @sinclairinat0r.com, did you know the Heinz #beans factory is one of the largest food factories in Europe? https://en.wikipedia.org/wiki/H._J._Heinz,_Wigan?";
+            //             1         2         3         4         5         6         7         8         9         10        11        12        13        14        15        16
+            //   012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901
+            DefaultFacetExtractor extractor = new(MockResolver);
+
+            IList<Facet> results = await extractor.ExtractFacets(text, TestContext.Current.CancellationToken);
+
+            Assert.NotNull(results);
+            Assert.NotEmpty(results);
+            Assert.Equal(3, results.Count);
+
+            int mentionCount = 0;
+            int hashTagCount = 0;
+            int urlCount = 0;
+
+            foreach (Facet facet in results)
+            {
+                Assert.Single(facet.Features);
+                switch (facet.Features[0])
+                {
+                    case MentionFacetFeature mentionFacetFeature:
+                        mentionCount++;
+                        Assert.Equal(1, mentionCount);
+
+                        Assert.Equal("did:plc:qkulxlxgznoyw4vdy7nu2mof", mentionFacetFeature.Did);
+                        Assert.Equal(6, facet.Index.ByteStart);
+                        Assert.Equal(25, facet.Index.ByteEnd);
+                        break;
+
+                    case TagFacetFeature tagFacetFeature:
+                        hashTagCount++;
+                        Assert.Equal(1, hashTagCount);
+
+                        Assert.Equal("beans", tagFacetFeature.Tag);
+                        Assert.Equal(50, facet.Index.ByteStart);
+                        Assert.Equal(56, facet.Index.ByteEnd);
+                        break;
+
+                    case LinkFacetFeature linkFacetFeature:
+                        urlCount++;
+                        Assert.Equal(1, urlCount);
+
+                        Assert.Equal(new Uri("https://en.wikipedia.org/wiki/H._J._Heinz,_Wigan"), linkFacetFeature.Uri);
+                        Assert.Equal(113, facet.Index.ByteStart);
+                        Assert.Equal(161, facet.Index.ByteEnd);
+
+                        break;
+
+                    default:
+                        throw new Exception("Unexpected facet feature");
+                }
+            }
+        }
+
 
         [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Mocking ResolveHandle() signature.")]
         [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Mocking ResolveHandle().")]

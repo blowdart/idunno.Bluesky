@@ -100,7 +100,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// Get a view of an actor's 'author feed' (post and reposts by the author).
         /// </summary>
-        /// <param name="actor">The <see cref="AtIdentifier"/> of the actor whose feed should be retrieved.</param>
+        /// <param name="actor">The <see cref="Did"/> of the actor whose feed should be retrieved.</param>
         /// <param name="limit">The maximum number of feeds to return from the api.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
         /// <param name="filter">Combinations of post/repost types to include in the results.</param>
@@ -110,10 +110,10 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>> GetAuthorFeed(
-            AtIdentifier actor,
+            Did actor,
             int? limit = null,
             string? cursor = null,
-            FeedFilter? filter = null,
+            FeedFilter? filter = FeedFilter.PostsNoReplies,
             bool? includePins = null,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)

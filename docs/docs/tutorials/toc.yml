@@ -1,0 +1,7 @@
+items:
+- name: Creating a post
+  href: creatingAPost.md
+- name: Viewing feeds
+  href: viewingFeeds.md
+- name: Viewing threads
+  href: viewingThreads.md

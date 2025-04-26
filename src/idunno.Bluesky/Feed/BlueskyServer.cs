@@ -285,7 +285,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// Get a view of an actor's 'author feed' (post and reposts by the author).
         /// </summary>
-        /// <param name="actor">The <see cref="AtIdentifier"/> of the actor whose feed should be retrieved.</param>
+        /// <param name="actor">The <see cref="Did"/> of the actor whose feed should be retrieved.</param>
         /// <param name="limit">The maximum number of items to return from the api.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
         /// <param name="filter">Combinations of post/repost types to include in the results.</param>
@@ -308,7 +308,7 @@ namespace idunno.Bluesky
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>> GetAuthorFeed(
-            AtIdentifier actor,
+            Did actor,
             int? limit,
             string? cursor,
             FeedFilter? filter,

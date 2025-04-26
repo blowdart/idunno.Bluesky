@@ -19,6 +19,7 @@ namespace idunno.Bluesky.Embed
         public EmbeddedImages(ICollection<EmbeddedImage> images)
         {
             ArgumentNullException.ThrowIfNull(images);
+
             ArgumentOutOfRangeException.ThrowIfLessThan(images.Count, 1);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(images.Count, Maximum.ImagesInPost);
 

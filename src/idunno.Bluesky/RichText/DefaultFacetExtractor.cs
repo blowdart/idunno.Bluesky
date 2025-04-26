@@ -19,7 +19,7 @@ namespace idunno.Bluesky.RichText
         [GeneratedRegex(@"(?:^|\s)(#[^\d\s]\S*)(?=\s)?", RegexOptions.IgnoreCase, 5000)]
         private static partial Regex s_HashTagRegex();
 
-        [GeneratedRegex(@"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)", RegexOptions.IgnoreCase, 5000)]
+        [GeneratedRegex(@"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+,.~#&\/=]*)", RegexOptions.IgnoreCase, 5000)]
         private static partial Regex s_UrlRegex();
 
         [GeneratedRegex(@"@\w+(\.\w+)*", RegexOptions.IgnoreCase, 5000)]

@@ -1,39 +1,61 @@
 # Concepts & Common Terms 
 
-Before we go any further lets take a little time to explain some common terms that you will see when discussing AT Protocol and Bluesky APIs.
+This documentation contains some common terms that you will see when discussing AT Protocol and Bluesky APIs.
 
-## <a name="atUris">AT URIs, CIDs and Strong References</a>
+## <a name="atUris">at:// uri, cid, and Strong References</a>
 
-If you looked at the return value from `agent.Post()` you would have seen that the API returns an instance of `StrongReference`, assuming it succeeded.
+If you looked at the return value from `agent.Post()` you would have seen that the API returns some information, including a `StrongReference`, a `Uri` and a `Cid`.
 
-A `StrongReference` has two properties:
+### <a name="uri">at:// uris</a>
+This is not an HTTPS URI, it is an [`at://` uri](https://atproto.com/specs/at-uri-scheme). An `at://` uri is a reference to a record on the network.
 
-* `Uri` - This is not an HTTPS URI, it is an [AT URI](https://atproto.com/specs/at-uri-scheme). An AT URI is a reference to a record on the network. It is made up of three parts, an authority, a collection and a record key:
+It is made up of three parts, an authority, a collection and a record key:
 
-  `"at://" AUTHORITY [ "/" COLLECTION [ "/" RKEY ] ]`
+`"at://" AUTHORITY [ "/" COLLECTION [ "/" RKEY ] ]`
 
-  The authority is a DID, which is who or what owns the content, the collection is used as a grouping of record types, and the rKey is the key to the individual record.
+The authority is a [DID](#dids), which is who or what owns the content, the collection is used as a grouping of record types, and the rKey is the key to the individual record.
 
-  A record may have multiple revisions, although Bluesky does not make use of that year,
+### <a name="cid">CID</a>
+This is a [content identifier](https://github.com/multiformats/cid), a way to reference a revision of a record pointed to by an `at://` uri.
+It is implemented as a hash of the record.
 
-* * `Cid` - This is a [content identifier](https://github.com/multiformats/cid), a way to reference a revision of an AT URI. It is implemented as a hash of the record
+### <a name="strongReference">StrongReference</a>
+
+A `StrongReference` is a record contain both the [at:// uri](#uri) of a record, and its [CID](#cid).
+
+## <a name="repositories">Repositories</a>
+
+Bluesky stores all your stuff in a repository on a Personal Data Server (PDS).
+A repository contains various collections, and these collections contain records.
+For example, when you write a post you are cerating a record in your repository in the `app.bsky.feed.post` collection.
+
+A simple post record would, in JSON, look something like this
+
+```json
+{
+  "text": "Hello World!",
+  "$type": "app.bsky.feed.post",
+  "createdAt": "2023-08-07T05:31:12.156888Z"
+}
+```
+
+The shape of a record is defined by the lexicon, for example you can find the definition for a post record in the
+[Bluesky Feed lexicon](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/feed/post.json).
 
 ## <a name="records">Records, Collections and NSIDs</a>
 
-When a `Uri` and `Cid` are combined together they make a `StrongReference` to an individual revision of a record.
+Collections are identified by namespace identifiers ([NSID](https://atproto.com/specs/nsid)s), which make up part of the [`at://` uri](commonTerms.md#atUris).
 
-Records are stored in a repository. Each account gets its own repository (repo) on a PDS (personal data server), and are sorted into collections, according to their type, for example the Post collection or the Likes collection.
+A record can be referred to by its (strong reference)[#strongReference], or by an `at://` uri.
 
-Collections are identified by namespace identifiers ([NSID](https://atproto.com/specs/nsid)s), which make up part of the [AT-URI](commonTerms.md#atUris).
+If we examine an `at://` uri, for example, `at://sinclairinat0r.com/app.bsky.feed.post/3l5ptjwzotx2h`, we can break it down into the following parts
 
-If we take an `AT URI` for example, `at://sinclairinat0r.com/app.bsky.feed.post/3l5ptjwzotx2h` this breaks down into
-* An authority of `sinclairinat0r.com`, which can also be takes as the repository name.
-* A collection of `app.bsky.feed.post`, the NSID of the collection the record is in. In this case it's in my post repository, which contains all my posts.
-* A record key of `3jwdwj2ctlk26`, a key to an individual post in the record collection.
+* An authority of `sinclairinat0r.com`, which can also be read as the repository name.
+* A collection of `app.bsky.feed.post`, the NSID of the collection the record is in. In this case it's in the post repository, which contains all the users posts.
+* A record key of `3jwdwj2ctlk26`, a key to the latest version an individual post in the record collection.
 
-<!-- markdown-link-check-disable -->
-[Tom Sherman](https://bsky.app/profile/tom.frontpage.team) has written an [AT URI](https://atproto-browser.vercel.app/) browser, where you can retrieve the [record](https://atproto-browser.vercel.app/at/did:plc:qkulxlxgznoyw4vdy7nu2mof/app.bsky.feed.post/3l5ptjwzotx2h) referred to in an AT URI and see their structure.
-<!-- markdown-link-check-enable -->
+Records can, according to the AT Protocol, have multiple versions. A (strong reference)[#strongReference] contains not only an [at:// uri](#uri)
+but also a [CID](#cid) which refers to a individual revision of a record.
 
 ## <a name="actorsHandlesDids">Actors, handles and DIDs</a>
 
@@ -68,3 +90,4 @@ As you explore the APIs you while you write records you don't get records, inste
 A view is how Bluesky aggregates information from multiple records into a single entity. For example a `PostView` takes information from not only the `Post` record, but also information about the post author via a `ProfileView`, and things like reply and like counts. If you've used a SQL database before you can think of a view like a select over multiple joined tables.
 
 Views are generated by applications, the overall view over data that Bluesky presents is commonly referred to as the `AppView`.
+

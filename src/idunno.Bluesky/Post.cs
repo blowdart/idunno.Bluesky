@@ -97,7 +97,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="langs"/> is an empty list.</exception>
         public Post(
             string text,
-            IList<string> langs) : this(text: text, facets: null, langs: langs, embeddedRecord: null, reply: null, labels : null, tags : null)
+            ICollection<string> langs) : this(text: text, facets: null, langs: langs, embeddedRecord: null, reply: null, labels : null, tags : null)
         {
             ArgumentException.ThrowIfNullOrEmpty(text);
             ArgumentNullException.ThrowIfNull(langs);
@@ -125,12 +125,12 @@ namespace idunno.Bluesky
         /// </remarks>
         public Post(
             string? text,
-            IList<Facet>? facets = null,
-            IList<string>? langs = null,
+            ICollection<Facet>? facets = null,
+            ICollection<string>? langs = null,
             EmbeddedBase? embeddedRecord = null,
             ReplyReferences? reply = null,
             SelfLabels? labels = null,
-            IReadOnlyCollection<string>? tags = null) : this(text, DateTimeOffset.Now, facets, langs, embeddedRecord, reply, labels, tags)
+            ICollection<string>? tags = null) : this(text, DateTimeOffset.Now, facets, langs, embeddedRecord, reply, labels, tags)
         {
         }
 
@@ -157,12 +157,12 @@ namespace idunno.Bluesky
         public Post(
             string? text,
             DateTimeOffset createdAt,
-            IList<Facet>? facets = null,
-            IList<string>? langs = null,
+            ICollection<Facet>? facets = null,
+            ICollection<string>? langs = null,
             EmbeddedBase? embeddedRecord = null,
             ReplyReferences? reply = null,
             SelfLabels? labels = null,
-            IReadOnlyCollection<string>? tags = null) : base(createdAt)
+            ICollection<string>? tags = null) : base(createdAt)
         {
             if (string.IsNullOrWhiteSpace(text) && embeddedRecord is null)
             {
@@ -190,13 +190,15 @@ namespace idunno.Bluesky
 
             if (tags is not null)
             {
-                if (tags.Count > Maximum.ExternalTagsInPost)
+                List<string> tagList = [.. tags];
+
+                if (tagList.Count > Maximum.ExternalTagsInPost)
                 {
                     throw new ArgumentOutOfRangeException(nameof(tags), $"Cannot contain more than {Maximum.ExternalTagsInPost} tags.");
                 }
 
                 int position = 0;
-                foreach (string tag in tags)
+                foreach (string tag in tagList)
                 {
                     if (string.IsNullOrEmpty(tag))
                     {
@@ -210,7 +212,7 @@ namespace idunno.Bluesky
                     position++;
                 }
 
-                Tags = new List<string>(tags).AsReadOnly();
+                Tags = tagList;
             }
         }
 
@@ -228,11 +230,11 @@ namespace idunno.Bluesky
         public Post(
             string? text,
             EmbeddedImage image,
-            IList<Facet>? facets = null,
-            IList<string>? langs = null,
+            ICollection<Facet>? facets = null,
+            ICollection<string>? langs = null,
             ReplyReferences? reply = null,
             SelfLabels? labels = null,
-            IReadOnlyCollection<string>? tags = null)
+            ICollection<string>? tags = null)
             : this(text,
                 createdAt: DateTimeOffset.UtcNow,
                 facets: facets,
@@ -261,11 +263,11 @@ namespace idunno.Bluesky
             string? text,
             DateTimeOffset createdAt,
             EmbeddedImage image,
-            IList<Facet>? facets = null,
-            IList<string>? langs = null,
+            ICollection<Facet>? facets = null,
+            ICollection<string>? langs = null,
             ReplyReferences? reply = null,
             SelfLabels? labels = null,
-            IReadOnlyCollection<string>? tags = null)
+            ICollection<string>? tags = null)
             : this (text,
                 createdAt: createdAt,
                 facets: facets,
@@ -293,11 +295,11 @@ namespace idunno.Bluesky
         public Post(
             string? text,
             ICollection<EmbeddedImage> images,
-            IList<Facet>? facets = null,
-            IList<string>? langs = null,
+            ICollection<Facet>? facets = null,
+            ICollection<string>? langs = null,
             ReplyReferences? reply = null,
             SelfLabels? labels = null,
-            IReadOnlyCollection<string>? tags = null)
+            ICollection<string>? tags = null)
             : this(text,
                 createdAt: DateTimeOffset.UtcNow,
                 facets: facets,
@@ -330,11 +332,11 @@ namespace idunno.Bluesky
             string? text,
             DateTimeOffset createdAt,
             ICollection<EmbeddedImage> images,
-            IList<Facet>? facets = null,
-            IList<string>? langs = null,
+            ICollection<Facet>? facets = null,
+            ICollection<string>? langs = null,
             ReplyReferences? reply = null,
             SelfLabels? labels = null,
-            IReadOnlyCollection<string>? tags = null)
+            ICollection<string>? tags = null)
             : this(text,
                 createdAt: createdAt,
                 facets: facets,
@@ -364,11 +366,11 @@ namespace idunno.Bluesky
         public Post(
             string? text,
             EmbeddedVideo video,
-            IList<Facet>? facets = null,
-            IList<string>? langs = null,
+            ICollection<Facet>? facets = null,
+            ICollection<string>? langs = null,
             ReplyReferences? reply = null,
             SelfLabels? labels = null,
-            IReadOnlyCollection<string>? tags = null)
+            ICollection<string>? tags = null)
             : this(text,
                 createdAt: DateTimeOffset.UtcNow,
                 facets: facets,
@@ -397,11 +399,11 @@ namespace idunno.Bluesky
             string? text,
             DateTimeOffset createdAt,
             EmbeddedVideo video,
-            IList<Facet>? facets = null,
-            IList<string>? langs = null,
+            ICollection<Facet>? facets = null,
+            ICollection<string>? langs = null,
             ReplyReferences? reply = null,
             SelfLabels? labels = null,
-            IReadOnlyCollection<string>? tags = null)
+            ICollection<string>? tags = null)
             : this(text,
                 createdAt: createdAt,
                 facets: facets,
@@ -426,7 +428,7 @@ namespace idunno.Bluesky
         /// </summary>
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public IList<Facet>? Facets { get; internal set; }
+        public ICollection<Facet>? Facets { get; internal set; }
 
         /// <summary>
         /// The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.
@@ -448,7 +450,7 @@ namespace idunno.Bluesky
         /// </summary>
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public IList<string>? Langs { get; internal set; }
+        public ICollection<string>? Langs { get; internal set; }
 
         /// <summary>
         /// A collection of <see cref="SelfLabels"/> to apply to the post, if any.
@@ -465,7 +467,7 @@ namespace idunno.Bluesky
         /// </summary>
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public IReadOnlyCollection<string>? Tags { get; internal set; }
+        public ICollection<string>? Tags { get; internal set; }
 
         /// <summary>
         /// Gets the number of characters in the post.

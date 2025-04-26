@@ -10,6 +10,9 @@ items:
       - name: Connecting to Bluesky
         href: connecting.md
 
+  - name: Tutorials
+    href: tutorials/toc.yml
+
   - name: Feeds & timelines
     items:
       - name: Reading Timelines & Feeds

@@ -20,7 +20,7 @@ namespace idunno.Bluesky.Feed
         }
 
         /// <summary>
-        /// A <see cref="PostView"/> of the post.
+        /// A <see cref="Feed.PostView"/> of the post.
         /// </summary>
         [JsonInclude]
         [JsonRequired]

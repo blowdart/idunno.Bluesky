@@ -146,20 +146,20 @@ namespace Samples.Timeline
                                 break;
                             }
 
-                            Console.WriteLine($"Entry Type : {timelineView.Post.Record.GetType()}");
+                            Console.WriteLine($"Entry Type : {timelineView.PostView.Record.GetType()}");
 
-                            if (!string.IsNullOrEmpty(timelineView.Post.Record.Text))
+                            if (!string.IsNullOrEmpty(timelineView.PostView.Record.Text))
                             {
-                                Console.WriteLine($"{timelineView.Post.Record.Text}");
+                                Console.WriteLine($"{timelineView.PostView.Record.Text}");
                             }
 
-                            Console.WriteLine($"  From {@timelineView.Post.Author} {GetLabels(timelineView.Post.Author)}");
-                            Console.WriteLine($"  Posted at: {timelineView.Post.Record.CreatedAt.ToLocalTime():G}");
-                            Console.WriteLine($"  {timelineView.Post.LikeCount} like{(timelineView.Post.LikeCount != 1 ? "s" : "")} {timelineView.Post.RepostCount} repost{(timelineView.Post.RepostCount != 1 ? "s" : "")}.");
-                            Console.WriteLine($"  AtUri: {timelineView.Post.Uri}");
-                            Console.WriteLine($"  Cid:   {timelineView.Post.Cid}");
+                            Console.WriteLine($"  From {@timelineView.PostView.Author} {GetLabels(timelineView.PostView.Author)}");
+                            Console.WriteLine($"  Posted at: {timelineView.PostView.Record.CreatedAt.ToLocalTime():G}");
+                            Console.WriteLine($"  {timelineView.PostView.LikeCount} like{(timelineView.PostView.LikeCount != 1 ? "s" : "")} {timelineView.PostView.RepostCount} repost{(timelineView.PostView.RepostCount != 1 ? "s" : "")}.");
+                            Console.WriteLine($"  AtUri: {timelineView.PostView.Uri}");
+                            Console.WriteLine($"  Cid:   {timelineView.PostView.Cid}");
 
-                            string postLabels = GetLabels(timelineView.Post);
+                            string postLabels = GetLabels(timelineView.PostView);
                             if (!string.IsNullOrEmpty(postLabels))
                             {
                                 Console.WriteLine($"  {postLabels}");

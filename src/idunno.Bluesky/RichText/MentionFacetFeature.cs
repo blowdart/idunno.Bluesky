@@ -10,7 +10,7 @@ namespace idunno.Bluesky.RichText
     /// <summary>
     /// Facet feature for mention of another account. The text is usually a handle, including a '@' prefix, but the facet reference is a DID.
     /// </summary>
-    public sealed record MentionFacetFeature :FacetFeature
+    public sealed record MentionFacetFeature : FacetFeature
     {
         /// <summary>
         /// Creates a new instance of <see cref="MentionFacetFeature"/>.
