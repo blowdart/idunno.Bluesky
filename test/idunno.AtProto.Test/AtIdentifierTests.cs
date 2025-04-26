@@ -67,5 +67,63 @@ namespace idunno.AtProto.Test
             Assert.False(result);
             Assert.Null(atIdentifier);
         }
+
+        // Test cases from https://github.com/bluesky-social/atproto/blob/main/interop-test-files/syntax/atidentifier_syntax_valid.txt
+        [Theory]
+        // Valid handles
+        [InlineData("XX.LCS.MIT.EDU", typeof(Handle))]
+        [InlineData("john.test", typeof(Handle))]
+        [InlineData("jan.test", typeof(Handle))]
+        [InlineData("a234567890123456789.test", typeof(Handle))]
+        [InlineData("john2.test", typeof(Handle))]
+        [InlineData("john-john.test", typeof(Handle))]
+
+        // Valid DIDs
+        [InlineData("did:method:val", typeof(Did))]
+        [InlineData("did:method:VAL", typeof(Did))]
+        [InlineData("did:method:val123", typeof(Did))]
+        [InlineData("did:method:123", typeof(Did))]
+        [InlineData("did:method:val-two", typeof(Did))]
+        public void ImplicitStringConvertWithValidAtIdentifiersShouldCorrectType(string input, Type expectedType)
+        {
+            AtIdentifier result = (AtIdentifier)input;
+
+            Assert.NotNull(result);
+            Assert.Equal(expectedType, result.GetType());
+        }
+
+        // Test cases from https://github.com/bluesky-social/atproto/blob/main/interop-test-files/syntax/atidentifier_syntax_invalid.txt
+        [Theory]
+        // Invalid handles
+        [InlineData("did:thing.test")]
+        [InlineData("did:thing")]
+        [InlineData("john -.test")]
+        [InlineData("john.0:")]
+        [InlineData("john.-")]
+        [InlineData("xn--bcher-.tld")]
+        [InlineData("john..test")]
+        [InlineData("jo_hn.test")]
+
+        // Invalid DIDs
+        [InlineData("did")]
+        [InlineData("didmethodval")]
+        [InlineData("method:did:val")]
+        [InlineData("did:method:")]
+        [InlineData("didmethod:val")]
+        [InlineData("did:methodval)")]
+        [InlineData(":did:method:val")]
+        [InlineData("did:method:val:")]
+        [InlineData("did:method:val%")]
+        [InlineData("DID:method:val")]
+
+        // Other invalid stuff
+        [InlineData("email@example.com")]
+        [InlineData("@handle@example.com")]
+        [InlineData("@handle")]
+        [InlineData("blah")]
+        public void IImplicitStringConvertWithValidAtIdentifiersShouldThrow(string input)
+        {
+            Assert.Throws<ArgumentException>( () => { AtIdentifier atIdentifier = (AtIdentifier)input; });
+        }
     }
 }

@@ -149,7 +149,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="s">The string to convert.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Did FromString(string s) => s;
+        public static new Did FromString(string s) => s;
 
         /// <summary>
         /// Converts the specified did to a string.

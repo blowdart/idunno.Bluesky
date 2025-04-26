@@ -101,7 +101,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="s">The string to convert.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Handle FromString(string s) => s;
+        public static new Handle FromString(string s) => s;
 
         /// <summary>
         /// Returns the hash code for this <see cref="Handle"/>.

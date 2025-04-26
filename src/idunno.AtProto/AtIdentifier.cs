@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
 namespace idunno.AtProto
@@ -74,6 +75,20 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="atIdentifier">The <see cref="AtIdentifier"/> to convert to a string.</param>
         public static implicit operator string?(AtIdentifier atIdentifier) => atIdentifier?.ToString() ?? null;
+
+        /// <summary>
+        /// Creates a <see cref="AtIdentifier"/> from the specified string.
+        /// </summary>
+        /// <param name="s">The string to convert.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator AtIdentifier(string s) => Create(s);
+
+        /// <summary>
+        /// Creates a <see cref="AtIdentifier"/> from the specified string.
+        /// </summary>
+        /// <param name="s">The string to convert.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static AtIdentifier FromString(string s) => s;
 
         /// <summary>
         /// Returns the hash code for this <see cref="AtIdentifier"/>.
