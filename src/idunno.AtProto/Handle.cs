@@ -18,6 +18,7 @@ namespace idunno.AtProto
     /// <para>See https://atproto.com/specs/handle for further details.</para>
     /// </remarks>
     [JsonConverter(typeof(Json.HandleConverter))]
+    [DebuggerDisplay("{DebuggerDisplay,nq}")]
     public sealed partial class Handle : AtIdentifier, IEquatable<Handle>
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
@@ -270,5 +271,9 @@ namespace idunno.AtProto
             result = new Handle(s, false);
             return true;
         }
+
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private string DebuggerDisplay => ToString();
+
     }
 }

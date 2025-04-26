@@ -19,6 +19,7 @@ namespace idunno.AtProto
     /// <para>See https://atproto.com/specs/did for further details on how ATProto uses DIDs.</para>
     /// </remarks>
     [JsonConverter(typeof(Json.DidConverter))]
+    [DebuggerDisplay("{DebuggerDisplay,nq}")]
     public sealed partial class Did : AtIdentifier, IEquatable<Did>
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
@@ -220,7 +221,7 @@ namespace idunno.AtProto
             {
                 if (throwOnError)
                 {
-                    ArgumentNullException.ThrowIfNullOrWhiteSpace(s);
+                    ArgumentException.ThrowIfNullOrWhiteSpace(s);
                 }
                 else
                 {
@@ -285,5 +286,8 @@ namespace idunno.AtProto
                 return "INVALID";
             }
         }
+
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private string DebuggerDisplay => ToString();
     }
 }
