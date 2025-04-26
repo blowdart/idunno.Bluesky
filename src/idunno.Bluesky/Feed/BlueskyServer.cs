@@ -12,6 +12,7 @@ using idunno.AtProto.Repo;
 using idunno.Bluesky.Feed;
 using idunno.Bluesky.Feed.Model;
 using idunno.AtProto.Authentication;
+using System.Net.Http.Headers;
 
 namespace idunno.Bluesky
 {
@@ -538,6 +539,7 @@ namespace idunno.Bluesky
         /// <param name="cursor">An optional cursor for pagination.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the feed from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
+        /// <param name="headers">A collection of HTTP headers to send with the request.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
@@ -560,6 +562,7 @@ namespace idunno.Bluesky
             Uri service,
             AccessCredentials? accessCredentials,
             HttpClient httpClient,
+            ICollection<NameValueHeaderValue>? headers = null,
             Action<AtProtoCredential>? onCredentialsUpdated = null,
             ILoggerFactory? loggerFactory = default,
             IEnumerable<Did>? subscribedLabelers = null,
@@ -594,6 +597,7 @@ namespace idunno.Bluesky
                 $"{GetFeedEndpoint}?{queryString}",
                 credentials: accessCredentials,
                 httpClient: httpClient,
+                requestHeaders: headers,
                 jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: onCredentialsUpdated,
                 subscribedLabelers: subscribedLabelers,
