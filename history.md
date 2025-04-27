@@ -1,5 +1,29 @@
 # Version History
 
+## 0.7.0
+
+### Features
+
+#### idunno.AtProto
+
+* Added overload to UploadBlob that takes a filename.
+
+#### Docs
+
+* Added simple tutorial docs with the same topic as the official sdk docs
+
+### Bug fixes
+
+#### idunno.Bluesky
+
+* Correct how DeleteLike() works so it takes the ATUri of the post to delete the like from.
+
+### Breaking Changes
+
+#### idunno.Bluesky
+
+* Aligned some method and parameter names to be closed to the official SDK.
+
 ## 0.6.1
 
 ### Bug Fixes

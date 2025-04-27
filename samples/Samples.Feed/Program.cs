@@ -142,14 +142,14 @@ namespace Samples.Feed
                                 break;
                             }
 
-                            Console.WriteLine($"{feedViewPost.PostView.Record.Text ?? "\u001b[3mNo post text\u001b[23m"}");
-                            Console.WriteLine($"  From {feedViewPost.PostView.Author}");
-                            PrintLabels(feedViewPost.PostView.Author);
+                            Console.WriteLine($"{feedViewPost.Post.Record.Text ?? "\u001b[3mNo post text\u001b[23m"}");
+                            Console.WriteLine($"  From {feedViewPost.Post.Author}");
+                            PrintLabels(feedViewPost.Post.Author);
 
-                            Console.WriteLine($"  Posted at: {feedViewPost.PostView.Record.CreatedAt.ToLocalTime():G}");
-                            Console.WriteLine($"  {feedViewPost.PostView.LikeCount} like{(feedViewPost.PostView.LikeCount != 1 ? "s" : "")} {feedViewPost.PostView.RepostCount} repost{(feedViewPost.PostView.RepostCount != 1 ? "s" : "")}.");
-                            Console.WriteLine($"  AtUri : {feedViewPost.PostView.Uri}");
-                            Console.WriteLine($"  Cid   : {feedViewPost.PostView.Cid}");
+                            Console.WriteLine($"  Posted at: {feedViewPost.Post.Record.CreatedAt.ToLocalTime():G}");
+                            Console.WriteLine($"  {feedViewPost.Post.LikeCount} like{(feedViewPost.Post.LikeCount != 1 ? "s" : "")} {feedViewPost.Post.RepostCount} repost{(feedViewPost.Post.RepostCount != 1 ? "s" : "")}.");
+                            Console.WriteLine($"  AtUri : {feedViewPost.Post.Uri}");
+                            Console.WriteLine($"  Cid   : {feedViewPost.Post.Cid}");
                             Console.WriteLine();
                         }
 
