@@ -101,9 +101,17 @@ Congratulations, you've just posted from code!
 
 You can @ someone in the post text, add hashtags, or http/https links and they will all get turned into the right type of link. Try it and check in the app.
 
-### Next Steps
+## Next Steps
 
-* [Understand how to make API calls and check their results and handle errors](docs/requestsAndResponses.md)
-* [Make richer posts](docs/posting.md)
-* [Read your timeline](docs/timeline.md)
+### Tutorials
+
+* [Creating a post](docs/tutorials/creatingAPost.md)
+* [Viewing feeds](docs/tutorials/viewingFeeds.md)
+* [Viewing threads](docs/tutorials/viewingThreads.md)
+
+### Detailed concepts
+
+* [Understand how to make API calls, check their results, and handle errors](docs/requestsAndResponses.md)
+* [Making rich posts](docs/posting.md)
+* [Reading your timeline](docs/timeline.md)
 
