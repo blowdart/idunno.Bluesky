@@ -3,11 +3,28 @@
 
 using idunno.AtProto;
 using idunno.Bluesky.Actor;
+using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky
 {
     public partial class BlueskyAgent
     {
+        /// <summary>
+        /// Gets a <see cref="ProfileRecordValue"/> for the current authenticated user.
+        /// </summary>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        public async Task<AtProtoHttpResult<ProfileRecord>> GetProfile(
+            CancellationToken cancellationToken = default)
+        {
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            return await GetProfileRecord(cancellationToken).ConfigureAwait(false);
+        }
+
         /// <summary>
         /// Gets a <see cref="ProfileViewDetailed"/> for the specified <paramref name="actor"/>.
         /// </summary>

@@ -24,5 +24,11 @@ namespace idunno.Bluesky.Record
         {
             ArgumentNullException.ThrowIfNull(value);
         }
+
+        /// <summary>
+        /// Gets the Profile record.
+        /// </summary>
+        [JsonIgnore]
+        public ProfileRecordValue Profile => Value;
     }
 }

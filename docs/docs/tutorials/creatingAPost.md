@@ -6,7 +6,7 @@ The following code will login to Bluesky and create a simple post.
 
 The result of a successful call to `Post()` creates a [record](../commonTerms.md#records) in your Bluesky [repository](../commonTerms.md#repositories).
 
-The call will return, amongst other information, the `at://` [uri](../commonTerms.md#uri)  of the post record and its [content identifier (CID)](../commonTerms.md#cid).
+The call will return, amongst other information, the `at://` [uri](../commonTerms.md#uri) of the post record and its [content identifier (CID)](../commonTerms.md#cid).
 
 [!code-csharp[](code/helloWorld.cs#L7-L11)]
 

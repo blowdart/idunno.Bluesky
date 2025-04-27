@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 
 using idunno.AtProto;
@@ -17,7 +18,7 @@ namespace idunno.Bluesky
         /// <typeparam name="TRecordValue">The type of record to create.</typeparam>
         /// <param name="recordValue"><para>The record to be created.</para></param>
         /// <param name="collection"><para>The collection the record should be created in.</para></param>
-        /// <param name="rkey"><para>An optional <see cref="RecordKey"/> to create the record with.</para></param>
+        /// <param name="rKey"><para>An optional <see cref="RecordKey"/> to create the record with.</para></param>
         /// <param name="validate">
         ///   <para>Gets a flag indicating what validation will be performed, if any.</para>
         ///   <para>A value of <keyword>true</keyword> requires lexicon schema validation of record data.</para>
@@ -34,7 +35,7 @@ namespace idunno.Bluesky
         public async Task<AtProtoHttpResult<CreateRecordResult>> CreateBlueskyRecord<TRecordValue>(
             TRecordValue recordValue,
             Nsid collection,
-            RecordKey? rkey = null,
+            RecordKey? rKey = null,
             bool? validate = true,
             Cid? swapCommit = null,
             string? serviceProxy = null,
@@ -52,7 +53,7 @@ namespace idunno.Bluesky
                 recordValue: recordValue,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: collection,
-                rKey: rkey,
+                rKey: rKey,
                 validate: validate,
                 swapCommit: swapCommit,
                 serviceProxy: serviceProxy,
@@ -166,9 +167,9 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Updates the current user's <see cref="ProfileRecord"/>.
+        /// Sets the current user's <see cref="ProfileRecord"/>.
         /// </summary>
-        /// <param name="profileRecord">The <see cref="ProfileRecord"/> to update.</param>
+        /// <param name="profile">The <see cref="ProfileRecord"/> to create.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
@@ -179,36 +180,115 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage("AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
-        public async Task<AtProtoHttpResult<PutRecordResult>> UpdateProfileRecord(
-            ProfileRecord profileRecord,
+        public async Task<AtProtoHttpResult<CreateRecordResult>> CreateProfile(
+            ProfileRecordValue profile,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNull(profileRecord);
-            ArgumentNullException.ThrowIfNull(profileRecord.Value);
+            ArgumentNullException.ThrowIfNull(profile);
 
             if (!IsAuthenticated)
             {
                 throw new AuthenticationRequiredException();
             }
 
-            if (profileRecord.Uri.Authority is not Did recordDid)
+            return await CreateBlueskyRecord(
+                recordValue: profile,
+                collection: CollectionNsid.Profile,
+                rKey: "self",
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Creates or updates the current users profile.
+        /// </summary>
+        /// <param name="profile">The profile to create from or update to</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<PutRecordResult>> SetProfile(
+            ProfileRecordValue profile,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(profile);
+
+            if (!IsAuthenticated)
             {
-                throw new ArgumentException("Uri authority is not a DID", nameof(profileRecord));
+                throw new AuthenticationRequiredException();
+            }
+
+            return await PutRecord<BlueskyRecordValue>(
+                recordValue: profile,
+                collection: CollectionNsid.Profile,
+                rKey: "self",
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Updates the current users profile.
+        /// </summary>
+        /// <param name="profile">The profile update to</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<PutRecordResult>> SetProfile(
+            ProfileRecord profile,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(profile);
+            ArgumentNullException.ThrowIfNull(profile.Value);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            return await SetProfile(profile.Value, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Update the current user's <see cref="ProfileRecord"/>.
+        /// </summary>
+        /// <param name="profile">The <see cref="ProfileRecord"/> to update.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
+        public async Task<AtProtoHttpResult<PutRecordResult>> UpdateProfile(
+            ProfileRecord profile,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(profile);
+            ArgumentNullException.ThrowIfNull(profile.Value);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            if (profile.Uri.Authority is not Did recordDid)
+            {
+                throw new ArgumentException("Uri authority is not a DID", nameof(profile));
             }
 
             if (recordDid != Did)
             {
-                throw new ArgumentException("Uri authority does not match the current user", nameof(profileRecord));
+                throw new ArgumentException("Uri authority does not match the current user", nameof(profile));
             }
 
             return await PutRecord(
-                recordValue: profileRecord.Value,
+                recordValue: profile.Value,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Profile,
                 rKey: "self",
                 validate: null,
                 swapCommit: null,
-                swapRecord: profileRecord.Cid,
+                swapRecord: profile.Cid,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
     }

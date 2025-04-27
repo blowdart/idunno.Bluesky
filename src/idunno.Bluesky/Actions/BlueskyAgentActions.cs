@@ -1247,9 +1247,9 @@ namespace idunno.Bluesky
             {
                 return new AtProtoHttpResult<Commit>(
                     null,
-                    statusCode: HttpStatusCode.NotFound,
+                    statusCode: HttpStatusCode.BadRequest,
                     httpResponseHeaders: postViewResult.HttpResponseHeaders,
-                    atErrorDetail: new AtErrorDetail("NotFound", "Post was found."),
+                    atErrorDetail: new AtErrorDetail("RecordNotFound", "Could not locate record:{uri}"),
                     rateLimit: postViewResult.RateLimit);
             }
             else if (postViewResult.Result.Viewer is null ||
@@ -1259,7 +1259,7 @@ namespace idunno.Bluesky
                     null,
                     statusCode: HttpStatusCode.NotFound,
                     httpResponseHeaders: postViewResult.HttpResponseHeaders,
-                    atErrorDetail: new AtErrorDetail("NotFound", "No like record for the post was found."),
+                    atErrorDetail: new AtErrorDetail("RepostNotFound", "No repost record for the was found in {uri}."),
                     rateLimit: postViewResult.RateLimit);
             }
 
@@ -1391,9 +1391,9 @@ namespace idunno.Bluesky
             {
                 return new AtProtoHttpResult<Commit>(
                     null,
-                    statusCode: HttpStatusCode.NotFound,
+                    statusCode: HttpStatusCode.BadRequest,
                     httpResponseHeaders: postViewResult.HttpResponseHeaders,
-                    atErrorDetail: new AtErrorDetail("NotFound", "Post was found."),
+                    atErrorDetail: new AtErrorDetail("RecordNotFound", "Could not locate record:{uri}"),
                     rateLimit: postViewResult.RateLimit);
             }
             else if (postViewResult.Result.Viewer is null ||
@@ -1403,7 +1403,7 @@ namespace idunno.Bluesky
                     null,
                     statusCode: HttpStatusCode.NotFound,
                     httpResponseHeaders: postViewResult.HttpResponseHeaders,
-                    atErrorDetail: new AtErrorDetail("NotFound", "No like record for the post was found."),
+                    atErrorDetail: new AtErrorDetail("LikeNotFound", "No like record was found in {uri}."),
                     rateLimit: postViewResult.RateLimit);
             }
 

@@ -25,10 +25,44 @@ namespace idunno.Bluesky.Record
         /// <param name="description">The description for the account, if any.</param>
         /// <param name="avatar">A small image to be displayed next to posts from account, if any.</param>
         /// <param name="banner">A larger horizontal image to display behind profile view, if any.</param>
+        /// <param name="pinnedPost">A <see cref="StrongReference"/> to the profile's pinned post, if any.</param>
+        /// <param name="labels">Any <see cref="SelfLabels"/> applied to the profile.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/>The <see cref="DateTimeOffset"/> the record was created at.</param>
+        public ProfileRecordValue(
+            string? displayName = null,
+            string? description = null,
+            Blob? avatar = null,
+            Blob? banner = null,
+            StrongReference? pinnedPost = null,
+            SelfLabels? labels = null,
+            DateTimeOffset? createdAt = null) : this(
+                displayName: displayName,
+                description: description,
+                avatar: avatar,
+                banner: banner,
+                joinedViaStarterPack: null,
+                pinnedPost: pinnedPost,
+                labels: labels,
+                createdAt: createdAt
+                )
+        {
+            if (createdAt is not null)
+            {
+                CreatedAt = DateTimeOffset.UtcNow;
+            }
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="ProfileRecordValue"/>.
+        /// </summary>
+        /// <param name="displayName">The display name of the account, if any.</param>
+        /// <param name="description">The description for the account, if any.</param>
+        /// <param name="avatar">A small image to be displayed next to posts from account, if any.</param>
+        /// <param name="banner">A larger horizontal image to display behind profile view, if any.</param>
         /// <param name="joinedViaStarterPack">A <see cref="StrongReference"/> to the starter pack the account joined through, if any.</param>
         /// <param name="pinnedPost">A <see cref="StrongReference"/> to the profile's pinned post, if any.</param>
         /// <param name="labels">Any <see cref="SelfLabels"/> applied to the profile.</param>
-        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the record was created on.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/>The <see cref="DateTimeOffset"/> the record was created at.</param>
         [JsonConstructor]
         public ProfileRecordValue(
             string? displayName,
@@ -58,13 +92,6 @@ namespace idunno.Bluesky.Record
 
             CreatedAt = createdAt;
         }
-
-        /// <summary>
-        /// Gets the json discriminator value for the record.
-        /// </summary>
-        [JsonPropertyName("$type")]
-        [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needs to an instance property for json serialization.")]
-        public string Type => RecordType.Profile;
 
         /// <summary>
         /// Gets the creation date/time of the profile, if provided.

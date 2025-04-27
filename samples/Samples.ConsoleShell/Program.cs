@@ -37,7 +37,7 @@ namespace Samples.ConsoleShell
             ArgumentException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
-            proxyUri = new Uri("http://localhost:8866");
+            // proxyUri = new Uri("http://localhost:8866");
 
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
@@ -108,20 +108,6 @@ namespace Samples.ConsoleShell
                     }
                 }
                 // END-AUTHENTICATION
-
-                var postResult = await agent.Post("repost test", cancellationToken: cancellationToken);
-
-                await agent.Repost(
-                    uri: postResult.Result!.Uri,
-                    cid: postResult.Result.Cid,
-                    cancellationToken: cancellationToken);
-
-                await agent.DeleteRepost(
-                    uri: postResult.Result!.Uri,
-                    cancellationToken: cancellationToken);
-
-                // Your code goes here.
-                
 
                 Debugger.Break();
             }

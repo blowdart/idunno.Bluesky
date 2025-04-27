@@ -42,10 +42,10 @@
 | | [app.bsky.graph.getStarterPacks](https://docs.bsky.app/docs/api/app-bsky-graph-get-starter-packs) | `BlueskyAgent.GetStarterPacks()` [*](https://github.com/bluesky-social/atproto/issues/2920) | ✔ |
 | | [app.bsky.graph.getSuggestedFollowsByActor](https://docs.bsky.app/docs/api/app-bsky-graph-get-suggested-follows-by-actor) | `BlueskyAgent.GetSuggestedFollowsByActor()` | ✔ |
 | | [app.bsky.graph.muteActorList](https://docs.bsky.app/docs/api/app-bsky-graph-mute-actor-list) | `BlueskyAgent.MuteActorList()` | ✔ |
-| | [app.bsky.graph.muteActor](https://docs.bsky.app/docs/api/app-bsky-graph-mute-actor) | `BlueskyAgent.MuteActor()` | ✔ |
+| | [app.bsky.graph.muteActor](https://docs.bsky.app/docs/api/app-bsky-graph-mute-actor) | `BlueskyAgent.Mute()` | ✔ |
 | | [app.bsky.graph.muteThread](https://docs.bsky.app/docs/api/app-bsky-graph-mute-thread) | `BlueskyAgent.MuteThread()` | ✔ |
 | | [app.bsky.graph.unmuteActorList](https://docs.bsky.app/docs/api/app-bsky-graph-unmute-actor-list) | `BlueskyAgent.UnmuteActorList()` | ✔ |
-| | [app.bsky.graph.unmuteActor](https://docs.bsky.app/docs/api/app-bsky-graph-unmute-actor) | `BlueskyAgent.UmnuteActor()` | ✔ |
+| | [app.bsky.graph.unmuteActor](https://docs.bsky.app/docs/api/app-bsky-graph-unmute-actor) | `BlueskyAgent.Unmute()` | ✔ |
 | | [app.bsky.graph.unmuteThread](https://docs.bsky.app/docs/api/app-bsky-graph-unmute-thread) | `BlueskyAgent.UnmuteThread()` | ✔ |
 | **Labelers** | [app.bsky.labeler.getServices](https://docs.bsky.app/docs/api/app-bsky-labeler-get-services) | `BlueskyAgent.GetLabelerServices()` | ✔ |
 | **Notifications** | [app.bsky.notification.getUnreadCount](https://docs.bsky.app/docs/api/app-bsky-notification-get-unread-count) | `BlueskyAgent.GetNotificationUnreadCount()` | ✔ |

@@ -134,11 +134,11 @@ Reposting works in just the same way.
 
 ```c#
 var repostResult = await agent.Repost(postStrongReference);
-var undoRepostResult = await agent.UndoRepost(repostResult.Result);
+var undoRepostResult = await agent.DeleteRepost(postUri);
 ```
 
 Quoting a post requires both the post strong reference, and the text you the quote post to contain.
-Deleting a post quoting another post is like deleting a regular post, you call `DeletePost`;
+Deleting a post quoting another post is like deleting a regular post, you call `DeletePost` with the AT-URI of the quote post that was created;
 
 ```c#
 var quoteResult = await agent.Quote(postStrongReference, "This is a quote of a post.");

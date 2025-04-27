@@ -179,10 +179,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "code", "code", "{33B6F64E-9
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tutorials", "tutorials", "{A95171BB-EF1B-42B0-8001-1AEAF832734C}"
 	ProjectSection(SolutionItems) = preProject
+		docs\docs\tutorials\blockingUsers.md = docs\docs\tutorials\blockingUsers.md
 		docs\docs\tutorials\creatingAPost.md = docs\docs\tutorials\creatingAPost.md
+		docs\docs\tutorials\editingProfiles.md = docs\docs\tutorials\editingProfiles.md
+		docs\docs\tutorials\followingAndUnfollowing.md = docs\docs\tutorials\followingAndUnfollowing.md
 		docs\docs\tutorials\likingAndReposting.md = docs\docs\tutorials\likingAndReposting.md
+		docs\docs\tutorials\muteAndUnmute.md = docs\docs\tutorials\muteAndUnmute.md
+		docs\docs\tutorials\threadGates.md = docs\docs\tutorials\threadGates.md
 		docs\docs\tutorials\toc.yml = docs\docs\tutorials\toc.yml
 		docs\docs\tutorials\viewingFeeds.md = docs\docs\tutorials\viewingFeeds.md
+		docs\docs\tutorials\viewingProfiles.md = docs\docs\tutorials\viewingProfiles.md
 		docs\docs\tutorials\viewingThreads.md = docs\docs\tutorials\viewingThreads.md
 	EndProjectSection
 EndProject

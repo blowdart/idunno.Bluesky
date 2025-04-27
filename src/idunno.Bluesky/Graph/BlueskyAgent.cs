@@ -492,26 +492,26 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Creates a mute relationship for the specified list of accounts. Requires authentication.
+        /// Creates a mute relationship for the specified account. Requires authentication.
         /// </summary>
-        /// <param name="listUri">The <see cref="AtUri"/> of the list of actors to mute.</param>
+        /// <param name="actor">The <see cref="AtIdentifier"/> of the actor to mute.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
-        public async Task<AtProtoHttpResult<EmptyResponse>> MuteActorList(
-            AtUri listUri,
+        public async Task<AtProtoHttpResult<EmptyResponse>> Mute(
+            AtIdentifier actor,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNull(listUri);
+            ArgumentNullException.ThrowIfNull(actor);
 
             if (!IsAuthenticated)
             {
                 throw new AuthenticationRequiredException();
             }
 
-            return await BlueskyServer.MuteActorList(
-                listUri,
+            return await BlueskyServer.MuteActor(
+                actor,
                 service: Service,
                 accessCredentials: Credentials,
                 httpClient: HttpClient,
@@ -539,8 +539,32 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            return await BlueskyServer.MuteActor(
+            return await Mute(
                 actor,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Creates a mute relationship for the specified list of accounts. Requires authentication.
+        /// </summary>
+        /// <param name="listUri">The <see cref="AtUri"/> of the list of actors to mute.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/> is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
+        public async Task<AtProtoHttpResult<EmptyResponse>> MuteActorList(
+            AtUri listUri,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(listUri);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            return await BlueskyServer.MuteActorList(
+                listUri,
                 service: Service,
                 accessCredentials: Credentials,
                 httpClient: HttpClient,
@@ -615,7 +639,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
-        public async Task<AtProtoHttpResult<EmptyResponse>> UnmuteActor(
+        public async Task<AtProtoHttpResult<EmptyResponse>> Unmute(
             AtIdentifier actor,
             CancellationToken cancellationToken = default)
         {
@@ -634,6 +658,28 @@ namespace idunno.Bluesky
                 onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Unmutes the specified account. Requires authentication.
+        /// </summary>
+        /// <param name="actor">The <see cref="AtIdentifier"/> of the actor to unmute</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
+        public async Task<AtProtoHttpResult<EmptyResponse>> UnmuteActor(
+            AtIdentifier actor,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(actor);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            return await Unmute(actor, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>

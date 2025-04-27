@@ -67,7 +67,7 @@ if (userPreferences.Succeeded)
 }
 ```
 
-You can then past this into `agent.Post()`
+You can then pass this into `agent.Post()`
 
 ```c#
 await agent.Post(

@@ -11,6 +11,7 @@ Feeds are lists of posts, [paginated by cursors](../cursorsAndPagination.md). Bl
 The Bluesky agent you created in the [Get Started](../../index.md) section has a dedicated `GetTimeline()` method that returns the authenticated user's timeline.
 It accepts two key parameters: `cursor` and `limit`.
 
+`GetTimeline(cursor?, limit?)`
 
 | Parameter | Type   | Description                                           | Required   | Default   |
 |-----------|--------|-------------------------------------------------------|:----------:|:---------:|
@@ -87,6 +88,8 @@ at://<did>/app.bsky.feed.generator/<record_key>
 
 To fetch a feed from a generator use the `GetFeed()` method on the agent. It accepts three key parameters,
 
+`GetFeed(feed, cursor?, limit?)`
+
 | Parameter | Type   | Description                                               | Required   |  Default  |
 |-----------|--------|-----------------------------------------------------------|:----------:|:---------:|
 | feed      | AtUri  | The [at:// uri](../commonTerms.md#uri) of the feed        | Yes        |           |
@@ -108,6 +111,8 @@ Feed generators also described by data accessible via the `GetFeedGenerator()` m
 This method returns metadata about the generator including its name, description etc. 
 `GetFeedGenerator()` accepts one key parameter,
 
+`GetFeedGenerator(feed)`
+
 | Parameter | Type   | Description                                            | Required   | Default   |
 |-----------|--------|--------------------------------------------------------|:----------:|:---------:|
 | feed      | AtUri  | The [at:// uri](../commonTerms.md#uri) of the feed     | Yes        |           |
@@ -117,10 +122,12 @@ var feedGeneratorResult = await agent.GetFeedGenerator(
     feed: "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot");
 ```
 
-## Author Feeds
+## <a name="authorFeeds">Author Feeds</a>
 
 Author feeds return posts by a single user. You can retrieve an author feed with `GetAuthorFeed`,
 which accepts four key parameters
+
+`GetAuthorFeed(actor, filter?, cursor?, limit?)`
 
 | Parameter | Type       | Description                                                                   | Required | Options                                                      | Default  |
 | --------- | ---------- | ----------------------------------------------------------------------------- | :------: | :----------------------------------------------------------- | :------: |
@@ -128,6 +135,7 @@ which accepts four key parameters
 | filter    | FeedFilter | The type of posts you'd like to receive in the results                        | No       | FeedFilter.PostsWithReplies<br />FeedFilter.PostsNoReplies<br />FeedFilter.PostsWithMedia<br />FeedFilter.PostsAndAuthorThreads | FeedFilter.PostsNoReplies |
 | cursor    | string     | A cursor that tells the server where to paginate from                         | No       |                                                              | *null*   |
 | limit     | int        | The number of posts to return per page (max 100)                              | No       |                                                              | 50       |
+
 ```c#
 
 var authorFeedResult = await agent.GetAuthorFeed(

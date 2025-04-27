@@ -1,6 +1,8 @@
 ﻿# Viewing threads 
 
-A *thread* refers to a post, its replies (descendants), and its parents (ancestors). Fetching a thread is done with the GetPostThread method, which accepts the following key parameters:
+A *thread* refers to a post, its replies (descendants), and its parents (ancestors). Fetching a thread is done with `agent.GetPostThread()` , which accepts the following key parameters:
+
+`GetPostThread(uri, depth?, parentHeight?)`
 
 | Parameter    | Type   | Description                                                             | Required   | Default | Minimum | Maximum |
 |--------------|--------|-------------------------------------------------------------------------|:----------:|:-------:|:-------:|:-------:|

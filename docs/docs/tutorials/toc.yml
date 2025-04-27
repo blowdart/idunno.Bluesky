@@ -5,3 +5,17 @@ items:
   href: viewingFeeds.md
 - name: Viewing threads
   href: viewingThreads.md
+- name: Liking and Reposting
+  href: likingAndReposting.md
+- name: Viewing profiles
+  href: viewingProfiles.md
+- name: Editing profiles
+  href: editingProfiles.md
+- name: Following and unfollowing
+  href: followingAndUnfollowing.md
+- name: Muting users
+  href: muteAndUnmute.md
+- name: Blocking users
+  href: blockingUsers.md
+- name: Thread gates
+  href: threadGates.md
