@@ -1436,6 +1436,70 @@ namespace idunno.AtProto
         /// <summary>
         /// Uploads a blob, to be referenced from a repository record.
         /// </summary>
+        /// <param name="fileName">The name of the file to be uploaded as a blob.</param>
+        /// <param name="mimeType">The mime type of the blob to be created.</param>
+        /// <param name="service">The service to upload the blob to.</param>
+        /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="fileName"/> or if <paramref name="mimeType"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> or if <paramref name="mimeType"/> is empty.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
+        public async Task<AtProtoHttpResult<Blob>> UploadBlob(
+            string fileName,
+            string mimeType,
+            Uri? service = null,
+            string? serviceProxy = null,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(fileName);
+            ArgumentException.ThrowIfNullOrEmpty(mimeType);
+
+            service ??= Service;
+
+            if (!IsAuthenticated)
+            {
+                Logger.UploadBlobFailedAsSessionIsAnonymous(_logger, service);
+
+                throw new AuthenticationRequiredException();
+            }
+
+            if (!File.Exists(fileName))
+            {
+                throw new FileNotFoundException("File not found", fileName: fileName);
+            }
+
+            byte[] blob = await File.ReadAllBytesAsync(fileName, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (blob.Length == 0)
+            {
+                Logger.UploadBlobFailedAsFileLengthIsZero(_logger, service, fileName);
+                throw new ArgumentException("file length cannot be 0.", nameof(fileName));
+            }
+
+            try
+            {
+                return await AtProtoServer.UploadBlob(
+                    blob: blob,
+                    mimeType: mimeType,
+                    service: service,
+                    accessCredentials: Credentials,
+                    httpClient: HttpClient,
+                    serviceProxy: serviceProxy,
+                    onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+                    loggerFactory: LoggerFactory,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+            catch (HttpRequestException ex)
+            {
+                Logger.UploadBlobThrewHttpRequestException(_logger, service, ex);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Uploads a blob, to be referenced from a repository record.
+        /// </summary>
         /// <param name="blob">The blob to upload.</param>
         /// <param name="mimeType">The mime type of the blob to upload.</param>
         /// <param name="service">The service to upload the blob to.</param>

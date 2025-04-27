@@ -164,10 +164,10 @@ namespace idunno.AtProto
         [LoggerMessage(110, LogLevel.Debug, "GetRecord {repo} {collection} {rKey} on {service}.")]
         internal static partial void GetRecordCalled(ILogger logger, AtIdentifier repo, Nsid collection, RecordKey rKey, Uri service);
 
-        [LoggerMessage(111, LogLevel.Error, "GetRecord failed with with {statusCode}, \"{error}\" \"{message}\" against {repo} {collection} {rKey} on {service}.")]
+        [LoggerMessage(111, LogLevel.Error, "GetRecord failed with with {statusCode}, \"{error}\" \"{message}\" against at://{repo}/{collection}/{rKey} on {service}.")]
         internal static partial void GetRecordFailed(ILogger logger, HttpStatusCode statusCode, AtIdentifier repo, Nsid collection, RecordKey rKey, string? error, string? message, Uri service);
 
-        [LoggerMessage(112, LogLevel.Error, "GetRecord succeeded but returned a null record against {repo} {collection} {rKey} on {service}.")]
+        [LoggerMessage(112, LogLevel.Error, "GetRecord succeeded but returned a null record against at://{repo}/{collection}/{rKey} on {service}.")]
         internal static partial void GetRecordSucceededButReturnedNullResult(ILogger logger, AtIdentifier repo, Nsid collection, RecordKey rKey, Uri service);
 
         [LoggerMessage(120, LogLevel.Debug, "ListRecords {repo} {collection} on {service}.")]
@@ -187,6 +187,9 @@ namespace idunno.AtProto
 
         [LoggerMessage(132, LogLevel.Error, "UploadBlob to {service} threw.")]
         internal static partial void UploadBlobThrewHttpRequestException(ILogger logger, Uri service, Exception ex);
+
+        [LoggerMessage(133, LogLevel.Error, "UploadBlob to {service} failed as file {fileName} length is zero.")]
+        internal static partial void UploadBlobFailedAsFileLengthIsZero(ILogger logger, Uri service, string fileName);
 
         [LoggerMessage(150, LogLevel.Debug, "ApplyWrites succeeded, commit id {cid}, revision {revision}  on {service}")]
         internal static partial void ApplyWritesSucceeded(ILogger logger, Cid cid, string revision, Uri service);
