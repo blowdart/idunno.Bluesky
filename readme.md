@@ -47,8 +47,9 @@ The [releases page](https://github.com/blowdart/idunno.Bluesky/releases) provide
 
 ### Major
 
+* Grand rename - AtProtoRecord to AtProtoReferenceRecord, AtProtoRecordValue to AtProtoRecord, BlueskyRecordValue to BlueskyRecord, etc.
 * Logging in idunno.Bluesky
-* List curation
+* Feed interaction APIs
 * GIF attaching
 * AOT & trimming support (Contingent on [linker bug](https://github.com/dotnet/runtime/issues/114307))
 * Firehose support

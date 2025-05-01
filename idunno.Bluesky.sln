@@ -187,6 +187,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tutorials", "tutorials", "{
 		docs\docs\tutorials\muteAndUnmute.md = docs\docs\tutorials\muteAndUnmute.md
 		docs\docs\tutorials\threadGates.md = docs\docs\tutorials\threadGates.md
 		docs\docs\tutorials\toc.yml = docs\docs\tutorials\toc.yml
+		docs\docs\tutorials\userLists.md = docs\docs\tutorials\userLists.md
 		docs\docs\tutorials\viewingFeeds.md = docs\docs\tutorials\viewingFeeds.md
 		docs\docs\tutorials\viewingProfiles.md = docs\docs\tutorials\viewingProfiles.md
 		docs\docs\tutorials\viewingThreads.md = docs\docs\tutorials\viewingThreads.md
@@ -194,7 +195,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tutorials", "tutorials", "{
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "code", "code", "{481AD9A1-E768-4787-8D78-B2B9600800E8}"
 	ProjectSection(SolutionItems) = preProject
+		docs\docs\tutorials\code\feed.cs = docs\docs\tutorials\code\feed.cs
 		docs\docs\tutorials\code\helloWorld.cs = docs\docs\tutorials\code\helloWorld.cs
+		docs\docs\tutorials\code\lists.cs = docs\docs\tutorials\code\lists.cs
+		docs\docs\tutorials\code\manageLists.cs = docs\docs\tutorials\code\manageLists.cs
 	EndProjectSection
 EndProject
 Global

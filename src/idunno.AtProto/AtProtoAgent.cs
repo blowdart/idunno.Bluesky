@@ -519,6 +519,32 @@ namespace idunno.AtProto
             return result;
         }
 
+        /// <summary>Deletes a record, identified by its <paramref name="uri"/>.</summary>
+        /// <param name="uri">The <see cref="AtUri"/> of the record to delete.</param>
+        /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, the uri collection or the uri record key is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
+        public async Task<AtProtoHttpResult<Commit>> DeleteRecord(
+            AtUri uri,
+            string? serviceProxy = null,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(uri);
+
+            ArgumentNullException.ThrowIfNull(uri.Collection);
+            ArgumentNullException.ThrowIfNull(uri.RecordKey);
+
+            if (!IsAuthenticated)
+            {
+                Logger.DeleteRecordFailedAsSessionIsAnonymous(_logger);
+                throw new AuthenticationRequiredException();
+            }
+
+            return await DeleteRecord(Did, uri.Collection, uri.RecordKey, null, null, serviceProxy, cancellationToken).ConfigureAwait(false);
+        }
+
         /// <summary>Deletes a record, identified by the repo, collection and rKey from the specified service.</summary>
         /// <param name="collection">The collection the record should be deleted from.</param>
         /// <param name="rKey">The record key, identifying the record to be deleted.</param>

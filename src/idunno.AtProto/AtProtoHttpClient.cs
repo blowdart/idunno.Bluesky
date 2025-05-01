@@ -950,6 +950,7 @@ namespace idunno.AtProto
             // https://docs.bsky.app/blog/2025-protocol-roadmap-spring
             if (!_supressProxyHeaderCheck &&
                 !endpoint.StartsWith("/xrpc/com.atproto", StringComparison.Ordinal) &&
+                !endpoint.StartsWith("/oauth/", StringComparison.Ordinal) &&
                 (requestHeaders is null ||
                 !requestHeaders.Any(nameValueHeaderValue => nameValueHeaderValue.Name.Equals("atproto-proxy", StringComparison.Ordinal))))
             {

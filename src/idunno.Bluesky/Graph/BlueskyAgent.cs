@@ -2,8 +2,10 @@
 // Licensed under the MIT License.
 
 using idunno.AtProto;
+using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Graph;
+using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky
 {
@@ -266,25 +268,25 @@ namespace idunno.Bluesky
         /// <summary>
         /// Get a <see cref="ListView"/> of a Bluesky list and a paginated collection of <see cref="ListItemView"/>s of its items.
         /// </summary>
-        /// <param name="list">The <see cref="AtUri"/> of the list to get.</param>
+        /// <param name="uri">The <see cref="AtUri"/> of the list to get.</param>
         /// <param name="limit">The maximum number of lists that should be return in a page.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
         public async Task<AtProtoHttpResult<ListViewWithItems>> GetList(
-            AtUri list,
-            int? limit = null,
+            AtUri uri,
+            int? limit = 50,
             string? cursor = null,
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNull(list);
+            ArgumentNullException.ThrowIfNull(uri);
 
             return await BlueskyServer.GetList(
-                list,
+                uri,
                 limit,
                 cursor,
                 service: AuthenticatedOrUnauthenticatedServiceUri,
@@ -293,6 +295,28 @@ namespace idunno.Bluesky
                 onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 subscribedLabelers: subscribedLabelers,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Gets the referenced record for a list.
+        /// </summary>
+        /// <param name="uri">The <see cref="AtUri"/> of the list record to get.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null or the uri collection property is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/> does not point to a list record.</exception>
+        public async Task<AtProtoHttpResult<AtProtoRecord<BlueskyList>>> GetListRecord(
+            AtUri uri,
+            CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(uri);
+
+            ArgumentNullException.ThrowIfNull(uri.Collection);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(uri.Collection, CollectionNsid.List);
+
+            return await GetRecord<AtProtoRecord<BlueskyList>>(
+                uri: uri,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -574,6 +598,28 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
+        /// Creates a mute relationship for the specified moderation list. Requires authentication.
+        /// </summary>
+        /// <param name="listUri">The <see cref="AtUri"/> of the moderation list of actors to mute.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/> is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
+        public async Task<AtProtoHttpResult<EmptyResponse>> MuteModList(
+            AtUri listUri,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(listUri);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            return await MuteActorList(listUri, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
         /// Mutes a thread preventing notifications from the thread and any of its children. Requires authentication.
         /// </summary>
         /// <param name="rootUri">The <see cref="AtUri"/> of the thread to mute</param>
@@ -629,6 +675,28 @@ namespace idunno.Bluesky
                 onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Unmutes the specified moderation list. Requires authentication.
+        /// </summary>
+        /// <param name="listUri">The <see cref="AtUri"/> of the list of actors to unmute.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/> is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
+        public async Task<AtProtoHttpResult<EmptyResponse>> UnmuteModeList(
+            AtUri listUri,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(listUri);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            return await UnmuteActorList(listUri, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>

@@ -15,19 +15,19 @@ namespace idunno.Bluesky.Graph
     public enum ListPurpose
     {
         /// <summary>
-        /// The thread gate is due to a moderation list.
+        /// The list is a moderation list.
         /// </summary>
         [JsonStringEnumMemberName("app.bsky.graph.defs#modlist")]
         ModList,
 
         /// <summary>
-        /// The thread gate is due to a curation list.
+        /// The list is a curation list.
         /// </summary>
         [JsonStringEnumMemberName("app.bsky.graph.defs#curatelist")]
         CurateList,
 
         /// <summary>
-        /// The thread gate is due to a reference list, such as an actor within a starter pack.
+        /// The list is a reference list, like starter pack.
         /// </summary>
         [JsonStringEnumMemberName("app.bsky.graph.defs#referencelist")]
         ReferenceList

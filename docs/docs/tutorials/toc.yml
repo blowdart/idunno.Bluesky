@@ -17,5 +17,7 @@ items:
   href: muteAndUnmute.md
 - name: Blocking users
   href: blockingUsers.md
+- name: User lists
+  href: userLists.md
 - name: Thread gates
   href: threadGates.md

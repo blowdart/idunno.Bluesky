@@ -43,36 +43,7 @@ if (timelineResult.Result.Cursor is not null)
 
 You can put it altogether;
 
-```c#
-int maximumPagesToRetrieve = 5;
-int numberOfEntriesPerPage = 5;
-int pageCount = 0;
-
-var timelineResult =
-    await agent.GetTimeline(limit: numberOfEntriesPerPage);
-
-if (timelineResult.Succeeded && timelineResult.Result.Count != 0)
-{
-    do
-    {
-        // Do whatever needs to be done on the page of timeline entries.
-
-        if (pageCount < maximumPagesToRetrieve &&
-            !string.IsNullOrEmpty(timelineResult.Result.Cursor))
-        {
-            // Get the next page
-            timelineResult =
-                await agent.GetTimeline(
-                    limit: numberOfEntriesPerPage,
-                    cursor: timelineResult.Result.Cursor, cancellationToken: cancellationToken);
-            pageCount++;
-        }
-
-    } while (timelineResult.Succeeded &&
-             !string.IsNullOrEmpty(timelineResult.Result.Cursor) &&
-             pageCount < maximumPagesToRetrieve);
-}
-```
+[!code-csharp[](code/feed.cs?highlight=5-11,14-28)]
 
 > [!TIP]
 > The code above will work for any method that returns a paginated result, like `GetFeed()`, `GetAuthorFeed()`, `ListNotifications()`, etc.
@@ -137,7 +108,6 @@ which accepts four key parameters
 | limit     | int        | The number of posts to return per page (max 100)                              | No       |                                                              | 50       |
 
 ```c#
-
 var authorFeedResult = await agent.GetAuthorFeed(
     actor: "did:plc:z72i7hdynmk6r22z27h6tvur",
     filter: FeedFilter..PostsAndAuthorThreads,

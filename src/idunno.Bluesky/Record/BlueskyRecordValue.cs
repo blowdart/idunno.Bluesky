@@ -4,6 +4,7 @@
 using System.Text.Json.Serialization;
 
 using idunno.AtProto.Repo;
+
 using idunno.Bluesky.Actions;
 
 namespace idunno.Bluesky.Record
@@ -11,8 +12,8 @@ namespace idunno.Bluesky.Record
     /// <summary>
     /// Base record for common Bluesky record values
     /// </summary>
-    [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = false,
-                     UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]
+    [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
+                     UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
     [JsonDerivedType(typeof(Post), RecordType.Post)]
     [JsonDerivedType(typeof(FollowRecordValue), RecordType.Follow)]
     [JsonDerivedType(typeof(RepostRecordValue), RecordType.Repost)]
@@ -22,6 +23,8 @@ namespace idunno.Bluesky.Record
     [JsonDerivedType(typeof(StarterPackRecordValue), RecordType.StarterPack)]
     [JsonDerivedType(typeof(LabelerDeclarationRecordValue), RecordType.LabelerDeclaration)]
     [JsonDerivedType(typeof(VerificationRecordValue), RecordType.Verification)]
+    [JsonDerivedType(typeof(BlueskyList), RecordType.List)]
+    [JsonDerivedType(typeof(BlueskyListItem), RecordType.ListItem)]
     public record BlueskyRecordValue : AtProtoRecordValue
     {
         /// <summary>

@@ -179,6 +179,17 @@ namespace idunno.Bluesky
         /// The NSID for a user's verification collection.
         /// </summary>
         public static Nsid Verification { get; } = new Nsid("app.bsky.graph.verification");
+
+        /// <summary>
+        /// The NSID for a user's list collection.
+        /// </summary>
+        public static Nsid List { get; } = new Nsid("app.bsky.graph.list");
+
+        /// <summary>
+        /// The NSID for the user's collection of users added to their own lists.
+        /// </summary>
+        public static Nsid ListItem { get; } = new Nsid("app.bsky.graph.listitem");
+
     }
 
     /// <summary>
@@ -260,6 +271,16 @@ namespace idunno.Bluesky
         /// Indicates a verification record.
         /// </summary>
         public const string Verification = "app.bsky.graph.verification";
+
+        /// <summary>
+        /// Indicates a list record.
+        /// </summary>
+        public const string List = "app.bsky.graph.list";
+
+        /// <summary>
+        /// Indicates a record of an item in a list.
+        /// </summary>
+        public const string ListItem = "app.bsky.graph.listitem";
     }
 
     /// <summary>

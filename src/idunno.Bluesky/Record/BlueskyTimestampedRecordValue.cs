@@ -10,8 +10,8 @@ namespace idunno.Bluesky.Record
     /// <summary>
     /// Base record for common Bluesky record values which are always timestamped.
     /// </summary>
-    [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = false,
-                     UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]
+    [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
+                     UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
     [JsonDerivedType(typeof(Post), RecordType.Post)]
     [JsonDerivedType(typeof(FollowRecordValue), RecordType.Follow)]
     [JsonDerivedType(typeof(RepostRecordValue), RecordType.Repost)]
@@ -19,6 +19,8 @@ namespace idunno.Bluesky.Record
     [JsonDerivedType(typeof(BlockRecordValue), RecordType.Block)]
     [JsonDerivedType(typeof(StarterPackRecordValue), RecordType.StarterPack)]
     [JsonDerivedType(typeof(VerificationRecordValue), RecordType.Verification)]
+    [JsonDerivedType(typeof(BlueskyList), RecordType.List)]
+    [JsonDerivedType(typeof(BlueskyListItem), RecordType.ListItem)]
     public record BlueskyTimestampedRecordValue : BlueskyRecordValue
     {
         /// <summary>
@@ -37,6 +39,22 @@ namespace idunno.Bluesky.Record
         public BlueskyTimestampedRecordValue(DateTimeOffset createdAt) : base()
         {
             CreatedAt = createdAt.ToUniversalTime();
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="BlueskyTimestampedRecordValue"/>
+        /// </summary>
+        /// <param name="createdAt">The date and time the record was created at.</param>
+        public BlueskyTimestampedRecordValue(DateTimeOffset? createdAt) : base()
+        {
+            if (createdAt is null)
+            {
+                CreatedAt = DateTimeOffset.UtcNow;
+            }
+            else
+            {
+                CreatedAt = createdAt.Value.ToUniversalTime();
+            }
         }
 
         /// <summary>

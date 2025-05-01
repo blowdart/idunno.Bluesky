@@ -266,6 +266,9 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(LabelerViewerState))]
     [JsonSerializable(typeof(LabelerDeclarationRecordValue))]
 
+    [JsonSerializable(typeof(BlueskyList))]
+    [JsonSerializable(typeof(BlueskyListItem))]
+
     [JsonSerializable(typeof(DateTimeOffset))]
     internal partial class SourceGenerationContext : JsonSerializerContext
     {
