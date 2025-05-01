@@ -1,5 +1,13 @@
 # Version History
 
+## 0.8.0
+
+### Features
+
+#### idunno.Bluesky
+
+* Add list management APIs and documentation.
+
 ## 0.7.0
 
 ### Features
