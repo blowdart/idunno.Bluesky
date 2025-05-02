@@ -1,7 +1,7 @@
 # <a name="makingRequests">Making requests to Bluesky</a>
 
-Making requests to Bluesky is done though the `BlueskyAgent` class. Once you authenticate using `agent.Login()` or via OAuth,
-the agent manages your "session"", the tokens necessary to make authenticated requests are stored, refreshed automatically
+Making requests to Bluesky is done though the `BlueskyAgent` class. Once you authenticate using `agent.Login()` or via [OAuth](connecting.md#oauth),
+the agent manages your "session", the tokens necessary to make authenticated requests are stored, refreshed automatically
 and added to any authenticated API requests.
 
 ## <a name="understandingResults">Understanding responses from Bluesky</a>
@@ -11,9 +11,9 @@ avoids the use of exceptions should the HTTP call fail, and allows you to view a
 
 `AtProtoHttpResult<T>` has properties to help you determine the success or failure of the call. These include
 
-* The `Succeeded` property, a `boolean` indicated whether the API call was sucessful or not,
+* The `Succeeded` property, a `boolean` indicated whether the API call was successful or not,
 * The `StatusCode` property containing the HTTP status code from the API call,
-* The `Result` property, containing the result of the API call. This may be null if a call was unsucessful,
+* The `Result` property, containing the result of the API call. This may be null if a call was unsuccessful,
 * The `AtErrorDetail` property, containing any detailed error messages from the API if any were returned.
 
 If a request is **successful** the `Succeeded` property on the returned result instance will be `true`, the `Result` property will not be null, and
@@ -39,8 +39,6 @@ Let's add some basic error checking to the Hello World code you wrote in [gettin
 * Line 9 you can see a call to `loginResult.Succeeded`, ensuring that any attempt to post only happens if the call to `Login` was successful,
 * Lines 13-16 show a reaction if the call to `Post()` failed, and
 * Lines 19-25 show how you can check for any API errors that might be returned.
-
-You can download [helloWorldErrorChecked.cs](./code/helloWorldErrorChecked.cs).
 
 > [!TIP]
 > `AtProtoHttpResult<T>` has an `EnsureSucceeded()` method which will throw an `AtProtoHttpRequestException` if the `Succeeded` property is false.

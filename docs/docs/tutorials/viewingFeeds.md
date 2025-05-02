@@ -3,7 +3,7 @@
 Feeds are lists of posts, [paginated by cursors](../cursorsAndPagination.md). Bluesky has a few types of feeds, including
 
 * **timelines**: the default chronological feed of posts from users the authenticated user follows
-* **feed generators**: custom feeds made by users and organiziations
+* **feed generators**: custom feeds made by users and organizations
 * **author feeds**: a feed of posts by a single author
 
 ## Viewing a user's timeline

@@ -2,7 +2,8 @@
 
 A user's profile consists of the user's title, a description, a profile picture and a banner picture, all of which can be left empty, as
 well as other settings like a pinned post that is shown when someone views the account's profile page, a setting to discourage applications
-for displaying the profile and posts to unauthenticated users and self labels, which can be any of the configuration [global label values](https://docs.bsky.app/docs/advanced-guides/moderation#global-label-values).
+for displaying the profile and posts to unauthenticated users and self labels,
+which can be any of the configuration [global label values](https://docs.bsky.app/docs/advanced-guides/moderation#global-label-values).
 
 To get the profile record for the current user call `agent.GetProfileRecord()`.
 

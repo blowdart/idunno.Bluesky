@@ -23,7 +23,7 @@ Profile views can include labels from labelers. Please see [Labels](labels.md) f
 
 ## <a name="profileVerification">Profile verification</a>
 
-Bluesky supports a composible verification system where various organications will verify accounts, for example the New York Times may verify their reporters. The
+Bluesky supports a composable verification system where various organizations will verify accounts, for example the New York Times may verify their reporters. The
 `Verification` property holds the verification status for a user, and a list of the verifiers who have verified it. The `VerifiedStatus` can be valid, invalid, none or unknown,
 you can use this to decide if you want to display an indicator of the status to your users.
 

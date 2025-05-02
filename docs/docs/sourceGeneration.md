@@ -112,7 +112,7 @@ For example, if you have a custom `AtProtoRecordValue` and corresponding `AtProt
 
 Native AOT has benefits:
 
-* Reduced disk footprint: Native AOT publishing produces a single executable containing just the code from exteneral dependencies that is used by your application.
+* Reduced disk footprint: Native AOT publishing produces a single executable containing just the code from external dependencies that is used by your application.
 * Reduced startup time: Native AOT can show reduced start-up times, meaning your app is ready to respond more quickly.
 * Reduced memory usage: Native AOT apps can show reduced memory demands, depending on the work it does.
 

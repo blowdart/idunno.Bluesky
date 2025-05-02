@@ -384,7 +384,8 @@ var builderPostResult = await agent.Post(postBuilder, cancellationToken: cancell
 
 ## <a name="openGraphCards">Embedding an external link (Open Graph cards)</a>
 
-[Open Graph](https://ogp.me/) is a standard that allows web pages to become a rich object in a social graph. Open Graph metadata allows you to embed a rich link card in a Bluesky post, which will look something like this:
+[Open Graph](https://ogp.me/) is a standard that allows web pages to become a rich object in a social graph. Open Graph metadata allows you to embed a rich link card in a
+Bluesky post, which will look something like this:
 
 ![An embedded link to Wikipedia's page on Baked Beans](media/embeddedCard.png "An embedded Card")
 
@@ -404,8 +405,8 @@ If you don't want to use a `PostBuilder` you can use the appropriate `Post()` me
 var postResult = agent.Post(externalCard: embeddedExternal, cancellationToken: cancellationToken);
 ```
 
-You can use libraries like [OpenGraph.net](https://github.com/ghorsey/OpenGraph-Net/) or [X.Web.MetaExtractor](https://www.nuget.org/packages/X.Web.MetaExtractor) to retrieve Open Graph properties from which you can construct a card.
-For example, using OpenGraph.Net
+You can use libraries like [OpenGraph.net](https://github.com/ghorsey/OpenGraph-Net/) or [X.Web.MetaExtractor](https://www.nuget.org/packages/X.Web.MetaExtractor) to retrieve
+Open Graph properties from which you can construct a card. For example, using OpenGraph.Net
 
 ```
 Uri pageUri = new ("https://en.wikipedia.org/wiki/Baked_beans");

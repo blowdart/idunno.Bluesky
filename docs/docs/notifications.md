@@ -6,7 +6,8 @@ Like the [timeline sample](timeline.md) notifications can be retrieved and itera
 HttpResult<int> unreadCount = await agent.GetNotificationUnreadCount();
 ```
 
-`GetNotificationUnreadCount()` allows you to check if there's anything unread before you consider retrieving notifications. This could also be used for an indicator in an application or badge. `GetNotificationUnreadCount()` also takes an optional `DateTimeOffset` parameter to allow you to get the unread count from a particular date and time.
+`GetNotificationUnreadCount()` allows you to check if there's anything unread before you consider retrieving notifications. This could also be used for an indicator in an application or badge.
+`GetNotificationUnreadCount()` also takes an optional `DateTimeOffset` parameter to allow you to get the unread count from a particular date and time.
 
 To retrieve your notifications, read or unread, you call `ListNotifications()`.
 
@@ -15,7 +16,7 @@ var notifications =
     await agent.ListNotifications().ConfigureAwait(false);
 ```
 
-From there, you would perform the `.Succeded` check and work your way through the notifications collection exposed in the `Result` property. Each notification has a reason property. 
+From there, you would perform the `.Succeded` check and work your way through the notifications collection exposed in the `Result` property. Each notification has a reason property.
 
 Each type of notification, `Follow`, `Like`, `Mention`, `Quote`, `Reply`, and `Repost` having varying types of information used to supplement the notification with appropriate information.
 
@@ -76,13 +77,18 @@ HttpResult<EmptyResponse> updateSeen =
     await agent.UpdateNotificationSeenAt();
 ```
 
-`UpdateNotificationSeenAt()` takes an optional `DateTimeOffset seenAt` parameter, so you can, and probably should, save a timestamp before you start working through notifications, and then use the saved timestamp once you've finished, so that notifications that happen after you retrieved the notification list don't get marked as seen. `UpdateNotificationSeenAt()` can also take a `seenAt` parameter in the past, which allows you to reset when Bluesky things you last saw notifications - which is very handy for testing any notification viewer you've written.
+`UpdateNotificationSeenAt()` takes an optional `DateTimeOffset seenAt` parameter, so you can, and probably should, save a timestamp before you start working through notifications,
+and then use the saved timestamp once you've finished, so that notifications that happen after you retrieved the notification list don't get marked as seen.
+`UpdateNotificationSeenAt()` can also take a `seenAt` parameter in the past, which allows you to reset when Bluesky things you last saw notifications, which is very handy
+for testing any notification viewer you've written.
 
-A full sample can be found in the [Notifications](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.Notifications) project in the [samples](https://github.com/blowdart/idunno.atproto/tree/main/samples) directory in this GitHub repository.
+A full sample can be found in the [Notifications](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.Notifications) project in the
+[samples](https://github.com/blowdart/idunno.atproto/tree/main/samples) directory in this GitHub repository.
 
 ## <a name=cursorsPagination>Cursors and Pagination</a>
 
-If you've looked at the source code for the [Notifications sample](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.Notifications)  you may have noticed it pages through notifications rather than get all the notifications at once.
+If you've looked at the source code for the [Notifications sample](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.Notifications) you may have noticed it pages
+through notifications rather than get all the notifications at once.
 
 The sample uses the `limit` and `cursor` parameters to get notifications one page at a time, consisting of five notifications per page.
 

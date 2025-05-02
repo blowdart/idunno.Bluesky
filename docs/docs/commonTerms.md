@@ -27,7 +27,7 @@ A `StrongReference` is a record contain both the [at:// uri](#uri) of a record, 
 
 Bluesky stores all your stuff in a repository on a Personal Data Server (PDS).
 A repository contains various collections, and these collections contain records.
-For example, when you write a post you are cerating a record in your repository in the `app.bsky.feed.post` collection.
+For example, when you write a post you are creating a record in your repository in the `app.bsky.feed.post` collection.
 
 A simple post record would, in JSON, look something like this
 
@@ -63,21 +63,30 @@ The Bluesky API documentation refers to a user or bot account as an`Actor`. Acto
 
 ### <a name="handles">Handles</a>
 
-A `handle` is what you see in human readable terms, for example "blowdart.me". It's how you view a profile in the browser, for example https://bsky.app/profile/blowdart.me and it's how you @ people in posts.
+A `handle` is what you see in human readable terms, for example "blowdart.me". It's how you view a profile in the browser, for example https://bsky.app/profile/blowdart.me and
+it's how you @ people in posts.
 
-However as you may have discovered handles can change. When registering on Bluesky you register with a *something*.bsky.social handle, which you can then change to be DNS "verified". If you change your handle your posts still remain, and people that follow you keep following you through the change. This is because underneath handles aren't often used by the APIs, an account is referenced by its `DID`.
+However as you may have discovered handles can change. When registering on Bluesky you register with a *something*.bsky.social handle, which you can then change to be DNS "verified".
+If you change your handle your posts still remain, and people that follow you keep following you through the change. This is because underneath handles aren't often used by the APIs,
+an account is referenced by its `DID`.
 
 ### <a name="dids">Distributed Identifier (DID)</a>
 
-A `DID` is your unique key on the atproto network. Under the covers Bluesky uses `DID`s, not handles for pretty much everything, sometimes accepting both and doing the work behind the scenes to resolve a handle into a `DID``.
+A `DID` is your unique key on the atproto network. Under the covers Bluesky uses `DID`s, not handles for pretty much everything, sometimes accepting both and doing the
+work behind the scenes to resolve a handle into a `DID``.
 
-A `DID` looks something like this: `did:plc:hfgp6pj3akhqxntgqwramlbg`. The first part of the `DID` is the prefix declaring it's a `DID`, the second part is an identifier for the issuer (`plc` is a `DID` issued by Bluesky, `web` is another common identifier indicating an independently issued `DID`), and the final part is a unique reference issued by the issuer.
+A `DID` looks something like this: `did:plc:hfgp6pj3akhqxntgqwramlbg`. The first part of the `DID` is the prefix declaring it's a `DID`,
+the second part is an identifier for the issuer (`plc` is a `DID` issued by Bluesky, `web` is another common identifier indicating an independently issued `DID`),
+and the final part is a unique reference issued by the issuer.
 
-For example, the api to [get an actor profile](https://docs.bsky.app/docs/api/app-bsky-actor-get-profile) takes a `DID`or a handle (this either/or combination is represented as an At-Identifier), but things like [updateAccountPassword](https://docs.bsky.app/docs/api/com-atproto-admin-update-subject-status) take just a `DID`.
+For example, the api to [get an actor profile](https://docs.bsky.app/docs/api/app-bsky-actor-get-profile) takes a `DID`or a handle
+(this either/or combination is represented as an At-Identifier), but things like [updateAccountPassword](https://docs.bsky.app/docs/api/com-atproto-admin-update-subject-status) take just a `DID`.
 
 When you login via an agent the authenticated user's `DID` is available via the `Did` property on the agent instance.
 
-Bluesky's `DID` directory is available at https://web.plc.directory/. It servers up a `DidDoc` for a plc `DID` which allows discovery of things like a `DID`'s personal data server where authenticated API calls should go. The `BlueskyAgent` class take care of PDS discovery automatically, but you can retrieve a `DidDoc` yourself using the `DirectoryAgent` `ResolveDidDocument` method.
+Bluesky's `DID` directory is available at https://web.plc.directory/. It servers up a `DidDoc` for a plc `DID` which allows discovery of things like a `DID`'s personal data
+server where authenticated API calls should go. The `BlueskyAgent` class take care of PDS discovery automatically,
+but you can retrieve a `DidDoc` yourself using the `DirectoryAgent` `ResolveDidDocument` method.
 
 ### <a name="resolvingHandles">Resolving a Handle to a DID</a>
 
@@ -87,7 +96,8 @@ The `AtProto` and `Bluesky` agents provide a method to resolve a `DID` for a `Ha
 
 As you explore the APIs you while you write records you don't get records, instead you get views of records. You create a `Post` but what you see in your timeline is a `PostView`.
 
-A view is how Bluesky aggregates information from multiple records into a single entity. For example a `PostView` takes information from not only the `Post` record, but also information about the post author via a `ProfileView`, and things like reply and like counts. If you've used a SQL database before you can think of a view like a select over multiple joined tables.
+A view is how Bluesky aggregates information from multiple records into a single entity. For example a `PostView` takes information from not only the `Post` record,
+but also information about the post author via a `ProfileView`, and things like reply and like counts.
+If you've used a SQL database before you can think of a view like a select over multiple joined tables.
 
 Views are generated by applications, the overall view over data that Bluesky presents is commonly referred to as the `AppView`.
-

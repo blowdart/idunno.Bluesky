@@ -62,7 +62,7 @@ Reply and quote posts contain [strong references](../commonTerms.md#strongRefere
 
 Replies and quote posts contain strong references to other records.
 
-* [at:// uri](../commonTerms.md#uri): indicating the repositody DID, collection and record key
+* [at:// uri](../commonTerms.md#uri): indicating the repository [DID](../commonTerms.md#dids), collection and record key
 * [CID](../commonTerms.md#cid): the hash to the record itself
 
 You can get a post's strong reference from the timeline view, author view or other views that contain posts like search views or feed views.

@@ -114,7 +114,7 @@ You can also supply the user's handle.
 
 ### Deleting a list
 
-To delete a list to call `DeleteList()` with the lists's `at://` [uri](../commonTerms.md#uri)
+To delete a list to call `DeleteList()` with the list's `at://` [uri](../commonTerms.md#uri)
 
 `DeleteList()`
 

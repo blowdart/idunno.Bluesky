@@ -20,7 +20,7 @@ var getPostThreadResult = await agent.GetPostThread(
 The result of a `GetPostThread()` is a `PostThread` which contains the `Thread` and any `ThreadGate` rules applied to it.
 
 `Thread` has a `Post` property, this is the root post, the one whose [at:// uri](../commonTerms.md#uri) you provided,
-a `Parent` property, which is a nested tree of ancestors (if any), and `Replies`, a one dimensonal array of replies (if any).
+a `Parent` property, which is a nested tree of ancestors (if any), and `Replies`, a one dimensional array of replies (if any).
 
 As `Replies` is one-dimensional, to facilitate the construction of a tree from this data, each reply in the array contains references to its
 immediate parent (ancestor) and immediate child (descendent).

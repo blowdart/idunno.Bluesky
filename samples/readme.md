@@ -5,7 +5,7 @@ This folder contains various samples to demonstrate various features of the `idu
 Each console sample uses the same command line arguments:
 
 * `--handle` : The handle to use when authenticating.
-* `--password` : The password to use when authenticating.
+* `--password` : The password to use when authenticating (this parameter is ignored by OAuth samples).
 * `--authcode` : The authorization code to use when authenticating.
 * `--proxy`: The URI of the proxy server you wish to use.
 
@@ -15,7 +15,8 @@ If you use an Bluesky app password you don't need to worry about authorization c
 
 ## Sample List
 
-* `Samples.ConsoleShell` - a skeleton console application that you can use as a starting point for experimentation.
+* `Samples.ConsoleShell` - a skeleton console application which authenticates with a handle and password that you can use as a starting point for experimentation.
+* `Samples.ConsoleShell.OAuth` - a skeleton console application which authenticates with OAuth that you can use as a starting point for experimentation.
 * `Samples.Common` - helper functions used in the sample applications.
 
 * `Samples.AtProto` - a sample showing how to use the underlying AtProto APIs.

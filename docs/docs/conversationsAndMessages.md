@@ -45,7 +45,8 @@ foreach (MessageViewBase message in getMessages.Result)
 }
 ```
 
-Once you've shown a user their messages you can update the read status of a conversation with `UpdateRead()` which takes the conversation id, and, optionally the message id of the last message seen.
+Once you've shown a user their messages you can update the read status of a conversation with `UpdateRead()` which takes the conversation id, and,
+optionally the message id of the last message seen.
 
 ## <a name="sending">Sending a message</a>
 
