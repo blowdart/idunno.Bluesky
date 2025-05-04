@@ -84,8 +84,8 @@ namespace Samples.AgentEvents
                         // falling back to using the refresh token to create a new authenticated session.
                         persistedLoginState = new StoredAuthenticationState(
                             authenticationType: e.AccessCredentials.AuthenticationType,
-                            did: e.AccessCredentials.Did,
-                            service: e.AccessCredentials.Service,
+                            did: e.Did,
+                            service: e.Service,
                             accessToken: e.AccessCredentials.AccessJwt,
                             refreshToken: e.AccessCredentials.RefreshToken);
 
@@ -95,7 +95,7 @@ namespace Samples.AgentEvents
                             persistedLoginState.DPoPNonce = dPoPAccessCredentials.DPoPNonce;
                         }
 
-                        Console.WriteLine($"EVENT: {e.AccessCredentials.Did} authenticated on {e.AccessCredentials.Service}");
+                        Console.WriteLine($"EVENT: {e.Did} authenticated on {e.AccessCredentials.Service}");
                     };
 
                     agent.CredentialsUpdated += (sender, e) =>
@@ -106,8 +106,8 @@ namespace Samples.AgentEvents
                         // to try to restore the session you had.
                         persistedLoginState = new StoredAuthenticationState(
                             authenticationType: e.AccessCredentials.AuthenticationType,
-                            did: e.AccessCredentials.Did,
-                            service: e.AccessCredentials.Service,
+                            did: e.Did,
+                            service: e.Service,
                             accessToken: e.AccessCredentials.AccessJwt,
                             refreshToken: e.AccessCredentials.RefreshToken);
 
@@ -117,7 +117,7 @@ namespace Samples.AgentEvents
                             persistedLoginState.DPoPNonce = dPoPAccessCredentials.DPoPNonce;
                         }
 
-                        Console.WriteLine($"EVENT: Credentials updated for : {e.AccessCredentials.Did}");
+                        Console.WriteLine($"EVENT: Credentials updated for : {e.Did}");
                     };
 
                     agent.Unauthenticated += (sender, e) =>
@@ -134,7 +134,7 @@ namespace Samples.AgentEvents
                         // could not refresh and so any tokens you saved will be invalid.
                         persistedLoginState = null;
 
-                        Console.WriteLine($"EVENT: Token Refresh failed API returned {e.StatusCode}");
+                        Console.WriteLine($"EVENT: Token Refresh for {e.Did} failed API returned {e.StatusCode}");
 
                         if (e.Error is not null)
                         {
@@ -228,8 +228,8 @@ namespace Samples.AgentEvents
                         // falling back to using the refresh token to create a new authenticated session.
                         persistedLoginState = new StoredAuthenticationState(
                             authenticationType: e.AccessCredentials.AuthenticationType,
-                            did: e.AccessCredentials.Did,
-                            service: e.AccessCredentials.Service,
+                            did: e.Did,
+                            service: e.Service,
                             accessToken: e.AccessCredentials.AccessJwt,
                             refreshToken: e.AccessCredentials.RefreshToken);
 
@@ -239,7 +239,7 @@ namespace Samples.AgentEvents
                             persistedLoginState.DPoPNonce = dPoPAccessCredentials.DPoPNonce;
                         }
 
-                        Console.WriteLine($"EVENT: {e.AccessCredentials.Did} authenticated on {e.AccessCredentials.Service}");
+                        Console.WriteLine($"EVENT: {e.Did} authenticated on {e.Service}");
                     };
 
                     agent.CredentialsUpdated += (sender, e) =>
@@ -250,8 +250,8 @@ namespace Samples.AgentEvents
                         // to try to restore the session you had.
                         persistedLoginState = new StoredAuthenticationState(
                             authenticationType: e.AccessCredentials.AuthenticationType,
-                            did: e.AccessCredentials.Did,
-                            service: e.AccessCredentials.Service,
+                            did: e.Did,
+                            service: e.Service,
                             accessToken: e.AccessCredentials.AccessJwt,
                             refreshToken: e.AccessCredentials.RefreshToken);
 
@@ -261,7 +261,7 @@ namespace Samples.AgentEvents
                             persistedLoginState.DPoPNonce = dPoPAccessCredentials.DPoPNonce;
                         }
 
-                        Console.WriteLine($"EVENT: Credentials updated for : {e.AccessCredentials.Did}");
+                        Console.WriteLine($"EVENT: Credentials updated for : {e.Did}");
                     };
 
                     agent.Unauthenticated += (sender, e) =>
@@ -278,7 +278,7 @@ namespace Samples.AgentEvents
                         // could not refresh and so any tokens you saved will be invalid.
                         persistedLoginState = null;
 
-                        Console.WriteLine($"EVENT: Token Refresh failed API returned {e.StatusCode}");
+                        Console.WriteLine($"EVENT: Token Refresh for {e.Did} failed API returned {e.StatusCode}");
 
                         if (e.Error is not null)
                         {
@@ -416,7 +416,7 @@ namespace Samples.AgentEvents
                         // could not refresh and so any tokens you saved will be invalid.
                         persistedLoginState = null;
 
-                        Console.WriteLine($"EVENT: Token Refresh failed API returned {e.StatusCode}");
+                        Console.WriteLine($"EVENT: Token Refresh for  {e.Did}  failed API returned {e.StatusCode}");
 
                         if (e.Error is not null)
                         {

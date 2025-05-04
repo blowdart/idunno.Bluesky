@@ -79,11 +79,11 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            FollowRecordValue follow = new(did);
+            Follow follow = new(did);
 
             // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
-            AtProtoHttpResult<CreateRecordResult> result = await CreateRecord<BlueskyTimestampedRecordValue>(
-                recordValue: follow,
+            AtProtoHttpResult<CreateRecordResult> result = await CreateRecord<BlueskyTimestampedRecord>(
+                record: follow,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Follow,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -266,11 +266,11 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            BlockRecordValue block = new(did);
+            Block block = new(did);
 
             // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
-            return await CreateRecord<BlueskyTimestampedRecordValue>(
-                recordValue: block,
+            return await CreateRecord<BlueskyTimestampedRecord>(
+                record: block,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Block,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1173,11 +1173,11 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            RepostRecordValue repostRecord = new(post);
+            Repost repostRecord = new(post);
 
             // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
-            return await CreateRecord<BlueskyTimestampedRecordValue>(
-                recordValue: repostRecord,
+            return await CreateRecord<BlueskyTimestampedRecord>(
+                record: repostRecord,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Repost,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1212,7 +1212,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// Deletes the repost record for the post referenced by <see cref="Uri"/>.
         /// </summary>
-        /// <param name="uri">The <see cref="AtUri"/> of the post to unreposted.</param>
+        /// <param name="uri">The <see cref="AtUri"/> of the post to delete the repost of.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is null.</exception>
@@ -1272,7 +1272,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// Deletes the repost record post referenced by <see cref="StrongReference"/>.
         /// </summary>
-        /// <param name="strongReference">The <see cref="StrongReference"/> of the post to unreposted.</param>
+        /// <param name="strongReference">The <see cref="StrongReference"/> of the post to delete the repost of.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
@@ -1317,11 +1317,11 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(strongReference.Uri.Collection);
             ArgumentOutOfRangeException.ThrowIfNotEqual(strongReference.Uri.Collection, CollectionNsid.Post);
 
-            LikeRecordValue likeRecord = new(strongReference);
+            Like likeRecord = new(strongReference);
 
             // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
-            return await CreateRecord<BlueskyTimestampedRecordValue>(
-                recordValue: likeRecord,
+            return await CreateRecord<BlueskyTimestampedRecord>(
+                record: likeRecord,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Like,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1354,7 +1354,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Deletes the like record for the post refered to by <paramref name="uri"/>.
+        /// Deletes the like record for the post referred to by <paramref name="uri"/>.
         /// </summary>
         /// <param name="uri">The <see cref="AtUri"/> of the like record to delete.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -1786,8 +1786,8 @@ namespace idunno.Bluesky
             if ((threadGateRules is null && postGateRules is null && interactionPreferences is null) && !string.IsNullOrEmpty(post.Text))
             {
                 // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
-                return await CreateRecord<BlueskyTimestampedRecordValue>(
-                    recordValue: post,
+                return await CreateRecord<BlueskyTimestampedRecord>(
+                    record: post,
                     jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                     collection: CollectionNsid.Post,
                     cancellationToken: cancellationToken).ConfigureAwait(false);

@@ -8,26 +8,17 @@ namespace idunno.AtProto.Events
     /// <summary>
     /// Encapsulations information about credentials that have been set on an agent.
     /// </summary>
-    public sealed class AuthenticatedEventArgs : EventArgs
+    /// <param name="did">The <see cref="Did"/> the credentials belong to.</param>
+    /// <param name="service">The <see cref="Uri"/> of the service that credentials are for.</param>
+    /// <param name="accessCredentials">The initial access credentials for the session.</param>
+    public sealed class AuthenticatedEventArgs(
+            Did did,
+            Uri service,
+            AccessCredentials accessCredentials) : BaseAuthenticationEventArgs(did, service)
     {
         /// <summary>
-        /// Creates a new instance of <see cref="AuthenticatedEventArgs"/>
+        /// Gets the newly issued access credentials.
         /// </summary>
-        /// <param name="accessCredentials">The initial access credentials for the session.</param>
-        /// <exception cref="ArgumentNullException">
-        ///   Thrown when <paramref name="accessCredentials"/> is null.
-        /// </exception>
-        public AuthenticatedEventArgs(
-            AccessCredentials accessCredentials)
-        {
-            ArgumentNullException.ThrowIfNull(accessCredentials);
-
-            AccessCredentials = accessCredentials;
-        }
-
-        /// <summary>
-        /// The initial access credentials for the session.
-        /// </summary>
-        public AccessCredentials AccessCredentials { get; }
+        public AccessCredentials AccessCredentials { get; } = accessCredentials;
     }
 }

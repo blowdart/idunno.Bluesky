@@ -12,11 +12,11 @@ To create a profile call `agent.SetProfile()` with a profile record value.
 
 | Parameter    | Type                | Description                                                             | Required   |
 |--------------|---------------------|-------------------------------------------------------------------------|:----------:|
-| profile      | ProfileRecordValue  | The new profile record to create.                                       | Yes        |
+| profile      | Profile             | The new profile record to create.                                       | Yes        |
 
 ```
 await agent.SetProfile(
-    new ProfileRecordValue(
+    new Profile(
         displayName: "display name",
         description: "description");
 ```
@@ -28,7 +28,7 @@ then call `agent.SetProfile()` with the edited profile record.
 
 | Parameter    | Type                | Description                                                             | Required   |
 |--------------|---------------------|-------------------------------------------------------------------------|:----------:|
-| profile      | ProfileRecord       | The updated profile record to write.                                    | Yes        |
+| profile      | ReferencedProfile   | The updated profile record to write.                                    | Yes        |
 
 ```c#
 var getProfileResult = await agent.GetProfile();

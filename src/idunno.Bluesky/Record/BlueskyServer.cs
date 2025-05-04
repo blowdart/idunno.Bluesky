@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 
-using idunno.Bluesky.Record;
+using idunno.AtProto.Repo;
 
 namespace idunno.Bluesky
 {
@@ -33,7 +33,7 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage("AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-        public static async Task<AtProtoHttpResult<PostRecord>> GetPostRecord(
+        public static async Task<AtProtoHttpResult<AtProtoRepositoryRecord<Post>>> GetPostRecord(
             AtUri uri,
             Cid? cid,
             Uri service,
@@ -46,7 +46,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(uri);
             ArgumentNullException.ThrowIfNull(uri.RecordKey);
 
-            return await AtProtoServer.GetRecord<PostRecord>(
+            return await AtProtoServer.GetRecord<Post>(
                 repo: uri.Repo,
                 collection: CollectionNsid.Post,
                 rKey: uri.RecordKey,

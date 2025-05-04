@@ -377,8 +377,8 @@ namespace idunno.AtProto
         /// <summary>
         /// Creates a record in the specified collection belonging to the current user.
         /// </summary>
-        /// <typeparam name="TRecordValue">The type of record to create.</typeparam>
-        /// <param name="recordValue"><para>The record to be created.</para></param>
+        /// <typeparam name="TRecord">The type of record to create.</typeparam>
+        /// <param name="record"><para>The record to be created.</para></param>
         /// <param name="collection"><para>The collection the record should be created in.</para></param>
         /// <param name="rKey"><para>An optional <see cref="RecordKey"/> to create the record with.</para></param>
         /// <param name="validate">
@@ -392,20 +392,20 @@ namespace idunno.AtProto
         /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns><para>The task object representing the asynchronous operation.</para></returns>
-        /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="recordValue"/> or <paramref name="collection"/> is null.</para></exception>
+        /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="record"/> or <paramref name="collection"/> is null.</para></exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
         [RequiresDynamicCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
-        public async Task<AtProtoHttpResult<CreateRecordResult>> CreateRecord<TRecordValue>(
-            TRecordValue recordValue,
+        public async Task<AtProtoHttpResult<CreateRecordResult>> CreateRecord<TRecord>(
+            TRecord record,
             Nsid collection,
             RecordKey? rKey = null,
             bool? validate = true,
             Cid? swapCommit = null,
             string? serviceProxy = null,
-            CancellationToken cancellationToken = default) where TRecordValue : AtProtoRecordValue
+            CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
         {
-            ArgumentNullException.ThrowIfNull(recordValue);
+            ArgumentNullException.ThrowIfNull(record);
             ArgumentNullException.ThrowIfNull(collection);
 
             if (!IsAuthenticated)
@@ -415,7 +415,7 @@ namespace idunno.AtProto
             }
 
             AtProtoHttpResult<CreateRecordResult> result = await AtProtoServer.CreateRecord(
-                record: recordValue,
+                record: record,
                 collection: collection,
                 creator: Credentials.Did,
                 rKey: rKey,
@@ -448,9 +448,9 @@ namespace idunno.AtProto
         /// <summary>
         /// Creates a record in the specified collection belonging to the current user.
         /// </summary>
-        /// <typeparam name="TRecordValue">The type of record to create.</typeparam>
-        /// <param name="recordValue"><para>The record to be created.</para></param>
-        /// <param name="jsonSerializerOptions"><para>The <see cref="JsonSerializerOptions"/> to apply during serialization of <typeparamref name="TRecordValue"/>.</para></param>
+        /// <typeparam name="TRecord">The type of record to create.</typeparam>
+        /// <param name="record"><para>The record to be created.</para></param>
+        /// <param name="jsonSerializerOptions"><para>The <see cref="JsonSerializerOptions"/> to apply during serialization of <typeparamref name="TRecord"/>.</para></param>
         /// <param name="collection"><para>The collection the record should be created in.</para></param>
         /// <param name="rKey"><para>An optional <see cref="RecordKey"/> to create the record with.</para></param>
         /// <param name="validate">
@@ -464,21 +464,21 @@ namespace idunno.AtProto
         /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns><para>The task object representing the asynchronous operation.</para></returns>
-        /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="recordValue"/> or <paramref name="collection"/> is null.</para></exception>
+        /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="record"/> or <paramref name="collection"/> is null.</para></exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
         [RequiresDynamicCode("Use a Get overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a Get overload which takes JsonSerializerOptions instead.")]
-        public async Task<AtProtoHttpResult<CreateRecordResult>> CreateRecord<TRecordValue>(
-            TRecordValue recordValue,
+        public async Task<AtProtoHttpResult<CreateRecordResult>> CreateRecord<TRecord>(
+            TRecord record,
             JsonSerializerOptions jsonSerializerOptions,
             Nsid collection,
             RecordKey? rKey = null,
             bool? validate = true,
             Cid? swapCommit = null,
             string? serviceProxy = null,
-            CancellationToken cancellationToken = default) where TRecordValue : AtProtoRecordValue
+            CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
         {
-            ArgumentNullException.ThrowIfNull(recordValue);
+            ArgumentNullException.ThrowIfNull(record);
             ArgumentNullException.ThrowIfNull(collection);
 
             if (!IsAuthenticated)
@@ -488,7 +488,7 @@ namespace idunno.AtProto
             }
 
             AtProtoHttpResult<CreateRecordResult> result = await AtProtoServer.CreateRecord(
-                record: recordValue,
+                record: record,
                 collection: collection,
                 creator: Credentials.Did,
                 rKey: rKey,
@@ -694,8 +694,8 @@ namespace idunno.AtProto
         /// <summary>
         /// Updates or creates a record in the specified collection belonging to the current user.
         /// </summary>
-        /// <typeparam name="TRecordValue">The type of the record value to be updated</typeparam>
-        /// <param name="recordValue"><para>The record to be updated or created.</para></param>
+        /// <typeparam name="TRecord">The type of the record value to be updated</typeparam>
+        /// <param name="record"><para>The record to be updated or created.</para></param>
         /// <param name="collection"><para>The collection the record should be updated or created in.</para></param>
         /// <param name="rKey"><para>The <see cref="RecordKey"/> of the record to update, otherwise the record key that will be used for the new record.</para></param>
         /// <param name="validate">
@@ -711,22 +711,22 @@ namespace idunno.AtProto
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns><para>The task object representing the asynchronous operation.</para></returns>
         /// <exception cref="ArgumentNullException">
-        ///     <para>Thrown when <paramref name="recordValue"/>, <paramref name="collection"/> or <paramref name="rKey"/> is null.</para>
+        ///     <para>Thrown when <paramref name="record"/>, <paramref name="collection"/> or <paramref name="rKey"/> is null.</para>
         /// </exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
         [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
-        public async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecordValue>(
-            TRecordValue recordValue,
+        public async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecord>(
+            TRecord record,
             Nsid collection,
             RecordKey rKey,
             bool? validate = true,
             Cid? swapCommit = null,
             Cid? swapRecord = null,
             string? serviceProxy = null,
-            CancellationToken cancellationToken = default) where TRecordValue : AtProtoRecordValue
+            CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
         {
-            ArgumentNullException.ThrowIfNull(recordValue);
+            ArgumentNullException.ThrowIfNull(record);
             ArgumentNullException.ThrowIfNull(collection);
             ArgumentNullException.ThrowIfNull(rKey);
 
@@ -737,7 +737,7 @@ namespace idunno.AtProto
             }
 
             AtProtoHttpResult<PutRecordResult> result = await AtProtoServer.PutRecord(
-                recordValue: recordValue,
+                record: record,
                 collection: collection,
                 creator: Did,
                 rKey: rKey,
@@ -771,9 +771,9 @@ namespace idunno.AtProto
         /// <summary>
         /// Updates or creates a record in the specified collection belonging to the current user.
         /// </summary>
-        /// <typeparam name="TRecordValue">The type of the record value to be updated</typeparam>
-        /// <param name="recordValue"><para>The record to be updated or created.</para></param>
-        /// <param name="jsonSerializerOptions"><para><see cref="JsonSerializerOptions"/> to use during serialization of <paramref name="recordValue"/>.</para></param>
+        /// <typeparam name="TRecord">The type of the record value to be updated</typeparam>
+        /// <param name="record"><para>The record to be updated or created.</para></param>
+        /// <param name="jsonSerializerOptions"><para><see cref="JsonSerializerOptions"/> to use during serialization of <paramref name="record"/>.</para></param>
         /// <param name="collection"><para>The collection the record should be updated or created in.</para></param>
         /// <param name="rKey"><para>The <see cref="RecordKey"/> of the record to update, otherwise the record key that will be used for the new record.</para></param>
         /// <param name="validate">
@@ -789,13 +789,13 @@ namespace idunno.AtProto
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns><para>The task object representing the asynchronous operation.</para></returns>
         /// <exception cref="ArgumentNullException">
-        ///     <para>Thrown when <paramref name="recordValue"/>, <paramref name="collection"/> or <paramref name="rKey"/> is null.</para>
+        ///     <para>Thrown when <paramref name="record"/>, <paramref name="collection"/> or <paramref name="rKey"/> is null.</para>
         /// </exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
-        public async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecordValue>(
-            TRecordValue recordValue,
+        public async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecord>(
+            TRecord record,
             JsonSerializerOptions jsonSerializerOptions,
             Nsid collection,
             RecordKey rKey,
@@ -803,9 +803,9 @@ namespace idunno.AtProto
             Cid? swapCommit = null,
             Cid? swapRecord = null,
             string? serviceProxy = null,
-            CancellationToken cancellationToken = default) where TRecordValue : AtProtoRecordValue
+            CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
         {
-            ArgumentNullException.ThrowIfNull(recordValue);
+            ArgumentNullException.ThrowIfNull(record);
             ArgumentNullException.ThrowIfNull(collection);
             ArgumentNullException.ThrowIfNull(rKey);
 
@@ -816,7 +816,7 @@ namespace idunno.AtProto
             }
 
             AtProtoHttpResult<PutRecordResult> result = await AtProtoServer.PutRecord(
-                recordValue: recordValue,
+                record: record,
                 collection: collection,
                 creator: Did,
                 rKey: rKey,
@@ -851,8 +851,8 @@ namespace idunno.AtProto
         /// <summary>
         /// Updates a record in the specified collection belonging to the current user.
         /// </summary>
-        /// <typeparam name="TRecordValue">The type of the value of record to update.</typeparam>
-        /// <param name="record"><para>The record to be updated.</para></param>
+        /// <typeparam name="TRecord">The type of the value of record to update.</typeparam>
+        /// <param name="repositoryRecord"><para>The record to be updated.</para></param>
         /// <param name="validate">
         ///   <para>Gets a flag indicating what validation will be performed, if any.</para>
         ///   <para>A value of <keyword>true</keyword> requires lexicon schema validation of record data.</para>
@@ -860,29 +860,25 @@ namespace idunno.AtProto
         ///   <para>A value of <keyword>null</keyword> to validate record data only for known lexicons.</para>
         ///   <para>Defaults to <keyword>true</keyword>.</para>
         /// </param>
-        /// <param name="swapCommit"><para>Compare and swap with the previous commit by CID.</para></param>
-        /// <param name="swapRecord"><para>The <see cref="Cid"/> of the record, if any, to compare and swap with.</para></param>
         /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns><para>The task object representing the asynchronous operation.</para></returns>
         /// <exception cref="ArgumentNullException">
-        ///     <para>Thrown when <paramref name="record"/> is null.</para>
+        ///     <para>Thrown when <paramref name="repositoryRecord"/> is null.</para>
         /// </exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
         [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
-        public async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecordValue>(
-            AtProtoRecord<TRecordValue> record,
+        public async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecord>(
+            AtProtoRepositoryRecord<TRecord> repositoryRecord,
             bool? validate = true,
-            Cid? swapCommit = null,
-            Cid? swapRecord = null,
             string? serviceProxy = null,
-            CancellationToken cancellationToken = default) where TRecordValue : AtProtoRecordValue
+            CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
         {
-            ArgumentNullException.ThrowIfNull(record);
-            ArgumentNullException.ThrowIfNull(record.Value);
-            ArgumentNullException.ThrowIfNull(record.Uri.Collection);
-            ArgumentNullException.ThrowIfNull(record.Uri.RecordKey);
+            ArgumentNullException.ThrowIfNull(repositoryRecord);
+            ArgumentNullException.ThrowIfNull(repositoryRecord.Value);
+            ArgumentNullException.ThrowIfNull(repositoryRecord.Uri.Collection);
+            ArgumentNullException.ThrowIfNull(repositoryRecord.Uri.RecordKey);
 
             if (!IsAuthenticated)
             {
@@ -891,10 +887,8 @@ namespace idunno.AtProto
             }
 
             AtProtoHttpResult<PutRecordResult> result = await AtProtoServer.PutRecord(
-                record: record,
+                repositoryRecord: repositoryRecord,
                 validate: validate,
-                swapCommit: swapCommit,
-                swapRecord: swapRecord,
                 service: Service,
                 accessCredentials: Credentials,
                 httpClient: HttpClient,
@@ -905,7 +899,7 @@ namespace idunno.AtProto
 
             if (result.Succeeded)
             {
-                Logger.PutRecordSucceeded(_logger, result.Result.Uri, result.Result.Cid, record.Uri.Collection, Service);
+                Logger.PutRecordSucceeded(_logger, result.Result.Uri, result.Result.Cid, repositoryRecord.Uri.Collection, Service);
             }
             else if (result.StatusCode == HttpStatusCode.OK && result.Result is null)
             {
@@ -913,7 +907,7 @@ namespace idunno.AtProto
             }
             else
             {
-                Logger.PutRecordFailed(_logger, result.StatusCode, record.Uri.Collection, record.Uri.RecordKey, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message, Service);
+                Logger.PutRecordFailed(_logger, result.StatusCode, repositoryRecord.Uri.Collection, repositoryRecord.Uri.RecordKey, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message, Service);
             }
 
             return result;
@@ -922,9 +916,9 @@ namespace idunno.AtProto
         /// <summary>
         /// Updates a record in the specified collection belonging to the current user.
         /// </summary>
-        /// <typeparam name="TRecordValue">The type of the value of record to update.</typeparam>
-        /// <param name="record"><para>The record to be updated.</para></param>
-        /// <param name="jsonSerializerOptions"><para>The <see cref="JsonSerializerOptions"/> to use when serializing <paramref name="record"/></para></param>
+        /// <typeparam name="TRecord">The type of the value of record to update.</typeparam>
+        /// <param name="repositoryRecord"><para>The record to be updated.</para></param>
+        /// <param name="jsonSerializerOptions"><para>The <see cref="JsonSerializerOptions"/> to use when serializing <paramref name="repositoryRecord"/></para></param>
         /// <param name="validate">
         ///   <para>Gets a flag indicating what validation will be performed, if any.</para>
         ///   <para>A value of <keyword>true</keyword> requires lexicon schema validation of record data.</para>
@@ -932,30 +926,26 @@ namespace idunno.AtProto
         ///   <para>A value of <keyword>null</keyword> to validate record data only for known lexicons.</para>
         ///   <para>Defaults to <keyword>true</keyword>.</para>
         /// </param>
-        /// <param name="swapCommit"><para>Compare and swap with the previous commit by CID.</para></param>
-        /// <param name="swapRecord"><para>The <see cref="Cid"/> of the record, if any, to compare and swap with.</para></param>
         /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns><para>The task object representing the asynchronous operation.</para></returns>
         /// <exception cref="ArgumentNullException">
-        ///     <para>Thrown when <paramref name="record"/> is null.</para>
+        ///     <para>Thrown when <paramref name="repositoryRecord"/> is null.</para>
         /// </exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
-        public async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecordValue>(
-            AtProtoRecord<TRecordValue> record,
+        public async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecord>(
+            AtProtoRepositoryRecord<TRecord> repositoryRecord,
             JsonSerializerOptions jsonSerializerOptions,
             bool? validate = true,
-            Cid? swapCommit = null,
-            Cid? swapRecord = null,
             string? serviceProxy = null,
-            CancellationToken cancellationToken = default) where TRecordValue : AtProtoRecordValue
+            CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
         {
-            ArgumentNullException.ThrowIfNull(record);
-            ArgumentNullException.ThrowIfNull(record.Value);
-            ArgumentNullException.ThrowIfNull(record.Uri.Collection);
-            ArgumentNullException.ThrowIfNull(record.Uri.RecordKey);
+            ArgumentNullException.ThrowIfNull(repositoryRecord);
+            ArgumentNullException.ThrowIfNull(repositoryRecord.Value);
+            ArgumentNullException.ThrowIfNull(repositoryRecord.Uri.Collection);
+            ArgumentNullException.ThrowIfNull(repositoryRecord.Uri.RecordKey);
 
             if (!IsAuthenticated)
             {
@@ -964,10 +954,8 @@ namespace idunno.AtProto
             }
 
             AtProtoHttpResult<PutRecordResult> result = await AtProtoServer.PutRecord(
-                record: record,
+                repositoryRecord: repositoryRecord,
                 validate: validate,
-                swapCommit: swapCommit,
-                swapRecord: swapRecord,
                 service: Service,
                 accessCredentials: Credentials,
                 httpClient: HttpClient,
@@ -979,7 +967,7 @@ namespace idunno.AtProto
 
             if (result.Succeeded)
             {
-                Logger.PutRecordSucceeded(_logger, result.Result.Uri, result.Result.Cid, record.Uri.Collection, Service);
+                Logger.PutRecordSucceeded(_logger, result.Result.Uri, result.Result.Cid, repositoryRecord.Uri.Collection, Service);
             }
             else if (result.StatusCode == HttpStatusCode.OK && result.Result is null)
             {
@@ -987,7 +975,7 @@ namespace idunno.AtProto
             }
             else
             {
-                Logger.PutRecordFailed(_logger, result.StatusCode, record.Uri.Collection, record.Uri.RecordKey, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message, Service);
+                Logger.PutRecordFailed(_logger, result.StatusCode, repositoryRecord.Uri.Collection, repositoryRecord.Uri.RecordKey, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message, Service);
             }
 
             return result;
@@ -1019,7 +1007,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Gets the record specified by the identifying parameters.
         /// </summary>
-        /// <typeparam name="T">The type of record to get.</typeparam>
+        /// <typeparam name="TRecord">The type of record to get.</typeparam>
         /// <param name="uri">The <see cref="AtUri"/> of the record to retrieve.</param>
         /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
         /// <param name="service">The service to retrieve the record from.</param>
@@ -1030,12 +1018,12 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an incorrect format.</exception>
         [RequiresDynamicCode("Use a GetRecord overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a GetRecord overload which takes JsonSerializerOptions instead.")]
-        public async Task<AtProtoHttpResult<T>> GetRecord<T>(
+        public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>>> GetRecord<TRecord>(
             AtUri uri,
             Cid? cid = null,
             Uri? service = null,
             string? serviceProxy = null,
-            CancellationToken cancellationToken = default) where T : class
+            CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
         {
             ArgumentNullException.ThrowIfNull(uri);
 
@@ -1054,13 +1042,13 @@ namespace idunno.AtProto
                 throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
             }
 
-            return await GetRecord<T>(uri.Repo, uri.Collection, uri.RecordKey, cid, service, serviceProxy, cancellationToken).ConfigureAwait(false);
+            return await GetRecord<TRecord>(uri.Repo, uri.Collection, uri.RecordKey, cid, service, serviceProxy, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Gets the record specified by the identifying parameters.
         /// </summary>
-        /// <typeparam name="T">The type of record to get.</typeparam>
+        /// <typeparam name="TRecord">The type of record to get.</typeparam>
         /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the record from.</param>
         /// <param name="collection">The NSID of the collection the record should be retrieved from.</param>
         /// <param name="rKey">The record key, identifying the record to be retrieved.</param>
@@ -1072,14 +1060,14 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/>, <paramref name="collection"/> is null or empty.</exception>
         [RequiresDynamicCode("Use a GetRecord overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a GetRecord overload which takes JsonSerializerOptions instead.")]
-        public async Task<AtProtoHttpResult<T>> GetRecord<T>(
+        public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>>> GetRecord<TRecord>(
             AtIdentifier repo,
             Nsid collection,
             RecordKey rKey,
             Cid? cid = null,
             Uri? service = null,
             string? serviceProxy = null,
-            CancellationToken cancellationToken = default) where T:class
+            CancellationToken cancellationToken = default) where TRecord: AtProtoRecord
         {
             ArgumentNullException.ThrowIfNull(repo);
             ArgumentNullException.ThrowIfNull(collection);
@@ -1096,8 +1084,8 @@ namespace idunno.AtProto
                 accessCredentials = Credentials;
             }
 
-            AtProtoHttpResult<T> result =
-                await AtProtoServer.GetRecord<T>(
+            AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>> result =
+                await AtProtoServer.GetRecord<TRecord>(
                     repo: repo,
                     collection: collection,
                     rKey: rKey,
@@ -1125,9 +1113,9 @@ namespace idunno.AtProto
         /// <summary>
         /// Gets the record specified by the identifying parameters.
         /// </summary>
-        /// <typeparam name="T">The type of record to get.</typeparam>
+        /// <typeparam name="TRecord">The type of record to get.</typeparam>
         /// <param name="uri">The <see cref="AtUri"/> of the record to retrieve.</param>
-        /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use when deserializing <typeparamref name="T"/>.</param>
+        /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use when deserializing <typeparamref name="TRecord"/>.</param>
         /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
         /// <param name="service">The service to retrieve the record from.</param>
         /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
@@ -1137,13 +1125,13 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an incorrect format.</exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
-        public async Task<AtProtoHttpResult<T>> GetRecord<T>(
+        public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>>> GetRecord<TRecord>(
             AtUri uri,
             JsonSerializerOptions jsonSerializerOptions,
             Cid? cid = null,
             Uri? service = null,
             string? serviceProxy = null,
-            CancellationToken cancellationToken = default) where T : class
+            CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
         {
             ArgumentNullException.ThrowIfNull(uri);
 
@@ -1162,18 +1150,18 @@ namespace idunno.AtProto
                 throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
             }
 
-            return await GetRecord<T>(uri.Repo, uri.Collection, uri.RecordKey, jsonSerializerOptions, cid, service, serviceProxy, cancellationToken).ConfigureAwait(false);
+            return await GetRecord<TRecord>(uri.Repo, uri.Collection, uri.RecordKey, jsonSerializerOptions, cid, service, serviceProxy, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Gets the record specified by the identifying parameters.
         /// </summary>
-        /// <typeparam name="T">The type of record to get.</typeparam>
+        /// <typeparam name="TRecord">The type of record to get.</typeparam>
         /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the record from.</param>
         /// <param name="collection">The NSID of the collection the record should be retrieved from.</param>
         /// <param name="rKey">The record key, identifying the record to be retrieved.</param>
         /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
-        /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use when deserializing <typeparamref name="T"/>.</param>
+        /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use when deserializing <typeparamref name="TRecord"/>.</param>
         /// <param name="service">The service to retrieve the record from.</param>
         /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -1181,7 +1169,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/>, <paramref name="collection"/> is null or empty.</exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
-        public async Task<AtProtoHttpResult<T>> GetRecord<T>(
+        public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>>> GetRecord<TRecord>(
             AtIdentifier repo,
             Nsid collection,
             RecordKey rKey,
@@ -1189,7 +1177,7 @@ namespace idunno.AtProto
             Cid? cid = null,
             Uri? service = null,
             string? serviceProxy = null,
-            CancellationToken cancellationToken = default) where T : class
+            CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
         {
             ArgumentNullException.ThrowIfNull(repo);
             ArgumentNullException.ThrowIfNull(collection);
@@ -1206,8 +1194,8 @@ namespace idunno.AtProto
                 accessCredentials = Credentials;
             }
 
-            AtProtoHttpResult<T> result =
-                await AtProtoServer.GetRecord<T>(
+            AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>> result =
+                await AtProtoServer.GetRecord<TRecord>(
                     repo: repo,
                     collection: collection,
                     rKey: rKey,
@@ -1236,7 +1224,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Gets a page of records in the specified <paramref name="collection"/> for the current user.
         /// </summary>
-        /// <typeparam name="TRecordValue">The tyepe of the record value to get.</typeparam>
+        /// <typeparam name="TRecord">The type of the record value to get.</typeparam>
         /// <param name="collection">The NSID of the collection the records should be retrieved from.</param>
         /// <param name="limit">The number of records to return in each page.</param>
         /// <param name="cursor">The cursor position to start retrieving records from.</param>
@@ -1249,14 +1237,14 @@ namespace idunno.AtProto
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         [RequiresDynamicCode("Use a ListRecords overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a ListRecords overload which takes JsonSerializerOptions instead.")]
-        public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>>> ListRecords<TRecordValue>(
+        public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TRecord>>>> ListRecords<TRecord>(
             Nsid collection,
             int? limit = 50,
             string? cursor = null,
             bool reverse = false,
             Uri? service = null,
             string? serviceProxy = null,
-            CancellationToken cancellationToken = default) where TRecordValue : AtProtoRecordValue
+            CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
         {
             ArgumentNullException.ThrowIfNull(collection);
 
@@ -1265,7 +1253,7 @@ namespace idunno.AtProto
                 throw new AuthenticationRequiredException();
             }
 
-            return await ListRecords<TRecordValue>(
+            return await ListRecords<TRecord>(
                 repo: Credentials.Did,
                 collection: collection,
                 limit: limit,
@@ -1279,7 +1267,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Gets a page of records in the specified <paramref name="collection"/>.
         /// </summary>
-        /// <typeparam name="TRecordValue">The tyepe of the record value to get.</typeparam>
+        /// <typeparam name="TRecord">The type of the record value to get.</typeparam>
         /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the records from.</param>
         /// <param name="collection">The NSID of the collection the records should be retrieved from.</param>
         /// <param name="limit">The number of records to return in each page.</param>
@@ -1293,7 +1281,7 @@ namespace idunno.AtProto
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
         [RequiresDynamicCode("Use a ListRecords overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a ListRecords overload which takes JsonSerializerOptions instead.")]
-        public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>>> ListRecords<TRecordValue>(
+        public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TRecord>>>> ListRecords<TRecord>(
             AtIdentifier repo,
             Nsid collection,
             int? limit = 50,
@@ -1301,7 +1289,7 @@ namespace idunno.AtProto
             bool reverse = false,
             Uri? service = null,
             string? serviceProxy = null,
-            CancellationToken cancellationToken = default) where TRecordValue : AtProtoRecordValue
+            CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
         {
             ArgumentNullException.ThrowIfNull(repo);
             ArgumentNullException.ThrowIfNull(collection);
@@ -1317,7 +1305,7 @@ namespace idunno.AtProto
 
             Logger.ListRecordsCalled(_logger, repo, collection, service);
 
-            AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>> result = await AtProtoServer.ListRecords<TRecordValue>(
+            AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TRecord>>> result = await AtProtoServer.ListRecords<TRecord>(
                 repo: repo,
                 collection: collection,
                 limit: limit,
@@ -1346,9 +1334,9 @@ namespace idunno.AtProto
         /// <summary>
         /// Gets a page of records in the specified <paramref name="collection"/> for the current user.
         /// </summary>
-        /// <typeparam name="TRecordValue">The tyepe of the record value to get.</typeparam>
+        /// <typeparam name="TRecord">The type of the record value to get.</typeparam>
         /// <param name="collection">The NSID of the collection the records should be retrieved from.</param>
-        /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use when deserializing <typeparamref name="TRecordValue"/>.</param>
+        /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use when deserializing <typeparamref name="TRecord"/>.</param>
         /// <param name="limit">The number of records to return in each page.</param>
         /// <param name="cursor">The cursor position to start retrieving records from.</param>
         /// <param name="reverse">A flag indicating if records should be listed in reverse order.</param>
@@ -1360,7 +1348,7 @@ namespace idunno.AtProto
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
-        public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>>> ListRecords<TRecordValue>(
+        public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TRecord>>>> ListRecords<TRecord>(
             Nsid collection,
             JsonSerializerOptions jsonSerializerOptions,
             int? limit = 50,
@@ -1368,7 +1356,7 @@ namespace idunno.AtProto
             bool reverse = false,
             Uri? service = null,
             string? serviceProxy = null,
-            CancellationToken cancellationToken = default) where TRecordValue : AtProtoRecordValue
+            CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
         {
             ArgumentNullException.ThrowIfNull(collection);
 
@@ -1377,7 +1365,7 @@ namespace idunno.AtProto
                 throw new AuthenticationRequiredException();
             }
 
-            return await ListRecords<TRecordValue>(
+            return await ListRecords<TRecord>(
                 repo: Credentials.Did,
                 collection: collection,
                 jsonSerializerOptions: jsonSerializerOptions,
@@ -1392,10 +1380,10 @@ namespace idunno.AtProto
         /// <summary>
         /// Gets a page of records in the specified <paramref name="collection"/>.
         /// </summary>
-        /// <typeparam name="TRecordValue">The tyepe of the record value to get.</typeparam>
+        /// <typeparam name="TRecord">The type of the record value to get.</typeparam>
         /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the records from.</param>
         /// <param name="collection">The NSID of the collection the records should be retrieved from.</param>
-        /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use when deserializing <typeparamref name="TRecordValue"/>.</param>
+        /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use when deserializing <typeparamref name="TRecord"/>.</param>
         /// <param name="limit">The number of records to return in each page.</param>
         /// <param name="cursor">The cursor position to start retrieving records from.</param>
         /// <param name="reverse">A flag indicating if records should be listed in reverse order.</param>
@@ -1407,7 +1395,7 @@ namespace idunno.AtProto
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
-        public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>>> ListRecords<TRecordValue>(
+        public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TRecord>>>> ListRecords<TRecord>(
             AtIdentifier repo,
             Nsid collection,
             JsonSerializerOptions jsonSerializerOptions,
@@ -1416,7 +1404,7 @@ namespace idunno.AtProto
             bool reverse = false,
             Uri? service = null,
             string? serviceProxy = null,
-            CancellationToken cancellationToken = default) where TRecordValue : AtProtoRecordValue
+            CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
         {
             ArgumentNullException.ThrowIfNull(repo);
             ArgumentNullException.ThrowIfNull(collection);
@@ -1432,7 +1420,7 @@ namespace idunno.AtProto
 
             Logger.ListRecordsCalled(_logger, repo, collection, service);
 
-            AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TRecordValue>>> result = await AtProtoServer.ListRecords<TRecordValue>(
+            AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TRecord>>> result = await AtProtoServer.ListRecords<TRecord>(
                 repo: repo,
                 collection: collection,
                 limit: limit,

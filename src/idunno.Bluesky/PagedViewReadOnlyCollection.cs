@@ -9,23 +9,15 @@ namespace idunno.Bluesky
     /// A list of <typeparamref name="T"/> views, with an optional cursor for pagination.
     /// </summary>
     /// <typeparam name="T">The type of <see cref="View"/>s the list contains.</typeparam>
-    public class PagedViewReadOnlyCollection<T> : ReadOnlyCollection <T> where T : View
+    /// <param name="list">The list to create this instance of <see cref="PagedViewReadOnlyCollection{T}"/> from.</param>
+    /// <param name="cursor">An optional cursor for pagination.</param>
+    public class PagedViewReadOnlyCollection<T>(IList<T> list, string? cursor = null) : ReadOnlyCollection <T>(list) where T : View
     {
         /// <summary>
         /// Creates a new instance of <see cref="PagedViewReadOnlyCollection{T}"/> with an empty list and no cursor.
         /// </summary>
-        public PagedViewReadOnlyCollection() : this(new List<T>(), null)
+        public PagedViewReadOnlyCollection() : this([], null)
         {
-        }
-
-        /// <summary>
-        /// Creates a new instance of <see cref="PagedViewReadOnlyCollection{T}"/>.
-        /// </summary>
-        /// <param name="list">The list to create this instance of <see cref="PagedViewReadOnlyCollection{T}"/> from.</param>
-        /// <param name="cursor">An optional cursor for pagination.</param>
-        public PagedViewReadOnlyCollection(IList<T> list, string? cursor = null) : base(list)
-        {
-            Cursor = cursor;
         }
 
         /// <summary>
@@ -33,13 +25,13 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="collection">A collection of <typeparamref name="T"/> to create this instance of <see cref="PagedViewReadOnlyCollection{T}"/> from.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
-        public PagedViewReadOnlyCollection(ICollection<T> collection, string? cursor = null) :this(new List<T>(collection), cursor)
+        public PagedViewReadOnlyCollection(ICollection<T> collection, string? cursor = null) :this([.. collection], cursor)
         {
         }
 
         /// <summary>
         /// An optional cursor returned by the underlying API pagination.
         /// </summary>
-        public string? Cursor { get; }
+        public string? Cursor { get; } = cursor;
     }
 }

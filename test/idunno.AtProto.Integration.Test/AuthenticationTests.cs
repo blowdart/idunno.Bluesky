@@ -235,7 +235,7 @@ namespace idunno.AtProto.Integration.Test
 
                 agent.Credentials = (DPoPAccessCredentials)credential;
 
-                TestRecordValue recordValue = new() { TestValue = "test" };
+                TestRecord recordValue = new() { TestValue = "test" };
 
                 _ = await agent.CreateRecord(
                     recordValue,
@@ -363,7 +363,7 @@ namespace idunno.AtProto.Integration.Test
 
                 agent.Credentials = (DPoPAccessCredentials)credential;
 
-                TestRecordValue recordValue = new() { TestValue = "test" };
+                TestRecord recordValue = new() { TestValue = "test" };
 
                 _ = await agent.CreateRecord(
                     recordValue,

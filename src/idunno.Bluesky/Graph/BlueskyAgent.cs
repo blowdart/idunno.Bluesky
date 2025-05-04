@@ -306,7 +306,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null or the uri collection property is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/> does not point to a list record.</exception>
-        public async Task<AtProtoHttpResult<AtProtoRecord<BlueskyList>>> GetListRecord(
+        public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<BlueskyList>>> GetListRecord(
             AtUri uri,
             CancellationToken cancellationToken)
         {
@@ -315,7 +315,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(uri.Collection);
             ArgumentOutOfRangeException.ThrowIfNotEqual(uri.Collection, CollectionNsid.List);
 
-            return await GetRecord<AtProtoRecord<BlueskyList>>(
+            return await GetRecord<BlueskyList>(
                 uri: uri,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }

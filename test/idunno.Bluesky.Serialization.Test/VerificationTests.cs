@@ -128,11 +128,11 @@ namespace idunno.Bluesky.Serialization.Test
                 }
                 """;
 
-            BlueskyRecordValue? actual = JsonSerializer.Deserialize<BlueskyRecordValue>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+            BlueskyRecord? actual = JsonSerializer.Deserialize<BlueskyRecord>(json, BlueskyServer.BlueskyJsonSerializerOptions);
 
-            Assert.IsType<VerificationRecordValue>(actual);
+            Assert.IsType<Verification>(actual);
 
-            VerificationRecordValue? verificationRecordValue = actual as VerificationRecordValue;
+            Verification? verificationRecordValue = actual as Verification;
 
             Assert.NotNull(verificationRecordValue);
             Assert.Equal("ashley.dev", verificationRecordValue.Handle);

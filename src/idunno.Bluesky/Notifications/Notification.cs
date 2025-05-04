@@ -15,7 +15,7 @@ namespace idunno.Bluesky.Notifications
     /// <summary>
     /// A record containing information on a Bluesky notification.
     /// </summary>
-    public sealed record Notification : AtProtoReferencedObject
+    public sealed record Notification : AtProtoRepositoryObject
     {
         [JsonConstructor]
         internal Notification(
@@ -23,7 +23,7 @@ namespace idunno.Bluesky.Notifications
             Cid cid,
             ProfileViewBasic author,
             NotificationReason reason,
-            BlueskyRecordValue record,
+            BlueskyRecord record,
             bool isRead,
             DateTimeOffset indexedAt,
             IReadOnlyCollection<Label>? labels) : base(uri, cid)
@@ -65,10 +65,10 @@ namespace idunno.Bluesky.Notifications
         public AtUri? ReasonSubject { get; init; }
 
         /// <summary>
-        /// Gets the underlying <see cref="BlueskyRecordValue"/> for the notification.
+        /// Gets the underlying <see cref="BlueskyRecord"/> for the notification.
         /// </summary>
         [JsonInclude]
-        public BlueskyRecordValue Record { get; init; }
+        public BlueskyRecord Record { get; init; }
 
         /// <summary>
         /// Gets a flag indicating whether the notification has been read by the authenticated user.

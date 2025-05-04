@@ -13,13 +13,14 @@ namespace idunno.Bluesky.Record
     /// <summary>
     /// Encapsulates a Bluesky account profile.
     /// </summary>
-    public sealed record ProfileRecordValue : BlueskyRecordValue
+    [SuppressMessage("Naming", "CA1724", Justification = "The System.Web Profile class is part of ASP.NET and has not been carried over to .NET")]
+    public sealed record Profile : BlueskyRecord
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private const string DiscourageLoggedOutUserLabelName = "!no-unauthenticated";
 
         /// <summary>
-        /// Creates a new instance of <see cref="ProfileRecordValue"/>.
+        /// Creates a new instance of <see cref="Profile"/>.
         /// </summary>
         /// <param name="displayName">The display name of the account, if any.</param>
         /// <param name="description">The description for the account, if any.</param>
@@ -28,7 +29,7 @@ namespace idunno.Bluesky.Record
         /// <param name="pinnedPost">A <see cref="StrongReference"/> to the profile's pinned post, if any.</param>
         /// <param name="labels">Any <see cref="SelfLabels"/> applied to the profile.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/>The <see cref="DateTimeOffset"/> the record was created at.</param>
-        public ProfileRecordValue(
+        public Profile(
             string? displayName = null,
             string? description = null,
             Blob? avatar = null,
@@ -43,8 +44,7 @@ namespace idunno.Bluesky.Record
                 joinedViaStarterPack: null,
                 pinnedPost: pinnedPost,
                 labels: labels,
-                createdAt: createdAt
-                )
+                createdAt: createdAt)
         {
             if (createdAt is not null)
             {
@@ -53,7 +53,7 @@ namespace idunno.Bluesky.Record
         }
 
         /// <summary>
-        /// Creates a new instance of <see cref="ProfileRecordValue"/>.
+        /// Creates a new instance of <see cref="Profile"/>.
         /// </summary>
         /// <param name="displayName">The display name of the account, if any.</param>
         /// <param name="description">The description for the account, if any.</param>
@@ -64,7 +64,7 @@ namespace idunno.Bluesky.Record
         /// <param name="labels">Any <see cref="SelfLabels"/> applied to the profile.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/>The <see cref="DateTimeOffset"/> the record was created at.</param>
         [JsonConstructor]
-        public ProfileRecordValue(
+        public Profile(
             string? displayName,
             string? description,
             Blob? avatar,

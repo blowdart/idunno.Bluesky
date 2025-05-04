@@ -105,7 +105,7 @@ namespace Samples.AtProto
 
                 string? cursor = null;
 
-                var listRecordsResult = await agent.ListRecords<AtProtoRecordValue> (
+                var listRecordsResult = await agent.ListRecords<AtProtoRecord> (
                     did,
                     collection: "app.bsky.feed.post",
                     cursor: cursor,

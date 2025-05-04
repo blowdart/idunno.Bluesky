@@ -470,7 +470,7 @@ namespace idunno.Bluesky
         {
             ArgumentNullException.ThrowIfNull(strongReference);
 
-            AtProtoHttpResult<Record.PostRecord> getPostResult = await GetPostRecord(strongReference, cancellationToken: cancellationToken).ConfigureAwait(false);
+            AtProtoHttpResult<AtProtoRepositoryRecord<Post>> getPostResult = await GetPostRecord(strongReference, cancellationToken: cancellationToken).ConfigureAwait(false);
             if (getPostResult.Succeeded)
             {
                 if (getPostResult.Result.Value.Reply == null)
@@ -518,7 +518,7 @@ namespace idunno.Bluesky
         {
             ArgumentNullException.ThrowIfNull(strongReference);
 
-            AtProtoHttpResult<Record.PostRecord> getPostResult = await GetPostRecord(strongReference, cancellationToken: cancellationToken).ConfigureAwait(false);
+            AtProtoHttpResult<AtProtoRepositoryRecord<Post>> getPostResult = await GetPostRecord(strongReference, cancellationToken: cancellationToken).ConfigureAwait(false);
             if (getPostResult.Succeeded)
             {
                 if (getPostResult.Result.Value.Reply == null)
@@ -566,7 +566,7 @@ namespace idunno.Bluesky
         {
             ArgumentNullException.ThrowIfNull(strongReference);
 
-            AtProtoHttpResult<Record.PostRecord> getPostRecordResult = await GetPostRecord(strongReference, cancellationToken: cancellationToken).ConfigureAwait(false);
+            AtProtoHttpResult<AtProtoRepositoryRecord<Post>> getPostRecordResult = await GetPostRecord(strongReference, cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (getPostRecordResult.Succeeded)
             {

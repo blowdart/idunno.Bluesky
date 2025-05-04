@@ -12,7 +12,6 @@ using idunno.Bluesky.Chat.Model;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed;
 using idunno.Bluesky.Feed.Gates;
-using idunno.Bluesky.Feed.Gates.Model;
 using idunno.Bluesky.Feed.Model;
 using idunno.Bluesky.Graph;
 using idunno.Bluesky.Graph.Model;
@@ -38,10 +37,10 @@ namespace idunno.Bluesky
         PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
         WriteIndented = false)]
 
-    [JsonSerializable(typeof(BlockRecordValue))]
-    [JsonSerializable(typeof(FollowRecordValue))]
-    [JsonSerializable(typeof(LikeRecordValue))]
-    [JsonSerializable(typeof(RepostRecordValue))]
+    [JsonSerializable(typeof(Block))]
+    [JsonSerializable(typeof(Follow))]
+    [JsonSerializable(typeof(Actions.Like))]
+    [JsonSerializable(typeof(Repost))]
 
     [JsonSerializable(typeof(GetPreferencesResponse))]
     [JsonSerializable(typeof(GetProfilesResponse))]
@@ -136,8 +135,6 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(ViewNotFound))]
     [JsonSerializable(typeof(ViewRecord))]
 
-    [JsonSerializable(typeof(GetPostGateResponse))]
-    [JsonSerializable(typeof(GetThreadGateResponse))]
     [JsonSerializable(typeof(DisableEmbeddingRule))]
     [JsonSerializable(typeof(FollowerRule))]
     [JsonSerializable(typeof(FollowingRule))]
@@ -168,7 +165,7 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(FeedViewPost))]
     [JsonSerializable(typeof(GeneratorView))]
     [JsonSerializable(typeof(GeneratorViewerState))]
-    [JsonSerializable(typeof(Like))]
+    [JsonSerializable(typeof(Feed.Like), TypeInfoPropertyName ="FeedLike")]
     [JsonSerializable(typeof(Likes))]
     [JsonSerializable(typeof(NotFoundPost))]
     [JsonSerializable(typeof(PostThread))]
@@ -225,16 +222,14 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(NotificationCollection))]
     [JsonSerializable(typeof(NotificationReason))]
 
-    [JsonSerializable(typeof(BlueskyRecordValue))]
-    [JsonSerializable(typeof(BlueskyTimestampedRecordValue))]
-    [JsonSerializable(typeof(PostRecord))]
-    [JsonSerializable(typeof(ProfileRecord))]
-    [JsonSerializable(typeof(ProfileRecordValue))]
+    [JsonSerializable(typeof(BlueskyRecord))]
+    [JsonSerializable(typeof(BlueskyTimestampedRecord))]
+    [JsonSerializable(typeof(Profile))]
+    [JsonSerializable(typeof(AtProtoRepositoryRecord<Profile>))]
     [JsonSerializable(typeof(SelfLabels))]
-    [JsonSerializable(typeof(StarterPackRecordValue))]
-    [JsonSerializable(typeof(VerificationRecord))]
-    [JsonSerializable(typeof(VerificationRecordValue))]
-
+    [JsonSerializable(typeof(StarterPack))]
+    [JsonSerializable(typeof(Verification))]
+    [JsonSerializable(typeof(AtProtoRepositoryRecord<Verification>))]
 
     [JsonSerializable(typeof(ByteSlice))]
     [JsonSerializable(typeof(Facet))]
@@ -251,6 +246,7 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(UploadLimits))]
 
     [JsonSerializable(typeof(Post))]
+    [JsonSerializable(typeof(AtProtoRepositoryRecord<Post>))]
     [JsonSerializable(typeof(Bluesky.View), TypeInfoPropertyName = "BaseView")]
 
     [JsonSerializable(typeof(LabelVisibility))]
@@ -264,7 +260,8 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(LabelerView))]
     [JsonSerializable(typeof(LabelerViewDetailed))]
     [JsonSerializable(typeof(LabelerViewerState))]
-    [JsonSerializable(typeof(LabelerDeclarationRecordValue))]
+    [JsonSerializable(typeof(LabelerDeclaration))]
+    [JsonSerializable(typeof(AtProtoRepositoryRecord<LabelerDeclaration>))]
 
     [JsonSerializable(typeof(BlueskyList))]
     [JsonSerializable(typeof(BlueskyListItem))]

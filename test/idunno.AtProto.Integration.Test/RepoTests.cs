@@ -196,10 +196,10 @@ namespace idunno.AtProto.Integration.Test
 
             HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-            TestRecordValue recordValue = new() { TestValue = "test" };
+            TestRecord record = new() { TestValue = "test" };
 
             AtProtoHttpResult<CreateRecordResult> response = await AtProtoServer.CreateRecord(
-                record: recordValue,
+                record: record,
                 collection: expectedCollection,
                 creator: expectedDid,
                 rKey: expectedRecordKey,
@@ -294,10 +294,10 @@ namespace idunno.AtProto.Integration.Test
 
             HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-            TestRecordValue recordValue = new() { TestValue = "test" };
+            TestRecord record = new() { TestValue = "test" };
 
             AtProtoHttpResult<CreateRecordResult> response = await AtProtoServer.CreateRecord(
-                record: recordValue,
+                record: record,
                 collection: expectedCollection,
                 creator: expectedDid,
                 rKey: expectedRecordKey,
@@ -386,10 +386,10 @@ namespace idunno.AtProto.Integration.Test
             {
                 agent.Credentials = expectedCredentials;
 
-                TestRecordValue recordValue = new() { TestValue = "test" };
+                TestRecord record = new() { TestValue = "test" };
 
                 AtProtoHttpResult<CreateRecordResult> response = await agent.CreateRecord(
-                    recordValue: recordValue,
+                    record: record,
                     collection: expectedCollection,
                     validate: true,
                     swapCommit: null,
@@ -481,10 +481,10 @@ namespace idunno.AtProto.Integration.Test
             {
                 agent.Credentials = expectedCredentials;
 
-                TestRecordValue recordValue = new() { TestValue = "test" };
+                TestRecord record = new() { TestValue = "test" };
 
                 AtProtoHttpResult<CreateRecordResult> response = await agent.CreateRecord(
-                    recordValue: recordValue,
+                    record: record,
                     collection: expectedCollection,
                     validate: true,
                     swapCommit: null,
@@ -532,10 +532,10 @@ namespace idunno.AtProto.Integration.Test
 
             using (var agent = new AtProtoAgent(TestServerBuilder.DefaultUri, new TestHttpClientFactory(testServer)))
             {
-                TestRecordValue recordValue = new() { TestValue = "test" };
+                TestRecord record = new() { TestValue = "test" };
 
                 await Assert.ThrowsAsync<AuthenticationRequiredException>(() => agent.CreateRecord(
-                    recordValue: recordValue,
+                    record: record,
                     collection: expectedCollection,
                     validate: true,
                     swapCommit: null,
@@ -613,10 +613,10 @@ namespace idunno.AtProto.Integration.Test
 
             HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-            TestRecordValue recordValue = new() { TestValue = "test" };
+            TestRecord record = new() { TestValue = "test" };
 
             AtProtoHttpResult<PutRecordResult> response = await AtProtoServer.PutRecord(
-                recordValue: recordValue,
+                record: record,
                 collection: expectedCollection,
                 creator: expectedDid,
                 rKey: expectedRecordKey,
@@ -712,10 +712,10 @@ namespace idunno.AtProto.Integration.Test
             HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
             JsonSerializerOptions jsonSerializerOptions = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(SourceGenerationContext.Default);
-            TestRecordValue recordValue = new() { TestValue = "test" };
+            TestRecord record = new() { TestValue = "test" };
 
             AtProtoHttpResult<PutRecordResult> response = await AtProtoServer.PutRecord(
-                recordValue: recordValue,
+                record: record,
                 collection: expectedCollection,
                 creator: expectedDid,
                 rKey: expectedRecordKey,
@@ -812,10 +812,10 @@ namespace idunno.AtProto.Integration.Test
             {
                 agent.Credentials = expectedCredentials;
 
-                TestRecordValue recordValue = new() { TestValue = "test" };
+                TestRecord record = new() { TestValue = "test" };
 
                 AtProtoHttpResult<PutRecordResult> response = await agent.PutRecord(
-                    recordValue: recordValue,
+                    record: record,
                     collection: expectedCollection,
                     rKey: expectedRecordKey,
                     validate: true,
@@ -915,10 +915,10 @@ namespace idunno.AtProto.Integration.Test
             {
                 agent.Credentials = expectedCredentials;
 
-                TestRecordValue recordValue = new() { TestValue = "test" };
+                TestRecord record = new() { TestValue = "test" };
 
                 AtProtoHttpResult<PutRecordResult> response = await agent.PutRecord(
-                    recordValue: recordValue,
+                    record: record,
                     collection: expectedCollection,
                     rKey: expectedRecordKey,
                     validate: true,
@@ -1008,14 +1008,111 @@ namespace idunno.AtProto.Integration.Test
 
             HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-            TestRecordValue recordValue = new() { TestValue = "test" };
-            TestRecord record = new(expectedAtUri, expectedCid, recordValue);
+            TestRecord record = new() { TestValue = "test" };
 
-            AtProtoHttpResult<PutRecordResult> response = await AtProtoServer.PutRecord(
+            AtProtoHttpResult<PutRecordResult> response = await AtProtoServer.PutRecord<TestRecord>(
                 record: record,
+                collection: expectedCollection,
+                creator: expectedDid,
+                rKey: expectedRecordKey,
                 validate: true,
                 swapCommit: null,
                 swapRecord: null,
+                service: TestServerBuilder.DefaultUri,
+                accessCredentials: expectedCredentials,
+                httpClient: httpClient,
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            Assert.True(response.Succeeded);
+
+            Assert.Equal(expectedAtUri, response.Result.Uri);
+            Assert.Equal(expectedCid, response.Result.Cid);
+            Assert.NotNull(response.Result.Commit);
+            Assert.Equal(expectedCid, response.Result.Commit.Cid);
+            Assert.Equal("revision", response.Result.Commit.Rev);
+
+            Assert.Equal(ValidationStatus.Valid, response.Result.ValidationStatus);
+
+            Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
+        }
+
+        [Fact]
+        public async Task ServerCallToPutRepositoryRecordSerializesTheRecordValueWithNoConfiguredTypeResolverCorrectly()
+        {
+            Did expectedDid = "did:plc:test";
+            Nsid expectedCollection = "blue.idunno.test";
+            RecordKey expectedRecordKey = TimestampIdentifier.Generate();
+            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
+            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+            AccessCredentials expectedCredentials = new(
+                    service: TestServerBuilder.DefaultUri,
+                    authenticationType: AuthenticationType.UsernamePassword,
+                    accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
+                    refreshToken: "refreshToken");
+
+            JsonElement capturedRecordValue = default;
+
+            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+            {
+                HttpRequest request = context.Request;
+                HttpResponse response = context.Response;
+
+                if (request.Path == AtProtoServer.PutRecordEndpoint)
+                {
+                    if (request.Headers.Authorization.Count != 1)
+                    {
+                        response.StatusCode = 401;
+                        return;
+                    }
+
+                    if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
+                    {
+                        response.StatusCode = 403;
+                        return;
+                    }
+
+                    JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
+
+                    if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
+                    {
+                        response.StatusCode = 400;
+                        return;
+                    }
+
+                    if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
+                    {
+                        response.StatusCode = 500;
+                        return;
+                    }
+
+                    if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
+                    {
+                        response.StatusCode = 500;
+                        return;
+                    }
+
+                    response.StatusCode = 200;
+                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                    {
+                        Commit = new(expectedCid, "revision"),
+                        ValidationStatus = "valid"
+                    };
+
+                    await response.WriteAsJsonAsync(serverDescription);
+                }
+            });
+
+
+            HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+            TestRecord record = new() { TestValue = "test" };
+            AtProtoRepositoryRecord<TestRecord> repositoryRecord = new(expectedAtUri, expectedCid, record);
+
+
+            AtProtoHttpResult<PutRecordResult> response = await AtProtoServer.PutRecord(
+                repositoryRecord: repositoryRecord,
+                validate: true,
                 service: TestServerBuilder.DefaultUri,
                 accessCredentials: expectedCredentials,
                 httpClient: httpClient,
@@ -1106,14 +1203,113 @@ namespace idunno.AtProto.Integration.Test
 
             JsonSerializerOptions jsonSerializerOptions = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(SourceGenerationContext.Default);
 
-            TestRecordValue recordValue = new() { TestValue = "test" };
-            TestRecord record = new(expectedAtUri, expectedCid, recordValue);
+            TestRecord record = new() { TestValue = "test" };
 
             AtProtoHttpResult<PutRecordResult> response = await AtProtoServer.PutRecord(
                 record: record,
+                collection: expectedCollection,
+                creator: expectedDid,
+                rKey: expectedRecordKey,
                 validate: true,
                 swapCommit: null,
                 swapRecord: null,
+                service: TestServerBuilder.DefaultUri,
+                accessCredentials: expectedCredentials,
+                httpClient: httpClient,
+                jsonSerializerOptions: jsonSerializerOptions,
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            Assert.True(response.Succeeded);
+
+            Assert.Equal(expectedAtUri, response.Result.Uri);
+            Assert.Equal(expectedCid, response.Result.Cid);
+            Assert.NotNull(response.Result.Commit);
+            Assert.Equal(expectedCid, response.Result.Commit.Cid);
+            Assert.Equal("revision", response.Result.Commit.Rev);
+
+            Assert.Equal(ValidationStatus.Valid, response.Result.ValidationStatus);
+
+            Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
+        }
+
+        [Fact]
+        public async Task ServerCallToPutRepositoryRecordSerializesTheRecordValueWithConfiguredTypeResolverCorrectly()
+        {
+            Did expectedDid = "did:plc:test";
+            Nsid expectedCollection = "blue.idunno.test";
+            RecordKey expectedRecordKey = TimestampIdentifier.Generate();
+            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
+            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+            AccessCredentials expectedCredentials = new(
+                    service: TestServerBuilder.DefaultUri,
+                    authenticationType: AuthenticationType.UsernamePassword,
+                    accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
+                    refreshToken: "refreshToken");
+
+            JsonElement capturedRecordValue = default;
+
+            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+            {
+                HttpRequest request = context.Request;
+                HttpResponse response = context.Response;
+
+                if (request.Path == AtProtoServer.PutRecordEndpoint)
+                {
+                    if (request.Headers.Authorization.Count != 1)
+                    {
+                        response.StatusCode = 401;
+                        return;
+                    }
+
+                    if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
+                    {
+                        response.StatusCode = 403;
+                        return;
+                    }
+
+                    JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
+
+                    if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
+                    {
+                        response.StatusCode = 400;
+                        return;
+                    }
+
+                    if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
+                    {
+                        response.StatusCode = 500;
+                        return;
+                    }
+
+                    if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
+                    {
+                        response.StatusCode = 500;
+                        return;
+                    }
+
+                    response.StatusCode = 200;
+                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                    {
+                        Commit = new(expectedCid, "revision"),
+                        ValidationStatus = "valid"
+                    };
+
+                    await response.WriteAsJsonAsync(serverDescription);
+                }
+            });
+
+
+            HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+            JsonSerializerOptions jsonSerializerOptions = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(SourceGenerationContext.Default);
+
+            TestRecord record = new() { TestValue = "test" };
+            AtProtoRepositoryRecord<TestRecord> wrappedRecord = new(expectedAtUri, expectedCid, record);
+
+            AtProtoHttpResult<PutRecordResult> response = await AtProtoServer.PutRecord(
+                repositoryRecord: wrappedRecord,
+                validate: true,
                 service: TestServerBuilder.DefaultUri,
                 accessCredentials: expectedCredentials,
                 httpClient: httpClient,
@@ -1161,11 +1357,12 @@ namespace idunno.AtProto.Integration.Test
 
             using (var agent = new AtProtoAgent(TestServerBuilder.DefaultUri, new TestHttpClientFactory(testServer)))
             {
-                TestRecordValue recordValue = new() { TestValue = "test" };
-                TestRecord record = new(expectedAtUri, expectedCid, recordValue);
+                TestRecord record = new() { TestValue = "test" };
 
                 await Assert.ThrowsAsync<AuthenticationRequiredException>(() => agent.PutRecord(
                     record: record,
+                    collection: expectedCollection,
+                    rKey: expectedAtUri.RecordKey!,
                     validate: true,
                     swapCommit: null,
                     cancellationToken: TestContext.Current.CancellationToken));
@@ -1173,7 +1370,7 @@ namespace idunno.AtProto.Integration.Test
         }
 
         [Fact]
-        public async Task UnauthenticatedAgentCallToPutRecordValueThrowsAuthenticationRequiredException()
+        public async Task UnauthenticatedAgentCallToPutRepositoryRecordThrowsAuthenticationRequiredException()
         {
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
@@ -1202,13 +1399,11 @@ namespace idunno.AtProto.Integration.Test
 
             using (var agent = new AtProtoAgent(TestServerBuilder.DefaultUri, new TestHttpClientFactory(testServer)))
             {
-                TestRecordValue recordValue = new() { TestValue = "test" };
-                TestRecord record = new(expectedAtUri, expectedCid, recordValue);
+                TestRecord record = new() { TestValue = "test" };
+                AtProtoRepositoryRecord<TestRecord> wrappedRecord = new(expectedAtUri, expectedCid, record);
 
                 await Assert.ThrowsAsync<AuthenticationRequiredException>(() => agent.PutRecord(
-                    recordValue: recordValue,
-                    collection: expectedCollection,
-                    rKey: expectedRecordKey,
+                    repositoryRecord: wrappedRecord,
                     validate: true,
                     cancellationToken: TestContext.Current.CancellationToken));
             }
@@ -1295,7 +1490,7 @@ namespace idunno.AtProto.Integration.Test
 
             HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-            AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TestRecordValue>>> response = await AtProtoServer.ListRecords<TestRecordValue>(
+            AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TestRecord>>> response = await AtProtoServer.ListRecords<TestRecord>(
                 repo: expectedDid,
                 collection: expectedCollection,
                 limit: 10,
@@ -1417,7 +1612,7 @@ namespace idunno.AtProto.Integration.Test
             {
                 agent.Credentials = expectedCredentials;
 
-                AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TestRecordValue>>> response = await agent.ListRecords<TestRecordValue>(
+                AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TestRecord>>> response = await agent.ListRecords<TestRecord>(
                     collection: expectedCollection,
                     cursor: "cursor",
                     cancellationToken: TestContext.Current.CancellationToken);
@@ -1526,7 +1721,7 @@ namespace idunno.AtProto.Integration.Test
             {
                 agent.Credentials = expectedCredentials;
 
-                AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TestRecordValue>>> response = await agent.ListRecords<TestRecordValue>(
+                AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TestRecord>>> response = await agent.ListRecords<TestRecord>(
                     collection: expectedCollection,
                     cursor: "cursor",
                     cancellationToken: TestContext.Current.CancellationToken);
@@ -1631,7 +1826,7 @@ namespace idunno.AtProto.Integration.Test
 
             HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-            AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRecord<TestRecordValue>>> response = await AtProtoServer.ListRecords<TestRecordValue>(
+            AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TestRecord>>> response = await AtProtoServer.ListRecords<TestRecord>(
                 repo: expectedDid,
                 collection: expectedCollection,
                 limit: 10,
@@ -1718,7 +1913,7 @@ namespace idunno.AtProto.Integration.Test
 
             HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-            AtProtoHttpResult<TestRecord> response = await AtProtoServer.GetRecord<TestRecord>(
+            AtProtoHttpResult<AtProtoRepositoryRecord<TestRecord>> response = await AtProtoServer.GetRecord<TestRecord>(
                 repo: expectedDid,
                 collection: expectedCollection,
                 rKey: expectedRecordKey,
@@ -1794,7 +1989,7 @@ namespace idunno.AtProto.Integration.Test
 
             HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-            AtProtoHttpResult<TestRecord> response = await AtProtoServer.GetRecord<TestRecord>(
+            AtProtoHttpResult<AtProtoRepositoryRecord<TestRecord>> response = await AtProtoServer.GetRecord<TestRecord>(
                 repo: expectedDid,
                 collection: expectedCollection,
                 rKey: expectedRecordKey,
@@ -1845,7 +2040,7 @@ namespace idunno.AtProto.Integration.Test
                     refreshToken: "refreshToken");
 
             ICollection<WriteOperation> operations = [];
-            operations.Add(new CreateOperation(expectedCollection, new TestRecordValue() { TestValue = "testValue" }));
+            operations.Add(new CreateOperation(expectedCollection, new TestRecord() { TestValue = "testValue" }));
 
             TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
             {

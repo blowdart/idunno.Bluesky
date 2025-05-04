@@ -51,7 +51,7 @@ When browsing timelines and feeds you will need to understand how AtProto implem
 
 A timeline is a well known feed. A feed is a view created by a feed generator over collections of posts, the criteria for which the feed controls.
 
-A feed is referenced by its `AT URI `, loaded with `GetFeed()` rather than `GetTimeLine()` and then paginated in exactly the same way. 
+A feed is referenced by its [at:// uri](../commonTerms.md#uri), loaded with `GetFeed()` rather than `GetTimeLine()` and then paginated in exactly the same way. 
 
 ```c#
 AtUri feedUri = new("at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot");

@@ -1,5 +1,45 @@
 # Version History
 
+## 0.9.0
+
+### Breaking Changes
+
+#### idunno.AtProto
+
+* Grand renaming
+  * `AtProtoRecord` is renamed to `AtProtoRepositoryRecord`
+  * `AtProtoRecordValue` is renamed to `AtProtoRecord`
+  * `AtProtoReferencedObject` is renamed to `AtProtoRepositoryObject`
+  * `CreateRecord<TRecordValue>` is now `CreateRecord<TRecord>` and the `recordValue` parameter is renamed to `record`
+  * `GetRecord<T>` is now `GetRecord<TRecord>` and returns `AtProtoRepositoryRecord<TRecord>`.
+  * `ListRecords<TRecordValue>` is now `ListRecord<TRecord>`
+  * `PutRecord<TRecordValue>` is now `PutRecord<TRecord>` and the `recordValue` parameter is renamed to `record`
+  * `AtProtoRepositoryRecord<T>` added to wrap the responses from `GetRecord<T>`
+
+#### idunno.Bluesky
+
+* Grand renaming
+  * `BlueskyRecordValue` is renamed to `BlueskyRecord`
+  * `BlueskyTimestampedRecordValue` is renamed to `BlueskyTimestampedRecord`
+  * `LabelerDeclarationRecord` is renamed to `ReferencedLabelerDeclaration`
+  * `LabelerDeclarationRecordValue` is renamed to `LabelerDeclaration`
+  * `PostRecord` is renamed to `ReferencedPost`
+  * `ProfileRecord` is renamed to `ReferencedProfile`
+  * `ProfileRecordValue` is renamed to `Profile`
+  * `StarterPackRecordValue` is renamed to `StarterPack`
+  * `VerificationRecord` is renamed to `ReferencedVerification`
+  * `VerificationRecordValue` is renamed to `Verification`
+  * `BlockRecordValue` is renamed to `Block`
+  * `FollowRecordValue` is renamed to `Follow`
+  * `LikeRecordValue` is renamed to `Like`
+  * `RepostRecordValue` is renamed to `Repost`
+  * `CreateBlueskyRecord<TRecordValue>` is now `BlueskyRecord<TRecord>` and the `recordValue` parameter is renamed to `record`
+  * `GetPostGate()` and `GetThreadGate` now use `AtProtoRepositoryRecord<T>` internally.
+  * `ReferencedLabelerDeclaration` deleted in favor of `AtProtoRepositoryRecord<LabelerDeclaration>`
+  * `ReferencedPost` deleted deleted in favor of `AtProtoRepositoryRecord<Post>`.
+  * `ReferencedProfile` deleted deleted in favor of `AtProtoRepositoryRecord<Profile>`.
+  * `ReferencedVerification` deleted deleted in favor of `AtProtoRepositoryRecord<Verification>`.
+
 ## 0.8.0
 
 ### Features

@@ -7,6 +7,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
@@ -21,8 +22,8 @@ namespace idunno.Bluesky
         /// <summary>
         /// Creates a record in the specified collection belonging to the current user.
         /// </summary>
-        /// <typeparam name="TRecordValue">The type of record to create.</typeparam>
-        /// <param name="recordValue"><para>The record to be created.</para></param>
+        /// <typeparam name="TRecord">The type of record to create.</typeparam>
+        /// <param name="record"><para>The record to be created.</para></param>
         /// <param name="collection"><para>The collection the record should be created in.</para></param>
         /// <param name="rKey"><para>An optional <see cref="RecordKey"/> to create the record with.</para></param>
         /// <param name="validate">
@@ -36,18 +37,18 @@ namespace idunno.Bluesky
         /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns><para>The task object representing the asynchronous operation.</para></returns>
-        /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="recordValue"/> or <paramref name="collection"/> is null.</para></exception>
+        /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="record"/> or <paramref name="collection"/> is null.</para></exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
-        public async Task<AtProtoHttpResult<CreateRecordResult>> CreateBlueskyRecord<TRecordValue>(
-            TRecordValue recordValue,
+        public async Task<AtProtoHttpResult<CreateRecordResult>> CreateBlueskyRecord<TRecord>(
+            TRecord record,
             Nsid collection,
             RecordKey? rKey = null,
             bool? validate = true,
             Cid? swapCommit = null,
             string? serviceProxy = null,
-            CancellationToken cancellationToken = default) where TRecordValue : BlueskyRecordValue
+            CancellationToken cancellationToken = default) where TRecord : BlueskyRecord
         {
-            ArgumentNullException.ThrowIfNull(recordValue);
+            ArgumentNullException.ThrowIfNull(record);
             ArgumentNullException.ThrowIfNull(collection);
 
             if (!IsAuthenticated)
@@ -55,8 +56,8 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            AtProtoHttpResult<CreateRecordResult> result = await CreateRecord<BlueskyRecordValue>(
-                recordValue: recordValue,
+            AtProtoHttpResult<CreateRecordResult> result = await CreateRecord<BlueskyRecord>(
+                record: record,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: collection,
                 rKey: rKey,
@@ -71,19 +72,19 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets the post record for the specified <see cref="StrongReference"/>.
         /// </summary>
-        /// <param name="uri">The <see cref="AtUri" /> of the post to return the <see cref="PostRecord"/> for.</param>
-        /// <param name="cid">An optional <see cref="Cid" /> of the post to return the <see cref="PostRecord"/> for.</param>
+        /// <param name="uri">The <see cref="AtUri" /> of the post to return the <see cref="AtProtoRepositoryRecord{Post}"/> for.</param>
+        /// <param name="cid">An optional <see cref="Cid" /> of the post to return the <see cref="AtProtoRepositoryRecord{Post}"/> for.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
-        public async Task<AtProtoHttpResult<PostRecord>> GetPostRecord(
+        public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<Post>>> GetPostRecord(
             AtUri uri,
             Cid? cid = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uri);
 
-            AtProtoHttpResult<PostRecord> result = await BlueskyServer.GetPostRecord(
+            AtProtoHttpResult<AtProtoRepositoryRecord<Post>> result = await BlueskyServer.GetPostRecord(
                 uri,
                 cid,
                 service: AuthenticatedOrUnauthenticatedServiceUri,
@@ -129,11 +130,11 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets the post record for the specified <see cref="StrongReference"/>.
         /// </summary>
-        /// <param name="strongReference">The <see cref="StrongReference" /> of the post to return the <see cref="PostRecord"/> for.</param>
+        /// <param name="strongReference">The <see cref="StrongReference" /> of the post to return the <see cref="AtProtoRepositoryRecord{Post}"/> for.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
-        public async Task<AtProtoHttpResult<PostRecord>> GetPostRecord(
+        public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<Post>>> GetPostRecord(
             StrongReference strongReference,
             CancellationToken cancellationToken = default)
         {
@@ -143,7 +144,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Gets a <see cref="ProfileRecord"/> for the current user.
+        /// Gets a <see cref="Profile"/> for the current user.
         /// </summary>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -155,7 +156,7 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage("AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-        public async Task<AtProtoHttpResult<ProfileRecord>> GetProfileRecord(
+        public async Task<AtProtoHttpResult<Profile>> GetProfileRecord(
             CancellationToken cancellationToken = default)
         {
             if (!IsAuthenticated)
@@ -165,17 +166,36 @@ namespace idunno.Bluesky
 
             AtUri profileUri = new($"at://{Did}/{CollectionNsid.Profile}/self");
 
-            return await GetRecord<ProfileRecord>(
+            AtProtoHttpResult<AtProtoRepositoryRecord<Profile>> getRecordResult = await GetRecord<Profile>(
                 profileUri,
                 service: Service,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (getRecordResult.Succeeded)
+            {
+                return new AtProtoHttpResult<Profile>(
+                    result: getRecordResult.Result.Value,
+                    statusCode: getRecordResult.StatusCode,
+                    httpResponseHeaders: getRecordResult.HttpResponseHeaders,
+                    atErrorDetail: getRecordResult.AtErrorDetail,
+                    rateLimit: getRecordResult.RateLimit);
+            }
+            else
+            {
+                return new AtProtoHttpResult<Profile>(
+                    result: null,
+                    statusCode: getRecordResult.StatusCode,
+                    httpResponseHeaders: getRecordResult.HttpResponseHeaders,
+                    atErrorDetail: getRecordResult.AtErrorDetail,
+                    rateLimit: getRecordResult.RateLimit);
+            }
         }
 
         /// <summary>
-        /// Sets the current user's <see cref="ProfileRecord"/>.
+        /// Sets the current user's <see cref="Profile"/>.
         /// </summary>
-        /// <param name="profile">The <see cref="ProfileRecord"/> to create.</param>
+        /// <param name="profile">The <see cref="Profile"/> to create.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
@@ -187,7 +207,7 @@ namespace idunno.Bluesky
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
         public async Task<AtProtoHttpResult<CreateRecordResult>> CreateProfile(
-            ProfileRecordValue profile,
+            Profile profile,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(profile);
@@ -198,7 +218,7 @@ namespace idunno.Bluesky
             }
 
             return await CreateBlueskyRecord(
-                recordValue: profile,
+                record: profile,
                 collection: CollectionNsid.Profile,
                 rKey: "self",
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -212,7 +232,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<PutRecordResult>> SetProfile(
-            ProfileRecordValue profile,
+            Profile profile,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(profile);
@@ -222,8 +242,8 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            return await PutRecord<BlueskyRecordValue>(
-                recordValue: profile,
+            return await PutRecord<BlueskyRecord>(
+                record: profile,
                 collection: CollectionNsid.Profile,
                 rKey: "self",
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -237,7 +257,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<PutRecordResult>> SetProfile(
-            ProfileRecord profile,
+            AtProtoRepositoryRecord<Profile> profile,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(profile);
@@ -252,9 +272,9 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Update the current user's <see cref="ProfileRecord"/>.
+        /// Update the current user's <see cref="Profile"/>.
         /// </summary>
-        /// <param name="profile">The <see cref="ProfileRecord"/> to update.</param>
+        /// <param name="profile">The <see cref="AtProtoRepositoryRecord{Profile}"/> to update.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
@@ -266,7 +286,7 @@ namespace idunno.Bluesky
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
         public async Task<AtProtoHttpResult<PutRecordResult>> UpdateProfile(
-            ProfileRecord profile,
+            AtProtoRepositoryRecord<Profile> profile,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(profile);
@@ -288,7 +308,7 @@ namespace idunno.Bluesky
             }
 
             return await PutRecord(
-                recordValue: profile.Value,
+                record: profile.Value,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.Profile,
                 rKey: "self",
@@ -324,8 +344,8 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            return await CreateRecord<BlueskyTimestampedRecordValue>(
-                recordValue: list,
+            return await CreateRecord<BlueskyTimestampedRecord>(
+                record: list,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.List,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -361,14 +381,14 @@ namespace idunno.Bluesky
         /// <summary>
         /// Updates the referenced list record.
         /// </summary>
-        /// <param name="list">The <see cref="AtProtoRecord{TRecordValue}"/> referenced <see cref="BlueskyList"/> to update.</param>
+        /// <param name="list">The <see cref="AtProtoRepositoryRecord{TRecord}"/> referenced <see cref="BlueskyList"/> to update.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> or its Uri, or the URI Collection or RecordKey property is null .</exception>
         /// <exception cref="ArgumentException">Thrown if <paramref name="list"/> does not point to a list.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<PutRecordResult>> UpdateList(
-            AtProtoRecord<BlueskyList> list,
+            AtProtoRepositoryRecord<BlueskyList> list,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(list);
@@ -413,8 +433,8 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            return await PutRecord<BlueskyTimestampedRecordValue>(
-                recordValue: list,
+            return await PutRecord<BlueskyTimestampedRecord>(
+                record: list,
                 collection: CollectionNsid.List,
                 rKey: uri.RecordKey,
                 validate: true,
@@ -452,8 +472,8 @@ namespace idunno.Bluesky
 
             BlueskyListItem listItem = new() { List = uri, Subject = did };
 
-            return await CreateRecord<BlueskyTimestampedRecordValue>(
-                recordValue: listItem,
+            return await CreateRecord<BlueskyTimestampedRecord>(
+                record: listItem,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.ListItem,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -507,7 +527,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Deletes the list entry refered to by the <paramref name="uri"/>.
+        /// Deletes the list entry referred to by the <paramref name="uri"/>.
         /// </summary>
         /// <param name="uri">The <see cref="AtUri"/> of the record to delete.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -544,7 +564,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Deletes the list entry refered to by the <paramref name="did"/> from the list referred to by <see cref="Uri"/>.
+        /// Deletes the list entry referred to by the <paramref name="did"/> from the list referred to by <see cref="Uri"/>.
         /// </summary>
         /// <param name="uri">The <see cref="AtUri"/> of the list to delete the subject whose <see cref="Did"/> matches <paramref name="did"/>.</param>
         /// <param name="did">The <see cref="Did"/> of the subject to delete from the list</param>
@@ -607,7 +627,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Deletes the list entry refered to by the <paramref name="handle"/> from the list referred to by <see cref="Uri"/>.
+        /// Deletes the list entry referred to by the <paramref name="handle"/> from the list referred to by <see cref="Uri"/>.
         /// </summary>
         /// <param name="uri">The <see cref="AtUri"/> of the list to delete the subject whose <see cref="Did"/> matches <paramref name="handle"/>.</param>
         /// <param name="handle">The <see cref="Handle"/> of the subject to delete from the list</param>

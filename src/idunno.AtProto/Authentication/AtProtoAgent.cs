@@ -884,9 +884,10 @@ namespace idunno.AtProto
             _credentialRefreshTimer ??= new();
             StartTokenRefreshTimer();
 
-            var authenticatedEventArgs = new AuthenticatedEventArgs(accessCredentials);
-
-            OnAuthenticated(authenticatedEventArgs);
+            OnAuthenticated(new AuthenticatedEventArgs(
+                accessCredentials.Did,
+                accessCredentials.Service,
+                accessCredentials));
 
             await Task.CompletedTask.ConfigureAwait(false);
         }
@@ -1012,8 +1013,9 @@ namespace idunno.AtProto
                     Logger.RefreshSessionApiCallFailed(_logger, refreshCredential.Service, tokenHash, refreshSessionResult.StatusCode);
 
                     var tokenRefreshFailedEventArgs = new TokenRefreshFailedEventArgs(
+                        did: Did!,
+                        service: refreshCredential.Service,
                         refreshCredential.RefreshToken,
-                        refreshCredential.Service,
                         refreshSessionResult.StatusCode,
                         refreshSessionResult.AtErrorDetail);
 

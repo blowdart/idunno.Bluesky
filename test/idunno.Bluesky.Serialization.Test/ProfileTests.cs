@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
-using idunno.Bluesky.Actor;
 using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky.Serialization.Test
@@ -45,7 +44,7 @@ namespace idunno.Bluesky.Serialization.Test
                 }
                 """;
 
-            ProfileRecordValue? actual = JsonSerializer.Deserialize<ProfileRecordValue>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+            Profile? actual = JsonSerializer.Deserialize<Profile>(json, BlueskyServer.BlueskyJsonSerializerOptions);
 
             Assert.NotNull(actual);
         }

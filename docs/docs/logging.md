@@ -26,8 +26,8 @@ using var agent = new BlueSkyAgent(
         LoggerFactory = loggerFactory
     }))
 {
-    await agent.Login(handle, password, cancellationToken: cancellationToken);
-    await agent.Logout(cancellationToken: cancellationToken);
+    await agent.Login(handle, password);
+    await agent.Logout();
 }
 ```
 

@@ -32,7 +32,7 @@ namespace idunno.Bluesky.Graph
         public StarterPackView(
             AtUri uri,
             Cid cid,
-            StarterPackRecordValue record,
+            StarterPack record,
             ProfileViewBasic creator,
             int listItemCount,
             int joinedWeekCount,

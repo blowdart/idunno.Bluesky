@@ -7,7 +7,6 @@ using idunno.AtProto;
 using idunno.AtProto.Repo;
 
 using idunno.Bluesky.Feed.Gates;
-using idunno.Bluesky.Feed.Gates.Model;
 
 namespace idunno.Bluesky
 {
@@ -104,7 +103,7 @@ namespace idunno.Bluesky
             }
 
             return await CreateRecord(
-                recordValue: threadGate,
+                record: threadGate,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.ThreadGate,
                 rKey: threadGate.Post.RecordKey,
@@ -197,7 +196,7 @@ namespace idunno.Bluesky
             }
 
             return await PutRecord(
-                recordValue: threadGate,
+                record: threadGate,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.ThreadGate,
                 rKey: threadGate.Post.RecordKey,
@@ -241,7 +240,7 @@ namespace idunno.Bluesky
                 throw new ArgumentException("Does not point to a Post record", nameof(post));
             }
 
-            AtProtoHttpResult<GetThreadGateResponse> recordResponse = await GetRecord<GetThreadGateResponse>(
+            AtProtoHttpResult<AtProtoRepositoryRecord<ThreadGate>> recordResponse = await GetRecord<ThreadGate>(
                 repo: Did,
                 collection: CollectionNsid.ThreadGate,
                 rKey: post.RecordKey,
@@ -347,7 +346,7 @@ namespace idunno.Bluesky
             }
 
             return await CreateRecord(
-                recordValue: postGate,
+                record: postGate,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: CollectionNsid.PostGate,
                 rKey: postGate.Post.RecordKey,
@@ -432,7 +431,7 @@ namespace idunno.Bluesky
                 throw new ArgumentException("Does not point to a Post record", nameof(post));
             }
 
-            AtProtoHttpResult<GetPostGateResponse> recordResponse = await GetRecord<GetPostGateResponse>(
+            AtProtoHttpResult<AtProtoRepositoryRecord<PostGate>> recordResponse = await GetRecord<PostGate>(
                 repo: Did,
                 collection: CollectionNsid.PostGate,
                 rKey: post.RecordKey,
@@ -506,7 +505,7 @@ namespace idunno.Bluesky
             }
 
             return await PutRecord(
-                recordValue: postGate,
+                record: postGate,
                 collection: CollectionNsid.PostGate,
                 rKey: postGate.Post.RecordKey,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,

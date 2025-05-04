@@ -16,7 +16,7 @@ if (postResult.Succeeded)
 ```
 
 The result from creating a post contains. amongst other things, a strong reference to the new record. This `StrongReference` consists of an
-[AT URI](https://atproto.com/specs/at-uri-scheme) and a Content Identifier ([CID](https://github.com/multiformats/cid)). 
+[at:// uri](../commonTerms.md#uri) and a Content Identifier ([CID](https://github.com/multiformats/cid)). 
 
 An AT URI is a way to reference individual records in a specific repository (every Bluesky user has their own repository).
 
@@ -52,7 +52,7 @@ If you don't provide `createdAt` the current date and time will be used.
 
 ## <a name="understandingPostResults">Understanding the results from a post call</a>
 
-The `Post()` method creates a record in your Bluesky repo and returns an`AtProtoHttpResult<CreateRecordResponse>`
+The `Post()` method creates a record in your Bluesky repo and returns an`AtProtoHttpResult<CreateRecordResult>`
 This encapsulates the HTTP status code returned by the Bluesky API, the result of the operation,
 if the operation was successful, any error messages the API returned, and information on the current rate limits applied to you,
 which can be useful for making sure you don't flood the servers and get locked by a rate limiter.
@@ -101,20 +101,20 @@ To reply to a post, again, you need a post's `StrongReference`, which you pass i
 
 ```c#
 // Create a test post we will reply to.
-var createPostResponse = 
+var createPostResult = 
     await agent.Post("Another test post, this time to check replying.");
 
 // Reply to the post we just created
-var replyCreatePostResponse = 
-    await agent.ReplyTo(createPostResponse.Result.StrongReference, "This is a reply.");
+var replyCreatePostResult = 
+    await agent.ReplyTo(createPostResult.Result.StrongReference, "This is a reply.");
 
 // Reply to the reply using the reply's StrongReference
 var replyToReplyStrongReference = 
-  await agent.ReplyTo(replyCreatePostResponse.StrongReference, "This is a reply to the reply.");
+  await agent.ReplyTo(replyCreatePostResult.StrongReference, "This is a reply to the reply.");
 ```
 
 Replying to a post creates a new record, and it may not surprise you to see that the `ReplyTo()`
-methods returns an `HttpResult<CreateRecordResponse>` just like creating a post does.
+methods returns an `HttpResult<CreateRecordResult>` just like creating a post does.
 
 ## <a name="likeRepostQuote">Liking, reposting and quote posting posts</a>
 
@@ -272,7 +272,7 @@ postBuilder.Append('.');
 var hashTag = new HashTag("beans");
 postBuilder.Append(hashTag);
 
-var facetedCreatePostResponse =
+var facetedCreatePostResult =
     await agent.Post(postBuilder, cancellationToken: cancellationToken);
 ```
 
@@ -379,6 +379,7 @@ var postResult = await agent.Post("Naughty bean content", labels : labels, cance
 
 var postBuilder = new PostBuilder("Naughty bean content");
 postBuilder.SetSelfLabels(labels);
+
 var builderPostResult = await agent.Post(postBuilder, cancellationToken: cancellationToken);
 ```
 

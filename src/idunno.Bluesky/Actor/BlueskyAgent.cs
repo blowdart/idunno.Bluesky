@@ -10,11 +10,11 @@ namespace idunno.Bluesky
     public partial class BlueskyAgent
     {
         /// <summary>
-        /// Gets a <see cref="ProfileRecordValue"/> for the current authenticated user.
+        /// Gets a <see cref="Profile"/> for the current authenticated user.
         /// </summary>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        public async Task<AtProtoHttpResult<ProfileRecord>> GetProfile(
+        public async Task<AtProtoHttpResult<Profile>> GetProfile(
             CancellationToken cancellationToken = default)
         {
             if (!IsAuthenticated)

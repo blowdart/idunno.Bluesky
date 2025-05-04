@@ -13,39 +13,39 @@ namespace idunno.Bluesky.Record
     [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
                      UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
     [JsonDerivedType(typeof(Post), RecordType.Post)]
-    [JsonDerivedType(typeof(FollowRecordValue), RecordType.Follow)]
-    [JsonDerivedType(typeof(RepostRecordValue), RecordType.Repost)]
-    [JsonDerivedType(typeof(LikeRecordValue), RecordType.Like)]
-    [JsonDerivedType(typeof(BlockRecordValue), RecordType.Block)]
-    [JsonDerivedType(typeof(StarterPackRecordValue), RecordType.StarterPack)]
-    [JsonDerivedType(typeof(VerificationRecordValue), RecordType.Verification)]
+    [JsonDerivedType(typeof(Follow), RecordType.Follow)]
+    [JsonDerivedType(typeof(Repost), RecordType.Repost)]
+    [JsonDerivedType(typeof(Like), RecordType.Like)]
+    [JsonDerivedType(typeof(Block), RecordType.Block)]
+    [JsonDerivedType(typeof(StarterPack), RecordType.StarterPack)]
+    [JsonDerivedType(typeof(Verification), RecordType.Verification)]
     [JsonDerivedType(typeof(BlueskyList), RecordType.List)]
     [JsonDerivedType(typeof(BlueskyListItem), RecordType.ListItem)]
-    public record BlueskyTimestampedRecordValue : BlueskyRecordValue
+    public record BlueskyTimestampedRecord : BlueskyRecord
     {
         /// <summary>
-        /// Creates a new instance of <see cref="BlueskyTimestampedRecordValue"/> with <see cref="CreatedAt"/> set to the current date and time.
+        /// Creates a new instance of <see cref="BlueskyTimestampedRecord"/> with <see cref="CreatedAt"/> set to the current date and time.
         /// </summary>
-        public BlueskyTimestampedRecordValue()
+        public BlueskyTimestampedRecord()
         {
             CreatedAt = DateTimeOffset.UtcNow;
         }
 
         /// <summary>
-        /// Creates a new instance of <see cref="BlueskyTimestampedRecordValue"/>
+        /// Creates a new instance of <see cref="BlueskyTimestampedRecord"/>
         /// </summary>
         /// <param name="createdAt">The date and time the record was created at.</param>
         [JsonConstructor]
-        public BlueskyTimestampedRecordValue(DateTimeOffset createdAt) : base()
+        public BlueskyTimestampedRecord(DateTimeOffset createdAt) : base()
         {
             CreatedAt = createdAt.ToUniversalTime();
         }
 
         /// <summary>
-        /// Creates a new instance of <see cref="BlueskyTimestampedRecordValue"/>
+        /// Creates a new instance of <see cref="BlueskyTimestampedRecord"/>
         /// </summary>
         /// <param name="createdAt">The date and time the record was created at.</param>
-        public BlueskyTimestampedRecordValue(DateTimeOffset? createdAt) : base()
+        public BlueskyTimestampedRecord(DateTimeOffset? createdAt) : base()
         {
             if (createdAt is null)
             {
@@ -58,10 +58,10 @@ namespace idunno.Bluesky.Record
         }
 
         /// <summary>
-        /// Creates a new instance of <see cref="BlueskyTimestampedRecordValue"/> from the specified <paramref name="record"/>.
+        /// Creates a new instance of <see cref="BlueskyTimestampedRecord"/> from the specified <paramref name="record"/>.
         /// </summary>
-        /// <param name="record">The <see cref="BlueskyTimestampedRecordValue"/> to create the new instance from.</param>
-        public BlueskyTimestampedRecordValue(BlueskyTimestampedRecordValue record) : base(record)
+        /// <param name="record">The <see cref="BlueskyTimestampedRecord"/> to create the new instance from.</param>
+        public BlueskyTimestampedRecord(BlueskyTimestampedRecord record) : base(record)
         {
             if (record is not null)
             {

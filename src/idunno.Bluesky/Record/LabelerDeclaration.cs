@@ -1,25 +1,22 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Text.Json.Serialization;
-
 using idunno.AtProto;
 using idunno.AtProto.Labels;
-using idunno.AtProto.Moderation;
 
 using idunno.Bluesky.Labeler;
 
 namespace idunno.Bluesky.Record
 {
     /// <summary>
-    /// Encapsulates a declaration of the existance of a labeler service.
+    /// Encapsulates a declaration of the existence of a labeler service.
     /// </summary>
-    public sealed record LabelerDeclarationRecordValue : BlueskyRecordValue
+    public sealed record LabelerDeclaration : BlueskyRecord
     {
         // See https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/labeler/service.json
 
         /// <summary>
-        /// Gets the policies the labeller publishes.
+        /// Gets the policies the labeler publishes.
         /// </summary>
         public required LabelerPolicies Policies { get; init; }
 
