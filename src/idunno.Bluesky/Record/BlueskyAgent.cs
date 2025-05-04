@@ -156,7 +156,7 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage("AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-        public async Task<AtProtoHttpResult<Profile>> GetProfileRecord(
+        public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<Profile>>> GetProfileRecord(
             CancellationToken cancellationToken = default)
         {
             if (!IsAuthenticated)
@@ -166,30 +166,11 @@ namespace idunno.Bluesky
 
             AtUri profileUri = new($"at://{Did}/{CollectionNsid.Profile}/self");
 
-            AtProtoHttpResult<AtProtoRepositoryRecord<Profile>> getRecordResult = await GetRecord<Profile>(
+            return await GetRecord<Profile>(
                 profileUri,
                 service: Service,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            if (getRecordResult.Succeeded)
-            {
-                return new AtProtoHttpResult<Profile>(
-                    result: getRecordResult.Result.Value,
-                    statusCode: getRecordResult.StatusCode,
-                    httpResponseHeaders: getRecordResult.HttpResponseHeaders,
-                    atErrorDetail: getRecordResult.AtErrorDetail,
-                    rateLimit: getRecordResult.RateLimit);
-            }
-            else
-            {
-                return new AtProtoHttpResult<Profile>(
-                    result: null,
-                    statusCode: getRecordResult.StatusCode,
-                    httpResponseHeaders: getRecordResult.HttpResponseHeaders,
-                    atErrorDetail: getRecordResult.AtErrorDetail,
-                    rateLimit: getRecordResult.RateLimit);
-            }
         }
 
         /// <summary>
@@ -242,11 +223,7 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            return await PutRecord<BlueskyRecord>(
-                record: profile,
-                collection: CollectionNsid.Profile,
-                rKey: "self",
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await UpdateProfile(profile, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -268,7 +245,7 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            return await SetProfile(profile.Value, cancellationToken).ConfigureAwait(false);
+            return await UpdateProfile(profile, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -315,6 +292,42 @@ namespace idunno.Bluesky
                 validate: null,
                 swapCommit: null,
                 swapRecord: profile.Cid,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Update the current user's <see cref="Profile"/>.
+        /// </summary>
+        /// <param name="profile">The <see cref="Profile"/> to update with.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
+        public async Task<AtProtoHttpResult<PutRecordResult>> UpdateProfile(
+            Profile profile,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(profile);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            return await PutRecord(
+                record: profile,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
+                collection: CollectionNsid.Profile,
+                rKey: "self",
+                validate: null,
+                swapCommit: null,
+                swapRecord: null,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 

@@ -60,9 +60,9 @@ the metadata, or with `UpdateList()` providing the list `at://` [uri](../commonT
 
 `UpdateList(list)`
 
-| Parameter | Type                       | Description                                                                     | Required   | Default   |
-|-----------|----------------------------|---------------------------------------------------------------------------------|:----------:|:---------:|
-| list      | AtProtoRecord<BlueskyList> | A referenced instance of the BlueskyList containing the metadata to be updated. | Yes        |           |
+| Parameter | Type                                 | Description                                                                     | Required   | Default   |
+|-----------|--------------------------------------|---------------------------------------------------------------------------------|:----------:|:---------:|
+| list      | AtProtoRepositoryRecord<BlueskyList> | A referenced instance of the BlueskyList containing the metadata to be updated. | Yes        |           |
 
 [!code-csharp[](code/manageLists.cs?highlight=5#L18-L22)]
 

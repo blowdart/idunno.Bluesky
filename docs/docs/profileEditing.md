@@ -32,7 +32,7 @@ if (profileRecordResult.Succeeded)
      profileRecordResult.Result.Value.Description =
          $"Profile updated on {DateTimeOffset.Now:G}";
 
-     var updateResult = await agent.UpdateProfileRecord(profileRecordResult.Result);
+     var updateResult = await agent.UpdateProfile(profileRecordResult.Result);
 }
 ```
 
@@ -58,7 +58,7 @@ var profileRecordResult = await agent.GetProfileRecord();
 if (profileRecordResult.Succeeded)
 {
     profileRecordResult.Result.Value.DiscourageShowingToLoggedOutUsers = true;
-    await agent.UpdateProfileRecord(profileRecordResult.Result);
+    await agent.UpdateProfile(profileRecordResult.Result);
 }
 ```
 
