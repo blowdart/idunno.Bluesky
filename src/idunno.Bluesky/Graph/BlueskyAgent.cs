@@ -315,7 +315,7 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(uri.Collection);
             ArgumentOutOfRangeException.ThrowIfNotEqual(uri.Collection, CollectionNsid.List);
 
-            return await GetRecord<BlueskyList>(
+            return await GetBlueskyRecord<BlueskyList>(
                 uri: uri,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }

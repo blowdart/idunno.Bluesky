@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Security.Claims;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using idunno.AtProto;
@@ -39,6 +41,13 @@ namespace idunno.Bluesky
         /// <returns><para>The task object representing the asynchronous operation.</para></returns>
         /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="record"/> or <paramref name="collection"/> is null.</para></exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
         public async Task<AtProtoHttpResult<CreateRecordResult>> CreateBlueskyRecord<TRecord>(
             TRecord record,
             Nsid collection,
@@ -67,6 +76,81 @@ namespace idunno.Bluesky
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return result;
+        }
+
+        /// <summary>
+        /// Gets the Bluesky record specified by the identifying parameters.
+        /// </summary>
+        /// <typeparam name="TRecord">The type of record to get.</typeparam>
+        /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the record from.</param>
+        /// <param name="collection">The NSID of the collection the record should be retrieved from.</param>
+        /// <param name="rKey">The record key, identifying the record to be retrieved.</param>
+        /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
+        /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/>, <paramref name="collection"/> is null or empty.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+        public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>>> GetBlueskyRecord<TRecord>(
+            AtIdentifier repo,
+            Nsid collection,
+            RecordKey rKey,
+            Cid? cid = null,
+            string? serviceProxy = null,
+            CancellationToken cancellationToken = default) where TRecord : BlueskyRecord
+        {
+            ArgumentNullException.ThrowIfNull(repo);
+            ArgumentNullException.ThrowIfNull(collection);
+            ArgumentNullException.ThrowIfNull(rKey);
+
+            return await GetRecord<TRecord>(
+                repo: repo,
+                collection: collection,
+                rKey: rKey,
+                cid: cid,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
+                serviceProxy: serviceProxy,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Gets the Bluesky record specified by the <paramref name="uri"/>.
+        /// </summary>
+        /// <typeparam name="TRecord">The type of record to get.</typeparam>
+        /// <param name="uri">The <see cref="AtUri"/> of the record to retrieve.</param>
+        /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, or its collection or rkey property is null.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+        public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>>> GetBlueskyRecord<TRecord>(
+            AtUri uri,
+            string? serviceProxy = null,
+            CancellationToken cancellationToken = default) where TRecord : BlueskyRecord
+        {
+            ArgumentNullException.ThrowIfNull(uri);
+            ArgumentNullException.ThrowIfNull(uri.Collection);
+            ArgumentNullException.ThrowIfNull(uri.RecordKey);
+
+            return await GetBlueskyRecord<TRecord>(
+                repo: uri.Repo,
+                collection: uri.Collection,
+                rKey: uri.RecordKey,
+                cid: null,
+                serviceProxy: serviceProxy,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -431,6 +515,13 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or its Collection or RecordKey property is null .</exception>
         /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> does not point to a list.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
         public async Task<AtProtoHttpResult<PutRecordResult>> UpdateList(
             AtUri uri,
             BlueskyList list,
@@ -450,6 +541,7 @@ namespace idunno.Bluesky
                 record: list,
                 collection: CollectionNsid.List,
                 rKey: uri.RecordKey,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 validate: true,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }

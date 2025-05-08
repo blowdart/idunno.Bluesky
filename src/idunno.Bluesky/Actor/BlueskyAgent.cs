@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using idunno.AtProto;
+using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Record;
 
@@ -14,7 +15,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        public async Task<AtProtoHttpResult<Profile>> GetProfile(
+        public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<Profile>>> GetProfile(
             CancellationToken cancellationToken = default)
         {
             if (!IsAuthenticated)
