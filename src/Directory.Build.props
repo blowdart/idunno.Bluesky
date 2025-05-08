@@ -19,13 +19,11 @@
 
   <!-- AOT & Trimming -->
   <!-- Remove until https://github.com/dotnet/runtime/issues/114307 -->
-<!--
   <PropertyGroup>
     <IsAotCompatible>true</IsAotCompatible>
     <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
   </PropertyGroup>
--->
-  
+
   <Choose>
     <When Condition="'$(Configuration)' != 'CodeQL'">
       <PropertyGroup>

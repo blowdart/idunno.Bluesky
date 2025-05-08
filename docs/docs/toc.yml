@@ -44,10 +44,12 @@ items:
     items:
       - name: Labels
         href: labels.md
-      - name: Saving & restoring authentication state
-        href: savingAndRestoringAuthentication.md
+      - name: Using the Jetstream
+        href: jetstream.md
       - name: Configuring logging
         href: logging.md
+      - name: Saving & restoring authentication state
+        href: savingAndRestoringAuthentication.md
       - name: Json Source Generation and Native AOT
         href: sourceGeneration.md
 

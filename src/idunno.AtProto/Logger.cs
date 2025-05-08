@@ -314,5 +314,8 @@ namespace idunno.AtProto
 
         [LoggerMessage(800, LogLevel.Warning, "AtProtoHttpClient is making a call to {endpoint} but no atproxy-header was supplied")]
         internal static partial void AtProtoHttpClientMakingCallToNoneComAtProtoEndpointWithoutProxyHeader(ILogger logger, string endpoint);
+
+        [LoggerMessage(900, LogLevel.Error, "Background task threw an exception")]
+        internal static partial void BackgroundTaskThrew(ILogger logger, Exception ex);
     }
 }
