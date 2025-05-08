@@ -15,8 +15,6 @@ using Blob = idunno.AtProto.Repo.Blob;
 using idunno.AtProto.Server.Models;
 using idunno.DidPlcDirectory;
 
-
-
 namespace idunno.AtProto
 {
     /// <summary>

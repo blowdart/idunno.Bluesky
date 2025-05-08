@@ -16,7 +16,7 @@ if (postResult.Succeeded)
 ```
 
 The result from creating a post contains. amongst other things, a strong reference to the new record. This `StrongReference` consists of an
-[at:// uri](../commonTerms.md#uri) and a Content Identifier ([CID](https://github.com/multiformats/cid)). 
+[at:// uri](commonTerms.md#uri) and a Content Identifier ([CID](https://github.com/multiformats/cid)). 
 
 An AT URI is a way to reference individual records in a specific repository (every Bluesky user has their own repository).
 

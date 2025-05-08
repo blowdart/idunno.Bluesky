@@ -2,7 +2,7 @@
 
 This folder contains various samples to demonstrate various features of the `idunno.Bluesky` library.
 
-Each console sample uses the same command line arguments:
+Most console samples uses the same command line arguments:
 
 * `--handle` : The handle to use when authenticating.
 * `--password` : The password to use when authenticating (this parameter is ignored by OAuth samples).
@@ -22,7 +22,8 @@ If you use an Bluesky app password you don't need to worry about authorization c
 * `Samples.AtProto` - a sample showing how to use the underlying AtProto APIs.
 * `Samples.DirectMessages` - a sample showing how to use the conversation APIs.
 * `Samples.EmbeddedCard` - a sample showing how to embed an Open Graph card in a post.
-* `Samples.Feed` - a sample showing how to page through a feed..
+* `Samples.Feed` - a sample showing how to page through a feed.
+* `Samples.Jetstream`- a sample showing how to subscribe to the AtProto Jetstream.
 * `Samples.Logging` - a sample showing how to configure logging with the .net console logger.
 * `Samples.LoginDiscovery` - a sample that walks threw the various stages of how a handle is resolved its Personal Data Store (PDS).
 * `Samples.Notifications` - a sample which shows notifications for the authenticated user.

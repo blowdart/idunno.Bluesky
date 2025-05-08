@@ -9,6 +9,12 @@
     <Configurations>Debug;Release;CodeQL</Configurations>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!-- Disable strongname warning as that's not been enforced since .net 5.-->
+    <!-- See https://github.com/dotnet/roslyn/issues/76197 -->
+    <NoWarn>$(NoWarn);CS8002</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>
@@ -40,7 +46,9 @@
   <PropertyGroup>
     <PackageReadmeFile>readme.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>
+    <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
+
   <ItemGroup>
     <None Include="readme.md" Pack="true" PackagePath="\" />
     <None Include="icon.png" Pack="true" PackagePath="\" />
@@ -56,5 +64,25 @@
     <PackageReference Include="DnsClient" />
     <PackageReference Include="Duende.IdentityModel.OidcClient" />
     <PackageReference Include="Duende.IdentityModel.OidcClient.Extensions" />
+    <PackageReference Include="ZstdSharp.Port" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Resource.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resource.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Resource.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resource.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="G:\Users\BarryDorrans\.nuget\packages\zstdnet\1.4.5\build\x64\libzstd.dll" />
   </ItemGroup>
 </Project>

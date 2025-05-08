@@ -33,7 +33,7 @@ namespace idunno.AtProto
 
         private readonly ICollection<NameValueHeaderValue>? _extraRequestHeaders;
 
-        private readonly bool _supressProxyHeaderCheck;
+        private readonly bool _suppressProxyHeaderCheck;
 
         private readonly JsonSerializerOptions _jsonSerializationOptionsDefault =  new(JsonSerializerDefaults.Web)
         {
@@ -64,7 +64,7 @@ namespace idunno.AtProto
         /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
         /// <exception cref="ArgumentException">Thrown when <paramref name="serviceProxy"/> is null or white space./</exception>
         /// <remarks>
-        ///<para>Passing null as the <paramref name="serviceProxy"/> value will supress the checks for the presence of the atproto-proxy header on requests by this instance.</para>
+        ///<para>Passing null as the <paramref name="serviceProxy"/> value will suppress the checks for the presence of the atproto-proxy header on requests by this instance.</para>
         /// </remarks>
         public AtProtoHttpClient(string? serviceProxy, ILoggerFactory? loggerFactory = null)
         {
@@ -81,7 +81,7 @@ namespace idunno.AtProto
             }
             else
             {
-                _supressProxyHeaderCheck = true;
+                _suppressProxyHeaderCheck = true;
             }
 
             loggerFactory ??= NullLoggerFactory.Instance;
@@ -948,7 +948,7 @@ namespace idunno.AtProto
             // The Bluesky 2025 Protocol roadmap announced that the default PDS implementation would stop forwarding app.bsky.* endpoints to the the Bluesky API server
             // at some future point, so log a warning if a request is made to any API endpoint not that is not a PDS endpoint (com.atproto.*).
             // https://docs.bsky.app/blog/2025-protocol-roadmap-spring
-            if (!_supressProxyHeaderCheck &&
+            if (!_suppressProxyHeaderCheck &&
                 !endpoint.StartsWith("/xrpc/com.atproto", StringComparison.Ordinal) &&
                 !endpoint.StartsWith("/oauth/", StringComparison.Ordinal) &&
                 (requestHeaders is null ||
