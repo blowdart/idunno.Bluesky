@@ -19,7 +19,6 @@ permissions:
   checks: write
 
 env:
-  DOTNET_NOLOGO: true
   DOTNET_GENERATE_ASPNET_CERTIFICATE: false
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
 

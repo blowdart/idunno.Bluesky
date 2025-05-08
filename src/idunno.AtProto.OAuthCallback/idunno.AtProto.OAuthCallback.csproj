@@ -2,9 +2,11 @@
 
   <PropertyGroup>
     <Description>Local loopback OAuth listener for idunno.AtProto.</Description>
+    <PackageTags>atproto;oauth</PackageTags>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <LangVersion>12.0</LangVersion>
     <Configurations>Debug;Release;CodeQL</Configurations>
   </PropertyGroup>
 

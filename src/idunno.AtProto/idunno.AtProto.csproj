@@ -83,7 +83,4 @@
     </EmbeddedResource>
   </ItemGroup>
 
-  <ItemGroup>
-    <None Remove="G:\Users\BarryDorrans\.nuget\packages\zstdnet\1.4.5\build\x64\libzstd.dll" />
-  </ItemGroup>
 </Project>
