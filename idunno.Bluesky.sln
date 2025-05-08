@@ -202,7 +202,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "code", "code", "{481AD9A1-E
 		docs\docs\tutorials\code\manageLists.cs = docs\docs\tutorials\code\manageLists.cs
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.Jetstream", "Samples\Samples.Jetstream\Samples.Jetstream.csproj", "{209A74A9-168E-4204-8F9C-EE78DC1D061F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.Jetstream", "samples\Samples.Jetstream\Samples.Jetstream.csproj", "{209A74A9-168E-4204-8F9C-EE78DC1D061F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
