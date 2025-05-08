@@ -14,7 +14,7 @@ namespace idunno.Bluesky.Feed.Gates
     /// Record defining interaction rules for a post.
     /// The record key (rkey) of the post gate record must match the record key of the post, and that record must be in the same repository.
     /// </summary>
-    public sealed record PostGate : AtProtoRecordValue
+    public sealed record PostGate : AtProtoRecord
     {
         /// <summary>
         /// Creates a new instance of <see cref="PostGate"/>.

@@ -11,23 +11,23 @@ namespace idunno.Bluesky.Actions
     /// <summary>
     /// Encapsulates the information needed to create a repost record.
     /// </summary>
-    public sealed record RepostRecordValue : BlueskyTimestampedRecordValue
+    public sealed record Repost : BlueskyTimestampedRecord
     {
         /// <summary>
-        /// Creates a new instance of <see cref="RepostRecordValue"/> with<see cref = "BlueskyTimestampedRecordValue.CreatedAt" /> set to the current date and time.
+        /// Creates a new instance of <see cref="Repost"/> with<see cref = "BlueskyTimestampedRecord.CreatedAt" /> set to the current date and time.
         /// </summary>
         /// <param name="subject">The <see cref="StrongReference"/> to the post to be reposted.</param>
-        public RepostRecordValue(StrongReference subject) : this(subject, DateTimeOffset.UtcNow)
+        public Repost(StrongReference subject) : this(subject, DateTimeOffset.UtcNow)
         {
         }
 
         /// <summary>
-        /// Creates a new instance of <see cref="RepostRecordValue"/>.
+        /// Creates a new instance of <see cref="Repost"/>.
         /// </summary>
         /// <param name="subject">The <see cref="StrongReference"/> to the post to be reposted.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> for the repost creation date.</param>
         [JsonConstructor]
-        public RepostRecordValue(StrongReference subject, DateTimeOffset createdAt) : base(createdAt)
+        public Repost(StrongReference subject, DateTimeOffset createdAt) : base(createdAt)
         {
             Subject = subject;
         }

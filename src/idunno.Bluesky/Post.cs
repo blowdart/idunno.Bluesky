@@ -17,7 +17,7 @@ namespace idunno.Bluesky
     /// <remarks>
     /// <para>See <see href="https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/feed/post.json">post.json</see> for the lexicon definition.</para>
     /// </remarks>
-    public sealed record class Post : BlueskyTimestampedRecordValue
+    public sealed record class Post : BlueskyTimestampedRecord
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private const string PornLabelName = "porn";
@@ -32,7 +32,7 @@ namespace idunno.Bluesky
         private const string NudityLabelName = "nudity";
 
         /// <summary>
-        /// Creates a new instance of <see cref="Post"/> and sets <see cref="BlueskyTimestampedRecordValue.CreatedAt"/> to the current date and time.
+        /// Creates a new instance of <see cref="Post"/> and sets <see cref="BlueskyTimestampedRecord.CreatedAt"/> to the current date and time.
         /// </summary>
         public Post() : base()
         {

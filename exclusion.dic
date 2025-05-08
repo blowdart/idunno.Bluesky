@@ -15,6 +15,8 @@ nsid
 nsids
 Nsid
 Nsids
+DIDs
+dids
 uris
 threadgate
 postgate
@@ -46,3 +48,5 @@ nuget
 Pexels
 dpop
 JsonTypeInfos
+csharp
+Jetstream

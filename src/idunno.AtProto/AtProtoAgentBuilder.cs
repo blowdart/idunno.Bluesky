@@ -24,7 +24,7 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Gets or sets the service the agent will intially connect to.
+        /// Gets or sets the service the agent will initially connect to.
         /// </summary>
         public Uri Service { get; set; } = new Uri(DefaultService);
 
@@ -75,7 +75,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Sets the service the agent will initially connect to.
         /// </summary>
-        /// <param name="service">The <see cref="Uri"/> of the service to intially connect to.</param>
+        /// <param name="service">The <see cref="Uri"/> of the service to initially connect to.</param>
         /// <returns>The same instance of <see cref="AtProtoAgentBuilder"/> for chaining.</returns>
         public AtProtoAgentBuilder ForService(Uri service)
         {
@@ -88,7 +88,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Sets the service the agent will initially connect to.
         /// </summary>
-        /// <param name="service">The <see cref="Uri"/> of the service to intially connect to.</param>
+        /// <param name="service">The <see cref="Uri"/> of the service to initially connect to.</param>
         /// <returns>The same instance of <see cref="AtProtoAgentBuilder"/> for chaining.</returns>
         public AtProtoAgentBuilder ForService(string service)
         {

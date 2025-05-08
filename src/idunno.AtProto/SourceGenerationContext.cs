@@ -5,6 +5,8 @@ using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 using idunno.AtProto.Admin;
 using idunno.AtProto.Authentication.Models;
+using idunno.AtProto.Jetstream;
+using idunno.AtProto.Jetstream.Models;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Labels.Models;
 using idunno.AtProto.Moderation;
@@ -89,6 +91,13 @@ namespace idunno.AtProto
     [JsonSerializable(typeof(ModerationReport))]
 
     [JsonSerializable(typeof(ServiceToken))]
+
+    [JsonSerializable(typeof(AtJetstreamEvent))]
+    [JsonSerializable(typeof(JetStreamEventKind))]
+    [JsonSerializable(typeof(AtJetstreamAccountEvent))]
+    [JsonSerializable(typeof(AtJetstreamCommitEvent))]
+    [JsonSerializable(typeof(AtJetstreamIdentityEvent))]
+    [JsonSerializable(typeof(OptionsUpdateMessage))]
     internal partial class SourceGenerationContext : JsonSerializerContext
     {
     }

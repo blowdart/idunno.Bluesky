@@ -11,7 +11,7 @@ To get the profile record for the current user call `agent.GetProfileRecord()`.
 var profileRecordResult = await agent.GetProfileRecord();
 ```
 
-If the call is successful, it will return an `AtProtoHttpResult` wrapping an `AtProtoRecord<ProfileRecord>` which, in turn,
+If the call is successful, it will return an `AtProtoHttpResult` wrapping an `AtProtoRecord<Profile>` which, in turn,
 exposes the profile values in its `Value` property.
 
 ```c#
@@ -32,7 +32,7 @@ if (profileRecordResult.Succeeded)
      profileRecordResult.Result.Value.Description =
          $"Profile updated on {DateTimeOffset.Now:G}";
 
-     var updateResult = await agent.UpdateProfileRecord(profileRecordResult.Result);
+     var updateResult = await agent.UpdateProfile(profileRecordResult.Result);
 }
 ```
 
@@ -45,7 +45,7 @@ This requires a strong reference to a post, and the post must belong to the curr
 
 To remove the pinned post set `PinnedPost` to null and call `UpdateProfileRecord()`.
 
-## <a name="discouragingUnauthenticatedViewing">Discouraging apps from showing the account to unauthenticated users.</a>
+## <a name="discouragingUnauthenticatedViewing">Discouraging apps from showing an account to unauthenticated users.</a>
 
 Bluesky has a setting to *discourage* applications from showing an account to unauthenticated users. The Bluesky application respects this setting,
 and other applications *may* respect the setting.
@@ -58,7 +58,7 @@ var profileRecordResult = await agent.GetProfileRecord();
 if (profileRecordResult.Succeeded)
 {
     profileRecordResult.Result.Value.DiscourageShowingToLoggedOutUsers = true;
-    await agent.UpdateProfileRecord(profileRecordResult.Result);
+    await agent.UpdateProfile(profileRecordResult.Result);
 }
 ```
 

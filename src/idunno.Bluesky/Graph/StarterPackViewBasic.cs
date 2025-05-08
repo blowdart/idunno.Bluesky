@@ -32,7 +32,7 @@ namespace idunno.Bluesky.Graph
         public StarterPackViewBasic(
             AtUri uri,
             Cid cid,
-            StarterPackRecordValue record,
+            StarterPack record,
             ProfileViewBasic creator,
             int listItemCount,
             int joinedWeekCount,
@@ -87,7 +87,7 @@ namespace idunno.Bluesky.Graph
         /// Gets the record for the starter pack.
         /// </summary>
         [JsonRequired]
-        public StarterPackRecordValue Record { get; init; }
+        public StarterPack Record { get; init; }
 
         /// <summary>
         /// Gets the <see cref="ProfileViewBasic"/> of the list creator.

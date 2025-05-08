@@ -3,10 +3,9 @@
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
-
 using Microsoft.Extensions.Primitives;
 
-using System.Text.Json;
+using idunno.AtProto.Repo;
 
 namespace idunno.AtProto.Integration.Test
 {
@@ -14,7 +13,7 @@ namespace idunno.AtProto.Integration.Test
     public class AtProtoHttpClientTests
     {
         [Fact]
-        public async Task AgentGetRecordSpecifingAServiceProxySendsTheProxyHeader()
+        public async Task AgentGetRecordSpecifyingAServiceProxySendsTheProxyHeader()
         {
             const string serviceProxy = "did:web:api.test.invalid#proxy";
             const string expectedValue = "test";
@@ -26,7 +25,16 @@ namespace idunno.AtProto.Integration.Test
             const string rkey = "rkey";
             const string cid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
-            string jsonReturnValue = $"{{\"testValue\":\"{expectedValue}\"}}";
+            string jsonReturnValue = """
+                {
+                    "uri" : "at://did:plc:identifier/test.idunno.lexiconType/rkey",
+                    "cid" : "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
+                    "value" :
+                    {
+                        "testValue" : "test"
+                    }
+                }
+                """;
 
             TestServer testServer = TestServerBuilder.CreateServer(server, async context =>
             {
@@ -55,16 +63,17 @@ namespace idunno.AtProto.Integration.Test
 
             using (AtProtoAgent agent = new(server, new TestHttpClientFactory(testServer)))
             {
-                AtProtoHttpResult<TestRecordValue> result = await agent.GetRecord<TestRecordValue>(
+                AtProtoHttpResult<AtProtoRepositoryRecord<TestRecord>> result = await agent.GetRecord<TestRecord>(
                     uri: new($"at://{repo}/{collection}/{rkey}"),
                     cid: new(cid),
                     serviceProxy: serviceProxy,
                     cancellationToken: TestContext.Current.CancellationToken);
 
                 Assert.True(result.Succeeded);
-                Assert.IsType<TestRecordValue>(result.Result);
+                Assert.Equal(expectedValue, result.Result.Value.TestValue);
 
-                Assert.Equal(expectedValue, result.Result.TestValue);
+                Assert.Equal("at://did:plc:identifier/test.idunno.lexiconType/rkey", result.Result.Uri);
+                Assert.Equal("bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4", result.Result.Cid);
             }
         }
 
@@ -80,7 +89,16 @@ namespace idunno.AtProto.Integration.Test
             const string rkey = "rkey";
             const string cid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
-            string jsonReturnValue = $"{{\"testValue\":\"{expectedValue}\"}}";
+            string jsonReturnValue = """
+                {
+                    "uri" : "at://did:plc:identifier/test.idunno.lexiconType/rkey",
+                    "cid" : "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
+                    "value" :
+                    {
+                        "testValue" : "test"
+                    }
+                }
+                """;
 
             TestServer testServer = TestServerBuilder.CreateServer(server, async context =>
             {
@@ -108,15 +126,14 @@ namespace idunno.AtProto.Integration.Test
 
             using (AtProtoAgent agent = new(server, new TestHttpClientFactory(testServer)))
             {
-                AtProtoHttpResult<TestRecordValue> result = await agent.GetRecord<TestRecordValue>(
+                AtProtoHttpResult<AtProtoRepositoryRecord<TestRecord>> result = await agent.GetRecord<TestRecord>(
                     uri: new($"at://{repo}/{collection}/{rkey}"),
                     cid: new(cid),
                     cancellationToken: TestContext.Current.CancellationToken);
 
                 Assert.True(result.Succeeded);
-                Assert.IsType<TestRecordValue>(result.Result);
 
-                Assert.Equal(expectedValue, result.Result.TestValue);
+                Assert.Equal(expectedValue, result.Result.Value.TestValue);
             }
         }
     }

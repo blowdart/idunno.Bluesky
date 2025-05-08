@@ -10,10 +10,10 @@ namespace idunno.Bluesky.Record
     /// <summary>
     ///  Encapsulates a Bluesky starter pack.
     /// </summary>
-    public record StarterPackRecordValue : BlueskyTimestampedRecordValue
+    public record StarterPack : BlueskyTimestampedRecord
     {
         /// <summary>
-        /// Creates a new instance of <see cref="StarterPackRecordValue"/>.
+        /// Creates a new instance of <see cref="StarterPack"/>.
         /// </summary>
         /// <param name="name">The name of the starter pack.</param>
         /// <param name="description">The description of the starter pack.</param>
@@ -22,7 +22,7 @@ namespace idunno.Bluesky.Record
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the starter pack was created on.</param>
         /// <param name="updatedAt">The <see cref="DateTimeOffset"/> the starter pack was last updated.</param>
         [JsonConstructor]
-        public StarterPackRecordValue(
+        public StarterPack(
             string name,
             string description,
             AtUri list,

@@ -3,7 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using idunno.AtProto;
-
+using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Record;
@@ -15,12 +15,12 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets the labeler declaration record value for the specified <paramref name="identifier"/>.
         /// </summary>
-        /// <param name="identifier">The labeler <see cref="Handle"/> whose declaraction record should be returned.</param>
+        /// <param name="identifier">The labeler <see cref="Handle"/> whose declaration record should be returned.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="identifier"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="identifier"/> cannot be converted to a <see cref="Did"/> or <see cref="Handle"/>.</exception>
-        public async Task<AtProtoHttpResult<LabelerDeclarationRecord>> GetLabelerDeclaration(
+        public async Task<AtProtoHttpResult<LabelerDeclaration>> GetLabelerDeclaration(
             AtIdentifier identifier,
             CancellationToken cancellationToken = default)
         {
@@ -44,11 +44,11 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets the labeler declaration record value for the specified <paramref name="handle"/>.
         /// </summary>
-        /// <param name="handle">The labeler <see cref="Handle"/> whose declaraction record should be returned.</param>
+        /// <param name="handle">The labeler <see cref="Handle"/> whose declaration record should be returned.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is null.</exception>
-        public async Task<AtProtoHttpResult<LabelerDeclarationRecord>> GetLabelerDeclaration(
+        public async Task<AtProtoHttpResult<LabelerDeclaration>> GetLabelerDeclaration(
             Handle handle,
             CancellationToken cancellationToken = default)
         {
@@ -58,7 +58,7 @@ namespace idunno.Bluesky
 
             if (did == null)
             {
-                return new AtProtoHttpResult<LabelerDeclarationRecord>(
+                return new AtProtoHttpResult<LabelerDeclaration>(
                     null,
                     statusCode: System.Net.HttpStatusCode.NotFound,
                     httpResponseHeaders: null);
@@ -70,7 +70,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets the labeler declaration record value for the specified <paramref name="did"/>.
         /// </summary>
-        /// <param name="did">The labeler <see cref="AtProto.Did" /> whose declaraction record should be returned.</param>
+        /// <param name="did">The labeler <see cref="AtProto.Did" /> whose declaration record should be returned.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null.</exception>
@@ -81,20 +81,39 @@ namespace idunno.Bluesky
         [UnconditionalSuppressMessage("AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-        public async Task<AtProtoHttpResult<LabelerDeclarationRecord>> GetLabelerDeclaration(
+        public async Task<AtProtoHttpResult<LabelerDeclaration>> GetLabelerDeclaration(
             Did did,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(did);
 
-            return await GetRecord<LabelerDeclarationRecord>(
+            AtProtoHttpResult<AtProtoRepositoryRecord<LabelerDeclaration>> getRecordResult =  await GetRecord<LabelerDeclaration>(
                 new AtUri($"at://{did}/app.bsky.labeler.service/self"),
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (getRecordResult.Succeeded)
+            {
+                return new AtProtoHttpResult<LabelerDeclaration>(
+                    getRecordResult.Result.Value,
+                    statusCode: getRecordResult.StatusCode,
+                    httpResponseHeaders: getRecordResult.HttpResponseHeaders,
+                    atErrorDetail: getRecordResult.AtErrorDetail,
+                    rateLimit: getRecordResult.RateLimit);
+            }
+            else
+            {
+                return new AtProtoHttpResult<LabelerDeclaration>(
+                    null,
+                    statusCode: getRecordResult.StatusCode,
+                    httpResponseHeaders: getRecordResult.HttpResponseHeaders,
+                    atErrorDetail: getRecordResult.AtErrorDetail,
+                    rateLimit: getRecordResult.RateLimit);
+            }
         }
 
         /// <summary>
-        /// Gets information about the labeller services that the current user subscribes to.
+        /// Gets information about the labeler services that the current user subscribes to.
         /// </summary>
         /// <param name="getDetailedViews">Flag indicating whether a detailed view for each service should be returned.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -140,9 +159,9 @@ namespace idunno.Bluesky
 
 
         /// <summary>
-        /// Gets information about the labeller services identified by the specified <paramref name="dids"/>.
+        /// Gets information about the labeler services identified by the specified <paramref name="dids"/>.
         /// </summary>
-        /// <param name="dids">A collection of <see cref="Did"/>s for the labellers whose service views should be returned</param>
+        /// <param name="dids">A collection of <see cref="Did"/>s for the labelers whose service views should be returned</param>
         /// <param name="getDetailedViews">Flag indicating whether a detailed view for each service should be returned.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -174,7 +193,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Gets detailed information about the labeller services that the current user subscribes to.
+        /// Gets detailed information about the labeler services that the current user subscribes to.
         /// </summary>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>

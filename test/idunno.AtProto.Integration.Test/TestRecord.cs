@@ -6,16 +6,8 @@ using idunno.AtProto.Repo;
 namespace idunno.AtProto.Integration.Test
 {
     [ExcludeFromCodeCoverage]
-    public record TestRecordValue : AtProtoRecordValue
+    public record TestRecord : AtProtoRecord
     {
         public required string TestValue { get; set; }
-    }
-
-    [ExcludeFromCodeCoverage]
-    public record TestRecord : AtProtoRecord<TestRecordValue>
-    {
-        public TestRecord(AtUri uri, Cid cid, TestRecordValue value) : base(uri, cid, value)
-        {
-        }
     }
 }

@@ -15,7 +15,7 @@ namespace idunno.Bluesky.Record
     /// <summary>
     /// Record representing a list of accounts (actors). Scope includes moderation-oriented lists, curation-oriented lists and starter packs.
     /// </summary>
-    public sealed record BlueskyList : BlueskyTimestampedRecordValue
+    public sealed record BlueskyList : BlueskyTimestampedRecord
     {
         string _name;
         string? _description;

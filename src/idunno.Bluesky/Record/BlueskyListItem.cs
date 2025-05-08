@@ -5,7 +5,7 @@ using idunno.AtProto;
 
 namespace idunno.Bluesky.Record
 {
-    internal sealed record BlueskyListItem : BlueskyTimestampedRecordValue
+    internal sealed record BlueskyListItem : BlueskyTimestampedRecord
     {
         public required AtUri List { get; init; }
 

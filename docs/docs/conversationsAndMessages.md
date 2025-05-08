@@ -11,7 +11,7 @@
 To get a list of conversations for the authenticated user use the `ListConversations()` api:
 
 ```c#
-var listConversations = await agent.ListConversations();
+var listConversationsResult = await agent.ListConversations();
 ```
 
 This returns a [pageable list](cursorsAndPagination.md) of `ConversationView` which supplies the conversation ID, members,
@@ -22,14 +22,14 @@ If you already have a conversation ID you can use `GetConversation` to retrieve 
 To retrieve the messages in a conversation use `GetMessages`:
 
 ```c#
-var getMessages = await agent.GetMessages(conversationId, cancellationToken: cancellationToken);
+var getMessagesResult = await agent.GetMessages(conversationId, cancellationToken: cancellationToken);
 ```
 
 The returns a [pageable list](cursorsAndPagination.md) of either `MessageView` or `DeletedMessageView` for each message in the conversation, as well
 as the DID of the sender, which you can match up to the `ConversationView` to get the sender information, for example
 
 ```c#
-foreach (MessageViewBase message in getMessages.Result)
+foreach (MessageViewBase message in getMessagesResult.Result)
 {
     if (message is MessageView view)
     {
@@ -53,7 +53,7 @@ optionally the message id of the last message seen.
 To send a message to a conversation use `SendMessage()`:
 
 ```c#
-var sendMessage = await agent.SendMessage(conversationID, "hello"", cancellationToken);
+var sendMessageResult = await agent.SendMessage(conversationID, "hello"", cancellationToken);
 ```
 
 This returns a `MessageView` which includes the message identifier, which you can use to delete a message.
@@ -99,7 +99,6 @@ foreach (MessageViewBase message in getMessages.Result)
 To add a reaction to a message call `AddReaction()`. This requires the conversation id and the message id, and the reaction you want to add. A reaction is an single emoji grapheme.
 To delete a reaction call `RemoveReaction()` with the same parameters with which you added a reaction.
 
-
 ## <a name="creating">Starting a conversation</a>
 
 To start a conversation you will need the DIDs of the conversation members, which you pass a collection to `GetConversationForMembers()`. If the user has left a conversation with these DIDs
@@ -109,7 +108,7 @@ it will be restored in the direct message list.
 var memberDid = await agent.ResolveHandle("example.invalid.handle", cancellationToken);
 List<Did> conversationMembers = new() { agent.Did!, bot2Did! };
 
-var startConversation = await agent.GetConversationForMembers(conversationMembers, cancellationToken);
+var startConversationResult = await agent.GetConversationForMembers(conversationMembers, cancellationToken);
 ```
 
 `StartConversation()` returns a `ConversationView` which includes the conversation ID, which you can then use to send messages to the chat.

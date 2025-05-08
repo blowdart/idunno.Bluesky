@@ -16,7 +16,7 @@ namespace idunno.Bluesky.Embed
     [JsonDerivedType(typeof(EmbeddedVideo), typeDiscriminator: "app.bsky.embed.video")]
     [JsonDerivedType(typeof(EmbeddedRecord), typeDiscriminator: "app.bsky.embed.record")]
     [JsonDerivedType(typeof(EmbeddedRecordWithMedia), typeDiscriminator: "app.bsky.embed.recordWithMedia")]
-    public record EmbeddedBase : AtProtoRecordValue
+    public record EmbeddedBase : AtProtoRecord
     {
     }
 }

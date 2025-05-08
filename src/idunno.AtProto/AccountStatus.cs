@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-namespace idunno.AtProto.Authentication
+namespace idunno.AtProto
 {
     /// <summary>
     /// The hosting status of a user account.

@@ -6,36 +6,36 @@ An authenticated user can edit their profile, including updating their display n
 > Only accounts with a valid profile are indexed for search. When creating a new account, Bluesky recommends creating a minimal
 > profile with `DisplayName` set to the user's [handle](../commonTerms.md#handles).
 
-To create a profile call `agent.SetProfile()` with a profile record value.
+To create a profile call `agent.CreateProfile()` with a profile record value.
 
-`SetProfile(profile)`
+`CreateProfile(profile)`
 
 | Parameter    | Type                | Description                                                             | Required   |
 |--------------|---------------------|-------------------------------------------------------------------------|:----------:|
-| profile      | ProfileRecordValue  | The new profile record to create.                                       | Yes        |
+| profile      | Profile             | The new profile record to create.                                       | Yes        |
 
 ```
-await agent.SetProfile(
-    new ProfileRecordValue(
+await agent.CreateProfile(
+    new Profile(
         displayName: "display name",
         description: "description");
 ```
 
 To edit a profile get the user's existing profile with `agent.GetProfile()`, edit the profile,
-then call `agent.SetProfile()` with the edited profile record.
+then call `agent.UpdateProfile()` with the edited profile record.
 
-`SetProfile(profile)`
+`UpdateProfile(profile)`
 
 | Parameter    | Type                | Description                                                             | Required   |
 |--------------|---------------------|-------------------------------------------------------------------------|:----------:|
-| profile      | ProfileRecord       | The updated profile record to write.                                    | Yes        |
+| profile      | ReferencedProfile   | The updated profile record to write.                                    | Yes        |
 
 ```c#
 var getProfileResult = await agent.GetProfile();
 if (getProfileResult.Succeeded)
 {
     getProfileResult.Result.Profile.Description = "The idunno.Bluesky Test Bot";
-    agent.SetProfile(getProfileResult.Result, cancellationToken: cancellationToken);
+    agent.UpdateProfile(getProfileResult.Result, cancellationToken: cancellationToken);
 }
 ```
 
@@ -52,6 +52,6 @@ if (getProfileResult.Succeeded &&
 {
     getProfileResult.Result.Profile.Description = "The idunno.Bluesky Test Bot";
     getProfileResult.Result.Profile.Avatar = avatarUploadBlobResult.Result;
-    agent.SetProfile(getProfileResult.Result, cancellationToken: cancellationToken);
+    agent.UpdateProfile(getProfileResult.Result, cancellationToken: cancellationToken);
 }
 ```

@@ -20,8 +20,7 @@ namespace idunno.AtProto.Integration.Test
         UseStringEnumConverter = true)]
 
     [JsonSerializable(typeof(TestRecord))]
-    [JsonSerializable(typeof(TestRecordValue))]
-    [JsonSerializable(typeof(AtProtoRecord<TestRecordValue>))]
+    [JsonSerializable(typeof(AtProtoRepositoryRecord<TestRecord>))]
     [JsonSerializable(typeof(DidDocument))]
     internal partial class SourceGenerationContext : JsonSerializerContext
     {
