@@ -2,6 +2,12 @@
 
 ## 0.9.0
 
+### Features
+
+#### idunno.AtProto
+
+* New `AtProtoJetstream` class for consuming the jetstream.
+
 ### Breaking Changes
 
 #### idunno.AtProto
