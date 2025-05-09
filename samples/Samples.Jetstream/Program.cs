@@ -44,10 +44,6 @@ namespace Samples.Jetstream
                 {
                     UseCompression = true,
                     LoggerFactory = loggerFactory
-                },
-                webSocketOptions: new WebSocketOptions()
-                {
-                    Proxy = new WebProxy(new Uri("http://localhost:8866"))
                 }))
             {
                 jetStream.ConnectionStateChanged += (sender, e) =>
