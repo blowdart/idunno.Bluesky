@@ -24,5 +24,3 @@ updates:
   directory: "/"
   schedule:
     interval: "daily"
-  reviewers:
-    - "blowdart"
