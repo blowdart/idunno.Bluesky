@@ -52,11 +52,13 @@ Now add the [Coravel](https://docs.coravel.net/) nuget package to provide the sc
 
 # [Command Line](#tab/coravel/commandLine)
 
-In a PowerShell console window run the following commands
+1. In a PowerShell console window run the following commands
    ```PowerShell
    dotnet add package Coravel
    dotnet add package Microsoft.Extensions.Hosting
    ```
+1. Open `BlueskyBot.csproj` in the editor of your choice and add add the following before the `</Project>` line
+   [!code-xml[](code/BlueskyBot/BlueskyBot.csproj#L21-L25)]
 
 # [Visual Studio](#tab/coravel/visualStudio)
 
@@ -64,6 +66,8 @@ In a PowerShell console window run the following commands
 1. Search for `Microsoft.Extensions.Hosting`, and click **Install**.
 1. Close the **Manage nuget packages** dialog.
 1. Choose **File ▶ Save All**
+1. Open `BlueskyBot.csproj` in the editor of your choice and add add the following before the `</Project>` line
+   [!code-xml[](code/BlueskyBot/BlueskyBot.csproj#L21-L25)]
 
 # [Visual Studio Code](#tab/coravel/vsCode)
 
@@ -71,7 +75,8 @@ In a PowerShell console window run the following commands
 1. Enter `Coravel` in the package search dialog and choose the latest version.
 1. Open the Command Palette (Ctrl + Shift + P) then search for and select **Nuget: Add**
 1. Enter `Microsoft.Extensions.Hosting` in the package search dialog and choose the latest version.
-
+1. Open `BlueskyBot.csproj` in the editor of your choice and add add the following before the `</Project>` line
+   [!code-xml[](code/BlueskyBot/BlueskyBot.csproj#L21-L25)]
 ---
 
 ## Add settings file support
@@ -98,7 +103,7 @@ Now we have all our dependencies line project we'll add a settings file and a cl
 1. Open `BotSettings.cs` in your editor of choice and and add the following
    [!code-csharp[](code/BlueskyBot/BotSettings.cs)]
 1. Open `BlueskyBot.csproj` in the editor of choice and add the following lines before the closing `</project>` 
-   [!code-xml[](code/BlueskyBot/BlueskyBot.csproj?highlight=21-25)]
+   [!code-xml[](code/BlueskyBot/BlueskyBot.csproj#L27-L31)]
 1. Run `dotnet build` to make sure there aren't any mistakes.
 
 # [Visual Studio](#tab/settings/visualStudio)
@@ -125,7 +130,7 @@ Now we have all our dependencies line project we'll add a settings file and a cl
    **<yourAccountHandle>** with the handle of your bot account.
    [!code-json[](code/BlueskyBot/appsettings.json?highlight=3)]
 1. Open the `BlueskyBot.csproj` file and add the following before the `</Project>` line
-   [!code-xml[](code/BlueskyBot/BlueskyBot.csproj?highlight=21-25)]
+   [!code-xml[](code/BlueskyBot/BlueskyBot.csproj#L27-L31)]
 1. Right click on the BlueskyBot folder in the Explorer window and choose **New File..**, then call the new file `BotSettings.cs`
 1. Replace the generated contents with the following
    [!code-csharp[](code/BlueskyBot/BotSettings.cs)]

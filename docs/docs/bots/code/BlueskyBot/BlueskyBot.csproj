@@ -18,6 +18,12 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <!-- Disable strongname warning as that's not been enforced since .net 5.-->
+    <!-- See https://github.com/dotnet/roslyn/issues/76197 -->
+    <NoWarn>$(NoWarn);CS8002</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
