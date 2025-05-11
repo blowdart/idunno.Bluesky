@@ -50,3 +50,5 @@ dpop
 JsonTypeInfos
 csharp
 Jetstream
+csproj
+Coravel

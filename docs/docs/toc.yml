@@ -40,6 +40,11 @@ items:
       - name: Editing a user profile
         href: profileEditing.md
 
+  - name: Writing Bots
+    items:
+      - name: Writing your first bot
+        href: bots/scheduledPostBot.md
+
   - name: Advanced Topics
     items:
       - name: Labels

@@ -11,7 +11,6 @@ using idunno.AtProto.Repo;
 
 using Samples.Common;
 using idunno.AtProto.Server.Models;
-using idunno.Bluesky;
 
 namespace Samples.AtProto
 {

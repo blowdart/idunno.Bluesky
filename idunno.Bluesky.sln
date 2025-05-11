@@ -61,6 +61,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{8849E619-47FB-420A-AEA0-A5794F728BD0}"
 	ProjectSection(SolutionItems) = preProject
 		.github\workflows\ci-build.yml = .github\workflows\ci-build.yml
+		.github\CODEOWNERS = .github\CODEOWNERS
 		.github\dependabot.yml = .github\dependabot.yml
 	EndProjectSection
 EndProject
@@ -206,6 +207,19 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "code", "code", "{481AD9A1-E
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.Jetstream", "samples\Samples.Jetstream\Samples.Jetstream.csproj", "{209A74A9-168E-4204-8F9C-EE78DC1D061F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.Bot", "samples\Samples.Bot\Samples.Bot.csproj", "{95FC0356-5BC7-43E9-9FDD-7D4894E85CDE}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "bots", "bots", "{9A865CDD-4409-4949-8E18-F7C7F2240E53}"
+	ProjectSection(SolutionItems) = preProject
+		docs\docs\bots\scheduledPostBot.md = docs\docs\bots\scheduledPostBot.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "code", "code", "{6A7AE9C2-2EB2-4F62-A96F-77A61534FCBD}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BlueskyBot", "BlueskyBot", "{48A71DA9-2EAF-43FC-BA5B-2FFD7C245C7C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlueskyBot", "docs\docs\bots\code\BlueskyBot\BlueskyBot.csproj", "{12B43359-C9E4-3F6B-467A-8CB645FB2164}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		CodeQL|Any CPU = CodeQL|Any CPU
@@ -339,6 +353,18 @@ Global
 		{209A74A9-168E-4204-8F9C-EE78DC1D061F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{209A74A9-168E-4204-8F9C-EE78DC1D061F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{209A74A9-168E-4204-8F9C-EE78DC1D061F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{95FC0356-5BC7-43E9-9FDD-7D4894E85CDE}.CodeQL|Any CPU.ActiveCfg = Debug|Any CPU
+		{95FC0356-5BC7-43E9-9FDD-7D4894E85CDE}.CodeQL|Any CPU.Build.0 = Debug|Any CPU
+		{95FC0356-5BC7-43E9-9FDD-7D4894E85CDE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{95FC0356-5BC7-43E9-9FDD-7D4894E85CDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{95FC0356-5BC7-43E9-9FDD-7D4894E85CDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{95FC0356-5BC7-43E9-9FDD-7D4894E85CDE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{12B43359-C9E4-3F6B-467A-8CB645FB2164}.CodeQL|Any CPU.ActiveCfg = Debug|Any CPU
+		{12B43359-C9E4-3F6B-467A-8CB645FB2164}.CodeQL|Any CPU.Build.0 = Debug|Any CPU
+		{12B43359-C9E4-3F6B-467A-8CB645FB2164}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{12B43359-C9E4-3F6B-467A-8CB645FB2164}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{12B43359-C9E4-3F6B-467A-8CB645FB2164}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{12B43359-C9E4-3F6B-467A-8CB645FB2164}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -379,6 +405,11 @@ Global
 		{A95171BB-EF1B-42B0-8001-1AEAF832734C} = {E2B63F0A-9892-45AA-8453-4E5A23017D63}
 		{481AD9A1-E768-4787-8D78-B2B9600800E8} = {A95171BB-EF1B-42B0-8001-1AEAF832734C}
 		{209A74A9-168E-4204-8F9C-EE78DC1D061F} = {B1A49FA3-07AB-4D78-BC16-FF7FB5857840}
+		{95FC0356-5BC7-43E9-9FDD-7D4894E85CDE} = {B1A49FA3-07AB-4D78-BC16-FF7FB5857840}
+		{9A865CDD-4409-4949-8E18-F7C7F2240E53} = {E2B63F0A-9892-45AA-8453-4E5A23017D63}
+		{6A7AE9C2-2EB2-4F62-A96F-77A61534FCBD} = {9A865CDD-4409-4949-8E18-F7C7F2240E53}
+		{48A71DA9-2EAF-43FC-BA5B-2FFD7C245C7C} = {6A7AE9C2-2EB2-4F62-A96F-77A61534FCBD}
+		{12B43359-C9E4-3F6B-467A-8CB645FB2164} = {48A71DA9-2EAF-43FC-BA5B-2FFD7C245C7C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2B9F8C2-975D-4E3A-B05E-48FDF4BCE3E6}

@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": ".NET Core Launch (console)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "dotnet: build",
+            // If you have changed target frameworks, make sure to update the program path.
+            "program": "${workspaceFolder}/BlueskyBot/bin/Debug/net9.0/BlueskyBot.dll",
+            "cwd": "${workspaceFolder}/BlueskyBot",
+            "stopAtEntry": false,
+            "console": "internalConsole",
+            "env": {
+                "DOTNET_ENVIRONMENT": "Development"
+            }
+        }
+    ]
+}

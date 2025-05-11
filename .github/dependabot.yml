@@ -17,6 +17,9 @@ updates:
       update-types: ["version-update:semver-major"]
     - dependency-name: "System.Runtime.Caching"
       update-types: ["version-update:semver-major"]
+    - dependency-name: "Microsoft.Extensions.Hosting"
+      update-types: ["version-update:semver-major"]
+
   reviewers:
     - "blowdart"
 
