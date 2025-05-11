@@ -8,6 +8,16 @@
 
 * New `AtProtoJetstream` class for consuming the jetstream.
 
+#### Docs
+
+* Add Jetstream docs
+* Add guidance for writing a simple scheduled post bot.
+
+#### Samples
+
+* Add Jetstream sample
+* Add bot sample
+
 ### Breaking Changes
 
 #### idunno.AtProto
