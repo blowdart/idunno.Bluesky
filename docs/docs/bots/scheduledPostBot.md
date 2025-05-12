@@ -184,8 +184,8 @@ Finally lets actually put some code together, and write the bot and run it.
 
 # [Command Line](#tab/program/commandLine)
 
-1. Open `program.cs` in your editor of choice, delete the contents and replace them with the following code
-[!code-json[](code/BlueskyBot/program.cs)]
+1. Open `Program.cs` in your editor of choice, delete the contents and replace them with the following code
+[!code-json[](code/BlueskyBot/Program.cs)]
 2. At the command line run the bot using
 ```Powershell
 dotnet run --environment:DOTNET_ENVIRONMENT=Development
@@ -193,8 +193,8 @@ dotnet run --environment:DOTNET_ENVIRONMENT=Development
 3. Wait until you see "Just posted" then check your bot's posts.
 
 # [Visual Studio](#tab/program/visualStudio)
-1. Open `program.cs`, delete the contents and replace them with the following code
-[!code-json[](code/BlueskyBot/program.cs)]
+1. Open `Program.cs`, delete the contents and replace them with the following code
+[!code-json[](code/BlueskyBot/Program.cs)]
 1. On the Visual Studio main menu choose ** Debug  ▶ BlueskyBot Debug Properties **
 1. In the **Launch Profiles** dialog enter `DOTNET_ENVIRONMENT` as the Name and `Development` as the value.
 1. Close the **Launch Profiles** dialog
@@ -203,8 +203,8 @@ dotnet run --environment:DOTNET_ENVIRONMENT=Development
 1. Wait until you see "Just posted" then check your bot's posts.
 
 # [Visual Studio Code](#tab/program/vsCode)
-1. Open `program.cs`, delete the contents and replace them with the following code
-[!code-json[](code/BlueskyBot/program.cs)]
+1. Open `Program.cs`, delete the contents and replace them with the following code
+[!code-json[](code/BlueskyBot/Program.cs)]
 1. Right click on the `BlueskyBot` folder and choose **New Folder**.
 1. Name the folder `.vscode`
 1. Right click on the new `.vscode` folder and choose **New File**
