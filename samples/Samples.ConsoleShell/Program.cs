@@ -11,10 +11,6 @@ using Samples.Common;
 
 using idunno.AtProto;
 using idunno.Bluesky;
-using idunno.Bluesky.Embed;
-using System.IO;
-using System.Net;
-using idunno.Bluesky.Feed;
 
 namespace Samples.ConsoleShell
 {

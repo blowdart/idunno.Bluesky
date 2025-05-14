@@ -177,7 +177,7 @@ namespace idunno.AtProto.Jetstream
         }
 
         /// <summary>
-        /// Builds the <see cref="AtProtoJetstream"/>.
+        /// Builds a new instance of <see cref="AtProtoJetstream"/>.
         /// </summary>
         /// <returns>A configured <see cref="AtProtoJetstream"/>.</returns>
         public AtProtoJetstream Build()

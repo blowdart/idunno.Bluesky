@@ -2,13 +2,13 @@
 // Licensed under the MIT License.
 
 using System.Net.WebSockets;
+using System.Xml.Serialization;
 using Microsoft.Extensions.Logging;
 
 namespace idunno.AtProto.Jetstream
 {
     internal static partial class JetStreamLogger
     {
-
         [LoggerMessage(1, LogLevel.Information, "Connecting to {uri}")]
         internal static partial void ConnectingTo(ILogger logger, Uri uri);
 
@@ -18,7 +18,7 @@ namespace idunno.AtProto.Jetstream
         [LoggerMessage(3, LogLevel.Error, "Error in message loop")]
         internal static partial void MessageLoopError(ILogger logger, Exception ex);
 
-        [LoggerMessage(4, LogLevel.Error, "MessageLoop has been cancelled")]
+        [LoggerMessage(4, LogLevel.Error, "WSS operation in messageLoop has been cancelled")]
         internal static partial void MessageLoopCancellation(ILogger logger);
 
         [LoggerMessage(5, LogLevel.Debug, "Client state changed to {state}")]
@@ -39,5 +39,16 @@ namespace idunno.AtProto.Jetstream
         [LoggerMessage(10, LogLevel.Debug, "ReceiveLoop could not convert message to string")]
         internal static partial void MessageLoopFailedToConvert(ILogger logger);
 
+        [LoggerMessage(11, LogLevel.Error, "Exception when calling _client.Dispose() in ConnectAsync()")]
+        internal static partial void ErrorDisposingClientInConnectAsync(ILogger logger, Exception ex);
+
+        [LoggerMessage(11, LogLevel.Warning, "{fault} logged. Current fault count is {currentCount}")]
+        internal static partial void FaultLogged(ILogger logger, string fault, int currentCount);
+
+        [LoggerMessage(12, LogLevel.Debug, "ClientWebSocket created")]
+        internal static partial void InternalClientWebSocketCreated(ILogger logger);
+
+        [LoggerMessage(13, LogLevel.Debug, "Sent OptionsUpdate message")]
+        internal static partial void OptionsUpdateMessageSent(ILogger logger);
     }
 }

@@ -724,6 +724,26 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
+        /// Extracts facets from the post text, if any.
+        /// </summary>
+        /// <param name="facetExtractor">The facet extractor to use</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="facetExtractor"/> is null.</exception>
+        /// <remarks>
+        /// <para>If this instance of <see cref="PostBuilder"/> already has <see cref="Facet"/>s extraction will not run.</para>
+        /// </remarks>
+        public async Task ExtractFacets(IFacetExtractor facetExtractor, CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(facetExtractor);
+
+            if (!string.IsNullOrEmpty(_post.Text) && Facets.Count == 0)
+            {
+                _post.Facets = await facetExtractor.ExtractFacets(_post.Text, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
         /// Appends a copy of the specified string to the record text of this instance.
         /// </summary>
         /// <param name="value">The string to append</param>

@@ -14,6 +14,7 @@ using idunno.Bluesky.Actions;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Record;
 using System;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace idunno.Bluesky
 {
@@ -1028,29 +1029,35 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="parent">A <see cref="StrongReference"/> to the parent post that the new post will be in reply to.</param>
         /// <param name="text">The text for the new reply</param>
+        /// <param name="extractFacets">Flag indicating whether facets should be extracted from the post text automatically.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/> or <paramref name="text"/> is nul.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResult>> ReplyTo(StrongReference parent, string text, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResult>> ReplyTo(
+            StrongReference parent,
+            string text,
+            bool extractFacets = true,
+            CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(text);
-            ArgumentNullException.ThrowIfNull(parent);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.PostLengthInCharacters);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.PostLengthInCharacters);
 
-            if (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(text),
-                    $"text cannot have a be longer than than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
-            }
+            ArgumentNullException.ThrowIfNull(parent);
 
             if (!IsAuthenticated)
             {
                 throw new AuthenticationRequiredException();
             }
 
-            return await ReplyTo(parent, text, images:null, cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await InternalReplyTo(
+                parent: parent,
+                text:text,
+                images:null,
+                extractFacets:extractFacets,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1059,23 +1066,25 @@ namespace idunno.Bluesky
         /// <param name="parent">A <see cref="StrongReference"/> to the parent post that the new post will be in reply to.</param>
         /// <param name="text">The text for the new reply</param>
         /// <param name="image">An image to attach to the reply.</param>
+        /// <param name="extractFacets">Flag indicating whether facets should be extracted from the post text automatically.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/>, <paramref name="text"/> or <paramref name="image"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResult>> ReplyTo(StrongReference parent, string text, EmbeddedImage image, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResult>> ReplyTo(
+            StrongReference parent,
+            string text,
+            EmbeddedImage image,
+            bool extractFacets = true,
+            CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(text);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.PostLengthInCharacters);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.PostLengthInCharacters);
+
             ArgumentNullException.ThrowIfNull(parent);
             ArgumentNullException.ThrowIfNull(image);
-
-            if (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(text),
-                    $"text cannot have a be longer than than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
-            }
 
             if (!IsAuthenticated)
             {
@@ -1084,7 +1093,12 @@ namespace idunno.Bluesky
 
             List<EmbeddedImage> images = [ image ];
 
-            return await ReplyTo(parent, text, images, cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await InternalReplyTo(
+                parent: parent,
+                text: text,
+                images: images,
+                extractFacets: extractFacets,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1093,25 +1107,55 @@ namespace idunno.Bluesky
         /// <param name="parent">A <see cref="StrongReference"/> to the parent post that the new post will be in reply to.</param>
         /// <param name="text">The text for the new post</param>
         /// <param name="images">Any images to attach to the post.</param>
+        /// <param name="extractFacets">Flag indicating whether facets should be extracted from the post text automatically.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown <paramref name="text"/> is null or empty.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResult>> ReplyTo(StrongReference parent, string text, ICollection<EmbeddedImage>? images, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResult>> ReplyTo(
+            StrongReference parent,
+            string text,
+            ICollection<EmbeddedImage> images,
+            bool extractFacets = true,
+            CancellationToken cancellationToken = default)
         {
-            ArgumentException.ThrowIfNullOrEmpty(text);
+            ArgumentNullException.ThrowIfNull(text);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.PostLengthInCharacters);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.PostLengthInCharacters);
             ArgumentNullException.ThrowIfNull(parent);
+            ArgumentNullException.ThrowIfNull(images);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(images.Count, Maximum.ImagesInPost);
 
-            if (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
+            if (!IsAuthenticated)
             {
-                throw new ArgumentOutOfRangeException(nameof(text), $"text cannot have be longer than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
+                throw new AuthenticationRequiredException();
             }
 
-            if (images != null && images.Count > Maximum.ImagesInPost)
-            { 
-                throw new ArgumentOutOfRangeException( nameof(images), $"cannot have more than {Maximum.ImagesInPost} images.");
+            return await InternalReplyTo(
+                parent: parent,
+                text: text,
+                images: images,
+                extractFacets: extractFacets,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+ 
+        private async Task<AtProtoHttpResult<CreateRecordResult>> InternalReplyTo(
+            StrongReference parent,
+            string text,
+            ICollection<EmbeddedImage>? images = null,
+            bool extractFacets = true,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(text);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.PostLengthInCharacters);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.PostLengthInCharacters);
+            ArgumentNullException.ThrowIfNull(parent);
+
+            if (images != null)
+            {
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(images.Count, Maximum.ImagesInPost);
             }
 
             if (!IsAuthenticated)
@@ -1139,6 +1183,13 @@ namespace idunno.Bluesky
             if (images is not null)
             {
                 postBuilder.Add(images);
+            }
+
+            if (extractFacets)
+            {
+                await postBuilder.ExtractFacets(
+                    facetExtractor: _facetExtractor,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
             }
 
             return await Post(postBuilder, cancellationToken: cancellationToken).ConfigureAwait(false);

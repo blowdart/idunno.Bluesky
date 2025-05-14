@@ -7,8 +7,7 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto.Jetstream;
-using System.Net;
-using idunno.AtProto;
+
 
 namespace Samples.Jetstream
 {

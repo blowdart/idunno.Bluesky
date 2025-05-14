@@ -2,19 +2,18 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Web;
-
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-
-using ZstdSharp;
-
 using idunno.AtProto.Jetstream.Events;
 using idunno.AtProto.Jetstream.Models;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using ZstdSharp;
 
 namespace idunno.AtProto.Jetstream
 {
@@ -36,11 +35,21 @@ namespace idunno.AtProto.Jetstream
 
         private readonly Decompressor? _decompressor;
 
+        private readonly MemoryCache _faultCache;
+
         private List<Nsid> _collections = [];
 
         private List<Did> _dids = [];
 
         private ClientWebSocket _client;
+
+        private static readonly Meter s_meter = new("idunno.bluesky.jetstream");
+        private static readonly Counter<long> s_messagesReceived = s_meter.CreateCounter<long>(
+            name: "idunno.bluesky.jetstream.message",
+            description: "Number of messages received from the jetstream.");
+        private static readonly Counter<long> s_eventsParsed = s_meter.CreateCounter<long>(
+            name: "idunno.bluesky.jetstream.event",
+            description: "Number of events parsed from the jetstream.");
 
         /// <summary>
         /// Creates a new instance of <see cref="Jetstream"/>.
@@ -92,17 +101,21 @@ namespace idunno.AtProto.Jetstream
                 }
             }
 
-            _logger = LoggerFactory.CreateLogger<AtProtoJetstream>();
-
-            _client = new ClientWebSocket();
             if (webSocketOptions is not null)
             {
-                _client.Options.Proxy = webSocketOptions.Proxy;
-                if (webSocketOptions.KeepAliveInterval is not null)
-                {
-                    _client.Options.KeepAliveInterval = webSocketOptions.KeepAliveInterval.Value;
-                }
+                WebSocketOptions = webSocketOptions;
             }
+
+            _logger = LoggerFactory.CreateLogger<AtProtoJetstream>();
+
+            _faultCache = new MemoryCache(
+                new MemoryCacheOptions()
+                {
+                    SizeLimit = 10,
+                },
+                loggerFactory: LoggerFactory);
+
+            _client = CreateWebSocketClient();
         }
 
         /// <summary>
@@ -114,6 +127,8 @@ namespace idunno.AtProto.Jetstream
         /// Gets the configuration options for the agent.
         /// </summary>
         protected internal JetstreamOptions Options { get; init; } = new JetstreamOptions();
+
+        private WebSocketOptions WebSocketOptions { get; init; } = new WebSocketOptions();
 
         /// <summary>
         /// Gets or sets a list of <see cref="Did"/>s to filter commit operations on.
@@ -150,6 +165,21 @@ namespace idunno.AtProto.Jetstream
         }
 
         /// <summary>
+        /// Gets the underlying <see cref="ClientWebSocket"/>.
+        /// </summary>
+        protected ClientWebSocket ClientWebSocket => _client;
+
+        /// <summary>
+        /// Gets the <see cref="WebSocketState"/> of the underlying <see cref="ClientWebSocket"/>.
+        /// </summary>
+        public WebSocketState ClientState => _client.State;
+
+        /// <summary>
+        /// Gets the <see cref="DateTimeOffset"/> indicating when last time a message from the JetsStream was received.
+        /// </summary>
+        public DateTimeOffset? MessageLastReceived { get; private set; }
+
+        /// <summary>
         /// Raised when this instance of <see cref="Jetstream"/> receives a message.
         /// </summary>
         public event EventHandler<MessageReceivedEventArgs>? MessageReceived;
@@ -176,6 +206,8 @@ namespace idunno.AtProto.Jetstream
         /// <param name="e">The <see cref="MessageReceivedEventArgs"/> for the event.</param>
         protected virtual void OnMessageReceived(MessageReceivedEventArgs e)
         {
+            MessageLastReceived = DateTimeOffset.UtcNow;
+
             EventHandler<MessageReceivedEventArgs>? messageReceived = MessageReceived;
 
             if (!_disposed)
@@ -226,6 +258,7 @@ namespace idunno.AtProto.Jetstream
         /// </summary>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+        [MemberNotNull(nameof(_client))]
         public async Task ConnectAsync(
             CancellationToken? cancellationToken = default)
         {
@@ -242,6 +275,7 @@ namespace idunno.AtProto.Jetstream
         /// <param name="startFrom">A Unix microseconds timestamp cursor to begin playback from. A value of null results in live-tail operation.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+        [MemberNotNull(nameof(_client))]
         public async Task ConnectAsync(
             Uri? uri = null,
             DateTimeOffset? startFrom = null,
@@ -264,6 +298,9 @@ namespace idunno.AtProto.Jetstream
         /// <param name="cursor">A Unix microseconds timestamp cursor to begin playback from. A value of null results in live-tail operation.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+        [MemberNotNull(nameof(_client))]
+        [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Suppressing dispose exceptions on purpose.")]
+        [SuppressMessage("Minor Code Smell", "S2486:Generic exceptions should not be ignored", Justification = "Suppressing dispose exceptions on purpose.")]
         public async Task ConnectAsync(
             Uri? uri = null,
             long? cursor = null,
@@ -271,14 +308,26 @@ namespace idunno.AtProto.Jetstream
         {
             CancellationToken ctx = cancellationToken ?? CancellationToken.None;
 
-            if (_client.State == WebSocketState.Open)
+            if (_client is not null && _client.State == WebSocketState.Open)
             {
                 return;
             }
 
-            if (_client.State == WebSocketState.Aborted || _client.State == WebSocketState.Closed)
+            if (_client is null || _client.State == WebSocketState.Aborted || _client.State == WebSocketState.Closed)
             {
-                _client = new ClientWebSocket();
+                if (_client is not null)
+                {
+                    try
+                    {
+                        _client.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        JetStreamLogger.ErrorDisposingClientInConnectAsync(_logger, ex);
+                    }
+                }
+
+                _client = CreateWebSocketClient();
                 OnConnectionStateChanged(new ConnectionStateChangedEventArgs(_client.State));
             }
 
@@ -341,7 +390,7 @@ namespace idunno.AtProto.Jetstream
 
             OnConnectionStateChanged(new ConnectionStateChangedEventArgs(_client.State));
 
-            ReceiveLoop(_client, ctx).FireAndForget();
+            ReceiveLoop(ctx).FireAndForget();
         }
 
         /// <summary>
@@ -358,7 +407,7 @@ namespace idunno.AtProto.Jetstream
             CancellationToken? cancellationToken = default)
         {
             CancellationToken ctx = cancellationToken ?? CancellationToken.None;
-           
+
             if (_client.State == WebSocketState.Open)
             {
                 try
@@ -374,6 +423,25 @@ namespace idunno.AtProto.Jetstream
             OnConnectionStateChanged(new ConnectionStateChangedEventArgs(_client.State));
         }
 
+        /// <summary>
+        /// Log a fault in the fault cache.
+        /// </summary>
+        /// <param name="fault">A description of the fault.</param>
+        protected void LogFault(string fault="Unspecified fault")
+        {
+            _faultCache.Set(
+                key: DateTimeOffset.UtcNow.Ticks,
+                value: fault,
+                DateTime.Now.AddMinutes(5));
+
+            JetStreamLogger.FaultLogged(_logger, fault, FaultCount);
+        }
+
+        /// <summary>
+        /// Gets the number of faults (maximum of 10) that occurred in the last five minutes.
+        /// </summary>
+        public int FaultCount => _faultCache.Count;
+
         /// <inheritdoc/>
         protected virtual void Dispose(bool disposing)
         {
@@ -382,6 +450,7 @@ namespace idunno.AtProto.Jetstream
                 if (disposing)
                 {
                     _client.Dispose();
+                    _faultCache.Dispose();
                     _decompressor?.Dispose();
                 }
 
@@ -397,18 +466,44 @@ namespace idunno.AtProto.Jetstream
             GC.SuppressFinalize(this);
         }
 
+        private ClientWebSocket CreateWebSocketClient()
+        {
+            var client = new ClientWebSocket();
+            JetStreamLogger.InternalClientWebSocketCreated(_logger);
+
+            if (WebSocketOptions is not null)
+            {
+                if (WebSocketOptions.Proxy is not null)
+                {
+                    client.Options.Proxy = WebSocketOptions.Proxy;
+                }
+
+                if (WebSocketOptions.KeepAliveInterval is not null)
+                {
+                    client.Options.KeepAliveInterval = WebSocketOptions.KeepAliveInterval.Value;
+                }
+            }
+
+            return client;
+        }
+
         [SuppressMessage("Reliability", "CA2008:Do not create tasks without passing a TaskScheduler", Justification = "A scheduler can be configured on the TaskFactory in Options.")]
-        private async Task ReceiveLoop(ClientWebSocket client, CancellationToken cancellationToken)
+        private async Task ReceiveLoop(CancellationToken cancellationToken)
         {
             byte[] buffer = new byte[Options.MaximumMessageSize];
 
-            while (client.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 WebSocketMessageType expectedMessageType = Options.UseCompression ? WebSocketMessageType.Binary : WebSocketMessageType.Text;
 
                 try
                 {
-                    ValueWebSocketReceiveResult result = await client.ReceiveAsync(new Memory<byte>(buffer), cancellationToken).ConfigureAwait(false);
+                    if (_client.State != WebSocketState.Open)
+                    {
+                        await ConnectAsync(cancellationToken).ConfigureAwait(false);
+                    }
+
+                    ValueWebSocketReceiveResult result = await _client.ReceiveAsync(new Memory<byte>(buffer), cancellationToken).ConfigureAwait(false);
 
                     if (result.MessageType != expectedMessageType && !result.EndOfMessage)
                     {
@@ -433,7 +528,9 @@ namespace idunno.AtProto.Jetstream
 
                     if (!string.IsNullOrEmpty(message))
                     {
+
                         OnMessageReceived(new MessageReceivedEventArgs(message));
+                        s_messagesReceived.Add(1);
 
                         // Now go to handle message in a new task.
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -442,16 +539,25 @@ namespace idunno.AtProto.Jetstream
                     }
                     else
                     {
+                        LogFault("Message conversion to string failed.");
                         JetStreamLogger.MessageLoopFailedToConvert(_logger);
                     }
-
                 }
-                catch (OperationCanceledException)
+                catch (WebSocketException ex)
                 {
+                    // Close the client and reopen.
+                    LogFault(ex.Message);
+                    _client.Dispose();
+                    await ConnectAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException ex)
+                {
+                    LogFault(ex.Message);
                     JetStreamLogger.MessageLoopCancellation(_logger);
                 }
                 catch (Exception ex)
                 {
+                    LogFault(ex.Message);
                     JetStreamLogger.MessageLoopError(_logger, ex);
                     throw;
                 }
@@ -535,7 +641,11 @@ namespace idunno.AtProto.Jetstream
             string message = JsonSerializer.Serialize(optionsUpdateMessage, SourceGenerationContext.Default.OptionsUpdateMessage);
             byte[] messageAsBytes = Encoding.UTF8.GetBytes(message);
 
-            await _client.SendAsync(messageAsBytes, WebSocketMessageType.Text, true, CancellationToken.None).FireAndForgetAsync(_logger).ConfigureAwait(false);
+            if (_client is not null && _client.State == WebSocketState.Open)
+            {
+                await _client.SendAsync(messageAsBytes, WebSocketMessageType.Text, true, CancellationToken.None).FireAndForgetAsync(_logger).ConfigureAwait(false);
+                JetStreamLogger.OptionsUpdateMessageSent(_logger);
+            }
         }
 
         internal static AtJetstreamEvent? DeriveEvent(AtJetstreamEvent atJetstreamEvent)
@@ -563,6 +673,8 @@ namespace idunno.AtProto.Jetstream
                         Kind = atJetstreamEvent.Kind,
                         Account = account
                     };
+
+                    s_eventsParsed.Add(1);
                     break;
 
                 case JetStreamEventKind.Commit:
@@ -582,6 +694,8 @@ namespace idunno.AtProto.Jetstream
                         Kind = atJetstreamEvent.Kind,
                         Commit = commit
                     };
+
+                    s_eventsParsed.Add(1);
                     break;
 
                 case JetStreamEventKind.Identity:
@@ -601,6 +715,8 @@ namespace idunno.AtProto.Jetstream
                         Kind = atJetstreamEvent.Kind,
                         Identity = identity
                     };
+
+                    s_eventsParsed.Add(1);
                     break;
 
                 default:
