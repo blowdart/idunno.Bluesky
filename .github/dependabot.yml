@@ -7,6 +7,8 @@ updates:
   ignore:
     - dependency-name: "Microsoft.AspNetCore.TestHost"
       update-types: ["version-update:semver-major"]
+    - dependency-name: "Microsoft.Extensions.Caching.Memory"
+      update-types: ["version-update:semver-major"]
     - dependency-name: "Microsoft.Extensions.DependencyInjection"
       update-types: ["version-update:semver-major"]
     - dependency-name: "Microsoft.Extensions.Logging"
@@ -20,8 +22,6 @@ updates:
     - dependency-name: "Microsoft.Extensions.Hosting"
       update-types: ["version-update:semver-major"]
 
-  reviewers:
-    - "blowdart"
 
 - package-ecosystem: "github-actions"
   directory: "/"
