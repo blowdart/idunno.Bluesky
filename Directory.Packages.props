@@ -14,7 +14,7 @@
     <PackageVersion Include="Microsoft.Sbom.Targets" Version="4.0.2" />
     <PackageVersion Include="DotNetAnalyzers.DocumentationAnalyzers" Version="1.0.0-beta.59" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.9.0" />
-    <PackageVersion Include="System.Text.Json" Version="9.0.4" />
+    <PackageVersion Include="System.Text.Json" Version="9.0.5" />
     <PackageVersion Include="System.Runtime.Caching" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="8.0.1" />
     <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.9.0" />
@@ -33,7 +33,7 @@
     <PackageVersion Include="Duende.IdentityModel.OidcClient" Version="6.0.1" />
     <PackageVersion Include="Duende.IdentityModel.OidcClient.Extensions" Version="6.0.1" />
     <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.15" />
-    <PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="8.0.15" />
+    <PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="8.0.16" />
     <PackageVersion Include="ZstdSharp.Port" Version="0.8.5" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="8.0.0" />
   </ItemGroup>
