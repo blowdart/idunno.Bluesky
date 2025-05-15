@@ -11,15 +11,19 @@ updates:
       update-types: ["version-update:semver-major"]
     - dependency-name: "Microsoft.Extensions.DependencyInjection"
       update-types: ["version-update:semver-major"]
+    - dependency-name: "Microsoft.Extensions.Hosting"
+      update-types: ["version-update:semver-major"]
     - dependency-name: "Microsoft.Extensions.Logging"
       update-types: ["version-update:semver-major"]
     - dependency-name: "Microsoft.Extensions.Logging.Console"
       update-types: ["version-update:semver-major"]
     - dependency-name: "Microsoft.Extensions.Http"
       update-types: ["version-update:semver-major"]
-    - dependency-name: "System.Runtime.Caching"
+    - dependency-name: "Microsoft.Extensions.Options.DataAnnotation"
       update-types: ["version-update:semver-major"]
-    - dependency-name: "Microsoft.Extensions.Hosting"
+    - dependency-name: "Microsoft.Extensions.Telemetry.Abstractions"
+      update-types: ["version-update:semver-major"]
+    - dependency-name: "System.Runtime.Caching"
       update-types: ["version-update:semver-major"]
 
 
