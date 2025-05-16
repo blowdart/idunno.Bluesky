@@ -6,11 +6,11 @@ namespace idunno.AtProto.Jetstream.Events
     /// <summary>
     /// Contains the results of parsing a message from the Jetstream.
     /// </summary>
-    public sealed class RecordReceivedEventArgs : EventArgs
+    public sealed class RecordReceivedEventArgs(AtJetstreamEvent parsedEvent) : EventArgs
     {
         /// <summary>
         /// Gets the message that trigged the event, parsed as its json object.
         /// </summary>
-        public required AtJetstreamEvent ParsedEvent { get; init; }
+        public AtJetstreamEvent ParsedEvent { get; } = parsedEvent;
     }
 }

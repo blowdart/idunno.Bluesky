@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-
+using System.Diagnostics.Metrics;
 using Microsoft.Extensions.Logging;
 
 namespace idunno.AtProto.Jetstream
@@ -18,6 +18,11 @@ namespace idunno.AtProto.Jetstream
         /// Gets or sets the <see cref="ILoggerFactory"/>, if any, to use when creating loggers.
         /// </summary>
         public ILoggerFactory? LoggerFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the <see cref="IMeterFactory"/>, if any, to use when creating meters.
+        /// </summary>
+        public IMeterFactory? MeterFactory { get; set; }
 
         /// <summary>
         /// Gets a flag indicating whether the underlying WebSocket should use compression. Defaults to true.

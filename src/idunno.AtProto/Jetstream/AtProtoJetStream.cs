@@ -8,11 +8,13 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Web;
-using idunno.AtProto.Jetstream.Events;
-using idunno.AtProto.Jetstream.Models;
-using Microsoft.Extensions.Caching.Memory;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+
+using idunno.AtProto.Jetstream.Events;
+using idunno.AtProto.Jetstream.Models;
+
 using ZstdSharp;
 
 namespace idunno.AtProto.Jetstream
@@ -29,27 +31,24 @@ namespace idunno.AtProto.Jetstream
 
         private const string SubscribeEndpoint = "/subscribe";
 
+        /// <summary>
+        /// Fall back meter for non-DI aware scenarios.
+        /// </summary>
+        private static readonly Meter s_fallbackMeter = new(JetstreamMetrics.MeterName);
+
+        private readonly JetstreamMetrics _metrics;
+
         private readonly ILogger<AtProtoJetstream> _logger;
 
         private readonly Uri _uri = new("wss://jetstream1.us-west.bsky.network");
 
         private readonly Decompressor? _decompressor;
 
-        private readonly MemoryCache _faultCache;
-
         private List<Nsid> _collections = [];
 
         private List<Did> _dids = [];
 
         private ClientWebSocket _client;
-
-        private static readonly Meter s_meter = new("idunno.bluesky.jetstream");
-        private static readonly Counter<long> s_messagesReceived = s_meter.CreateCounter<long>(
-            name: "idunno.bluesky.jetstream.message",
-            description: "Number of messages received from the jetstream.");
-        private static readonly Counter<long> s_eventsParsed = s_meter.CreateCounter<long>(
-            name: "idunno.bluesky.jetstream.event",
-            description: "Number of events parsed from the jetstream.");
 
         /// <summary>
         /// Creates a new instance of <see cref="Jetstream"/>.
@@ -91,6 +90,15 @@ namespace idunno.AtProto.Jetstream
                 LoggerFactory = NullLoggerFactory.Instance;
             }
 
+            if (Options.MeterFactory is not null)
+            {
+                _metrics = new JetstreamMetrics(Options.MeterFactory);
+            }
+            else
+            {
+                _metrics = new JetstreamMetrics(s_fallbackMeter);
+            }
+
             if (Options.UseCompression)
             {
                 _decompressor = new Decompressor();
@@ -107,13 +115,6 @@ namespace idunno.AtProto.Jetstream
             }
 
             _logger = LoggerFactory.CreateLogger<AtProtoJetstream>();
-
-            _faultCache = new MemoryCache(
-                new MemoryCacheOptions()
-                {
-                    SizeLimit = 10,
-                },
-                loggerFactory: LoggerFactory);
 
             _client = CreateWebSocketClient();
         }
@@ -195,6 +196,11 @@ namespace idunno.AtProto.Jetstream
         public event EventHandler<RecordReceivedEventArgs>? RecordReceived;
 
         /// <summary>
+        /// Raised when this instance of <see cref="Jetstream"/> encounters a fault.
+        /// </summary>
+        public event EventHandler<FaultRaisedEventArgs>? FaultRaised;
+
+        /// <summary>
         /// Creates a new <see cref="AtProtoJetstreamBuilder"/>.
         /// </summary>
         /// <returns>A new <see cref="AtProtoJetstreamBuilder"/></returns>
@@ -212,6 +218,7 @@ namespace idunno.AtProto.Jetstream
 
             if (!_disposed)
             {
+                _metrics.MessagesReceived(1);
                 messageReceived?.Invoke(this, e);
             }
         }
@@ -226,6 +233,7 @@ namespace idunno.AtProto.Jetstream
 
             if (!_disposed)
             {
+                _metrics.EventsParsed(1);
                 messageParsed?.Invoke(this, e);
             }
         }
@@ -250,6 +258,20 @@ namespace idunno.AtProto.Jetstream
                 {
                     JetStreamLogger.ClientStateChanged(_logger, WebSocketState.None);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Called to raise any <see cref="FaultRaised"/> events, if any.
+        /// </summary>
+        /// <param name="e">The <see cref="FaultRaisedEventArgs"/> for the event.</param>
+        protected virtual void OnFaultRaised(FaultRaisedEventArgs e)
+        {
+            EventHandler<FaultRaisedEventArgs>? faultRaised = FaultRaised;
+
+            if (!_disposed)
+            {
+                faultRaised?.Invoke(this, e);
             }
         }
 
@@ -424,23 +446,13 @@ namespace idunno.AtProto.Jetstream
         }
 
         /// <summary>
-        /// Log a fault in the fault cache.
+        /// Log a fault.
         /// </summary>
         /// <param name="fault">A description of the fault.</param>
         protected void LogFault(string fault="Unspecified fault")
         {
-            _faultCache.Set(
-                key: DateTimeOffset.UtcNow.Ticks,
-                value: fault,
-                DateTime.Now.AddMinutes(5));
-
-            JetStreamLogger.FaultLogged(_logger, fault, FaultCount);
+            OnFaultRaised(new FaultRaisedEventArgs(fault));
         }
-
-        /// <summary>
-        /// Gets the number of faults (maximum of 10) that occurred in the last five minutes.
-        /// </summary>
-        public int FaultCount => _faultCache.Count;
 
         /// <inheritdoc/>
         protected virtual void Dispose(bool disposing)
@@ -450,7 +462,6 @@ namespace idunno.AtProto.Jetstream
                 if (disposing)
                 {
                     _client.Dispose();
-                    _faultCache.Dispose();
                     _decompressor?.Dispose();
                 }
 
@@ -530,7 +541,7 @@ namespace idunno.AtProto.Jetstream
                     {
 
                         OnMessageReceived(new MessageReceivedEventArgs(message));
-                        s_messagesReceived.Add(1);
+                        _metrics.MessagesReceived(1);
 
                         // Now go to handle message in a new task.
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -589,7 +600,7 @@ namespace idunno.AtProto.Jetstream
 
                     if (derivedEvent is not null)
                     {
-                        OnRecordReceived(new RecordReceivedEventArgs() { ParsedEvent = derivedEvent });
+                        OnRecordReceived(new RecordReceivedEventArgs(derivedEvent));
                     }
                     else
                     {
@@ -648,7 +659,7 @@ namespace idunno.AtProto.Jetstream
             }
         }
 
-        internal static AtJetstreamEvent? DeriveEvent(AtJetstreamEvent atJetstreamEvent)
+        internal AtJetstreamEvent? DeriveEvent(AtJetstreamEvent atJetstreamEvent)
         {
             AtJetstreamEvent derivedEvent = atJetstreamEvent;
 
@@ -674,7 +685,7 @@ namespace idunno.AtProto.Jetstream
                         Account = account
                     };
 
-                    s_eventsParsed.Add(1);
+                    _metrics.EventsParsed(1);
                     break;
 
                 case JetStreamEventKind.Commit:
@@ -695,7 +706,7 @@ namespace idunno.AtProto.Jetstream
                         Commit = commit
                     };
 
-                    s_eventsParsed.Add(1);
+                    _metrics.EventsParsed(1);
                     break;
 
                 case JetStreamEventKind.Identity:
@@ -716,7 +727,7 @@ namespace idunno.AtProto.Jetstream
                         Identity = identity
                     };
 
-                    s_eventsParsed.Add(1);
+                    _metrics.EventsParsed(1);
                     break;
 
                 default:

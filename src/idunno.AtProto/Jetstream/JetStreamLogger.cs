@@ -42,13 +42,13 @@ namespace idunno.AtProto.Jetstream
         [LoggerMessage(11, LogLevel.Error, "Exception when calling _client.Dispose() in ConnectAsync()")]
         internal static partial void ErrorDisposingClientInConnectAsync(ILogger logger, Exception ex);
 
-        [LoggerMessage(11, LogLevel.Warning, "{fault} logged. Current fault count is {currentCount}")]
+        [LoggerMessage(12, LogLevel.Warning, "{fault} logged. Current fault count is {currentCount}")]
         internal static partial void FaultLogged(ILogger logger, string fault, int currentCount);
 
-        [LoggerMessage(12, LogLevel.Debug, "ClientWebSocket created")]
+        [LoggerMessage(13, LogLevel.Debug, "ClientWebSocket created")]
         internal static partial void InternalClientWebSocketCreated(ILogger logger);
 
-        [LoggerMessage(13, LogLevel.Debug, "Sent OptionsUpdate message")]
+        [LoggerMessage(14, LogLevel.Debug, "Sent OptionsUpdate message")]
         internal static partial void OptionsUpdateMessageSent(ILogger logger);
     }
 }

@@ -8,6 +8,8 @@
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;CodeQL</Configurations>
     <LangVersion>13.0</LangVersion>
+    <!-- Needed for meters -->
+    <EventSourceSupport>true</EventSourceSupport>
   </PropertyGroup>
 
   <PropertyGroup>

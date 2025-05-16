@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-
+using System.Diagnostics.Metrics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -31,6 +31,11 @@ namespace idunno.AtProto.Jetstream
         /// Gets or sets the <see cref="ILoggerFactory"/> to use when creating loggers.
         /// </summary>
         public ILoggerFactory LoggerFactory { get; set; } = NullLoggerFactory.Instance;
+
+        /// <summary>
+        /// Gets or sets the <see cref="IMeterFactory"/> to use when creating meters.
+        /// </summary>
+        public IMeterFactory? MeterFactory { get; set; }
 
         /// <summary>
         /// Gets or sets a flag indicating whether compression should be used with the stream.
@@ -96,6 +101,20 @@ namespace idunno.AtProto.Jetstream
             ArgumentNullException.ThrowIfNull(logger);
 
             LoggerFactory = logger;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the <see cref="IMeterFactory"/> to use when creating meters.
+        /// </summary>
+        /// <param name="meterFactory">The <see cref="IMeterFactory"/> to use when creating loggers.</param>
+        /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="meterFactory"/> is null</exception>
+        public AtProtoJetstreamBuilder WithMeterFactory(IMeterFactory meterFactory)
+        {
+            ArgumentNullException.ThrowIfNull(meterFactory);
+
+            MeterFactory = meterFactory;
             return this;
         }
 

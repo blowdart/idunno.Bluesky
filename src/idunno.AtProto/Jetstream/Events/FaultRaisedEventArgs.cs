@@ -4,17 +4,17 @@
 namespace idunno.AtProto.Jetstream.Events
 {
     /// <summary>
-    /// Encapsulates information given when a the message received from a jetstream instance.
+    /// Encapsulates information given when a fault occurs in jetstream processing.
     /// </summary>
     /// <remarks>
     /// Creates a new instance of <see cref="MessageReceivedEventArgs"/>
     /// </remarks>
-    public sealed class MessageReceivedEventArgs(string message) : EventArgs
+    public class FaultRaisedEventArgs(string fault) : EventArgs
     {
 
         /// <summary>
         /// The message received from the jetstream.
         /// </summary>
-        public string Message { get; } = message;
+        public string Fault { get; } = fault;
     }
 }
