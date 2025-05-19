@@ -21,16 +21,13 @@ builder.Services
     .Bind(builder.Configuration.GetSection(BotSettings.ConfigurationSectionName));
 
 builder.Services
+    .AddSingleton<IValidateOptions<BotSettings>, ValidateBotSettings>();
+
+builder.Services
     .AddScheduler()
     .AddTransient<Post>();
 
 IHost app = builder.Build();
-
-// As tasks run in the background and will swallow exceptions check app settings are
-// available before starting the scheduler
-var botSettingsService = app.Services.GetRequiredService<IOptions<BotSettings>>();
-ArgumentException.ThrowIfNullOrWhiteSpace(botSettingsService.Value.Handle);
-ArgumentException.ThrowIfNullOrWhiteSpace(botSettingsService.Value.AppPassword);
 
 // Configure the schedule for posting
 app.Services.UseScheduler(s =>

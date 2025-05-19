@@ -89,21 +89,27 @@ Now we have all our dependencies line project we'll add a settings file and a cl
    ```Powershell
    New-Item -Path . -Name "appsettings.json"
    New-Item -Path . -Name "BotSettings.cs"
+   New-Item -Path . -Name "ValidateBotSettings.cs"
    ```
 
    If you are using Linux or MacOS run the following commands 
    ```bash
    touch appsettings.json
    touch BotSettings.cs
+   touch ValidateBotSettings.cs
    ```
 
 1. Open `appsettings.json` in your editor of choice and add the following, replacing
    **<yourAccountHandle>** with the handle of your bot account.
    [!code-json[](code/BlueskyBot/appsettings.json?highlight=3)]
-1. Open `BotSettings.cs` in your editor of choice and and add the following
+1. Open `BotSettings.cs` in your editor of choice and and change the contents to the following
    [!code-csharp[](code/BlueskyBot/BotSettings.cs)]
+1. Open `ValidateBotSettings.cs` in your editor of choice and and change the contents to the following
+   [!code-csharp[](code/BlueskyBot/ValidateBotSettings.cs)]
 1. Open `BlueskyBot.csproj` in the editor of choice and add the following lines before the closing `</project>` 
    [!code-xml[](code/BlueskyBot/BlueskyBot.csproj#L27-L31)]
+1. Still in `BlueskyBot.csproj` add the following lines before the closing `</project>`
+   [!code-xml[](code/BlueskyBot/BlueskyBot.csproj#L33-L35)]
 1. Run `dotnet build` to make sure there aren't any mistakes.
 
 # [Visual Studio](#tab/settings/visualStudio)
@@ -120,6 +126,11 @@ Now we have all our dependencies line project we'll add a settings file and a cl
 1. In the name input box enter `BotSettings.cs`
 1. Replace the generated contents with the following
    [!code-csharp[](code/BlueskyBot/BotSettings.cs)]
+1. In the name input box enter `ValidateBotSettings.cs`
+1. Replace the generated contents with the following
+   [!code-csharp[](code/BlueskyBot/ValidateBotSettings.cs)]
+1. Click on the BlueskyBot project file to open it and add the following lines before the closing `</project>`
+   [!code-xml[](code/BlueskyBot/BlueskyBot.csproj#L33-L35)]
 1. Choose **File ▶ Save All**
 1. In the main VS menu choose choose **Build ▶ Build Solution** to make sure there aren't any mistakes.
  
@@ -129,11 +140,16 @@ Now we have all our dependencies line project we'll add a settings file and a cl
 1. Enter the following, replacing
    **<yourAccountHandle>** with the handle of your bot account.
    [!code-json[](code/BlueskyBot/appsettings.json?highlight=3)]
-1. Open the `BlueskyBot.csproj` file and add the following before the `</Project>` line
+1. Open the `BlueskyBot.csproj` file to open it and add the following before the `</Project>` line
    [!code-xml[](code/BlueskyBot/BlueskyBot.csproj#L27-L31)]
 1. Right click on the BlueskyBot folder in the Explorer window and choose **New File..**, then call the new file `BotSettings.cs`
 1. Replace the generated contents with the following
    [!code-csharp[](code/BlueskyBot/BotSettings.cs)]
+1. Right click on the BlueskyBot folder in the Explorer window and choose **New File..**, then call the new file `ValidateBotSettings.cs`
+1. Replace the generated contents with the following
+   [!code-csharp[](code/BlueskyBot/ValidateBotSettings.cs)]
+1. Click on the `BlueskyBot.csproj` file to open it and add the following lines before the closing `</project>`
+   [!code-xml[](code/BlueskyBot/BlueskyBot.csproj#L33-L35)]
 1. Choose **File ▶ Save All**
 1. Open the Command Palette (Ctrl + Shift + P) and search for, and select **.NET: build**
 
@@ -180,7 +196,7 @@ At the command line run the following commands, replacing **<yourAppPassword>** 
 
 ## Write a scheduled posting bot
 
-Finally lets actually put some code together, and write the bot and run it.
+Finally let's actually put some code together, and write the bot and run it.
 
 # [Command Line](#tab/program/commandLine)
 

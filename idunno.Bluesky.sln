@@ -60,7 +60,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{DDB6FAB2-1
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{8849E619-47FB-420A-AEA0-A5794F728BD0}"
 	ProjectSection(SolutionItems) = preProject
-		.github\workflows\ci-build.yml = .github\workflows\ci-build.yml
 		.github\CODEOWNERS = .github\CODEOWNERS
 		.github\dependabot.yml = .github\dependabot.yml
 	EndProjectSection
@@ -220,6 +219,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BlueskyBot", "BlueskyBot", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlueskyBot", "docs\docs\bots\code\BlueskyBot\BlueskyBot.csproj", "{12B43359-C9E4-3F6B-467A-8CB645FB2164}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.Bot.Watcher", "Samples\Samples.Bot.Watcher\Samples.Bot.Watcher.csproj", "{3FC00E30-70BD-4745-9FE2-7987F169E246}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		CodeQL|Any CPU = CodeQL|Any CPU
@@ -353,11 +354,16 @@ Global
 		{12B43359-C9E4-3F6B-467A-8CB645FB2164}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{12B43359-C9E4-3F6B-467A-8CB645FB2164}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{12B43359-C9E4-3F6B-467A-8CB645FB2164}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3FC00E30-70BD-4745-9FE2-7987F169E246}.CodeQL|Any CPU.ActiveCfg = Debug|Any CPU
+		{3FC00E30-70BD-4745-9FE2-7987F169E246}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3FC00E30-70BD-4745-9FE2-7987F169E246}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3FC00E30-70BD-4745-9FE2-7987F169E246}.Release|Any CPU.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{C94F8041-6886-4D0F-82DC-8AF2B41FF649} = {0B264B3D-0AE0-4990-AD21-4261BF1ABE01}
 		{ADF99051-BF1C-4379-94C7-A590377B05E3} = {ACED7B7D-7BBE-4086-937F-7ECEE6A3F6B4}
 		{F0D2699C-0578-4BF0-AB26-84FF918480FD} = {8849E619-47FB-420A-AEA0-A5794F728BD0}
 		{AB11676F-150A-4AD3-A34B-01AE0C9A1065} = {B1A49FA3-07AB-4D78-BC16-FF7FB5857840}
@@ -398,6 +404,7 @@ Global
 		{6A7AE9C2-2EB2-4F62-A96F-77A61534FCBD} = {9A865CDD-4409-4949-8E18-F7C7F2240E53}
 		{48A71DA9-2EAF-43FC-BA5B-2FFD7C245C7C} = {6A7AE9C2-2EB2-4F62-A96F-77A61534FCBD}
 		{12B43359-C9E4-3F6B-467A-8CB645FB2164} = {48A71DA9-2EAF-43FC-BA5B-2FFD7C245C7C}
+		{3FC00E30-70BD-4745-9FE2-7987F169E246} = {B1A49FA3-07AB-4D78-BC16-FF7FB5857840}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2B9F8C2-975D-4E3A-B05E-48FDF4BCE3E6}

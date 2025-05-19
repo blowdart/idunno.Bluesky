@@ -4,10 +4,14 @@
 
 ### Features
 
-#### idunno.Bluesky
+#### idunno.AtProto
 
+* Add new overrides for `Login` to accept Handles and Dids.
 * Add `ClientState`, `MessageLastRecieved` and `FaultCount` properties to `AtProtoJetstream` to enable health monitoring.
 * Add metrics to `AtProtoJetStream`.
+
+#### idunno.Bluesky
+
 * Add `ExtractFacets()` to `PostBuilder` to enable auto-detection in `ReplyTo()`.
 * Add new `ReplyTo()` overload to `BlueskyAgent`.
 * Exposed `BlueskyServer.JsonSerializationOptions` so bots can deserialize payloads into Bluesky records with AOT support.
