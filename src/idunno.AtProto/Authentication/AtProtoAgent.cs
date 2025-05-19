@@ -397,16 +397,59 @@ namespace idunno.AtProto
         }
 
         /// <summary>
+        /// Authenticates to and creates a session on the <paramref name="service"/> with the specified <paramref name="identifier"/> and <paramref name="password"/>.
+        /// </summary>
+        /// <param name="identifier">The identifier used to authenticate.</param>
+        /// <param name="password">The password used to authenticated.</param>
+        /// <param name="authFactorToken">An optional multi factory authentication code.</param>
+        /// <param name="service">The service to authenticate to.</param>
+        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="identifier" /> or <paramref name="password"/> is empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="identifier" /> or <paramref name="password"/> is null or empty.</exception>
+        public async Task<AtProtoHttpResult<bool>> Login(string identifier, string password, string? authFactorToken = null, Uri? service = null, CancellationToken cancellationToken = default)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(identifier);
+            ArgumentException.ThrowIfNullOrWhiteSpace(password);
+
+            AtIdentifier atIdentifier = AtIdentifier.Create(identifier);
+
+            Handle? handle = atIdentifier as Handle;
+            if (handle is not null)
+            {
+                return await Login(
+                    handle: handle,
+                    password: password,
+                    authFactorToken: authFactorToken,
+                    service: service,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+
+            Did? did = atIdentifier as Did;
+            if (did is not null)
+            {
+                return await Login(
+                    did: did,
+                    password: password,
+                    authFactorToken: authFactorToken,
+                    service: service,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+
+            throw new ArgumentException($"{identifier} is not a valid handle or did", nameof(identifier));
+        }
+
+        /// <summary>
         /// Authenticates to and creates a session on the <paramref name="service"/> with the specified <paramref name="handle"/> and <paramref name="password"/>.
         /// </summary>
-        /// <param name="handle">The identifier used to authenticate.</param>
+        /// <param name="handle">The handle used to authenticate.</param>
         /// <param name="password">The password used to authenticated.</param>
         /// <param name="authFactorToken">An optional multi factory authentication code.</param>
         /// <param name="service">The service to authenticate to.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="handle" /> or <paramref name="password"/> is null or empty.</exception>
-        public async Task<AtProtoHttpResult<bool>> Login(string handle, string password, string? authFactorToken = null, Uri? service = null, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<bool>> Login(Handle handle, string password, string? authFactorToken = null, Uri? service = null, CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(handle);
             ArgumentException.ThrowIfNullOrWhiteSpace(password);
@@ -447,11 +490,11 @@ namespace idunno.AtProto
                     service = pds;
                 }
 
-                Logger.CreateSessionCalled(_logger, handle, service);
+                Logger.CreateSessionCalled(_logger, handle!, service);
 
                 AtProtoHttpResult<Session> createSessionResult =
                     await AtProtoServer.CreateSession(
-                        handle,
+                        handle!,
                         password,
                         authFactorToken,
                         service,
