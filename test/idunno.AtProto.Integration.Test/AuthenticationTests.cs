@@ -31,13 +31,12 @@ namespace idunno.AtProto.Integration.Test
         public async Task CreateSessionSendsCorrectRequestParsesResponseAndSetsAgentCredentialsAndDid()
         {
             const string domainName = "test.invalid";
-            const string userIdentifier = domainName;
             const string expectedDid = "did:plc:ec72yg6n2sydzjvtovvdlxrk";
             const string expectedRefreshToken = "refreshToken";
 
             string expectedJwt = JwtBuilder.CreateJwt(expectedDid, $"did:web:{domainName}");
 
-            string? sentIdentifer;
+            string? sentIdentifier;
             string? sentPassword;
             string? authFactorToken;
 
@@ -82,7 +81,7 @@ namespace idunno.AtProto.Integration.Test
                         return;
                     }
 
-                    if (createSessionRequest.Identifier != userIdentifier)
+                    if (createSessionRequest.Identifier != expectedDid)
                     {
                         response.StatusCode = 400;
                         var errorResponse = new AtErrorDetail()
@@ -95,14 +94,14 @@ namespace idunno.AtProto.Integration.Test
 
                     response.StatusCode = 200;
 
-                    sentIdentifer = createSessionRequest.Identifier;
+                    sentIdentifier = createSessionRequest.Identifier;
                     sentPassword = createSessionRequest.Password;
                     authFactorToken = createSessionRequest.AuthFactorToken;
 
                     var createSessionResponse = new CreateSessionResponse(
                         accessJwt: expectedJwt,
                         refreshJwt: expectedRefreshToken,
-                        handle: userIdentifier,
+                        handle: "test.invalid",
                         did: expectedDid);
 
                     await response.WriteAsJsonAsync(createSessionResponse, _jsonSerializerOptions);
@@ -118,9 +117,10 @@ namespace idunno.AtProto.Integration.Test
                 }))
             {
                 AtProtoHttpResult<bool> loginResult = await agent.Login(
-                    identifier: userIdentifier,
+                    did: expectedDid,
                     password: "password",
                     authFactorToken: null,
+                    service: new Uri("http://test.invalid"),
                     cancellationToken: TestContext.Current.CancellationToken);
 
                 Assert.True(loginResult.Succeeded);

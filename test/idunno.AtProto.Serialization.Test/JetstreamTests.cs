@@ -49,7 +49,8 @@ namespace idunno.AtProto.Serialization.Test
             Assert.Equal(2, actual.DateTimeOffset.Second);
             Assert.Equal(329, actual.DateTimeOffset.Millisecond);
 
-            AtJetstreamEvent? derived = AtProtoJetstream.DeriveEvent(actual);
+            var jetStream = new AtProtoJetstream();
+            AtJetstreamEvent? derived = jetStream.DeriveEvent(actual);
 
             Assert.NotNull(derived);
             Assert.IsType<AtJetstreamCommitEvent>(derived);
@@ -89,7 +90,8 @@ namespace idunno.AtProto.Serialization.Test
             Assert.Equal("did:plc:ec72yg6n2sydzjvtovvdlxrk", actual.Did);
             Assert.Equal(JetStreamEventKind.Commit, actual.Kind);
 
-            AtJetstreamEvent? derived = AtProtoJetstream.DeriveEvent(actual);
+            var jetStream = new AtProtoJetstream();
+            AtJetstreamEvent? derived = jetStream.DeriveEvent(actual);
 
             Assert.NotNull(derived);
             Assert.IsType<AtJetstreamCommitEvent>(derived);
@@ -150,7 +152,8 @@ namespace idunno.AtProto.Serialization.Test
             Assert.Equal("did:plc:ec72yg6n2sydzjvtovvdlxrk", actual.Did);
             Assert.Equal(JetStreamEventKind.Commit, actual.Kind);
 
-            AtJetstreamEvent? derived = AtProtoJetstream.DeriveEvent(actual);
+            var jetStream = new AtProtoJetstream();
+            AtJetstreamEvent? derived = jetStream.DeriveEvent(actual);
 
             Assert.NotNull(derived);
             Assert.IsType<AtJetstreamCommitEvent>(derived);
@@ -185,7 +188,8 @@ namespace idunno.AtProto.Serialization.Test
             Assert.Equal("did:plc:lfpx2poegjaojca4u3ctkrja", actual.Did);
             Assert.Equal(JetStreamEventKind.Account, actual.Kind);
 
-            AtJetstreamEvent? derived = AtProtoJetstream.DeriveEvent(actual);
+            var jetStream = new AtProtoJetstream();
+            AtJetstreamEvent? derived = jetStream.DeriveEvent(actual);
 
             Assert.NotNull(derived);
             Assert.IsType<AtJetstreamAccountEvent>(derived);
@@ -221,7 +225,8 @@ namespace idunno.AtProto.Serialization.Test
             Assert.Equal("did:plc:ufbl4k27gp6kzas5glhz7fim", actual.Did);
             Assert.Equal(JetStreamEventKind.Account, actual.Kind);
 
-            AtJetstreamEvent? derived = AtProtoJetstream.DeriveEvent(actual);
+            var jetStream = new AtProtoJetstream();
+            AtJetstreamEvent? derived = jetStream.DeriveEvent(actual);
 
             Assert.NotNull(derived);
             Assert.IsType<AtJetstreamAccountEvent>(derived);
@@ -257,7 +262,8 @@ namespace idunno.AtProto.Serialization.Test
             Assert.Equal("did:plc:g6ylltenitt4tp27bpwalh7b", actual.Did);
             Assert.Equal(JetStreamEventKind.Identity, actual.Kind);
 
-            AtJetstreamEvent? derived = AtProtoJetstream.DeriveEvent(actual);
+            var jetStream = new AtProtoJetstream();
+            AtJetstreamEvent? derived = jetStream.DeriveEvent(actual);
 
             Assert.NotNull(derived);
             Assert.IsType<AtJetstreamIdentityEvent>(derived);

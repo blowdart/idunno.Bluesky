@@ -4,18 +4,17 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Reflection.Metadata;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Timers;
-
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.IdentityModel.Tokens;
-
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Authentication.Models;
 using idunno.AtProto.Events;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
 
 
 namespace idunno.AtProto
@@ -398,27 +397,27 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Authenticates to and creates a session on the <paramref name="service"/> with the specified <paramref name="identifier"/> and <paramref name="password"/>.
+        /// Authenticates to and creates a session on the <paramref name="service"/> with the specified <paramref name="handle"/> and <paramref name="password"/>.
         /// </summary>
-        /// <param name="identifier">The identifier used to authenticate.</param>
+        /// <param name="handle">The identifier used to authenticate.</param>
         /// <param name="password">The password used to authenticated.</param>
         /// <param name="authFactorToken">An optional multi factory authentication code.</param>
         /// <param name="service">The service to authenticate to.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="identifier" /> or <paramref name="password"/> is null or empty.</exception>
-        public async Task<AtProtoHttpResult<bool>> Login(string identifier, string password, string? authFactorToken = null, Uri? service = null, CancellationToken cancellationToken = default)
+        /// <exception cref="ArgumentException">Thrown when <paramref name="handle" /> or <paramref name="password"/> is null or empty.</exception>
+        public async Task<AtProtoHttpResult<bool>> Login(string handle, string password, string? authFactorToken = null, Uri? service = null, CancellationToken cancellationToken = default)
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(identifier);
+            ArgumentException.ThrowIfNullOrWhiteSpace(handle);
             ArgumentException.ThrowIfNullOrWhiteSpace(password);
 
-            using (_logger.BeginScope($"Handle/Password login for {identifier}"))
+            using (_logger.BeginScope($"Handle/Password login for {handle}"))
             {
                 StopTokenRefreshTimer();
 
                 if (service is null)
                 {
-                    Did? userDid = await ResolveHandle(identifier, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    Did? userDid = await ResolveHandle(handle, cancellationToken: cancellationToken).ConfigureAwait(false);
 
                     if (userDid is null || cancellationToken.IsCancellationRequested)
                     {
@@ -448,11 +447,11 @@ namespace idunno.AtProto
                     service = pds;
                 }
 
-                Logger.CreateSessionCalled(_logger, identifier, service);
+                Logger.CreateSessionCalled(_logger, handle, service);
 
                 AtProtoHttpResult<Session> createSessionResult =
                     await AtProtoServer.CreateSession(
-                        identifier,
+                        handle,
                         password,
                         authFactorToken,
                         service,
@@ -510,6 +509,108 @@ namespace idunno.AtProto
         }
 
         /// <summary>
+        /// Authenticates to and creates a session on the <paramref name="service"/> with the specified <paramref name="did"/> and <paramref name="password"/>.
+        /// </summary>
+        /// <param name="did">The identifier used to authenticate.</param>
+        /// <param name="password">The password used to authenticated.</param>
+        /// <param name="authFactorToken">An optional multi factory authentication code.</param>
+        /// <param name="service">The service to authenticate to.</param>
+        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="did" /> or <paramref name="password"/> is null or empty.</exception>
+        public async Task<AtProtoHttpResult<bool>> Login(Did did, string password, string? authFactorToken = null, Uri? service = null, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(did);
+            ArgumentException.ThrowIfNullOrWhiteSpace(password);
+
+            using (_logger.BeginScope($"Did/Password login for {did}"))
+            {
+                StopTokenRefreshTimer();
+
+                if (service is null)
+                {
+                    Uri? pds = null;
+
+                    if (!cancellationToken.IsCancellationRequested)
+                    {
+                        pds = await ResolvePds(did, cancellationToken).ConfigureAwait(false);
+                    }
+
+                    if (pds is null || cancellationToken.IsCancellationRequested)
+                    {
+                        return new AtProtoHttpResult<bool>(
+                            false,
+                            HttpStatusCode.NotFound,
+                            null,
+                            new AtErrorDetail() { Error = "PdsNotResolvable", Message = $"Could not resolve a PDS for {did}." });
+                    }
+
+                    service = pds;
+                }
+
+                Logger.CreateSessionCalled(_logger, did, service);
+
+                AtProtoHttpResult<Session> createSessionResult =
+                    await AtProtoServer.CreateSession(
+                        did,
+                        password,
+                        authFactorToken,
+                        service,
+                        httpClient: HttpClient,
+                        loggerFactory: LoggerFactory,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                Logger.CreateSessionReturned(_logger, createSessionResult.StatusCode);
+
+                if (createSessionResult.Succeeded)
+                {
+                    if (!await ValidateJwtToken(createSessionResult.Result.AccessJwt, createSessionResult.Result.Did, service).ConfigureAwait(false))
+                    {
+                        Logger.CreateSessionJwtValidationFailed(_logger);
+                        throw new SecurityTokenValidationException("The issued access token could not be validated.");
+                    }
+
+                    AuthenticationType authenticationType = AuthenticationType.UsernamePassword;
+                    if (!string.IsNullOrWhiteSpace(authFactorToken))
+                    {
+                        authenticationType = AuthenticationType.UsernamePasswordAuthFactorToken;
+                    }
+
+                    AccessCredentials accessCredentials = new(
+                            service,
+                            authenticationType,
+                            createSessionResult.Result.AccessJwt,
+                            createSessionResult.Result.RefreshJwt);
+
+                    await InternalLogin(accessCredentials).ConfigureAwait(false);
+
+                    return new AtProtoHttpResult<bool>()
+                    {
+                        Result = true,
+                        StatusCode = createSessionResult.StatusCode,
+                        AtErrorDetail = createSessionResult.AtErrorDetail,
+                        RateLimit = createSessionResult.RateLimit
+                    };
+                }
+                else
+                {
+                    Logger.CreateSessionFailed(_logger, createSessionResult.StatusCode);
+
+                    StopTokenRefreshTimer();
+                    Credentials = null;
+
+                    return new AtProtoHttpResult<bool>
+                    {
+                        Result = false,
+                        StatusCode = createSessionResult.StatusCode,
+                        AtErrorDetail = createSessionResult.AtErrorDetail,
+                        RateLimit = createSessionResult.RateLimit
+                    };
+                }
+            }
+        }
+
+
+        /// <summary>
         /// Sets the agent credentials to the specified <paramref name="accessCredentials"/>.
         /// </summary>
         /// <param name="accessCredentials"><see cref="AccessCredentials"/> to use when authenticating to the service.</param>
@@ -518,8 +619,8 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/> or any of its properties are null.</exception>
         [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Matching other login methods, so keeping cancellationToken for ease of use.")]
         public async Task<bool> Login(
-            AccessCredentials accessCredentials,
-            CancellationToken cancellationToken = default)
+        AccessCredentials accessCredentials,
+        CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(accessCredentials.AccessJwt);
@@ -749,7 +850,7 @@ namespace idunno.AtProto
                     throw new CredentialException("Credential type is OAuth but it cannot be converted to DPoPAccessCredentials.");
                 }
 
-                DPoPRefreshCredential refreshCredential = new (accessCredentials.Service, accessCredentials.RefreshToken, accessCredentials.DPoPProofKey, accessCredentials.DPoPNonce);
+                DPoPRefreshCredential refreshCredential = new(accessCredentials.Service, accessCredentials.RefreshToken, accessCredentials.DPoPProofKey, accessCredentials.DPoPNonce);
 
                 return await RefreshOAuthIssuedCredentials(refreshCredential, cancellationToken).ConfigureAwait(false);
             }
