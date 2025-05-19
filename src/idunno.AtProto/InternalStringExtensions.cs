@@ -18,8 +18,6 @@ namespace idunno.AtProto
                 return 0;
             }
 
-            ArgumentNullException.ThrowIfNull(c);
-
             return s.Length - s.Replace(c.ToString(), "", StringComparison.InvariantCulture).Length;
         }
 

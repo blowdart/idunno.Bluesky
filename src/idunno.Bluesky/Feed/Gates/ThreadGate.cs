@@ -58,12 +58,9 @@ namespace idunno.Bluesky.Feed.Gates
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> when this record was created</param>
         /// <param name="rules">The list of rules for replies to the specified <paramref name="post"/>.</param>
         /// <param name="hiddenReplies">A list of reply <see cref="AtUri"/>s that will be hidden for <see cref="Post"/></param>
-        /// <exception cref="ArgumentNullException">if <paramref name="createdAt"/> is null.</exception>
         [JsonConstructor]
         public ThreadGate(AtUri post, DateTimeOffset createdAt, ICollection<ThreadGateRule>? rules = null, ICollection<AtUri>? hiddenReplies = null) : this(post, rules, hiddenReplies)
         {
-            ArgumentNullException.ThrowIfNull(createdAt);
-
             CreatedAt = createdAt;
         }
 

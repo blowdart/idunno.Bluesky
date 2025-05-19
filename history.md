@@ -6,9 +6,10 @@
 
 #### idunno.Bluesky
 
-* Added `ClientState`, `MessageLastRecieved` and `FaultCount` properties to `AtProtoJetstream` to enable health monitoring.
-* Added `ExtractFacets()` to `PostBuilder` to enable auto-detection in `ReplyTo()`.
-* Added new `ReplyTo()` overload to `BlueskyAgent`.
+* Add `ClientState`, `MessageLastRecieved` and `FaultCount` properties to `AtProtoJetstream` to enable health monitoring.
+* Add metrics to `AtProtoJetStream`.
+* Add `ExtractFacets()` to `PostBuilder` to enable auto-detection in `ReplyTo()`.
+* Add new `ReplyTo()` overload to `BlueskyAgent`.
 * Exposed `BlueskyServer.JsonSerializationOptions` so bots can deserialize payloads into Bluesky records with AOT support.
 
 ## 0.9.0

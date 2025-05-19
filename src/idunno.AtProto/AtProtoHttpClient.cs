@@ -981,7 +981,7 @@ namespace idunno.AtProto
                             break;
 
                         default:
-                            string content = JsonSerializer.Serialize(record, typeof(TRecord), jsonSerializerOptions);
+                            string content = JsonSerializer.Serialize<TRecord>(record, jsonSerializerOptions);
 
                             httpRequestMessage.Content = new StringContent(content, Encoding.UTF8, MediaTypeNames.Application.Json);
                             break;
@@ -1026,10 +1026,9 @@ namespace idunno.AtProto
 
                                 try
                                 {
-                                    result.Result = JsonSerializer.Deserialize(
+                                    result.Result = JsonSerializer.Deserialize<TResult>(
                                         responseContent,
-                                        typeof(TResult),
-                                        jsonSerializerOptions) as TResult;
+                                        jsonSerializerOptions);
                                 }
                                 catch (JsonException ex)
                                 {

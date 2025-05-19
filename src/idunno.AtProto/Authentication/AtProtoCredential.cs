@@ -61,7 +61,6 @@ namespace idunno.AtProto.Authentication
             string? dPoPNonce = null)
         {
             ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(authenticationType);
 
             switch (authenticationType)
             {

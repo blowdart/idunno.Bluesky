@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.CommandLine.Parsing;
+using System.Diagnostics;
 using System.Text;
 
 using Microsoft.Extensions.Logging;
@@ -13,7 +14,6 @@ using idunno.AtProto.OAuthCallback;
 using idunno.Bluesky;
 
 using Samples.Common;
-using System.Diagnostics;
 
 namespace Samples.ConsoleShellOAuth
 {

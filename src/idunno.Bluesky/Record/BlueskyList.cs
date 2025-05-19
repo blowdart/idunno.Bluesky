@@ -61,6 +61,9 @@ namespace idunno.Bluesky.Record
         /// <param name="avatar">The list's avatar, if any.</param>
         /// <param name="labels">The list's self labels, if any.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the list was created at. Defaults to <see cref="DateTimeOffset.UtcNow"/>.</param>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="name"/> is &gt; 64 characters or <paramref name="description"/> &gt; 300 graphemes.</exception>
         public BlueskyList(
             string name,
             ListPurpose purpose,
@@ -72,7 +75,7 @@ namespace idunno.Bluesky.Record
         {
             ArgumentException.ThrowIfNullOrEmpty(name);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, 64);
-            ArgumentNullException.ThrowIfNull(purpose);
+
             if (description is not null)
             {
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(description.GetGraphemeLength(), 300);

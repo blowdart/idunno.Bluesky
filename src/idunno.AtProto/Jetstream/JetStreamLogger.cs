@@ -18,22 +18,22 @@ namespace idunno.AtProto.Jetstream
         [LoggerMessage(3, LogLevel.Error, "Error in message loop")]
         internal static partial void MessageLoopError(ILogger logger, Exception ex);
 
-        [LoggerMessage(4, LogLevel.Error, "WSS operation in messageLoop has been cancelled")]
+        [LoggerMessage(4, LogLevel.Information, "WSS operation in messageLoop has been cancelled")]
         internal static partial void MessageLoopCancellation(ILogger logger);
 
         [LoggerMessage(5, LogLevel.Debug, "Client state changed to {state}")]
         internal static partial void ClientStateChanged(ILogger logger, WebSocketState state);
 
-        [LoggerMessage(6, LogLevel.Debug, "ParseMessage passed null or empty message")]
+        [LoggerMessage(6, LogLevel.Warning, "ParseMessage passed null or empty message")]
         internal static partial void ParseMessageGotNullOrEmptyMessage(ILogger logger);
 
-        [LoggerMessage(7, LogLevel.Error, "ParseMessage could not parse {json}")]
+        [LoggerMessage(7, LogLevel.Warning, "ParseMessage could not parse {json}")]
         internal static partial void ParseMessageCouldNotProcessAsJson(ILogger logger, string json, Exception ex);
 
         [LoggerMessage(8, LogLevel.Error, "ParseMessage threw exception")]
         internal static partial void ParseMessageThrewException(ILogger logger, Exception ex);
 
-        [LoggerMessage(9, LogLevel.Error, "ParseMessage json deserializer returned null for {json}")]
+        [LoggerMessage(9, LogLevel.Warning, "ParseMessage json deserializer returned null for {json}")]
         internal static partial void ParseMessageDeserializationReturnedNull(ILogger logger, string json);
 
         [LoggerMessage(10, LogLevel.Debug, "ReceiveLoop could not convert message to string")]

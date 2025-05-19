@@ -550,8 +550,11 @@ namespace idunno.AtProto.Jetstream
                     }
                     else
                     {
-                        LogFault("Message conversion to string failed.");
-                        JetStreamLogger.MessageLoopFailedToConvert(_logger);
+                        if (_client.State == WebSocketState.Open)
+                        {
+                            LogFault("Message conversion to string failed.");
+                            JetStreamLogger.MessageLoopFailedToConvert(_logger);
+                        }
                     }
                 }
                 catch (WebSocketException ex)
@@ -561,9 +564,8 @@ namespace idunno.AtProto.Jetstream
                     _client.Dispose();
                     await ConnectAsync(cancellationToken).ConfigureAwait(false);
                 }
-                catch (OperationCanceledException ex)
+                catch (OperationCanceledException)
                 {
-                    LogFault(ex.Message);
                     JetStreamLogger.MessageLoopCancellation(_logger);
                 }
                 catch (Exception ex)
@@ -629,6 +631,11 @@ namespace idunno.AtProto.Jetstream
 
         private async Task SendOptionsUpdateMessage()
         {
+            if (_client is null || _client.State != WebSocketState.Open)
+            {
+                return;
+            }
+
             OptionsUpdatePayload payload = new()
             {
                 MaxMessageSizeBytes = Options.MaximumMessageSize
@@ -652,11 +659,8 @@ namespace idunno.AtProto.Jetstream
             string message = JsonSerializer.Serialize(optionsUpdateMessage, SourceGenerationContext.Default.OptionsUpdateMessage);
             byte[] messageAsBytes = Encoding.UTF8.GetBytes(message);
 
-            if (_client is not null && _client.State == WebSocketState.Open)
-            {
-                await _client.SendAsync(messageAsBytes, WebSocketMessageType.Text, true, CancellationToken.None).FireAndForgetAsync(_logger).ConfigureAwait(false);
-                JetStreamLogger.OptionsUpdateMessageSent(_logger);
-            }
+            await _client.SendAsync(messageAsBytes, WebSocketMessageType.Text, true, CancellationToken.None).FireAndForgetAsync(_logger).ConfigureAwait(false);
+            JetStreamLogger.OptionsUpdateMessageSent(_logger);
         }
 
         internal AtJetstreamEvent? DeriveEvent(AtJetstreamEvent atJetstreamEvent)

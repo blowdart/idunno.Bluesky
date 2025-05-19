@@ -19,14 +19,14 @@ namespace idunno.Bluesky
         /// <summary>
         /// Creates and sends a moderation report to the specified <paramref name="labelerDid"/>.
         /// </summary>
-        /// <param name="labelerDid">The <see cref="Did"/> of the labeller to report to.</param>
+        /// <param name="labelerDid">The <see cref="Did"/> of the labeler to report to.</param>
         /// <param name="subject">The subject of the report, a <see cref="StrongReference"/> to a record, or a <see cref="RepoReference"/> for an actor.</param>
         /// <param name="reportType">The reason for the report.</param>
         /// <param name="reason">Any notes to justify the report.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="labelerDid"/>, <paramref name="subject"/>, <paramref name="reportType"/> is null.
+        /// Thrown when <paramref name="labelerDid"/> or <paramref name="subject"/> is null.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="reason"/> is not null and is &gt; 20000 characters.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
@@ -45,7 +45,6 @@ namespace idunno.Bluesky
         {
             ArgumentNullException.ThrowIfNull(labelerDid);
             ArgumentNullException.ThrowIfNull(subject);
-            ArgumentNullException.ThrowIfNull(reportType);
 
             if (reason is not null)
             {

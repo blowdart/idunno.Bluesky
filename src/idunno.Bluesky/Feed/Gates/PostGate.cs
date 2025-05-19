@@ -55,12 +55,9 @@ namespace idunno.Bluesky.Feed.Gates
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the record was created on.</param>
         /// <param name="detachedEmbeddingUris">The list of <see cref="AtUri"/> posts embedding <paramref name="post"/> to be detached, if any.</param>
         /// <param name="rules">The list of rules for post gate, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="createdAt"/> is null.</exception>
         public PostGate(AtUri post, DateTimeOffset createdAt, ICollection<PostGateRule>? rules, ICollection<AtUri>? detachedEmbeddingUris) :
             this(post, rules, detachedEmbeddingUris)
         {
-            ArgumentNullException.ThrowIfNull(createdAt);
-
             CreatedAt = createdAt;
         }
 

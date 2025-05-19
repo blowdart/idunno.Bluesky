@@ -29,7 +29,7 @@ namespace idunno.Bluesky.Chat
         ///   Thrown when <paramref name="id" /> or <paramref name="revision"/> is null or whitespace.
         /// </exception>
         /// <exception cref="ArgumentNullException">
-        ///   Thrown when <paramref name="text"/> or <paramref name="sentAt"/> or <paramref name="sender"/> is null.
+        ///   Thrown when <paramref name="text"/> or <paramref name="sender"/> is null.
         /// </exception>
         public MessageView(
             string id,
@@ -46,7 +46,6 @@ namespace idunno.Bluesky.Chat
 
             ArgumentNullException.ThrowIfNull(text);
             ArgumentNullException.ThrowIfNull(sender);
-            ArgumentNullException.ThrowIfNull(sentAt);
 
             Text = text;
             Embed = embed;

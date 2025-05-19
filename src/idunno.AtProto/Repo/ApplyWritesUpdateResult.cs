@@ -12,8 +12,6 @@ namespace idunno.AtProto.Repo
     {
         internal ApplyWritesUpdateResult(ApplyWritesUpdateResponse applyWritesUpdateResponse)
         {
-            ArgumentNullException.ThrowIfNull(nameof(applyWritesUpdateResponse));
-
             Uri = applyWritesUpdateResponse.Uri;
             Cid = applyWritesUpdateResponse.Cid;
             StrongReference = new(Uri, Cid);

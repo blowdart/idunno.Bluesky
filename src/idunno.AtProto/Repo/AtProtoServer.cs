@@ -1291,10 +1291,9 @@ namespace idunno.AtProto
                 {
                     string jsonString = record.ToJsonString();
 
-                    AtProtoRepositoryRecord<TRecord>? atProtoRecord = JsonSerializer.Deserialize(
+                    AtProtoRepositoryRecord<TRecord>? atProtoRecord = JsonSerializer.Deserialize<AtProtoRepositoryRecord<TRecord>>(
                         jsonString,
-                        typeof(AtProtoRepositoryRecord <TRecord>),
-                        jsonSerializerOptions) as AtProtoRepositoryRecord<TRecord>;
+                        jsonSerializerOptions);
 
                     if (atProtoRecord is not null)
                     {

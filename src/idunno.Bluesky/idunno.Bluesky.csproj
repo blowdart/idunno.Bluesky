@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Description>.NET client for the Bluesky social network.</Description>
     <PackageTags>atproto;bluesky</PackageTags>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;CodeQL</Configurations>

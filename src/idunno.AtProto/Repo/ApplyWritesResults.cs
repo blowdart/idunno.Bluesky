@@ -12,7 +12,6 @@ namespace idunno.AtProto.Repo
     {
         internal ApplyWritesResults(ApplyWritesResponse response)
         {
-            ArgumentNullException.ThrowIfNull(nameof(response));
             Commit = response.Commit;
 
             List<IApplyWritesResult> results = [];

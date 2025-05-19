@@ -21,10 +21,10 @@ namespace idunno.Bluesky.Chat
         /// <param name="sender">A view over the message author.</param>
         /// <param name="sentAt">The <see cref="DateTimeOffset"/> the message was sent on.</param>
         /// <exception cref="ArgumentException">
-        ///   Thrown <paramref name="id" /> or <paramref name="revision"/> is null or whitespace.
+        ///   Thrown <paramref name="id" /> or <paramref name="revision"/> is white space.
         /// </exception>
         /// <exception cref="ArgumentNullException">
-        ///   Thrown when <paramref name="sentAt"/> or <paramref name="sender"/> is null.
+        ///   Thrown when <paramref name="id" /> or <paramref name="revision"/>, <paramref name="sender"/> is null.
         /// </exception>
         [JsonConstructor]
         public MessageViewBase(string id, string revision, MessageViewSender sender, DateTimeOffset sentAt)
@@ -33,7 +33,6 @@ namespace idunno.Bluesky.Chat
             ArgumentException.ThrowIfNullOrWhiteSpace(revision);
 
             ArgumentNullException.ThrowIfNull(sender);
-            ArgumentNullException.ThrowIfNull(sentAt);
 
             Id = id;
             Revision = revision;

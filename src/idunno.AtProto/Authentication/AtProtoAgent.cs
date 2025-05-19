@@ -1063,41 +1063,33 @@ namespace idunno.AtProto
 
         private void StartTokenRefreshTimer()
         {
-            if (_enableTokenRefresh)
+            if (_enableTokenRefresh && Credentials is AccessCredentials accessCredentials && !string.IsNullOrEmpty(accessCredentials.AccessJwt))
             {
-                if (Credentials is AccessCredentials accessCredentials && !string.IsNullOrEmpty(accessCredentials.AccessJwt))
+                TimeSpan accessTokenExpiresIn = GetTimeToJwtTokenExpiry(accessCredentials.AccessJwt);
+
+                if (accessTokenExpiresIn.TotalSeconds < 60)
                 {
-                    TimeSpan accessTokenExpiresIn = GetTimeToJwtTokenExpiry(accessCredentials.AccessJwt);
+                    // As we're about to expire, go refresh the token
+                    RefreshCredentials().FireAndForget();
+                    return;
+                }
 
-                    if (accessTokenExpiresIn.TotalSeconds < 60)
-                    {
-                        // As we're about to expire, go refresh the token
-                        RefreshCredentials().FireAndForget();
-                        return;
-                    }
+                TimeSpan refreshIn = _refreshAccessTokenInterval;
+                if (accessTokenExpiresIn < _refreshAccessTokenInterval)
+                {
+                    refreshIn = accessTokenExpiresIn - new TimeSpan(0, 1, 0);
+                }
 
-                    TimeSpan refreshIn = _refreshAccessTokenInterval;
-                    if (accessTokenExpiresIn < _refreshAccessTokenInterval)
-                    {
-                        refreshIn = accessTokenExpiresIn - new TimeSpan(0, 1, 0);
-                    }
+                if (_credentialRefreshTimer is not null)
+                {
+                    _credentialRefreshTimer.Interval = refreshIn.TotalMilliseconds >= int.MaxValue ? int.MaxValue : refreshIn.TotalMilliseconds;
+                    _credentialRefreshTimer.Elapsed += RefreshTimerElapsed;
+                    _credentialRefreshTimer.Enabled = true;
+                    _credentialRefreshTimer.Start();
 
-                    if (_credentialRefreshTimer is not null)
-                    {
-                        _credentialRefreshTimer.Interval = refreshIn.TotalMilliseconds >= int.MaxValue ? int.MaxValue : refreshIn.TotalMilliseconds;
-                        _credentialRefreshTimer.Elapsed += RefreshTimerElapsed;
-                        _credentialRefreshTimer.Enabled = true;
-                        _credentialRefreshTimer.Start();
-
-                        Logger.TokenRefreshTimerStarted(_logger, _credentialRefreshTimer.Interval);
-                    }
+                    Logger.TokenRefreshTimerStarted(_logger, _credentialRefreshTimer.Interval);
                 }
             }
-            else
-            {
-                Logger.TokenRefreshTimerStartCalledButRefreshDisabled(_logger);
-            }
-
         }
 
         private void StopTokenRefreshTimer(bool dispose = false)

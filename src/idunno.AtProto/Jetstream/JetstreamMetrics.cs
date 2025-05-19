@@ -11,9 +11,9 @@ namespace idunno.AtProto.Jetstream
     /// </summary>
     public sealed class JetstreamMetrics
     {
-        private readonly Counter<long> _messagesReceivedCounter;
+        private Counter<long> _messagesReceivedCounter;
 
-        private readonly Counter<long> _eventsParsedCounter;
+        private Counter<long> _eventsParsedCounter;
 
         /// <summary>
         /// Creates a new instance of <see cref="JetstreamMetrics"/>.
@@ -24,13 +24,7 @@ namespace idunno.AtProto.Jetstream
         {
             ArgumentNullException.ThrowIfNull(meter);
 
-            _messagesReceivedCounter = meter.CreateCounter<long>(
-                name: "idunno.bluesky.jetstream.message",
-                description: "Number of messages received from the jetstream.");
-
-            _eventsParsedCounter = meter.CreateCounter<long>(
-                name: "idunno.bluesky.jetstream.event",
-                description: "Number of events parsed from the jetstream.");
+            Initialize(meter);
         }
 
         /// <summary>
@@ -44,13 +38,7 @@ namespace idunno.AtProto.Jetstream
 
             Meter meter = meterFactory.Create(MeterName);
 
-            _messagesReceivedCounter = meter.CreateCounter<long>(
-                name: "idunno.bluesky.jetstream.message",
-                description: "Number of messages received from the jetstream.");
-
-            _eventsParsedCounter = meter.CreateCounter<long>(
-            name: "idunno.bluesky.jetstream.event",
-            description: "Number of events parsed from the jetstream.");
+            Initialize(meter);
         }
 
         /// <summary>
@@ -65,7 +53,19 @@ namespace idunno.AtProto.Jetstream
         /// <param name="quantity">The quantity to increment the metric by</param>
         public void EventsParsed(int quantity) => _eventsParsedCounter.Add(quantity);
 
-        internal static string MeterName  => "idunno.bluesky.jetstream";
+        internal static string MeterName  => "idunno.Bluesky.Jetstream";
 
+        [MemberNotNull(nameof(_messagesReceivedCounter), nameof(_eventsParsedCounter))]
+        [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Guidelines suggest all lower case.")]
+        private void Initialize(Meter meter)
+        {
+            _messagesReceivedCounter = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.message",
+                description: "Number of messages received from the jetstream.");
+
+            _eventsParsedCounter = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.event",
+                description: "Number of events parsed from the jetstream.");
+        }
     }
 }

@@ -71,7 +71,7 @@ namespace idunno.Bluesky
         /// Accepts the conversation specified by the <paramref name="conversationId"/> for the authenticated user.
         /// </summary>
         /// <param name="conversationId">The conversation identifier to accept.</param>
-        /// <param name="service">The <see cref="Uri"/> of the service to accept the concersation on.</param>
+        /// <param name="service">The <see cref="Uri"/> of the service to accept the conversation on.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
         /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
@@ -1117,8 +1117,6 @@ namespace idunno.Bluesky
             ILoggerFactory? loggerFactory = default,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNull(status);
-
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);

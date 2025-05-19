@@ -17,8 +17,11 @@ namespace idunno.Bluesky
     /// </summary>
     public sealed class PostBuilder
     {
+#if NET9_0_OR_GREATER
+        private readonly Lock _syncLock = new ();
+#else
         private readonly object _syncLock = new ();
-
+#endif
         private readonly Post _post;
         private readonly List<EmbeddedImage> _embeddedImages = [];
         private EmbeddedVideo? _embeddedVideo;
@@ -822,8 +825,6 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentOutOfRangeException">Thrown when enlarging the the record text of this instance would exceed <see cref="MaxCapacity"/> or <see cref="MaxCapacityGraphemes"/>.</exception>
         public PostBuilder Append(char value)
         {
-            ArgumentNullException.ThrowIfNull(value);
-
             return Append(value.ToString());
         }
 

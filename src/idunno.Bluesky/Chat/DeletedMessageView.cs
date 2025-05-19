@@ -18,9 +18,8 @@ namespace idunno.Bluesky.Chat
         /// <exception cref="ArgumentException">
         ///   Thrown when <paramref name="id" /> or <paramref name="revision"/> is null or whitespace.
         /// </exception>
-
         /// <exception cref="ArgumentNullException">
-        ///   Thrown when <paramref name="sentAt"/> or <paramref name="sender"/> is null.
+        ///   Thrown when <paramref name="sender"/> is null.
         /// </exception>
         public DeletedMessageView(
             string id,
@@ -32,7 +31,6 @@ namespace idunno.Bluesky.Chat
             ArgumentException.ThrowIfNullOrWhiteSpace(revision);
 
             ArgumentNullException.ThrowIfNull(sender);
-            ArgumentNullException.ThrowIfNull(sentAt);
         }
     }
 }
