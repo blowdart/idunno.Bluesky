@@ -20,7 +20,7 @@ await agent.Block(did);
 
 ## Unblocking a user
 
-Unblock is also simliar to muting.
+Unblock is also similar to muting.
 
 `Unblock(did)`
 

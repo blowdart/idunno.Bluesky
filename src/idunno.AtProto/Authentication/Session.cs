@@ -120,7 +120,7 @@ namespace idunno.AtProto.Authentication
         public string AccessJwt { get; init; }
 
         /// <summary>
-        /// The Refresh JWT for thesession.
+        /// The Refresh JWT for the session.
         /// </summary>
         public string RefreshJwt { get; init; }
 

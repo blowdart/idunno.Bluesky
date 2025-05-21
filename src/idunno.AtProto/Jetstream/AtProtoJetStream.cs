@@ -27,6 +27,12 @@ namespace idunno.AtProto.Jetstream
     /// </remarks>
     public class AtProtoJetstream : IDisposable
     {
+#if NET9_0_OR_GREATER
+        private readonly Lock _syncLock = new ();
+#else
+        private readonly object _syncLock = new();
+#endif
+
         private volatile bool _disposed;
 
         private const string SubscribeEndpoint = "/subscribe";
@@ -337,20 +343,23 @@ namespace idunno.AtProto.Jetstream
 
             if (_client is null || _client.State == WebSocketState.Aborted || _client.State == WebSocketState.Closed)
             {
-                if (_client is not null)
+                lock (_syncLock)
                 {
-                    try
+                    if (_client is not null)
                     {
-                        _client.Dispose();
+                        try
+                        {
+                            _client.Dispose();
+                        }
+                        catch (Exception ex)
+                        {
+                            JetStreamLogger.ErrorDisposingClientInConnectAsync(_logger, ex);
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        JetStreamLogger.ErrorDisposingClientInConnectAsync(_logger, ex);
-                    }
-                }
 
-                _client = CreateWebSocketClient();
-                OnConnectionStateChanged(new ConnectionStateChangedEventArgs(_client.State));
+                    _client = CreateWebSocketClient();
+                    OnConnectionStateChanged(new ConnectionStateChangedEventArgs(_client.State));
+                }
             }
 
             uri ??= _uri;
@@ -435,6 +444,10 @@ namespace idunno.AtProto.Jetstream
                 try
                 {
                     await _client.CloseAsync(status, statusDescription, ctx).ConfigureAwait(false);
+                }
+                catch (ObjectDisposedException)
+                {
+                    throw;
                 }
                 catch (Exception ex)
                 {
@@ -568,6 +581,10 @@ namespace idunno.AtProto.Jetstream
                 {
                     JetStreamLogger.MessageLoopCancellation(_logger);
                 }
+                catch (ObjectDisposedException)
+                {
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     LogFault(ex.Message);
@@ -620,6 +637,10 @@ namespace idunno.AtProto.Jetstream
             {
                 JetStreamLogger.ParseMessageCouldNotProcessAsJson(logger, json, ex);
                 return Task.FromException(ex);
+            }
+            catch (ObjectDisposedException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
