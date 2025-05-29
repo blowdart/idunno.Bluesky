@@ -13,4 +13,7 @@
     <PackageReference Include="idunno.Bluesky" Version="0.9.1-prerelease" />
   </ItemGroup>
 
+  <PropertyGroup>
+      <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
 </Project>
