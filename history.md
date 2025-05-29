@@ -1,5 +1,22 @@
 # Version History
 
+## 0.9.2
+
+### Features
+
+#### idunno.AtProto
+
+* Enable trimming for .NET 9.0 projects
+
+#### idunno.AtProto.OAuthCallback
+
+* Enable trimming for .NET 9.0 projects
+
+#### idunno.Bluesky
+
+* Enable trimming for .NET 9.0 projects
+
+
 ## 0.9.1
 
 ### Features

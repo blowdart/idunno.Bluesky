@@ -10,7 +10,7 @@
 * Viewing feeds
 * Viewing threads
 * Creating and deleting posts
-  * Adding Mentions, links and hashtags to posts
+  * Adding mentions, links and hashtags to posts
   * Adding images and video to posts
   * Gating threads and posts
   * Liking, quoting, and reposting posts
@@ -18,6 +18,8 @@
 * Following and unfollowing users
 * Muting and blocking users
 * Sending, receiving, and deleting messages
+
+* Trimming is supported for applications targeting .NET 9.0 or later.
 
 ## How to Use
 

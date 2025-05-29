@@ -8,8 +8,41 @@ OAuth libraries for the [idunno.AtProto](https://www.nuget.org/packages/idunno.A
 
 * Local callback server for console applications and local testing.
 
+* Trimming is supported for applications targeting .NET 9.0 or later.
+
 ## How to Use
 
+```c#
+using (var agent = new BlueskyAgent(
+    options: new BlueskyAgentOptions()
+    {
+        OAuthOptions = new OAuthOptions()
+        {
+            ClientId = "http://localhost",
+            Scopes = ["atproto"]
+        }
+    }))
+    {
+
+        await using var callbackServer = new CallbackServer(
+            CallbackServer.GetRandomUnusedPort());
+        {
+            string callbackData;
+
+            OAuthClient oAuthClient = agent.CreateOAuthClient();
+
+            Uri startUri = await agent.BuildOAuth2LoginUri(oAuthClient, loginHandle, returnUri: callbackServer.Uri, cancellationToken: cancellationToken);
+
+            OAuthClient.OpenBrowser(startUri);
+
+            callbackData = await callbackServer.WaitForCallbackAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            await agent.ProcessOAuth2LoginResponse(oAuthClient, callbackData, cancellationToken);
+
+            await agent.ProcessOAuth2LoginResponse(oAuthClient, callbackData, cancellationToken);
+        }
+    }
+```
 
 ## Related Packages
 

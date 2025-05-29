@@ -6,10 +6,14 @@
 
 ## Key Features
 
-* PDS authentication and session management
+* PDS authentication via handle/password and OAuth
 * List, Create, Get, Put, Delete records
 * Blob uploads
+* Self labelling
 * Handle and PDS resolution
+* AT Protocol Jetstream support
+
+* Trimming is supported for applications targeting .NET 9.0 or later.
 
 ## How to Use
 

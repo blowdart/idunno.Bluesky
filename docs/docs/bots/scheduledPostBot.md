@@ -2,13 +2,13 @@
 
 Bots are accounts on the network that post automatically. Popular ones include bots that post the magnitude of recent earthquakes, traffic alerts, etc.
 
-Let's write a simple bot that posts every fifteen minutes. We're choosing to implement the bot as a command line application, so it could eventually live inside a docket container,
+Let's write a simple bot that posts every fifteen minutes. We're choosing to implement the bot as a command line application, so it could eventually live inside a docker container,
 or ran in something like a Digital Ocean droplet easily.
 
 > [!NOTE]
 > You must already have created an account for your bot to run as, and generated a [app password](https://bsky.app/settings/app-passwords) for that account.
 
-## Create a .NET project with the idunno.Bluesky nuget package
+## Create a .NET project and add the idunno.Bluesky nuget package
 
 Let's start by creating a .NET project for our bot and adding the idunno.Bluesky package.
 
@@ -26,7 +26,7 @@ Let's start by creating a .NET project for our bot and adding the idunno.Bluesky
 1. Create a new .NET Command Line project by opening the File menu, and choosing **New ▶ Project**.
 1. In the "**Create a new project**" dialog select C# as the language, choose **Console App** as the project type then click Next.
 1. In the "**Configure your new project**" dialog name the project `BlueskyBot` and click Next.
-1. In the "**Additional information**" dialog choose a Framework as .NET 8.0, uncheck the "Do not use top level statements" check box then click **Create**.
+1. In the "**Additional information**" dialog choose the Framework as .NET 8.0, uncheck the "Do not use top level statements" check box then click **Create**.
 1. Under the **Project** menu Select **Manage nuget packages**, select the *Browse* tab, ensure that the Include prelease checkbox is checked. Search for `idunno.Bluesky`, and click **Install**.
 1. Close the **Manage nuget packages** dialog.
 
@@ -40,7 +40,7 @@ First configure VS Code to [allow pre-release nuget packages](https://code.visua
 1. Name your project `BlueskyBot`
 1. Choose the solution format you prefer.
 1. Press **Enter** to create the solution.
-1. Select the `HelloWorld.csproj` file in Explorer window.
+1. Select the `BlueskyBot.csproj` file in Explorer window.
 1. Open the Command Palette (Ctrl + Shift + P) and then search for and select **Nuget: Add**
 1. Enter `idunno.Bluesky` in the package search dialog and choose the latest version.
 
@@ -52,7 +52,7 @@ Now add the [Coravel](https://docs.coravel.net/) nuget package to provide the sc
 
 # [Command Line](#tab/coravel/commandLine)
 
-1. In a PowerShell console window run the following commands
+1. In a console window run the following commands
    ```PowerShell
    dotnet add package Coravel
    dotnet add package Microsoft.Extensions.Hosting
@@ -79,9 +79,9 @@ Now add the [Coravel](https://docs.coravel.net/) nuget package to provide the sc
    [!code-xml[](code/BlueskyBot/BlueskyBot.csproj#L21-L25)]
 ---
 
-## Add settings file support
+## Add a settings file
 
-Now we have all our dependencies line project we'll add a settings file and a class for the settings file.
+Now we have all our dependencies lined up we'll add a settings file and a class for the settings file.
 
 # [Command Line](#tab/settings/commandLine)
 
@@ -121,7 +121,7 @@ Now we have all our dependencies line project we'll add a settings file and a cl
    **<yourAccountHandle>** with the handle of your bot account.
    [!code-json[](code/BlueskyBot/appsettings.json?highlight=3)]
 1. Right click on `appsettings.json` in Solution Explorer and choose **Properties**
-1. Change the 'Copy to Output Directory` to `Copy always`. Close the **Properties** dialog.
+1. Change the `Copy to Output Directory` to `Copy always`. Close the **Properties** dialog.
 1. Right click on the `BlueskyBot.csproj` file in Solution Explorer and choose **Add ▶ Class**.
 1. In the name input box enter `BotSettings.cs`
 1. Replace the generated contents with the following
@@ -161,8 +161,9 @@ Now we'll use the [User Secret Manager](https://learn.microsoft.com/en-us/aspnet
 
 > [!TIP]
 > Secret Manager is a developer resource, it does not exist on production servers. If you moved the bot to a production server
-> you could use environment variables to store the bot password, or something like
-> Azure KeyVault with its [.NET configuration provider](https://learn.microsoft.com/en-us/aspnet/core/security/key-vault-configuration).
+> you could use [environment variables](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets?view=aspnetcore-9.0&tabs=windows#environment-variables)
+> to store the bot password, or something like> Azure KeyVault with its
+> [.NET configuration provider](https://learn.microsoft.com/en-us/aspnet/core/security/key-vault-configuration).
 > Refer to your hosting providers documentation to discover your options.
 
 # [Command Line](#tab/appPassword/commandLine)

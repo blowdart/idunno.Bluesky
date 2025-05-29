@@ -118,5 +118,7 @@ Native AOT has benefits:
 
 If you wish to use AOT with your own classes you must enable JSON Source Generation for your `AtProtoRecordValue` and `AtProtoRecord` records and follow the guidance above.
 
-> [!WARNING]
-> Trimming is not currently supported due to a bug in the [linker](https://github.com/dotnet/runtime/issues/114307).
+# Trimming
+
+Trimming is supported if your application targets .NET 9.0. You cannot target .NET 8.0 due the use of v9 of `System.Text.Json` and
+a [bug in the linker](https://github.com/dotnet/runtime/issues/114307).

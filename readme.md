@@ -8,7 +8,7 @@
 [![NuGet Version](https://img.shields.io/nuget/vpre/idunno.Bluesky)](https://www.nuget.org/packages/idunno.Bluesky/)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/idunno.Bluesky)](https://www.nuget.org/packages/idunno.Bluesky/)
 
-A .NET 8 class library for the [AT Protocol](https://docs.bsky.app/docs/api/at-protocol-xrpc-api) and APIs for the [Bluesky social network](https://bsky.social/).
+A .NET 8 and .NET 9 class library for the [AT Protocol](https://docs.bsky.app/docs/api/at-protocol-xrpc-api) and APIs for the [Bluesky social network](https://bsky.social/).
 
 ## Getting Started
 
@@ -49,7 +49,6 @@ The [releases page](https://github.com/blowdart/idunno.Bluesky/releases) provide
 
 * Logging in idunno.Bluesky
 * GIF attaching
-* Trimming support (Contingent on [linker bug](https://github.com/dotnet/runtime/issues/114307))
 * Firehose support
 * Wider test coverage
 * More deserialization tests with captured responses
@@ -61,7 +60,7 @@ The [releases page](https://github.com/blowdart/idunno.Bluesky/releases) provide
 ## Dependencies
 
 `idunno.AtProto` takes a dependency on `System.Text.Json` v9 to support deserializing derived types where the `$type` property is not the
-first property in the JSON object.
+first property in the JSON object. 
 
 ### External dependencies
 

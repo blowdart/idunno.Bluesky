@@ -17,11 +17,16 @@
     <WarningsNotAsErrors>S1133,S1135</WarningsNotAsErrors>
   </PropertyGroup>
 
-  <!-- AOT & Trimming -->
-  <!-- Remove until https://github.com/dotnet/runtime/issues/114307 -->
+  <!-- AOT -->
   <PropertyGroup>
     <IsAotCompatible>true</IsAotCompatible>
     <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+  </PropertyGroup>
+
+  <!-- Trimming -->
+  <!-- Limit trimming to .NET9.0 or higher due to https://github.com/dotnet/runtime/issues/114307 -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net9.0'">
+    <IsTrimmable>true</IsTrimmable>
   </PropertyGroup>
 
   <Choose>

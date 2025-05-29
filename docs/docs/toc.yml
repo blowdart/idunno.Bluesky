@@ -40,11 +40,6 @@ items:
       - name: Editing a user profile
         href: profileEditing.md
 
-  - name: Writing Bots
-    items:
-      - name: Writing your first bot
-        href: bots/scheduledPostBot.md
-
   - name: Advanced Topics
     items:
       - name: Labels
@@ -55,8 +50,15 @@ items:
         href: logging.md
       - name: Saving & restoring authentication state
         href: savingAndRestoringAuthentication.md
-      - name: Json Source Generation and Native AOT
+      - name: Json Source Generation, AOT & Trimming
         href: sourceGeneration.md
+
+  - name: Writing Bots
+    items:
+      - name: Writing your first bot
+        href: bots/scheduledPostBot.md
+      - name: Writing a watcher bot
+        href: bots/watcherBot.md
 
   - name: Reference
     items:
