@@ -20,6 +20,7 @@ If you use an Bluesky app password you don't need to worry about authorization c
 * `Samples.Common` - helper functions used in the sample applications.
 
 * `Samples.AtProto` - a sample showing how to use the underlying AtProto APIs.
+* `Samples.Bot` - a sample showing a simple bot posting on a scheduled time.
 * `Samples.DirectMessages` - a sample showing how to use the conversation APIs.
 * `Samples.EmbeddedCard` - a sample showing how to embed an Open Graph card in a post.
 * `Samples.Feed` - a sample showing how to page through a feed.

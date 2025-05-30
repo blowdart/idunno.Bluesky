@@ -40,6 +40,7 @@ namespace idunno.AtProto
         {
             ArgumentNullException.ThrowIfNull(service);
 
+            OriginalService = service;
             Service = service;
 
             if (options is not null)
@@ -80,6 +81,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClientFactory);
 
+            OriginalService = service;
             Service = service;
 
             if (options is not null)
@@ -117,6 +119,11 @@ namespace idunno.AtProto
         /// Gets the <see cref="Uri"/> for the AT Proto service the agent is issuing requests against.
         /// </summary>
         public Uri Service { get; protected internal set; }
+
+        /// <summary>
+        /// Gets the <see cref="Uri"/> for the service originally supplied during the construction of this instance.
+        /// </summary>
+        protected internal Uri OriginalService { get; set; }
 
         /// <summary>
         /// Releases the unmanaged resources used by the <see cref="AtProtoAgent"/> and optionally disposes of the managed resources.

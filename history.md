@@ -1,5 +1,13 @@
 # Version History
 
+## 0.9.2.1
+
+### Bug fixes
+
+#### idunno.AtProto
+
+* Properly restore service uri when credentials are refreshed from a stored state. Fixes [#164](https://github.com/blowdart/idunno.Bluesky/issues/164)
+
 ## 0.9.2
 
 ### Features

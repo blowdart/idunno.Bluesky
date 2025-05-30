@@ -9,12 +9,13 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Timers;
-using idunno.AtProto.Authentication;
-using idunno.AtProto.Authentication.Models;
-using idunno.AtProto.Events;
+
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+
+using idunno.AtProto.Authentication;
+using idunno.AtProto.Events;
 
 
 namespace idunno.AtProto
@@ -52,7 +53,14 @@ namespace idunno.AtProto
                 try
                 {
                     _credentials = value;
-
+                    if (_credentials is not null)
+                    {
+                        Service = _credentials.Service;
+                    }
+                    else
+                    {
+                        Service = OriginalService;
+                    }
                 }
                 finally
                 {
