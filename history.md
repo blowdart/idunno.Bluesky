@@ -1,6 +1,6 @@
 # Version History
 
-## 0.9.2.1
+## 0.9.3
 
 ### Bug fixes
 
