@@ -1,4 +1,4 @@
-﻿# Writing your first bot
+﻿# Writing your first scheduled bot
 
 Bots are accounts on the network that post automatically. Popular ones include bots that post the magnitude of recent earthquakes, traffic alerts, etc.
 
