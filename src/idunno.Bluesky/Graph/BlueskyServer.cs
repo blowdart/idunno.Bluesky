@@ -125,7 +125,7 @@ namespace idunno.Bluesky
 
             if (cursor is not null)
             {
-                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor = {Uri.EscapeDataString(cursor)}");
+                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor)}");
             }
 
             string queryString = queryStringBuilder.ToString();
@@ -219,7 +219,7 @@ namespace idunno.Bluesky
 
             if (cursor is not null)
             {
-                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor = {Uri.EscapeDataString(cursor)}");
+                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor)}");
             }
 
             string queryString = queryStringBuilder.ToString();
@@ -313,7 +313,7 @@ namespace idunno.Bluesky
 
             if (cursor is not null)
             {
-                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor = {Uri.EscapeDataString(cursor)}");
+                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor)}");
             }
 
             string queryString = queryStringBuilder.ToString();
@@ -408,7 +408,7 @@ namespace idunno.Bluesky
 
             if (cursor is not null)
             {
-                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor = {Uri.EscapeDataString(cursor)}");
+                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor)}");
             }
 
             string queryString = queryStringBuilder.ToString();
@@ -498,7 +498,7 @@ namespace idunno.Bluesky
 
             if (cursor is not null)
             {
-                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor = {Uri.EscapeDataString(cursor)}");
+                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor)}");
             }
 
             string queryString = queryStringBuilder.ToString();
@@ -585,7 +585,7 @@ namespace idunno.Bluesky
 
             if (cursor is not null)
             {
-                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor = {Uri.EscapeDataString(cursor)}");
+                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor)}");
             }
 
             string queryString = queryStringBuilder.ToString();
@@ -677,7 +677,7 @@ namespace idunno.Bluesky
 
             if (cursor is not null)
             {
-                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor = {Uri.EscapeDataString(cursor)}");
+                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor)}");
             }
 
             string queryString = queryStringBuilder.ToString();
@@ -768,7 +768,7 @@ namespace idunno.Bluesky
 
             if (cursor is not null)
             {
-                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor = {Uri.EscapeDataString(cursor)}");
+                queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor)}");
             }
 
             string queryString = queryStringBuilder.ToString();

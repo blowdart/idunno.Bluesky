@@ -1,5 +1,13 @@
 # Version History
 
+## 0.9.4
+
+### Bug fixes
+
+#### idunno.Bluesky
+
+* Fix cursor pagination in GetFollowers, GetBlocks, GetFollows, GetKnownFollowers, GetListBlocks, GetListMutes, GetList, GetLists, ListConversations.
+
 ## 0.9.3
 
 ### Bug fixes
