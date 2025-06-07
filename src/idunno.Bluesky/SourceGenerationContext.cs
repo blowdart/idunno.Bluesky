@@ -88,6 +88,7 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(GetLogResponse))]
     [JsonSerializable(typeof(GetMessagesResponse))]
     [JsonSerializable(typeof(ListConversationsResponse))]
+    [JsonSerializable(typeof(SendMessageRequest))]
     [JsonSerializable(typeof(SendMessageBatchRequest))]
     [JsonSerializable(typeof(SendMessageBatchResponse))]
     [JsonSerializable(typeof(UpdateReadRequest))]

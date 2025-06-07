@@ -28,7 +28,7 @@ namespace idunno.Bluesky.Chat
 
             if (facets is not null)
             {
-                Facets = new ReadOnlyCollection<Facet>(facets.ToList<Facet>().AsReadOnly());
+                Facets = new ReadOnlyCollection<Facet>(facets.ToList().AsReadOnly());
             }
             else
             {
@@ -46,17 +46,17 @@ namespace idunno.Bluesky.Chat
         public string Text { get; init; }
 
         /// <summary>
-        /// Gets the rich text <see cref="Facet"/>s of the message, if any.
+        /// Gets or sets the rich text <see cref="Facet"/>s of the message, if any.
         /// </summary>
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public IReadOnlyCollection<Facet>? Facets { get; init; }
+        public IReadOnlyCollection<Facet>? Facets { get; set; }
 
         /// <summary>
-        /// Gets the embedded record of the message, if any.
+        /// Gets or sets the embedded record of the message, if any.
         /// </summary>
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public EmbeddedRecord? Embed { get; init; }
+        public EmbeddedBase? Embed { get; set; }
     }
 }

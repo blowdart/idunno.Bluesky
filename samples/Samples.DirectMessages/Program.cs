@@ -10,10 +10,12 @@ using Microsoft.Extensions.Logging;
 
 using idunno.Bluesky;
 using idunno.Bluesky.Actor;
+using idunno.AtProto;
 using idunno.Bluesky.Chat;
 
 using Samples.Common;
-using idunno.AtProto;
+using idunno.Bluesky.Embed;
+using System.Net.Http.Headers;
 
 namespace Samples.DirectMessages
 {
@@ -102,6 +104,18 @@ namespace Samples.DirectMessages
                     }
                 }
 
+                var startConversationResult = await agent.GetConversationForMembers(["did:plc:hfgp6pj3akhqxntgqwramlbg"], cancellationToken: cancellationToken);
+                if (startConversationResult.Succeeded)
+                {
+                    var post = await agent.GetPostRecord("at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3lqxyqocwx22m", cancellationToken: cancellationToken);
+
+                    var sendMessageResult = await agent.SendMessage(
+                        startConversationResult.Result.Id,
+                        "Embedded post test",
+                        embeddedPost: post.Result!.StrongReference,
+                        cancellationToken: cancellationToken);
+                }
+
                 var listConversations = await agent.ListConversations(cancellationToken: cancellationToken);
 
                 if (listConversations.Succeeded && listConversations.Result.Count != 0 && !cancellationToken.IsCancellationRequested)
@@ -178,6 +192,19 @@ namespace Samples.DirectMessages
                                                         var reactionSender = getConversation.Result.Members.FirstOrDefault(m => m.Did == view.Sender.Did) ??
                                                             throw new InvalidOperationException("Cannot find message sender in conversation view");
                                                         Console.WriteLine($"{reactionSender}: {reaction.Value} {reaction.CreatedAt:g}");
+                                                    }
+
+                                                    if (view.Embed is not null &&
+                                                        view.Embed.Record is not null &&
+                                                        view.Embed.Record is ViewRecord viewRecord)
+                                                    {
+                                                        Console.WriteLine("  Embedded Record");
+
+                                                        if (viewRecord.Value is Post post)
+                                                        {
+                                                            Console.WriteLine($"  {viewRecord.Author}");
+                                                            Console.WriteLine($"  {post.Text}");
+                                                        }
                                                     }
                                                 }
                                                 else if (message is DeletedMessageView _)

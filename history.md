@@ -1,12 +1,21 @@
 # Version History
 
+## 0.9.5
+
+### Features
+
+#### idunno.Bluesky
+
+* Fix serialization exception in `SendMessage`. Fixes [#169](https://github.com/blowdart/idunno.Bluesky/issues/169)
+* Add optional parameter, `embeddedPost` to `SendMessage` to allow for embedding of posts in direct messages.
+
 ## 0.9.4
 
 ### Bug fixes
 
 #### idunno.Bluesky
 
-* Fix cursor pagination in GetFollowers, GetBlocks, GetFollows, GetKnownFollowers, GetListBlocks, GetListMutes, GetList, GetLists, ListConversations.
+* Fix cursor pagination in `GetFollowers`, `GetBlocks`, `GetFollows`, `GetKnownFollowers`, `GetListBlocks`, `GetListMutes`, `GetList`, `GetLists`, and `ListConversations`.
 
 ## 0.9.3
 

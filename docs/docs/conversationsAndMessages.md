@@ -22,7 +22,7 @@ If you already have a conversation ID you can use `GetConversation` to retrieve 
 To retrieve the messages in a conversation use `GetMessages`:
 
 ```c#
-var getMessagesResult = await agent.GetMessages(conversationId, cancellationToken: cancellationToken);
+var getMessagesResult = await agent.GetMessages(conversationId);
 ```
 
 The returns a [pageable list](cursorsAndPagination.md) of either `MessageView` or `DeletedMessageView` for each message in the conversation, as well
@@ -53,18 +53,57 @@ optionally the message id of the last message seen.
 To send a message to a conversation use `SendMessage()`:
 
 ```c#
-var sendMessageResult = await agent.SendMessage(conversationID, "hello"", cancellationToken);
+var sendMessageResult = await agent.SendMessage(conversationID, "hello");
 ```
 
 This returns a `MessageView` which includes the message identifier, which you can use to delete a message.
 
-For rich messages, tagging DIDs, embedding links etc. you can pass an instance of `MessageInput` and specify the facets for the message.
+If you want to embed a link to a post provide a `StrongReference` to the post in the optional `embeddedPost` parameter on `SendMessage`.
+
+Like posts mentions, hashtags and links are detected automatically. If you want to disable facet detection set the `extractFacets` parameter to false.
+If you want to create your own facets create an instance of `MessageInput` and pass that into `SendMessage`.
 
 You can send multiple messages into multiple conversations using `SendMessageBatch()`.
 
 ## <a name="deleting">Deleting a message in a conversation</a>
 
 To delete a message in a conversation use `DeleteMessageForSelf()`, passing the conversation id and the message id.
+
+## <a name="reacting">Embedded posts in messages</a>
+
+If you want to embed a link to a post provide a `StrongReference` to the post in the optional `embeddedPost` parameter on `SendMessage`.
+
+To extract the post details from a `MessageView` use the `Embed` property like this:
+
+```c#
+foreach (MessageViewBase message in getMessages.Result)
+{
+    if (message is MessageView view)
+    {
+        var sender = getConversation.Result.Members.FirstOrDefault(m => m.Did == view.Sender.Did) ??
+            throw new InvalidOperationException("Cannot find message sender in conversation view");
+
+        Console.WriteLine($"{sender}: {view.Text} {view.SentAt:g}");
+
+        if (view.Embed is not null &&
+            view.Embed.Record is not null &&
+            view.Embed.Record is ViewRecord viewRecord)
+        {
+            if (viewRecord.Value is Post post)
+            {
+                Console.WriteLine($"  {viewRecord.Author}");
+                Console.WriteLine($"  {post.Text}");
+            }
+        }
+    }
+    else if (message is DeletedMessageView _)
+    {
+        Console.WriteLine("Deleted Message");
+    }
+}
+```
+
+The above code leaves space for handling other types of embeds should they be added by Bluesky.
 
 ## <a name="reacting">Message reactions</a>
 
@@ -105,10 +144,10 @@ To start a conversation you will need the DIDs of the conversation members, whic
 it will be restored in the direct message list.
 
 ```c#
-var memberDid = await agent.ResolveHandle("example.invalid.handle", cancellationToken);
+var memberDid = await agent.ResolveHandle("example.invalid.handle");
 List<Did> conversationMembers = new() { agent.Did!, bot2Did! };
 
-var startConversationResult = await agent.GetConversationForMembers(conversationMembers, cancellationToken);
+var startConversationResult = await agent.GetConversationForMembers(conversationMembers);
 ```
 
 `StartConversation()` returns a `ConversationView` which includes the conversation ID, which you can then use to send messages to the chat.

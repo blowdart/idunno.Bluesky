@@ -331,6 +331,16 @@ namespace idunno.Bluesky
     public static class EmbeddedViewTypeDiscriminators
     {
         /// <summary>
+        /// The json type discriminator for a view record.
+        /// </summary>
+        public const string ViewRecord = "app.bsky.embed.record#viewRecord";
+
+        /// <summary>
+        /// The json type discriminator for an view of an embedded record.
+        /// </summary>
+        public const string EmbedView = "app.bsky.embed.record#view";
+
+        /// <summary>
         /// The json type discriminator for an view of an embedded record that cannot be found.
         /// </summary>
         public const string EmbedViewNotFound = "app.bsky.embed.record#viewNotFound";
@@ -344,6 +354,27 @@ namespace idunno.Bluesky
         /// The json type discriminator for a view over a record that is detached
         /// </summary>
         public const string EmbedViewDetached = "app.bsky.embed.record#Detached";
+
+        /// <summary>
+        /// The json type discriminator for a view over a feed generator
+        /// </summary>
+        public const string GeneratorView = "app.bsky.feed.defs#generatorView";
+
+        /// <summary>
+        /// The json type discriminator for a view over a list
+        /// </summary>
+        public const string ListView = "app.bsky.graph.defs#listView";
+
+        /// <summary>
+        /// The json type discriminator for a view over a list
+        /// </summary>
+        public const string LabelerView = "app.bsky.labeler.defs#labelerView";
+
+        /// <summary>
+        /// The json type discriminator for a basic view over a starter pack
+        /// </summary>
+        public const string StarterPackViewBasic = "app.bsky.graph.defs#starterPackViewBasic";
+
     }
 
     /// <summary>

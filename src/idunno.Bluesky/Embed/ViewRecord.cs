@@ -10,6 +10,7 @@ using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 
 using idunno.Bluesky.Actor;
+using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky.Embed
 {
@@ -27,6 +28,7 @@ namespace idunno.Bluesky.Embed
         /// <param name="uri">The <see cref="AtUri"/> of the record.</param>
         /// <param name="cid">The <see cref="AtProto.Cid"/> of the record.</param>
         /// <param name="author">A <see cref="ProfileViewBasic"/> of the record author.</param>
+        /// <param name="value">A <see cref="BlueskyRecord"/>.</param>
         /// <param name="labels">Any labels applied to the record.</param>
         /// <param name="replyCount">The number of replies to this post.</param>
         /// <param name="repostCount">The number of times this post has been reposted.</param>
@@ -39,6 +41,7 @@ namespace idunno.Bluesky.Embed
             AtUri uri,
             Cid cid,
             ProfileViewBasic author,
+            BlueskyRecord value,
             IReadOnlyCollection<Label>? labels,
             int? replyCount,
             int? repostCount,
@@ -59,6 +62,8 @@ namespace idunno.Bluesky.Embed
             QuoteCount = quoteCount;
             Embeds = embeds ?? new List<EmbeddedView>().AsReadOnly();
             IndexedAt = indexedAt;
+
+            Value = value;
         }
 
         /// <summary>
@@ -89,16 +94,9 @@ namespace idunno.Bluesky.Embed
         public ProfileViewBasic Author { get; init; }
 
         /// <summary>
-        /// Gets the record data itself.
+        /// Gets the record itself.
         /// </summary>
-        [JsonIgnore]
-        public JsonElement Value
-        {
-            get
-            {
-                return ExtensionData["value"];
-            }
-        }
+        public BlueskyRecord Value { get; init; }
 
         /// <summary>
         /// Gets any labels applied to the record.

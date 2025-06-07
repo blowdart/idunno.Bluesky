@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using idunno.AtProto;
+using idunno.AtProto.Repo;
 using idunno.Bluesky.Chat;
 using idunno.Bluesky.RichText;
 
@@ -411,20 +412,29 @@ namespace idunno.Bluesky
         /// <param name="id">The conversation identifier to send the <paramref name="message"/> to.</param>
         /// <param name="message">The message to send.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="message" />.</param>
+        /// <param name="embeddedPost">A <see cref="StrongReference"/> to a post that will be embedded in the message.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is null or white space.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> is null, or if <paramref name="embeddedPost"/> is specified but its collection is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="embeddedPost"/> is specified but it is not in the <see cref="CollectionNsid.Post"/> collection.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<MessageView>> SendMessage(
             string id,
             string message,
             bool extractFacets = true,
+            StrongReference? embeddedPost = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(id);
 
             ArgumentNullException.ThrowIfNull(message);
+
+            if (embeddedPost is not null)
+            {
+                ArgumentNullException.ThrowIfNull(embeddedPost.Uri.Collection);
+                ArgumentOutOfRangeException.ThrowIfNotEqual(embeddedPost.Uri.Collection, CollectionNsid.Post);
+            }
 
             if (!IsAuthenticated)
             {
@@ -441,6 +451,11 @@ namespace idunno.Bluesky
             {
                 IList<Facet> facets = await _facetExtractor.ExtractFacets(message, cancellationToken).ConfigureAwait(false);
                 messageInput = new MessageInput(message, facets);
+            }
+
+            if (embeddedPost is not null)
+            {
+                messageInput.Embed = new Embed.EmbeddedRecord(embeddedPost);
             }
 
             return await SendMessage(

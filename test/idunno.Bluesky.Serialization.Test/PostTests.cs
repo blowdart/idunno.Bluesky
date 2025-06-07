@@ -59,7 +59,7 @@ namespace idunno.Bluesky.Serialization.Test
         }
 
         [Fact]
-        public void SimplePostDeserializesCorrectlyWithJavascriptDateTimeAndSourceGeneratedJsonContext()
+        public void SimplePostDeserializesCorrectlyWithJavaScriptDateTimeAndSourceGeneratedJsonContext()
         {
             string json = """
                 {

@@ -11,6 +11,13 @@ namespace idunno.Bluesky
     /// Base class for view records.
     /// </summary>
     [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
+    [JsonDerivedType(typeof(Feed.GeneratorView), typeDiscriminator: EmbeddedViewTypeDiscriminators.GeneratorView)]
+    [JsonDerivedType(typeof(Graph.ListView), typeDiscriminator: EmbeddedViewTypeDiscriminators.ListView)]
+    [JsonDerivedType(typeof(Labeler.LabelerView), typeDiscriminator: EmbeddedViewTypeDiscriminators.LabelerView)]
+    [JsonDerivedType(typeof(Graph.StarterPackViewBasic), typeDiscriminator: EmbeddedViewTypeDiscriminators.StarterPackViewBasic)]
+    [JsonDerivedType(typeof(Embed.ViewRecord), typeDiscriminator: EmbeddedViewTypeDiscriminators.ViewRecord)]
+    [JsonDerivedType(typeof(Embed.EmbeddedView), typeDiscriminator: EmbeddedViewTypeDiscriminators.EmbedView)]
+
     public record View
     {
         /// <summary>
