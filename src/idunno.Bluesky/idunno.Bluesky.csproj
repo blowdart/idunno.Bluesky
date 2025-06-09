@@ -3,12 +3,6 @@
   <PropertyGroup>
     <Description>.NET client for the Bluesky social network.</Description>
     <PackageTags>atproto;bluesky</PackageTags>
-    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <Configurations>Debug;Release;CodeQL</Configurations>
-    <!-- Needed for meters -->
-    <EventSourceSupport>true</EventSourceSupport>
   </PropertyGroup>
 
   <ItemGroup>

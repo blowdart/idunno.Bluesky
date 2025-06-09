@@ -1,6 +1,34 @@
 <Project>
   <Import Project="..\Directory.Build.props" />
 
+  <Choose>
+    <When Condition="'$(Configuration)' != 'CodeQL'">
+      <PropertyGroup>
+        <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
+  
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Configurations>Debug;Release;CodeQL</Configurations>
+    <LangVersion>13.0</LangVersion>
+    <!-- Needed for meters -->
+    <EventSourceSupport>true</EventSourceSupport>
+  </PropertyGroup>
+
+  <!-- Trimming -->
+  <!-- Limit trimming to .NET9.0 or higher due to https://github.com/dotnet/runtime/issues/114307 -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net9.0'">
+    <IsTrimmable>true</IsTrimmable>
+  </PropertyGroup>
+
   <PropertyGroup>
     <PackageProjectUrl>https://github.com/blowdart/idunno.Bluesky</PackageProjectUrl>
     <!-- The SPDX name for the source license. See https://spdx.org/licenses/. -->
@@ -21,12 +49,6 @@
   <PropertyGroup>
     <IsAotCompatible>true</IsAotCompatible>
     <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
-  </PropertyGroup>
-
-  <!-- Trimming -->
-  <!-- Limit trimming to .NET9.0 or higher due to https://github.com/dotnet/runtime/issues/114307 -->
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net9.0'">
-    <IsTrimmable>true</IsTrimmable>
   </PropertyGroup>
 
   <Choose>
