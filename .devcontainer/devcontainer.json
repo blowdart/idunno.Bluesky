@@ -3,7 +3,7 @@
     "image": "mcr.microsoft.com/devcontainers/dotnet:9.0",
     "features": {
         "ghcr.io/devcontainers/features/powershell:1": {}
-    }
+    },
 
     "postCreateCommand": "dotnet restore",
 
