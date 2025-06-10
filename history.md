@@ -6,9 +6,15 @@
 
 #### idunno.Bluesky
 
-* Fix serialization exception in `SendMessage`. Fixes [#169](https://github.com/blowdart/idunno.Bluesky/issues/169)
 * Add optional parameter, `embeddedPost` to `SendMessage` to allow for embedding of posts in direct messages.
 * Add live status to profile views
+
+### Bug fixes
+
+#### idunno.Bluesky
+
+* Fix serialization exception in `SendMessage`. Fixes [#169](https://github.com/blowdart/idunno.Bluesky/issues/169)
+
 
 ## 0.9.4
 
