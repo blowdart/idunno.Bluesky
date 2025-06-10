@@ -8,14 +8,13 @@ using System.Text;
 
 using Microsoft.Extensions.Logging;
 
+using idunno.AtProto;
 using idunno.Bluesky;
 using idunno.Bluesky.Actor;
-using idunno.AtProto;
 using idunno.Bluesky.Chat;
+using idunno.Bluesky.Embed;
 
 using Samples.Common;
-using idunno.Bluesky.Embed;
-using System.Net.Http.Headers;
 
 namespace Samples.DirectMessages
 {

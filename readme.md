@@ -53,10 +53,6 @@ The [releases page](https://github.com/blowdart/idunno.Bluesky/releases) provide
 * Wider test coverage
 * More deserialization tests with captured responses
 
-### Minor
-
-* [Live support](https://github.com/bluesky-social/atproto/pull/3824)
-
 ### Awaiting external
 
 * Automatic Open Graph card generation when link facets detected.

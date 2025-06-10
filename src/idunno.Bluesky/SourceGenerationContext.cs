@@ -73,6 +73,7 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(ThreadViewPreference))]
     [JsonSerializable(typeof(VerificationState))]
     [JsonSerializable(typeof(VerificationView))]
+    [JsonSerializable(typeof(StatusView))]
 
     [JsonSerializable(typeof(BeginConversation))]
     [JsonSerializable(typeof(CreateMessage))]

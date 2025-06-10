@@ -131,6 +131,11 @@ namespace idunno.Bluesky.Actor
         public VerificationState? Verification { get; init; }
 
         /// <summary>
+        /// Gets the <see cref="StatusView" /> of the actor, if any.
+        /// </summary>
+        public StatusView? Status { get; init; }
+
+        /// <summary>
         /// Gets a string representation of the <see cref="ProfileView"/>.
         /// This returns the actor's display name, if any, otherwise returns the actor's handle.
         /// </summary>

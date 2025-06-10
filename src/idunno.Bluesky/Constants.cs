@@ -138,58 +138,62 @@ namespace idunno.Bluesky
         /// <summary>
         /// The NSID for a user's post collection.
         /// </summary>
-        public static Nsid Post { get; } = new Nsid("app.bsky.feed.post");
+        public static Nsid Post => new("app.bsky.feed.post");
 
         /// <summary>
         /// The NSID for a user's likes collection.
         /// </summary>
-        public static Nsid Like { get; } = new Nsid("app.bsky.feed.like");
+        public static Nsid Like => new("app.bsky.feed.like");
 
         /// <summary>
         /// The NSID for a user's reposts collection.
         /// </summary>
-        public static Nsid Repost { get; } = new Nsid("app.bsky.feed.repost");
+        public static Nsid Repost => new("app.bsky.feed.repost");
 
         /// <summary>
         /// The NSID for a user's follows collection.
         /// </summary>
-        public static Nsid Follow { get; } = new Nsid("app.bsky.graph.follow");
+        public static Nsid Follow => new("app.bsky.graph.follow");
 
         /// <summary>
         /// The NSID for a user's block collection.
         /// </summary>
-        public static Nsid Block { get; } = new Nsid("app.bsky.graph.block");
+        public static Nsid Block => new("app.bsky.graph.block");
 
         /// <summary>
         /// The NSID for a user's thread gates collection.
         /// </summary>
-        public static Nsid ThreadGate { get; } = new Nsid("app.bsky.feed.threadgate");
+        public static Nsid ThreadGate => new("app.bsky.feed.threadgate");
 
         /// <summary>
         /// The NSID for a user's post gates collection.
         /// </summary>
-        public static Nsid PostGate { get; } = new Nsid("app.bsky.feed.postgate");
+        public static Nsid PostGate => new("app.bsky.feed.postgate");
 
         /// <summary>
         /// The NSID for an actor's profile.
         /// </summary>
-        public static Nsid Profile { get; } = new Nsid("app.bsky.actor.profile");
+        public static Nsid Profile => new("app.bsky.actor.profile");
 
         /// <summary>
         /// The NSID for a user's verification collection.
         /// </summary>
-        public static Nsid Verification { get; } = new Nsid("app.bsky.graph.verification");
+        public static Nsid Verification => new("app.bsky.graph.verification");
 
         /// <summary>
         /// The NSID for a user's list collection.
         /// </summary>
-        public static Nsid List { get; } = new Nsid("app.bsky.graph.list");
+        public static Nsid List => new("app.bsky.graph.list");
 
         /// <summary>
         /// The NSID for the user's collection of users added to their own lists.
         /// </summary>
-        public static Nsid ListItem { get; } = new Nsid("app.bsky.graph.listitem");
+        public static Nsid ListItem => new("app.bsky.graph.listitem");
 
+        /// <summary>
+        /// The NSID for an actor's status record.
+        /// </summary>
+        public static Nsid Status => new("app.bsky.actor.status");
     }
 
     /// <summary>
