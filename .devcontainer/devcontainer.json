@@ -1,6 +1,9 @@
 {
     "name": "idunno.Bluesky",
     "image": "mcr.microsoft.com/devcontainers/dotnet:9.0",
+    "features": {
+        "ghcr.io/devcontainers/features/powershell:1": {}
+    }
 
     "postCreateCommand": "dotnet restore",
 
@@ -11,7 +14,6 @@
                 "ms-dotnettools.csdevkit",
                 "ms-dotnettools.csharp",
                 "ms-vscode-remote.remote-containers",
-                "streetsidesoftware.code-spell-checker",
                 "EditorConfig.EditorConfig",
                 "VisualStudioExptTeam.vscodeintellicode",
                 "VisualStudioExptTeam.intellicode-api-usage-examples",
