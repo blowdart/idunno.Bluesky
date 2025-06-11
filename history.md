@@ -1,5 +1,9 @@
 # Version History
 
+## 0.9.6
+
+* Various dependency bumps
+
 ## 0.9.5
 
 ### Features
@@ -14,7 +18,6 @@
 #### idunno.Bluesky
 
 * Fix serialization exception in `SendMessage`. Fixes [#169](https://github.com/blowdart/idunno.Bluesky/issues/169)
-
 
 ## 0.9.4
 
