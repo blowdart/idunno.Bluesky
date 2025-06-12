@@ -55,7 +55,7 @@ namespace idunno.AtProto
 
             services
                 .AddHttpClient(HttpClientName, client => InternalConfigureHttpClient(client, _httpClientOptions?.HttpUserAgent, _httpClientOptions?.Timeout))
-                .ConfigurePrimaryHttpMessageHandler(() => BuildProxyClientHandler(_httpClientOptions?.ProxyUri, checkCrl));
+                .ConfigurePrimaryHttpMessageHandler(() => BuildPrimaryHttpClientHandler(_httpClientOptions?.ProxyUri, checkCrl));
 
             _serviceProvider = services.BuildServiceProvider();
             HttpClientFactory = _serviceProvider.GetService<IHttpClientFactory>()!;
@@ -105,7 +105,7 @@ namespace idunno.AtProto
                 }
 
 
-                return BuildProxyClientHandler(_httpClientOptions?.ProxyUri, checkCrl);
+                return BuildPrimaryHttpClientHandler(_httpClientOptions?.ProxyUri, checkCrl);
             }
         }
 
@@ -178,7 +178,7 @@ namespace idunno.AtProto
                 checkCrl = _httpClientOptions.CheckCertificateRevocationList;
             }
 
-            return BuildProxyClientHandler(_httpClientOptions?.ProxyUri, checkCrl);
+            return BuildPrimaryHttpClientHandler(_httpClientOptions?.ProxyUri, checkCrl);
         }
 
         private static void InternalConfigureHttpClient(HttpClient client, string? httpUserAgent = null, TimeSpan? timeout = null)
@@ -210,7 +210,7 @@ namespace idunno.AtProto
             }
         }
 
-        private static HttpClientHandler BuildProxyClientHandler(Uri? proxyUri, bool checkCertificateRevocationList)
+        private static HttpClientHandler BuildPrimaryHttpClientHandler(Uri? proxyUri, bool checkCertificateRevocationList)
         { 
             if (proxyUri is not null)
             {
@@ -226,6 +226,7 @@ namespace idunno.AtProto
                     CheckCertificateRevocationList = checkCertificateRevocationList,
 
                     AutomaticDecompression = DecompressionMethods.All,
+                    UseCookies = false
                 };
             }
             else
@@ -234,6 +235,7 @@ namespace idunno.AtProto
                 {
                     CheckCertificateRevocationList = checkCertificateRevocationList,
                     AutomaticDecompression = DecompressionMethods.All
+                    UseCookies = false
                 };
             }
         }

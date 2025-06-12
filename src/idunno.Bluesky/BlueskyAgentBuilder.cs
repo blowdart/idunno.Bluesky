@@ -42,7 +42,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// Sets the facet extractor to use when parsing posts.
         /// </summary>
-        /// <param name="facetExtractor">The factet extractor to use.</param>
+        /// <param name="facetExtractor">The facet extractor to use.</param>
         /// <returns>The same instance of <see cref="BlueskyAgentBuilder"/> for chaining.</returns>
         public BlueskyAgentBuilder SetFacetExtractor(IFacetExtractor facetExtractor)
         {
