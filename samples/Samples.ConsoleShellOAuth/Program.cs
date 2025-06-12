@@ -106,19 +106,7 @@ namespace Samples.ConsoleShellOAuth
                         return;
                     }
 
-                    await agent.ProcessOAuth2LoginResponse(oAuthClient, callbackData, cancellationToken);
-
-                    if (string.IsNullOrEmpty(callbackData))
-                    {
-                        ConsoleColor oldColor = Console.ForegroundColor;
-
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine("Received no login response");
-                        Console.ForegroundColor = oldColor;
-                        return;
-                    }
-
-                    await agent.ProcessOAuth2LoginResponse(oAuthClient, callbackData, cancellationToken);
+                   await agent.ProcessOAuth2LoginResponse(oAuthClient, callbackData, cancellationToken);
                 }
 
                 if (!agent.IsAuthenticated)
