@@ -223,8 +223,8 @@ namespace idunno.AtProto
                         UseDefaultCredentials = true
                     },
                     UseProxy = true,
-                    CheckCertificateRevocationList = checkCertificateRevocationList,
 
+                    CheckCertificateRevocationList = checkCertificateRevocationList,
                     AutomaticDecompression = DecompressionMethods.All,
                     UseCookies = false
                 };
@@ -234,7 +234,7 @@ namespace idunno.AtProto
                 return new HttpClientHandler
                 {
                     CheckCertificateRevocationList = checkCertificateRevocationList,
-                    AutomaticDecompression = DecompressionMethods.All
+                    AutomaticDecompression = DecompressionMethods.All,
                     UseCookies = false
                 };
             }
