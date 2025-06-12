@@ -153,20 +153,21 @@ namespace Samples.OAuth
 
                 if (agent.IsAuthenticated)
                 {
-                    Console.WriteLine($"Credentials issued for: {agent.Credentials.Service}");
-                    Console.WriteLine($"Access JWT expires on:  {agent.Credentials.ExpiresOn:G}");
+                    Console.WriteLine($"Credentials issued for   : {agent.Credentials.Service}");
                     Console.WriteLine();
 
                     string accessCredentialsHash;
 
                     accessCredentialsHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(agent.Credentials.AccessJwt)));
-                    Console.WriteLine($"Access JWT hash      :  {agent.Credentials.ExpiresOn:G}");
+                    Console.WriteLine($"Access JWT hash          : {accessCredentialsHash}");
+                    Console.WriteLine($"Access JWT hash          : {agent.Credentials.ExpiresOn:G}");
 
 
                     await agent.RefreshCredentials(cancellationToken: cancellationToken);
 
                     accessCredentialsHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(agent.Credentials.AccessJwt)));
-                    Console.WriteLine($"Refreshed JWT hash   :  {agent.Credentials.ExpiresOn:G}");
+                    Console.WriteLine($"Refreshed JWT hash       : {accessCredentialsHash}");
+                    Console.WriteLine($"Refreshed JWT expires on : {agent.Credentials.ExpiresOn:G}");
                 }
                 else
                 {
