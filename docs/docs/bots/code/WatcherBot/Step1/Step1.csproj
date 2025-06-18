@@ -11,6 +11,8 @@
 
   <ItemGroup>
     <PackageReference Include="idunno.Bluesky" Version="0.9.1-prerelease" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.12.1" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.12.1" />
   </ItemGroup>
 
   <PropertyGroup>

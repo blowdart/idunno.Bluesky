@@ -15,7 +15,10 @@
   <ItemGroup>
     <PackageReference Include="Coravel" Version="6.0.2" />
     <PackageReference Include="idunno.Bluesky" Version="0.8.0-prerelease" />
+    <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="8.0.17" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.12.1" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.12.1" />
   </ItemGroup>
 
   <PropertyGroup>
