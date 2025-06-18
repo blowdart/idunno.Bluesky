@@ -215,6 +215,9 @@ namespace idunno.AtProto
         [LoggerMessage(170, LogLevel.Error, "GetServiceAuth failed for {service} as current session is not authenticated.")]
         internal static partial void GetServiceAuthFailedAsSessionIsAnonymous(ILogger logger, Uri service);
 
+        [LoggerMessage(180, LogLevel.Error, "GetSession failed for {service} as current session is not authenticated.")]
+        internal static partial void GetSessionFailedAsSessionIsAnonymous(ILogger logger, Uri service);
+
         // AtProtoClient logging
         [LoggerMessage(200, LogLevel.Debug, "{method} request to {requestUri} succeeded.")]
         internal static partial void AtProtoClientRequestSucceeded(ILogger logger, Uri requestUri, HttpMethod method);

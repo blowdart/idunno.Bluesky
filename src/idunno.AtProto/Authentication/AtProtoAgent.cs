@@ -323,6 +323,24 @@ namespace idunno.AtProto
         /// <summary>
         /// Gets information about the session associated with the access token provided.
         /// </summary>
+        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        public async Task<AtProtoHttpResult<Session>> GetSession(
+            CancellationToken cancellationToken = default)
+        {
+            if (!IsAuthenticated)
+            {
+                Logger.GetSessionFailedAsSessionIsAnonymous(_logger, Service);
+
+                throw new AuthenticationRequiredException();
+            }
+
+            return await GetSession(Credentials, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Gets information about the session associated with the access token provided.
+        /// </summary>
         /// <param name="accessCredentials">The access credentials to authenticate with.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
