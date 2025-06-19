@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="idunno.Bluesky" Version="0.9.1-prerelease" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.6" />
   </ItemGroup>
 
   <PropertyGroup>
