@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="idunno.Bluesky" Version="0.9.1-prerelease" />
+    <PackageReference Include="idunno.Bluesky" Version="0.9.5-prerelease" />
   </ItemGroup>
 
   <PropertyGroup>
