@@ -1,8 +1,6 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.Text;
 
@@ -23,13 +21,15 @@ namespace Samples.AgentEvents
             // Necessary to render emojis.
             Console.OutputEncoding = Encoding.UTF8;
 
-            var parser = Helpers.ConfigureCommandLine(PerformOperations);
-            await parser.InvokeAsync(args);
+            var parser = Helpers.ConfigureCommandLine(
+                args,
+                "Demonstrate AtProtoAgent authentication events",
+                PerformOperations);
 
-            return 0;
+            return await parser.InvokeAsync();
         }
 
-        static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
+        static async Task<int> PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrEmpty(handle);
             ArgumentException.ThrowIfNullOrEmpty(password);
@@ -198,7 +198,7 @@ namespace Samples.AgentEvents
                 if (persistedLoginState is null)
                 {
                     Console.WriteLine("❌\tNo persisted state to restore");
-                    return;
+                    return -1;
                 }
 
                 using (var agent = new BlueskyAgent(
@@ -311,7 +311,7 @@ namespace Samples.AgentEvents
                     if (savedState.Equals(persistedLoginState))
                     {
                         Console.WriteLine("❌\tPersisted state did not change");
-                        return;
+                        return -1;
                     }
 
                     // Now try just a refresh token
@@ -447,7 +447,7 @@ namespace Samples.AgentEvents
                             Console.ForegroundColor = ConsoleColor.Red;
                             Console.WriteLine("Received no login response");
                             Console.ForegroundColor = oldColor;
-                            return;
+                            return -1;
                         }
 
                         Console.WriteLine("Logging in");
@@ -458,7 +458,7 @@ namespace Samples.AgentEvents
                             Console.ForegroundColor = ConsoleColor.Red;
                             Console.WriteLine("Error parsing oauth callback data");
                             Console.ForegroundColor = oldColor;
-                            return;
+                            return -1;
                         }
                     }
 
@@ -504,7 +504,7 @@ namespace Samples.AgentEvents
                             Console.ForegroundColor = ConsoleColor.Red;
                             Console.WriteLine("Received no login response");
                             Console.ForegroundColor = oldColor;
-                            return;
+                            return -1;
                         }
 
                         Console.WriteLine("Logging in");
@@ -515,7 +515,7 @@ namespace Samples.AgentEvents
                             Console.ForegroundColor = ConsoleColor.Red;
                             Console.WriteLine("Error parsing oauth callback data");
                             Console.ForegroundColor = oldColor;
-                            return;
+                            return -1;
                         }
                     }
 
@@ -539,19 +539,19 @@ namespace Samples.AgentEvents
                 if (persistedLoginState is null)
                 {
                     Console.WriteLine("❌\tNo persisted state to restore");
-                    return;
+                    return -1;
                 }
 
                 if (persistedLoginState.AuthenticationType != AuthenticationType.OAuth)
                 {
                     Console.WriteLine("❌\tPersisted state AuthenticationType is not OAuth");
-                    return;
+                    return -1;
                 }
 
                 if (persistedLoginState.DPoPNonce is null || persistedLoginState.DPoPProofKey is null)
                 {
                     Console.WriteLine("\tNo DPoP state to restore");
-                    return;
+                    return -1;
                 }
 
                 Console.Write("Attempting to restore session...");
@@ -667,7 +667,7 @@ namespace Samples.AgentEvents
                     if (!await agent.RefreshCredentials(restoredCredential, cancellationToken) || !agent.IsAuthenticated)
                     {
                         Console.WriteLine("❌\tRestore failed for access/refresh pair");
-                        return;
+                        return -1;
                     }
 
                     Console.WriteLine("✔\tRestore succeeded for access/refresh pair");
@@ -675,7 +675,7 @@ namespace Samples.AgentEvents
                     if (persistedLoginState.Equals(savedState))
                     {
                         Console.WriteLine("❌\tPersisted state did not change.");
-                        return;
+                        return -1;
                     }
 
                     AtProtoCredential refreshOnlyCredential = AtProtoCredential.Create(
@@ -688,7 +688,7 @@ namespace Samples.AgentEvents
                     if (!await agent.RefreshCredentials(refreshOnlyCredential, cancellationToken) || !agent.IsAuthenticated)
                     {
                         Console.WriteLine("❌\tRestore failed for refresh only");
-                        return;
+                        return -1;
                     }
 
                     Console.WriteLine("✔\tRestore succeeded for refresh only");
@@ -696,7 +696,7 @@ namespace Samples.AgentEvents
 
             }
 
-                return;
+            return 0;
         }
     }
 

@@ -1,8 +1,6 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
 using System.Globalization;
 using System.Text;
 
@@ -28,10 +26,12 @@ namespace Samples.Notifications
             // Necessary to render emojis.
             Console.OutputEncoding = Encoding.UTF8;
 
-            var parser = Helpers.ConfigureCommandLine(PerformOperations);
-            await parser.InvokeAsync(args);
+            var parser = Helpers.ConfigureCommandLine(
+                args,
+                "BlueskyAgent Notifications Sample",
+                PerformOperations);
 
-            return 0;
+            return await parser.InvokeAsync();
         }
 
         static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)

@@ -1,7 +1,6 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.Text;
 
@@ -24,13 +23,15 @@ namespace Samples.ConsoleShellOAuth
             // Necessary to render emojis.
             Console.OutputEncoding = Encoding.UTF8;
 
-            var parser = Helpers.ConfigureCommandLine(PerformOperations);
-            await parser.InvokeAsync(args);
+            var parser = Helpers.ConfigureCommandLine(
+                args,
+                "BlueskyAgent OAuth Console Demonstration Template",
+                PerformOperations);
 
-            return 0;
+            return await parser.InvokeAsync();
         }
 
-        static async Task PerformOperations(string? loginHandle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
+        static async Task PerformOperations(string? loginHandle, Uri? proxyUri, CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrEmpty(loginHandle);
 

@@ -2,9 +2,8 @@
 // Licensed under the MIT License.
 
 using System.CommandLine;
-using System.CommandLine.Builder;
-using System.CommandLine.Parsing;
 using System.CommandLine.Help;
+using System.CommandLine.Invocation;
 using System.Text.Json;
 
 using Microsoft.Extensions.Logging;
@@ -22,35 +21,70 @@ public sealed class Program
         // Necessary to render emojis.
         Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-        var handleOption = new Option<string?>(
-            name: "--handle",
-            description: "The handle to use when authenticating to the PDS.",
-            getDefaultValue: () => Environment.GetEnvironmentVariable("_BlueskyHandle"));
-
-        var passwordOption = new Option<string?>(
-            name: "--password",
-            description: "The password to use when authenticating to Bluesky.",
-            getDefaultValue: () => Environment.GetEnvironmentVariable("_BlueskyPassword")!);
-
-        var authCodeOption = new Option<string?>(
-            name: "--authCode",
-            description: "The authorization code for the account to used when authenticating to Bluesky");
-
-        var olderThanOption = new Option<double?>(
-            name: "--olderThan",
-            description: "Delete records older than the specified number of days.");
-
-        var proxyOption = new Option<Uri?>(
-            name: "--proxy",
-            description: "The URI of a web proxy to use.")
+        var handleOption = new Option<string?>("--handle", "-u", "/u")
         {
-            ArgumentHelpName = "Uri"
+            Description = "The handle to use when authenticating to the PDS.",
+            DefaultValueFactory = defaultValue =>
+            {
+                const string environmentVariableName = "_BlueskyHandle";
+                string? environmentValue = Environment.GetEnvironmentVariable(environmentVariableName);
+
+                if (string.IsNullOrWhiteSpace(environmentValue))
+                {
+                    return null;
+                }
+
+                return environmentValue;
+            },
+            Required = true
         };
 
-        var whatIfOption = new Option<bool>(
-            name: "--whatIf",
-            description: "If set to true deletions do not occur, output shows items that would be affected.",
-            getDefaultValue: () => false);
+        var passwordOption = new Option<string?>("--password", "-p", "/p")
+        {
+            Description = "The password to use when authenticating to Bluesky.",
+            DefaultValueFactory = defaultValue =>
+            {
+                const string environmentVariableName = "_BlueskyPassword";
+                string? environmentValue = Environment.GetEnvironmentVariable(environmentVariableName);
+
+                if (string.IsNullOrWhiteSpace(environmentValue))
+                {
+                    return null;
+                }
+
+                return environmentValue;
+            },
+            Required = true,
+        };
+
+        var authCodeOption = new Option<string?>("--authCode", "-a", "/a")
+        {
+            Description = "The authorization code for the account to used when authenticating to Bluesky"
+        };
+
+        var olderThanOption = new Option<double?>("--olderThan", "-o", "/o")
+        {
+            Description = "Delete records older than the specified number of days."
+        };
+        olderThanOption.Validators.Add(result =>
+        {
+            if (result.GetValue(olderThanOption) < 1)
+            {
+                result.AddError("Must be greater than 0");
+            }
+        });
+
+        var proxyOption = new Option<Uri?>("--proxy")
+        {
+            Description = "The URI of a web proxy to use.",
+            HelpName = "Uri"
+        };
+
+        var whatIfOption = new Option<bool>("--whatIf", "-w", "/w")
+        {
+            Description = "If set to true deletions do not occur, output shows items that would be affected.",
+            DefaultValueFactory = defaultValue => false
+        };
 
         var rootCommand = new RootCommand("Delete Bluesky records.")
         {
@@ -62,47 +96,30 @@ public sealed class Program
             whatIfOption
         };
 
-        Parser parser = new CommandLineBuilder(rootCommand)
-            .UseDefaults()
-            .UseHelp(ctx =>
-            {
-                ctx.HelpBuilder.CustomizeSymbol(handleOption,
-                    firstColumnText: "--handle <string>",
-                    secondColumnText: "The handle to use when authenticating to Bluesky.\n" +
-                                      "If a handle is not specified the handle will be\n" +
-                                      "read from the _BlueskyHandle environment variable.");
-                ctx.HelpBuilder.CustomizeSymbol(passwordOption,
-                    firstColumnText: "--password <string>",
-                    secondColumnText: "The password to use when authenticating to Bluesky.\n" +
-                                      "If a password is not specified the password will be\n" +
-                                      "read from the _BlueskyPassword environment variable.");
-                ctx.HelpBuilder.CustomizeSymbol(olderThanOption,
-                    firstColumnText: "--olderThan <days>",
-                    secondColumnText: "Limits record deletion to records under than the " +
-                                      "specified number of days.");
-                   
-            })
-            .Build();
-
-        int returnCode = 0;
-
-        rootCommand.SetHandler(async (context) =>
+        for (int i = 0; i < rootCommand.Options.Count; i++)
         {
-            CancellationToken cancellationToken = context.GetCancellationToken();
+            if (rootCommand.Options[i] is HelpOption defaultHelpOption)
+            {
+                defaultHelpOption.Action = new CustomHelpAction((HelpAction)defaultHelpOption.Action!);
+                break;
+            }
+        }
 
-            returnCode = await DeleteRecords(
-                context.ParseResult.GetValueForOption(handleOption),
-                context.ParseResult.GetValueForOption(passwordOption),
-                context.ParseResult.GetValueForOption(authCodeOption),
-                context.ParseResult.GetValueForOption(olderThanOption),
-                context.ParseResult.GetValueForOption(proxyOption),
-                context.ParseResult.GetValueForOption(whatIfOption),
+        rootCommand.SetAction((parseResult, cancellationToken) =>
+        {
+            return DeleteRecords(
+                parseResult.GetValue(handleOption),
+                parseResult.GetValue(passwordOption),
+                parseResult.GetValue(authCodeOption),
+                parseResult.GetValue(olderThanOption),
+                parseResult.GetValue(proxyOption),
+                parseResult.GetValue(whatIfOption),
                 cancellationToken);
         });
 
-        await parser.InvokeAsync(args);
+        ParseResult parseResult = rootCommand.Parse(args);
 
-        return returnCode;
+        return await parseResult.InvokeAsync();
     }
 
     static async Task<int> DeleteRecords(
@@ -320,5 +337,18 @@ public sealed class Program
             configure.AddConsole();
             configure.SetMinimumLevel((LogLevel)level);
         });
+    }
+
+    internal sealed class CustomHelpAction(HelpAction action) : SynchronousCommandLineAction
+    {
+        public override int Invoke(ParseResult parseResult)
+        {
+            int result = action.Invoke(parseResult);
+
+            Console.WriteLine("If a handle is not specified the default value will be read from the _BlueskyHandle environment variable.");
+            Console.WriteLine("If a password is not specified the default value will be read from the _BlueskyPassword environment variable.");
+
+            return result;
+        }
     }
 }

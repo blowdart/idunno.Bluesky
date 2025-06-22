@@ -1,0 +1,20 @@
+{
+  "profiles": {
+    "Samples.BulkDelete -whatIf": {
+      "commandName": "Project",
+      "commandLineArgs": "--whatIf"
+    },
+    "Samples.BulkDelete -?": {
+      "commandName": "Project",
+      "commandLineArgs": "-?"
+    },
+    "Samples.BulkDelete -? (Empty username/password)": {
+      "commandName": "Project",
+      "commandLineArgs": "-?",
+      "environmentVariables": {
+        "_BlueskyHandle": "",
+        "_BlueskyPassword": ""
+      }
+    }
+  }
+}

@@ -1,8 +1,6 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
 using System.Globalization;
 using System.Text;
 
@@ -24,11 +22,12 @@ namespace Samples.Feed
         {
             // Necessary to render emojis.
             Console.OutputEncoding = System.Text.Encoding.UTF8;
+            var parser = Helpers.ConfigureCommandLine(
+                args,
+                "BlueskyAgent Feed Sample",
+                PerformOperations);
 
-            var parser = Helpers.ConfigureCommandLine(PerformOperations);
-            await parser.InvokeAsync(args);
-
-            return 0;
+            return await parser.InvokeAsync();
         }
 
         static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)

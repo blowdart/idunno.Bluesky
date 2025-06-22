@@ -1,9 +1,6 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.CommandLine;
-using System.CommandLine.Parsing;
-
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
@@ -19,10 +16,12 @@ namespace Samples.Logging
             // Necessary to render emojis.
             Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-            var parser = Helpers.ConfigureCommandLine(PerformOperations);
-            await parser.InvokeAsync(args);
+            var parser = Helpers.ConfigureCommandLine(
+                args,
+                "BlueskyAgent Logging Sample",
+                PerformOperations);
 
-            return 0;
+            return await parser.InvokeAsync();
         }
 
         static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)

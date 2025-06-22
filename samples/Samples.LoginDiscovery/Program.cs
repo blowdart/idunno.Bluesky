@@ -2,15 +2,15 @@
 // Licensed under the MIT License.
 
 using System.CommandLine;
-using System.CommandLine.Builder;
 using System.CommandLine.Help;
-using System.CommandLine.Parsing;
+using System.CommandLine.Invocation;
 
 using Microsoft.Extensions.Logging;
 
+using Samples.Common;
+
 using idunno.AtProto;
 
-using Samples.Common;
 
 namespace Samples.LoginDiscovery
 {
@@ -18,37 +18,63 @@ namespace Samples.LoginDiscovery
     {
         static async Task<int> Main(string[] args)
         {
-
             // Necessary to render emojis.
             Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-            var attemptLoginOption = new Option<bool>(
-                name: "--login",
-                description: "Attempt to perform a login on the discovered PDS.",
-                getDefaultValue: () => false);
-
-            var handleOption = new Option<string>(
-                name: "--handle",
-                description: "The handle to use when authenticating to the PDS.",
-                getDefaultValue: () => Environment.GetEnvironmentVariable("_BlueskyHandle")!);
-
-            var passwordOption = new Option<string>(
-                name: "--password",
-                description: "The password to use when authenticating to the PDS.",
-                getDefaultValue: () => Environment.GetEnvironmentVariable("_BlueskyPassword")!);
-
-            var authCodeOption = new Option<string?>(
-                name: "--authCode",
-                description: "The authorization code for the account to used when authenticating to the PDS");
-
-            var proxyOption = new Option<Uri?>(
-                name: "--proxy",
-                description: "The URI of a web proxy to use.")
+            var attemptLoginOption = new Option<bool>("--login", "-l", "/l")
             {
-                ArgumentHelpName = "Uri"
+                Description = "Attempt to perform a login on the discovered PDS.",
+                DefaultValueFactory = defaultValue => false
             };
 
-            var rootCommand = new RootCommand("Discover Bluesky Login PDS.")
+            var handleOption = new Option<string?>("--handle", "-u", "/u")
+            {
+                Description = "The handle to use when authenticating to the PDS.",
+                DefaultValueFactory = defaultValue =>
+                {
+                    const string environmentVariableName = "_BlueskyHandle";
+                    string? environmentValue = Environment.GetEnvironmentVariable(environmentVariableName);
+
+                    if (string.IsNullOrWhiteSpace(environmentValue))
+                    {
+                        return null;
+                    }
+
+                    return environmentValue;
+                },
+                Required = true
+            };
+
+            var passwordOption = new Option<string?>("--password", "-p", "/p")
+            {
+                Description = "The password to use when authenticating to Bluesky.",
+                DefaultValueFactory = defaultValue =>
+                {
+                    const string environmentVariableName = "_BlueskyPassword";
+                    string? environmentValue = Environment.GetEnvironmentVariable(environmentVariableName);
+
+                    if (string.IsNullOrWhiteSpace(environmentValue))
+                    {
+                        return null;
+                    }
+
+                    return environmentValue;
+                },
+                Required = true,
+            };
+
+            var authCodeOption = new Option<string?>("--authCode", "-a", "/a")
+            {
+                Description = "The authorization code for the account to used when authenticating to Bluesky"
+            };
+
+            var proxyOption = new Option<Uri?>("--proxy")
+            {
+                Description = "The URI of a web proxy to use.",
+                HelpName = "Uri"
+            };
+
+            var rootCommand = new RootCommand("Demonstrate how Bluesky Login discovery works.")
             {
                 attemptLoginOption,
                 handleOption,
@@ -57,41 +83,29 @@ namespace Samples.LoginDiscovery
                 proxyOption,
             };
 
-            Parser parser = new CommandLineBuilder(rootCommand)
-                .UseDefaults()
-                .UseHelp(ctx =>
-                {
-                    ctx.HelpBuilder.CustomizeSymbol(handleOption,
-                        firstColumnText: "--handle <string>",
-                        secondColumnText: "The handle to use when authenticating to Bluesky.\n" +
-                                        "If a handle is not specified the username will be\n" +
-                                        "read from the _BlueskyHandle environment variable.");
-                    ctx.HelpBuilder.CustomizeSymbol(passwordOption,
-                        firstColumnText: "--password <string>",
-                        secondColumnText: "The password to use when authenticating to Bluesky.\n" +
-                                        "If a password is not specified the password will be\n" +
-                                        "read from the _BlueskyPassword environment variable.");
-                })
-            .Build();
-
-            int returnCode = 0;
-
-            rootCommand.SetHandler(async (context) =>
+            for (int i = 0; i < rootCommand.Options.Count; i++)
             {
-                CancellationToken cancellationToken = context.GetCancellationToken();
+                if (rootCommand.Options[i] is HelpOption defaultHelpOption)
+                {
+                    defaultHelpOption.Action = new CustomHelpHandlePasswordAction((HelpAction)defaultHelpOption.Action!);
+                    break;
+                }
+            }
 
-                returnCode = await ResolveHandleAndLogin(
-                    context.ParseResult.GetValueForOption(attemptLoginOption),
-                    context.ParseResult.GetValueForOption(handleOption),
-                    context.ParseResult.GetValueForOption(passwordOption),
-                    context.ParseResult.GetValueForOption(authCodeOption),
-                    context.ParseResult.GetValueForOption(proxyOption),
+            rootCommand.SetAction((parseResult, cancellationToken) =>
+            {
+                return ResolveHandleAndLogin(
+                    parseResult.GetValue(attemptLoginOption),
+                    parseResult.GetValue(handleOption),
+                    parseResult.GetValue(passwordOption),
+                    parseResult.GetValue(authCodeOption),
+                    parseResult.GetValue(proxyOption),
                     cancellationToken);
             });
 
-            await parser.InvokeAsync(args);
+            var parseResult = rootCommand.Parse(args);
 
-            return returnCode;
+            return await parseResult.InvokeAsync();
         }
 
         static async Task<int> ResolveHandleAndLogin(bool attemptLogin, string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
@@ -210,6 +224,18 @@ namespace Samples.LoginDiscovery
                 }
 
                 return 0;
+            }
+        }
+        internal sealed class CustomHelpHandlePasswordAction(HelpAction action) : SynchronousCommandLineAction
+        {
+            public override int Invoke(ParseResult parseResult)
+            {
+                int result = action.Invoke(parseResult);
+
+                Console.WriteLine("If a handle is not specified the default value will be read from the _BlueskyHandle environment variable.");
+                Console.WriteLine("If a password is not specified the default value will be read from the _BlueskyPassword environment variable.");
+
+                return result;
             }
         }
     }
