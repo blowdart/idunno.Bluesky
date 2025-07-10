@@ -83,6 +83,7 @@ jobs:
       with:
         name: build-artifacts
         path: ${{ env.nupkgDirectory }}/*
+        persist-credentials: false
         retention-days: 7
 
   sign:
@@ -130,6 +131,7 @@ jobs:
       with:
         name: signed-artifacts
         path: ${{ env.nupkgDirectory }}/*
+        persist-credentials: false
         retention-days: 7
 
   publish:
