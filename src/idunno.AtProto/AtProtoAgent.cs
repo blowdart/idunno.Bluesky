@@ -32,8 +32,6 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="service">The URI of the AtProto service to connect to.</param>
         /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
-        /// <remarks>
-        /// </remarks>
         public AtProtoAgent(
             Uri service,
             AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions)
@@ -67,7 +65,6 @@ namespace idunno.AtProto
                         LoggerFactory = LoggerFactory,
                         HttpClientOptions = options?.HttpClientOptions
                     });
-
         }
 
         /// <summary>

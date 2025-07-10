@@ -57,6 +57,5 @@ namespace idunno.AtProto.Jetstream
                 _readBufferSize = value;
             }
         }
-
-    }
+}
 }

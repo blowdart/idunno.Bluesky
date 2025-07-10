@@ -56,6 +56,12 @@ namespace idunno.AtProto.Jetstream
 
         private ClientWebSocket _client;
 
+        private bool _closed;
+
+        private bool _closedGracefully;
+
+        private CancellationToken _connectAsyncCancellationToken;
+
         /// <summary>
         /// Creates a new instance of <see cref="Jetstream"/>.
         /// </summary>
@@ -172,14 +178,20 @@ namespace idunno.AtProto.Jetstream
         }
 
         /// <summary>
-        /// Gets the underlying <see cref="ClientWebSocket"/>.
+        /// Gets a flag indicating whether the underlying WebSocket is connected to the jetstream.
         /// </summary>
-        protected ClientWebSocket ClientWebSocket => _client;
+        public bool IsConnected => _client.State == WebSocketState.Open;
 
         /// <summary>
         /// Gets the <see cref="WebSocketState"/> of the underlying <see cref="ClientWebSocket"/>.
         /// </summary>
-        public WebSocketState ClientState => _client.State;
+        public WebSocketState State => _client.State;
+
+        /// <summary>
+        /// Gets a flag indicating whether the underlying WebSocket was disconnected gracefully,
+        /// by requesting a cancellation on the <see cref="CancellationToken"/> passed passed to <see cref="ConnectAsync(Uri?, long?, CancellationToken)"/>.
+        /// </summary>
+        public bool DisconnectedGracefully => IsConnected && (_closedGracefully || !_connectAsyncCancellationToken.IsCancellationRequested);
 
         /// <summary>
         /// Gets the <see cref="DateTimeOffset"/> indicating when last time a message from the JetsStream was received.
@@ -213,17 +225,21 @@ namespace idunno.AtProto.Jetstream
         public static AtProtoJetstreamBuilder CreateBuilder() => AtProtoJetstreamBuilder.Create();
 
         /// <summary>
+        /// Gets the underlying <see cref="ClientWebSocket"/>.
+        /// </summary>
+        protected ClientWebSocket ClientWebSocket => _client;
+
+        /// <summary>
         /// Called to raise any <see cref="MessageReceived"/> events, if any.
         /// </summary>
         /// <param name="e">The <see cref="MessageReceivedEventArgs"/> for the event.</param>
         protected virtual void OnMessageReceived(MessageReceivedEventArgs e)
         {
-            MessageLastReceived = DateTimeOffset.UtcNow;
-
             EventHandler<MessageReceivedEventArgs>? messageReceived = MessageReceived;
 
             if (!_disposed)
             {
+                MessageLastReceived = DateTimeOffset.UtcNow;
                 _metrics.MessagesReceived(1);
                 messageReceived?.Invoke(this, e);
             }
@@ -251,7 +267,7 @@ namespace idunno.AtProto.Jetstream
         protected virtual void OnConnectionStateChanged(ConnectionStateChangedEventArgs e)
         {
             EventHandler<ConnectionStateChangedEventArgs>? connectionStatusChanged = ConnectionStateChanged;
-            
+
             if (!_disposed)
             {
                 connectionStatusChanged?.Invoke(this, e);
@@ -288,7 +304,7 @@ namespace idunno.AtProto.Jetstream
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         [MemberNotNull(nameof(_client))]
         public async Task ConnectAsync(
-            CancellationToken? cancellationToken = default)
+            CancellationToken cancellationToken = default)
         {
             await ConnectAsync(
                 uri: null,
@@ -307,13 +323,13 @@ namespace idunno.AtProto.Jetstream
         public async Task ConnectAsync(
             Uri? uri = null,
             DateTimeOffset? startFrom = null,
-            CancellationToken? cancellationToken = default)
+            CancellationToken cancellationToken = default)
         {
             long? cursor = null;
 
             if (startFrom is not null)
             {
-                cursor = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
+                cursor = startFrom.Value.ToUnixTimeMilliseconds() * 1000;
             }
 
             await ConnectAsync(uri, cursor, cancellationToken).ConfigureAwait(false);
@@ -332,9 +348,9 @@ namespace idunno.AtProto.Jetstream
         public async Task ConnectAsync(
             Uri? uri = null,
             long? cursor = null,
-            CancellationToken? cancellationToken = default)
+            CancellationToken cancellationToken = default)
         {
-            CancellationToken ctx = cancellationToken ?? CancellationToken.None;
+            _connectAsyncCancellationToken = cancellationToken;
 
             if (_client is not null && _client.State == WebSocketState.Open)
             {
@@ -415,13 +431,29 @@ namespace idunno.AtProto.Jetstream
 
             Uri serverUri = new(uriBuilder.ToString());
 
+            WebSocketState previousState = _client.State;
+
             JetStreamLogger.ConnectingTo(_logger, serverUri);
 
-            await _client.ConnectAsync(serverUri, ctx).ConfigureAwait(false);
+            try
+            {
+                await _client.ConnectAsync(serverUri, cancellationToken).ConfigureAwait(false);
+                _closed = false;
+            }
+            catch (WebSocketException ex)
+            {
+                JetStreamLogger.WebSocketException(_logger, ex);
+            }
 
-            OnConnectionStateChanged(new ConnectionStateChangedEventArgs(_client.State));
+            if (_client.State != previousState)
+            {
+                OnConnectionStateChanged(new ConnectionStateChangedEventArgs(_client.State));
+            }
 
-            ReceiveLoop(ctx).FireAndForget();
+            if (_client.State == WebSocketState.Open)
+            {
+                ReceiveLoop(cancellationToken).FireAndForget();
+            }
         }
 
         /// <summary>
@@ -435,15 +467,31 @@ namespace idunno.AtProto.Jetstream
         public async Task CloseAsync(
             WebSocketCloseStatus status = WebSocketCloseStatus.NormalClosure,
             string statusDescription = "Client disconnect",
-            CancellationToken? cancellationToken = default)
+            CancellationToken cancellationToken = default)
         {
-            CancellationToken ctx = cancellationToken ?? CancellationToken.None;
+            WebSocketState startingState = _client.State;
 
             if (_client.State == WebSocketState.Open)
             {
                 try
                 {
-                    await _client.CloseAsync(status, statusDescription, ctx).ConfigureAwait(false);
+                    await _client.CloseAsync(status, statusDescription, cancellationToken).ConfigureAwait(false);
+                    _closedGracefully = true;
+                }
+                catch (ObjectDisposedException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    JetStreamLogger.CloseError(_logger, ex);
+                }
+            }
+            else if (_client.State == WebSocketState.Connecting)
+            {
+                try
+                {
+                    _client.Abort();
                 }
                 catch (ObjectDisposedException)
                 {
@@ -455,14 +503,19 @@ namespace idunno.AtProto.Jetstream
                 }
             }
 
-            OnConnectionStateChanged(new ConnectionStateChangedEventArgs(_client.State));
+            _closed = true;
+
+            if (_client.State != startingState)
+            {
+                OnConnectionStateChanged(new ConnectionStateChangedEventArgs(_client.State));
+            }
         }
 
         /// <summary>
         /// Log a fault.
         /// </summary>
         /// <param name="fault">A description of the fault.</param>
-        protected void LogFault(string fault="Unspecified fault")
+        protected void LogFault(string fault = "Unspecified fault")
         {
             OnFaultRaised(new FaultRaisedEventArgs(fault));
         }
@@ -511,35 +564,54 @@ namespace idunno.AtProto.Jetstream
             return client;
         }
 
+        [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Catch all for logging.")]
         [SuppressMessage("Reliability", "CA2008:Do not create tasks without passing a TaskScheduler", Justification = "A scheduler can be configured on the TaskFactory in Options.")]
         private async Task ReceiveLoop(CancellationToken cancellationToken)
         {
             byte[] buffer = new byte[Options.MaximumMessageSize];
+            WebSocketMessageType expectedMessageType = Options.UseCompression ? WebSocketMessageType.Binary : WebSocketMessageType.Text;
 
-            while (!cancellationToken.IsCancellationRequested)
+            bool keepRunning = true;
+
+            while (keepRunning && !_closed && !cancellationToken.IsCancellationRequested)
             {
-                WebSocketMessageType expectedMessageType = Options.UseCompression ? WebSocketMessageType.Binary : WebSocketMessageType.Text;
-
                 try
                 {
-                    if (_client.State != WebSocketState.Open)
-                    {
-                        await ConnectAsync(cancellationToken).ConfigureAwait(false);
-                    }
-
                     ValueWebSocketReceiveResult result = await _client.ReceiveAsync(new Memory<byte>(buffer), cancellationToken).ConfigureAwait(false);
 
-                    if (result.MessageType != expectedMessageType && !result.EndOfMessage)
+                    if (result.MessageType == WebSocketMessageType.Close)
                     {
+                        await _client.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, cancellationToken: cancellationToken).ConfigureAwait(false);
+                        JetStreamLogger.CloseMessageReceived(_logger);
+                        keepRunning = false;
                         continue;
+                    }
+
+                    if (result.MessageType != expectedMessageType)
+                    {
+                        JetStreamLogger.UnexpectedMessageType(_logger, result.MessageType);
+
+                        if (!result.EndOfMessage)
+                        {
+                            continue;
+                        }
                     }
 
                     byte[] receivedData;
 
                     if (Options.UseCompression)
                     {
-                        Span<byte> bufferAsSpan = buffer.AsSpan(0, result.Count);
-                        receivedData = _decompressor!.Unwrap(bufferAsSpan).ToArray();
+                        try
+                        {
+                            Span<byte> bufferAsSpan = buffer.AsSpan(0, result.Count);
+                            receivedData = _decompressor!.Unwrap(bufferAsSpan).ToArray();
+                        }
+                        catch (ZstdException ex)
+                        {
+                            // Can't decompress so ignore this message.
+                            JetStreamLogger.DecompressionException(_logger, ex);
+                            continue;
+                        }
                     }
                     else
                     {
@@ -552,9 +624,7 @@ namespace idunno.AtProto.Jetstream
 
                     if (!string.IsNullOrEmpty(message))
                     {
-
                         OnMessageReceived(new MessageReceivedEventArgs(message));
-                        _metrics.MessagesReceived(1);
 
                         // Now go to handle message in a new task.
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -570,26 +640,10 @@ namespace idunno.AtProto.Jetstream
                         }
                     }
                 }
-                catch (WebSocketException ex)
+                catch (Exception e)
                 {
-                    // Close the client and reopen.
-                    LogFault(ex.Message);
-                    _client.Dispose();
-                    await ConnectAsync(cancellationToken).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    JetStreamLogger.MessageLoopCancellation(_logger);
-                }
-                catch (ObjectDisposedException)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    LogFault(ex.Message);
-                    JetStreamLogger.MessageLoopError(_logger, ex);
-                    throw;
+                    JetStreamLogger.MessageLoopError(_logger, e);
+                    LogFault(e.Message);
                 }
             }
         }
@@ -672,7 +726,7 @@ namespace idunno.AtProto.Jetstream
                 payload.WantedDIDs = [.. _dids];
             }
 
-            OptionsUpdateMessage optionsUpdateMessage = new ()
+            OptionsUpdateMessage optionsUpdateMessage = new()
             {
                 Payload = payload
             };
