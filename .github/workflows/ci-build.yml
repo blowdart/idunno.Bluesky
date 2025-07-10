@@ -61,7 +61,6 @@ jobs:
           src/**/idunno.*.dll
           src/**/idunno.*.deps.json
           src/**/idunno.*.xml
-        persist-credentials: false
         retention-days: 5
 
     - name: 'Test'
@@ -107,7 +106,6 @@ jobs:
         path: |
           ${{ github.workspace }}/Cobertura.xml
           ${{ github.workspace }}/code-coverage-results.md
-        persist-credentials: false
         retention-days: 5
 
     - name: Publish Test Results
@@ -121,5 +119,4 @@ jobs:
       with:
         name: test-results
         path: "test/**/TestResults.xml"
-        persist-credentials: false
         retention-days: 5
