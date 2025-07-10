@@ -6,14 +6,14 @@ using System.Text;
 
 using Microsoft.Extensions.Logging;
 
+using idunno.AtProto;
 using idunno.AtProto.Jetstream;
-
 
 namespace Samples.Jetstream
 {
     public sealed class Program
     {
-        static async Task<int> Main(string[] args)
+        static async Task<int> Main()
         {
             var loggerFactory = LoggerFactory.Create(configure =>
             {
@@ -36,7 +36,7 @@ namespace Samples.Jetstream
 
             Console.OutputEncoding = Encoding.UTF8;
 
-            ConsoleColor savedColor = Console.ForegroundColor;
+            AtProtoAgent agent = new(new Uri("https://public.api.bsky.app"));
 
             using (var jetStream = new AtProtoJetstream(
                 options: new JetstreamOptions()
@@ -47,51 +47,61 @@ namespace Samples.Jetstream
             {
                 jetStream.ConnectionStateChanged += (sender, e) =>
                 {
-                    Console.ForegroundColor = savedColor;
-                    Console.WriteLine($"Connection status changed to {e.State}");
+                    //Console.WriteLine($"CONNECTION: status changed to {e.State}");
                 };
 
                 jetStream.MessageReceived += (sender, e) =>
                 {
-                    Console.ForegroundColor = savedColor;
-                    Console.WriteLine($"Received message {e.Message}");
+                    //Console.WriteLine($"MESSAGE: Received message {e.Message}");
                 };
 
-                jetStream.RecordReceived += (sender, e) =>
+                jetStream.RecordReceived += async (sender, e) =>
                 {
                     string timeStamp = e.ParsedEvent.DateTimeOffset.ToLocalTime().ToString("G", CultureInfo.DefaultThreadCurrentUICulture);
-
-                    ConsoleColor savedColor = Console.ForegroundColor;
 
                     switch (e.ParsedEvent)
                     {
                         case AtJetstreamAccountEvent accountEvent:
+                            string eventBelongsTo = accountEvent.Did;
+
+                            DidDocument? didDoc = await agent.ResolveDidDocument(accountEvent.Did).ConfigureAwait(false);
+
+                            if (didDoc is not null)
+                            {
+                                foreach (string alsoKnownAs in didDoc.AlsoKnownAs)
+                                {
+                                    if (alsoKnownAs.StartsWith("at://", StringComparison.InvariantCulture))
+                                    {
+                                        eventBelongsTo += "/";
+                                        eventBelongsTo += alsoKnownAs[5..];
+                                        break;
+                                    }
+                                }
+                            }
+
                             if (accountEvent.Account.Active)
                             {
-                                Console.ForegroundColor = ConsoleColor.Green;
-                                Console.WriteLine($"ACCOUNT: {accountEvent.Did} activated at {timeStamp}");
+                                Console.WriteLine($"ACCOUNT: {eventBelongsTo} activated at {timeStamp}");
+                            }
+                            else if (accountEvent.Account.Status == AccountStatus.Deactivated)
+                            {
+                                Console.WriteLine($"ACCOUNT: {eventBelongsTo} deactivated at {timeStamp}");
+                            }
+                            else if (accountEvent.Account.Status == AccountStatus.Deleted)
+                            {
+                                Console.WriteLine($"ACCOUNT: {eventBelongsTo} deleted at {timeStamp}");
                             }
                             else
                             {
-                                Console.ForegroundColor = ConsoleColor.Red;
-                                Console.Write($"ACCOUNT: {accountEvent.Did} deactivated at {timeStamp}");
-
-                                if (accountEvent.Account.Status is not null)
-                                {
-                                    Console.Write($"{accountEvent.Account.Status}");
-                                }
-
-                                Console.WriteLine();
+                                Console.WriteLine($"ACCOUNT: {eventBelongsTo} was {accountEvent.Account.Status.ToString()!.ToLowerInvariant()} at {timeStamp}");
                             }
                             break;
 
                         case AtJetstreamCommitEvent commitEvent:
-                            Console.ForegroundColor = ConsoleColor.Cyan;
                             Console.WriteLine($"COMMIT: {commitEvent.Did} executed a {commitEvent.Commit.Operation} in {commitEvent.Commit.Collection} at {timeStamp}");
                             break;
 
                         case AtJetstreamIdentityEvent identityEvent:
-                            Console.ForegroundColor = ConsoleColor.Yellow;
                             Console.WriteLine($"IDENTITY: {identityEvent.Did} changed handle to {identityEvent.Identity.Handle} at {timeStamp}");
                             break;
 
@@ -100,13 +110,51 @@ namespace Samples.Jetstream
                     }
                 };
 
-                await jetStream.ConnectAsync(cancellationToken: cancellationToken);
+                const int maximumRetries = 5;
+                const int retryWaitPeriod = 10000;
+                TimeSpan resetRetryCountAfter = new(0, 5, 0);
 
-                while (!cancellationToken.IsCancellationRequested)
+                int currentRetryCount = 0;
+                DateTimeOffset? lastConnectionAttemptedAt = null;
+
+                bool listeningDone = false;
+
+                do
                 {
-                }
+                    if (currentRetryCount > maximumRetries)
+                    {
+                        Console.WriteLine("RECONNECT: Failed");
+                        break;
+                    }
 
-                Console.ForegroundColor = savedColor;
+                    if (DateTimeOffset.UtcNow > lastConnectionAttemptedAt + resetRetryCountAfter)
+                    {
+                        currentRetryCount = 0;
+                    }
+
+                    currentRetryCount++;
+
+                    lastConnectionAttemptedAt = DateTimeOffset.UtcNow;
+                    await jetStream.ConnectAsync(startFrom: jetStream.MessageLastReceived, cancellationToken: cancellationToken);
+                    while (jetStream.IsConnected && !cancellationToken.IsCancellationRequested)
+                    {
+                        // Let it run and process
+                    }
+
+                    if (!jetStream.DisconnectedGracefully)
+                    {
+                        await jetStream.CloseAsync();
+
+                        // The jetstream is no longer connected, but a cancellation isn't the reason.
+                        Console.WriteLine($"DISCONNECTED: state == {jetStream.State}");
+
+                        // Try to reconnect
+
+                        Console.WriteLine("RECONNECT: Waiting ...");
+                        await Task.Delay(retryWaitPeriod);
+                        Console.WriteLine($"RECONNECT: Reconnecting {currentRetryCount}/{maximumRetries}");
+                    }
+                } while (!listeningDone && !cancellationToken.IsCancellationRequested);
 
                 await jetStream.CloseAsync();
             }

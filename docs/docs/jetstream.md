@@ -66,12 +66,29 @@ If you want the raw messages from the jetstream subscribe to the `MessageReceive
 > When deserializing this property to, for example, a `BlueskyRecord` you will encounter exceptions if you attempt it on a non-Bluesky defined record 
 
 Once you have a configured instance of `AtProtoJetstream` call `ConnectAsync` and processing will begin in the background, raising events as appropriate.
-When you are finished with the jetstream call `CloseAsync`
+When you are finished with the Jetstream call `CloseAsync`
 
 ```c#
 await jetStream.ConnectAsync();
 
+/// Processing happens in the background.
+
 await jetStream.CloseAsync();
+```
+
+If you create your own `CancellationTokenSource` and token and pass it to `ConnectAsync()` you can stop the background processing by calling `Cancel()` on the `CancellationTokenSource`.
+
+```c#
+/// Setup a cancellation token
+CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+CancellationToken cancellationToken = cancellationTokenSource.Token;
+
+await jetStream.ConnectAsync();
+
+/// Processing happens in the background.
+
+/// Time to close
+cancellationTokenSource.Cancel()
 ```
 
 The [Jetstream sample](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Jetstream) shows subscribing to both raw messages and events,
@@ -91,6 +108,62 @@ using (var jetStream = new AtProtoJetstream(
 ```
 
 You can also change the `CollectionFilter` and `DidFilter` properties on a running instance.
+
+## Retrying connection loss
+
+If the underlying WebSocket to the Jetstream is closed by the server (for example, due to the connection dropping), message parsing will stop and exit. If you want
+to implement retrying the connection then you can wrap the `ConnectAsync()` / `CloseAsync()` in logic like the following:
+
+```c#
+const int maximumRetries = 5;
+const int retryWaitPeriod = 10000; // milliseconds
+TimeSpan resetRetryCountAfter = new(0, 5, 0);
+
+int currentRetryCount = 0;
+DateTimeOffset? lastConnectionAttemptedAt = null;
+
+bool listeningDone = false;
+
+do
+{
+    if (currentRetryCount > maximumRetries)
+    {
+        break;
+    }
+
+    if (DateTimeOffset.UtcNow > lastConnectionAttemptedAt + resetRetryCountAfter)
+    {
+        currentRetryCount = 0;
+    }
+
+    currentRetryCount++;
+
+    lastConnectionAttemptedAt = DateTimeOffset.UtcNow;
+    await jetStream.ConnectAsync(startFrom: jetStream.MessageLastReceived, cancellationToken: cancellationToken);
+    while (jetStream.IsConnected && !cancellationToken.IsCancellationRequested)
+    {
+        // Let it run and process
+    }
+
+    if (!jetStream.DisconnectedGracefully)
+    {
+        await jetStream.CloseAsync();
+
+        // The jetstream is no longer connected, but a cancellation isn't the reason.
+
+        // Try to reconnect
+        await Task.Delay(retryWaitPeriod);
+    }
+    else
+    {
+        listeningDone = true;
+    }
+
+} while (!listeningDone && !cancellationToken.IsCancellationRequested);
+
+await jetStream.CloseAsync();
+
+```
 
 ## Configuring AtProtoJetstream
 
