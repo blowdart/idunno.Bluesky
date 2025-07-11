@@ -105,7 +105,8 @@ namespace Samples.Notifications
                     }
                 }
 
-                Preferences preferences = new();
+                // Get actor preferences so we can pass the user's subscribed labelers into API calls.
+                idunno.Bluesky.Actor.Preferences preferences = new();
                 var preferencesResult = await agent.GetPreferences(cancellationToken: cancellationToken);
                 if (preferencesResult.Succeeded)
                 {
