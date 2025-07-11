@@ -66,6 +66,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{8849
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{F0D2699C-0578-4BF0-AB26-84FF918480FD}"
 	ProjectSection(SolutionItems) = preProject
+		.github\workflows\actions-security-analysis.yml = .github\workflows\actions-security-analysis.yml
 		.github\workflows\ci-build.yml = .github\workflows\ci-build.yml
 		.github\workflows\ci-manual-build-test-sign.yml = .github\workflows\ci-manual-build-test-sign.yml
 		.github\workflows\close-inactive-issues.yml = .github\workflows\close-inactive-issues.yml
