@@ -254,6 +254,9 @@ As we want to watch for posts we will limit the jetstream to only tell us about 
 Now that you have your bot detecting posts with your watched words in them you can expand it to flag the post for examination, or even to send a reply to the
 post, or whatever else you want to do.
 
+The bot will exit if its connection to the jetstream is interrupted. If you want to add retry logic for your jetstream connection see [retry logic](../jetstream.md#retry)
+in [Using the Jetstream](../jetstream.md).
+
 > [!TIP]
 > If you want to watch for hash tags, or links to web sites, or mentions you should look at the
 `Post`'s [facets](https://docs.bsky.app/docs/advanced-guides/post-richtext), not the post text.

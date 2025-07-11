@@ -109,7 +109,7 @@ using (var jetStream = new AtProtoJetstream(
 
 You can also change the `CollectionFilter` and `DidFilter` properties on a running instance.
 
-## Retrying connection loss
+## <a name="retry">Retrying connection loss</a>
 
 If the underlying WebSocket to the Jetstream is closed by the server (for example, due to the connection dropping), message parsing will stop and exit. If you want
 to implement retrying the connection then you can wrap the `ConnectAsync()` / `CloseAsync()` in logic like the following:
