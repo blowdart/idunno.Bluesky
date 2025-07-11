@@ -14,12 +14,20 @@
   * Adding images and video to posts
   * Gating threads and posts
   * Liking, quoting, and reposting posts
+* Notifications
+  * Viewing and setting preferences for
+  * Subscribing to user activities
 * Viewing user profiles
 * Following and unfollowing users
 * Muting and blocking users
 * Sending, receiving, and deleting messages
 
 * Trimming is supported for applications targeting .NET 9.0 or later.
+
+## Version History
+
+A full [version history](https://github.com/blowdart/idunno.Bluesky/blob/main/history.md) can be found on the project's
+[GitHub](https://github.com/blowdart/idunno.Bluesky/) repository.
 
 ## How to Use
 

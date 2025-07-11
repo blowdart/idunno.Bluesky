@@ -4,7 +4,6 @@
 using System.Text.Json.Serialization;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
-using idunno.Bluesky.Actions;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Actor.Model;
 using idunno.Bluesky.Chat;
@@ -39,10 +38,10 @@ namespace idunno.Bluesky
 
     [JsonSerializable(typeof(Block))]
     [JsonSerializable(typeof(Follow))]
-    [JsonSerializable(typeof(Actions.Like))]
+    [JsonSerializable(typeof(Record.Like))]
     [JsonSerializable(typeof(Repost))]
 
-    [JsonSerializable(typeof(GetPreferencesResponse))]
+    [JsonSerializable(typeof(Actor.Model.GetPreferencesResponse), TypeInfoPropertyName = "ActorGetPreferencesResponse")]
     [JsonSerializable(typeof(GetProfilesResponse))]
     [JsonSerializable(typeof(GetSuggestionsResponse))]
     [JsonSerializable(typeof(PutPreferencesRequest))]
@@ -62,7 +61,7 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(MutedWordPreferences))]
     [JsonSerializable(typeof(PersonalDetailsPreference))]
     [JsonSerializable(typeof(Preference))]
-    [JsonSerializable(typeof(Preferences))]
+    [JsonSerializable(typeof(Actor.Preferences), TypeInfoPropertyName = "ActorPreferences")]
     [JsonSerializable(typeof(ProfileAssociated))]
     [JsonSerializable(typeof(ProfileAssociatedChat))]
     [JsonSerializable(typeof(ProfileView))]
@@ -74,7 +73,7 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(VerificationState))]
     [JsonSerializable(typeof(VerificationView))]
     [JsonSerializable(typeof(StatusView))]
-
+    
     [JsonSerializable(typeof(BeginConversation))]
     [JsonSerializable(typeof(CreateMessage))]
     [JsonSerializable(typeof(DeleteMessage))]
@@ -217,12 +216,20 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(StarterPackViewBasic))]
     [JsonSerializable(typeof(SuggestedActors))]
 
-    [JsonSerializable(typeof(ListNotificationsResponse))]
-    [JsonSerializable(typeof(UnreadCountResponse))]
-    [JsonSerializable(typeof(UpdateSeenRequest))]
-    [JsonSerializable(typeof(Notification))]
+    [JsonSerializable(typeof(Notifications.Model.GetPreferencesResponse), TypeInfoPropertyName = "NotificationGetPreferencesResponse")]
+    [JsonSerializable(typeof(Notifications.Model.ListActivitySubscriptionsResponse))]
+    [JsonSerializable(typeof(Notifications.Model.ListNotificationsResponse))]
+    [JsonSerializable(typeof(Notifications.Model.NotificationResponse))]
+    [JsonSerializable(typeof(Notifications.Model.PutPreferencesV2Request))]
+    [JsonSerializable(typeof(Notifications.Model.UnreadCountResponse))]
+    [JsonSerializable(typeof(Notifications.Model.UpdateSeenRequest))]
     [JsonSerializable(typeof(NotificationCollection))]
-    [JsonSerializable(typeof(NotificationReason))]
+    [JsonSerializable(typeof(Notifications.Declaration), TypeInfoPropertyName = "NotificationDeclaration")]
+    [JsonSerializable(typeof(NotificationAllowedFrom))]
+    [JsonSerializable(typeof(AtProtoRepositoryRecord<Notifications.Declaration>))]
+    [JsonSerializable(typeof(ActivitySubscription))]
+    [JsonSerializable(typeof(SubjectActivitySubscription))]
+    [JsonSerializable(typeof(Notifications.Preferences), TypeInfoPropertyName = "NotificationPreferences")]
 
     [JsonSerializable(typeof(BlueskyRecord))]
     [JsonSerializable(typeof(BlueskyTimestampedRecord))]

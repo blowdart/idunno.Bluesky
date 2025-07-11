@@ -45,7 +45,6 @@ namespace idunno.Bluesky.Feed
         [JsonRequired]
         public ProfileView Actor { get; init; }
 
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private string DebuggerDisplay
         {
             get

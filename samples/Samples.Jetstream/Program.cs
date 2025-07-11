@@ -154,6 +154,11 @@ namespace Samples.Jetstream
                         await Task.Delay(retryWaitPeriod);
                         Console.WriteLine($"RECONNECT: Reconnecting {currentRetryCount}/{maximumRetries}");
                     }
+                    else
+                    {
+                        listeningDone = true;
+                    }
+
                 } while (!listeningDone && !cancellationToken.IsCancellationRequested);
 
                 await jetStream.CloseAsync();

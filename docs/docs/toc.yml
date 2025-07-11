@@ -29,6 +29,15 @@ items:
       - name: Adding videos to your posts
         href: video.md
 
+  - name: Notifications
+    items:
+      - name: Checking for notifications
+        href: notifications.md
+      - name: Activity notifications
+        href: notifications.md#activity
+      - name: Notification preferences
+        href: notifications.md#preferences
+
   - name: Users
     items:
       - name: Viewing user profiles

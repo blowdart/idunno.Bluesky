@@ -18,11 +18,11 @@ namespace idunno.Bluesky.Feed
             Cid = cid;
         }
 
-        internal RepostedBy(AtUri uri, Cid? cid, IEnumerable<ProfileView> profileViews, string? cursor = null) : this(uri, cid, new List<ProfileView>(profileViews), cursor)
+        internal RepostedBy(AtUri uri, Cid? cid, IEnumerable<ProfileView> profileViews, string? cursor = null) : this(uri, cid, [.. profileViews], cursor)
         {
         }
 
-        internal RepostedBy(AtUri uri, Cid? cid = null, string? cursor = null) : this(uri, cid, new List<ProfileView>(), cursor)
+        internal RepostedBy(AtUri uri, Cid? cid = null, string? cursor = null) : this(uri, cid, [], cursor)
         {
         }
 
@@ -37,7 +37,7 @@ namespace idunno.Bluesky.Feed
         public Cid? Cid { get; init; }
 
         /// <summary>
-        /// Gets a <see cref="StrongReference"/> to the post whos reposts are in the collection.
+        /// Gets a <see cref="StrongReference"/> to the post whose reposts are in the collection.
         /// </summary>
         public StrongReference? StrongReference
         {

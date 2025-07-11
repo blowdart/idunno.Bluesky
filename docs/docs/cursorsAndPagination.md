@@ -4,15 +4,17 @@ If you've looked at the source code for the [Notifications](https://github.com/b
 [Timeline](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Timeline) samples you may have noticed they through notifications
 rather than get all the notifications at once.
 
-Each sample uses the limit and cursor parameters to get their results one page at a time.
+Each sample uses the `limit` and `cursor` parameters to get their results one page at a time.
+
 For example, to page through notifications, with each page containing a maximum of five results you would write the following:.
 
 ```c#
 HttpResult<NotificationsView> notifications = 
      await agent.ListNotifications(5);
 ```
-
 The first call to `ListNotifications()` uses the limit parameter to control how many notifications are returned from the API.
+
+If you don't pass a limit Bluesky uses a default page size limit, which can vary by API.
 
 Then the code loops until either the the call to `ListNotifications()` returns an empty cursor, or it fails.
 

@@ -189,6 +189,33 @@ namespace Samples.Notifications
                                     }
                                     break;
 
+                                case NotificationReason.LikeViaRepost:
+                                    {
+                                        if (notification.ReasonSubject is not null)
+                                        {
+                                            var getLikedPost = await agent.GetPostView(notification.ReasonSubject, preferences.SubscribedLabelers, cancellationToken: cancellationToken);
+
+                                            if (getLikedPost.Succeeded)
+                                            {
+                                                if (notification.Author.Did != getLikedPost.Result.Author.Did)
+                                                {
+                                                    Console.WriteLine($"❤️ {notification.Author} liked your repost at {getLikedPost.Result.Record.CreatedAt.ToLocalTime():G}.");
+                                                    PrintLabels(notification.Author);
+                                                }
+                                                else
+                                                {
+                                                    Console.WriteLine($"❤️ You liked your own repost at {getLikedPost.Result.Record.CreatedAt.ToLocalTime():G}.");
+                                                }
+                                                Console.WriteLine($"   {getLikedPost.Result.Record.Text}");
+                                            }
+                                            else if (getLikedPost.StatusCode == System.Net.HttpStatusCode.OK && getLikedPost.Result is null)
+                                            {
+                                                Console.WriteLine("   🛈 Liked post was deleted");
+                                            }
+                                        }
+                                    }
+                                    break;
+
                                 case NotificationReason.Mention:
                                     {
                                         if (notification.Record is Post post)
@@ -295,6 +322,25 @@ namespace Samples.Notifications
                                     }
                                     break;
 
+                                case NotificationReason.RepostViaRepost:
+                                    {
+                                        if (notification.ReasonSubject is not null)
+                                        {
+                                            AtProtoHttpResult<PostView> repostView =
+                                                await agent.GetPostView(notification.ReasonSubject, preferences.SubscribedLabelers, cancellationToken: cancellationToken).ConfigureAwait(false);
+                                            if (repostView.Succeeded)
+                                            {
+                                                Console.WriteLine($"♲ {notification.Author} reposted your repost at {repostView.Result.Record.CreatedAt.ToLocalTime():G}.");
+                                                if (notification.Author.Did != agent.Did)
+                                                {
+                                                    PrintLabels(notification.Author);
+                                                }
+                                                Console.WriteLine($"   {repostView.Result.Record.Text}");
+                                            }
+                                        }
+                                    }
+                                    break;
+
                                 case NotificationReason.StarterPackJoined:
                                     {
                                         if (notification.ReasonSubject is not null)
@@ -319,8 +365,33 @@ namespace Samples.Notifications
                                     }
                                     break;
 
+                                case NotificationReason.SubscribedPost:
+                                    {
+                                        if (notification.Record is Post post)
+                                        {
+                                            string contents = string.Empty;
+
+                                            if (!string.IsNullOrEmpty(post.Text))
+                                            {
+                                                contents = post.Text + " ";
+                                            }
+
+                                            if (post.Reply is null)
+                                            {
+                                                Console.WriteLine($"📬 {notification.Author} posted {contents}at {post.CreatedAt.ToLocalTime():G}");
+                                            }
+                                            else
+                                            {
+                                                {
+                                                    Console.WriteLine($"📬 {notification.Author} replied {contents}at {post.CreatedAt.ToLocalTime():G}");
+                                                }
+                                            }
+                                        }
+                                        break;
+                                    }
+
                                 default:
-                                    Console.WriteLine($"{notification.Author} did something unknown to trigger a notification at {notification.IndexedAt.ToLocalTime():G}.");
+                                    Console.WriteLine($"{notification.Author} did something unknown ({notification.RawReason}) to trigger a notification at {notification.IndexedAt.ToLocalTime():G}.");
                                     if (notification.Author.Did != agent.Did)
                                     {
                                         PrintLabels(notification.Author);
@@ -338,10 +409,10 @@ namespace Samples.Notifications
                         {
                             // Get the next page
                             notificationsListResult = await agent.ListNotifications(
-                            limit: pageSize,
-                            cursor: notificationsListResult.Result.Cursor,
-                            subscribedLabelers: preferences.SubscribedLabelers,
-                            cancellationToken: cancellationToken).ConfigureAwait(false);
+                                limit: pageSize,
+                                cursor: notificationsListResult.Result.Cursor,
+                                subscribedLabelers: preferences.SubscribedLabelers,
+                                cancellationToken: cancellationToken).ConfigureAwait(false);
                         }
 
                     } while (!cancellationToken.IsCancellationRequested &&

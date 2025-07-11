@@ -6,11 +6,15 @@ using System.Text.Json.Serialization;
 namespace idunno.Bluesky.Notifications
 {
     /// <summary>
-    /// Reasons for a notification.
+    /// The reason why a notification was delivered - e.g. your post was liked, or you received a new follower.
     /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter<NotificationReason>))]
     public enum NotificationReason
     {
+        /// <summary>
+        /// The notification reason is unknown.
+        /// </summary>
+        Unknown,
+
         /// <summary>
         /// A user followed the notification subject.
         /// </summary>
@@ -45,6 +49,34 @@ namespace idunno.Bluesky.Notifications
         /// A user followed the notification subject from a starter pack.
         /// </summary>
         [JsonStringEnumMemberName("starterpack-joined")]
-        StarterPackJoined
+        StarterPackJoined,
+
+        /// <summary>
+        /// The user's account has been verified.
+        /// </summary>
+        Verified,
+
+        /// <summary>
+        /// The user's account has been unverified.
+        /// </summary>
+        Unverified,
+
+        /// <summary>
+        /// A repost created by the notification subject was liked.
+        /// </summary>
+        [JsonStringEnumMemberName("like-via-repost")]
+        LikeViaRepost,
+
+        /// <summary>
+        /// A repost created by the notification subject was reposted.
+        /// </summary>
+        [JsonStringEnumMemberName("repost-via-repost")]
+        RepostViaRepost,
+
+        /// <summary>
+        /// The post is from a user the current user subscribed to.
+        /// </summary>
+        [JsonStringEnumMemberName("subscribed-post")]
+        SubscribedPost
     }
 }

@@ -194,6 +194,11 @@ namespace idunno.Bluesky
         /// The NSID for an actor's status record.
         /// </summary>
         public static Nsid Status => new("app.bsky.actor.status");
+
+        /// <summary>
+        /// The NSID for an actor's notification declaration record.
+        /// </summary>
+        public static Nsid NotificationDeclaration => new("app.bsky.notification.declaration");
     }
 
     /// <summary>
@@ -285,6 +290,11 @@ namespace idunno.Bluesky
         /// Indicates a record of an item in a list.
         /// </summary>
         public const string ListItem = "app.bsky.graph.listitem";
+
+        /// <summary>
+        /// Indicates a declaration of notification preferences.
+        /// </summary>
+        public const string NotificationDeclaration = "app.bsky.notification.declaration";
     }
 
     /// <summary>

@@ -3,8 +3,6 @@
 
 using System.Text.Json.Serialization;
 
-using idunno.Bluesky.Actions;
-
 namespace idunno.Bluesky.Record
 {
     /// <summary>

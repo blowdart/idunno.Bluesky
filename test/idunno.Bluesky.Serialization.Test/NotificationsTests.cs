@@ -2,8 +2,9 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
-
+using idunno.Bluesky.Notifications;
 using idunno.Bluesky.Notifications.Model;
+using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky.Serialization.Test
 {
@@ -191,6 +192,90 @@ namespace idunno.Bluesky.Serialization.Test
             Assert.Equal("cursor", notification.Cursor);
             Assert.False(notification.Priority);
             Assert.Equal(new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), notification.SeenAt);
+        }
+
+        [Fact]
+        public void MutualsDeclarationDeserializesCorrectly()
+        {
+            string jsonString = """
+                {
+                    "$type": "app.bsky.notification.declaration",
+                    "allowSubscriptions": "mutuals"
+                }
+                """;
+
+            Declaration? declaration = JsonSerializer.Deserialize<Notifications.Declaration>(jsonString, BlueskyServer.BlueskyJsonSerializerOptions);
+
+            Assert.NotNull(declaration);
+            Assert.Equal(NotificationAllowedFrom.Mutuals, declaration.AllowSubscriptions);
+        }
+
+        [Fact]
+        public void FollowersDeclarationDeserializesCorrectly()
+        {
+            string jsonString = """
+                {
+                    "$type": "app.bsky.notification.declaration",
+                    "allowSubscriptions": "followers"
+                }
+                """;
+
+            Declaration? declaration = JsonSerializer.Deserialize<Notifications.Declaration>(jsonString, BlueskyServer.BlueskyJsonSerializerOptions);
+
+            Assert.NotNull(declaration);
+            Assert.Equal(NotificationAllowedFrom.Followers, declaration.AllowSubscriptions);
+        }
+
+        [Fact]
+        public void NoneDeclarationDeserializesCorrectly()
+        {
+            string jsonString = """
+                {
+                    "$type": "app.bsky.notification.declaration",
+                    "allowSubscriptions": "none"
+                }
+                """;
+
+            Declaration? declaration = JsonSerializer.Deserialize<Notifications.Declaration>(jsonString, BlueskyServer.BlueskyJsonSerializerOptions);
+
+            Assert.NotNull(declaration);
+            Assert.Equal(NotificationAllowedFrom.None, declaration.AllowSubscriptions);
+        }
+
+        [Fact]
+        public void MutualsDeclarationSerializesCorrectly()
+        {
+            Declaration declaration = new (NotificationAllowedFrom.Mutuals);
+
+            string actual = JsonSerializer.Serialize<BlueskyRecord>(declaration, BlueskyServer.BlueskyJsonSerializerOptions);
+
+            Assert.NotNull(actual);
+
+            Assert.Equal("{\"$type\":\"app.bsky.notification.declaration\",\"allowSubscriptions\":\"mutuals\"}", actual);
+        }
+
+        [Fact]
+        public void FollowersDeclarationSerializesCorrectly()
+        {
+            Declaration declaration = new(NotificationAllowedFrom.Followers);
+
+            string actual = JsonSerializer.Serialize<BlueskyRecord>(declaration, BlueskyServer.BlueskyJsonSerializerOptions);
+
+            Assert.NotNull(actual);
+
+            Assert.Equal("{\"$type\":\"app.bsky.notification.declaration\",\"allowSubscriptions\":\"followers\"}", actual);
+        }
+
+        [Fact]
+        public void NoneDeclarationSerializesCorrectly()
+        {
+            Declaration declaration = new(NotificationAllowedFrom.None);
+
+            string actual = JsonSerializer.Serialize<BlueskyRecord>(declaration, BlueskyServer.BlueskyJsonSerializerOptions);
+
+            Assert.NotNull(actual);
+
+            Assert.Equal("{\"$type\":\"app.bsky.notification.declaration\",\"allowSubscriptions\":\"none\"}", actual);
         }
     }
 }

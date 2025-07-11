@@ -10,11 +10,12 @@ using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.RichText;
-using idunno.Bluesky.Actions;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Record;
 using System;
 using static System.Net.Mime.MediaTypeNames;
+using idunno.Bluesky.Feed;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace idunno.Bluesky
 {
@@ -1203,13 +1204,9 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        [UnconditionalSuppressMessage(
-            "Trimming",
-            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
-            Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
-        [UnconditionalSuppressMessage("AOT",
-            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
-            Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
+        /// <remarks>
+        /// <para>You should prefer to use <see cref="Repost(FeedViewPost, CancellationToken)"/> as this will ensure reposts of reposts create the right notifications.</para>
+        /// </remarks>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Repost(StrongReference post, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(post);
@@ -1225,13 +1222,7 @@ namespace idunno.Bluesky
             }
 
             Repost repostRecord = new(post);
-
-            // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
-            return await CreateRecord<BlueskyTimestampedRecord>(
-                record: repostRecord,
-                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
-                collection: CollectionNsid.Repost,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await Repost(repostRecord, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1244,6 +1235,9 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, the uri collection, or <paramref name="cid"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="uri"/> does not point to a post.</exception>
         /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
+        /// <remarks>
+        /// <para>You should prefer to use <see cref="Repost(FeedViewPost, CancellationToken)"/> as this will ensure reposts of reposts create the right notifications.</para>
+        /// </remarks>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Repost(AtUri uri, Cid cid, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uri);
@@ -1258,6 +1252,92 @@ namespace idunno.Bluesky
             }
 
             return await Repost(new StrongReference(uri, cid), cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Creates a repost record in the current user's repo for the specified in the <paramref name="postView"/>.
+        /// </summary>
+        /// <param name="postView">A <see cref="PostView"/> of the post to be liked.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postView"/>, the PostView Uri, or the PostView Uri Collection is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the postView Uri does not point to a post.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Repost(PostView postView, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(postView);
+
+            ArgumentNullException.ThrowIfNull(postView.Uri);
+            ArgumentNullException.ThrowIfNull(postView.Uri.Collection);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(postView.Uri.Collection, CollectionNsid.Post);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            return await Repost(postView.StrongReference, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Creates a repost record in the current user's repo for the specified <see cref="FeedViewPost">post</see>.
+        /// </summary>
+        /// <param name="post">A <see cref="FeedViewPost"/> of the post to be reposted.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/>, or its Post is null, or the collection for the Post property's URI is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        ///   Thrown when the Post property on <paramref name="post"/> does not point to a post, or.
+        ///   if a reason is present and the reason is typeof <see cref="ReasonRepost"/> and reason <see cref="StrongReference"/> is null, or the strong reference's
+        ///   Uri property is null, or the strong reference's URI does not point to a Repost record.
+        /// </exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Repost(FeedViewPost post, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(post);
+            ArgumentNullException.ThrowIfNull(post.Post);
+            ArgumentNullException.ThrowIfNull(post.Post.Uri.Collection);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(post.Post.Uri.Collection, CollectionNsid.Post);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            Repost repostRecord;
+
+            if (post.Reason is ReasonRepost postReason)
+            {
+                ArgumentNullException.ThrowIfNull(postReason.StrongReference);
+                ArgumentNullException.ThrowIfNull(postReason.StrongReference.Uri);
+                ArgumentNullException.ThrowIfNull(postReason.StrongReference.Uri.Collection);
+                ArgumentOutOfRangeException.ThrowIfNotEqual(postReason.StrongReference.Uri.Collection, CollectionNsid.Repost);
+
+                repostRecord = new(post.Post.StrongReference, postReason.StrongReference);
+            }
+            else
+            {
+                repostRecord = new(post.Post.StrongReference);
+            }
+
+            return await Repost(repostRecord, cancellationToken).ConfigureAwait(false);
+        }
+
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
+        private async Task<AtProtoHttpResult<CreateRecordResult>> Repost(Repost repostRecord, CancellationToken cancellationToken = default)
+        {
+            // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
+            return await CreateRecord<BlueskyTimestampedRecord>(
+                record: repostRecord,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
+                collection: CollectionNsid.Repost,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1349,13 +1429,9 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or the strongReference uri collection is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="strongReference"/> does not point to a post.</exception>
         /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
-        [UnconditionalSuppressMessage(
-            "Trimming",
-            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
-            Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
-        [UnconditionalSuppressMessage("AOT",
-            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
-            Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
+        /// <remarks>
+        /// <para>You should prefer to use <see cref="Repost(FeedViewPost, CancellationToken)"/> as this will ensure reposts of reposts create the right notifications.</para>
+        /// </remarks>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Like(StrongReference strongReference, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
@@ -1368,14 +1444,10 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(strongReference.Uri.Collection);
             ArgumentOutOfRangeException.ThrowIfNotEqual(strongReference.Uri.Collection, CollectionNsid.Post);
 
-            Like likeRecord = new(strongReference);
+            Record.Like likeRecord = new(strongReference);
 
             // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
-            return await CreateRecord<BlueskyTimestampedRecord>(
-                record: likeRecord,
-                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
-                collection: CollectionNsid.Like,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await Like(likeRecord, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1388,6 +1460,9 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, the uri collection, or <paramref name="cid"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="uri"/> does not point to a post.</exception>
         /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
+        /// <remarks>
+        /// <para>You should prefer to use <see cref="Repost(FeedViewPost, CancellationToken)"/> as this will ensure reposts of reposts create the right notifications.</para>
+        /// </remarks>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Like(AtUri uri, Cid cid, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uri);
@@ -1402,6 +1477,92 @@ namespace idunno.Bluesky
             }
 
             return await Like(new StrongReference(uri, cid), cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Creates a like record in the current user's repo for the specified in the <paramref name="postView"/>.
+        /// </summary>
+        /// <param name="postView">A <see cref="PostView"/> of the post to be liked.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postView"/>, the PostView Uri, or the PostView Uri Collection is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the postView Uri does not point to a post.</exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Like(PostView postView, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(postView);
+
+            ArgumentNullException.ThrowIfNull(postView.Uri);
+            ArgumentNullException.ThrowIfNull(postView.Uri.Collection);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(postView.Uri.Collection, CollectionNsid.Post);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            return await Like(postView.StrongReference, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Creates a like record in the current user's repo for the specified <see cref="FeedViewPost">post</see>.
+        /// </summary>
+        /// <param name="post">A <see cref="FeedViewPost"/> of the post to be liked.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/>, or its Post is null, or the collection for the Post property's URI is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        ///   Thrown when the Post property on <paramref name="post"/> does not point to a post, or.
+        ///   if a reason is present and the reason is typeof <see cref="ReasonRepost"/> and reason <see cref="StrongReference"/> is null, or the strong reference's
+        ///   Uri property is null, or the strong reference's URI does not point to a Repost record.
+        /// </exception>
+        /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Like(FeedViewPost post, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(post);
+            ArgumentNullException.ThrowIfNull(post.Post);
+            ArgumentNullException.ThrowIfNull(post.Post.Uri.Collection);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(post.Post.Uri.Collection, CollectionNsid.Post);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            Record.Like likeRecord;
+
+            if (post.Reason is ReasonRepost postReason)
+            {
+                ArgumentNullException.ThrowIfNull(postReason.StrongReference);
+                ArgumentNullException.ThrowIfNull(postReason.StrongReference.Uri);
+                ArgumentNullException.ThrowIfNull(postReason.StrongReference.Uri.Collection);
+                ArgumentOutOfRangeException.ThrowIfNotEqual(postReason.StrongReference.Uri.Collection, CollectionNsid.Repost);
+
+                likeRecord = new(post.Post.StrongReference, postReason.StrongReference);
+            }
+            else
+            {
+                likeRecord = new(post.Post.StrongReference);
+            }
+
+            return await Like(likeRecord, cancellationToken).ConfigureAwait(false);
+        }
+
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
+        private async Task<AtProtoHttpResult<CreateRecordResult>> Like(Record.Like likeRecord, CancellationToken cancellationToken = default)
+        {
+            // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
+            return await CreateRecord<BlueskyTimestampedRecord>(
+                record: likeRecord,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
+                collection: CollectionNsid.Like,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>

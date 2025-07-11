@@ -10,6 +10,11 @@ OAuth libraries for the [idunno.AtProto](https://www.nuget.org/packages/idunno.A
 
 * Trimming is supported for applications targeting .NET 9.0 or later.
 
+## Version History
+
+A full [version history](https://github.com/blowdart/idunno.Bluesky/blob/main/history.md) can be found on the project's
+[GitHub](https://github.com/blowdart/idunno.Bluesky/) repository.
+
 ## How to Use
 
 ```c#

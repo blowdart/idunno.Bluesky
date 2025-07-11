@@ -3,6 +3,8 @@
 
 using System.Text.Json.Serialization;
 
+using idunno.AtProto;
+using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
 
 namespace idunno.Bluesky.Feed
@@ -17,11 +19,20 @@ namespace idunno.Bluesky.Feed
         /// </summary>
         /// <param name="by">The <see cref="ProfileViewBasic"/> of the actor who reposted the post.</param>
         /// <param name="indexedAt">The <see cref="DateTimeOffset"/> when the repost was indexed.</param>
+        /// <param name="uri">An optional <see cref="AtUri"/> of the post that was reposted.</param>
+        /// <param name="cid">An optional <see cref="idunno.AtProto.Cid">content identifier</see> of the post that was reposted.</param>
         [JsonConstructor]
-        internal ReasonRepost(ProfileViewBasic by, DateTimeOffset indexedAt)
+        internal ReasonRepost(ProfileViewBasic by, DateTimeOffset indexedAt, AtUri? uri, Cid? cid)
         {
             By = by;
             IndexedAt = indexedAt;
+            Uri = uri;
+            Cid = cid;
+
+            if (uri is not null && cid is not null)
+            {
+                StrongReference = new StrongReference(uri, cid);
+            }
         }
 
         /// <summary>
@@ -37,5 +48,23 @@ namespace idunno.Bluesky.Feed
         [JsonInclude]
         [JsonRequired]
         public DateTimeOffset IndexedAt { get; init; }
+
+        /// <summary>
+        /// Gets the <see cref="AtUri" /> of the post that was reposted.
+        /// </summary>
+        [JsonInclude]
+        public AtUri? Uri { get; init; }
+
+        /// <summary>
+        /// Gets the <see cref="Cid">content identifier</see> of the post that was reposted.
+        /// </summary>
+        [JsonInclude]
+        public Cid? Cid { get; init; }
+
+        /// <summary>
+        /// Gets a strong reference to the repost record.
+        /// </summary>
+        [JsonIgnore]
+        public StrongReference? StrongReference { get; }
     }
 }

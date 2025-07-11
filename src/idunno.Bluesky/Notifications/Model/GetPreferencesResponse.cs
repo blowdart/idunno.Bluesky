@@ -3,7 +3,7 @@
 
 namespace idunno.Bluesky.Notifications.Model
 {
-    internal sealed record ListNotificationsResponse(IList<NotificationResponse> Notifications, string? Cursor, bool? Priority, DateTimeOffset SeenAt)
+    internal sealed record GetPreferencesResponse(Preferences Preferences)
     {
     }
 }

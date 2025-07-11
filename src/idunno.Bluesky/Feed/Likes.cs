@@ -17,11 +17,11 @@ namespace idunno.Bluesky.Feed
             Cid = cid;
         }
 
-        internal Likes(AtUri uri, Cid? cid,IEnumerable<Like> collection, string? cursor = null) : this(uri, cid, new List<Like>(collection), cursor)
+        internal Likes(AtUri uri, Cid? cid,IEnumerable<Like> collection, string? cursor = null) : this(uri, cid, [.. collection], cursor)
         {
         }
 
-        internal Likes(AtUri uri, Cid? cid = null, string? cursor = null) : this(uri, cid, new List<Like>(), cursor)
+        internal Likes(AtUri uri, Cid? cid = null, string? cursor = null) : this(uri, cid, [], cursor)
         {
         }
 

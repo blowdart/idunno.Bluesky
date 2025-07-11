@@ -16,13 +16,15 @@ namespace idunno.Bluesky.Actor
         /// <param name="starterPacks">The number of starter packs the actor currently has.</param>
         /// <param name="labeler">A flag indicating whether the actor is a labeler.</param>
         /// <param name="chat">The chat configuration for the actor.</param>
-        public ProfileAssociated(int lists, int feedGens, int starterPacks, bool labeler, ProfileAssociatedChat? chat)
+        /// <param name="activitySubscription">The actor's activity subscription preferences.</param>
+        public ProfileAssociated(int lists, int feedGens, int starterPacks, bool labeler, ProfileAssociatedChat? chat, ActivitySubscriptions? activitySubscription)
         {
             Lists = lists;
             FeedGens = feedGens;
             StarterPacks = starterPacks;
             Labeler = labeler;
             Chat = chat;
+            ActivitySubscription = activitySubscription;
         }
 
         /// <summary>
@@ -51,5 +53,10 @@ namespace idunno.Bluesky.Actor
         /// Gets the chat configuration for the actor.
         /// </summary>
         public ProfileAssociatedChat? Chat { get; init; }
+
+        /// <summary>
+        /// Gets the actor's activity subscription preferences.
+        /// </summary>
+        public ActivitySubscriptions? ActivitySubscription { get; init; }
     }
 }

@@ -63,10 +63,10 @@ namespace Samples.Common
 
         /// <summary>
         /// Returns a command line parser configured with the common command line parameters,
-        /// which will call <paramref name="runCode"/> when the <see cref="Parser"/>'s InvokeAsync is called.
+        /// which will call <paramref name="runCode"/> when the <see cref="ParseResult"/>'s InvokeAsync is called.
         /// </summary>
         /// <param name="runCode">The function to run when InvokeAsync is called on the parser.</param>
-        /// <returns>A preconfigured command line <see cref="Parser"/>.</returns>
+        /// <returns>A preconfigured command line <see cref="ParseResult"/>.</returns>
         public static ParseResult ConfigureCommandLine(
             string[] args,
             string commandDescription,
@@ -104,10 +104,10 @@ namespace Samples.Common
 
         /// <summary>
         /// Returns a command line parser configured with the common command line parameters,
-        /// which will call <paramref name="runCode"/> when the <see cref="Parser"/>'s InvokeAsync is called.
+        /// which will call <paramref name="runCode"/> when the <see cref="ParseResult"/>'s InvokeAsync is called.
         /// </summary>
         /// <param name="runCode">The function to run when InvokeAsync is called on the parser.</param>
-        /// <returns>A preconfigured command line <see cref="Parser"/>.</returns>
+        /// <returns>A preconfigured command line <see cref="ParseResult"/>.</returns>
         public static ParseResult ConfigureCommandLine(
             string[] args,
             string commandDescription,

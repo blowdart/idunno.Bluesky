@@ -7,6 +7,16 @@ Liking and reposting posts are a core feature of Bluesky. The SDK has dedicated 
 Liking a post is done by calling `agent.Like()` with a [strong reference](../commonTerms.md#strongReference) of the post
 to like
 
+`Like(post)`
+
+| Parameter       | Type            | Description                                                                                                                         | Required   |
+|-----------------|-----------------|---------------------------------------------------------------------------------------------------------------=---------------------|:----------:|
+| post            | FeedViewPost    | The FeedViewPost (the items in the collection returned by `GetTimeline()` or `GetFeed()` or `GetAuthorFeed()`) of the post to like. | Yes        |
+
+>[!Tip]
+>It is recommended use the `Like()` overload that takes a `FeedViewPost` where possible as this will check if you are liking a repost, and ensures the correct notification is send to the
+>repost author.
+
 `Like(strongReference)`
 
 | Parameter       | Type            | Description                                                                    | Required   |
@@ -31,9 +41,9 @@ the post to like
 var likeResult = agent.Like(uri, cid);
 ```
 
-## Unliking a post
+## Un-liking a post
 
-Unliking a post requires calling `agent.DeleteLike()` with original post's [at:// uri](../commonTerms.md#uri).
+Un-liking a post requires calling `agent.DeleteLike()` with original post's [at:// uri](../commonTerms.md#uri).
 
 | Parameter    | Type   | Description                                                                | Required   |
 |--------------|--------|----------------------------------------------------------------------------|:----------:|
@@ -45,7 +55,17 @@ var deleteLikeResult = agent.DeleteLike(uri);
 
 ## Reposting a post
 
-Reposting and un-reposting looks almost exactly the same as liking and unliking.
+Reposting and un-reposting looks almost exactly the same as liking and un-liking.
+
+`Repost(post)`
+
+| Parameter       | Type            | Description                                                                                                                           | Required   |
+|-----------------|-----------------|---------------------------------------------------------------------------------------------------------------------------------------|:----------:|
+| post            | FeedViewPost    | The FeedViewPost (the items in the collection returned by `GetTimeline()` or `GetFeed()` or `GetAuthorFeed()`) of the post to repost. | Yes        |
+
+>[!Tip]
+>It is recommended use the Repost() overload that takes a `FeedViewPost` where possible as this will check if you are reposting a repost, and ensures the correct notification is send to the
+>repost author.
 
 `Repost(strongReference)`
 

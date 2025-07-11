@@ -8,6 +8,7 @@ using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 
 using idunno.Bluesky.Actor;
+using idunno.Bluesky.Notifications.Model;
 using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky.Notifications
@@ -17,19 +18,30 @@ namespace idunno.Bluesky.Notifications
     /// </summary>
     public sealed record Notification : AtProtoRepositoryObject
     {
-        [JsonConstructor]
+        internal Notification(NotificationResponse notificationResponse) : this(
+            notificationResponse.Uri,
+            notificationResponse.Cid,
+            notificationResponse.Author,
+            notificationResponse.Reason,
+            notificationResponse.Record,
+            notificationResponse.IsRead,
+            notificationResponse.IndexedAt,
+            notificationResponse.Labels)
+        {
+        }
+
         internal Notification(
             AtUri uri,
             Cid cid,
             ProfileViewBasic author,
-            NotificationReason reason,
+            string reason,
             BlueskyRecord record,
             bool isRead,
             DateTimeOffset indexedAt,
             IReadOnlyCollection<Label>? labels) : base(uri, cid)
         {
             Author = author;
-            Reason = reason;
+            RawReason = reason;
             Record = record;
             IsRead = isRead;
             IndexedAt = indexedAt;
@@ -42,6 +54,24 @@ namespace idunno.Bluesky.Notifications
             {
                 Labels = new List<Label>().AsReadOnly<Label>();
             }
+
+            // As JsonStringEnumConvertor doesn't have the ability to fall back to a default, we have to do this.
+            Reason = reason.ToUpperInvariant() switch
+            {
+                "FOLLOW" => NotificationReason.Follow,
+                "LIKE" => NotificationReason.Like,
+                "MENTION" => NotificationReason.Mention,
+                "REPLY" => NotificationReason.Reply,
+                "REPOST" => NotificationReason.Repost,
+                "QUOTE" => NotificationReason.Quote,
+                "STARTERPACK-JOINED" => NotificationReason.StarterPackJoined,
+                "VERIFIED" => NotificationReason.Verified,
+                "UNVERIFIED" => NotificationReason.Unverified,
+                "LIKE-VIA-REPOST" => NotificationReason.LikeViaRepost,
+                "REPOST-VIA-REPOST" => NotificationReason.RepostViaRepost,
+                "SUBSCRIBED-POST" => NotificationReason.SubscribedPost,
+                _ => NotificationReason.Unknown,
+            };
         }
 
         /// <summary>
@@ -52,10 +82,19 @@ namespace idunno.Bluesky.Notifications
         public ProfileViewBasic Author { get; init; }
 
         /// <summary>
-        /// Gets the reason for the notification.
+        /// Gets the raw reason for the notification.
         /// </summary>
         [JsonInclude]
         [JsonRequired]
+        [JsonPropertyName("reason")]
+        public string RawReason { get; init; }
+
+        /// <summary>
+        /// Gets the reason for the notification.
+        /// </summary>
+        /// <remarks><para>If the reason is <see cref="NotificationReason.Unknown"/> the unparsed reason can be accessed via <see cref="RawReason"/>.</para></remarks>
+        [JsonIgnore]
+        [JsonPropertyName("reason_enum")]
         public NotificationReason Reason { get; init; }
 
         /// <summary>

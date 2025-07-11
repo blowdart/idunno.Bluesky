@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 using idunno.Bluesky.Graph;
+using idunno.Bluesky.Notifications;
 
 namespace idunno.Bluesky.Actor
 {
@@ -27,6 +28,7 @@ namespace idunno.Bluesky.Actor
         /// <param name="following">An <see cref="AtUri"/> reference to the follow record, if the current user is following the actor.</param>
         /// <param name="followedBy">An <see cref="AtUri"/> reference to the actor's follow record, if the the actor is following the current user.</param>
         /// <param name="knownFollowers">A <see cref="KnownFollowers"/> record of mutual followers shared between the actor and the current user, if any.</param>
+        /// <param name="activitySubscription">Any <see cref="ActivitySubscription" /> the current user has to the subject's activity.</param>
         [JsonConstructor]
         public ActorViewerState(
             bool muted,
@@ -36,7 +38,8 @@ namespace idunno.Bluesky.Actor
             ListViewBasic? blockingByList,
             AtUri? following,
             AtUri? followedBy,
-            KnownFollowers? knownFollowers)
+            KnownFollowers? knownFollowers,
+            ActivitySubscription? activitySubscription)
         {
             Muted = muted;
             MutedByList = mutedByList;
@@ -49,6 +52,8 @@ namespace idunno.Bluesky.Actor
             FollowedBy = followedBy;
 
             KnownFollowers = knownFollowers;
+
+            ActivitySubscription = activitySubscription;
         }
 
         /// <summary>
@@ -94,9 +99,21 @@ namespace idunno.Bluesky.Actor
         public AtUri? FollowedBy { get; init; }
 
         /// <summary>
-        /// A <see cref="KnownFollowers"/> record of mutual followers shared between the actor and the current user, if any.
+        /// Gets a <see cref="KnownFollowers"/> record of mutual followers shared between the actor and the current user, if any.
         /// </summary>
+        /// <remarks>
+        ///<para>This property is present only in selected cases, as an optimization.</para>
+        /// </remarks>
         [JsonInclude]
         public KnownFollowers? KnownFollowers { get; init; }
+
+        /// <summary>
+        /// Gets <see cref="ActivitySubscription"/> the current user has to the subject's activity, if any.
+        /// </summary>
+        /// <remarks>
+        ///<para>This property is present only in selected cases, as an optimization.</para>
+        /// </remarks>
+        [JsonInclude]
+        public ActivitySubscription? ActivitySubscription { get; init; }
     }
 }

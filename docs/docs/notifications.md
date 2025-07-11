@@ -1,6 +1,6 @@
 ﻿# <a name="checkingNotifications">Checking your notifications</a>
 
-Like the [timeline sample](timeline.md) notifications can be retrieved and iterated through, but Bluesky allows you to check your unread count first.
+Like the [timeline](timeline.md) notifications can be retrieved and iterated through. Bluesky also allows you to check your unread notification count.
 
 ```c#
 HttpResult<int> unreadCount = await agent.GetNotificationUnreadCount();
@@ -9,16 +9,15 @@ HttpResult<int> unreadCount = await agent.GetNotificationUnreadCount();
 `GetNotificationUnreadCount()` allows you to check if there's anything unread before you consider retrieving notifications. This could also be used for an indicator in an application or badge.
 `GetNotificationUnreadCount()` also takes an optional `DateTimeOffset` parameter to allow you to get the unread count from a particular date and time.
 
-To retrieve your notifications, read or unread, you call `ListNotifications()`.
+To retrieve your notifications, read or unread, call `ListNotifications()`.
 
 ```c#
 var notifications = 
     await agent.ListNotifications().ConfigureAwait(false);
 ```
-
 From there, you would perform the `.Succeded` check and work your way through the notifications collection exposed in the `Result` property. Each notification has a reason property.
 
-Each type of notification, `Follow`, `Like`, `Mention`, `Quote`, `Reply`, and `Repost` having varying types of information used to supplement the notification with appropriate information.
+Each type of notification, for example `Follow`, `Mention` or `Quote`, have varying types of information used to supplement the notification with appropriate information for its type.
 
 ```c#
 foreach (Notification notification in notifications.Result!.Notifications)
@@ -85,12 +84,12 @@ for testing any notification viewer you've written.
 A full sample can be found in the [Notifications](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.Notifications) project in the
 [samples](https://github.com/blowdart/idunno.atproto/tree/main/samples) directory in this GitHub repository.
 
-## <a name=cursorsPagination>Cursors and Pagination</a>
+## <a name=cursorsPagination>Paging results</a>
 
-If you've looked at the source code for the [Notifications sample](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.Notifications) you may have noticed it pages
-through notifications rather than get all the notifications at once.
+`ListNotifications()` returns results a page at a time, more results may be waiting for a subsequent call.
 
-The sample uses the `limit` and `cursor` parameters to get notifications one page at a time, consisting of five notifications per page.
+The [Notifications sample](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.Notifications) uses the `limit` and `cursor` parameters to get notifications
+one page at a time, consisting of five notifications per page.
 
 ```c#
 HttpResult<NotificationsView> notifications = 
@@ -121,15 +120,44 @@ if (notifications.Succeeded && notifications.Result.Count != 0)
 ```
 
 You can see that there's a difference between the first call to `ListNotifications()` and the second, the addition of the `cursor` parameter.
-This parameter is how Bluesky APIs implement paging.
+This parameter is how Bluesky APIs implement paging. If there are no more results then the cursor returned from the API call will be null.
 
-The response from the `ListNotifications()` API, or any API that supports paging, includes a cursor every time more things are available.
-Passing the cursor from a previous API response to a new request gets the next page of data.
-The AT Proto documentation has a section on [Cursors and Pagination](https://atproto.com/specs/xrpc#cursors-and-pagination).
+For more details see [Cursors and Pagination](cursorsAndPagination.md).
+or AT Proto documentation section on [Cursors and Pagination](https://atproto.com/specs/xrpc#cursors-and-pagination).
 
-APIs that support pagination include `ListNotifications()`, `SearchActors()`, `GetTimeline()`, `GetFeed()` and `GetSuggestions()`.
-One thing to note for feeds is that cursors aren't a standard format, an API can generate whatever they want, and use that to
-decide what to serve next. The [Feed](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.Feed) sample pages
-through the Bluesky Discovery feed. This feed users the cursor to track what it's already shown you, so as you load more and more pages the
-cursor grows and grows, until, if you page for long enough the cursor is too big to send in the request and you get a `400 Bad Request`` response.
-This is why the feed sample only loads 10 pages of 5 posts.
+## <a name="activity">Subscribing to and viewing subscriptions of activity notifications</a>
+
+To subscribe to activity notifications for an account call `agent.SetActivitySubscription()` with the account's DID or handle, and the type of activity you want to subscribe to.
+
+```c#
+agent.SetActivitySubscription(
+   did: "did:plc:3iicfxmgcfr32lansi4ju7oa",
+   posts: true,
+   replies: true
+)
+```
+
+To unsubscribe set both the `posts` and `replies` values to `false`.
+
+To view which accounts the user is currently subscribed to call `agent.ListActivitySubscriptions()`. This returns a pageable list of views over the profiles whose activity
+you have subscribed to. To see your subscription settings for each profile you must drill down into the `Viewer` property on the profile,
+then check the `ActivitySubscription` property on `Viewer`.
+
+## Controlling who can subscribe to your activities
+
+You can control who has the ability to subscribe to the current user's activity using `SetNotificationDeclaration()`. This takes a `NotificationAllowedFrom` enum, which allows you to choose
+`None`, `Followers` or `Mutals`.
+
+## <a name="preferences">Getting and setting notification preferences</a>
+
+You can retrieve a user's current notification preferences with `GetNotificationPreferences()`, which returns a `NotificationPreferences` instance.
+
+To set preferences take the `NotificationPreferences` instance you retrieved with `GetNotificationPreferences()`, change the preferences to be what you require, and then call
+`SetNotificationPreferences` with the updated `NotificationPreferences` instance.
+
+```c#
+var notificationPreferences = await agent.GetNotificationPreferences();
+
+notificationPreferences.Result.SubscribedPost.Push = false;
+await agent.SetNotificationPreferences(notificationPreferences.Result);
+```

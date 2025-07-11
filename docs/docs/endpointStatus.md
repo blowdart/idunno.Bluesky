@@ -49,7 +49,11 @@
 | | [app.bsky.graph.unmuteThread](https://docs.bsky.app/docs/api/app-bsky-graph-unmute-thread) | `BlueskyAgent.UnmuteThread()` | ✔ |
 | **Labelers** | [app.bsky.labeler.getServices](https://docs.bsky.app/docs/api/app-bsky-labeler-get-services) | `BlueskyAgent.GetLabelerServices()` | ✔ |
 | **Notifications** | [app.bsky.notification.getUnreadCount](https://docs.bsky.app/docs/api/app-bsky-notification-get-unread-count) | `BlueskyAgent.GetNotificationUnreadCount()` | ✔ |
+| | app.bsky.notifications.getPreferences | `BlueskyAgent.GetNotificationPreferences()` | ✔ |
+| | app.bsky.notification.listActivitySubscriptions | `BlueskyAgent.ListActivitySubscriptions()` | ✔ |
 | | [app.bsky.notification.listNotifications](https://docs.bsky.app/docs/api/app-bsky-notification-list-notifications) | `BlueskyAgent.ListNotifications()` | ✔ |
+| | app.bsky.notification.putActivitySubscription | `BlueskyAgent.SetActivitySubscription()` | ✔ |
+| | app.bsky.notifications.putPreferencesV2 | `BlueskyAgent.SetNotificationPreferences()` | ✔ |
 | | [app.bsky.notification.updateSeen](https://docs.bsky.app/docs/api/app-bsky-notification-update-seen) | `BlueskyAgent.UpdateNotificationSeenAt()` | ✔ |
 | **Direct Messages** | chat.bsky.convo.AddReaction | `BlueskyAgent.AddReaction()` | ✔ |
 | | [chat.bsky.convo.deleteMessageForSelf](https://docs.bsky.app/docs/api/chat-bsky-convo-delete-message-for-self) | `BlueskyAgent.DeleteMessageForSelf()` | ✔ |

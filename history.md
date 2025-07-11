@@ -1,5 +1,42 @@
 # Version History
 
+## 0.9.7
+
+### Features
+
+#### idunno.Bluesky
+
+* Added new overloads to `agent.Like()` and `agent.Repost()` that take a `FeedViewPost` which check if you are acting on a repost.
+* Added new overloads to `agent.Like()` and `agent.Repost()` that take a `PostView`.
+* Added new optional `Via` parameter to `Record.Like` and `Record.Repost` constructors that take a `StrongReference` to a repost record,
+  to enable [notifications of likes and reposts of reposts](https://bsky.social/about/blog/07-02-2025-more-notification-control).
+* Added new property `DisconnectedGracefully` to `JetStream`.
+* Added a `RawNotificationReason` property to `Notification` for when the notification reason can't be parsed into a `NotificationReason`.
+* Added the ability to declare an account's declaration for who can subscribe to notifications about their activity, `agent.SetNotificationDeclaration()`.
+* Added the ability to get and set notification preferences, `agent.GetNotificationPreferences()` and `agent.SetNotificationPreferences`.
+* Added the activity subscription support, `agent.ListActivitySubscriptions()`, `agent.SetActivitySubscription()`
+
+### Bug Fixes
+
+#### idunno.Bluesky
+
+* Passing a DateTime to `JetStream.ConnectAsync()` sends the current cursor when opening a socket to the JetStream.
+* Added `Deleted` to the JetStream `AccountStatus` enum.
+* Added new notification reasons to `NotificationReason`.
+ 
+#### Documentation
+
+* Added details on a reconnect/retry strategy for the `JetStream`.
+
+### Breaking Changes
+
+#### idunno.Bluesky
+
+* Moved `Actions.Like`, `Actions.Repost`, `Actions.Block` and `Actions.Follow` into the `Record` namespace.
+* `Notification` has a new property, `RawReason`, which contains the over the wire reason for a notification as a string.
+  The `Reason` property can now be `Unknown` in cases where the notification raw reason does not map to a `NotificationReason`.
+* Added new notification reasons to `NotificationReason` for `Verified`, `Unverified`, `LikeViaRepost`, `RepostViaRepost` and `SubscribedPost`
+
 ## 0.9.6
 
 * Various dependency bumps

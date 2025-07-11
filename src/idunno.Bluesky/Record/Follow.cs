@@ -2,11 +2,9 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
-
 using idunno.AtProto;
-using idunno.Bluesky.Record;
 
-namespace idunno.Bluesky.Actions
+namespace idunno.Bluesky.Record
 {
     /// <summary>
     /// Encapsulates the a follow record.
