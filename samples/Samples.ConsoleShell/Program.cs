@@ -9,6 +9,7 @@ using Samples.Common;
 
 using idunno.AtProto;
 using idunno.Bluesky;
+using idunno.Bluesky.Feed;
 
 namespace Samples.ConsoleShell
 {
@@ -104,6 +105,19 @@ namespace Samples.ConsoleShell
                     }
                 }
                 // END-AUTHENTICATION
+
+                var getPostResult = await agent.GetPost(new AtUri("at://did:plc:oisofpd7lj26yvgiivf3lxsi/app.bsky.feed.post/3ltv6ettzxc2j"), cancellationToken: cancellationToken);
+                getPostResult.EnsureSucceeded();
+
+                var getPostRootStrongReference = await agent.GetPostRoot(
+                    getPostResult.Result.StrongReference,
+                    cancellationToken: cancellationToken);
+                getPostRootStrongReference.EnsureSucceeded();
+
+                var getRootPostResult = await agent.GetPost(getPostRootStrongReference.Result.Uri, cancellationToken: cancellationToken);
+                getRootPostResult.EnsureSucceeded();
+
+                var threadGate = getRootPostResult.Result.ThreadGate;
 
                 Debugger.Break();
             }
