@@ -4,7 +4,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Mime;
-
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace idunno.AtProto
@@ -188,9 +188,19 @@ namespace idunno.AtProto
             client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
             client.DefaultRequestVersion = HttpVersion.Version20;
 
+            Assembly assembly = typeof(Agent).Assembly;
+            string? version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+
             if (httpUserAgent is null)
             {
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("idunno.AtProto/" + Versioning.JsonVersion);
+                if (string.IsNullOrEmpty(version))
+                {
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd("idunno.AtProto");
+                }
+                else
+                {
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd("idunno.AtProto/" + version);
+                }
             }
             else
             {
