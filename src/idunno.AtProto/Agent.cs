@@ -190,7 +190,7 @@ namespace idunno.AtProto
 
             if (httpUserAgent is null)
             {
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("idunno.AtProto/" + typeof(Agent).Assembly.GetName().Version);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("idunno.AtProto/" + Versioning.JsonVersion);
             }
             else
             {

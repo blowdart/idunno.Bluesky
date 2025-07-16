@@ -23,6 +23,10 @@
     <EventSourceSupport>true</EventSourceSupport>
   </PropertyGroup>
 
+  <ItemGroup>
+    <AdditionalFiles Include="../../version.json" />
+  </ItemGroup>
+  
   <!-- Trimming -->
   <!-- Limit trimming to .NET9.0 or higher due to https://github.com/dotnet/runtime/issues/114307 -->
   <PropertyGroup Condition="'$(TargetFramework)' == 'net9.0'">
