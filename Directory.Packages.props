@@ -19,7 +19,7 @@
     <PackageVersion Include="Nerdbank.GitVersioning" Version="3.7.115" />
     <PackageVersion Include="OpenGraph-Net" Version="4.0.1" />
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.13.0.120203" />
-    <PackageVersion Include="System.CommandLine" Version="2.0.0-beta5.25306.1" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.0-beta6.25358.103" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.12.1" />
     <PackageVersion Include="System.Text.Json" Version="9.0.7" />
     <PackageVersion Include="xunit.v3" Version="3.0.0" />
