@@ -63,9 +63,9 @@
       </PropertyGroup>
 
       <ItemGroup>
-        <PackageReference Include="DotNet.ReproducibleBuilds" PrivateAssets="All"/>
-        <PackageReference Include="Nerdbank.GitVersioning" PrivateAssets="All"/>
-        <PackageReference Include="SonarAnalyzer.CSharp" PrivateAssets="All"/>
+        <PackageReference Include="DotNet.ReproducibleBuilds" PrivateAssets="All" />
+        <PackageReference Include="Nerdbank.GitVersioning" PrivateAssets="All" />
+        <PackageReference Include="SonarAnalyzer.CSharp" PrivateAssets="All" />
       </ItemGroup>
     </When>
   </Choose>
@@ -78,7 +78,7 @@
         <GenerateSBOM>true</GenerateSBOM>
       </PropertyGroup>
       <ItemGroup>
-        <PackageReference Include="Microsoft.Sbom.Targets" PrivateAssets="All"/>
+        <PackageReference Include="Microsoft.Sbom.Targets" PrivateAssets="All" />
       </ItemGroup>
     </When>
   </Choose>
@@ -88,7 +88,7 @@
   <Choose>
     <When Condition="'$(Configuration)' == 'Debug'">
       <ItemGroup>
-        <PackageReference Include="DotNetAnalyzers.DocumentationAnalyzers" PrivateAssets="All"/>
+        <PackageReference Include="DotNetAnalyzers.DocumentationAnalyzers" PrivateAssets="All" />
       </ItemGroup>
     </When>
   </Choose>
