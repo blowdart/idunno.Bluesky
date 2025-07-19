@@ -105,7 +105,7 @@ jobs:
     - name: Generate Code Coverage summary
       uses: irongut/CodeCoverageSummary@51cc3a756ddcd398d447c044c02cb6aa83fdae95 # v1.3.0
       with:
-        filename: test/*/coverage.cobertura.xml
+        filename: test/**/coverage.cobertura.xml
         badge: true
         fail_below_min: false # just informative for now
         format: markdown
