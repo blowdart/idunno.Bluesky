@@ -107,10 +107,14 @@ jobs:
         path: ${{ env.COVERAGE_REPORT }}
         retention-days: 5
 
+    - name: Add coverage to build summary
+      shell: bash
+      run: cat ${COVERAGE_REPORT}/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
+
     - name: Publish Code Coverage Report
       uses: irongut/CodeCoverageSummary@51cc3a756ddcd398d447c044c02cb6aa83fdae95 # v1.3.0
       with:
-        filename: "{{env.COVERAGE_REPORT}}/Cobertura.xml"
+        filename: test/**/Cobertura.xml
         badge: true
         fail_below_min: false # just informative for now
         format: markdown
@@ -119,7 +123,3 @@ jobs:
         indicators: true
         output: both
         thresholds: "10 30"
-
-    - name: Add coverage to build summary
-      shell: bash
-      run: cat ${COVERAGE_REPORT}/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
