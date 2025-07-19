@@ -68,12 +68,17 @@ jobs:
       id: test
       run: dotnet test --no-build --restore --collect:"XPlat Code Coverage" --logger junit
 
+    - name: 'List current directory'
+      shell: pwsh
+      run: >
+        Get-ChildItem -Recurse -Force
+
     - name: 'Create test summary'
       uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86 # v2.4
+      if: always()
       with:
         paths: test/**/TestResults.xml
         show: "fail, skip"
-      if: always()
 
     - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action@3a74b2957438d0b6e2e61d67b05318aa25c9e6c6 # v2.20.0
