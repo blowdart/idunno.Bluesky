@@ -71,7 +71,7 @@ jobs:
     - name: 'List current directory'
       shell: pwsh
       run: >
-        Get-ChildItem -Recurse -Force
+        Get-ChildItem test -Recurse -Force
 
     - name: 'Create test summary'
       uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86 # v2.4
@@ -109,7 +109,9 @@ jobs:
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: coverage-results
-        path: ${{ env.COVERAGE_REPORT }}
+        path: | 
+          ${{ env.COVERAGE_REPORT }}
+          test/**/coverage.cobertura.xml
         retention-days: 5
 
     - name: Add coverage to build summary
@@ -119,7 +121,7 @@ jobs:
     - name: Publish Code Coverage Report
       uses: irongut/CodeCoverageSummary@51cc3a756ddcd398d447c044c02cb6aa83fdae95 # v1.3.0
       with:
-        filename: test/**/Cobertura.xml
+        filename: test/**/coverage.cobertura.xml
         badge: true
         fail_below_min: false # just informative for now
         format: markdown
