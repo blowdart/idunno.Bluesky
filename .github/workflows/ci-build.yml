@@ -100,10 +100,17 @@ jobs:
         toolpath: "reportgeneratortool"
         license: ${{ secrets.REPORT_GENERATOR_LICENSE }}
 
+    - name: Upload Code Coverage Results
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: coverage-results
+        path: ${{ env.COVERAGE_REPORT }}
+        retention-days: 5
+
     - name: Publish Code Coverage Report
       uses: irongut/CodeCoverageSummary@51cc3a756ddcd398d447c044c02cb6aa83fdae95 # v1.3.0
       with:
-        filename: "Cobertura.xml"
+        filename: "{{env.COVERAGE_REPORT}}/Cobertura.xml"
         badge: true
         fail_below_min: false # just informative for now
         format: markdown
@@ -112,13 +119,6 @@ jobs:
         indicators: true
         output: both
         thresholds: "10 30"
-
-    - name: Upload Code Coverage Results
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-      with:
-        name: coverage-results
-        path: ${{ env.COVERAGE_REPORT }}
-        retention-days: 5
 
     - name: Add coverage to build summary
       shell: bash

@@ -9,7 +9,6 @@ using Samples.Common;
 
 using idunno.AtProto;
 using idunno.Bluesky;
-using idunno.Bluesky.Feed;
 
 namespace Samples.ConsoleShell
 {
@@ -34,7 +33,7 @@ namespace Samples.ConsoleShell
             ArgumentException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
-            // proxyUri = new Uri("http://localhost:8866");
+            proxyUri = new Uri("http://localhost:8866");
 
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
@@ -105,6 +104,11 @@ namespace Samples.ConsoleShell
                     }
                 }
                 // END-AUTHENTICATION
+
+                var getPostThreadResult = await agent.GetPostThread("at://did:plc:oisofpd7lj26yvgiivf3lxsi/app.bsky.feed.post/3ltv6ettzxc2j", cancellationToken: cancellationToken);
+                getPostThreadResult.EnsureSucceeded();
+
+               
 
                 var getPostResult = await agent.GetPost(new AtUri("at://did:plc:oisofpd7lj26yvgiivf3lxsi/app.bsky.feed.post/3ltv6ettzxc2j"), cancellationToken: cancellationToken);
                 getPostResult.EnsureSucceeded();
