@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <AssemblyAttribute Include="System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="System.Diagnostics.CodeAnalysis" />
     <Using Include="Xunit" />
   </ItemGroup>
@@ -23,4 +27,5 @@
     </PackageReference>
     <PackageReference Include="JunitXml.TestLogger" />
   </ItemGroup>
+
 </Project>

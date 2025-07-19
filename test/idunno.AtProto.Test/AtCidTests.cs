@@ -3,7 +3,6 @@
 
 namespace idunno.AtProto.Test
 {
-    [ExcludeFromCodeCoverage]
     public class AtCidTests
     {
         const string ValidCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";

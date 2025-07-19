@@ -5,7 +5,6 @@ using System.Net;
 
 namespace idunno.AtProto.Test
 {
-    [ExcludeFromCodeCoverage]
     public class HttpResultTests
     {
         [Fact]

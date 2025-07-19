@@ -3,7 +3,6 @@
 
 namespace idunno.AtProto.Test
 {
-    [ExcludeFromCodeCoverage]
     public class AtUriTests
     {
         [Theory]

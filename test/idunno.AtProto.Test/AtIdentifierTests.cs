@@ -3,7 +3,6 @@
 
 namespace idunno.AtProto.Test
 {
-    [ExcludeFromCodeCoverage]
     public class AtIdentifierTests
     {
         // Test cases from https://github.com/bluesky-social/atproto/blob/main/interop-test-files/syntax/atidentifier_syntax_valid.txt

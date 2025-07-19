@@ -21,6 +21,7 @@ permissions:
 env:
   DOTNET_GENERATE_ASPNET_CERTIFICATE: false
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  COVERAGE_REPORT: ${{ github.workspace}}/coveragereport
 
 jobs:
   build:
@@ -74,12 +75,25 @@ jobs:
         show: "fail, skip"
       if: always()
 
+    - name: Publish Test Results
+      uses: EnricoMi/publish-unit-test-result-action@3a74b2957438d0b6e2e61d67b05318aa25c9e6c6 # v2.20.0
+      if: always()
+      with:
+        files: "test/**/TestResults.xml"
+
+    - name: Upload Test Artifacts
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: test-results
+        path: "test/**/TestResults.xml"
+        retention-days: 5
+
     - name: 'Generate Coverage Reports'
       uses: danielpalme/ReportGenerator-GitHub-Action@82ef2bc4c83f42bbeec82a5cd9a8e3f6156b64b9 # 5.4.9
       with:
         reports: "test/**/coverage.cobertura.xml"
-        targetdir: "${{ github.workspace }}"
-        reporttypes: "Cobertura" 
+        targetdir: "${{ env.COVERAGE_REPORT }}"
+        reporttypes: "Cobertura,MarkdownSummaryGithub" 
         verbosity: "Info" 
         title: "Code Coverage" 
         tag: "${{ github.run_number }}_${{ github.run_id }}"
@@ -103,20 +117,9 @@ jobs:
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: coverage-results
-        path: |
-          ${{ github.workspace }}/Cobertura.xml
-          ${{ github.workspace }}/code-coverage-results.md
+        path: ${{ env.COVERAGE_REPORT }}
         retention-days: 5
 
-    - name: Publish Test Results
-      uses: EnricoMi/publish-unit-test-result-action@3a74b2957438d0b6e2e61d67b05318aa25c9e6c6 # v2.20.0
-      if: always()
-      with:
-        files: "test/**/TestResults.xml"
-
-    - name: Upload Test Artifacts
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-      with:
-        name: test-results
-        path: "test/**/TestResults.xml"
-        retention-days: 5
+    - name: Add coverage to build summary
+      shell: bash
+      run: cat ${COVERAGE_REPORT}/SummaryGithub.md >> $GITHUB_STEP_SUMMARY

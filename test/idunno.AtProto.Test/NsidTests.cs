@@ -3,7 +3,6 @@
 
 namespace idunno.AtProto.Test
 {
-    [ExcludeFromCodeCoverage]
     public class NsidTests
     {
         // Test cases from https://github.com/bluesky-social/atproto/blob/290a7e67b8e6417b00352cc1d54bac006c2f6f93/interop-test-files/syntax/nsid_syntax_valid.txt

@@ -2,16 +2,12 @@
 // Licensed under the MIT License.
 
 using System.Net.Http.Headers;
-using System.Threading.Tasks;
 using idunno.AtProto.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace idunno.AtProto.Test
 {
-    [ExcludeFromCodeCoverage]
     public class BuilderTests
     {
         [Fact]
