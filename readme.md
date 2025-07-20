@@ -31,9 +31,36 @@ Please see the [documentation](https://bluesky.idunno.dev/) for much more useful
 
 The [API status page](https://bluesky.idunno.dev/docs/endpointStatus.html) shows what APIs are currently implemented.
 
+## Key Features
+
+* Creating and deleting posts
+  * Posting with mentions, links and hashtags
+  * Posting images and video, with alt text support.
+  * Setting a post's language
+  * Gating threads and posts
+  * Liking, quoting, and reposting posts
+* Viewing a user's timeline and notifications
+* Viewing feeds
+* Viewing threads
+* Viewing notifications
+* Viewing and setting preferences for
+  * Subscribing to user activities
+  * Viewing user profiles
+  * Notifications
+* Following and unfollowing users
+* Muting and blocking users
+* Sending, receiving, and deleting direct messages
+* Handle / password and OAuth authentication
+* Jetstream support for simple firehose consumption
+* Automatic session management with background token refreshes
+
+Trimming is supported for applications targeting .NET 9.0 or later.
+
 ## Current Build Status
 
-![Build Status](https://github.com/blowdart/idunno.Bluesky/actions/workflows/ci-build.yml/badge.svg?branch=main)
+[![Build Status](https://github.com/blowdart/idunno.Bluesky/actions/workflows/ci-build.yml/badge.svg?branch=main)](https://github.com/blowdart/idunno.Bluesky/actions/workflows/ci-build.yml)
+[![CodeQL Scan](https://github.com/blowdart/idunno.Bluesky/actions/workflows/codeql-analysis.yml/badge.svg?branch=main)](https://github.com/blowdart/idunno.Bluesky/actions/workflows/codeql-analysis.yml)
+[![Dependency Review](https://github.com/blowdart/idunno.Bluesky/actions/workflows/dependency-review.yml/badge.svg)](https://github.com/blowdart/idunno.Bluesky/actions/workflows/dependency-review.yml)
 
 ## Release History
 

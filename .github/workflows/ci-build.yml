@@ -93,6 +93,10 @@ jobs:
         toolpath: "reportgeneratortool"
         license: ${{ secrets.REPORT_GENERATOR_LICENSE }}
 
+    - name: Append coverage report to build summary
+      shell: bash
+      run: cat ${COVERAGE_REPORT}/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
+
     - name: Upload Code Coverage Results
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
@@ -102,18 +106,3 @@ jobs:
           test/**/coverage.cobertura.xml
         retention-days: 5
 
-    - name: Generate Code Coverage summary
-      uses: irongut/CodeCoverageSummary@51cc3a756ddcd398d447c044c02cb6aa83fdae95 # v1.3.0
-      with:
-        filename: test/**/coverage.cobertura.xml
-        badge: true
-        fail_below_min: false # just informative for now
-        format: markdown
-        hide_branch_rate: false
-        hide_complexity: false
-        indicators: true
-        output: both
-        thresholds: "10 30"
-
-    - name: Publish Code Coverage Summary
-      run: cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
