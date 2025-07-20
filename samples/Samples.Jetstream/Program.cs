@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
 using idunno.AtProto.Jetstream;
+using ZstdSharp.Unsafe;
 
 namespace Samples.Jetstream
 {
@@ -117,8 +118,6 @@ namespace Samples.Jetstream
                 int currentRetryCount = 0;
                 DateTimeOffset? lastConnectionAttemptedAt = null;
 
-                bool listeningDone = false;
-
                 do
                 {
                     if (currentRetryCount > maximumRetries)
@@ -132,8 +131,6 @@ namespace Samples.Jetstream
                         currentRetryCount = 0;
                     }
 
-                    currentRetryCount++;
-
                     lastConnectionAttemptedAt = DateTimeOffset.UtcNow;
                     await jetStream.ConnectAsync(startFrom: jetStream.MessageLastReceived, cancellationToken: cancellationToken);
                     while (jetStream.IsConnected && !cancellationToken.IsCancellationRequested)
@@ -141,25 +138,33 @@ namespace Samples.Jetstream
                         // Let it run and process
                     }
 
-                    if (!jetStream.DisconnectedGracefully)
+                    if (cancellationToken.IsCancellationRequested)
                     {
-                        await jetStream.CloseAsync();
+                        await jetStream.CloseAsync(statusDescription: "Cancellation requested at console.", cancellationToken: cancellationToken);
+                        break;
+                    }
+                    else
+                    {
+                        await jetStream.CloseAsync(statusDescription: "Force closed on error", cancellationToken: cancellationToken);
 
-                        // The jetstream is no longer connected, but a cancellation isn't the reason.
-                        Console.WriteLine($"DISCONNECTED: state == {jetStream.State}");
+                        // The jet stream is no longer connected, but a cancellation isn't the reason.
+                        Console.WriteLine($"FORCE DISCONNECTED: state == {jetStream.State}");
 
                         // Try to reconnect
+                        currentRetryCount++;
+
+                        if (currentRetryCount > maximumRetries)
+                        {
+                            Console.WriteLine("RECONNECT: Too many times, failed");
+                            break;
+                        }
 
                         Console.WriteLine("RECONNECT: Waiting ...");
                         await Task.Delay(retryWaitPeriod);
                         Console.WriteLine($"RECONNECT: Reconnecting {currentRetryCount}/{maximumRetries}");
                     }
-                    else
-                    {
-                        listeningDone = true;
-                    }
 
-                } while (!listeningDone && !cancellationToken.IsCancellationRequested);
+                } while (!cancellationToken.IsCancellationRequested);
 
                 await jetStream.CloseAsync();
             }

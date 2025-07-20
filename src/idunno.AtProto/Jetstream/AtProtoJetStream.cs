@@ -56,11 +56,7 @@ namespace idunno.AtProto.Jetstream
 
         private ClientWebSocket _client;
 
-        private bool _closed;
-
         private bool _closedGracefully;
-
-        private CancellationToken _connectAsyncCancellationToken;
 
         /// <summary>
         /// Creates a new instance of <see cref="Jetstream"/>.
@@ -189,9 +185,10 @@ namespace idunno.AtProto.Jetstream
 
         /// <summary>
         /// Gets a flag indicating whether the underlying WebSocket was disconnected gracefully,
-        /// by requesting a cancellation on the <see cref="CancellationToken"/> passed passed to <see cref="ConnectAsync(Uri?, long?, CancellationToken)"/>.
+        /// by requesting a cancellation on the <see cref="CancellationToken"/> passed passed to <see cref="ConnectAsync(Uri?, long?, CancellationToken)"/> or
+        /// by calling <see cref="CloseAsync(WebSocketCloseStatus, string, CancellationToken)"/>.
         /// </summary>
-        public bool DisconnectedGracefully => IsConnected && (_closedGracefully || !_connectAsyncCancellationToken.IsCancellationRequested);
+        public bool DisconnectedGracefully => !IsConnected && _closedGracefully;
 
         /// <summary>
         /// Gets the <see cref="DateTimeOffset"/> indicating when last time a message from the JetsStream was received.
@@ -350,8 +347,6 @@ namespace idunno.AtProto.Jetstream
             long? cursor = null,
             CancellationToken cancellationToken = default)
         {
-            _connectAsyncCancellationToken = cancellationToken;
-
             if (_client is not null && _client.State == WebSocketState.Open)
             {
                 return;
@@ -438,7 +433,6 @@ namespace idunno.AtProto.Jetstream
             try
             {
                 await _client.ConnectAsync(serverUri, cancellationToken).ConfigureAwait(false);
-                _closed = false;
             }
             catch (WebSocketException ex)
             {
@@ -471,7 +465,11 @@ namespace idunno.AtProto.Jetstream
         {
             WebSocketState startingState = _client.State;
 
-            if (_client.State == WebSocketState.Open)
+            if (_client.State == WebSocketState.Closed)
+            {
+                return;
+            }
+            else if (_client.State == WebSocketState.Open)
             {
                 try
                 {
@@ -502,8 +500,6 @@ namespace idunno.AtProto.Jetstream
                     JetStreamLogger.CloseError(_logger, ex);
                 }
             }
-
-            _closed = true;
 
             if (_client.State != startingState)
             {
@@ -571,9 +567,7 @@ namespace idunno.AtProto.Jetstream
             byte[] buffer = new byte[Options.MaximumMessageSize];
             WebSocketMessageType expectedMessageType = Options.UseCompression ? WebSocketMessageType.Binary : WebSocketMessageType.Text;
 
-            bool keepRunning = true;
-
-            while (keepRunning && !_closed && !cancellationToken.IsCancellationRequested)
+            while (_client.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
             {
                 try
                 {
@@ -583,7 +577,7 @@ namespace idunno.AtProto.Jetstream
                     {
                         await _client.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, cancellationToken: cancellationToken).ConfigureAwait(false);
                         JetStreamLogger.CloseMessageReceived(_logger);
-                        keepRunning = false;
+                        _closedGracefully = false;
                         continue;
                     }
 
@@ -645,6 +639,11 @@ namespace idunno.AtProto.Jetstream
                     JetStreamLogger.MessageLoopError(_logger, e);
                     LogFault(e.Message);
                 }
+            }
+
+            if (_client.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
+            {
+                await CloseAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
             }
         }
 

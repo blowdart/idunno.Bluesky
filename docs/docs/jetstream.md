@@ -122,8 +122,6 @@ TimeSpan resetRetryCountAfter = new(0, 5, 0);
 int currentRetryCount = 0;
 DateTimeOffset? lastConnectionAttemptedAt = null;
 
-bool listeningDone = false;
-
 do
 {
     if (currentRetryCount > maximumRetries)
@@ -136,8 +134,6 @@ do
         currentRetryCount = 0;
     }
 
-    currentRetryCount++;
-
     lastConnectionAttemptedAt = DateTimeOffset.UtcNow;
     await jetStream.ConnectAsync(startFrom: jetStream.MessageLastReceived, cancellationToken: cancellationToken);
     while (jetStream.IsConnected && !cancellationToken.IsCancellationRequested)
@@ -145,21 +141,29 @@ do
         // Let it run and process
     }
 
-    if (!jetStream.DisconnectedGracefully)
+    if (cancellationToken.IsCancellationRequested)
     {
-        await jetStream.CloseAsync();
+        await jetStream.CloseAsync(statusDescription: "Cancellation requested at console.");
+        break;
+    }
+    else
+    {
+        await jetStream.CloseAsync(statusDescription: "Force closed on error");
 
         // The jetstream is no longer connected, but a cancellation isn't the reason.
+
+        currentRetryCount++;
+
+        if (currentRetryCount > maximumRetries)
+        {
+            break;
+        }
 
         // Try to reconnect
         await Task.Delay(retryWaitPeriod);
     }
-    else
-    {
-        listeningDone = true;
-    }
 
-} while (!listeningDone && !cancellationToken.IsCancellationRequested);
+} while (!cancellationToken.IsCancellationRequested);
 
 await jetStream.CloseAsync();
 
