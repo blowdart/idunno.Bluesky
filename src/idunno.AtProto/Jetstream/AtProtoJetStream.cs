@@ -188,7 +188,7 @@ namespace idunno.AtProto.Jetstream
         /// by requesting a cancellation on the <see cref="CancellationToken"/> passed passed to <see cref="ConnectAsync(Uri?, long?, CancellationToken)"/> or
         /// by calling <see cref="CloseAsync(WebSocketCloseStatus, string, CancellationToken)"/>.
         /// </summary>
-        public bool DisconnectedGracefully => !IsConnected && _closedGracefully;
+        public bool DisconnectedGracefully => _client.State == WebSocketState.Closed && _closedGracefully;
 
         /// <summary>
         /// Gets the <see cref="DateTimeOffset"/> indicating when last time a message from the JetsStream was received.
