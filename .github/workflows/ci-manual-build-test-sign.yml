@@ -25,6 +25,9 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   NUPKG_DIRECTORY: ${{ github.workspace}}/nupkgs
 
+permissions:
+  contents: read
+
 jobs:
   build:
     permissions:
