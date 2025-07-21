@@ -4,9 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: read
-  pages: write
-  id-token: write
+  contents: read
 
 env:
   DOTNET_NOLOGO: true
@@ -23,6 +21,11 @@ jobs:
   publish-docs:
     name: 'Build and publish docs'
     runs-on: ubuntu-latest
+
+    permissions:
+      actions: read
+      pages: write
+      id-token: write
 
     environment:
       name: github-pages

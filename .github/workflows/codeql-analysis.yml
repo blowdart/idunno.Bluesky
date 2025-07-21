@@ -14,8 +14,8 @@ on:
   schedule:
     - cron: '25 4 * * 2'
 
-# Declare default permissions as read only.
-permissions: read-all
+permissions:
+  contents: read
 
 env:
   DOTNET_NOLOGO: true

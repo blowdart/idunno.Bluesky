@@ -14,9 +14,6 @@ on:
 
 permissions:
   contents: read
-  issues: read
-  pull-requests: write
-  checks: write
 
 env:
   DOTNET_GENERATE_ASPNET_CERTIFICATE: false
@@ -27,6 +24,11 @@ jobs:
   build:
     name: Build and Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: write
+      checks: write
     steps:
     - name: 'Harden Runner'
       uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
