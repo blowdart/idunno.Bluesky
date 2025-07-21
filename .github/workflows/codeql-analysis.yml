@@ -14,6 +14,9 @@ on:
   schedule:
     - cron: '25 4 * * 2'
 
+# Declare default permissions as read only.
+permissions: read-all
+
 env:
   DOTNET_NOLOGO: true
   DOTNET_GENERATE_ASPNET_CERTIFICATE: false
