@@ -11,6 +11,7 @@
     <NoWarn>$(NoWarn);CS8002</NoWarn>
   </PropertyGroup>
 
+
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>
@@ -52,6 +53,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" />
+    <PackageReference Include="SimpleBase" />
     <PackageReference Include="System.Text.Json" />
     <PackageReference Include="Microsoft.AspNetCore.WebUtilities" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
@@ -61,6 +63,7 @@
     <PackageReference Include="DnsClient" />
     <PackageReference Include="Duende.IdentityModel.OidcClient" />
     <PackageReference Include="Duende.IdentityModel.OidcClient.Extensions" />
+    <PackageReference Include="PeterO.Cbor" />
     <PackageReference Include="ZstdSharp.Port" />
   </ItemGroup>
 
