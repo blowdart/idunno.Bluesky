@@ -131,7 +131,7 @@ namespace idunno.AtProto.Integration.Test
         {
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Generate();
+            RecordKey expectedRecordKey = TimestampIdentifier.Next();
             AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
             Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
@@ -228,7 +228,7 @@ namespace idunno.AtProto.Integration.Test
         {
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Generate();
+            RecordKey expectedRecordKey = TimestampIdentifier.Next();
             AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
             Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
@@ -327,7 +327,7 @@ namespace idunno.AtProto.Integration.Test
         {
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{TimestampIdentifier.Generate()}");
+            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{TimestampIdentifier.Next()}");
             Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
             AccessCredentials expectedCredentials = new(
@@ -414,7 +414,7 @@ namespace idunno.AtProto.Integration.Test
         {
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{TimestampIdentifier.Generate()}");
+            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{TimestampIdentifier.Next()}");
             Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
             AccessCredentials expectedCredentials = new(
@@ -509,7 +509,7 @@ namespace idunno.AtProto.Integration.Test
         {
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{TimestampIdentifier.Generate()}");
+            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{TimestampIdentifier.Next()}");
             Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
             TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
@@ -548,7 +548,7 @@ namespace idunno.AtProto.Integration.Test
         {
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Generate();
+            RecordKey expectedRecordKey = TimestampIdentifier.Next();
             AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
             Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
@@ -646,7 +646,7 @@ namespace idunno.AtProto.Integration.Test
         {
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Generate();
+            RecordKey expectedRecordKey = TimestampIdentifier.Next();
             AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
             Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
@@ -746,7 +746,7 @@ namespace idunno.AtProto.Integration.Test
         {
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Generate();
+            RecordKey expectedRecordKey = TimestampIdentifier.Next();
             AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
             Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
@@ -840,7 +840,7 @@ namespace idunno.AtProto.Integration.Test
         {
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Generate();
+            RecordKey expectedRecordKey = TimestampIdentifier.Next();
             AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
             Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
@@ -943,7 +943,7 @@ namespace idunno.AtProto.Integration.Test
         {
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Generate();
+            RecordKey expectedRecordKey = TimestampIdentifier.Next();
             AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
             Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
@@ -1041,7 +1041,7 @@ namespace idunno.AtProto.Integration.Test
         {
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Generate();
+            RecordKey expectedRecordKey = TimestampIdentifier.Next();
             AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
             Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
@@ -1136,7 +1136,7 @@ namespace idunno.AtProto.Integration.Test
         {
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Generate();
+            RecordKey expectedRecordKey = TimestampIdentifier.Next();
             AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
             Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
@@ -1237,7 +1237,7 @@ namespace idunno.AtProto.Integration.Test
         {
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Generate();
+            RecordKey expectedRecordKey = TimestampIdentifier.Next();
             AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
             Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
@@ -1334,7 +1334,7 @@ namespace idunno.AtProto.Integration.Test
         {
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{TimestampIdentifier.Generate()}");
+            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{TimestampIdentifier.Next()}");
             Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
             TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
@@ -1374,7 +1374,7 @@ namespace idunno.AtProto.Integration.Test
         {
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Generate();
+            RecordKey expectedRecordKey = TimestampIdentifier.Next();
             AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
             Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
@@ -2032,7 +2032,7 @@ namespace idunno.AtProto.Integration.Test
                 """;
 
 
-            RecordKey expectedDeleteRKey = TimestampIdentifier.Generate();
+            RecordKey expectedDeleteRKey = TimestampIdentifier.Next();
             AccessCredentials expectedCredentials = new(
                     service: TestServerBuilder.DefaultUri,
                     authenticationType: AuthenticationType.UsernamePassword,

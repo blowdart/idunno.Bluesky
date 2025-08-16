@@ -1805,7 +1805,7 @@ namespace idunno.Bluesky
                     new EmbeddedRecordWithMedia(new EmbeddedRecord(strongReference), new EmbeddedImages(images));
             }
 
-            CreateOperation createOperation = new(CollectionNsid.Post, TimestampIdentifier.Generate(), postRecord);
+            CreateOperation createOperation = new(CollectionNsid.Post, TimestampIdentifier.Next(), postRecord);
 
             AtProtoHttpResult<ApplyWritesResults> result = await ApplyWrites(
                 operations: [createOperation],
@@ -2012,7 +2012,7 @@ namespace idunno.Bluesky
                 List<WriteOperation> writeRequests = [];
 
                 // We need to generate a record key to hang it all together.
-                RecordKey rKey = TimestampIdentifier.Generate();
+                RecordKey rKey = TimestampIdentifier.Next();
                 AtUri postUri = new($"at://{Did}/{CollectionNsid.Post}/{rKey}");
 
                 writeRequests.Add(new CreateOperation(CollectionNsid.Post, rKey, post));

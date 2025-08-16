@@ -18,7 +18,7 @@ namespace idunno.AtProto.Test
         [Fact]
         public void EmptyValueConstructionShouldThrow()
         {
-            Assert.Throws<ArgumentNullException>(() => new Cid(string.Empty));
+            Assert.Throws<ArgumentException>(() => new Cid(string.Empty));
         }
 
         [Fact]
@@ -49,6 +49,22 @@ namespace idunno.AtProto.Test
             Assert.NotNull(rhs);
             Assert.Equal(lhs, rhs);
             Assert.True(lhs.Equals(rhs));
+        }
+
+        [Fact]
+        public void ConstructingFromPropertiesProducesSameStringRepresentation()
+        {
+            Cid atCidFromString = ValidCid;
+
+            Cid atCidFromProperties = new (atCidFromString.Version, atCidFromString.Codec, [.. atCidFromString.Hash]);
+
+            Assert.NotNull(atCidFromString);
+            Assert.NotNull(atCidFromProperties);
+
+            Assert.Equal(atCidFromString.Version, atCidFromProperties.Version);
+            Assert.Equal(atCidFromString.Codec, atCidFromProperties.Codec);
+            Assert.Equal(atCidFromString.Hash, atCidFromProperties.Hash);
+            Assert.Equal(atCidFromString.ToString(), atCidFromProperties.ToString());
         }
     }
 }

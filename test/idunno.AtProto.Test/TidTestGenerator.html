@@ -1,0 +1,146 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>tid generator</title>
+    <script>
+      const S32_CHAR = "234567abcdefghijklmnopqrstuvwxyz";
+
+      function s32encode(i) {
+
+        console.log("i = " + i);
+        let s = "";
+        while (i) {
+          const c = i % 32;
+          i = Math.floor(i / 32);
+          s = S32_CHAR.charAt(c) + s;
+          console.log("i = " + i);
+        }
+        return s;
+      }
+
+      function s32decode(s) {
+        let i = 0;
+        for (const c of s) {
+          i = i * 32 + S32_CHAR.indexOf(c);
+        }
+        return i;
+      }
+
+      const TID_LEN = 13;
+
+      let lastTimestamp = 0;
+      let timestampCount = 0;
+      let clockid = null;
+
+      function dedash(str) {
+        return str.replaceAll("-", "");
+      }
+
+      class TID {
+        str = new String();
+
+        constructor(str) {
+          const noDashes = dedash(str);
+          if (noDashes.length !== TID_LEN) {
+            throw new Error(`Poorly formatted TID: ${noDashes.length} length`);
+          }
+          this.str = noDashes;
+        }
+
+        static next(prev) {
+          // javascript does not have microsecond precision
+          // instead, we append a counter to the timestamp to indicate if multiple timestamps were created within the same millisecond
+          // take max of current time & last timestamp to prevent tids moving backwards if system clock drifts backwards
+          const currentDate = Date.now();
+
+          document.getElementById("DateAndTime").textContent = new Date(currentDate).toISOString();
+
+          const time = Math.max(currentDate, lastTimestamp);
+          if (time === lastTimestamp) {
+            timestampCount++;
+          }
+          lastTimestamp = time;
+          const timestamp = time * 1000 + timestampCount;
+          // the bottom 32 clock ids can be randomized & are not guaranteed to be collision resistant
+          // we use the same clockid for all tids coming from this machine
+          if (clockid === null) {
+            clockid = Math.floor(Math.random() * 32);
+          }
+          const tid = TID.fromTime(timestamp, clockid);
+          if (!prev || tid.newerThan(prev)) {
+            return tid;
+          }
+          return TID.fromTime(prev.timestamp() + 1, clockid);
+        }
+
+        static nextStr(prev) {
+          return TID.next(prev ? new TID(prev) : undefined).toString();
+        }
+
+        static fromTime(timestamp, clockid) {
+
+          console.log("timestamp encoding");
+          var encodedTimestamp = s32encode(timestamp);
+
+          console.log("clockid encoding");
+          var encodedClockid = s32encode(clockid);
+
+          document.getElementById("B32Timestamp").textContent = encodedTimestamp;
+          document.getElementById("B32ClockId").textContent = encodedClockid;
+
+          // base32 encode with encoding variant sort (s32)
+          const str = `${encodedTimestamp}${encodedClockid.padStart(2,"2")}`;
+          return new TID(str);
+        }
+
+        static fromStr(str) {
+          return new TID(str);
+        }
+
+        timestamp() {
+          return s32decode(this.str.slice(0, 11));
+        }
+
+        clockid() {
+          return s32decode(this.str.slice(11, 13));
+        }
+
+        formatted() {
+          const str = this.toString();
+          return `${str.slice(0, 4)}-${str.slice(4, 7)}-${str.slice(
+            7,
+            11
+          )}-${str.slice(11, 13)}`;
+        }
+
+        toString() {
+          return this.str;
+        }
+      }
+    </script>
+</head>
+<body onload="generate()">
+    <h1>tid generation harness</h1>
+    <p>Date/Time <span id="DateAndTime" /></p>
+    <p>Timestamp <span id="Timestamp" /></p>
+    <p>Encoded Timestamp <span id="B32Timestamp" /></p>
+    <p>Clock Id <span id="ClockId" /></p>
+    <p>Encoded Clock Id <span id="B32ClockId" /></p>
+    <p>Value <span id="Value" /></p>
+</body>
+<script>
+    function generate()
+    {
+        console.log("TID.nextStr()");
+        var tidString = TID.nextStr();
+        document.getElementById("Value").textContent = tidString;
+
+        var tid = TID.fromStr(tidString);
+        document.getElementById("Timestamp").textContent = tid.timestamp();
+        document.getElementById("ClockId").textContent = tid.clockid();
+
+    }
+</script>
+</html>

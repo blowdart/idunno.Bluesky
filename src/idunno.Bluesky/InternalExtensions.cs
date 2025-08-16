@@ -1,9 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.ComponentModel;
 using System.Globalization;
-using System.Reflection;
 using System.Text;
 
 namespace idunno.Bluesky
@@ -40,7 +38,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Gets the UTF8 index position of <see cref="Index"/> in <paramref name="s"/>.
+        /// Gets the UTF8 index position of <paramref name="index"/> in <paramref name="s"/>.
         /// </summary>
         /// <param name="s">The string in which the <paramref name="index"/> is based.</param>
         /// <param name="index">The character based index in <paramref name="s"/></param>

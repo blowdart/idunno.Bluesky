@@ -1,55 +1,149 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Collections;
-using System.Security.Cryptography;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace idunno.AtProto
 {
     /// <summary>
     /// Utility class for Timestamp Identifiers (TID)
     /// </summary>
-    public static class TimestampIdentifier
+    [DebuggerDisplay("{DebuggerDisplay,nq}")]
+    public sealed partial class TimestampIdentifier
     {
+        [GeneratedRegex("^[234567abcdefghij][234567abcdefghijklmnopqrstuvwxyz]{12}$", RegexOptions.IgnoreCase, 100)]
+        private static partial Regex s_Validator();
+
+        private const int TidLength = 13;
+
+        private static double? s_clockId;
+
+        private static readonly Random s_random = new();
+
+        private static double s_lastTimeStamp;
+
+#if NET9_0_OR_GREATER
+        private static readonly Lock s_syncLock = new ();
+#else
+        private static readonly object s_syncLock = new();
+#endif
+
+        private readonly string _value;
+
         /// <summary>
-        /// Generates a new timestamp identifier.
+        /// Creates a new instance of <see cref="TimestampIdentifier"/>
         /// </summary>
-        /// <returns>A new timestamp identifier.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Bluesky normalizes to lower case.")]
-        public static RecordKey Generate()
+        /// <param name="s">The string to create a <see cref="TimestampIdentifier"/> from.</param>
+        public TimestampIdentifier(string s)
         {
-            // https://atproto.com/specs/record-key
+            ArgumentNullException.ThrowIfNull(s);
 
-            BitArray timeStamp = new(64);
+            s = s.Trim('-');
 
-            // The top bit is always 0
-            timeStamp.Set(0, false);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(s.Length, TidLength);
+
+            if (!s_Validator().IsMatch(s))
+            {
+                throw new ArgumentException("not a valid TimeStampIdentifier", nameof(s));
+            }
+
+            _value = s;
+        }
+
+        /// <summary>
+        /// Creates a <see cref="RecordKey"/> from the specified <paramref name="timeStamp"/> and <paramref name="clockId"/>.
+        /// </summary>
+        /// <param name="timeStamp">The timestamp to generate the <see cref="RecordKey"/> from.</param>
+        /// <param name="clockId">The clock identifier to generate the <see cref="RecordKey"/> from.</param>
+        /// <returns></returns>
+        internal static string FromTime(double timeStamp, long clockId)
+        {
+            string encodedTimeStamp = SortableBase32Encoding.ToString(timeStamp).PadLeft(11, '2');
+            string encodedClockId = SortableBase32Encoding.ToString(clockId).PadLeft(2, '2');
+
+            return $"{encodedTimeStamp}{encodedClockId}";
+        }
+
+        /// <summary>
+        /// Creates a <see cref="RecordKey"/> from the current time.
+        /// </summary>
+        /// <returns></returns>
+        [SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Not a cryptographic function.")]
+        public static RecordKey Next()
+        {
+            lock (s_syncLock)
+            {
+                s_clockId ??= Math.Floor(s_random.NextSingle() * 32);
+            }
 
             TimeSpan duration = DateTimeOffset.UtcNow - DateTimeOffset.UnixEpoch;
-            long microsecondsSinceEpoch = duration.Ticks / 10;
+            double microsecondsSinceEpoch = Math.Round(duration.TotalMicroseconds);
 
-            // The next 53 bits represent microseconds since the UNIX epoch.
-            BitArray microsecondsSinceEpochAsBits = new (BitConverter.GetBytes(microsecondsSinceEpoch));
-            for (int i = 0; i <53; i++)
+            // - monotonically increasing time
+            double timeStamp = Math.Max(microsecondsSinceEpoch, s_lastTimeStamp);
+            lock (s_syncLock)
             {
-                timeStamp.Set(i+1, microsecondsSinceEpochAsBits[i]);
+                s_lastTimeStamp = timeStamp + 1;
             }
 
-            // The final 10 bits are a random "clock identifier."
-            BitArray randomIdentifier = new (RandomNumberGenerator.GetBytes(2));
-            for (int i = 0; i < 10; i++)
-            {
-                timeStamp.Set(i + 1 + 53, randomIdentifier[i]);
-            }
-
-            // Now turn into a byte array.
-            byte[] timeStampAsBytes = new byte[8];
-            timeStamp.CopyTo(timeStampAsBytes, 0);
-
-            // Encode to base32, and trim the padding.
-            string base32Encoded = Base32Encoding.ToString(timeStampAsBytes).TrimEnd('=').ToLowerInvariant();
-
-            return base32Encoded;
+            return new RecordKey(FromTime(timeStamp, (long)s_clockId.Value));
         }
+
+        /// <inheritdoc />
+        public override string ToString() => $"{_value}";
+
+        /// <summary>
+        /// Creates a <see cref="TimestampIdentifier"/> from the specified string.
+        /// </summary>
+        /// <param name="s">The string to convert.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static TimestampIdentifier FromString(string s) => new(s);
+
+        /// <summary>
+        /// Creates a <see cref="TimestampIdentifier"/> from the specified string.
+        /// </summary>
+        /// <param name="s">The string to convert.</param>
+        public static implicit operator TimestampIdentifier(string s) => TimestampIdentifier.FromString(s);
+
+        /// <summary>
+        /// Converts the specified <see cref="TimestampIdentifier"/> to a string.
+        /// </summary>
+        /// <param name="tid">The <see cref="TimestampIdentifier"/> to convert.</param>
+        public static implicit operator string(TimestampIdentifier tid)
+        {
+            if (tid is null)
+            {
+                return string.Empty;
+            }
+            else
+            {
+                return tid.ToString();
+            }
+        }
+
+        /// <summary>
+        /// Gets the value of this instance of <see cref="TimestampIdentifier"/>.
+        /// </summary>
+        [JsonPropertyName("tid")]
+        public string Value => ToString();
+
+        /// <summary>
+        /// Gets the timestamp of the current instance of <see cref="TimestampIdentifier"/>.
+        /// </summary>
+        [JsonIgnore]
+        public double TimeStamp => SortableBase32Encoding.FromString(_value.Substring(0, 11));
+
+        /// <summary>
+        /// Gets the clock id of the current instance of <see cref="TimestampIdentifier"/>.
+        /// </summary>
+        [JsonIgnore]
+        public double ClockId => SortableBase32Encoding.FromString(_value.Substring(11, 2));
+
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private string DebuggerDisplay => ToString();
     }
 }

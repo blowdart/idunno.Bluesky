@@ -1,5 +1,28 @@
 # Version History
 
+## 0.9.8
+
+### Features
+
+#### idunno.AtProto
+
+* Added extra validation to `Cid`.
+
+### Bug Fixes
+
+#### idunno.AtProto
+
+* Fixed `TimeStampIdentifier` generation.
+
+### Documentation
+
+### Breaking Changes
+
+#### idunno.AtProto
+
+* Moved `WebSocketOptions` from `idunno.AtProto.JetStream` to `idunno.AtProto`.
+* Renamed `JetstreamOptions.MaximumMessageSize` to `JetstreamOptions.BufferSize`.
+
 ## 0.9.7
 
 ### Features

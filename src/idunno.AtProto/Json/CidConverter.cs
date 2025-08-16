@@ -32,7 +32,7 @@ namespace idunno.AtProto.Json
             {
                 cid = new Cid(reader.GetString()!);
             }
-            catch (ArgumentNullException e)
+            catch (ArgumentException e)
             {
                 throw new JsonException("Could not convert value to an Cid", e);
             }

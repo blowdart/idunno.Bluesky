@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
 using idunno.AtProto.Jetstream;
-using ZstdSharp.Unsafe;
 
 namespace Samples.Jetstream
 {
@@ -48,12 +47,12 @@ namespace Samples.Jetstream
             {
                 jetStream.ConnectionStateChanged += (sender, e) =>
                 {
-                    //Console.WriteLine($"CONNECTION: status changed to {e.State}");
+                    Console.WriteLine($"CONNECTION: status changed to {e.State}");
                 };
 
                 jetStream.MessageReceived += (sender, e) =>
                 {
-                    //Console.WriteLine($"MESSAGE: Received message {e.Message}");
+                    Console.WriteLine($"MESSAGE: Received message {e.Message}");
                 };
 
                 jetStream.RecordReceived += async (sender, e) =>
@@ -62,6 +61,10 @@ namespace Samples.Jetstream
 
                     switch (e.ParsedEvent)
                     {
+                        case AtJetstreamCommitEvent commitEvent:
+                            Console.WriteLine($"COMMIT: {commitEvent.Did} executed a {commitEvent.Commit.Operation} in {commitEvent.Commit.Collection} at {timeStamp}");
+                            break;
+
                         case AtJetstreamAccountEvent accountEvent:
                             string eventBelongsTo = accountEvent.Did;
 
@@ -96,10 +99,6 @@ namespace Samples.Jetstream
                             {
                                 Console.WriteLine($"ACCOUNT: {eventBelongsTo} was {accountEvent.Account.Status.ToString()!.ToLowerInvariant()} at {timeStamp}");
                             }
-                            break;
-
-                        case AtJetstreamCommitEvent commitEvent:
-                            Console.WriteLine($"COMMIT: {commitEvent.Did} executed a {commitEvent.Commit.Operation} in {commitEvent.Commit.Collection} at {timeStamp}");
                             break;
 
                         case AtJetstreamIdentityEvent identityEvent:

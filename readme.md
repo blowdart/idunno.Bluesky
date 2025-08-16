@@ -1,4 +1,6 @@
-﻿# ![The Bluesky butterfly logo, except in purple](docs/docicon.png)idunno.Bluesky
+﻿# ![The Bluesky butterfly logo, except in purple](docs/docicon.png)idunno.Bluesky - .NET SDK for Bluesky.
+
+A .NET 8 and .NET 9 library and SDK for [Bluesky](https://bsky.social/) and the [AT Protocol](https://docs.bsky.app/docs/api/at-protocol-xrpc-api)
 
 [if you want me to wear 37 pieces of flair, like your pretty boy over there, Brian, why don't you just make the minimum 37 pieces of flair?]: #
 
@@ -8,8 +10,6 @@
 [![NuGet Version](https://img.shields.io/nuget/vpre/idunno.Bluesky)](https://www.nuget.org/packages/idunno.Bluesky/)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/idunno.Bluesky)](https://www.nuget.org/packages/idunno.Bluesky/)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/blowdart/idunno.Bluesky/badge)](https://scorecard.dev/viewer/?uri=github.com/blowdart/idunno.Bluesky)
-
-A .NET 8 and .NET 9 class library for the [AT Protocol](https://docs.bsky.app/docs/api/at-protocol-xrpc-api) and APIs for the [Bluesky social network](https://bsky.social/).
 
 ## Getting Started
 
@@ -77,7 +77,6 @@ The [releases page](https://github.com/blowdart/idunno.Bluesky/releases) provide
 
 * Logging in idunno.Bluesky
 * GIF attaching
-* Firehose support
 * Wider test coverage
 * More deserialization tests with captured responses
 
@@ -96,6 +95,8 @@ first property in the JSON object.
 * [Microsoft.IdentityModel.Tokens](https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet) - used to extract the expiry date and time of the JWT tokens issued by Bluesky.
 * [IdentityModel.OidcClient](https://github.com/IdentityModel/IdentityModel.OidcClient) - used to do the OAuth heavy lifting.
 * [DnsClient](https://dnsclient.michaco.net/) - used in Handle to DID resolution.
+* [PeterO.CBor](https://github.com/peteroupc/CBOR) - used in Fire Hose decoding.
+* [SimpleBase](https://github.com/ssg/SimpleBase) - used in decoding CIDs.
 * [ZstdSharp](https://github.com/oleg-st/ZstdSharp) - used in Jetstream decompression.
 
 ### External analyzers used during builds
@@ -104,13 +105,14 @@ first property in the JSON object.
 
 ### External build &amp; testing tools
 
-* [xunit](https://github.com/xunit/xunit) - used for unit tests.
-* [NerdBank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning) - used for version stamping assemblies and packages.
-* [DotNet.ReproducibleBuilds](https://github.com/dotnet/reproducible-builds) - used to easily set .NET reproducible build settings.
-* [ReportGenerator](https://github.com/danielpalme/ReportGenerator) - used to produce code coverage reports.
-* [JunitXml.TestLogger](https://github.com/spekt/junit.testlogger) - used in CI builds to produce test results in a format understood by the [test-summary](https://github.com/test-summary/action) GitHub action.
-* [sign](https://github.com/dotnet/sign) - used to code sign assemblies and nuget packages.
 * [docfx](https://dotnet.github.io/docfx/) - used to generate the documentation site.
+* [DotNet.ReproducibleBuilds](https://github.com/dotnet/reproducible-builds) - used to easily set .NET reproducible build settings.
+* [Coverlet.Collector](https://github.com/coverlet-coverage/coverlet) - used to produce code coverage files
+* [JunitXml.TestLogger](https://github.com/spekt/junit.testlogger) - used in CI builds to produce test results in a format understood by the [test-summary](https://github.com/test-summary/action) GitHub action.
+* [NerdBank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning) - used for version stamping assemblies and packages.
+* [ReportGenerator](https://github.com/danielpalme/ReportGenerator) - used to produce code coverage reports.
+* [sign](https://github.com/dotnet/sign) - used to code sign assemblies and nuget packages.
+* [xunit](https://github.com/xunit/xunit) - used for unit tests.
 
 ## Other .NET Bluesky libraries and projects
 

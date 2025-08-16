@@ -78,7 +78,7 @@ namespace idunno.Bluesky.Test
         public void TextAndPropertiesConstructorSetsEverythingCorrectly()
         {
             const string postText = "post text";
-            StrongReference strongReference = new(new AtUri("at://foo.com/com.example.foo/123"), new Cid("\"bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"));
+            StrongReference strongReference = new(new AtUri("at://foo.com/com.example.foo/123"), new Cid("bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"));
 
             List<string> expectedLanguages = ["en-gb", "en-us"];
             List<Facet> expectedFacets = [new Facet(new ByteSlice(0, 1), [new MentionFacetFeature(new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk"))])];
@@ -111,7 +111,7 @@ namespace idunno.Bluesky.Test
         public void TextCreationDateAndPropertiesConstructorSetsEverythingCorrectly()
         {
             const string postText = "post text";
-            StrongReference strongReference = new(new AtUri("at://foo.com/com.example.foo/123"), new Cid("\"bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"));
+            StrongReference strongReference = new(new AtUri("at://foo.com/com.example.foo/123"), new Cid("bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"));
 
             DateTimeOffset expectedDate = DateTimeOffset.UtcNow;
             List<string> expectedLanguages = ["en-gb", "en-us"];
@@ -147,7 +147,7 @@ namespace idunno.Bluesky.Test
         public void CopyConstructorCopiesEverythingCorrectly()
         {
             const string postText = "post text";
-            StrongReference strongReference = new(new AtUri("at://foo.com/com.example.foo/123"), new Cid("\"bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"));
+            StrongReference strongReference = new(new AtUri("at://foo.com/com.example.foo/123"), new Cid("bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"));
 
             DateTimeOffset expectedDate = DateTimeOffset.UtcNow;
             List<string> expectedLanguages = ["en-gb", "en-us"];
@@ -232,7 +232,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void ConstructorDoesNotThrowWhenTextIsNullAndThereIsAnEmbed()
         {
-            StrongReference strongReference = new(new AtUri("at://foo.com/com.example.foo/123"), new Cid("\"bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"));
+            StrongReference strongReference = new(new AtUri("at://foo.com/com.example.foo/123"), new Cid("bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"));
             EmbeddedBase expectedEmbedded = new EmbeddedRecord(strongReference);
 
             var post = new Post(null, embeddedRecord : expectedEmbedded);
@@ -244,7 +244,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void ConstructorDoesNotThrowWhenTextIsEmptyAndThereIsAnEmbed()
         {
-            StrongReference strongReference = new(new AtUri("at://foo.com/com.example.foo/123"), new Cid("\"bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"));
+            StrongReference strongReference = new(new AtUri("at://foo.com/com.example.foo/123"), new Cid("bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"));
             EmbeddedBase expectedEmbedded = new EmbeddedRecord(strongReference);
 
             var post = new Post(string.Empty, embeddedRecord: expectedEmbedded);
