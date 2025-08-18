@@ -14,7 +14,7 @@
     <PackageVersion Include="Microsoft.CodeCoverage" Version="17.14.1" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="Microsoft.Sbom.Targets" Version="4.0.3" />
-    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.13.1" />
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.14.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
     <PackageVersion Include="Nerdbank.GitVersioning" Version="3.7.115" />
     <PackageVersion Include="OpenGraph-Net" Version="4.0.1" />
