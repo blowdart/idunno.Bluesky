@@ -208,7 +208,7 @@ namespace idunno.AtProto.Jetstream
                     LoggerFactory = LoggerFactory,
                     UseCompression = EnableCompression,
                     Dictionary = CompressionDictionary,
-                    MaximumMessageSize = MaximumMessageSize,
+                    BufferSize = MaximumMessageSize,
                     TaskFactory = TaskFactory,
                 },
                 collections: CollectionsToFilterOn,

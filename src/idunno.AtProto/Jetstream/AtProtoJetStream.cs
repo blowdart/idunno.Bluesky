@@ -62,8 +62,8 @@ namespace idunno.AtProto.Jetstream
         /// Creates a new instance of <see cref="Jetstream"/>.
         /// </summary>
         /// <param name="uri">The host uri to connection to. Defaults to wss://jetstream1.us-west.bsky.network/.</param>
-        /// <param name="options">Any options to configure this instance of <see cref="Jetstream"/>.</param>
-        /// <param name="webSocketOptions">Any <see cref="WebSocketOptions"/> to set on the underlying client WebSocket.</param>
+        /// <param name="options">Any options to configure this instance of <see cref="AtProtoJetstream"/>.</param>
+        /// <param name="webSocketOptions">Any <see cref="AtProto.WebSocketOptions"/> to set on the underlying client WebSocket.</param>
         /// <param name="collections">The <see cref="Nsid"/>s of any collection types to subscribe to. If null or empty all collection types will be subscribed to.</param>
         /// <param name="dids">Any <see cref="Did"/>s to subscribe to. If null or empty all dids will be subscribed to.</param>
         public AtProtoJetstream(
@@ -133,7 +133,7 @@ namespace idunno.AtProto.Jetstream
         protected internal ILoggerFactory LoggerFactory { get; init; }
 
         /// <summary>
-        /// Gets the configuration options for the agent.
+        /// Gets the configuration options for the jetstream.
         /// </summary>
         protected internal JetstreamOptions Options { get; init; } = new JetstreamOptions();
 
@@ -196,22 +196,22 @@ namespace idunno.AtProto.Jetstream
         public DateTimeOffset? MessageLastReceived { get; private set; }
 
         /// <summary>
-        /// Raised when this instance of <see cref="Jetstream"/> receives a message.
+        /// Raised when this instance of <see cref="AtProtoJetstream"/> receives a message.
         /// </summary>
         public event EventHandler<MessageReceivedEventArgs>? MessageReceived;
 
         /// <summary>
-        /// Raised when this instance of <see cref="Jetstream"/> receives a message.
+        /// Raised when this instance of <see cref="AtProtoJetstream"/> receives a message.
         /// </summary>
         public event EventHandler<ConnectionStateChangedEventArgs>? ConnectionStateChanged;
 
         /// <summary>
-        /// Raised when this instance of <see cref="Jetstream"/> parses a message and converts it to a record.
+        /// Raised when this instance of <see cref="AtProtoJetstream"/> parses a message and converts it to a record.
         /// </summary>
         public event EventHandler<RecordReceivedEventArgs>? RecordReceived;
 
         /// <summary>
-        /// Raised when this instance of <see cref="Jetstream"/> encounters a fault.
+        /// Raised when this instance of <see cref="AtProtoJetstream"/> encounters a fault.
         /// </summary>
         public event EventHandler<FaultRaisedEventArgs>? FaultRaised;
 
@@ -260,7 +260,7 @@ namespace idunno.AtProto.Jetstream
         /// <summary>
         /// Called to raise any <see cref="ConnectionStateChanged"/> events, if any.
         /// </summary>
-        /// <param name="e">The <see cref="MessageReceivedEventArgs"/> for the event.</param>
+        /// <param name="e">The <see cref="ConnectionStateChangedEventArgs"/> for the event.</param>
         protected virtual void OnConnectionStateChanged(ConnectionStateChangedEventArgs e)
         {
             EventHandler<ConnectionStateChangedEventArgs>? connectionStatusChanged = ConnectionStateChanged;
@@ -412,7 +412,7 @@ namespace idunno.AtProto.Jetstream
 
             uriBuilder.Append(
                 CultureInfo.InvariantCulture,
-                $"maximumMessageSizeBytes={Options.MaximumMessageSize}&");
+                $"maximumMessageSizeBytes={Options.BufferSize}&");
 
             if (uriBuilder[^1] == '&')
             {
@@ -448,6 +448,10 @@ namespace idunno.AtProto.Jetstream
             {
                 ReceiveLoop(cancellationToken).FireAndForget();
             }
+            else
+            {
+                JetStreamLogger.ConnectionFailed(_logger, _client.State);
+            }
         }
 
         /// <summary>
@@ -480,6 +484,10 @@ namespace idunno.AtProto.Jetstream
                 {
                     throw;
                 }
+                catch (TaskCanceledException)
+                {
+                    // Swallow
+                }
                 catch (Exception ex)
                 {
                     JetStreamLogger.CloseError(_logger, ex);
@@ -494,6 +502,10 @@ namespace idunno.AtProto.Jetstream
                 catch (ObjectDisposedException)
                 {
                     throw;
+                }
+                catch (TaskCanceledException)
+                {
+                    // Swallow
                 }
                 catch (Exception ex)
                 {
@@ -564,16 +576,17 @@ namespace idunno.AtProto.Jetstream
         [SuppressMessage("Reliability", "CA2008:Do not create tasks without passing a TaskScheduler", Justification = "A scheduler can be configured on the TaskFactory in Options.")]
         private async Task ReceiveLoop(CancellationToken cancellationToken)
         {
-            byte[] buffer = new byte[Options.MaximumMessageSize];
+            byte[] buffer = new byte[Options.BufferSize];
             WebSocketMessageType expectedMessageType = Options.UseCompression ? WebSocketMessageType.Binary : WebSocketMessageType.Text;
 
             while (_client.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    ValueWebSocketReceiveResult result = await _client.ReceiveAsync(new Memory<byte>(buffer), cancellationToken).ConfigureAwait(false);
+                    (WebSocketReceiveResult webSocketReceiveResult, byte[] message) =
+                        await _client.ReceiveNextMessageAsync(Options.BufferSize, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-                    if (result.MessageType == WebSocketMessageType.Close)
+                    if (webSocketReceiveResult.MessageType == WebSocketMessageType.Close)
                     {
                         await _client.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, cancellationToken: cancellationToken).ConfigureAwait(false);
                         JetStreamLogger.CloseMessageReceived(_logger);
@@ -581,14 +594,9 @@ namespace idunno.AtProto.Jetstream
                         continue;
                     }
 
-                    if (result.MessageType != expectedMessageType)
+                    if (webSocketReceiveResult.MessageType != expectedMessageType)
                     {
-                        JetStreamLogger.UnexpectedMessageType(_logger, result.MessageType);
-
-                        if (!result.EndOfMessage)
-                        {
-                            continue;
-                        }
+                        JetStreamLogger.UnexpectedMessageType(_logger, webSocketReceiveResult.MessageType);
                     }
 
                     byte[] receivedData;
@@ -597,7 +605,7 @@ namespace idunno.AtProto.Jetstream
                     {
                         try
                         {
-                            Span<byte> bufferAsSpan = buffer.AsSpan(0, result.Count);
+                            Span<byte> bufferAsSpan = message.AsSpan(0, message.Length);
                             receivedData = _decompressor!.Unwrap(bufferAsSpan).ToArray();
                         }
                         catch (ZstdException ex)
@@ -609,20 +617,20 @@ namespace idunno.AtProto.Jetstream
                     }
                     else
                     {
-                        receivedData = new byte[result.Count];
-                        Array.Copy(buffer, 0, receivedData, 0, result.Count);
+                        receivedData = new byte[message.Length];
+                        Array.Copy(buffer, 0, receivedData, 0, message.Length);
                     }
 
                     // Now convert to a string
-                    string message = Encoding.UTF8.GetString(receivedData);
+                    string messageAsString = Encoding.UTF8.GetString(receivedData);
 
-                    if (!string.IsNullOrEmpty(message))
+                    if (!string.IsNullOrEmpty(messageAsString))
                     {
-                        OnMessageReceived(new MessageReceivedEventArgs(message));
+                        OnMessageReceived(new MessageReceivedEventArgs(messageAsString));
 
                         // Now go to handle message in a new task.
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                        Options.TaskFactory.StartNew(() => ParseMessage(message, _logger).FireAndForgetAsync(_logger), cancellationToken).ConfigureAwait(false);
+                        Options.TaskFactory.StartNew(() => ParseMessage(messageAsString, _logger).FireAndForgetAsync(_logger), cancellationToken).ConfigureAwait(false);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                     }
                     else
@@ -712,7 +720,7 @@ namespace idunno.AtProto.Jetstream
 
             OptionsUpdatePayload payload = new()
             {
-                MaxMessageSizeBytes = Options.MaximumMessageSize
+                MaxMessageSizeBytes = Options.BufferSize
             };
 
             if (_collections is not null && _collections.Count > 0)

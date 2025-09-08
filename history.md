@@ -12,6 +12,7 @@
 
 #### idunno.AtProto
 
+* Bookmark support
 * Fixed `TimeStampIdentifier` generation.
 
 ### Documentation

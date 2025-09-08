@@ -78,5 +78,7 @@ namespace idunno.AtProto.Jetstream
         [LoggerMessage(23, LogLevel.Error, "Decompression failed")]
         internal static partial void DecompressionException(ILogger logger, ZstdException ex);
 
+        [LoggerMessage(24, LogLevel.Error, "Connection failed {state}")]
+        internal static partial void ConnectionFailed(ILogger logger, WebSocketState state);
     }
 }

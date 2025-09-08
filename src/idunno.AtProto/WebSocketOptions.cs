@@ -3,10 +3,10 @@
 
 using System.Net;
 
-namespace idunno.AtProto.Jetstream
+namespace idunno.AtProto
 {
     /// <summary>
-    /// WebSocket options for the underlying client.
+    /// WebSocket options for the Jetstream and Firehose.
     /// </summary>
     public sealed record WebSocketOptions
     {

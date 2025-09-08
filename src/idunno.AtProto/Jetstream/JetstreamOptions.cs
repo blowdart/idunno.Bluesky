@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace idunno.AtProto.Jetstream
 {
     /// <summary>
-    /// Configures options for an instance of <see cref="Jetstream"/>.
+    /// Configures options for an instance of <see cref="AtProtoJetstream"/>.
     /// </summary>
     public record JetstreamOptions
     {
@@ -43,7 +43,7 @@ namespace idunno.AtProto.Jetstream
         /// <summary>
         /// Gets the maximum size of messages to receive, in bytes.
         /// </summary>
-        public int MaximumMessageSize
+        public int BufferSize
         {
             get
             {
