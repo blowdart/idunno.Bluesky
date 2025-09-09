@@ -82,7 +82,9 @@ dotnet nuget verify [<package-path(s)>]
 
 The subject name of the signing certificate should be
 
-```Subject Name: CN=Barry Dorrans, O=Barry Dorrans, L=Bothell, S=Washington, C=US```
+```
+Subject Name: CN=Barry Dorrans, O=Barry Dorrans, L=Bothell, S=Washington, C=US
+```
 
 In addition, for GitHub artifact signing the project uses [minisign](https://github.com/jedisct1/minisign) with the following public key.
 
