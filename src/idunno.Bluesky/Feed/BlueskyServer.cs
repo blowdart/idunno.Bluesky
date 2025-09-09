@@ -3,16 +3,16 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Net.Http.Headers;
 using System.Text;
 
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
-using idunno.AtProto.Repo;
+using idunno.AtProto.Authentication;
 using idunno.Bluesky.Feed;
 using idunno.Bluesky.Feed.Model;
-using idunno.AtProto.Authentication;
-using System.Net.Http.Headers;
+
 
 namespace idunno.Bluesky
 {

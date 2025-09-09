@@ -10,7 +10,7 @@ using Samples.Common;
 using idunno.AtProto;
 using idunno.Bluesky;
 
-namespace Samples.ConsoleShell
+namespace Samples.Bookmarks
 {
     public sealed class Program
     {
@@ -21,7 +21,7 @@ namespace Samples.ConsoleShell
 
             var parser = Helpers.ConfigureCommandLine(
                 args,
-                "BlueskyAgent Console Demonstration Template",
+                "BlueskyAgent Bookmarks Sample",
                 PerformOperations);
 
             return await parser.InvokeAsync();
@@ -33,7 +33,7 @@ namespace Samples.ConsoleShell
             ArgumentException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
-            // proxyUri = new Uri("http://localhost:8866");
+            proxyUri = new Uri("http://localhost:8866");
 
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
@@ -103,8 +103,25 @@ namespace Samples.ConsoleShell
                 }
                 // END-AUTHENTICATION
 
-                // Your code goes here
+                var testPostResult = await agent.Post("Test post, for bookmarking", cancellationToken: cancellationToken);
+                testPostResult.EnsureSucceeded();
 
+                var createBookmarkResult = await agent.CreateBookmark(testPostResult.Result.StrongReference, cancellationToken: cancellationToken);
+                createBookmarkResult.EnsureSucceeded();
+                Debugger.Break();
+
+                var getPostResult = await agent.GetPost(testPostResult.Result.StrongReference.Uri, cancellationToken: cancellationToken);
+                getPostResult.EnsureSucceeded();
+                Console.WriteLine($"Test post has been bookmarked {getPostResult.Result.BookmarkCount} time(s).");
+                Debugger.Break();
+
+                var deleteBookmarkResult = await agent.DeleteBookmark(testPostResult.Result.StrongReference.Uri, cancellationToken: cancellationToken);
+                createBookmarkResult.EnsureSucceeded();
+                Debugger.Break();
+
+                getPostResult = await agent.GetPost(testPostResult.Result.StrongReference.Uri, cancellationToken: cancellationToken);
+                getPostResult.EnsureSucceeded();
+                Console.WriteLine($"Test post has been bookmarked {getPostResult.Result.BookmarkCount} time(s).");
                 Debugger.Break();
             }
         }

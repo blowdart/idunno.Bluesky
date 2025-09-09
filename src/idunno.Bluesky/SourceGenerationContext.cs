@@ -6,6 +6,7 @@ using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Actor.Model;
+using idunno.Bluesky.Bookmarks.Model;
 using idunno.Bluesky.Chat;
 using idunno.Bluesky.Chat.Model;
 using idunno.Bluesky.Embed;
@@ -276,6 +277,11 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(BlueskyListItem))]
 
     [JsonSerializable(typeof(DateTimeOffset))]
+
+    [JsonSerializable(typeof(CreateBookmarkRequest))]
+    [JsonSerializable(typeof(DeleteBookmarkRequest))]
+    [JsonSerializable(typeof(GetBookmarksResponse))]
+
     internal partial class SourceGenerationContext : JsonSerializerContext
     {
     }

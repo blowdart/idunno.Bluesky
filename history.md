@@ -12,8 +12,8 @@
 
 #### idunno.AtProto
 
-* Bookmark support
-* Fixed `TimeStampIdentifier` generation.
+* Bookmark support, `CreateBookmark()`, `DeleteBookmark()`, `GetBookmarks()` and the `BookmarkCount` property on `PostView`.
+* Fixed `TimeStampIdentifier` generation to generate correct values.
 
 ### Documentation
 

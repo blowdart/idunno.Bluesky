@@ -30,6 +30,7 @@ namespace idunno.Bluesky.Feed
             int repostCount,
             int likeCount,
             int quoteCount,
+            int bookmarkCount,
             ThreadGateView? threadGate,
             DateTimeOffset indexedAt,
             FeedViewerState? viewer,
@@ -48,6 +49,7 @@ namespace idunno.Bluesky.Feed
             RepostCount = repostCount;
             LikeCount = likeCount;
             QuoteCount = quoteCount;
+            BookmarkCount = bookmarkCount;
 
             ThreadGate = threadGate;
 
@@ -120,6 +122,12 @@ namespace idunno.Bluesky.Feed
         /// </summary>
         [JsonInclude]
         public int QuoteCount { get; init; }
+
+        /// <summary>
+        /// The number of times the post has been bookmarked.
+        /// </summary>
+        [JsonInclude]
+        public int BookmarkCount { get; init; }
 
         /// <summary>
         /// The date and time the post was indexed at.

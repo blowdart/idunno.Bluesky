@@ -15,6 +15,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="AuthenticationRequiredException">Thrown if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<Profile>>> GetProfile(
             CancellationToken cancellationToken = default)
         {

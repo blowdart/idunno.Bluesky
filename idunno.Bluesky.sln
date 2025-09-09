@@ -24,6 +24,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		purge.ps1 = purge.ps1
 		readme.md = readme.md
 		SECURITY.md = SECURITY.md
+		THIRD-PARTY-NOTICES.txt = THIRD-PARTY-NOTICES.txt
 		trimTest.ps1 = trimTest.ps1
 		version.json = version.json
 	EndProjectSection
@@ -235,6 +236,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Step4", "docs\docs\bots\cod
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Step5", "docs\docs\bots\code\WatcherBot\Step5\Step5.csproj", "{061FF07D-DC46-5649-2A78-94B86652F4E8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.Bookmarks", "samples\Samples.Bookmarks\Samples.Bookmarks.csproj", "{DCF955FF-9A5D-4DEA-8E12-15D49C3E41D5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		CodeQL|Any CPU = CodeQL|Any CPU
@@ -388,6 +391,10 @@ Global
 		{061FF07D-DC46-5649-2A78-94B86652F4E8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{061FF07D-DC46-5649-2A78-94B86652F4E8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{061FF07D-DC46-5649-2A78-94B86652F4E8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DCF955FF-9A5D-4DEA-8E12-15D49C3E41D5}.CodeQL|Any CPU.ActiveCfg = Debug|Any CPU
+		{DCF955FF-9A5D-4DEA-8E12-15D49C3E41D5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DCF955FF-9A5D-4DEA-8E12-15D49C3E41D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DCF955FF-9A5D-4DEA-8E12-15D49C3E41D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -439,6 +446,7 @@ Global
 		{3CD72755-37E5-D821-DE3A-378D01FDD4E9} = {8EF4CCE5-0328-4ED0-9D28-F5E9CC2F2EB4}
 		{E2D3A4A9-5FD9-AE9B-0C33-E08069CA710C} = {8EF4CCE5-0328-4ED0-9D28-F5E9CC2F2EB4}
 		{061FF07D-DC46-5649-2A78-94B86652F4E8} = {8EF4CCE5-0328-4ED0-9D28-F5E9CC2F2EB4}
+		{DCF955FF-9A5D-4DEA-8E12-15D49C3E41D5} = {B1A49FA3-07AB-4D78-BC16-FF7FB5857840}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B2B9F8C2-975D-4E3A-B05E-48FDF4BCE3E6}

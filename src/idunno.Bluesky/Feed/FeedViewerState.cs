@@ -19,7 +19,8 @@ namespace idunno.Bluesky.Feed
             bool threadMuted,
             bool replyDisabled,
             bool embeddingDisabled,
-            bool pinned)
+            bool pinned,
+            bool bookMarked)
         {
             Repost = repost;
             Like = like;
@@ -27,6 +28,7 @@ namespace idunno.Bluesky.Feed
             ReplyDisabled = replyDisabled;
             EmbeddingDisabled = embeddingDisabled;
             Pinned = pinned;
+            Bookmarked = bookMarked;
         }
 
         /// <summary>
@@ -58,5 +60,10 @@ namespace idunno.Bluesky.Feed
         /// A flag indicating whether the requesting account has pinned the the content.
         /// </summary>
         public bool Pinned { get; init; }
+
+        /// <summary>
+        /// A flag indicating whether the requesting account has bookmarked the content.
+        /// </summary>
+        public bool Bookmarked { get; init; }
     }
 }

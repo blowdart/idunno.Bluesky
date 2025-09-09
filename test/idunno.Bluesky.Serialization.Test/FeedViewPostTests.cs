@@ -59,6 +59,7 @@ namespace idunno.Bluesky.Serialization.Test
                     "repostCount": 0,
                     "likeCount": 0,
                     "quoteCount": 0,
+                    "bookmarkCount" : 1,
                     "indexedAt": "2025-04-25T22:24:26.383Z",
                     "viewer": {
                         "threadMuted": false,
@@ -214,6 +215,8 @@ namespace idunno.Bluesky.Serialization.Test
             FeedViewPost? feedViewPost = JsonSerializer.Deserialize<FeedViewPost>(json, BlueskyServer.BlueskyJsonSerializerOptions);
 
             Assert.NotNull(feedViewPost);
+
+            Assert.Equal(1, feedViewPost.Post.BookmarkCount);
         }
     }
 }

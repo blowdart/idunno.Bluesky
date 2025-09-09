@@ -11,6 +11,9 @@
 | | [app.bsky.actor.putPreferences](https://docs.bsky.app/docs/api/app-bsky-actor-put-preferences) | `BlueskyAgent.PutPreferences()` | ✔ |
 | | [app.bsky.actor.searchActors](https://docs.bsky.app/docs/api/app-bsky-actor-search-actors) | `BlueskyAgent.SearchActors()` | ✔ |
 | | [app.bsky.actor.searchActorsTypeahead](https://docs.bsky.app/docs/api/app-bsky-actor-search-actors-typeahead) | `BlueskyAgent.SearchActorsTypeahead()` | ✔ |
+| **Bookmarks** | app.bsky.bookmark.createBookmark | `BlueskyAgent.CreateBookmark()` | ✔ |
+| | app.bsky.bookmark.deleteBookmark | `BlueskyAgent.DeleteBookmark()` | ✔ |
+| | app.bsky.bookmark.getBookmarks | `BlueskyAgent.GetBookmarks()` | ✔ |
 | **Feed** | [app.bsky.feed.DescribeFeedGenerator](https://docs.bsky.app/docs/api/app-bsky-feed-describe-feed-generator) | `BlueskyAgent.DescribeFeedGenerator()` | ✔ |
 | | [app.bsky.feed.getActorFeeds](https://docs.bsky.app/docs/api/app-bsky-feed-get-actor-feeds) | `BlueskyAgent.GetActorFeeds()` | ✔ |
 | | [app.bsky.feed.getActorLikes](https://docs.bsky.app/docs/api/app-bsky-feed-get-actor-likes) | `BlueskyAgent.GetActorLikes()` | ✔ |
