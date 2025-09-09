@@ -67,6 +67,36 @@ Trimming is supported for applications targeting .NET 9.0 or later.
 
 The [releases page](https://github.com/blowdart/idunno.Bluesky/releases) provides details of each release and what was added, changed or removed.
 
+
+## Release Verification
+
+The project uses an Authenticode certificate to sign assemblies and to author sign the nupkg packages.
+nuget validates the signatures during its publication process.
+
+To validate these signatures use
+
+```
+dotnet nuget verify [<package-path(s)>]
+```
+
+The subject name of the signing certificate should be
+
+```Subject Name: CN=Barry Dorrans, O=Barry Dorrans, L=Bothell, S=Washington, C=US```
+
+In addition, for GitHub artifact signing the project uses [minisign](https://github.com/jedisct1/minisign) with the following public key.
+
+```
+RWTsT4BHHChe/Rj/GBAuZHg3RaZFnfBDqaZ7KzLvr44a7mO6fLCxSAFc
+```
+
+To validate a file using an artifact signature from a [release](https://github.com/blowdart/idunno.Bluesky/releases)
+download the `.nupkg` from nuget and the appropriate `.minisig` from the release page, then use the following command,
+replacing `<package-path>` with the file name you wish to verify.
+
+```
+minisign -Vm <package-path> -P RWTsT4BHHChe/Rj/GBAuZHg3RaZFnfBDqaZ7KzLvr44a7mO6fLCxSAFc
+```
+
 ## License
 
 `idunno.Bluesky`, `idunno.AtProto` and `idunno.AtProto.OAuthCallBack` are available under the MIT license, see the [LICENSE](LICENSE) file for more information.
