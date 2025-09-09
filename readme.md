@@ -51,6 +51,7 @@ The [API status page](https://bluesky.idunno.dev/docs/endpointStatus.html) shows
 * Following and unfollowing users
 * Muting and blocking users
 * Sending, receiving, and deleting direct messages
+* Create, deleting and listing a user's bookmarks
 * Handle / password and OAuth authentication
 * Jetstream support for simple firehose consumption
 * Automatic session management with background token refreshes
