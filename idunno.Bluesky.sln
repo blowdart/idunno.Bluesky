@@ -72,12 +72,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 	ProjectSection(SolutionItems) = preProject
 		.github\workflows\actions-security-analysis.yml = .github\workflows\actions-security-analysis.yml
 		.github\workflows\ci-build.yml = .github\workflows\ci-build.yml
-		.github\workflows\ci-manual-build-test-sign.yml = .github\workflows\ci-manual-build-test-sign.yml
 		.github\workflows\close-inactive-issues.yml = .github\workflows\close-inactive-issues.yml
 		.github\workflows\codeql-analysis.yml = .github\workflows\codeql-analysis.yml
 		.github\workflows\dependency-review.yml = .github\workflows\dependency-review.yml
 		.github\workflows\generate-publish-docs.yml = .github\workflows\generate-publish-docs.yml
 		.github\workflows\openssf-scorecard.yml = .github\workflows\openssf-scorecard.yml
+		.github\workflows\release-build.yml = .github\workflows\release-build.yml
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Samples.Timeline", "samples\Samples.Timeline\Samples.Timeline.csproj", "{AB11676F-150A-4AD3-A34B-01AE0C9A1065}"
