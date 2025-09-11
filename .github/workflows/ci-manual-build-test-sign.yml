@@ -1,4 +1,4 @@
-name: Manual Build, Test, Sign, Publish
+﻿name: Release Build, Test, Sign, Publish
 on:
   workflow_dispatch:
     inputs:
@@ -82,7 +82,7 @@ jobs:
       run: >
         Get-ChildItem -Path ${env:NUPKG_DIRECTORY} -Recurse -Force
 
-    - name: Upload unsigned nupkgs
+    - name: Upload unsigned nupkgs to artifacts
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: build-artifacts
@@ -129,7 +129,7 @@ jobs:
       run: >
         ./sign/sign code azure-key-vault *.nupkg --base-directory ${env:NUPKG_DIRECTORY} --azure-key-vault-url "${{ secrets.AZURE_KEY_VAULT_URL }}" --azure-key-vault-certificate "${{ secrets.AZURE_KEY_VAULT_CERTIFICATE }}"
 
-    - name: Upload signed nupkgs
+    - name: Upload signed nupkgs to artifacts
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: signed-artifacts
@@ -164,11 +164,17 @@ jobs:
       run: >
         Get-ChildItem -Path ${env:NUPKG_DIRECTORY} -Filter *.nupkg -Recurse -Force
 
+    - name: Authenticate to nuget
+      uses: NuGet/login@d883674c922ba7e5cc0370927b10a33b67d54677 # v1.0.0
+      id: nugetlogin
+      with:
+        user: ${{secrets.NUGET_USERNAME}}
+
       # Use --skip-duplicate to prevent errors if a package with the same version already exists.
       # This allows a retory of a failed workflow, already published packages will be skipped without error.
-    - name: Publish NuGet package
+    - name: Publish NuGet packages
       shell: pwsh
       run: >
         foreach($file in (Get-ChildItem "${env:NUPKG_DIRECTORY}" -Recurse -Filter *.nupkg)) {
-          dotnet nuget push $file --api-key "${{ secrets.NUGET_APIKEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+          dotnet nuget push $file --api-key "${{ steps.nugetlogin.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
         }
