@@ -1,5 +1,9 @@
 # Version History
 
+## 0.9.9
+
+* Bump System.Text.Json from 9.0.8 to 9.0.9.
+
 ## 0.9.8
 
 ### Features
