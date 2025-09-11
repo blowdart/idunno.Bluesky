@@ -22,8 +22,6 @@
 
 * Fixed `TimeStampIdentifier` generation to generate correct values.
 
-### Documentation
-
 ### Breaking Changes
 
 #### idunno.AtProto
