@@ -1,5 +1,13 @@
 # Version History
 
+## 1.0.0
+
+### Features
+
+#### idunno.Bluesky
+
+* Add support for Tags in Post() methods.
+
 ## 0.9.9
 
 * Bump System.Text.Json from 9.0.8 to 9.0.9.

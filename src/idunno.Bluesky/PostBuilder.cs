@@ -47,19 +47,22 @@ namespace idunno.Bluesky
         /// <param name="images">A collection of <see cref="EmbeddedImage"/>s to attach to the post, if any.</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
         /// <param name="labels">Any self labels to apply to the post.</param>
+        /// <param name="tags">Any tags to apply to the post.</param>
         public PostBuilder(
             string? text,
             string lang,
             DateTimeOffset? createdAt = null,
             ICollection<EmbeddedImage>? images = null,
             ICollection<Facet>? facets = null,
-            PostSelfLabels? labels = null) : this(
+            PostSelfLabels? labels = null,
+            ICollection<string>? tags = null) : this(
                 text: text,
                 langs: [lang],
                 createdAt: createdAt,
                 images: images,
                 facets: facets,
-                labels: labels)
+                labels: labels,
+                tags: tags)
         {
         }
 
@@ -72,6 +75,7 @@ namespace idunno.Bluesky
         /// <param name="images">A collection of <see cref="EmbeddedImage"/>s to attach to the post, if any.</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
         /// <param name="labels">Any self labels to apply to the post.</param>
+        /// <param name="tags">Any tags to apply to the post.</param>
         /// <exception cref="ArgumentException">Thrown when the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long.</exception>
         /// <exception cref="ArgumentNullException">Thrown when the <paramref name="text"/> is null or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when text for the post is too long or too many images are specified.</exception>
@@ -81,7 +85,8 @@ namespace idunno.Bluesky
             DateTimeOffset? createdAt = null,
             ICollection<EmbeddedImage>? images = null,
             ICollection<Facet>? facets = null,
-            PostSelfLabels? labels = null)
+            PostSelfLabels? labels = null,
+            ICollection<string>? tags = null)
         {
             DateTimeOffset postDate;
 
@@ -150,6 +155,11 @@ namespace idunno.Bluesky
             if (labels is not null)
             {
                 _post.SetSelfLabels(labels);
+            }
+
+            if (tags is not null)
+            {
+                _post.Tags = [.. tags];
             }
 
             if (langs is not null)
@@ -358,6 +368,48 @@ namespace idunno.Bluesky
                     else
                     {
                         _embeddedImages.Clear();
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets a flag indicating whether this instance has any tags
+        /// </summary>
+        [MemberNotNullWhen(true, nameof(Tags))]
+        public bool HasTags => _post.Tags is not null && _post.Tags.Count > 0;
+
+        /// <summary>
+        /// Gets a copy of the tags for the post.
+        /// </summary>
+        public IEnumerable<string>? Tags
+        {
+            get
+            {
+                lock (_syncLock)
+                {
+                    if (_post.Tags is null)
+                    {
+                        return null;
+                    }
+                    else
+                    {
+                        return new List<string>(_post.Tags).AsReadOnly();
+                    }
+                }
+            }
+
+            internal set
+            {
+                lock (_syncLock)
+                {
+                    if (value is not null)
+                    {
+                        _post.Tags = [.. value];
+                    }
+                    else
+                    {
+                        _post.Tags = null;
                     }
                 }
             }

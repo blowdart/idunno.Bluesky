@@ -114,6 +114,11 @@ namespace idunno.Bluesky
         /// The maximum number of bookmarks that can be returned from GetBookmarks.
         /// </summary>
         public static readonly int Bookmarks = 100;
+
+        /// <summary>
+        /// The maximum number of tags that a post can contain.
+        /// </summary>
+        public static readonly int Tags = 8;
     }
 
     /// <summary>

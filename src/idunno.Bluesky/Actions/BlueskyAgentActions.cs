@@ -425,6 +425,7 @@ namespace idunno.Bluesky
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
         /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
+        /// <param name="tags">Any optional tags to apply to the post.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -439,6 +440,7 @@ namespace idunno.Bluesky
             ICollection<PostGateRule>? postGateRules = null,
             InteractionPreferences? interactionPreferences = null,
             PostSelfLabels? labels = null,
+            ICollection<string>? tags = null,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
@@ -449,7 +451,17 @@ namespace idunno.Bluesky
                 langsArray = [langs];
             }
 
-            return await Post(text, createdAt, langsArray, threadGateRules, postGateRules, interactionPreferences, labels, extractFacets, cancellationToken).ConfigureAwait(false);
+            return await Post(
+                text,
+                createdAt,
+                langsArray,
+                threadGateRules,
+                postGateRules,
+                interactionPreferences,
+                labels,
+                tags,
+                extractFacets,
+                cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -462,6 +474,7 @@ namespace idunno.Bluesky
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
         /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
+        /// <param name="tags">Any optional tags to apply to the post.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -476,6 +489,7 @@ namespace idunno.Bluesky
             ICollection<PostGateRule>? postGateRules = null,
             InteractionPreferences? interactionPreferences = null,
             PostSelfLabels? labels = null,
+            ICollection<string>? tags = null,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
@@ -512,6 +526,7 @@ namespace idunno.Bluesky
                 postGateRules: postGateRules,
                 interactionPreferences: interactionPreferences,
                 labels: labels,
+                tags: tags,
                 extractFacets: extractFacets,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -527,6 +542,7 @@ namespace idunno.Bluesky
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
         /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
+        /// <param name="tags">Any optional tags to apply to the post.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -542,6 +558,7 @@ namespace idunno.Bluesky
             ICollection<PostGateRule>? postGateRules = null,
             InteractionPreferences? interactionPreferences = null,
             PostSelfLabels? labels = null,
+            ICollection<string>? tags = null,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
@@ -575,6 +592,7 @@ namespace idunno.Bluesky
                 postGateRules: postGateRules,
                 interactionPreferences: interactionPreferences,
                 labels: labels,
+                tags: tags,
                 extractFacets: extractFacets,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -590,6 +608,7 @@ namespace idunno.Bluesky
         /// <param name="postGateRules">Any post gating rules to apply to the post, if any.</param>
         /// <param name="interactionPreferences">Any default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
+        /// <param name="tags">Any optional tags to apply to the post.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -608,6 +627,7 @@ namespace idunno.Bluesky
             ICollection<PostGateRule>? postGateRules = null,
             InteractionPreferences? interactionPreferences = null,
             PostSelfLabels? labels = null,
+            ICollection<string>? tags = null,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
@@ -661,7 +681,8 @@ namespace idunno.Bluesky
                 text,
                 createdAt: creationDateTime,
                 langs : langs,
-                embeddedRecord: embeddedImages);
+                embeddedRecord: embeddedImages,
+                tags: tags);
 
             if (extractFacets)
             {
@@ -692,7 +713,8 @@ namespace idunno.Bluesky
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
         /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
-        /// <param name="labels">Optional self label settings for the post media content.</param>
+        /// <param name="labels">Any optional self label settings for the post media content.</param>
+        /// <param name="tags">Any optional tags to apply to the post.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -707,6 +729,7 @@ namespace idunno.Bluesky
             ICollection<PostGateRule>? postGateRules = null,
             InteractionPreferences? interactionPreferences = null,
             PostSelfLabels? labels = null,
+            ICollection<string>? tags = null,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
@@ -744,7 +767,8 @@ namespace idunno.Bluesky
                 text,
                 createdAt: creationDateTime,
                 langs: langs,
-                embeddedRecord: video);
+                embeddedRecord: video,
+                tags: tags);
 
             if (extractFacets && text is not null)
             {
@@ -776,6 +800,7 @@ namespace idunno.Bluesky
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
         /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
+        /// <param name="tags">Any optional tags to apply to the post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="externalCard"/> is null.</exception>
@@ -788,6 +813,7 @@ namespace idunno.Bluesky
             ICollection<PostGateRule>? postGateRules = null,
             InteractionPreferences? interactionPreferences = null,
             PostSelfLabels? labels = null,
+            ICollection<string>? tags = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(externalCard);
@@ -802,6 +828,7 @@ namespace idunno.Bluesky
                 interactionPreferences: interactionPreferences,
                 extractFacets: false,
                 labels: labels,
+                tags: tags,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -816,6 +843,7 @@ namespace idunno.Bluesky
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
         /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
+        /// <param name="tags">Optional of tags to apply to the post.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -832,6 +860,7 @@ namespace idunno.Bluesky
             InteractionPreferences? interactionPreferences = null,
             PostSelfLabels? labels = null,
             bool extractFacets = true,
+            ICollection<string>? tags = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(text);
@@ -856,7 +885,7 @@ namespace idunno.Bluesky
                 facets = await _facetExtractor.ExtractFacets(text, cancellationToken).ConfigureAwait(false);
             }
 
-            var postBuilder = new PostBuilder(text, createdAt : createdAt, langs: langs, facets: facets);
+            var postBuilder = new PostBuilder(text, createdAt : createdAt, langs: langs, facets: facets, tags: tags);
 
             postBuilder.EmbedRecord(externalCard);
 
