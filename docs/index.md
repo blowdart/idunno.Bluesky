@@ -10,7 +10,7 @@ Let's make your first post to Bluesky via the API in under 5 minutes.
    ```PowerShell
    dotnet new console -n HelloBluesky
    cd HelloBluesky
-   dotnet add package idunno.Bluesky --prerelease
+   dotnet add package idunno.Bluesky
    ```
 
 # [Visual Studio](#tab/visualStudio)
@@ -19,12 +19,10 @@ Let's make your first post to Bluesky via the API in under 5 minutes.
 1. In the "**Create a new project**" dialog select C# as the language, choose **Console App** as the project type then click Next.
 1. In the "**Configure your new project**" dialog name the project `HelloBluesky` and click Next.
 1. In the "**Additional information**" dialog choose a Framework as .NET 8.0, uncheck the "Do not use top level statements" check box then click **Create**.
-1. Under the **Project** menu Select **Manage nuget packages**, select the *Browse* tab, ensure that the Include prelease checkbox is checked. Search for `idunno.Bluesky`, and click **Install**.
+1. Under the **Project** menu Select **Manage nuget packages**, select the *Browse* tab. Search for `idunno.Bluesky`, and click **Install**.
 1. Close the **Manage nuget packages** dialog.
 
 # [Visual Studio Code](#tab/vsCode)
-
-First configure VS Code to [allow pre-release nuget packages](https://code.visualstudio.com/docs/csharp/package-management#_include-prerelease-package-versions).
 
 1. Create a new .NET Command Line project by opening the Command Palette (**Ctrl + Shift + P**) and search for **.NET New Project**
 1. In the Create a new .NET Project template search for and select **Console App**
