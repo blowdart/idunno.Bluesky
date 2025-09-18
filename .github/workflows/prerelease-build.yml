@@ -132,7 +132,7 @@ jobs:
         retention-days: 7
 
   publish:
-    name: Publish to nuget
+    name: Publish to GitHub Pacakges
     needs: sign
     runs-on: ubuntu-latest
     if:  ${{ inputs.perform_publish }}
@@ -163,7 +163,7 @@ jobs:
 
     - name: Setup GitHub Packages as NuGet Source
       shell: pwsh
-      run: >
+      run: |
         dotnet new nugetconfig
         dotnet nuget remove source nuget
         dotnet nuget add source https://nuget.pkg.github.com/blowdart/index.json --name github
