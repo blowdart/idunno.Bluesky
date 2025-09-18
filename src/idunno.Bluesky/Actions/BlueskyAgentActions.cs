@@ -1872,12 +1872,9 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            PostBuilder postBuilder = new()
+            PostBuilder postBuilder = new(text, lang: Thread.CurrentThread.CurrentUICulture.Name, tags: tags)
             {
                 QuotePost = strongReference,
-                Text = text,
-                Langs = [Thread.CurrentThread.CurrentUICulture.Name],
-                Tags = tags
             };
 
             if (images is not null)

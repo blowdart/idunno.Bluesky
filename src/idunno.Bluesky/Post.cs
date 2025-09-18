@@ -39,6 +39,88 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
+        /// Creates a new instance of <see cref="Post"/>.
+        /// </summary>
+        /// <param name="text">The text for the post.</param>
+        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
+        /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
+        /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
+        /// <param name="embeddedRecord">The embedded record for the post, if any.</param>
+        /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
+        /// <param name="tags">A collection of tags to apply to the post, if any.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created on.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is null and <paramref name="embeddedRecord"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        ///    Thrown when <paramref name="text"/> exceeds the maximum length or.
+        ///    <paramref name="tags"/> exceeds the maximum number of tags or has a value that exceeds the maximum tag length.
+        /// </exception>
+        /// <remarks>
+        ///<para><paramref name="text"/> may be an empty string, if there are <paramref name="embeddedRecord"/> is not null.</para>
+        /// </remarks>
+        [JsonConstructor]
+        public Post(
+            string? text,
+            DateTimeOffset createdAt,
+            ICollection<Facet>? facets = null,
+            ICollection<string>? langs = null,
+            EmbeddedBase? embeddedRecord = null,
+            ReplyReferences? reply = null,
+            SelfLabels? labels = null,
+            ICollection<string>? tags = null) : base(createdAt)
+        {
+            if (string.IsNullOrWhiteSpace(text) && embeddedRecord is null)
+            {
+                throw new ArgumentNullException(nameof(text));
+            }
+
+            if (!string.IsNullOrEmpty(text) && (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(text),
+                    $"text cannot have be longer than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
+            }
+
+            Text = text;
+            Reply = reply;
+            Facets = facets;
+            Langs = langs;
+
+            EmbeddedRecord = embeddedRecord;
+
+            if (labels is not null)
+            {
+                Labels = labels;
+            }
+
+            if (tags is not null)
+            {
+                List<string> tagList = [.. tags];
+
+                if (tagList.Count > Maximum.ExternalTagsInPost)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(tags), $"Cannot contain more than {Maximum.ExternalTagsInPost} tags.");
+                }
+
+                int position = 0;
+                foreach (string tag in tagList)
+                {
+                    if (string.IsNullOrEmpty(tag))
+                    {
+                        throw new ArgumentException($"Tag[{position}] is null or empty", nameof(tags));
+                    }
+
+                    if (tag.Length > Maximum.TagLengthInCharacters || tag.GetGraphemeLength() > Maximum.TagLengthInGraphemes)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(tags), $"Tag[{position}] is longer than {Maximum.TagLengthInCharacters} characters or {Maximum.TagLengthInGraphemes} graphemes");
+                    }
+                    position++;
+                }
+
+                Tags = tagList;
+            }
+        }
+
+        /// <summary>
         /// Creates a new instance of <see cref="Post"/> from the specified <paramref name="post"/>.
         /// </summary>
         /// <param name="post">The <see cref="Post"/> to create the new instance from.</param>
@@ -132,88 +214,6 @@ namespace idunno.Bluesky
             SelfLabels? labels = null,
             ICollection<string>? tags = null) : this(text, DateTimeOffset.Now, facets, langs, embeddedRecord, reply, labels, tags)
         {
-        }
-
-        /// <summary>
-        /// Creates a new instance of <see cref="Post"/>.
-        /// </summary>
-        /// <param name="text">The text for the post.</param>
-        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
-        /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
-        /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
-        /// <param name="embeddedRecord">The embedded record for the post, if any.</param>
-        /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
-        /// <param name="tags">A collection of tags to apply to the post, if any.</param>
-        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created on.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is null and <paramref name="embeddedRecord"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">
-        ///    Thrown when <paramref name="text"/> exceeds the maximum length or.
-        ///    <paramref name="tags"/> exceeds the maximum number of tags or has a value that exceeds the maximum tag length.
-        /// </exception>
-        /// <remarks>
-        ///<para><paramref name="text"/> may be an empty string, if there are <paramref name="embeddedRecord"/> is not null.</para>
-        /// </remarks>
-        [JsonConstructor]
-        public Post(
-            string? text,
-            DateTimeOffset createdAt,
-            ICollection<Facet>? facets = null,
-            ICollection<string>? langs = null,
-            EmbeddedBase? embeddedRecord = null,
-            ReplyReferences? reply = null,
-            SelfLabels? labels = null,
-            ICollection<string>? tags = null) : base(createdAt)
-        {
-            if (string.IsNullOrWhiteSpace(text) && embeddedRecord is null)
-            {
-                throw new ArgumentNullException(nameof(text));
-            }
-
-            if (!string.IsNullOrEmpty(text) && (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(text),
-                    $"text cannot have be longer than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
-            }
-
-            Text = text;
-            Reply = reply;
-            Facets = facets;
-            Langs = langs;
-
-            EmbeddedRecord = embeddedRecord;
-
-            if (labels is not null)
-            {
-                Labels = labels;
-            }
-
-            if (tags is not null)
-            {
-                List<string> tagList = [.. tags];
-
-                if (tagList.Count > Maximum.ExternalTagsInPost)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(tags), $"Cannot contain more than {Maximum.ExternalTagsInPost} tags.");
-                }
-
-                int position = 0;
-                foreach (string tag in tagList)
-                {
-                    if (string.IsNullOrEmpty(tag))
-                    {
-                        throw new ArgumentException($"Tag[{position}] is null or empty", nameof(tags));
-                    }
-
-                    if (tag.Length > Maximum.TagLengthInCharacters || tag.GetGraphemeLength() > Maximum.TagLengthInGraphemes)
-                    {
-                        throw new ArgumentException($"Tag[{position}] is longer than {Maximum.TagLengthInCharacters} characters or {Maximum.TagLengthInGraphemes} graphemes", nameof(tags));
-                    }
-                    position++;
-                }
-
-                Tags = tagList;
-            }
         }
 
         /// <summary>

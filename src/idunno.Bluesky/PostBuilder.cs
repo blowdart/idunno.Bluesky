@@ -133,9 +133,11 @@ namespace idunno.Bluesky
 
                 foreach (string tag in tags)
                 {
-                    ArgumentException.ThrowIfNullOrEmpty(tag);
-                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
-                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
+#pragma warning disable S3236 // Caller information arguments should not be provided explicitly
+                    ArgumentException.ThrowIfNullOrEmpty(tag, nameof(tags));
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters, nameof(tags));
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes, nameof(tags));
+#pragma warning restore S3236 // Caller information arguments should not be provided explicitly
                 }
             }
 
@@ -410,7 +412,7 @@ namespace idunno.Bluesky
                 }
             }
 
-            internal set
+            private set
             {
                 lock (_syncLock)
                 {

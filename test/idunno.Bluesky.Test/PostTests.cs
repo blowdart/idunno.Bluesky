@@ -8,6 +8,7 @@ using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.RichText;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace idunno.Bluesky.Test
 {
@@ -313,7 +314,7 @@ namespace idunno.Bluesky.Test
         {
             List<string> tags = [new('x', Maximum.TagLengthInGraphemes + 1)];
 
-            ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post("text", tags: tags));
+            ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("text", tags: tags));
 
             Assert.Equal("tags", caughtException.ParamName);
         }
@@ -323,7 +324,7 @@ namespace idunno.Bluesky.Test
         {
             List<string> tags = [new('x', Maximum.TagLengthInCharacters + 1)];
 
-            ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post("text", tags: tags));
+            ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("text", tags: tags));
 
             Assert.Equal("tags", caughtException.ParamName);
         }
@@ -638,6 +639,64 @@ namespace idunno.Bluesky.Test
             Assert.Equal(0, post.Length);
             Assert.Equal(0, post.GraphemeLength);
             Assert.Equal(0, post.Utf8Length); ;
+        }
+
+        [Fact]
+        public void ConstructorThrowsWhenTagsContainTooManyTags()
+        {
+            List<string> tags = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+
+            ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("text", createdAt: DateTimeOffset.UtcNow, tags: tags));
+
+            Assert.Equal("tags", caughtException.ParamName);
+        }
+
+        [Fact]
+        public void ConstructorThrowsWhenTagsContainEmptyTag()
+        {
+            List<string> tags = ["1", "2", "3", "4", "5", "6", "7", string.Empty];
+
+            ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post("text", createdAt: DateTimeOffset.UtcNow, tags: tags));
+
+            Assert.Equal("tags", caughtException.ParamName);
+        }
+
+        [Fact]
+        public void ConstructorThrowsWhenTagsContainNullTag()
+        {
+            List<string> tags = ["1", "2", "3", "4", "5", "6", "7", null];
+
+            ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post("text", createdAt: DateTimeOffset.UtcNow, tags: tags));
+
+            Assert.Equal("tags", caughtException.ParamName);
+        }
+
+        [Fact]
+        public void ConstructorSetsTagProperty()
+        {
+            List<string> tags = ["1", "2", "3", "4", "5", "6", "7", "8"];
+
+            var actual = new Post("text", createdAt: DateTimeOffset.UtcNow, tags: tags);
+
+            Assert.Equal(tags, actual.Tags);
+        }
+
+        [Fact]
+        public void ConstructorThrowsWhenTagIsTooLongInCharacters()
+        {
+            string tag = new('a', Maximum.TagLengthInCharacters + 1);
+            ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("test", tags: [tag]));
+
+            Assert.Equal("tags", caughtException.ParamName);
+        }
+
+        [Fact]
+        public void ConstructorThrowsWhenTagIsTooLongInGraphemes()
+        {
+            string tag = new('a', Maximum.TagLengthInGraphemes + 1);
+            ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("test", tags: [tag]));
+
+            Assert.Equal("tags", caughtException.ParamName);
         }
     }
 }

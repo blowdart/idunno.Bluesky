@@ -236,5 +236,45 @@ namespace idunno.Bluesky.Test
                     ]);
             });
         }
+
+        [Fact]
+        public void ConstructorThrowsWhenAnEmptyTagIsPassed()
+        {
+            List<string> tags = [string.Empty];
+
+            ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new PostBuilder("text", tags: tags));
+
+            Assert.Equal("tags", caughtException.ParamName);
+        }
+
+        [Fact]
+        public void ConstructorThrowsWhenAnTooLongTagInGraphemesIsPassed()
+        {
+            List<string> tags = [new('x', Maximum.TagLengthInGraphemes + 1)];
+
+            ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new PostBuilder("text", tags: tags));
+
+            Assert.Equal("tags", caughtException.ParamName);
+        }
+
+        [Fact]
+        public void ConstructorThrowsWhenAnTooLongTagInCharactersIsPassed()
+        {
+            List<string> tags = [new('x', Maximum.TagLengthInCharacters + 1)];
+
+            ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new PostBuilder("text", tags: tags));
+
+            Assert.Equal("tags", caughtException.ParamName);
+        }
+
+        [Fact]
+        public void ConstructorSetsTagProperty()
+        {
+            List<string> tags = ["1", "2", "3", "4", "5", "6", "7", "8"];
+
+            var actual = new PostBuilder("text", createdAt: DateTimeOffset.UtcNow, tags: tags);
+
+            Assert.Equal(tags, actual.Tags);
+        }
     }
 }
