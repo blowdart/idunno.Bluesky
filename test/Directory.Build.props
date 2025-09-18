@@ -3,6 +3,7 @@
   <PropertyGroup>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <IsPublishable>False</IsPublishable>
+    <NoWarn>SPELL</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

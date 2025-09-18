@@ -507,7 +507,7 @@ namespace idunno.Bluesky.Test
 
             Assert.Equal("text", post.Text);
             Assert.NotNull(post.Langs);
-            Assert.Equal(2, post.Langs.Count());
+            Assert.Equal(2, post.Langs.Count);
             Assert.Contains("en-gb", post.Langs);
             Assert.Contains("en-us", post.Langs);
         }
