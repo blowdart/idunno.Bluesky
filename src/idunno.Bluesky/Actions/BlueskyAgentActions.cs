@@ -1100,9 +1100,13 @@ namespace idunno.Bluesky
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from the post text automatically.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a null or empty tag.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/>, <paramref name="text"/> or <paramref name="image"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        ///   Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes,
+        ///   or <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
+        /// </exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> ReplyTo(
             StrongReference parent,
             string text,
@@ -1117,6 +1121,18 @@ namespace idunno.Bluesky
 
             ArgumentNullException.ThrowIfNull(parent);
             ArgumentNullException.ThrowIfNull(image);
+
+            if (tags is not null)
+            {
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tags.Count, Maximum.TagsInPost);
+
+                foreach (string tag in tags)
+                {
+                    ArgumentException.ThrowIfNullOrEmpty(tag);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
+                }
+            }
 
             if (!IsAuthenticated)
             {
@@ -1144,10 +1160,13 @@ namespace idunno.Bluesky
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from the post text automatically.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown <paramref name="text"/> is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown <paramref name="text"/> is null or empty, or <paramref name="tags"/> contains a null or empty tag.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        ///   Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes, or
+        ///   <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
+        /// </exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> ReplyTo(
             StrongReference parent,
             string text,
@@ -1162,6 +1181,18 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(parent);
             ArgumentNullException.ThrowIfNull(images);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(images.Count, Maximum.ImagesInPost);
+
+            if (tags is not null)
+            {
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tags.Count, Maximum.TagsInPost);
+
+                foreach (string tag in tags)
+                {
+                    ArgumentException.ThrowIfNullOrEmpty(tag);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
+                }
+            }
 
             if (!IsAuthenticated)
             {
@@ -1193,6 +1224,18 @@ namespace idunno.Bluesky
             if (images != null)
             {
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(images.Count, Maximum.ImagesInPost);
+            }
+
+            if (tags is not null)
+            {
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tags.Count, Maximum.TagsInPost);
+
+                foreach (string tag in tags)
+                {
+                    ArgumentException.ThrowIfNullOrEmpty(tag);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
+                }
             }
 
             if (!IsAuthenticated)
@@ -1689,9 +1732,13 @@ namespace idunno.Bluesky
         /// <param name="tags">Any tags to apply to the quote post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a null or empty tag.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        ///   Thrown when the text length is longer than the maximum permitted or
+        ///   <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
+        /// </exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is longer than the maximum permitted.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(
             StrongReference strongReference,
             string text,
@@ -1699,6 +1746,18 @@ namespace idunno.Bluesky
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
+
+            if (tags is not null)
+            {
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tags.Count, Maximum.TagsInPost);
+
+                foreach (string tag in tags)
+                {
+                    ArgumentException.ThrowIfNullOrEmpty(tag);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
+                }
+            }
 
             return await Quote(
                 strongReference: strongReference,
@@ -1717,10 +1776,13 @@ namespace idunno.Bluesky
         /// <param name="tags">Any tags to apply to the quote post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is null or <paramref name="tags"/> contains a null or empty tag.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="image"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        ///   Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes or
+        ///   <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
+        /// </exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(
             StrongReference strongReference,
             string text,
@@ -1731,6 +1793,18 @@ namespace idunno.Bluesky
             ArgumentNullException.ThrowIfNull(strongReference);
             ArgumentException.ThrowIfNullOrEmpty(text);
             ArgumentNullException.ThrowIfNull(image);
+
+            if (tags is not null)
+            {
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tags.Count, Maximum.TagsInPost);
+
+                foreach (string tag in tags)
+                {
+                    ArgumentException.ThrowIfNullOrEmpty(tag);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
+                }
+            }
 
             return await Quote(
                 strongReference: strongReference,
@@ -1749,9 +1823,13 @@ namespace idunno.Bluesky
         /// <param name="tags">Any tags to apply to the quote post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a null or empty tag.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null or <paramref name="text"/> is null or empty.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        ///   Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes or
+        ///   <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
+        /// </exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(
             StrongReference strongReference,
             string text,
@@ -1775,6 +1853,18 @@ namespace idunno.Bluesky
             if (images is not null && images.Count == 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(images), $"cannot be an empty collection.");
+            }
+
+            if (tags is not null)
+            {
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tags.Count, Maximum.TagsInPost);
+
+                foreach (string tag in tags)
+                {
+                    ArgumentException.ThrowIfNullOrEmpty(tag);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
+                }
             }
 
             if (!IsAuthenticated)
@@ -1806,7 +1896,11 @@ namespace idunno.Bluesky
         /// <param name="tags">Any tags to apply to the quote post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a null or empty tag.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is null</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        ///   Thrown when <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
+        /// </exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(
             StrongReference strongReference,
@@ -1815,6 +1909,18 @@ namespace idunno.Bluesky
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(image);
+
+            if (tags is not null)
+            {
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tags.Count, Maximum.TagsInPost);
+
+                foreach (string tag in tags)
+                {
+                    ArgumentException.ThrowIfNullOrEmpty(tag);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
+                }
+            }
 
             if (!IsAuthenticated)
             {
@@ -1836,7 +1942,9 @@ namespace idunno.Bluesky
         /// <param name="tags">Any tags to apply to the quote post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a null or empty tag.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="images"/> has too many images, or <paramref name="tags"/> has too many tags, or a tag that exceeds the maximum length.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -1858,9 +1966,21 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            if (images?.Count > Maximum.ImagesInPost)
+            if (images is not null)
             {
-                throw new ArgumentException($"Cannot have more than {Maximum.ImagesInPost} images", nameof(images));
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(images.Count, Maximum.ImagesInPost);
+            }
+
+            if (tags is not null)
+            {
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tags.Count, Maximum.TagsInPost);
+
+                foreach (string tag in tags)
+                {
+                    ArgumentException.ThrowIfNullOrEmpty(tag);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
+                }
             }
 
             // This is a special case as there is no post text, it cannot go through the normal post APIs, it must go through the repo.ApplyWrites() api.

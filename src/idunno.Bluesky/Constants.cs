@@ -118,7 +118,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// The maximum number of tags that a post can contain.
         /// </summary>
-        public static readonly int Tags = 8;
+        public static readonly int TagsInPost = 8;
     }
 
     /// <summary>

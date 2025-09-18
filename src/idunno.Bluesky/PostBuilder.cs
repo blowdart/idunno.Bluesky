@@ -76,9 +76,8 @@ namespace idunno.Bluesky
         /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
         /// <param name="labels">Any self labels to apply to the post.</param>
         /// <param name="tags">Any tags to apply to the post.</param>
-        /// <exception cref="ArgumentException">Thrown when the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when the <paramref name="text"/> is null or empty.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when text for the post is too long or too many images are specified.</exception>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long or <paramref name="tags"/> contains a null or empty tag.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> for the post is too long or <paramref name="images"/> contains too many images, or <paramref name="tags"/> has too many tags, or a tag that exceeds the maximum length.</exception>
         public PostBuilder(
             string? text,
             ICollection<string>? langs = null,
@@ -126,6 +125,18 @@ namespace idunno.Bluesky
             if (langs is not null)
             {
                 ArgumentOutOfRangeException.ThrowIfZero(langs.Count);
+            }
+
+            if (tags is not null)
+            {
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tags.Count, Maximum.TagsInPost);
+
+                foreach (string tag in tags)
+                {
+                    ArgumentException.ThrowIfNullOrEmpty(tag);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
+                }
             }
 
             if (!string.IsNullOrEmpty(text))
@@ -1323,6 +1334,10 @@ namespace idunno.Bluesky
         /// Converts the value of this instance to a <see cref="Post"/>.
         /// </summary>
         /// <returns>A <see cref="Post"/> whose value is the same as this instance.</returns>
+        /// <exception cref="PostBuilderException">
+        ///  Thrown when <see cref="Text"/> is null or empty and this instance has no images, embedded records or video, or
+        ///  this instance is both a reply and a quote, or this instance has both images and video.
+        /// </exception>
         public Post ToPost()
         {
             lock (_syncLock)
