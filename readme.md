@@ -102,6 +102,17 @@ replacing `<package-path>` with the file name you wish to verify.
 minisign -Vm <package-path> -P RWTsT4BHHChe/Rj/GBAuZHg3RaZFnfBDqaZ7KzLvr44a7mO6fLCxSAFc
 ```
 
+## Pre-releases
+
+If you want to test pre-releases you can find them in the [GitHub Packages feed](https://github.com/blowdart/idunno.Bluesky/pkgs/nuget).
+GitHub's documentation will help you learn more about [working
+with the GitHub registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-nuget-registry)
+
+The package source URI is https://nuget.pkg.github.com/blowdart/index.json
+
+Please note that nupkgs in the GitHub Packages feed are signed with [Trusted Signing](https://azure.microsoft.com/en-us/products/trusted-signing).
+
+
 ## License
 
 `idunno.Bluesky`, `idunno.AtProto` and `idunno.AtProto.OAuthCallBack` are available under the MIT license, see the [LICENSE](LICENSE) file for more information.
