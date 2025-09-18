@@ -22,6 +22,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		LICENSE = LICENSE
 		minisign.pub = minisign.pub
 		nuget.config = nuget.config
+		nuget.config.github = nuget.config.github
 		purge.ps1 = purge.ps1
 		readme.md = readme.md
 		SECURITY.md = SECURITY.md
@@ -77,6 +78,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 		.github\workflows\dependency-review.yml = .github\workflows\dependency-review.yml
 		.github\workflows\generate-publish-docs.yml = .github\workflows\generate-publish-docs.yml
 		.github\workflows\openssf-scorecard.yml = .github\workflows\openssf-scorecard.yml
+		.github\workflows\prerelease-build.yml = .github\workflows\prerelease-build.yml
 		.github\workflows\release-build.yml = .github\workflows\release-build.yml
 	EndProjectSection
 EndProject
