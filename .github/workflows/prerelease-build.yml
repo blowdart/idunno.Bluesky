@@ -28,7 +28,7 @@ jobs:
     permissions:
       contents: read
 
-    name: Build release
+    name: Build pre-release
     runs-on: ubuntu-latest
     steps:
     - name: Harden Runner
@@ -132,7 +132,7 @@ jobs:
         retention-days: 7
 
   publish:
-    name: Publish to GitHub Pacakges
+    name: Publish to GitHub Packages
     needs: sign
     runs-on: ubuntu-latest
     if:  ${{ inputs.perform_publish }}
