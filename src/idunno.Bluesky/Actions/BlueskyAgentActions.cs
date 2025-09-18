@@ -1058,7 +1058,8 @@ namespace idunno.Bluesky
         /// Creates a simple Bluesky post record with the specified <paramref name="text"/>, in reply to the <paramref name="parent"/> post.
         /// </summary>
         /// <param name="parent">A <see cref="StrongReference"/> to the parent post that the new post will be in reply to.</param>
-        /// <param name="text">The text for the new reply</param>
+        /// <param name="text">The text for the new reply.</param>
+        /// <param name="tags">Any tags to apply to the reply.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from the post text automatically.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -1068,6 +1069,7 @@ namespace idunno.Bluesky
         public async Task<AtProtoHttpResult<CreateRecordResult>> ReplyTo(
             StrongReference parent,
             string text,
+            ICollection<string>? tags = null,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
@@ -1096,6 +1098,7 @@ namespace idunno.Bluesky
         /// <param name="parent">A <see cref="StrongReference"/> to the parent post that the new post will be in reply to.</param>
         /// <param name="text">The text for the new reply</param>
         /// <param name="image">An image to attach to the reply.</param>
+        /// <param name="tags">Any tags to apply to the reply.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from the post text automatically.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -1106,6 +1109,7 @@ namespace idunno.Bluesky
             StrongReference parent,
             string text,
             EmbeddedImage image,
+            ICollection<string>? tags = null,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
@@ -1137,6 +1141,7 @@ namespace idunno.Bluesky
         /// <param name="parent">A <see cref="StrongReference"/> to the parent post that the new post will be in reply to.</param>
         /// <param name="text">The text for the new post</param>
         /// <param name="images">Any images to attach to the post.</param>
+        /// <param name="tags">Any tags to apply to the reply.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from the post text automatically.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -1148,6 +1153,7 @@ namespace idunno.Bluesky
             StrongReference parent,
             string text,
             ICollection<EmbeddedImage> images,
+            ICollection<string>? tags = null,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
@@ -1175,6 +1181,7 @@ namespace idunno.Bluesky
             StrongReference parent,
             string text,
             ICollection<EmbeddedImage>? images = null,
+            ICollection<string>? tags = null,
             bool extractFacets = true,
             CancellationToken cancellationToken = default)
         {
@@ -1205,7 +1212,7 @@ namespace idunno.Bluesky
                     replyReferencesResult.RateLimit);
             }
 
-            PostBuilder postBuilder = new(text: text, langs: null, createdAt: null, labels: null)
+            PostBuilder postBuilder = new(text: text, langs: null, createdAt: null, labels: null, tags: tags)
             {
                 InReplyTo = replyReferencesResult.Result,
             };
@@ -1679,16 +1686,26 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="strongReference">A <see cref="StrongReference"/> to the post to be quoted.</param>
         /// <param name="text">The text for the new post.</param>
+        /// <param name="tags">Any tags to apply to the quote post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is longer than the maximum permitted.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(StrongReference strongReference, string text, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(
+            StrongReference strongReference,
+            string text,
+            ICollection<string> tags,
+            CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
 
-            return await Quote(strongReference, text, images: null, cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await Quote(
+                strongReference: strongReference,
+                text: text,
+                images: null,
+                tags: tags,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1697,19 +1714,30 @@ namespace idunno.Bluesky
         /// <param name="strongReference">A <see cref="StrongReference"/> to the post to be quoted.</param>
         /// <param name="text">The text for the post</param>
         /// <param name="image">The image to attach to the post.</param>
+        /// <param name="tags">Any tags to apply to the quote post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="image"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(StrongReference strongReference, string text, EmbeddedImage image, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(
+            StrongReference strongReference,
+            string text,
+            EmbeddedImage image,
+            ICollection<string> tags,
+            CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
             ArgumentException.ThrowIfNullOrEmpty(text);
             ArgumentNullException.ThrowIfNull(image);
 
-            return await Quote(strongReference, text, [image], cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await Quote(
+                strongReference: strongReference,
+                text: text,
+                images: [image],
+                tags: tags,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1718,12 +1746,18 @@ namespace idunno.Bluesky
         /// <param name="strongReference">A <see cref="StrongReference"/> to the post to be quoted.</param>
         /// <param name="text">The text for the new post</param>
         /// <param name="images">Any images to attach to the post.</param>
+        /// <param name="tags">Any tags to apply to the quote post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null or <paramref name="text"/> is null or empty.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes.</exception>
-        public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(StrongReference strongReference, string text, ICollection<EmbeddedImage>? images, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(
+            StrongReference strongReference,
+            string text,
+            ICollection<EmbeddedImage>? images,
+            ICollection<string>? tags,
+            CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
             ArgumentNullException.ThrowIfNull(text);
@@ -1752,7 +1786,8 @@ namespace idunno.Bluesky
             {
                 QuotePost = strongReference,
                 Text = text,
-                Langs = [Thread.CurrentThread.CurrentUICulture.Name]
+                Langs = [Thread.CurrentThread.CurrentUICulture.Name],
+                Tags = tags
             };
 
             if (images is not null)
@@ -1768,6 +1803,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="strongReference">A <see cref="StrongReference"/> to the post to be quoted.</param>
         /// <param name="image">The image to attach to the quote.</param>
+        /// <param name="tags">Any tags to apply to the quote post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is null</exception>
@@ -1775,6 +1811,7 @@ namespace idunno.Bluesky
         public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(
             StrongReference strongReference,
             EmbeddedImage image,
+            ICollection<string>? tags = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(image);
@@ -1784,14 +1821,15 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            return await Quote(strongReference, [image], cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await Quote(strongReference, [image], tags: tags, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Creates an Bluesky post record quoting the post identified by <see cref="StrongReference"/>.
         /// </summary>
         /// <param name="strongReference">A <see cref="StrongReference"/> to the post to be quoted.</param>
-        /// <param name="images">Any images to attach to the post.</param>
+        /// <param name="images">Any images to attach to the quote post.</param>
+        /// <param name="tags">Any tags to apply to the quote post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null</exception>
@@ -1806,6 +1844,7 @@ namespace idunno.Bluesky
         public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(
             StrongReference strongReference,
             ICollection<EmbeddedImage>? images = null,
+            ICollection<string>? tags = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
@@ -1825,7 +1864,8 @@ namespace idunno.Bluesky
             {
                 EmbeddedRecord = new EmbeddedRecord(strongReference),
                 Text = string.Empty,
-                CreatedAt = DateTimeOffset.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow,
+                Tags = tags
             };
 
             if (images is not null)
