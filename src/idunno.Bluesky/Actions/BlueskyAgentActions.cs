@@ -12,10 +12,7 @@ using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.RichText;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Record;
-using System;
-using static System.Net.Mime.MediaTypeNames;
 using idunno.Bluesky.Feed;
-using Microsoft.AspNetCore.WebUtilities;
 
 namespace idunno.Bluesky
 {
@@ -1088,7 +1085,8 @@ namespace idunno.Bluesky
                 parent: parent,
                 text:text,
                 images:null,
-                extractFacets:extractFacets,
+                tags: tags,
+                extractFacets: extractFacets,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -1131,6 +1129,7 @@ namespace idunno.Bluesky
                 parent: parent,
                 text: text,
                 images: images,
+                tags: tags,
                 extractFacets: extractFacets,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -1173,6 +1172,7 @@ namespace idunno.Bluesky
                 parent: parent,
                 text: text,
                 images: images,
+                tags: tags,
                 extractFacets: extractFacets,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -1695,7 +1695,7 @@ namespace idunno.Bluesky
         public async Task<AtProtoHttpResult<CreateRecordResult>> Quote(
             StrongReference strongReference,
             string text,
-            ICollection<string> tags,
+            ICollection<string>? tags = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
@@ -1725,7 +1725,7 @@ namespace idunno.Bluesky
             StrongReference strongReference,
             string text,
             EmbeddedImage image,
-            ICollection<string> tags,
+            ICollection<string>? tags = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
@@ -1756,7 +1756,7 @@ namespace idunno.Bluesky
             StrongReference strongReference,
             string text,
             ICollection<EmbeddedImage>? images,
-            ICollection<string>? tags,
+            ICollection<string>? tags = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(strongReference);
@@ -1821,7 +1821,11 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            return await Quote(strongReference, [image], tags: tags, cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await Quote(
+                strongReference: strongReference,
+                images: [image],
+                tags: tags,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
