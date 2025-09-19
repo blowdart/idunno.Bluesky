@@ -683,7 +683,7 @@ namespace idunno.Bluesky
 
             if (extractFacets)
             {
-                IList<Facet> extractedFacets = await _facetExtractor.ExtractFacets(text, cancellationToken: cancellationToken).ConfigureAwait(false);
+                IList<Facet> extractedFacets = await FacetExtractor.ExtractFacets(text, cancellationToken: cancellationToken).ConfigureAwait(false);
                 post.Facets = extractedFacets;
             }
 
@@ -769,7 +769,7 @@ namespace idunno.Bluesky
 
             if (extractFacets && text is not null)
             {
-                IList<Facet> extractedFacets = await _facetExtractor.ExtractFacets(text, cancellationToken: cancellationToken).ConfigureAwait(false);
+                IList<Facet> extractedFacets = await FacetExtractor.ExtractFacets(text, cancellationToken: cancellationToken).ConfigureAwait(false);
                 post.Facets = extractedFacets;
             }
 
@@ -879,7 +879,7 @@ namespace idunno.Bluesky
 
             if (extractFacets)
             {
-                facets = await _facetExtractor.ExtractFacets(text, cancellationToken).ConfigureAwait(false);
+                facets = await FacetExtractor.ExtractFacets(text, cancellationToken).ConfigureAwait(false);
             }
 
             var postBuilder = new PostBuilder(text, createdAt : createdAt, langs: langs, facets: facets, tags: tags);
@@ -1268,7 +1268,7 @@ namespace idunno.Bluesky
             if (extractFacets)
             {
                 await postBuilder.ExtractFacets(
-                    facetExtractor: _facetExtractor,
+                    facetExtractor: FacetExtractor,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
             }
 

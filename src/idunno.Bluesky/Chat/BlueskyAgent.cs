@@ -449,7 +449,7 @@ namespace idunno.Bluesky
             }
             else
             {
-                IList<Facet> facets = await _facetExtractor.ExtractFacets(message, cancellationToken).ConfigureAwait(false);
+                IList<Facet> facets = await FacetExtractor.ExtractFacets(message, cancellationToken).ConfigureAwait(false);
                 messageInput = new MessageInput(message, facets);
             }
 

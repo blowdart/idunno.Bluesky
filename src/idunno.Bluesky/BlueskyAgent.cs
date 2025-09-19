@@ -16,8 +16,6 @@ namespace idunno.Bluesky
     {
         private readonly ILogger<BlueskyAgent> _logger;
 
-        private readonly IFacetExtractor _facetExtractor;
-
         /// <summary>
         /// Creates a new instance of <see cref="BlueskyAgent"/>.
         /// </summary>
@@ -38,11 +36,11 @@ namespace idunno.Bluesky
 
             if (options is not null && options.FacetExtractor is not null)
             {
-                _facetExtractor = options.FacetExtractor;
+                FacetExtractor = options.FacetExtractor;
             }
             else
             {
-                _facetExtractor = new DefaultFacetExtractor(ResolveHandle);
+                FacetExtractor = new DefaultFacetExtractor(ResolveHandle);
             }
 
             if (options is not null)
@@ -74,11 +72,11 @@ namespace idunno.Bluesky
 
             if (options is not null && options.FacetExtractor is not null)
             {
-                _facetExtractor = options.FacetExtractor;
+                FacetExtractor = options.FacetExtractor;
             }
             else
             {
-                _facetExtractor = new DefaultFacetExtractor(ResolveHandle);
+                FacetExtractor = new DefaultFacetExtractor(ResolveHandle);
             }
 
             if (options is not null)
@@ -116,6 +114,16 @@ namespace idunno.Bluesky
 
                 return Service;
             }
+        }
+
+        /// <summary>
+        /// Gets the configured <see cref="IFacetExtractor"/> for this instance.
+        /// </summary>
+        public IFacetExtractor FacetExtractor
+        {
+            get;
+
+            private set;
         }
 
         /// <summary>
