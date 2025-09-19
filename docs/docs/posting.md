@@ -187,10 +187,24 @@ specifically add facets as you build your post, see [Building facets with a Post
 
 While you can rely on auto-detection, or create facets manually, and attach them to a `PostRecord` and call down into the lower levels of the library to create a post record another option is available, a `PostBuilder`.
 
-You can use the `PostBuilder` class to create facets, each facet has its own class which you can add to the `PostBuilder`.
+You can use the `PostBuilder` class to create facets, each facet has its own class, `HashTag`, `Link`, and `Mention`,
+in the `idunno.Bluesky.RichText` namespace which you can add to a `PostBuilder`
+
 Each of these classes a parameter specific to the facet type, DIDs for mentions, strings for hashtags and URIs for links. They also have a text parameter, the text in a post you want the facet to apply to.
 
-`PostBuilder` works much like a `StringBuilder` does, you create an instance of it, and build your post bit by bit, adding/appending to the `PostBuilder` until you're ready to create a post from it, which you do by calling `agent.Post()` with the `PostBuilder`.
+`PostBuilder` works much like a `StringBuilder` does, you create an instance of it, and build your post bit by bit,
+adding/appending to the `PostBuilder` until you're ready to create a post from it, which you do by calling `agent.Post()` with the
+instance of `PostBuilder` you have been building on.
+
+If you want to auto-extract facets from text for use with a `PostBuilder` the `BlueskyAgent` class has a property, `FacetExtractor`
+which will extract facets from a string, which you can use when setting up your `PostBuiilder`
+
+```c#
+var postText = "Hello @sinclairinat0r.com, I hear you love beans! #beans";
+var extractedFacets = await agent.FacetExtractor.ExtractFacets(postText);
+var postBuilder = new PostBuilder(postText, facets: extractedFacets);
+
+```
 
 #### Mentions
 
@@ -240,7 +254,7 @@ var hashtagPostResult = await agent.Post(hashtagBuilder);
 ```
 
 > [!TIP]
-> The `HashTag` does not begin with the # character. If you include a hash character you end up with a double hashed tag.
+> Do not begin the `HashTag` text with the # character. If you include a hash character you end up with a double hashed tag.
 
 Of course, you can chain everything together:
 
@@ -382,6 +396,19 @@ postBuilder.SetSelfLabels(labels);
 
 var builderPostResult = await agent.Post(postBuilder, cancellationToken: cancellationToken);
 ```
+
+## <a name="tagging">Tagging your posts</a>
+
+Tags work like a hash tag, except they are not part of the post text, and don't appear in the Bluesky client (you can see
+them in [deck.blue](https://deck.blue) and other alternative clients). Tags are supported in mutes, so, a well-behaved bot
+might tag its posts with "bot", and users muting the bot tag would not show the tagged posts, even if the post text itself does
+not contain a #bot hashtag.
+
+The `Post`, `ReplyTo` and `Quote` methods on the `BlueskyAgent` class all take an optional `tags` parameter,
+which takes a collection of tags, and the `PostBuilder` class has a tags property.
+
+> [!TIP]
+> Do not begin the tag text with the # character. If you include a hash character you end up with a double hashed tag.
 
 ## <a name="openGraphCards">Embedding an external link (Open Graph cards)</a>
 
