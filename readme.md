@@ -104,14 +104,18 @@ minisign -Vm <package-path> -P RWTsT4BHHChe/Rj/GBAuZHg3RaZFnfBDqaZ7KzLvr44a7mO6f
 
 ## Pre-releases
 
-If you want to test pre-releases you can find them in the [GitHub Packages feed](https://github.com/blowdart/idunno.Bluesky/pkgs/nuget).
-GitHub's documentation will help you learn more about [working
-with the GitHub registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-nuget-registry)
+If you want to test pre-releases you can find them in the [myget feed](https://www.myget.org/feed/Packages/blowdart).
 
-The package source URI is https://nuget.pkg.github.com/blowdart/index.json
+You can add this as a Package Source in [Visual Studio](https://learn.microsoft.com/en-us/nuget/consume-packages/install-use-packages-visual-studio#package-sources)
+or through the [command line](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-nuget-add-source)
 
-Please note that nupkgs in the GitHub Packages feed are signed with [Trusted Signing](https://azure.microsoft.com/en-us/products/trusted-signing).
+The package source URI is https://www.myget.org/F/blowdart/api/v3/index.json
 
+Please note that pre-release nupkgs are signed with [Trusted Signing](https://azure.microsoft.com/en-us/products/trusted-signing). The subject name of the signing certificate should be
+
+```
+Subject Name: CN=Barry Dorrans, O=Barry Dorrans, L=Bothell, S=Washington, C=US
+```
 
 ## License
 

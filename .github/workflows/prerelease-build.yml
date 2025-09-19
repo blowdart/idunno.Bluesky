@@ -8,7 +8,7 @@ on:
         required: true
         default: true
       perform_publish:
-        description: 'GitHub Packages publish'
+        description: 'Publish to GitHub Packages & MyGet'
         type: boolean
         required: true
         default: true
@@ -132,7 +132,7 @@ jobs:
         retention-days: 7
 
   publish:
-    name: Publish to GitHub Packages
+    name: Publish to GitHub Packages and MyGet
     needs: sign
     runs-on: ubuntu-latest
     if:  ${{ inputs.perform_publish }}
@@ -161,18 +161,24 @@ jobs:
       run: >
         Get-ChildItem -Path ${env:NUPKG_DIRECTORY} -Filter *.nupkg -Recurse -Force
 
-    - name: Setup GitHub Packages as NuGet Source
+    - name: Setup MyGet and GitHub Packages as NuGet Source
       shell: pwsh
       run: |
         dotnet new nugetconfig
         dotnet nuget remove source nuget
         dotnet nuget add source https://nuget.pkg.github.com/blowdart/index.json --name github
+        dotnet nuget add source https://www.myget.org/F/blowdart/api/v3/index.json --name myget
 
-      # Use --skip-duplicate to prevent errors if a package with the same version already exists.
-      # This allows a retory of a failed workflow, already published packages will be skipped without error.
-    - name: Publish NuGet packages
+    - name: Publish NuGet packages to GitHub packages
       shell: pwsh
       run: >
         foreach($file in (Get-ChildItem "${env:NUPKG_DIRECTORY}" -Recurse -Filter *.nupkg)) {
           dotnet nuget push $file --api-key "${{ secrets.PUBLISH_PACKAGES_PAT }}" --source "github"
+        }
+
+    - name: Publish NuGet packages to myget
+      shell: pwsh
+      run: >
+        foreach($file in (Get-ChildItem "${env:NUPKG_DIRECTORY}" -Recurse -Filter *.nupkg)) {
+          dotnet nuget push $file --api-key "${{ secrets.MYGET_APIKEY }}" --source "https://www.myget.org/F/blowdart/api/v2/package"
         }

@@ -16,7 +16,7 @@ namespace idunno.Bluesky.RichText
 
         private protected PostBuilderFacetFeature(string text)
         {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(text);
+            ArgumentException.ThrowIfNullOrWhiteSpace(text);
             Text = text;
         }
 
