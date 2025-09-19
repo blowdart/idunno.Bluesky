@@ -111,7 +111,9 @@ or through the [command line](https://learn.microsoft.com/en-us/dotnet/core/tool
 
 The package source URI is https://www.myget.org/F/blowdart/api/v3/index.json
 
-Please note that pre-release nupkgs are signed with [Trusted Signing](https://azure.microsoft.com/en-us/products/trusted-signing). The subject name of the signing certificate should be
+Due to the way pre-release builds are stamped with the git commit the "latest" version on myget
+may not be the latest version. Always check the Last Updated column on the individual package details to find
+the true latest version.
 
 ```
 Subject Name: CN=Barry Dorrans, O=Barry Dorrans, L=Bothell, S=Washington, C=US
