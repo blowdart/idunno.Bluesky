@@ -104,7 +104,7 @@ minisign -Vm <package-path> -P RWTsT4BHHChe/Rj/GBAuZHg3RaZFnfBDqaZ7KzLvr44a7mO6f
 
 ## Pre-releases
 
-If you want to test pre-releases you can find them in the [myget feed](https://www.myget.org/feed/Packages/blowdart).
+If you want to test pre-releases you can find them in the [myget feed](https://www.myget.org/gallery/blowdart).
 
 You can add this as a Package Source in [Visual Studio](https://learn.microsoft.com/en-us/nuget/consume-packages/install-use-packages-visual-studio#package-sources)
 or through the [command line](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-nuget-add-source)
