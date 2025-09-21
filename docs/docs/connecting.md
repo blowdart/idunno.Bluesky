@@ -16,6 +16,11 @@ using (BlueskyAgent agent = new ())
 }
 ```
 
+> [!TIP]
+> Handles [do not start with an @ sign](https://atproto.com/specs/handle), that's just how the official app and
+> other apps choose to display them. When trying to login, or use other methods that take a handle make sure your
+> strings do not begin with the @ sign.
+
 When a login is successful the agent will store the information needed for subsequent API calls in its `Credentials` property, exchanging the handle
 and password for tokens. API calls that require authentication will use this information and the access tokens will, by default, refresh automatically.
 
