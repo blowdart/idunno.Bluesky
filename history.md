@@ -1,12 +1,21 @@
 # Version History
 
+## 1.1.0
+
+### Features
+
+#### idunno.Bluesky
+
+* Add support for Tags in `ReplyTo()` and `Quote()` methods.
+* Expose `FacetExtractor` on `BlueskyAgent`.
+
 ## 1.0.0
 
 ### Features
 
 #### idunno.Bluesky
 
-* Add support for Tags in Post() methods.
+* Add support for Tags in `Post()` methods.
 
 ## 0.9.9
 

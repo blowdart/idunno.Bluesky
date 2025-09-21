@@ -53,6 +53,9 @@ namespace idunno.AtProto
         /// Creates a new instance of <see cref="Handle"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to create a handle from.</param>
+        /// <remarks>
+        /// <para>Note that handles do not begin with an @ sign, that is just how they are typically displayed in applications.</para>
+        /// </remarks>
         [JsonConstructor]
         public Handle(string s) : this(s, true)
         {
@@ -95,6 +98,9 @@ namespace idunno.AtProto
         /// Creates a <see cref="Handle"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
+        /// <remarks>
+        /// <para>Note that handles do not begin with an @ sign, that is just how they are typically displayed in applications.</para>
+        /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator Handle(string s) => new(s);
 
@@ -102,6 +108,9 @@ namespace idunno.AtProto
         /// Creates a <see cref="Handle"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
+        /// <remarks>
+        /// <para>Note that handles do not begin with an @ sign, that is just how they are typically displayed in applications.</para>
+        /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static new Handle FromString(string s) => s;
 
@@ -197,6 +206,9 @@ namespace idunno.AtProto
         /// supplied in result will be overwritten.
         /// </param>
         /// <returns>true if s was converted successfully; otherwise, false.</returns>
+        /// <remarks>
+        /// <para>Note that handles do not begin with an @ sign, that is just how they are typically displayed in applications.</para>
+        /// </remarks>
         public static bool TryParse(string s, [NotNullWhen(true)] out Handle? result)
         {
             return Parse(s, false, out result);
