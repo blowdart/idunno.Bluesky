@@ -62,6 +62,11 @@ Open
 ---
 
 > [!TIP]
+> Handles [do not start with an @ sign](https://atproto.com/specs/handle), that's just how the official app and
+> other apps choose to display them. When trying to login, or use other methods that take a handle make sure your
+> strings do not begin with the @ sign.
+
+> [!TIP]
 > You can create and use an [App password](https://bsky.app/settings/app-passwords) instead of your login password.
 >
 > App Passwords are safer as they allow sign in without granting full access to your Bluesky account.

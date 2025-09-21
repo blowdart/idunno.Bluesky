@@ -15,6 +15,7 @@ namespace idunno.AtProto
     /// Handles are a less-permanent identifier for accounts, when compared to <see cref="Did" />s.
     /// </summary>
     /// <remarks>
+    /// <para>Note that handles do not begin with an @ sign, that is just how they are typically displayed in applications.</para>
     /// <para>See https://atproto.com/specs/handle for further details.</para>
     /// </remarks>
     [JsonConverter(typeof(Json.HandleConverter))]
@@ -80,7 +81,7 @@ namespace idunno.AtProto
         {
             get
             {
-                return !Equals(Handle.Invalid);
+                return !Equals(Invalid);
             }
         }
 
@@ -139,7 +140,7 @@ namespace idunno.AtProto
             }
 
             // Optimization for a common success case.
-            if (Object.ReferenceEquals(this, other))
+            if (ReferenceEquals(this, other))
             {
                 return true;
             }
@@ -274,6 +275,5 @@ namespace idunno.AtProto
 
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private string DebuggerDisplay => ToString();
-
     }
 }
