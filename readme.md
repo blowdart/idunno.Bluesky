@@ -145,7 +145,7 @@ first property in the JSON object.
 
 * [Microsoft.Extensions.Logging](https://learn.microsoft.com/en-us/dotnet/core/extensions/logging) - used to provide log messages.
 * [Microsoft.IdentityModel.Tokens](https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet) - used to extract the expiry date and time of the JWT tokens issued by Bluesky.
-* [IdentityModel.OidcClient](https://github.com/IdentityModel/IdentityModel.OidcClient) - used to do the OAuth heavy lifting.
+* [Duende.IdentityModel.OidcClient](https://github.com/DuendeSoftware/foss/tree/main/identity-model-oidc-client) - used to do the OAuth heavy lifting.
 * [DnsClient](https://dnsclient.michaco.net/) - used in Handle to DID resolution.
 * [PeterO.CBor](https://github.com/peteroupc/CBOR) - used in Fire Hose decoding.
 * [SimpleBase](https://github.com/ssg/SimpleBase) - used in decoding CIDs.
