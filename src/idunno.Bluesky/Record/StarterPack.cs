@@ -24,7 +24,7 @@ namespace idunno.Bluesky.Record
         [JsonConstructor]
         public StarterPack(
             string name,
-            string description,
+            string? description,
             AtUri list,
             IReadOnlyList<AtUri> feeds,
             DateTimeOffset createdAt,
@@ -48,8 +48,7 @@ namespace idunno.Bluesky.Record
         /// Gets the description of the starter pack
         /// </summary>
         [JsonInclude]
-        [JsonRequired]
-        public string Description { get; init; }
+        public string? Description { get; init; }
 
         /// <summary>
         /// Gets the <see cref="AtUri"/> of the starter pack.
