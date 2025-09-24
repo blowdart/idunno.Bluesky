@@ -153,6 +153,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{E2B63F0A-9
 		docs\docs\threadGatesAndPostGates.md = docs\docs\threadGatesAndPostGates.md
 		docs\docs\timeline.md = docs\docs\timeline.md
 		docs\docs\toc.yml = docs\docs\toc.yml
+		docs\docs\unspecced.md = docs\docs\unspecced.md
 		docs\docs\userPreferences.md = docs\docs\userPreferences.md
 		docs\docs\video.md = docs\docs\video.md
 	EndProjectSection

@@ -61,6 +61,8 @@ items:
         href: savingAndRestoringAuthentication.md
       - name: Json Source Generation, AOT & Trimming
         href: sourceGeneration.md
+      - name: Unspecced APIS
+        href: unspecced.md
 
   - name: Writing Bots
     items:

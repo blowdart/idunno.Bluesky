@@ -21,6 +21,8 @@ using idunno.Bluesky.Notifications;
 using idunno.Bluesky.Notifications.Model;
 using idunno.Bluesky.Record;
 using idunno.Bluesky.RichText;
+using idunno.Bluesky.Unspecced;
+using idunno.Bluesky.Unspecced.Model;
 using idunno.Bluesky.Video;
 using idunno.Bluesky.Video.Model;
 
@@ -281,6 +283,18 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(CreateBookmarkRequest))]
     [JsonSerializable(typeof(DeleteBookmarkRequest))]
     [JsonSerializable(typeof(GetBookmarksResponse))]
+
+    [JsonSerializable(typeof(TrendingTopic))]
+    [JsonSerializable(typeof(GetPopularFeedGeneratorsResponse))]
+    [JsonSerializable(typeof(GetSuggestedStarterPacksResponse))]
+    [JsonSerializable(typeof(GetSuggestedUsersResponse))]
+    [JsonSerializable(typeof(Suggestion))]
+    [JsonSerializable(typeof(GetTaggedSuggestionsResponse))]
+    [JsonSerializable(typeof(GetTrendingTopicsResponse))]
+    [JsonSerializable(typeof(TrendView))]
+    [JsonSerializable(typeof(GetTrendsResponse))]
+    [JsonSerializable(typeof(AgeAssuranceStatus))]
+    [JsonSerializable(typeof(GetAgeAssuranceStateResponse))]
 
     internal partial class SourceGenerationContext : JsonSerializerContext
     {

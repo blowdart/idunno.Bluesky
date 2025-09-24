@@ -119,6 +119,36 @@ namespace idunno.Bluesky
         /// The maximum number of tags that a post can contain.
         /// </summary>
         public static readonly int TagsInPost = 8;
+
+        /// <summary>
+        /// The maximum number of trending topics that can be requested.
+        /// </summary>
+        public static readonly int TrendingTopics = 25;
+
+        /// <summary>
+        /// The maximum number of suggested feeds that can be requested.
+        /// </summary>
+        public static readonly int SuggestedFeeds = 25;
+
+        /// <summary>
+        /// The maximum number of popular feed generators that can be requested.
+        /// </summary>
+        public static readonly int PopularFeedGenerators = 100;
+
+        /// <summary>
+        /// The maximum number of suggested users that can be requested.
+        /// </summary>
+        public static readonly int SuggestedUsers = 50;
+
+        /// <summary>
+        /// The maximum number of suggested start packs that can be requested.
+        /// </summary>
+        public static readonly int SuggestedStarterPacks = 25;
+
+        /// <summary>
+        /// The maximum number of trends that can be requested.
+        /// </summary>
+        public static readonly int Trends = 25;
     }
 
     /// <summary>
