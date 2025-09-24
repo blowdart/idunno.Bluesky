@@ -84,7 +84,7 @@ jobs:
         retention-days: 5
 
     - name: 'Generate Full Code Coverage Reports'
-      uses: danielpalme/ReportGenerator-GitHub-Action@5c07e4a90846ee6fd52c211620156d4679b03fcb # 5.4.14
+      uses: danielpalme/ReportGenerator-GitHub-Action@18e0cd4c1bebd0c8b3978b380a6a4ea61c51178e # 5.4.15
       with:
         reports: "test/**/coverage.cobertura.xml"
         targetdir: "${{ env.COVERAGE_REPORT }}"
