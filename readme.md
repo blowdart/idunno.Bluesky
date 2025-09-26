@@ -112,12 +112,19 @@ or through the [command line](https://learn.microsoft.com/en-us/dotnet/core/tool
 The package source URI is https://www.myget.org/F/blowdart/api/v3/index.json
 
 Due to the way pre-release builds are stamped with the git commit the "latest" version on myget
-may not be the latest version. Always check the Last Updated column on the individual package details to find
-the true latest version.
+may not always be the latest version.
 
-```
-Subject Name: CN=Barry Dorrans, O=Barry Dorrans, L=Bothell, S=Washington, C=US
-```
+Either check the Last Updated column in the [myget gallery](https://www.myget.org/gallery/blowdart) on the individual package
+details to find the true latest version, or if you want to get a pre-release for a specific commit, if one was produced,
+
+1. Check the version value in [version.json](https://github.com/blowdart/idunno.Bluesky/blob/main/version.json),
+1. Check [Pre-release publish runs](https://github.com/blowdart/idunno.Bluesky/actions/workflows/prerelease-build.yml),
+1. Select the latest run,
+1. The latest pre-release package will have the first 10 digits of the commit sha, prefixed with a `g`
+as the build number.
+
+For example, commit [190d63e](https://github.com/blowdart/idunno.Bluesky/commit/190d63e20d3d59e86912fd8cfe315915d101f6a8)
+produced a nightly build and packages. The package build number is be 1.1.0-prerelease.`g190d63e20d`
 
 ## License
 
