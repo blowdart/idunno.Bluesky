@@ -27,6 +27,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		readme.md = readme.md
 		SECURITY.md = SECURITY.md
 		THIRD-PARTY-NOTICES.txt = THIRD-PARTY-NOTICES.txt
+		sleet.json = sleet.json
 		trimTest.ps1 = trimTest.ps1
 		version.json = version.json
 	EndProjectSection

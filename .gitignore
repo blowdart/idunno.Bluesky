@@ -378,3 +378,6 @@ TestResults
 
 # .NET SDK templating engine
 TemplateEngineHost
+
+# Sleet tooling
+sleet/

@@ -182,3 +182,17 @@ jobs:
         foreach($file in (Get-ChildItem "${env:NUPKG_DIRECTORY}" -Recurse -Filter *.nupkg)) {
           dotnet nuget push $file --api-key "${{ secrets.MYGET_APIKEY }}" --source "https://www.myget.org/F/blowdart/api/v2/package"
         }
+
+    - name: Authenticate to Azure
+      uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # 2.3.0
+      with:
+        allow-no-subscriptions : true
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Publish to blob storage
+      shell : pwsh
+      run: |
+         dotnet tool install --tool-path ./sleet sleet
+         ./sleet/sleet push "${env:NUPKG_DIRECTORY}"

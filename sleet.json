@@ -1,0 +1,10 @@
+{
+  "sources": [
+    {
+      "name": "feed",
+      "type": "azure",
+      "container": "feed",
+      "path": "https://packages.idunno.blue/feed/"
+    }
+  ]
+}
