@@ -19,6 +19,10 @@ namespace idunno.Bluesky.Record
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private const string DiscourageLoggedOutUserLabelName = "!no-unauthenticated";
 
+        private string? _description;
+        private string? _displayName;
+        private string? _pronouns;
+
         /// <summary>
         /// Creates a new instance of <see cref="Profile"/>.
         /// </summary>
@@ -114,19 +118,70 @@ namespace idunno.Bluesky.Record
         /// Gets the display name of the account.
         /// </summary>
         [JsonInclude]
-        public string? DisplayName { get; set; }
+        public string? DisplayName
+        {
+            get
+            {
+                return _displayName;
+            }
+
+            set
+            {
+                if (value is not null)
+                {
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetGraphemeLength(), Maximum.DisplayNameLengthInGraphemes);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, Maximum.DisplayNameLength);
+                }
+
+                _displayName = value;
+            }
+        }
 
         /// <summary>
         /// Gets the description for the account.
         /// </summary>
         [JsonInclude]
-        public string? Description { get; set; }
+        public string? Description
+        {
+            get
+            {
+                return _description;
+            }
+
+            set
+            {
+                if (value is not null)
+                {
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetGraphemeLength(), Maximum.DescriptionLengthInGraphemes);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, Maximum.DescriptionLength);
+                }
+
+                _description = value;
+            }
+        }
 
         /// <summary>
         /// Gets the pronouns for the account, if any.
         /// </summary>
         [JsonInclude]
-        public string? Pronouns { get; set; }
+        public string? Pronouns
+        {
+            get
+            {
+                return _pronouns;
+            }
+
+            set
+            {
+                if (value is not null)
+                {
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetGraphemeLength(), Maximum.PronounLengthInGraphemes);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, Maximum.PronounLength);
+                }
+
+                _pronouns = value;
+            }
+        }
 
         /// <summary>
         /// Gets the website for the account, if any.
@@ -162,7 +217,7 @@ namespace idunno.Bluesky.Record
         /// Gets any <see cref="SelfLabels"/> applied to the profile/
         /// </summary>
         /// <remarks>
-        /// <para>Profile self labels can only be one of the known <see href="https://docs.bsky.app/docs/advanced-guides/moderation#global-label-values">global values</see>.</para>
+        /// <para>Profile self labels can only be one or more of the known <see href="https://docs.bsky.app/docs/advanced-guides/moderation#global-label-values">global values</see>.</para>
         /// </remarks>
         [NotNull]
         [JsonInclude]

@@ -149,6 +149,36 @@ namespace idunno.Bluesky
         /// The maximum number of trends that can be requested.
         /// </summary>
         public static readonly int Trends = 25;
+
+        /// <summary>
+        /// The maximum length of a profile pronoun.
+        /// </summary>
+        public static readonly int PronounLength = 2560;
+
+        /// <summary>
+        /// The maximum length of a profile pronoun, in graphemes.
+        /// </summary>
+        public static readonly int PronounLengthInGraphemes = 256;
+
+        /// <summary>
+        /// The maximum length of a profile display name.
+        /// </summary>
+        public static readonly int DisplayNameLength = 640;
+
+        /// <summary>
+        /// The maximum length of a profile display name, in graphemes.
+        /// </summary>
+        public static readonly int DisplayNameLengthInGraphemes = 64;
+
+        /// <summary>
+        /// The maximum length of a profile description.
+        /// </summary>
+        public static readonly int DescriptionLength = 2560;
+
+        /// <summary>
+        /// The maximum length of a profile description, in graphemes.
+        /// </summary>
+        public static readonly int DescriptionLengthInGraphemes = 256;
     }
 
     /// <summary>
