@@ -6,8 +6,23 @@
 
 #### idunno.Bluesky
 
+* Add support for pronouns and website in `Profile` and its associated views.
+* Add support for some of the more useful unspecced APIs
+  * `GetAgeAssuranceState()`
+  * `GetPopularFeedGenerators()`
+  * `GetSuggestedStarterPacks()`
+  * `GetSuggestedUsers()`
+  * `GetTaggedSuggestions()`
+  * `GetTrendingTopics()`
+  * `GetTrends()`
 * Add support for Tags in `ReplyTo()` and `Quote()` methods.
 * Expose `FacetExtractor` on `BlueskyAgent`.
+
+### Breaking Changes
+
+#### idunno.Bluesky
+
+* The constructor for `Profile()` which takes requires values for all parameters now includes a pronouns and website parameter.
 
 ## 1.0.0
 
