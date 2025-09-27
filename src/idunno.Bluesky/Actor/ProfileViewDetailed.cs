@@ -28,6 +28,8 @@ namespace idunno.Bluesky.Actor
         /// <param name="associated">Properties associated with the actor.</param>
         /// <param name="viewer">Metadata about the current user's relationship to the actor.</param>
         /// <param name="description">The actor's description from their profile.</param>
+        /// <param name="pronouns">The pronouns for the account, if any.</param>
+        /// <param name="website">The website for the account, if any.</param>
         /// <param name="labels">Labels applied to the actor.</param>
         /// <param name="indexedAt">The date and time the actor was last indexed.</param>
         /// <param name="createdAt">The date and time the actor was created.</param>
@@ -48,6 +50,8 @@ namespace idunno.Bluesky.Actor
             Handle handle,
             string? displayName,
             string? description,
+            string? pronouns,
+            Uri? website,
             Uri? avatar,
             Uri? banner,
             ProfileAssociated? associated,
@@ -61,7 +65,7 @@ namespace idunno.Bluesky.Actor
             int followersCount = 0,
             int followsCount = 0,
             int postsCount = 0
-            ) : base(did, handle, displayName, description, avatar, associated, viewer, labels, indexedAt, createdAt, verification)
+            ) : base(did, handle, displayName, description, pronouns, website, avatar, associated, viewer, labels, indexedAt, createdAt, verification)
         {
             Banner = banner;
             FollowersCount = followersCount;

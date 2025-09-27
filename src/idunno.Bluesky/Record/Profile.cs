@@ -24,6 +24,8 @@ namespace idunno.Bluesky.Record
         /// </summary>
         /// <param name="displayName">The display name of the account, if any.</param>
         /// <param name="description">The description for the account, if any.</param>
+        /// <param name="pronouns">The pronouns for the account, if any.</param>
+        /// <param name="website">The website for the account, if any.</param>
         /// <param name="avatar">A small image to be displayed next to posts from account, if any.</param>
         /// <param name="banner">A larger horizontal image to display behind profile view, if any.</param>
         /// <param name="pinnedPost">A <see cref="StrongReference"/> to the profile's pinned post, if any.</param>
@@ -32,6 +34,8 @@ namespace idunno.Bluesky.Record
         public Profile(
             string? displayName = null,
             string? description = null,
+            string? pronouns = null,
+            Uri? website = null,
             Blob? avatar = null,
             Blob? banner = null,
             StrongReference? pinnedPost = null,
@@ -39,6 +43,8 @@ namespace idunno.Bluesky.Record
             DateTimeOffset? createdAt = null) : this(
                 displayName: displayName,
                 description: description,
+                pronouns: pronouns,
+                website: website,
                 avatar: avatar,
                 banner: banner,
                 joinedViaStarterPack: null,
@@ -57,6 +63,8 @@ namespace idunno.Bluesky.Record
         /// </summary>
         /// <param name="displayName">The display name of the account, if any.</param>
         /// <param name="description">The description for the account, if any.</param>
+        /// <param name="pronouns">The pronouns for the account, if any.</param>
+        /// <param name="website">The website for the account, if any.</param>
         /// <param name="avatar">A small image to be displayed next to posts from account, if any.</param>
         /// <param name="banner">A larger horizontal image to display behind profile view, if any.</param>
         /// <param name="joinedViaStarterPack">A <see cref="StrongReference"/> to the starter pack the account joined through, if any.</param>
@@ -67,6 +75,8 @@ namespace idunno.Bluesky.Record
         public Profile(
             string? displayName,
             string? description,
+            string? pronouns,
+            Uri? website,
             Blob? avatar,
             Blob? banner,
             StrongReference? joinedViaStarterPack,
@@ -76,6 +86,8 @@ namespace idunno.Bluesky.Record
         {
             DisplayName = displayName;
             Description = description;
+            Pronouns = pronouns;
+            Website = website;
             Avatar = avatar;
             Banner = banner;
             JoinedViaStarterPack = joinedViaStarterPack;
@@ -109,6 +121,18 @@ namespace idunno.Bluesky.Record
         /// </summary>
         [JsonInclude]
         public string? Description { get; set; }
+
+        /// <summary>
+        /// Gets the pronouns for the account, if any.
+        /// </summary>
+        [JsonInclude]
+        public string? Pronouns { get; set; }
+
+        /// <summary>
+        /// Gets the website for the account, if any.
+        /// </summary>
+        [JsonInclude]
+        public Uri? Website { get; set; }
 
         /// <summary>
         /// Gets a small image to be displayed next to posts from account.

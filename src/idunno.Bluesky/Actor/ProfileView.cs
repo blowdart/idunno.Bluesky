@@ -20,6 +20,8 @@ namespace idunno.Bluesky.Actor
         /// <param name="handle">The <see cref="Handle"/> of the actor.</param>
         /// <param name="displayName">The display name for the actor.</param>
         /// <param name="description">The description for the actor.</param>
+        /// <param name="pronouns">The actor's pronouns, if any.</param>
+        /// <param name="website">The actor's website, if any.</param>
         /// <param name="avatar">A <see cref="Uri"/> to the actor's avatar, if any.</param>
         /// <param name="associated">Properties associated with the actor.</param>
         /// <param name="indexedAt">The date and time the actor was last indexed.</param>
@@ -37,6 +39,8 @@ namespace idunno.Bluesky.Actor
             Handle handle,
             string? displayName,
             string? description,
+            string? pronouns,
+            Uri? website,
             Uri? avatar,
             ProfileAssociated? associated,
             ActorViewerState? viewer,
@@ -44,7 +48,7 @@ namespace idunno.Bluesky.Actor
             DateTimeOffset? indexedAt,
             DateTimeOffset? createdAt,
             VerificationState? verification
-            ) : base(did, handle, displayName, avatar, associated, viewer, labels, createdAt, verification)
+            ) : base(did, handle, displayName, pronouns, website, avatar, associated, viewer, labels, createdAt, verification)
         {
             Description = description;
             IndexedAt = indexedAt;

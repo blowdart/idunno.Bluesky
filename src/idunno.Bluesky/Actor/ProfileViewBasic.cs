@@ -25,6 +25,8 @@ namespace idunno.Bluesky.Actor
         /// <param name="did">The <see cref="Did"/> of the actor.</param>
         /// <param name="handle">The <see cref="Handle"/> of the actor.</param>
         /// <param name="displayName">The display name for the actor.</param>
+        /// <param name="pronouns">The actor's pronouns, if any.</param>
+        /// <param name="website">The actor's website, if any.</param>
         /// <param name="avatar">A <see cref="Uri"/> to the actor's avatar, if any.</param>
         /// <param name="associated">Properties associated with the actor.</param>
         /// <param name="viewer">Metadata about the current user's relationship to the actor.</param>
@@ -40,6 +42,8 @@ namespace idunno.Bluesky.Actor
             Did did,
             Handle handle,
             string? displayName,
+            string? pronouns,
+            Uri? website,
             Uri? avatar,
             ProfileAssociated? associated,
             ActorViewerState? viewer,
@@ -59,6 +63,8 @@ namespace idunno.Bluesky.Actor
             Did = did;
             Handle = handle;
             DisplayName = displayName;
+            Pronouns = pronouns;
+            Website = website;
             Avatar = avatar;
             Associated = associated;
             Viewer = viewer;
@@ -93,6 +99,16 @@ namespace idunno.Bluesky.Actor
         /// Gets the display name, if any, of the actor.
         /// </summary>
         public string? DisplayName { get; init; }
+
+        /// <summary>
+        /// Gets the actor's pronouns, if any.
+        /// </summary>
+        public string? Pronouns { get; init; }
+
+        /// <summary>
+        /// Gets the actor's website, if any
+        /// </summary>
+        public Uri? Website { get; init; }
 
         /// <summary>
         /// Gets the <see cref="Uri"/> of the actor's avatar, if any.
