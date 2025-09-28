@@ -161,7 +161,6 @@ jobs:
       run: >
         Get-ChildItem -Path ${env:NUPKG_DIRECTORY} -Filter *.nupkg -Recurse -Force
 
-
     - name: Authenticate to Azure
       uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # 2.3.0
       with:
@@ -188,12 +187,12 @@ jobs:
       shell: pwsh
       run: >
         foreach($file in (Get-ChildItem "${env:NUPKG_DIRECTORY}" -Recurse -Filter *.nupkg)) {
-          dotnet nuget push $file --api-key "${{ secrets.PUBLISH_PACKAGES_PAT }}" --source "github"
+          dotnet nuget push $file --api-key "${{ secrets.PUBLISH_PACKAGES_PAT }}" --source "github" --skip-duplicate
         }
 
     - name: Publish NuGet packages to myget
       shell: pwsh
       run: >
         foreach($file in (Get-ChildItem "${env:NUPKG_DIRECTORY}" -Recurse -Filter *.nupkg)) {
-          dotnet nuget push $file --api-key "${{ secrets.MYGET_APIKEY }}" --source "https://www.myget.org/F/blowdart/api/v2/package"
+          dotnet nuget push $file --api-key "${{ secrets.MYGET_APIKEY }}" --source "https://www.myget.org/F/blowdart/api/v2/package" --skip-duplicate
         }
