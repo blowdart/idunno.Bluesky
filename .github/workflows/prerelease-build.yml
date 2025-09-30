@@ -8,7 +8,7 @@ on:
         required: true
         default: true
       perform_publish:
-        description: 'Publish to GitHub Packages & MyGet'
+        description: 'Publish to Blob Storage, GitHub Packages & MyGet'
         type: boolean
         required: true
         default: true
@@ -153,7 +153,6 @@ jobs:
         sparse-checkout: |
           sleet.json
         sparse-checkout-cone-mode: false
-
 
     - name: 'Setup .NET SDK'
       uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
