@@ -183,3 +183,24 @@ jobs:
          dotnet tool install --tool-path ./sleet sleet
          ./sleet/sleet push "${env:NUPKG_DIRECTORY}" --config ./sleet.json --source feed
 
+    - name: Setup MyGet and GitHub Packages as NuGet Source
+      shell: pwsh
+      run: |
+        dotnet new nugetconfig
+        dotnet nuget remove source nuget
+        dotnet nuget add source https://nuget.pkg.github.com/blowdart/index.json --name github
+        dotnet nuget add source https://www.myget.org/F/blowdart/api/v3/index.json --name myget
+
+    - name: Publish NuGet packages to GitHub packages
+      shell: pwsh
+      run: >
+        foreach($file in (Get-ChildItem "${env:NUPKG_DIRECTORY}" -Recurse -Filter *.nupkg)) {
+          dotnet nuget push $file --api-key "${{ secrets.PUBLISH_PACKAGES_PAT }}" --source "github" --skip-duplicate
+        }
+
+    - name: Publish NuGet packages to myget
+      shell: pwsh
+      run: >
+        foreach($file in (Get-ChildItem "${env:NUPKG_DIRECTORY}" -Recurse -Filter *.nupkg)) {
+          dotnet nuget push $file --api-key "${{ secrets.MYGET_APIKEY }}" --source "https://www.myget.org/F/blowdart/api/v2/package" --skip-duplicate
+        }
