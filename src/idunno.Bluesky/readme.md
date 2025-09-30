@@ -26,7 +26,7 @@
 
 ## Version History
 
-A full [version history](https://github.com/blowdart/idunno.Bluesky/blob/main/history.md) can be found on the project's
+A full [version history](https://github.com/blowdart/idunno.Bluesky/blob/main/CHANGELOG.md) can be found on the project's
 [GitHub](https://github.com/blowdart/idunno.Bluesky/) repository.
 
 ## How to Use

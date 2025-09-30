@@ -2,7 +2,7 @@
 
 ## 1.1.0
 
-### Features
+### Added
 
 #### idunno.Bluesky
 
@@ -18,27 +18,34 @@
 * Add support for Tags in `ReplyTo()` and `Quote()` methods.
 * Expose `FacetExtractor` on `BlueskyAgent`.
 
+### Fixed
+
+#### idunno.AtProto
+
+* Calling logout on an agent which is authenticated via OAuth no longer causes a DPoP error on the AtProto API.
+
 ### Breaking Changes
 
 #### idunno.Bluesky
 
 * The constructor for `Profile()` which takes requires values for all parameters now includes a pronouns and website parameter.
 
-## 1.0.0
+## 1.0.0 - 2025-09-17
 
-### Features
+
+### Added
 
 #### idunno.Bluesky
 
 * Add support for Tags in `Post()` methods.
 
-## 0.9.9
+## 0.9.9 - 2025-09-11
 
 * Bump System.Text.Json from 9.0.8 to 9.0.9.
 
-## 0.9.8
+## 0.9.8 - 2025-09-08
 
-### Features
+### Added
 
 #### idunno.AtProto
 
@@ -48,7 +55,7 @@
 
 * Bookmark support, `CreateBookmark()`, `DeleteBookmark()`, `GetBookmarks()` and the `BookmarkCount` property on `PostView`.
 
-### Bug Fixes
+### Fixed
 
 #### idunno.AtProto
 
@@ -61,9 +68,9 @@
 * Moved `WebSocketOptions` from `idunno.AtProto.JetStream` to `idunno.AtProto`.
 * Renamed `JetstreamOptions.MaximumMessageSize` to `JetstreamOptions.BufferSize`.
 
-## 0.9.7
+## 0.9.7- 2025-07-11
 
-### Features
+### Added
 
 #### idunno.Bluesky
 
@@ -77,7 +84,7 @@
 * Added the ability to get and set notification preferences, `agent.GetNotificationPreferences()` and `agent.SetNotificationPreferences`.
 * Added the activity subscription support, `agent.ListActivitySubscriptions()`, `agent.SetActivitySubscription()`
 
-### Bug Fixes
+### Fixed
 
 #### idunno.Bluesky
 
@@ -98,44 +105,44 @@
   The `Reason` property can now be `Unknown` in cases where the notification raw reason does not map to a `NotificationReason`.
 * Added new notification reasons to `NotificationReason` for `Verified`, `Unverified`, `LikeViaRepost`, `RepostViaRepost` and `SubscribedPost`
 
-## 0.9.6
+## 0.9.6 - Unreleased
 
 * Various dependency bumps
 
-## 0.9.5
+## 0.9.5 - 2025-06-10
 
-### Features
+### Added
 
 #### idunno.Bluesky
 
 * Add optional parameter, `embeddedPost` to `SendMessage` to allow for embedding of posts in direct messages.
 * Add live status to profile views
 
-### Bug fixes
+### Fixed
 
 #### idunno.Bluesky
 
 * Fix serialization exception in `SendMessage`. Fixes [#169](https://github.com/blowdart/idunno.Bluesky/issues/169)
 
-## 0.9.4
+## 0.9.4 - 2025-05-30
 
-### Bug fixes
+### Fixed
 
 #### idunno.Bluesky
 
 * Fix cursor pagination in `GetFollowers`, `GetBlocks`, `GetFollows`, `GetKnownFollowers`, `GetListBlocks`, `GetListMutes`, `GetList`, `GetLists`, and `ListConversations`.
 
-## 0.9.3
+## 0.9.3 - 2025-05-30
 
-### Bug fixes
+### Fixed
 
 #### idunno.AtProto
 
 * Properly restore service uri when credentials are refreshed from a stored state. Fixes [#164](https://github.com/blowdart/idunno.Bluesky/issues/164)
 
-## 0.9.2
+## 0.9.2 - 2025-05-29
 
-### Features
+### Added
 
 #### idunno.AtProto
 
@@ -150,9 +157,9 @@
 * Enable trimming for .NET 9.0 projects
 
 
-## 0.9.1
+## 0.9.1 - 2025-05-21
 
-### Features
+### Added
 
 #### idunno.AtProto
 
@@ -166,9 +173,9 @@
 * Add new `ReplyTo()` overload to `BlueskyAgent`.
 * Exposed `BlueskyServer.JsonSerializationOptions` so bots can deserialize payloads into Bluesky records with AOT support.
 
-## 0.9.0
+## 0.9.0 - 2025-05-11
 
-### Features
+### Added
 
 #### idunno.AtProto
 
@@ -222,17 +229,17 @@
   * `ReferencedProfile` deleted deleted in favor of `AtProtoRepositoryRecord<Profile>`.
   * `ReferencedVerification` deleted deleted in favor of `AtProtoRepositoryRecord<Verification>`.
 
-## 0.8.0
+## 0.8.0 - 2025-05-01
 
-### Features
+### Added
 
 #### idunno.Bluesky
 
 * Add list management APIs and documentation.
 
-## 0.7.0
+## 0.7.0 - 2025-04-26
 
-### Features
+### Added
 
 #### idunno.AtProto
 
@@ -242,7 +249,7 @@
 
 * Added simple tutorial docs with the same topic as the official sdk docs
 
-### Bug fixes
+### Fixed
 
 #### idunno.Bluesky
 
@@ -254,9 +261,9 @@
 
 * Aligned some method and parameter names to be closed to the official SDK.
 
-## 0.6.1
+## 0.6.1 - 2025-04-23
 
-### Bug Fixes
+### Fixed
 
 #### idunno.AtProto
 
@@ -274,23 +281,23 @@
 
 * Change `CreateRecord` record parameter name from `record` to `recordValue` to more accurately reflect what the parameter type.
 
-## 0.6.0
+## 0.6.0 - 2025-04-21
 
-### Features
+### Added
 
 #### idunno.Bluesky
 
 * Add support for verification, `VerificationView` is added to `ProfileViewBasic`, `ProfileView` and `ProfileViewDetailed`.
 
-## 0.5.0
+## 0.5.0 - 2025-04-21
 
-### Bug Fixes
+### Fixed
 
 #### idunno.Bluesky
 
 * Fix [direct message support](https://github.com/blowdart/idunno.Bluesky/issues/135).
 
-### Features
+### Added
 
 #### idunno.AtProto
 
@@ -319,25 +326,25 @@
 
 * Mirror `idunno.AtProto` return types.
 
-## 0.4.1
+## 0.4.1 - 2025-03-17
 
-### Bug Fixes
+### Fixed
 
 #### idunno.Bluesky
 
 * Fix video uploading code, sample and documentation.
 
-## 0.4.0
+## 0.4.0 - 2025-02-18
 
-### Features
+### Added
 
 #### idunno.Bluesky
 
 * Support for user thread gate and post gate preference settings.
 
-## 0.3.0
+## 0.3.0 - 2025-02-15
 
-### Features
+### Added
 
 #### idunno.AtProto
 
@@ -396,15 +403,15 @@
 
 * Local HTTP server for testing OAuth authentication.
 
-## 0.2.1
+## 0.2.1 - 2025-01-05
 
-### Features
+### Added
 
 #### idunno.AtProto
 
 * Extra logging in token refresh
 
-### Bug Fixes
+### Fixed
 
 #### idunno.AtProto
 
@@ -415,9 +422,9 @@
 
 * Added catch in Samples.SessionEvents when a bad token is being set on purpose - thank you [peteraritchie](https://github.com/peteraritchie).
 
-## 0.2.0
+## 0.2.0 - 2024-12-27
 
-### Features
+### Added
 
 #### idunno.AtProto
 
@@ -427,16 +434,16 @@
 
 * Add support for video.
 
-## 0.1.3
+## 0.1.3 - 2024-12-22
 
-### Features
+### Added
 
 #### idunno.Bluesky
 
 * Add self labels for posts.
 * *Breaking* - Consolidation of record value classes.
 
-### Bug fixes
+### Fixed
 
 #### idunno.Bluesky
 
@@ -452,32 +459,32 @@
 
 * Add Profile editing sample.
 
-## 0.1.2
+## 0.1.2 - 2024-12-19
 
-### Features
+### Added
 
 #### idunno.Bluesky
 
 * Adds Profile editing.
 
-### Bug fixes
+### Fixed
 
 #### idunno.Bluesky
 
 * Fixed positioning bug for `PostBuilder` facets.
 * Removed incorrect link length check.
 
-## 0.1.1
+## 0.1.1 - 2024-12-14
 
-### Bug Fixes
+### Fixed
 
 #### idunno.AtProto
 
 * Fixed bug when making requests a personal PDS timed out after authentication.
 
-## 0.1.0
+## 0.1.0 - 2024-12-12
 
-### Features
+### Added
 
 #### idunno.AtProto
 
