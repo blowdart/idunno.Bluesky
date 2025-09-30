@@ -36,7 +36,7 @@ namespace Samples.ConsoleShellOAuth
             ArgumentException.ThrowIfNullOrEmpty(loginHandle);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
-            // proxyUri = new Uri("http://localhost:8866");
+            proxyUri = new Uri("http://localhost:8866");
 
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
@@ -72,8 +72,7 @@ namespace Samples.ConsoleShellOAuth
                     }
                 }))
             {
-
-                await using var callbackServer = new CallbackServer(
+                await using var loginCallbackServer = new CallbackServer(
                     CallbackServer.GetRandomUnusedPort(),
                     loggerFactory: loggerFactory);
                 {
@@ -81,7 +80,7 @@ namespace Samples.ConsoleShellOAuth
 
                     OAuthClient oAuthClient = agent.CreateOAuthClient();
 
-                    Uri startUri = await agent.BuildOAuth2LoginUri(oAuthClient, loginHandle, returnUri: callbackServer.Uri, cancellationToken: cancellationToken);
+                    Uri startUri = await agent.BuildOAuth2LoginUri(oAuthClient, loginHandle, returnUri: loginCallbackServer.Uri, cancellationToken: cancellationToken);
 
                     if (oAuthClient.State is null)
                     {
@@ -95,7 +94,7 @@ namespace Samples.ConsoleShellOAuth
 
                     OAuthClient.OpenBrowser(startUri);
 
-                    callbackData = await callbackServer.WaitForCallbackAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+                    callbackData = await loginCallbackServer.WaitForCallbackAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
 
                     if (string.IsNullOrEmpty(callbackData))
                     {
@@ -123,6 +122,7 @@ namespace Samples.ConsoleShellOAuth
                 // Your code goes here.
 
                 Debugger.Break();
+
                 await agent.Logout(cancellationToken: cancellationToken);
             }
         }

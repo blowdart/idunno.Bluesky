@@ -126,6 +126,9 @@ as the build number.
 For example, commit [190d63e](https://github.com/blowdart/idunno.Bluesky/commit/190d63e20d3d59e86912fd8cfe315915d101f6a8)
 produced a nightly build and packages. The package build number is be 1.1.0-prerelease.`g190d63e20d`
 
+Please note that nightly builds are signed with [Trusted Signing](https://azure.microsoft.com/en-us/products/trusted-signing),
+the signing certificate chain will not match the signing chain of a release build.
+
 ## License
 
 `idunno.Bluesky`, `idunno.AtProto` and `idunno.AtProto.OAuthCallBack` are available under the MIT license, see the [LICENSE](LICENSE) file for more information.
