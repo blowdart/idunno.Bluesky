@@ -181,8 +181,8 @@ and logout with OAuth.
 
 ## Logging out
 
-To log the current user off Bluesky call the `Logout()` method. This revokes the refresh token (and, if they authenticated via OAuth, the access token),
-and clears the now revoked credentials from the agent.
+To log the authenticated user off Bluesky call the `Logout()` method. This revokes the refresh token (and,
+if the agent was authenticated via OAuth, the access token), and clears the now revoked credentials from the agent.
 
 ## Configuring the agent's HTTP settings
 
