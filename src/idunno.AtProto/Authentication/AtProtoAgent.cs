@@ -1,7 +1,6 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Reflection.Metadata;
@@ -10,12 +9,11 @@ using System.Text;
 using System.Text.Json;
 using System.Timers;
 
+using idunno.AtProto.Authentication;
+using idunno.AtProto.Events;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
-
-using idunno.AtProto.Authentication;
-using idunno.AtProto.Events;
 
 
 namespace idunno.AtProto
@@ -169,12 +167,12 @@ namespace idunno.AtProto
         /// <param name="oAuthClient">An instance of <paramref name="oAuthClient"/> to build the URI in.</param>
         /// <param name="handle">The handle to authorize for.</param>
         /// <param name="scopes">A collection of scopes to request. Defaults to "atproto".</param>
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <param name="returnUri">The URI the oauth server should post back to when it has authorized the application.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown when <paramref name="oAuthClient"/> or <paramref name="handle"/> is null, or
-        /// <paramref name="scopes"/> or <paramref name="returnUri"/>is not specified and is configured on the agent <see cref="Options"/>.
+        /// <paramref name="scopes"/> or <paramref name="returnUri"/>is not specified and is not configured on the agent <see cref="Options"/>.
         /// </exception>
         /// <exception cref="OAuthException">
         /// Thrown when the OAuth options on the agent have not been configured, or
@@ -215,6 +213,57 @@ namespace idunno.AtProto
                 authority: authorizationServer,
                 scopes: scopes,
                 handle: handle,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Builds an OAuth logout URI.
+        /// </summary>
+        /// <param name="oAuthClient">An instance of <paramref name="oAuthClient"/> to build the URI in.</param>
+        /// <param name="returnUri">The URI the oauth server should post back to when it has authorized the application.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when <paramref name="returnUri"/>is not specified and is not configured on the agent.<see cref="Options"/>.
+        /// </exception>
+        /// <exception cref="OAuthException">
+        /// Thrown when the OAuth options on the agent have not been configured, or
+        /// the current agent credentials are not OAuth credentials.
+        /// </exception>
+
+        internal async Task<Uri> BuildOAuth2LogoutUri(
+            OAuthClient oAuthClient,
+            Uri? returnUri = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            if (Credentials is not DPoPAccessCredentials credentials)
+            {
+                throw new OAuthException("Session credentials are not DPoP access credentials.");
+            }
+
+            ArgumentNullException.ThrowIfNull(oAuthClient);
+            if (Options is null || Options.OAuthOptions is null)
+            {
+                throw new OAuthException("OAuth options are not configured.");
+            }
+
+            Uri? pds = await ResolvePds(Credentials.Did, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException($"Could not resolve PDS for {Credentials.Did}.");
+            Uri? authorizationServer = await ResolveAuthorizationServer(pds, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException($"Could not discover authorization server for {Credentials.Did}.");
+
+            returnUri ??= Options.OAuthOptions.ReturnUri;
+            ArgumentNullException.ThrowIfNull(returnUri);
+
+            Options.OAuthOptions.Validate();
+
+            return await oAuthClient.BuildOAuth2LogoutUri(
+                credentials,
+                authority: authorizationServer,
+                returnUri: returnUri,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -433,7 +482,12 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="identifier" /> or <paramref name="password"/> is empty.</exception>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="identifier" /> or <paramref name="password"/> is null or empty.</exception>
-        public async Task<AtProtoHttpResult<bool>> Login(string identifier, string password, string? authFactorToken = null, Uri? service = null, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<bool>> Login(
+            string identifier,
+            string password,
+            string? authFactorToken = null,
+            Uri? service = null,
+            CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(identifier);
             ArgumentException.ThrowIfNullOrWhiteSpace(password);
@@ -475,7 +529,12 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="handle" /> or <paramref name="password"/> is null or empty.</exception>
-        public async Task<AtProtoHttpResult<bool>> Login(Handle handle, string password, string? authFactorToken = null, Uri? service = null, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<bool>> Login(
+            Handle handle,
+            string password,
+            string? authFactorToken = null,
+            Uri? service = null,
+            CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(handle);
             ArgumentException.ThrowIfNullOrWhiteSpace(password);
@@ -587,7 +646,12 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="did" /> or <paramref name="password"/> is null or empty.</exception>
-        public async Task<AtProtoHttpResult<bool>> Login(Did did, string password, string? authFactorToken = null, Uri? service = null, CancellationToken cancellationToken = default)
+        public async Task<AtProtoHttpResult<bool>> Login(
+            Did did,
+            string password,
+            string? authFactorToken = null,
+            Uri? service = null,
+            CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(did);
             ArgumentException.ThrowIfNullOrWhiteSpace(password);
@@ -688,8 +752,8 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/> or any of its properties are null.</exception>
         [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Matching other login methods, so keeping cancellationToken for ease of use.")]
         public async Task<bool> Login(
-        AccessCredentials accessCredentials,
-        CancellationToken cancellationToken = default)
+            AccessCredentials accessCredentials,
+            CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(accessCredentials.AccessJwt);
@@ -795,6 +859,12 @@ namespace idunno.AtProto
 
                 AtProtoHttpClient<EmptyResponse> revokeRequest = new(LoggerFactory);
 
+                DPoPRevokeCredentials dPoPRevokeCredentials = new(
+                    accessCredentials.Service,
+                    accessCredentials.RefreshToken,
+                    accessCredentials.DPoPProofKey,
+                    accessCredentials.DPoPNonce);
+
                 using (var formData = new FormUrlEncodedContent(
                 [
                     new KeyValuePair<string, string>("token", accessCredentials.RefreshToken),
@@ -807,7 +877,7 @@ namespace idunno.AtProto
                         endpoint: revocationEndpoint.AbsolutePath,
                         record: formData,
                         jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
-                        credentials: Credentials,
+                        credentials: dPoPRevokeCredentials,
                         httpClient: HttpClient,
                         cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -822,6 +892,12 @@ namespace idunno.AtProto
                     }
                 }
 
+                dPoPRevokeCredentials = new (
+                    accessCredentials.Service,
+                    accessCredentials.AccessJwt,
+                    accessCredentials.DPoPProofKey,
+                    accessCredentials.DPoPNonce);
+
                 using (var formData = new FormUrlEncodedContent(
                 [
                     new KeyValuePair<string, string>("token", accessCredentials.AccessJwt),
@@ -834,7 +910,7 @@ namespace idunno.AtProto
                         endpoint: revocationEndpoint.AbsolutePath,
                         record: formData,
                         jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
-                        credentials: Credentials,
+                        credentials: dPoPRevokeCredentials,
                         httpClient: HttpClient,
                         cancellationToken: cancellationToken).ConfigureAwait(false);
 

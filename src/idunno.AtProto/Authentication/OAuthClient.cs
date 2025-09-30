@@ -5,10 +5,8 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 using Microsoft.AspNetCore.WebUtilities;
-
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-
 using Microsoft.IdentityModel.JsonWebTokens;
 
 using Duende.IdentityModel.Client;
@@ -17,6 +15,8 @@ using Duende.IdentityModel.OidcClient.DPoP;
 using Duende.IdentityModel.OidcClient.Results;
 
 using idunno.AtProto.Server.Models;
+using System.IdentityModel.Tokens.Jwt;
+
 
 namespace idunno.AtProto.Authentication
 {
@@ -338,6 +338,46 @@ namespace idunno.AtProto.Authentication
             State = state;
 
             return await ProcessOAuth2LoginResponse(callbackData, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Prepares a logout URL for an interactive logout.
+        /// </summary>
+        /// <param name="credentials">The credentials to logout from.</param>
+        /// <param name="authority">The expected authority URI.</param>
+        /// <param name="clientId">The client ID for the application. If <see langword="null"/> will be taken from the configured OAuthOptions.</param>
+        /// <param name="returnUri">The redirect URI where the oauth server should respond back to.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        internal async Task<Uri> BuildOAuth2LogoutUri(
+            DPoPAccessCredentials credentials,
+            Uri authority,
+            string? clientId = null,
+            Uri? returnUri = null,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(credentials);
+
+            clientId ??= _options?.ClientId;
+            ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+
+            _expectedAuthority = authority;
+            _proofKey = credentials.DPoPProofKey;
+
+            if (_oidcClient is null)
+            {
+                OidcClientOptions oidcClientOptions = BuildOidcClientOptions(clientId, returnUri);
+                _oidcClient = new OidcClient(oidcClientOptions);
+            }
+
+            string logoutUri = await _oidcClient.PrepareLogoutAsync(
+                new LogoutRequest
+                {
+                    IdTokenHint = credentials.AccessJwt,
+                },
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            return new Uri(logoutUri);
         }
 
         /// <summary>
