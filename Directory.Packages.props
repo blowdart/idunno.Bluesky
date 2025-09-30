@@ -5,7 +5,7 @@
   <ItemGroup>
     <PackageVersion Include="Coravel" Version="6.0.2" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
-    <PackageVersion Include="DotNet.ReproducibleBuilds" Version="1.2.25" />
+    <PackageVersion Include="DotNet.ReproducibleBuilds" Version="1.2.39" />
     <PackageVersion Include="DotNetAnalyzers.DocumentationAnalyzers" Version="1.0.0-beta.59" />
     <PackageVersion Include="DnsClient" Version="1.8.0" />
     <PackageVersion Include="Duende.IdentityModel.OidcClient" Version="6.0.1" />
