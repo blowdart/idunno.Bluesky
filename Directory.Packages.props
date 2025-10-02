@@ -11,7 +11,7 @@
     <PackageVersion Include="Duende.IdentityModel.OidcClient" Version="6.0.1" />
     <PackageVersion Include="Duende.IdentityModel.OidcClient.Extensions" Version="6.0.1" />
     <PackageVersion Include="JunitXml.TestLogger" Version="6.1.0" />
-    <PackageVersion Include="Microsoft.CodeCoverage" Version="17.14.1" />
+    <PackageVersion Include="Microsoft.CodeCoverage" Version="18.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="Microsoft.Sbom.Targets" Version="4.0.3" />
     <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.14.0" />
