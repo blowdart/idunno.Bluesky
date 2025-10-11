@@ -15,6 +15,11 @@ namespace idunno.Bluesky
     public class BlueskyAgentOptions : AtProtoAgentOptions
     {
         /// <summary>
+        /// Configuration Provider Key
+        /// </summary>
+        public const string BlueskyAgent = "BlueskyAgent";
+
+        /// <summary>
         /// Creates a new instance of <see cref="BlueskyAgentOptions"/>
         /// </summary>
         public BlueskyAgentOptions() : base()

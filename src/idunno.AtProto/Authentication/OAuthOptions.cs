@@ -11,6 +11,16 @@ namespace idunno.AtProto.Authentication
         private IEnumerable<string> _scopes = ["atproto"];
 
         /// <summary>
+        /// Configuration Provider Key
+        /// </summary>
+        public const string AtProto = "AtProto";
+
+        /// <summary>
+        /// Configuration Provider Key
+        /// </summary>
+        public const string AtProtoOAuth = "OAuth";
+
+        /// <summary>
         /// Creates a new instance of <see cref="OAuthOptions"/>.
         /// </summary>
         public OAuthOptions()

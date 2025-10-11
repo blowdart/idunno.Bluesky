@@ -16,8 +16,16 @@ namespace idunno.AtProto
     /// false if you are using a debugging proxy which does not support CRLs.
     /// </para>
     /// </remarks>
-    public sealed class HttpClientOptions(string? httpUserAgent = null, Uri? proxyUri = null, bool checkCertificateRevocationList = true, TimeSpan? timeout = null)
+    public sealed class HttpClientOptions(
+        string? httpUserAgent = null,
+        Uri? proxyUri = null,
+        bool checkCertificateRevocationList = true,
+        TimeSpan? timeout = null)
     {
+        /// <summary>
+        /// Configuration Provider Key
+        /// </summary>
+        public const string AtProtoHttpClient = "AtProtoHttpClient";
 
         /// <summary>
         /// Gets or sets the user agent string to use, if any.

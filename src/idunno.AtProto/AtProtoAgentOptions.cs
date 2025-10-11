@@ -12,6 +12,12 @@ namespace idunno.AtProto
     /// </summary>
     public class AtProtoAgentOptions
     {
+
+        /// <summary>
+        /// Default configuration key.
+        /// </summary>
+        public const string AtProtoAgent = "AtProtoAgent";
+
         /// <summary>
         /// Creates a new instance of <see cref="AtProtoAgentOptions"/>"/>
         /// </summary>
