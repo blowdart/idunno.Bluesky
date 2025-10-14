@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using Duende.IdentityModel.OidcClient;
 
 namespace idunno.AtProto.Authentication
@@ -55,5 +56,38 @@ namespace idunno.AtProto.Authentication
         /// Gets or sets the logging correlation ID.
         /// </summary>
         public Guid CorrelationId { get; set; }
+
+        /// <summary>
+        /// Converts the <paramref name="state"/> to a JSON string.
+        /// </summary>
+        /// <param name="state">The <see cref="OAuthLoginState"/> to convert to json.</param>
+        /// <returns>A string containing the <paramref name="state"/> as json.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="state"/> is null.</exception>
+        public static string ToJson(OAuthLoginState state)
+        {
+            ArgumentNullException.ThrowIfNull(state);
+            return JsonSerializer.Serialize(state, typeof(OAuthLoginState), SourceGenerationContext.Default);
+        }
+
+        /// <summary>
+        /// Converts the <paramref name="json"/> to an instance of <see cref="OAuthLoginState"/>.
+        /// </summary>
+        /// <param name="json">The json to convert.</param>
+        /// <returns>An instance of <see cref="OAuthLoginState"/> deserialized from the supplied <paramref name="json"/> string.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or white space.</exception>
+        public static OAuthLoginState? FromJson(string json)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(json);
+            return JsonSerializer.Deserialize(json, typeof(OAuthLoginState), SourceGenerationContext.Default) as OAuthLoginState;
+        }
+
+        /// <summary>
+        /// Converts this instance of <see cref="OAuthLoginState"/> to a JSON string.
+        /// </summary>
+        /// <returns>A string containing this instance of <see cref="OAuthLoginState"/> as json.</returns>
+        public string ToJson()
+        {
+            return ToJson(this);
+        }
     }
 }
