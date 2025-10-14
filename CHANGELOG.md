@@ -1,6 +1,20 @@
 # Version History
 
-## 1.1.0
+## 1.2.0 - Unreleased, In Progress
+
+### Added
+
+#### idunno.AtProto
+
+* Add support for configuration binding and options in DI.
+* Add `OAuthLoginState` to `SourceGenerationContext`.
+
+#### idunno.Bluesky
+
+* Add support for configuration binding and options in DI.
+* Add support for Bluesky authentication in ASP.NET Razor Pages.
+
+## 1.1.0 - 2025-09-30
 
 ### Added
 
@@ -31,7 +45,6 @@
 * The constructor for `Profile()` which takes requires values for all parameters now includes a pronouns and website parameter.
 
 ## 1.0.0 - 2025-09-17
-
 
 ### Added
 

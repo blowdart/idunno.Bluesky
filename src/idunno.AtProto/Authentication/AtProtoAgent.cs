@@ -841,6 +841,7 @@ namespace idunno.AtProto
                 }
 
                 Options.OAuthOptions.Validate();
+
                 string scopeString = string.Join(" ", Options.OAuthOptions.Scopes.Where(s => !string.IsNullOrEmpty(s)));
 
                 string clientId = Options.OAuthOptions.ClientId;

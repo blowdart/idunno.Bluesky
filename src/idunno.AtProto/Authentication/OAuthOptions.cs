@@ -84,7 +84,8 @@ namespace idunno.AtProto.Authentication
                 else
                 {
                     ArgumentOutOfRangeException.ThrowIfZero(value.Count());
-                    _scopes = value;
+
+                    _scopes = value.Distinct();
                 }
             }
         }
