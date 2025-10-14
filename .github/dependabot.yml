@@ -4,6 +4,8 @@ updates:
   directory: "/"
   schedule:
     interval: daily
+  cooldown:
+    default-days: 5
   ignore:
     - dependency-name: "Microsoft.AspNetCore.TestHost"
       update-types: ["version-update:semver-major"]
@@ -31,3 +33,5 @@ updates:
   directory: "/"
   schedule:
     interval: "daily"
+  cooldown:
+    default-days: 5
