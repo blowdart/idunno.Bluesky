@@ -4,7 +4,9 @@ updates:
   directory: "/"
   schedule:
     interval: daily
-  open-pull-requests-limit: 1
+  # Disable update notifications, except for security updates.
+  # See https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference#open-pull-requests-limit-
+  open-pull-requests-limit: 0
   cooldown:
     default-days: 5
   ignore:
