@@ -28,7 +28,7 @@ namespace idunno.AtProto
         /// <summary>
         /// A regular expression suitable for use when validating a handle.
         /// </summary>
-        public const string ValidationRegex = (@"^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$";
+        public const string ValidationRegex = @"^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$";
 
         [GeneratedRegex(ValidationRegex, RegexOptions.None, 5000)]
         private static partial Regex s_validate();
