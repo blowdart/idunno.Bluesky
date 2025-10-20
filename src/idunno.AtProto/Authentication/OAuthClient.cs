@@ -110,6 +110,7 @@ namespace idunno.AtProto.Authentication
         /// <param name="clientId">The client ID</param>
         /// <param name="scopes">A collection of scopes to request. Defaults to "atproto".</param>
         /// <param name="handle">The handle to acquire a token for.</param>
+        /// <param name="uriExtraParameters">Any extra parameters to attach to the URI.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="clientId"/> is null or white space and no default clientId has been set on options.</exception>
@@ -123,6 +124,7 @@ namespace idunno.AtProto.Authentication
             string? clientId = null,
             IEnumerable<string>? scopes = null,
             Handle? handle = null,
+            IEnumerable<KeyValuePair<string, string>>? uriExtraParameters = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(authority);
@@ -178,7 +180,19 @@ namespace idunno.AtProto.Authentication
 
             if (handle is not null)
             {
-                extraParameters = [KeyValuePair.Create<string, string>("login_hint", handle.ToString())];
+                extraParameters = [KeyValuePair.Create("login_hint", handle.ToString())];
+            }
+
+            if (uriExtraParameters is not null && uriExtraParameters.Any())
+            {
+                if (extraParameters is null)
+                {
+                    extraParameters = [.. uriExtraParameters];
+                }
+                else
+                {
+                    extraParameters.AddRange(uriExtraParameters);
+                }
             }
 
             _authorizeState = await _oidcClient.PrepareLoginAsync(extraParameters, cancellationToken: cancellationToken).ConfigureAwait(false);
