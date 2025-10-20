@@ -31,7 +31,12 @@ namespace idunno.AtProto
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private const int MaximumLength = 2048;
 
-        [GeneratedRegex(@"^did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]$", RegexOptions.CultureInvariant, 5000)]
+        /// <summary>
+        /// A regular expression suitable for use when validating a handle.
+        /// </summary>
+        public const string ValidationRegex = @"^did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]$";
+
+        [GeneratedRegex(ValidationRegex, RegexOptions.CultureInvariant, 5000)]
         private static partial Regex s_validationRegex();
 
         private Did(string s, bool validate)

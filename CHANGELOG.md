@@ -8,6 +8,7 @@
 
 * Add support for configuration binding and options in DI.
 * Add `OAuthLoginState` to `SourceGenerationContext`.
+* Expose `ValidationRegex` constants on `Did` and `Handle` so they can be used in ASP.NET validation.
 
 #### idunno.Bluesky
 
