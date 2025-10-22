@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+
 using Duende.IdentityModel.OidcClient;
 
 namespace idunno.AtProto.Authentication
@@ -21,13 +22,14 @@ namespace idunno.AtProto.Authentication
         /// <param name="expectedService">The expected service that the access token should be issued for.</param>
         /// <param name="proofKey">The DPoP proof key which was used to sign the token request.</param>
         /// <param name="correlationId">The correlation identifier used in logging to tie requests and responses together.</param>
-        [SuppressMessage("Design", "CA1054:URI-like parameters should not be strings", Justification = "Matching the Duende property")]
+        /// <param name="extraProperties">Any extra properties to save in state.</param>
         public OAuthLoginState(
             AuthorizeState state,
             string expectedAuthority,
             string expectedService,
             string proofKey,
-            Guid correlationId)
+            Guid correlationId,
+            ICollection<KeyValuePair<string, string>>? extraProperties = null)
         {
             ArgumentNullException.ThrowIfNull(state);
 
@@ -43,6 +45,7 @@ namespace idunno.AtProto.Authentication
             ExpectedService = expectedService;
             ProofKey = proofKey;
             CorrelationId = correlationId;
+            ExtraProperties = extraProperties;
         }
 
 
@@ -59,6 +62,7 @@ namespace idunno.AtProto.Authentication
         /// <param name="expectedService">The expected service that the access token should be issued for.</param>
         /// <param name="proofKey">The DPoP proof key which was used to sign the token request.</param>
         /// <param name="correlationId">The correlation identifier used in logging to tie requests and responses together.</param>
+        /// <param name="extraProperties">Any extra properties to save in state.</param>
         [SuppressMessage("Design", "CA1054:URI-like parameters should not be strings", Justification = "Matching the Duende property")]
         [JsonConstructor]
         public OAuthLoginState(
@@ -71,7 +75,8 @@ namespace idunno.AtProto.Authentication
             string expectedAuthority,
             string expectedService,
             string proofKey,
-            Guid correlationId)
+            Guid correlationId,
+            ICollection<KeyValuePair<string, string>>? extraProperties = null)
         {
             StartUrl = startUrl;
             State = state;
@@ -85,6 +90,7 @@ namespace idunno.AtProto.Authentication
             ExpectedService = expectedService;
             ProofKey = proofKey;
             CorrelationId = correlationId;
+            ExtraProperties = extraProperties;
         }
 
         /// <summary>
@@ -156,6 +162,11 @@ namespace idunno.AtProto.Authentication
         public string ErrorDescription { get; set; }
 
         /// <summary>
+        /// Gets any extra properties for state.
+        /// </summary>
+        public ICollection<KeyValuePair<string, string>>? ExtraProperties { get; }
+
+        /// <summary>
         /// Converts the <paramref name="state"/> to a JSON string.
         /// </summary>
         /// <param name="state">The <see cref="OAuthLoginState"/> to convert to json.</param>
@@ -225,7 +236,8 @@ namespace idunno.AtProto.Authentication
             ProofKey,
             RedirectUri,
             StartUrl,
-            State).GetHashCode();
+            State,
+            ExtraProperties).GetHashCode();
 
         /// <summary>
         /// Indicates where an object is equal to this <see cref="OAuthLoginState"/>."/>
@@ -264,6 +276,12 @@ namespace idunno.AtProto.Authentication
                 return false;
             }
 
+            if ((ExtraProperties is null && other.ExtraProperties is not null) ||
+                (ExtraProperties is not null && other.ExtraProperties is null))
+            {
+                return false;
+            }
+
             return string.Equals(CodeVerifier, other.CodeVerifier, StringComparison.Ordinal) &&
                 CorrelationId == other.CorrelationId &&
                 string.Equals(RedirectUri, other.RedirectUri, StringComparison.Ordinal) &&
@@ -274,7 +292,8 @@ namespace idunno.AtProto.Authentication
                 string.Equals(ProofKey, other.ProofKey, StringComparison.Ordinal) &&
                 string.Equals(RedirectUri, other.RedirectUri, StringComparison.Ordinal) &&
                 string.Equals(StartUrl, other.StartUrl, StringComparison.Ordinal) &&
-                string.Equals(State, other.State, StringComparison.Ordinal);
+                string.Equals(State, other.State, StringComparison.Ordinal) &&
+                ExtraProperties!.OrderBy(kvp => kvp.Key, StringComparer.Ordinal).SequenceEqual(other.ExtraProperties!.OrderBy(kvp => kvp.Key, StringComparer.Ordinal));
         }
 
         /// <summary>
