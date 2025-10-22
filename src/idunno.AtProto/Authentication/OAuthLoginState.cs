@@ -12,7 +12,7 @@ namespace idunno.AtProto.Authentication
     /// <summary>
     /// Encapsulates state that is generated when a start URI is created and must be present for the response to be parsed.
     /// </summary>
-    public sealed class OAuthLoginState: IEquatable<OAuthLoginState>
+    public sealed class OAuthLoginState : IEquatable<OAuthLoginState>
     {
         /// <summary>
         /// Creates a new instance of <see cref="OAuthLoginState"/>.
@@ -276,24 +276,46 @@ namespace idunno.AtProto.Authentication
                 return false;
             }
 
-            if ((ExtraProperties is null && other.ExtraProperties is not null) ||
-                (ExtraProperties is not null && other.ExtraProperties is null))
+            bool extraPropertiesComparisonResult = false;
+
+            if (ExtraProperties is null && other.ExtraProperties is null)
+            {
+                extraPropertiesComparisonResult = true;
+            }
+            else if (ExtraProperties is null && other.ExtraProperties is not null)
+            {
+                extraPropertiesComparisonResult = false;
+            }
+            else if (ExtraProperties is not null && other.ExtraProperties is null)
+            {
+                extraPropertiesComparisonResult = false;
+            }
+            else if (ExtraProperties!.Count != other.ExtraProperties!.Count)
+            {
+                extraPropertiesComparisonResult = false;
+            }
+            else
+            {
+                extraPropertiesComparisonResult =
+                    ExtraProperties.OrderBy(kvp => kvp.Key, StringComparer.Ordinal).SequenceEqual(other.ExtraProperties.OrderBy(kvp => kvp.Key, StringComparer.Ordinal));
+            }
+
+            if (!extraPropertiesComparisonResult)
             {
                 return false;
             }
 
             return string.Equals(CodeVerifier, other.CodeVerifier, StringComparison.Ordinal) &&
-                CorrelationId == other.CorrelationId &&
-                string.Equals(RedirectUri, other.RedirectUri, StringComparison.Ordinal) &&
-                string.Equals(Error, other.Error, StringComparison.Ordinal) &&
-                string.Equals(ErrorDescription, other.ErrorDescription, StringComparison.Ordinal) &&
-                string.Equals(ExpectedAuthority, other.ExpectedAuthority, StringComparison.Ordinal) &&
-                string.Equals(ExpectedService, other.ExpectedService, StringComparison.Ordinal) &&
-                string.Equals(ProofKey, other.ProofKey, StringComparison.Ordinal) &&
-                string.Equals(RedirectUri, other.RedirectUri, StringComparison.Ordinal) &&
-                string.Equals(StartUrl, other.StartUrl, StringComparison.Ordinal) &&
-                string.Equals(State, other.State, StringComparison.Ordinal) &&
-                ExtraProperties!.OrderBy(kvp => kvp.Key, StringComparer.Ordinal).SequenceEqual(other.ExtraProperties!.OrderBy(kvp => kvp.Key, StringComparer.Ordinal));
+                  CorrelationId == other.CorrelationId &&
+                  string.Equals(RedirectUri, other.RedirectUri, StringComparison.Ordinal) &&
+                  string.Equals(Error, other.Error, StringComparison.Ordinal) &&
+                  string.Equals(ErrorDescription, other.ErrorDescription, StringComparison.Ordinal) &&
+                  string.Equals(ExpectedAuthority, other.ExpectedAuthority, StringComparison.Ordinal) &&
+                  string.Equals(ExpectedService, other.ExpectedService, StringComparison.Ordinal) &&
+                  string.Equals(ProofKey, other.ProofKey, StringComparison.Ordinal) &&
+                  string.Equals(RedirectUri, other.RedirectUri, StringComparison.Ordinal) &&
+                  string.Equals(StartUrl, other.StartUrl, StringComparison.Ordinal) &&
+                  string.Equals(State, other.State, StringComparison.Ordinal);
         }
 
         /// <summary>
