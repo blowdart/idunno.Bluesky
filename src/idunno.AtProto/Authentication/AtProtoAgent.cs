@@ -167,6 +167,7 @@ namespace idunno.AtProto
         /// <param name="handle">The handle to authorize for.</param>
         /// <param name="scopes">A collection of scopes to request. Defaults to "atproto".</param>
         /// <param name="returnUri">The URI the oauth server should post back to when it has authorized the application.</param>
+        /// <param name="uriExtraParameters">Any extra parameters to attach to the URI.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
@@ -184,6 +185,7 @@ namespace idunno.AtProto
             Handle handle,
             IEnumerable<string>? scopes = null,
             Uri? returnUri = null,
+            IEnumerable<KeyValuePair<string, string>>? uriExtraParameters = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(oAuthClient);
@@ -212,6 +214,7 @@ namespace idunno.AtProto
                 authority: authorizationServer,
                 scopes: scopes,
                 handle: handle,
+                uriExtraParameters: uriExtraParameters,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
