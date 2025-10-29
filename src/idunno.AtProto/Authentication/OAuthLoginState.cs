@@ -29,7 +29,7 @@ namespace idunno.AtProto.Authentication
             string expectedService,
             string proofKey,
             Guid correlationId,
-            ICollection<KeyValuePair<string, string>>? extraProperties = null)
+            IDictionary<string, string>? extraProperties = null)
         {
             ArgumentNullException.ThrowIfNull(state);
 
@@ -76,7 +76,7 @@ namespace idunno.AtProto.Authentication
             string expectedService,
             string proofKey,
             Guid correlationId,
-            ICollection<KeyValuePair<string, string>>? extraProperties = null)
+            IDictionary<string, string>? extraProperties = null)
         {
             StartUrl = startUrl;
             State = state;
@@ -164,7 +164,7 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Gets any extra properties for state.
         /// </summary>
-        public ICollection<KeyValuePair<string, string>>? ExtraProperties { get; }
+        public IDictionary<string, string>? ExtraProperties { get; }
 
         /// <summary>
         /// Converts the <paramref name="state"/> to a JSON string.

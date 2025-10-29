@@ -77,7 +77,10 @@ namespace idunno.Bluesky.Serialization.Test
                 "expectedService",
                 "proofKey",
                 correlationKey,
-                [new KeyValuePair<string, string>("key", "value")]);
+                new Dictionary<string, string>()
+                {
+                    { "key", "value" }
+                });
 
             JsonSerializer.Serialize(oAuthLoginState, _jsonSerializerOptions);
         }
@@ -101,7 +104,10 @@ namespace idunno.Bluesky.Serialization.Test
                 "expectedService",
                 "proofKey",
                 correlationKey,
-                [new KeyValuePair<string, string>("key", "value")]);
+                new Dictionary<string, string>()
+                {
+                    { "key", "value" }
+                });
 
             string json = JsonSerializer.Serialize(expected, BlueskyServer.BlueskyJsonSerializerOptions);
 
@@ -130,7 +136,10 @@ namespace idunno.Bluesky.Serialization.Test
                 "expectedService",
                 "proofKey",
                 correlationKey,
-                [new KeyValuePair<string, string>("key", "value")]);
+                new Dictionary<string, string>()
+                {
+                    { "key", "value" }
+                });
 
             string json = JsonSerializer.Serialize(expected, BlueskyServer.BlueskyJsonSerializerOptions);
 
@@ -159,7 +168,10 @@ namespace idunno.Bluesky.Serialization.Test
                 "expectedService",
                 "proofKey",
                 correlationKey,
-                [new KeyValuePair<string, string>("key", "value")]);
+                new Dictionary<string, string>()
+                {
+                    { "key", "value" }
+                });
 
             OAuthLoginState rhs = new(
                 new AuthorizeState()
@@ -213,7 +225,10 @@ namespace idunno.Bluesky.Serialization.Test
                 "expectedService",
                 "proofKey",
                 correlationKey,
-                [new KeyValuePair<string, string>("key", "value")]);
+                new Dictionary<string, string>()
+                {
+                    { "key", "value" }
+                });
 
             Assert.NotEqual(lhs, rhs);
         }
@@ -237,7 +252,10 @@ namespace idunno.Bluesky.Serialization.Test
                 "expectedService",
                 "proofKey",
                 correlationKey,
-                [new KeyValuePair<string, string>("key", "value")]);
+                new Dictionary<string, string>()
+                {
+                    { "key", "value" }
+                });
 
             OAuthLoginState rhs = new(
                 new AuthorizeState()
@@ -253,7 +271,10 @@ namespace idunno.Bluesky.Serialization.Test
                 "expectedService",
                 "proofKey",
                 correlationKey,
-                [new KeyValuePair<string, string>("key", "differentValue")]);
+                new Dictionary<string, string>()
+                {
+                    { "key", "differentValue" }
+                });
 
             Assert.NotEqual(lhs, rhs);
         }
