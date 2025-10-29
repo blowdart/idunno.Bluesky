@@ -164,7 +164,7 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Gets any extra properties for state.
         /// </summary>
-        public IDictionary<string, string>? ExtraProperties { get; }
+        public IDictionary<string, string>? ExtraProperties { get; internal set; }
 
         /// <summary>
         /// Converts the <paramref name="state"/> to a JSON string.

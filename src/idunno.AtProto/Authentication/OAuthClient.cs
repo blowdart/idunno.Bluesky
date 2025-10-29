@@ -15,7 +15,6 @@ using Duende.IdentityModel.OidcClient.DPoP;
 using Duende.IdentityModel.OidcClient.Results;
 
 using idunno.AtProto.Server.Models;
-using System.IdentityModel.Tokens.Jwt;
 
 
 namespace idunno.AtProto.Authentication
@@ -42,6 +41,7 @@ namespace idunno.AtProto.Authentication
         private Uri? _expectedAuthority;
         private Uri? _expectedService;
         private string? _proofKey;
+        private IDictionary<string, string>? _stateExtraProperties;
 
         private OAuthClient(ILoggerFactory? loggerFactory = null, OAuthOptions? options = null)
         {
@@ -85,7 +85,13 @@ namespace idunno.AtProto.Authentication
                 }
                 else
                 {
-                    return new OAuthLoginState(_authorizeState, _expectedAuthority.ToString(), _expectedService.ToString(), _proofKey, _correlationId);
+                    return new OAuthLoginState(
+                        _authorizeState,
+                        _expectedAuthority.ToString(),
+                        _expectedService.ToString(),
+                        _proofKey,
+                        _correlationId,
+                        _stateExtraProperties);
                 }
             }
 
@@ -98,6 +104,7 @@ namespace idunno.AtProto.Authentication
                 _expectedService = new Uri(value.ExpectedService);
                 _proofKey = value.ProofKey;
                 _correlationId = value.CorrelationId;
+                _stateExtraProperties = value.ExtraProperties;
             }
         }
 
@@ -111,6 +118,7 @@ namespace idunno.AtProto.Authentication
         /// <param name="scopes">A collection of scopes to request. Defaults to "atproto".</param>
         /// <param name="handle">The handle to acquire a token for.</param>
         /// <param name="uriExtraParameters">Any extra parameters to attach to the URI.</param>
+        /// <param name="stateExtraProperties">Any extra properties to attach to the state.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="clientId"/> is null or white space and no default clientId has been set on options.</exception>
@@ -125,6 +133,7 @@ namespace idunno.AtProto.Authentication
             IEnumerable<string>? scopes = null,
             Handle? handle = null,
             IEnumerable<KeyValuePair<string, string>>? uriExtraParameters = null,
+            IDictionary<string, string>? stateExtraProperties = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(authority);
@@ -207,6 +216,11 @@ namespace idunno.AtProto.Authentication
             }
             else
             {
+                if (stateExtraProperties is not null)
+                {
+                    _stateExtraProperties = stateExtraProperties;
+                }
+
                 Uri startUri = new(_authorizeState.StartUrl);
 
                 Logger.OAuthLoginUriGenerated(_logger, authority, startUri, _correlationId);

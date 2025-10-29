@@ -9,7 +9,8 @@
 * Add support for configuration binding and options in DI.
 * Add `OAuthLoginState` to `SourceGenerationContext`.
 * Expose `ValidationRegex` constants on `Did` and `Handle` so they can be used in ASP.NET validation.
-* Add optional parameter `uriExtraParameters` to `BuildOAuth2LoginUri`, for use in ASP.NET authentication.
+* Add optional parameter `uriExtraParameters` to `BuildOAuth2LoginUri`.
+* Add optional parameter `stateExtraProperties` to `BuildOAuth2LoginUri`, for use in ASP.NET authentication.
 
 #### idunno.Bluesky
 
