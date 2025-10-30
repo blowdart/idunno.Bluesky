@@ -78,7 +78,7 @@ jobs:
         Get-ChildItem -Path ${env:NUPKG_DIRECTORY} -Recurse -Force
 
     - name: Upload unsigned nupkgs to artifacts
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: build-artifacts
         path: ${{ env.NUPKG_DIRECTORY }}/*
@@ -125,7 +125,7 @@ jobs:
         ./sign/sign code trusted-signing *.nupkg --base-directory ${env:NUPKG_DIRECTORY} -tse "${{ secrets.AZURE_TRUSTEDSIGNING_ENDPOINT }}" -tsa "${{ secrets.AZURE_TRUSTEDSIGNING_ACCOUNT }}" -tscp "${{ secrets.AZURE_TRUSTEDSIGNING_CERTIFICATEPROFILE }}"
 
     - name: Upload signed nupkgs to artifacts
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: signed-artifacts
         path: ${{env.NUPKG_DIRECTORY}}/*
