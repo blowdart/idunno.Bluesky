@@ -101,7 +101,7 @@ jobs:
       run: dotnet tool install --tool-path ./sign --prerelease sign
 
     - name: 'Gather nupkgs from build output'
-      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
       with:
         name: build-artifacts
         path : ${{ env.NUPKG_DIRECTORY }}
@@ -159,7 +159,7 @@ jobs:
       uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
 
     - name: 'Gather nupkgs from signing artifacts'
-      uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
       with:
         name: signed-artifacts
         path : ${{ env.NUPKG_DIRECTORY }}
