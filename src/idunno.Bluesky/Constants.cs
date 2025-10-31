@@ -68,7 +68,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// The maximum number of replies that can be hidden in a thread gate.
         /// </summary>
-        public static readonly int ThreadGateHiddenReplies = 50;
+        public static readonly int ThreadGateHiddenReplies = 300;
 
         /// <summary>
         /// The maximum number of rules a post gate can contain.
