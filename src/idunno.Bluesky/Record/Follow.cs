@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
+
 using idunno.AtProto;
 using idunno.AtProto.Repo;
 
@@ -27,7 +28,6 @@ namespace idunno.Bluesky.Record
         /// </summary>
         /// <param name="subject">The <see cref="Did"/> to the actor to be followed.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> for the repost creation date.</param>
-        [JsonConstructor]
         public Follow(Did subject, DateTimeOffset createdAt) : this(subject: subject, via: null, createdAt: createdAt)
         {
             ArgumentNullException.ThrowIfNull(subject);
