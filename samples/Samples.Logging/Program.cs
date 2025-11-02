@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using idunno.AtProto;
 
 using Samples.Common;
+using Microsoft.Extensions.Options;
 
 namespace Samples.Logging
 {
@@ -51,7 +52,7 @@ namespace Samples.Logging
             // Change the log level in the ConfigureConsoleLogging() to enable logging
             using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
             {
-                using (var agentWithLogging = new AtProtoAgent(new("https://bsky.social"),
+                using (var agentWithLogging = new AtProtoAgent(service: new("https://bsky.social"),
                     new AtProtoAgentOptions()
                     {
                         LoggerFactory = loggerFactory,
@@ -71,9 +72,9 @@ namespace Samples.Logging
             Console.WriteLine("Logging in with no logger");
 
             // Now do it again without a logger to demonstrate no bad side effects
-            using var agentWithoutLogging = new AtProtoAgent(new("https://bsky.social"));
+            using var agentWithoutLogging = new AtProtoAgent(service: new("https://bsky.social"));
             {
-                _ = await agentWithoutLogging.Login(handle, password, cancellationToken: cancellationToken).ConfigureAwait(false);
+                await agentWithoutLogging.Login(handle, password, cancellationToken: cancellationToken).ConfigureAwait(false);
                 await agentWithoutLogging.Logout(cancellationToken: cancellationToken).ConfigureAwait(false);
             }
 

@@ -12,9 +12,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
-using Blob = idunno.AtProto.Repo.Blob;
 using idunno.AtProto.Server.Models;
 using idunno.DidPlcDirectory;
+
+using Blob = idunno.AtProto.Repo.Blob;
 
 namespace idunno.AtProto
 {
@@ -33,6 +34,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="service">The URI of the AtProto service to connect to.</param>
         /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>.</exception>
         public AtProtoAgent(
             Uri service,
             AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions)
@@ -74,7 +76,11 @@ namespace idunno.AtProto
         /// <param name="service">The URI of the AtProto service to connect to.</param>
         /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
         /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
-        public AtProtoAgent(Uri service, IHttpClientFactory httpClientFactory, AtProtoAgentOptions? options = null) : base(httpClientFactory, options?.HttpJsonOptions)
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClientFactory"/> is null.</exception>
+        public AtProtoAgent(
+            Uri service,
+            IHttpClientFactory httpClientFactory,
+            AtProtoAgentOptions? options = null) : base(httpClientFactory, options?.HttpJsonOptions)
         {
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClientFactory);
@@ -109,12 +115,99 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="principal">The <see cref="ClaimsPrincipal"/> to extract authentication properties from.</param>
         /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
-
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="principal"/> is null.</exception>
         public AtProtoAgent(
             ClaimsPrincipal principal,
             AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions)
         {
+            ArgumentNullException.ThrowIfNull(principal);
+
             DPoPAccessCredentials credentials = AtProtoCredential.Create(principal);
+            OriginalService = credentials.Service;
+            Service = credentials.Service;
+            _credentials = credentials;
+
+            if (options is not null)
+            {
+                _enableTokenRefresh = options.EnableBackgroundTokenRefresh;
+
+                options.OAuthOptions?.Validate();
+
+                Options = options;
+
+                LoggerFactory = Options.LoggerFactory ?? NullLoggerFactory.Instance;
+            }
+            else
+            {
+                LoggerFactory = NullLoggerFactory.Instance;
+            }
+
+            _logger = LoggerFactory.CreateLogger<AtProtoAgent>();
+
+            _directoryAgent = new DirectoryAgent(
+                    new DirectoryAgentOptions()
+                    {
+                        PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
+                        LoggerFactory = LoggerFactory,
+                        HttpClientOptions = options?.HttpClientOptions
+                    });
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoAgent"/> and sets the agent authentication to
+        /// a <see cref="DPoPAccessCredentials"/> derived from the <paramref name="principal"/>.
+        /// </summary>
+        /// <param name="principal">The <see cref="ClaimsPrincipal"/> to extract authentication properties from.</param>
+        /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
+        /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="principal"/> or <paramref name="options"/> is null.</exception>
+        public AtProtoAgent(
+            ClaimsPrincipal principal,
+            IHttpClientFactory httpClientFactory,
+            AtProtoAgentOptions? options = null) : base(httpClientFactory, options?.HttpJsonOptions)
+        {
+            ArgumentNullException.ThrowIfNull(principal);
+            ArgumentNullException.ThrowIfNull(httpClientFactory);
+
+            DPoPAccessCredentials credentials = AtProtoCredential.Create(principal);
+            OriginalService = credentials.Service;
+            Service = credentials.Service;
+            _credentials = credentials;
+
+            if (options is not null)
+            {
+                _enableTokenRefresh = options.EnableBackgroundTokenRefresh;
+                LoggerFactory = options.LoggerFactory ?? NullLoggerFactory.Instance;
+            }
+            else
+            {
+                LoggerFactory = NullLoggerFactory.Instance;
+            }
+
+            _logger = LoggerFactory.CreateLogger<AtProtoAgent>();
+
+            _directoryAgent = new DirectoryAgent(
+                httpClientFactory,
+                new DirectoryAgentOptions()
+                {
+                    PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
+                    LoggerFactory = LoggerFactory,
+                });
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoAgent"/> and sets the agent authentication to
+        /// a <see cref="DPoPAccessCredentials"/> derived from the <paramref name="identity"/>.
+        /// </summary>
+        /// <param name="identity">The <see cref="ClaimsIdentity"/> to extract authentication properties from.</param>
+        /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
+        public AtProtoAgent(
+            ClaimsIdentity identity,
+            AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions)
+        {
+            ArgumentNullException.ThrowIfNull(identity);
+
+            DPoPAccessCredentials credentials = AtProtoCredential.Create(identity);
             OriginalService = credentials.Service;
             Service = credentials.Service;
             _credentials = credentials;
@@ -150,12 +243,15 @@ namespace idunno.AtProto
         /// a <see cref="DPoPAccessCredentials"/> derived from the <paramref name="identity"/>.
         /// </summary>
         /// <param name="identity">The <see cref="ClaimsIdentity"/> to extract authentication properties from.</param>
+        /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
         /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
-
         public AtProtoAgent(
             ClaimsIdentity identity,
-            AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions)
+            IHttpClientFactory httpClientFactory,
+            AtProtoAgentOptions? options = null) : base(httpClientFactory, options?.HttpJsonOptions)
         {
+            ArgumentNullException.ThrowIfNull(identity);
+
             DPoPAccessCredentials credentials = AtProtoCredential.Create(identity);
             OriginalService = credentials.Service;
             Service = credentials.Service;
@@ -179,11 +275,11 @@ namespace idunno.AtProto
             _logger = LoggerFactory.CreateLogger<AtProtoAgent>();
 
             _directoryAgent = new DirectoryAgent(
+                httpClientFactory: httpClientFactory,
                     new DirectoryAgentOptions()
                     {
                         PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
-                        LoggerFactory = LoggerFactory,
-                        HttpClientOptions = options?.HttpClientOptions
+                        LoggerFactory = LoggerFactory
                     });
         }
 

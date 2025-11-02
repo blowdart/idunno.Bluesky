@@ -1,11 +1,14 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Security.Claims;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using idunno.AtProto;
 using idunno.Bluesky.RichText;
+using idunno.AtProto.Authentication;
 
 namespace idunno.Bluesky
 {
@@ -20,15 +23,107 @@ namespace idunno.Bluesky
         /// Creates a new instance of <see cref="BlueskyAgent"/>.
         /// </summary>
         /// <param name="options"><see cref="BlueskyAgentOptions"/> for the use in the creation of this instance of <see cref="BlueskyAgent"/>.</param>
-        ///<remarks>
-        /// <para>
-        /// Setting <see cref="HttpClientOptions.CheckCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
-        /// false if you are using a debugging proxy which does not support CRLs.
-        /// </para>
+        /// <remarks>
+        ///   <para>
+        ///     Setting <see cref="HttpClientOptions.CheckCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
+        ///     false if you are using a debugging proxy which does not support CRLs.
+        ///   </para>
         /// </remarks>
-        public BlueskyAgent(BlueskyAgentOptions ? options = null) :
-            base (DefaultServiceUris.BlueskyApiUri, options: options)
+        public BlueskyAgent(BlueskyAgentOptions ? options = null) : base (
+            service: DefaultServiceUris.BlueskyApiUri,
+            options: options)
         {
+            if (options is not null && options.PublicAppViewUri is not null)
+            {
+                ReadOnlyServiceUri = options.PublicAppViewUri;
+            }
+
+            if (options is not null && options.FacetExtractor is not null)
+            {
+                FacetExtractor = options.FacetExtractor;
+            }
+            else
+            {
+                FacetExtractor = new DefaultFacetExtractor(ResolveHandle);
+            }
+
+            if (options is not null)
+            {
+                LoggerFactory = options.LoggerFactory ?? NullLoggerFactory.Instance;
+            }
+            else
+            {
+                LoggerFactory = NullLoggerFactory.Instance;
+            }
+
+            _logger = LoggerFactory.CreateLogger<BlueskyAgent>();
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="BlueskyAgent"/> and sets the agent authentication to
+        /// a <see cref="DPoPAccessCredentials"/> derived from the <paramref name="principal"/>.
+        /// </summary>
+        /// <param name="principal">The <see cref="ClaimsPrincipal"/> to extract authentication properties from.</param>
+        /// <param name="options"><see cref="BlueskyAgentOptions"/> for the use in the creation of this instance of <see cref="BlueskyAgent"/>.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="principal"/> is null.</exception>
+        /// <remarks>
+        ///   <para>
+        ///     Setting <see cref="HttpClientOptions.CheckCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
+        ///     false if you are using a debugging proxy which does not support CRLs.
+        ///   </para>
+        /// </remarks>
+        public BlueskyAgent(ClaimsPrincipal principal, BlueskyAgentOptions? options = null) : base(
+            principal: principal,
+            options: options)
+        {
+            ArgumentNullException.ThrowIfNull(principal);
+
+            if (options is not null && options.PublicAppViewUri is not null)
+            {
+                ReadOnlyServiceUri = options.PublicAppViewUri;
+            }
+
+            if (options is not null && options.FacetExtractor is not null)
+            {
+                FacetExtractor = options.FacetExtractor;
+            }
+            else
+            {
+                FacetExtractor = new DefaultFacetExtractor(ResolveHandle);
+            }
+
+            if (options is not null)
+            {
+                LoggerFactory = options.LoggerFactory ?? NullLoggerFactory.Instance;
+            }
+            else
+            {
+                LoggerFactory = NullLoggerFactory.Instance;
+            }
+
+            _logger = LoggerFactory.CreateLogger<BlueskyAgent>();
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="BlueskyAgent"/> and sets the agent authentication to
+        /// a <see cref="DPoPAccessCredentials"/> derived from the <paramref name="identity"/>.
+        /// </summary>
+        /// <param name="identity">The <see cref="ClaimsPrincipal"/> to extract authentication properties from.</param>
+        /// <param name="options"><see cref="BlueskyAgentOptions"/> for the use in the creation of this instance of <see cref="BlueskyAgent"/>.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> is null.</exception>
+        /// <remarks>
+        ///   <para>
+        ///     Setting <see cref="HttpClientOptions.CheckCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
+        ///     false if you are using a debugging proxy which does not support CRLs.
+        ///   </para>
+        /// </remarks>
+
+        public BlueskyAgent(ClaimsIdentity identity, BlueskyAgentOptions? options = null) : base(
+            identity: identity,
+            options: options)
+        {
+            ArgumentNullException.ThrowIfNull(identity);
+
             if (options is not null && options.PublicAppViewUri is not null)
             {
                 ReadOnlyServiceUri = options.PublicAppViewUri;
@@ -60,9 +155,94 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
         /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
-        public BlueskyAgent(IHttpClientFactory httpClientFactory, BlueskyAgentOptions? options = null) :
-            base(DefaultServiceUris.BlueskyApiUri, httpClientFactory, options)
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClientFactory"/> is null.</exception>
+        public BlueskyAgent(IHttpClientFactory httpClientFactory, BlueskyAgentOptions? options = null) : base(
+            service: DefaultServiceUris.BlueskyApiUri,
+            httpClientFactory: httpClientFactory,
+            options: options)
         {
+            ArgumentNullException.ThrowIfNull(httpClientFactory);
+
+            if (options is not null && options.PublicAppViewUri is not null)
+            {
+                ReadOnlyServiceUri = options.PublicAppViewUri;
+            }
+
+            if (options is not null && options.FacetExtractor is not null)
+            {
+                FacetExtractor = options.FacetExtractor;
+            }
+            else
+            {
+                FacetExtractor = new DefaultFacetExtractor(ResolveHandle);
+            }
+
+            if (options is not null)
+            {
+                LoggerFactory = options.LoggerFactory ?? NullLoggerFactory.Instance;
+            }
+            else
+            {
+                LoggerFactory = NullLoggerFactory.Instance;
+            }
+
+            _logger = LoggerFactory.CreateLogger<BlueskyAgent>();
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="BlueskyAgent"/> and sets the agent authentication to
+        /// a <see cref="DPoPAccessCredentials"/> derived from the <paramref name="principal"/>.
+        /// </summary>
+        /// <param name="principal">The <see cref="ClaimsPrincipal"/> to extract authentication properties from.</param>
+        /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
+        /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
+        public BlueskyAgent(ClaimsPrincipal principal, IHttpClientFactory httpClientFactory, BlueskyAgentOptions? options = null) : base(
+                principal : principal,
+                httpClientFactory: httpClientFactory,
+                options: options)
+        {
+            ArgumentNullException.ThrowIfNull(principal);
+            ArgumentNullException.ThrowIfNull(httpClientFactory);
+
+            if (options is not null && options.PublicAppViewUri is not null)
+            {
+                ReadOnlyServiceUri = options.PublicAppViewUri;
+            }
+
+            if (options is not null && options.FacetExtractor is not null)
+            {
+                FacetExtractor = options.FacetExtractor;
+            }
+            else
+            {
+                FacetExtractor = new DefaultFacetExtractor(ResolveHandle);
+            }
+
+            if (options is not null)
+            {
+                LoggerFactory = options.LoggerFactory ?? NullLoggerFactory.Instance;
+            }
+            else
+            {
+                LoggerFactory = NullLoggerFactory.Instance;
+            }
+
+            _logger = LoggerFactory.CreateLogger<BlueskyAgent>();
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="BlueskyAgent"/> and sets the agent authentication to
+        /// a <see cref="DPoPAccessCredentials"/> derived from the <paramref name="identity"/>.
+        /// </summary>
+        /// <param name="identity">The <see cref="ClaimsIdentity"/> to extract authentication properties from.</param>
+        /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
+        /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
+        public BlueskyAgent(ClaimsIdentity identity, IHttpClientFactory httpClientFactory, BlueskyAgentOptions? options = null) : base(
+                identity: identity,
+                httpClientFactory: httpClientFactory,
+                options: options)
+        {
+            ArgumentNullException.ThrowIfNull(identity);
             ArgumentNullException.ThrowIfNull(httpClientFactory);
 
             if (options is not null && options.PublicAppViewUri is not null)

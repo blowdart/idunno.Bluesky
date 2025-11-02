@@ -17,6 +17,20 @@
 * Add support for configuration binding and options in DI.
 * Add support for Bluesky authentication in ASP.NET Razor Pages.
 
+### Breaking Changes
+
+#### idunno.AtProto
+
+* The `AtProtoAgent` constructor can now take an `ClaimsPrincipal` or `ClaimsIdentity`.
+  This means you must now use named parameters to call the desired constructor, e.g.
+  ```c#
+  using var agentWithoutLogging =
+    new AtProtoAgent(service: new("https://bsky.social"));
+  {
+  }
+  ```
+
+
 ## 1.1.0 - 2025-09-30
 
 ### Added
