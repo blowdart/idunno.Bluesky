@@ -6,7 +6,7 @@ namespace idunno.AtProto.Authentication
     /// <summary>
     /// Defines Bluesky specific claims for use in <see cref="System.Security.Claims.ClaimsIdentity"/>
     /// </summary>
-    public static class Claims
+    public static class BlueskyClaims
     {
         /// <summary>
         /// The claim name for a <see cref="Did"/>.
