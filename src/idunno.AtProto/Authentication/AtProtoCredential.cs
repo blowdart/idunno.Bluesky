@@ -147,12 +147,12 @@ namespace idunno.AtProto.Authentication
         {
             ArgumentNullException.ThrowIfNull(identity);
 
-            string? didAsString = identity.Claims?.FirstOrDefault(x => x.Type.Equals(BlueskyClaims.Did, StringComparison.Ordinal))?.Value;
-            string? accessJwt = identity.Claims?.FirstOrDefault(x => x.Type.Equals(BlueskyClaims.AccessToken, StringComparison.Ordinal))?.Value;
-            string? refreshToken = identity.Claims?.FirstOrDefault(x => x.Type.Equals(BlueskyClaims.RefreshToken, StringComparison.Ordinal))?.Value;
-            string? dPoPProofKey = identity.Claims?.FirstOrDefault(x => x.Type.Equals(BlueskyClaims.DPoPProof, StringComparison.Ordinal))?.Value;
-            string? dPoPNonce = identity.Claims?.FirstOrDefault(x => x.Type.Equals(BlueskyClaims.DPoPNonce, StringComparison.Ordinal))?.Value;
-            string? serviceAsString = identity.Claims?.FirstOrDefault(x => x.Type.Equals(BlueskyClaims.Did, StringComparison.Ordinal))?.Issuer;
+            string? didAsString = identity.Claims?.FirstOrDefault(x => x.Type.Equals(AtProtoClaims.Did, StringComparison.Ordinal))?.Value;
+            string? accessJwt = identity.Claims?.FirstOrDefault(x => x.Type.Equals(AtProtoClaims.AccessToken, StringComparison.Ordinal))?.Value;
+            string? refreshToken = identity.Claims?.FirstOrDefault(x => x.Type.Equals(AtProtoClaims.RefreshToken, StringComparison.Ordinal))?.Value;
+            string? dPoPProofKey = identity.Claims?.FirstOrDefault(x => x.Type.Equals(AtProtoClaims.DPoPProof, StringComparison.Ordinal))?.Value;
+            string? dPoPNonce = identity.Claims?.FirstOrDefault(x => x.Type.Equals(AtProtoClaims.DPoPNonce, StringComparison.Ordinal))?.Value;
+            string? serviceAsString = identity.Claims?.FirstOrDefault(x => x.Type.Equals(AtProtoClaims.Did, StringComparison.Ordinal))?.Issuer;
 
             if (didAsString is null)
             {
