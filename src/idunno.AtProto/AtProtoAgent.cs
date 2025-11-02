@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Security.Claims;
 using System.Text.Json;
 
 using Microsoft.Extensions.Logging;
@@ -100,6 +101,90 @@ namespace idunno.AtProto
                     PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
                     LoggerFactory = LoggerFactory,
                 });
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoAgent"/> and sets the agent authentication to
+        /// a <see cref="DPoPAccessCredentials"/> derived from the <paramref name="principal"/>.
+        /// </summary>
+        /// <param name="principal">The <see cref="ClaimsPrincipal"/> to extract authentication properties from.</param>
+        /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
+
+        public AtProtoAgent(
+            ClaimsPrincipal principal,
+            AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions)
+        {
+            DPoPAccessCredentials credentials = AtProtoCredential.Create(principal);
+            OriginalService = credentials.Service;
+            Service = credentials.Service;
+            _credentials = credentials;
+
+            if (options is not null)
+            {
+                _enableTokenRefresh = options.EnableBackgroundTokenRefresh;
+
+                options.OAuthOptions?.Validate();
+
+                Options = options;
+
+                LoggerFactory = Options.LoggerFactory ?? NullLoggerFactory.Instance;
+            }
+            else
+            {
+                LoggerFactory = NullLoggerFactory.Instance;
+            }
+
+            _logger = LoggerFactory.CreateLogger<AtProtoAgent>();
+
+            _directoryAgent = new DirectoryAgent(
+                    new DirectoryAgentOptions()
+                    {
+                        PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
+                        LoggerFactory = LoggerFactory,
+                        HttpClientOptions = options?.HttpClientOptions
+                    });
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoAgent"/> and sets the agent authentication to
+        /// a <see cref="DPoPAccessCredentials"/> derived from the <paramref name="identity"/>.
+        /// </summary>
+        /// <param name="identity">The <see cref="ClaimsIdentity"/> to extract authentication properties from.</param>
+        /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
+
+        public AtProtoAgent(
+            ClaimsIdentity identity,
+            AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions)
+        {
+            DPoPAccessCredentials credentials = AtProtoCredential.Create(identity);
+            OriginalService = credentials.Service;
+            Service = credentials.Service;
+            _credentials = credentials;
+
+            if (options is not null)
+            {
+                _enableTokenRefresh = options.EnableBackgroundTokenRefresh;
+
+                options.OAuthOptions?.Validate();
+
+                Options = options;
+
+                LoggerFactory = Options.LoggerFactory ?? NullLoggerFactory.Instance;
+            }
+            else
+            {
+                LoggerFactory = NullLoggerFactory.Instance;
+            }
+
+            _logger = LoggerFactory.CreateLogger<AtProtoAgent>();
+
+            _directoryAgent = new DirectoryAgent(
+                    new DirectoryAgentOptions()
+                    {
+                        PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
+                        LoggerFactory = LoggerFactory,
+                        HttpClientOptions = options?.HttpClientOptions
+                    });
         }
 
         /// <summary>
