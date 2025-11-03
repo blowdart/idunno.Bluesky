@@ -8,7 +8,7 @@ on:
         required: true
         default: true
       perform_publish:
-        description: 'Publish to Blob Storage, GitHub Packages & MyGet'
+        description: 'Publish Pre-release'
         type: boolean
         required: true
         default: true
@@ -26,7 +26,9 @@ permissions:
 jobs:
   build:
     permissions:
+      attestations: write
       contents: read
+      id-token: write
 
     name: Build pre-release
     runs-on: ubuntu-latest
@@ -84,6 +86,13 @@ jobs:
         path: ${{ env.NUPKG_DIRECTORY }}/*
         retention-days: 7
 
+    - name: Attest Build Artifacts
+      uses: actions/attest-build-provenance@v3
+      with:
+        subject-name: artifact.zip
+        subject-digest: sha256:${{ steps.build-artifacts.outputs.artifact-digest }}
+
+
   sign:
     name: Sign
     needs: build
@@ -91,8 +100,10 @@ jobs:
     if:  ${{ inputs.perform_sign }} 
     environment: nightly
     permissions:
+      attestations: write
       contents: read
       id-token: write
+
     steps:
     - name: 'Setup .NET SDK'
       uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
@@ -131,8 +142,14 @@ jobs:
         path: ${{env.NUPKG_DIRECTORY}}/*
         retention-days: 7
 
+    - name: Attest Signed Artifacts
+      uses: actions/attest-build-provenance@v3
+      with:
+        subject-name: artifact.zip
+        subject-digest: sha256:${{ steps.signed-artifacts.outputs.artifact-digest }}
+
   publish:
-    name: Publish to Blob storage, GitHub Packages and MyGet
+    name: Publish Pre-Release
     needs: sign
     runs-on: ubuntu-latest
     if:  ${{ inputs.perform_publish }}
@@ -183,7 +200,7 @@ jobs:
          dotnet tool install --tool-path ./sleet sleet
          ./sleet/sleet push "${env:NUPKG_DIRECTORY}" --config ./sleet.json --source feed
 
-    - name: Setup MyGet and GitHub Packages as NuGet Source
+    - name: Setup MyGet and GitHub Packages as NuGet Sources
       shell: pwsh
       run: |
         dotnet new nugetconfig
