@@ -983,7 +983,7 @@ namespace idunno.AtProto
         /// <exception cref="AuthenticationRequiredException">Thrown when agent is not authenticated.</exception>
         public async Task<bool> RefreshCredentials(CancellationToken cancellationToken = default)
         {
-            if (Credentials is null)
+            if (Credentials is null || Credentials.RefreshToken is null)
             {
                 Logger.RefreshCredentialsFailedNoSession(_logger);
                 throw new AuthenticationRequiredException();
