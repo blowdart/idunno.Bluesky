@@ -87,7 +87,7 @@ jobs:
         path: ${{ env.NUPKG_DIRECTORY }}/*
         retention-days: 7
 
-    - name: Attest Build Artifacts
+    - name: Attest build artifacts
       uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
       with:
         subject-name: build-artifacts.zip
@@ -144,14 +144,14 @@ jobs:
         path: ${{env.NUPKG_DIRECTORY}}/*
         retention-days: 7
 
-    - name: Attest Signed Artifacts
+    - name: Attest signed artifacts
       uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
       with:
         subject-name: signed-artifacts.zip
         subject-digest: sha256:${{ steps.upload.outputs.artifact-digest }}
 
   publish:
-    name: Publish Pre-Release
+    name: Publish
     needs: sign
     runs-on: ubuntu-latest
     if:  ${{ inputs.perform_publish }}

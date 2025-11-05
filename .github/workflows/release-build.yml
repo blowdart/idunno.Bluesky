@@ -31,7 +31,9 @@ permissions:
 jobs:
   build:
     permissions:
+      attestations: write
       contents: read
+      id-token: write
 
     name: Build release
     runs-on: ubuntu-latest
@@ -83,11 +85,18 @@ jobs:
         Get-ChildItem -Path ${env:NUPKG_DIRECTORY} -Recurse -Force
 
     - name: Upload unsigned nupkgs to artifacts
+      id: upload
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
-        name: build-artifacts
+        name: build-artifacts.zip
         path: ${{ env.NUPKG_DIRECTORY }}/*
         retention-days: 7
+
+    - name: Attest build artifacts
+      uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
+      with:
+        subject-name: build-artifacts.zip
+        subject-digest: sha256:${{ steps.upload.outputs.artifact-digest }}
 
   sign:
     name: Sign
@@ -96,8 +105,10 @@ jobs:
     if:  ${{ inputs.perform_sign }} 
     environment: release
     permissions:
+      attestations: write
       contents: read
       id-token: write
+
     steps:
     - name: 'Setup .NET SDK'
       uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
@@ -108,7 +119,7 @@ jobs:
     - name: 'Gather nupkgs from build output'
       uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
       with:
-        name: build-artifacts
+        name: build-artifacts.zip
         path : ${{ env.NUPKG_DIRECTORY }}
 
     - name: List assets to be signed
@@ -130,14 +141,21 @@ jobs:
         ./sign/sign code azure-key-vault *.nupkg --base-directory ${env:NUPKG_DIRECTORY} --azure-key-vault-url "${{ secrets.AZURE_KEY_VAULT_URL }}" --azure-key-vault-certificate "${{ secrets.AZURE_KEY_VAULT_CERTIFICATE }}"
 
     - name: Upload signed nupkgs to artifacts
+      id: upload
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
-        name: signed-artifacts
+        name: signed-artifacts.zip
         path: ${{env.NUPKG_DIRECTORY}}/*
         retention-days: 7
 
+    - name: Attest signed artifacts
+      uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
+      with:
+        subject-name: signed-artifacts.zip
+        subject-digest: sha256:${{ steps.upload.outputs.artifact-digest }}
+
   publish:
-    name: Publish to nuget
+    name: Publish
     needs: sign
     runs-on: ubuntu-latest
     if:  ${{ inputs.perform_publish }}
@@ -156,7 +174,7 @@ jobs:
     - name: 'Gather nupkgs from signing output'
       uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
       with:
-        name: signed-artifacts
+        name: signed-artifacts.zip
         path : ${{ env.NUPKG_DIRECTORY }}
 
     - name: List assets to be published
