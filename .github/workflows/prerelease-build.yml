@@ -143,7 +143,7 @@ jobs:
         retention-days: 7
 
     - name: Attest Signed Artifacts
-      uses: actions/attest-build-provenance@v3
+      uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
       with:
         subject-name: artifact.zip
         subject-digest: sha256:${{ steps.signed-artifacts.outputs.artifact-digest }}
