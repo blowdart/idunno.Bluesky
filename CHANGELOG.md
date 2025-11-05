@@ -11,6 +11,7 @@
 * Expose `ValidationRegex` constants on `Did` and `Handle` so they can be used in ASP.NET validation.
 * Add optional parameter `uriExtraParameters` to `BuildOAuth2LoginUri`.
 * Add optional parameter `stateExtraProperties` to `BuildOAuth2LoginUri`, for use in ASP.NET authentication.
+* Fix `AtProtoAgent.RefreshCredentials()` to attempt a refresh if the access token has expired and there is a refresh token.
 
 #### idunno.Bluesky
 
