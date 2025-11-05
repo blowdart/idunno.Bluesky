@@ -180,7 +180,7 @@ jobs:
     - name: 'Gather nupkgs from signing artifacts'
       uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
       with:
-        name: signed-artifacts
+        name: signed-artifacts.zip
         path : ${{ env.NUPKG_DIRECTORY }}
 
     - name: List assets to be published
