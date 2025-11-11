@@ -21,7 +21,6 @@ env:
   DOTNET_NOLOGO: true
   DOTNET_GENERATE_ASPNET_CERTIFICATE: false
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
-  CODEQL_EXTRACTOR_CSHARP_OPTION_BINLOG: true
 
 jobs:
   analyze:
@@ -69,10 +68,7 @@ jobs:
     # and avoid triggering deterministic builds and git commit based versioning
     # (as GitHub workflows shallow clone by default, and that breaks the versioning.)
     - name: build source
-      run: dotnet build --configuration CodeQL /p:UseSharedCompilation=false /t:rebuild /bl:bluesky.binlog
-
-    - name: build CodeQL database
-      run: codeql database create DB_bluesky --language=csharp --build-mode=none -Obinlog=bluesky.binlog
+      run: dotnet build --configuration CodeQL /p:UseSharedCompilation=false /t:rebuild
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@0499de31b99561a6d14a36a5f662c2a54f91beee # v4.31.2
