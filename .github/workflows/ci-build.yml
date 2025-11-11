@@ -45,15 +45,20 @@ jobs:
       uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
       with:
         dotnet-version: | 
+          8.0.x
           9.0.x
           10.0.x
 
-    - name: 'Reoprt SDK version'
+    - name: 'Report SDK versions'
       run : dotnet --info
+
+    - name : 'Restore'
+      id: restore
+      run: dotnet restore
 
     - name: 'Build'
       id: build
-      run: dotnet build --configuration Debug
+      run: dotnet build --configuration Debug --no-restore
 
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
