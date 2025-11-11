@@ -39,12 +39,6 @@ jobs:
         # Learn more about CodeQL language support at https://git.io/codeql-language-support
 
     steps:
-    - name : Check pre-installs
-      run : ls /usr/share/dotnet/sdk
-
-    - name: Chop out 10.0 for now
-      run : rm -rf /usr/share/dotnet/sdk/10*
-
     - name: Harden Runner
       uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
       with:
@@ -55,6 +49,9 @@ jobs:
       with:
         fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
         persist-credentials: false
+
+    - name: Copy over CodeQL global.json
+      run: cp -f.global.codeqljson global.json
 
     - name: 'Setup .NET SDK'
       uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
