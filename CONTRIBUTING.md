@@ -5,6 +5,13 @@
 The following is a set of guidelines for contributing to these libraries.
 These are just guidelines, not rules, so feel free to use your own judgement, and to propose changes to these guidelines in a pull request.
 
+## Building locally
+
+You will need, at a minimum, a [.NET SDK 10](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) installed.
+
+If you want to use Visual Studio you will need [Visual Studio 2026](https://visualstudio.microsoft.com/downloads/) with the
+ASP.NET and web development workload installed. Visual Studio 2026 community edition will work just fine.
+
 ## Issues
 
 Issues will be marked stale after 14 days of inactivity, and closed 14 days after they have been marked stale.
