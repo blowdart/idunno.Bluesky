@@ -40,10 +40,10 @@ jobs:
 
     steps:
     - name : Check pre-installs
-      run : ls /usr/bin/dotnet/sdk
+      run : ls /usr/share/dotnet/sdk
 
     - name: Chop out 10.0 for now
-      run : rm -rf /usr/bin/dotnet/sdk/10*
+      run : rm -rf /usr/share/dotnet/sdk/10*
 
     - name: Harden Runner
       uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
