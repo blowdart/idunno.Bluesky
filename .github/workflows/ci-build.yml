@@ -49,6 +49,9 @@ jobs:
           9.0.x
           10.0.x
 
+    - name: 'Reoprt SDK version'
+      run : dotnet --info
+
     - name: 'Restore external dependencies'
       run: dotnet restore
 
