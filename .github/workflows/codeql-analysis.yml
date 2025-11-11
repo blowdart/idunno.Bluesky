@@ -69,7 +69,7 @@ jobs:
     # We can't use autobuild because we want to restrict the build to just src folder solutions
     # and avoid triggering deterministic builds and git commit based versioning
     # (as GitHub workflows shallow clone by default, and that breaks the versioning.)
-    - name: build source
+    - name: Build source
       run: dotnet build --configuration CodeQL /p:UseSharedCompilation=false /t:rebuild
 
     - name: Perform CodeQL Analysis

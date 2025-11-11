@@ -10,7 +10,7 @@
     <Otherwise>
       <PropertyGroup>
         <!-- CodeQL doesn't do .NET 10 yet -->
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
       </PropertyGroup>
     </Otherwise>
   </Choose>
