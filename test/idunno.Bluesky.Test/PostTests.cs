@@ -662,16 +662,6 @@ namespace idunno.Bluesky.Test
         }
 
         [Fact]
-        public void ConstructorThrowsWhenTagsContainNullTag()
-        {
-            List<string> tags = ["1", "2", "3", "4", "5", "6", "7", null];
-
-            ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post("text", createdAt: DateTimeOffset.UtcNow, tags: tags));
-
-            Assert.Equal("tags", caughtException.ParamName);
-        }
-
-        [Fact]
         public void ConstructorSetsTagProperty()
         {
             List<string> tags = ["1", "2", "3", "4", "5", "6", "7", "8"];

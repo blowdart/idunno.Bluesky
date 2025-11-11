@@ -1,15 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>true</SelfContained>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <Configurations>Debug;Release;CodeQL</Configurations>
-  </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\src\idunno.Bluesky\idunno.Bluesky.csproj" />
   </ItemGroup>

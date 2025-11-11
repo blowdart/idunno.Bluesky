@@ -4,12 +4,12 @@
   <Choose>
     <When Condition="'$(Configuration)' != 'CodeQL'">
       <PropertyGroup>
-        <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+        <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
       </PropertyGroup>
     </When>
     <Otherwise>
       <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
       </PropertyGroup>
     </Otherwise>
   </Choose>
@@ -18,7 +18,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;CodeQL</Configurations>
-    <LangVersion>13.0</LangVersion>
+    <LangVersion>latest</LangVersion>
     <!-- Needed for meters -->
     <EventSourceSupport>true</EventSourceSupport>
   </PropertyGroup>

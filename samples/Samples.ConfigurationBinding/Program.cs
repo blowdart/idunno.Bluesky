@@ -27,6 +27,7 @@ namespace Samples.ConfigurationBinding
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1848:Use the LoggerMessage delegates", Justification = "Example code, inline for clarity")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1873:Avoid potentially expensive logging", Justification = "Example code, inline for claity")]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2254:Template should be a static expression", Justification = "Example code, inline for clarity")]
     internal sealed class HostedService(
         IOptions<BlueskyAgentOptions> options,

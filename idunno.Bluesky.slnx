@@ -1,0 +1,284 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="CodeQL" />
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+  </Configurations>
+  <Folder Name="/.devcontainer/">
+    <File Path=".devcontainer/devcontainer.json" />
+  </Folder>
+  <Folder Name="/.github/">
+    <File Path=".github/CODEOWNERS" />
+    <File Path=".github/dependabot.yml" />
+    <File Path=".github/pull_request_template.md" />
+  </Folder>
+  <Folder Name="/.github/ISSUE_TEMPLATE/">
+    <File Path=".github/ISSUE_TEMPLATE/bug_report.md" />
+    <File Path=".github/ISSUE_TEMPLATE/docs-issue.md" />
+    <File Path=".github/ISSUE_TEMPLATE/feature_request.md" />
+  </Folder>
+  <Folder Name="/.github/workflows/">
+    <File Path=".github/workflows/actions-security-analysis.yml" />
+    <File Path=".github/workflows/ci-build.yml" />
+    <File Path=".github/workflows/close-inactive-issues.yml" />
+    <File Path=".github/workflows/codeql-analysis.yml" />
+    <File Path=".github/workflows/dependency-review.yml" />
+    <File Path=".github/workflows/generate-publish-docs.yml" />
+    <File Path=".github/workflows/openssf-scorecard.yml" />
+    <File Path=".github/workflows/prerelease-build.yml" />
+    <File Path=".github/workflows/release-build.yml" />
+  </Folder>
+  <Folder Name="/docs/">
+    <File Path="docs/docfx.json" />
+    <File Path="docs/docicon.png" />
+    <File Path="docs/favicon.ico" />
+    <File Path="docs/favicon.png" />
+    <File Path="docs/filter.yml" />
+    <File Path="docs/index.md" />
+    <File Path="docs/toc.yml" />
+  </Folder>
+  <Folder Name="/docs/docs/">
+    <File Path="docs/docs/asp.net.md" />
+    <File Path="docs/docs/commonTerms.md" />
+    <File Path="docs/docs/connecting.md" />
+    <File Path="docs/docs/conversationsAndMessages.md" />
+    <File Path="docs/docs/cursorsAndPagination.md" />
+    <File Path="docs/docs/endpointStatus.md" />
+    <File Path="docs/docs/index.md" />
+    <File Path="docs/docs/jetstream.md" />
+    <File Path="docs/docs/labels.md" />
+    <File Path="docs/docs/logging.md" />
+    <File Path="docs/docs/notifications.md" />
+    <File Path="docs/docs/posting.md" />
+    <File Path="docs/docs/profileEditing.md" />
+    <File Path="docs/docs/profiles.md" />
+    <File Path="docs/docs/requestsAndResponses.md" />
+    <File Path="docs/docs/savingAndRestoringAuthentication.md" />
+    <File Path="docs/docs/sourceGeneration.md" />
+    <File Path="docs/docs/threadGatesAndPostGates.md" />
+    <File Path="docs/docs/timeline.md" />
+    <File Path="docs/docs/toc.yml" />
+    <File Path="docs/docs/unspecced.md" />
+    <File Path="docs/docs/userPreferences.md" />
+    <File Path="docs/docs/video.md" />
+  </Folder>
+  <Folder Name="/docs/docs/bots/">
+    <File Path="docs/docs/bots/scheduledPostBot.md" />
+    <File Path="docs/docs/bots/watcherBot.md" />
+  </Folder>
+  <Folder Name="/docs/docs/bots/code/" />
+  <Folder Name="/docs/docs/bots/code/BlueskyBot/">
+    <Project Path="docs/docs/bots/code/BlueskyBot/BlueskyBot.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/docs/docs/bots/code/WatcherBot/">
+    <Project Path="docs/docs/bots/code/WatcherBot/Step1/Step1.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="docs/docs/bots/code/WatcherBot/Step2/Step2.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="docs/docs/bots/code/WatcherBot/Step3/Step3.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="docs/docs/bots/code/WatcherBot/Step4/Step4.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="docs/docs/bots/code/WatcherBot/Step5/Step5.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/docs/docs/code/">
+    <File Path="docs/docs/code/createASession.cs" />
+    <File Path="docs/docs/code/helloWorld.cs" />
+    <File Path="docs/docs/code/helloWorldErrorChecked.cs" />
+  </Folder>
+  <Folder Name="/docs/docs/media/">
+    <File Path="docs/docs/images/embeddedCard.png" />
+    <File Path="docs/docs/media/vs-AdditionalInformation.png" />
+    <File Path="docs/docs/media/vs-CreateNewConsoleApp.png" />
+  </Folder>
+  <Folder Name="/docs/docs/tutorials/">
+    <File Path="docs/docs/tutorials/blockingUsers.md" />
+    <File Path="docs/docs/tutorials/creatingAPost.md" />
+    <File Path="docs/docs/tutorials/editingProfiles.md" />
+    <File Path="docs/docs/tutorials/followingAndUnfollowing.md" />
+    <File Path="docs/docs/tutorials/likingAndReposting.md" />
+    <File Path="docs/docs/tutorials/muteAndUnmute.md" />
+    <File Path="docs/docs/tutorials/threadGates.md" />
+    <File Path="docs/docs/tutorials/toc.yml" />
+    <File Path="docs/docs/tutorials/userLists.md" />
+    <File Path="docs/docs/tutorials/viewingFeeds.md" />
+    <File Path="docs/docs/tutorials/viewingProfiles.md" />
+    <File Path="docs/docs/tutorials/viewingThreads.md" />
+  </Folder>
+  <Folder Name="/docs/docs/tutorials/code/">
+    <File Path="docs/docs/tutorials/code/feed.cs" />
+    <File Path="docs/docs/tutorials/code/helloWorld.cs" />
+    <File Path="docs/docs/tutorials/code/lists.cs" />
+    <File Path="docs/docs/tutorials/code/manageLists.cs" />
+  </Folder>
+  <Folder Name="/samples/">
+    <File Path="samples/Directory.Build.Props" />
+    <File Path="samples/readme.md" />
+    <Project Path="samples/Samples.AgentEvents/Samples.AgentEvents.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.AtProto/Samples.AtProto.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.Bookmarks/Samples.Bookmarks.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.Bot/Samples.Bot.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.BulkDelete/Samples.BulkDelete.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.Common/Samples.Common.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.ConfigurationBinding/Samples.ConfigurationBinding.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.ConsoleShell/Samples.ConsoleShell.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.ConsoleShellOAuth/Samples.ConsoleShellOAuth.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.DirectMessages/Samples.DirectMessages.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.EmbeddedCard/Samples.EmbeddedCard.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.Feed/Samples.Feed.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.Jetstream/Samples.Jetstream.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.Logging/Samples.Logging.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.LoginDiscovery/Samples.LoginDiscovery.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.Notifications/Samples.Notifications.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.OAuth/Samples.OAuth.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.Posting/Samples.Posting.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.Timeline/Samples.Timeline.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.TokenRefresh/Samples.TokenRefresh.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="samples/Samples.Video/Samples.Video.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitignore" />
+    <File Path=".runsettings" />
+    <File Path=".vsconfig" />
+    <File Path="architectureNotes.md" />
+    <File Path="buildDocs.ps1" />
+    <File Path="CHANGELOG.md" />
+    <File Path="CODE_OF_CONDUCT.md" />
+    <File Path="CONTRIBUTING.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="docfx.json" />
+    <File Path="exclusion.dic" />
+    <File Path="global.json" />
+    <File Path="key.snk" />
+    <File Path="LICENSE" />
+    <File Path="minisign.pub" />
+    <File Path="nuget.config" />
+    <File Path="purge.ps1" />
+    <File Path="readme.md" />
+    <File Path="SECURITY.md" />
+    <File Path="sleet.json" />
+    <File Path="THIRD-PARTY-NOTICES.txt" />
+    <File Path="trimTest.ps1" />
+    <File Path="version.json" />
+  </Folder>
+  <Folder Name="/src/">
+    <File Path="src/.editorconfig" />
+    <File Path="src/Directory.Build.props" />
+    <Project Path="src/idunno.AtProto.OAuthCallback/idunno.AtProto.OAuthCallback.csproj" />
+    <Project Path="src/idunno.AtProto/idunno.AtProto.csproj" />
+    <Project Path="src/idunno.Bluesky/idunno.Bluesky.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <File Path="test/.editorconfig" />
+    <File Path="test/Directory.Build.props" />
+    <Project Path="test/idunno.AtProto.Integration.Test/idunno.AtProto.Integration.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="test/idunno.AtProto.Serialization.Test/idunno.AtProto.Serialization.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="test/idunno.AtProto.Test/idunno.AtProto.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="test/idunno.Bluesky.Integration.Test/idunno.Bluesky.Integration.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="test/idunno.Bluesky.Serialization.Test/idunno.Bluesky.Serialization.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="test/idunno.Bluesky.Test/idunno.Bluesky.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/trimming/">
+    <Project Path="trimming/idunno.TrimmingTest.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+  </Folder>
+</Solution>
