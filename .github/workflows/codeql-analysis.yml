@@ -50,15 +50,11 @@ jobs:
         fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
         persist-credentials: false
 
-    - name: Copy over CodeQL global.json
-      run: cp -f global.codeql.json global.json
-
     - name: 'Setup .NET SDK'
       uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
       with:
         dotnet-version: | 
-          8.0.x
-          9.0.x
+          10.0.x
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL

@@ -10,7 +10,7 @@ If you believe you have found a security vulnerability in any this repository pl
 
 Instead, to report a security issue, please use the GitHub Security Advisory ["Report a Vulnerability"](https://github.com/blowdart/idunno.Bluesky/security/advisories/new) form.
 
-You should receive a response within 48 hours. If, for some reason, you do not please feel free to follow up via [email](https://idunno.org/#contact) to ensure I received your report.
+You should receive a response within 48 hours. If, for some reason, you do not please feel free to follow up via email to ensure I received your report.
 
 Where possible please include the requested information listed below to help me better understand the nature and scope of the possible issue:
 
