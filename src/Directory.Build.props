@@ -1,21 +1,8 @@
-<Project>
+﻿<Project>
   <Import Project="..\Directory.Build.props" />
 
-  <Choose>
-    <When Condition="'$(Configuration)' != 'CodeQL'">
-      <PropertyGroup>
-        <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
-      </PropertyGroup>
-    </When>
-    <Otherwise>
-      <PropertyGroup>
-        <!-- CodeQL doesn't do .NET 10 yet -->
-        <TargetFramework>net9.0</TargetFramework>
-      </PropertyGroup>
-    </Otherwise>
-  </Choose>
-  
   <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;CodeQL</Configurations>

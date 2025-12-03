@@ -1,4 +1,4 @@
-version: 2
+﻿version: 2
 updates:
 - package-ecosystem: nuget
   directory: "/"
@@ -8,7 +8,7 @@ updates:
   # See https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference#open-pull-requests-limit-
   open-pull-requests-limit: 0
   cooldown:
-    default-days: 5
+    default-days: 7
   ignore:
     - dependency-name: "Microsoft.AspNetCore.TestHost"
       update-types: ["version-update:semver-major"]
@@ -37,4 +37,4 @@ updates:
   schedule:
     interval: "daily"
   cooldown:
-    default-days: 5
+    default-days: 7
