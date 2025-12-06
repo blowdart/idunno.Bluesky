@@ -1,4 +1,4 @@
-# Version History
+﻿# Version History
 
 ## 1.2.0 - Unreleased, In Progress
 
@@ -6,16 +6,20 @@
 
 #### idunno.AtProto
 
+* Add .NET 10 support
 * Add support for configuration binding and options in DI.
 * Add `OAuthLoginState` to `SourceGenerationContext`.
 * Expose `ValidationRegex` constants on `Did` and `Handle` so they can be used in ASP.NET validation.
 * Add optional parameter `uriExtraParameters` to `BuildOAuth2LoginUri`.
 * Add optional parameter `stateExtraProperties` to `BuildOAuth2LoginUri`, for use in ASP.NET authentication.
-* Fix `AtProtoAgent.RefreshCredentials()` to attempt a refresh if the access token has expired and there is a refresh token.
+* Fix `AtProtoAgent.RefreshCredentials()` to attempt a refresh if the access token has expired and there is a refresh token available.
 
 #### idunno.Bluesky
 
+* Add .NET 10 support
 * Add support for configuration binding and options in DI.
+
+### idunno.Bluesky.AspNet.Authentication
 * Add support for Bluesky authentication in ASP.NET Razor Pages.
 
 ### Breaking Changes
@@ -31,6 +35,9 @@
   }
   ```
 
+#### idunno.Bluesky
+
+* Added block informationship to Graph.Relationship, see [bsky: Expand getRelationships to include blocks](https://github.com/bluesky-social/atproto/pull/4418).
 
 ## 1.1.0 - 2025-09-30
 

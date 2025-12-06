@@ -20,12 +20,20 @@ namespace idunno.Bluesky.Graph
         /// <param name="did">The <see cref="Did"/> of the target actor.</param>
         /// <param name="following">If the actor follows this <see cref="Did"/>, this is the <see cref="AtUri"/> of the follow record, otherwise null</param>
         /// <param name="followedBy">If the actor is followed by this <see cref="Did"/>, contains the <see cref="AtUri"/> of the follow record.</param>
+        /// <param name="blocking">If the actor blocks this <see cref="Did" />, this is the <see cref="AtUri"/> of the block record.</param>
+        /// <param name="blockedBy">If the actor is blocked by this <see cref="Did" />, contains the <see cref="AtUri"/> of the block record.</param>
+        /// <param name="blockingByList">If the actor is blocked by this <see cref="Did" /> via a block list, contains the <see cref="AtUri"/> of the ListBlock record.</param>
+        /// <param name="blockedByList">If the actor blocks this <see cref="Did" /> by a block list, this is the <see cref="AtUri"/> of the ListBlock record.</param>
         [JsonConstructor]
-        public Relationship(Did did, AtUri?following, AtUri? followedBy)
+        public Relationship(Did did, AtUri?following, AtUri? followedBy, AtUri? blocking, AtUri? blockedBy, AtUri? blockingByList, AtUri? blockedByList)
         {
             Did = did;
             Following = following;
             FollowedBy = followedBy;
+            Blocking = blocking;
+            BlockedBy = blockedBy;
+            BlockingByList = blockingByList;
+            BlockedByList = blockedByList;
         }
 
         /// <summary>
@@ -46,5 +54,29 @@ namespace idunno.Bluesky.Graph
         /// </summary>
         [JsonInclude]
         public AtUri? FollowedBy { get; init; }
+
+        /// <summary>
+        /// If the actor blocks this <see cref="Did" />, this is the <see cref="AtUri"/> of the block record.
+        /// </summary>
+        [JsonInclude]
+        public AtUri? Blocking { get; init; }
+
+        /// <summary>
+        /// If the actor is blocked by this <see cref="Did" />, contains the <see cref="AtUri"/> of the block record.
+        /// </summary>
+        [JsonInclude]
+        public AtUri? BlockedBy { get; init; }
+
+        /// <summary>
+        /// If the actor blocks this <see cref="Did" /> by a block list, this is the <see cref="AtUri"/> of the ListBlock record.
+        /// </summary>
+        [JsonInclude]
+        public AtUri? BlockingByList { get; init; }
+
+        /// <summary>
+        /// If the actor is blocked by this <see cref="Did" /> via a block list, contains the <see cref="AtUri"/> of the ListBlock record.
+        /// </summary>
+        [JsonInclude]
+        public AtUri? BlockedByList { get; init; }
     }
 }
