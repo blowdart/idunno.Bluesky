@@ -23,6 +23,7 @@
     <File Path=".github/workflows/close-inactive-issues.yml" />
     <File Path=".github/workflows/codeql-analysis.yml" />
     <File Path=".github/workflows/dependency-review.yml" />
+    <File Path=".github/workflows/devskim.yml" />
     <File Path=".github/workflows/generate-publish-docs.yml" />
     <File Path=".github/workflows/openssf-scorecard.yml" />
     <File Path=".github/workflows/prerelease-build.yml" />
