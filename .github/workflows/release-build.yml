@@ -57,14 +57,18 @@ jobs:
           9.0.x
           10.0.x
 
+    - name : 'Restore'
+      id: restore
+      run: dotnet restore --locked-mode
+
     - name: 'Build'
-      run: dotnet build --configuration Release --property:PublicRelease=${{ inputs.public_release }}
+      run: dotnet build --configuration Release --no-restore --property:PublicRelease=${{ inputs.public_release }}
 
     - name: 'Test'
       run: dotnet test --configuration Release --no-restore --no-build --property:PublicRelease=${{ inputs.public_release }}
 
     - name: 'Pack release'
-      run: dotnet pack --configuration Release --no-restore  --no-build --output ${NUPKG_DIRECTORY} --property:PublicRelease=${{ inputs.public_release }}
+      run: dotnet pack --configuration Release --no-restore --no-build --output ${NUPKG_DIRECTORY} --property:PublicRelease=${{ inputs.public_release }}
 
     - name: 'List artifact directory'
       shell: pwsh

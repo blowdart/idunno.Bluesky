@@ -1,4 +1,4 @@
-name: CI Build
+﻿name: CI Build
 
 on:
   workflow_dispatch:
@@ -54,7 +54,7 @@ jobs:
 
     - name : 'Restore'
       id: restore
-      run: dotnet restore
+      run: dotnet restore --locked-mode
 
     - name: 'Build'
       id: build
