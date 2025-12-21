@@ -54,7 +54,7 @@ jobs:
 
     - name : 'Restore'
       id: restore
-      run: dotnet restore --locked-mode
+      run: dotnet restore
 
     - name: 'Build'
       run: dotnet build --configuration Release --no-restore --property:PublicRelease=false
@@ -64,11 +64,6 @@ jobs:
 
     - name: 'Pack release'
       run: dotnet pack --configuration Release --no-restore  --no-build --output ${NUPKG_DIRECTORY} --property:PublicRelease=false
-
-    - name: 'List artifact directory'
-      shell: pwsh
-      run: >
-        Get-ChildItem -Path ${env:NUPKG_DIRECTORY} -Recurse -Force
 
     - name: 'Extract SBOMs'
       shell: pwsh
