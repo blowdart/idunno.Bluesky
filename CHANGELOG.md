@@ -1,26 +1,50 @@
 ﻿# Version History
 
+## 2.0.0 - Unreleased, In Progress
+
+### idunno.Bluesky.AspNet.Authentication
+* Add support for Bluesky authentication in ASP.NET Razor Pages.
+
 ## 1.2.0 - Unreleased, In Progress
 
 ### Added
 
 #### idunno.AtProto
 
+* Enable `packages.lock.json`
 * Add .NET 10 support
 * Add support for configuration binding and options in DI.
 * Add `OAuthLoginState` to `SourceGenerationContext`.
-* Expose `ValidationRegex` constants on `Did` and `Handle` so they can be used in ASP.NET validation.
+* Expose `ValidationRegex` constants on `Did` and `Handle`.
 * Add optional parameter `uriExtraParameters` to `BuildOAuth2LoginUri`.
-* Add optional parameter `stateExtraProperties` to `BuildOAuth2LoginUri`, for use in ASP.NET authentication.
-* Fix `AtProtoAgent.RefreshCredentials()` to attempt a refresh if the access token has expired and there is a refresh token available.
+* Add optional parameter `stateExtraProperties` to `BuildOAuth2LoginUri`.
+
+#### idunno.AtProto.OAuthCallback
+
+* Enable `packages.lock.json`
+* Add .NET 10 support
 
 #### idunno.Bluesky
 
+* Enable `packages.lock.json`
 * Add .NET 10 support
 * Add support for configuration binding and options in DI.
 
-### idunno.Bluesky.AspNet.Authentication
-* Add support for Bluesky authentication in ASP.NET Razor Pages.
+### Changed
+
+#### idunno.AtProto
+
+* Update 3rd party dependencies.
+* Fix `AtProtoAgent.RefreshCredentials()` to attempt a refresh if the access token has expired and there is a refresh token available.
+* Update OAuth code for `IdentityModel.OidcClient.Extensions` version 7.0.0.
+
+#### idunno.AtProto.OAuthCallback
+
+* Update 3rd party dependencies.
+
+### idunno.Bluesky
+
+* Update 3rd party dependencies.
 
 ### Breaking Changes
 
@@ -37,7 +61,9 @@
 
 #### idunno.Bluesky
 
-* Added block informationship to Graph.Relationship, see [bsky: Expand getRelationships to include blocks](https://github.com/bluesky-social/atproto/pull/4418).
+* Add block information to `Graph.Relationship`, see [bsky: Expand getRelationships to include blocks](https://github.com/bluesky-social/atproto/pull/4418).
+* Add `contactMatch` to `NotificationReason`, see [bsky: Add contact-match notification type](https://github.com/bluesky-social/atproto/pull/4436)
+* Add `DeclaredAgePreference` to `Preferences`, see [[APP-1672] Add new read-only #declaredAgePref](https://github.com/bluesky-social/atproto/pull/4432)
 
 ## 1.1.0 - 2025-09-30
 

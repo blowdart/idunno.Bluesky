@@ -25,6 +25,7 @@ namespace idunno.Bluesky.Actor
     [JsonDerivedType(typeof(BlueskyAppStatePreference), typeDiscriminator: PreferenceTypeDiscriminators.BlueskyAppState)]
     [JsonDerivedType(typeof(InteractionPreferences), typeDiscriminator: PreferenceTypeDiscriminators.PostInteraction)]
     [JsonDerivedType(typeof(VerificationPreferences), typeDiscriminator: PreferenceTypeDiscriminators.Verification)]
+    [JsonDerivedType(typeof(DeclaredAgePreference), typeDiscriminator: PreferenceTypeDiscriminators.DeclaredAge)]
     public record Preference
     {
         /// <summary>

@@ -175,7 +175,9 @@ namespace idunno.AtProto.Authentication
                 LoggerFactory = _loggerFactory,
                 HttpClientFactory = (oidcOptions) =>
                 {
-                    var httpClient = new HttpClient(new ProofTokenMessageHandler(_proofKey, _innerFactoryHandler()), true);
+                    var httpClient = new HttpClient(new ProofTokenMessageHandler(
+                        new DefaultDPoPProofTokenFactory(_proofKey),
+                        _innerFactoryHandler()), true);
                     return _clientConfigurationHandler(httpClient);
                 }
             };
@@ -464,7 +466,7 @@ namespace idunno.AtProto.Authentication
                 LoggerFactory = _loggerFactory,
                 HttpClientFactory = (oidcOptions) =>
                 {
-                    var httpClient = new HttpClient(new ProofTokenMessageHandler(refreshCredential.DPoPProofKey, _innerFactoryHandler()), true);
+                    var httpClient = new HttpClient(new ProofTokenMessageHandler(new DefaultDPoPProofTokenFactory(refreshCredential.DPoPProofKey), _innerFactoryHandler()), true);
                     return _clientConfigurationHandler(httpClient);
                 }
             };
@@ -615,7 +617,7 @@ namespace idunno.AtProto.Authentication
                 LoggerFactory = _loggerFactory,
                 HttpClientFactory = (oidcOptions) =>
                 {
-                    var httpClient = new HttpClient(new ProofTokenMessageHandler(_proofKey, _innerFactoryHandler()), true);
+                    var httpClient = new HttpClient(new ProofTokenMessageHandler(new DefaultDPoPProofTokenFactory(_proofKey), _innerFactoryHandler()), true);
                     return _clientConfigurationHandler(httpClient);
                 }
             };

@@ -77,6 +77,12 @@ namespace idunno.Bluesky.Notifications
         /// The post is from a user the current user subscribed to.
         /// </summary>
         [JsonStringEnumMemberName("subscribed-post")]
-        SubscribedPost
+        SubscribedPost,
+
+        /// <summary>
+        /// The notification is from a matching contact.
+        /// </summary>
+        [JsonStringEnumMemberName("contact-match")]
+        ContactMatch
     }
 }

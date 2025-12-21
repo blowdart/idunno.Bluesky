@@ -32,5 +32,7 @@ namespace idunno.Bluesky.Actor
         public const string PostInteraction = "app.bsky.actor.defs#postInteractionSettingsPref";
 
         public const string Verification = "app.bsky.actor.defs#verificationPrefs";
+
+        public const string DeclaredAge = "app.bsky.actor.defs#declaredAgePref";
     }
 }

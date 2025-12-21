@@ -89,14 +89,18 @@ namespace idunno.Bluesky.Actor
                         VerificationPreferences = verificationPreferences;
                         break;
 
+                    case DeclaredAgePreference declaredAgePreference:
+                        DeclaredAgePreference = declaredAgePreference;
+                        break;
+
                     // As this is only meant for official Bluesky apps we'll just skip doing anything with it
                     // and not expose it as a Preferences property.
                     case BlueskyAppStatePreference:
-                            break;
+                        break;
 
-                        default:
-                            break;
-                        }
+                    default:
+                        break;
+                }
             }
 
             if (enableBlueskyModerationLabeler && !labelerPreferenceList.Contains(WellKnownDistributedIdentifiers.BlueskyModerationLabeler))
@@ -195,5 +199,11 @@ namespace idunno.Bluesky.Actor
         /// Preferences for how verified accounts appear in an app.
         /// </summary>
         public VerificationPreferences? VerificationPreferences { get; }
+
+        /// <summary>
+        /// Read-only preference containing value(s) inferred from the user's declared birthdate.
+        /// Absence of this preference object in the response indicates that the user has not made a declaration.
+        /// </summary>
+        public DeclaredAgePreference? DeclaredAgePreference { get; }
     }
 }

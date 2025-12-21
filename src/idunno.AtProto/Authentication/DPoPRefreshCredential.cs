@@ -134,7 +134,7 @@ namespace idunno.AtProto.Authentication
                 Url = httpRequestMessage.GetDPoPUrl()
             };
 
-            DPoPProofTokenFactory factory = new(DPoPProofKey);
+            DefaultDPoPProofTokenFactory factory = new(DPoPProofKey);
             DPoPProof proofToken = factory.CreateProofToken(dPoPProofRequest);
 
             httpRequestMessage.SetDPoPToken(RefreshToken, proofToken.ProofToken);
