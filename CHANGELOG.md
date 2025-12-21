@@ -11,7 +11,6 @@
 
 #### idunno.AtProto
 
-* Enable `packages.lock.json`
 * Add .NET 10 support
 * Add support for configuration binding and options in DI.
 * Add `OAuthLoginState` to `SourceGenerationContext`.
@@ -21,12 +20,10 @@
 
 #### idunno.AtProto.OAuthCallback
 
-* Enable `packages.lock.json`
 * Add .NET 10 support
 
 #### idunno.Bluesky
 
-* Enable `packages.lock.json`
 * Add .NET 10 support
 * Add support for configuration binding and options in DI.
 
