@@ -52,11 +52,8 @@ jobs:
           9.0.x
           10.0.x
 
-    - name: 'Restore'
-      run: dotnet restore
-
     - name: 'Build'
-      run: dotnet build --configuration Release --no-restore --property:PublicRelease=false
+      run: dotnet build --configuration Release --property:PublicRelease=false
 
     - name: 'Test'
       run: dotnet test --configuration Release --no-restore --no-build --property:PublicRelease=false
