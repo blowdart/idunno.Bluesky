@@ -52,13 +52,9 @@ jobs:
     - name: 'Report SDK versions'
       run : dotnet --info
 
-    - name : 'Restore'
-      id: restore
-      run: dotnet restore --locked-mode
-
     - name: 'Build'
       id: build
-      run: dotnet build --configuration Debug --no-restore
+      run: dotnet build --configuration Debug
 
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0

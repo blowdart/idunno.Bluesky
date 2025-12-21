@@ -79,14 +79,14 @@ jobs:
       id: upload
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
-        name: build-artifacts.zip
+        name: build-artifacts
         path: ${{ env.NUPKG_DIRECTORY }}/*
         retention-days: 7
 
     - name: Attest build artifacts
       uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
       with:
-        subject-name: build-artifacts.zip
+        subject-name: build-artifacts
         subject-digest: sha256:${{ steps.upload.outputs.artifact-digest }}
 
 
@@ -111,13 +111,8 @@ jobs:
     - name: 'Gather nupkgs from build output'
       uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
       with:
-        name: build-artifacts.zip
+        name: build-artifacts
         path : ${{ env.NUPKG_DIRECTORY }}
-
-    - name: List assets to be signed
-      shell: pwsh
-      run: >
-        Get-ChildItem -Path ${env:NUPKG_DIRECTORY} -Include *.nupkg -Recurse -Force
 
     - name: Authenticate to Azure
       uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # 2.3.0
@@ -136,14 +131,14 @@ jobs:
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       id: upload
       with:
-        name: signed-artifacts.zip
+        name: signed-artifacts
         path: ${{env.NUPKG_DIRECTORY}}/*
         retention-days: 7
 
     - name: Attest signed artifacts
       uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
       with:
-        subject-name: signed-artifacts.zip
+        subject-name: signed-artifacts
         subject-digest: sha256:${{ steps.upload.outputs.artifact-digest }}
 
   publish:
@@ -176,13 +171,8 @@ jobs:
     - name: 'Gather nupkgs from signing artifacts'
       uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
       with:
-        name: signed-artifacts.zip
+        name: signed-artifacts
         path : ${{ env.NUPKG_DIRECTORY }}
-
-    - name: List assets to be published
-      shell: pwsh
-      run: >
-        Get-ChildItem -Path ${env:NUPKG_DIRECTORY} -Filter *.nupkg -Recurse -Force
 
     - name: Authenticate to Azure
       uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # 2.3.0
