@@ -1,4 +1,4 @@
-# Saving and Restoring Sessions
+﻿# Saving and Restoring Sessions
 
 If you're writing an app you probably don't want to ask your user to authenticate every time your app starts, or to store their login
 credentials somewhere on disk. The Agent class provides a way to restore, or authenticate from a stored refresh token
@@ -21,9 +21,9 @@ You can subscribe to these events by adding a handler to the event. For example:
 ```c#
 var agent = new BlueskyAgent()
 {
-    agent.SessionCreated += (sender, args) =>
+    agent.Authenticated += (sender, args) =>
     {
-        Console.WriteLine("Session created");
+        Console.WriteLine("Authenticated");
         // Now persist the refresh token and any DPoPKey and DPopNonce, along with the service URI and DID
         // it belongs to somewhere secure.
         //
