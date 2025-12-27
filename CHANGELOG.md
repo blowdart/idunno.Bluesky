@@ -2,7 +2,9 @@
 
 ## 2.0.0 - Unreleased, In Progress
 
-### idunno.Bluesky.AspNet.Authentication
+### Added
+
+#### idunno.Bluesky.AspNet.Authentication
 
 * Add support for Bluesky authentication in ASP.NET Razor Pages.
 

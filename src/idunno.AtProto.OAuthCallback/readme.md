@@ -1,4 +1,4 @@
-# idunno.AtProto.OAuthCallback
+﻿# idunno.AtProto.OAuthCallback
 
 ## About
 
@@ -52,6 +52,7 @@ using (var agent = new BlueskyAgent(
 ## Related Packages
 
 * [idunno.AtProto](https://www.nuget.org/packages/idunno.AtProto) for interacting with an ATProto service.
+* [idunno.AtProto.Types](https://www.nuget.org/packages/idunno.AtProto.Types) which contains base types for the AtProto network.
 * [idunno.Bluesky](https://www.nuget.org/packages/idunno.Bluesky) for interacting with the [Bluesky social network](https://docs.bsky.app/).
 
 ## Documentation

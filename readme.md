@@ -1,6 +1,6 @@
 ﻿# ![The Bluesky butterfly logo, except in purple](docs/docicon.png)idunno.Bluesky - .NET SDK for Bluesky.
 
-A .NET 8 and .NET 9 library and SDK for [Bluesky](https://bsky.social/) and the [AT Protocol](https://docs.bsky.app/docs/api/at-protocol-xrpc-api)
+A .NET 8, 9 and 10 library and SDK for [Bluesky](https://bsky.social/) and the [AT Protocol](https://docs.bsky.app/docs/api/at-protocol-xrpc-api)
 
 [if you want me to wear 37 pieces of flair, like your pretty boy over there, Brian, why don't you just make the minimum 37 pieces of flair?]: #
 
@@ -66,10 +66,16 @@ Trimming is supported for applications targeting .NET 9.0 or later.
 [![CodeQL Scan](https://github.com/blowdart/idunno.Bluesky/actions/workflows/codeql-analysis.yml/badge.svg?branch=main)](https://github.com/blowdart/idunno.Bluesky/actions/workflows/codeql-analysis.yml)
 [![Dependency Review](https://github.com/blowdart/idunno.Bluesky/actions/workflows/dependency-review.yml/badge.svg)](https://github.com/blowdart/idunno.Bluesky/actions/workflows/dependency-review.yml)
 
+
+## License
+
+`idunno.Bluesky`, `idunno.AtProto`, `idunno.AtProto.OAuthCallBack` and `idunno.AtProto.Types` are available under the MIT license,
+see the [LICENSE](LICENSE) file for more information.
+
 ## Release History
 
 The [releases page](https://github.com/blowdart/idunno.Bluesky/releases) provides details of each release and what was added, changed or removed.
-
+The [changelog](CHANGELOG.md) also contains this information, as well as information on upcoming releases.
 
 ## Release Verification
 
@@ -88,7 +94,8 @@ The subject name of the signing certificate should be
 Subject Name: CN=Barry Dorrans, O=Barry Dorrans, L=Bothell, S=Washington, C=US
 ```
 
-In addition, for GitHub artifact signing the project uses [minisign](https://github.com/jedisct1/minisign) with the following public key.
+In addition, GitHub artifacts are attested during build,
+and are also signed with [minisign](https://github.com/jedisct1/minisign) with the following public key.
 
 ```
 RWTsT4BHHChe/Rj/GBAuZHg3RaZFnfBDqaZ7KzLvr44a7mO6fLCxSAFc
@@ -119,7 +126,7 @@ details to find the true latest version, or if you want to get a pre-release for
 
 1. Check the version value in [version.json](https://github.com/blowdart/idunno.Bluesky/blob/main/version.json),
 1. Check [Pre-release publish runs](https://github.com/blowdart/idunno.Bluesky/actions/workflows/prerelease-build.yml),
-1. Select the latest run,
+1. Select the latest run
 1. The latest pre-release package will have the first 10 digits of the commit sha, prefixed with a `g`
 as the build number.
 
@@ -128,10 +135,6 @@ produced a nightly build and packages. The package build number is be 1.1.0-prer
 
 Please note that nightly builds are signed with [Trusted Signing](https://azure.microsoft.com/en-us/products/trusted-signing),
 the signing certificate chain will not match the signing chain of a release build. The subject name remains the same.
-
-## License
-
-`idunno.Bluesky`, `idunno.AtProto` and `idunno.AtProto.OAuthCallBack` are available under the MIT license, see the [LICENSE](LICENSE) file for more information.
 
 ## Planned work
 
@@ -148,8 +151,8 @@ the signing certificate chain will not match the signing chain of a release buil
 
 ## Dependencies
 
-`idunno.AtProto` takes a dependency on `System.Text.Json` v9 to support deserializing derived types where the `$type` property is not the
-first property in the JSON object. 
+The .NET 8.0 version of `idunno.AtProto` takes a dependency on `System.Text.Json` v9 to support deserializing derived types
+where the `$type` property is not the first property in the JSON object. 
 
 ### External dependencies
 
