@@ -8,7 +8,7 @@
 
 * Add support for Bluesky authentication in ASP.NET Razor Pages.
 
-## 1.2.0 - Unreleased, In Progress
+## 1.2.0 - 2025-12-27
 
 ### Added
 
