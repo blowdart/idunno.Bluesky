@@ -15,7 +15,6 @@ namespace idunno.AtProto
 
             while (i > 0)
             {
-                System.Diagnostics.Debug.WriteLine(i);
                 int offset = (int)(i % 32);
                 i = Math.Floor(i / 32);
                 result.Insert(0, Base32Alphabet[offset]);
