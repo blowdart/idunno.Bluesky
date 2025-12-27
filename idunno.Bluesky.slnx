@@ -227,7 +227,6 @@
     <File Path="Directory.Packages.props" />
     <File Path="docfx.json" />
     <File Path="exclusion.dic" />
-    <File Path="global.json" />
     <File Path="key.snk" />
     <File Path="LICENSE" />
     <File Path="minisign.pub" />
