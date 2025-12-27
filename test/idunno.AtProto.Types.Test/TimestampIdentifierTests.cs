@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
-namespace idunno.AtProto.Test
+
+namespace idunno.AtProto.Types.Test
 {
     public class TimestampIdentifierTests
     {
@@ -81,8 +82,7 @@ namespace idunno.AtProto.Test
         public void ValuesRoundtripCorrectly(double timeStamp, long clockId, string expected)
         {
             string actual = TimestampIdentifier.FromTime(timeStamp, clockId);
-            TimestampIdentifier tid = new TimestampIdentifier(actual);
-
+            TimestampIdentifier tid = new(actual);
 
             Assert.Equal(expected, tid.ToString());
             Assert.Equal(timeStamp, tid.TimeStamp);

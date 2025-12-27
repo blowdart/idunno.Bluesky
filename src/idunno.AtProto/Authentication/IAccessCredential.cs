@@ -25,6 +25,11 @@ namespace idunno.AtProto.Authentication
         public DateTimeOffset ExpiresOn { get; }
 
         /// <summary>
+        /// Gets a value indicating whether the access token is expired.
+        /// </summary>
+        public bool IsExpired => DateTimeOffset.UtcNow >= ExpiresOn;
+
+        /// <summary>
         /// Gets the <see cref="AtProto.Did"/> the access token was issued for.
         /// </summary>
         public Did Did { get; }

@@ -3,6 +3,7 @@
 ## 2.0.0 - Unreleased, In Progress
 
 ### idunno.Bluesky.AspNet.Authentication
+
 * Add support for Bluesky authentication in ASP.NET Razor Pages.
 
 ## 1.2.0 - Unreleased, In Progress
@@ -21,6 +22,10 @@
 #### idunno.AtProto.OAuthCallback
 
 * Add .NET 10 support
+
+### idunno.AtProto.Types
+
+* Create common ATProto types `idunno.AtProto.Types` package.
 
 #### idunno.Bluesky
 
@@ -47,6 +52,7 @@
 
 #### idunno.AtProto
 
+* Move common ATProto types to `idunno.AtProto.Types` package.
 * The `AtProtoAgent` constructor can now take an `ClaimsPrincipal` or `ClaimsIdentity`.
   This means you must now use named parameters to call the desired constructor, e.g.
   ```c#

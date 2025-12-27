@@ -105,7 +105,6 @@ namespace idunno.AtProto
                     checkCrl = _httpClientOptions.CheckCertificateRevocationList;
                 }
 
-
                 return BuildPrimaryHttpClientHandler(_httpClientOptions?.ProxyUri, checkCrl);
             }
         }

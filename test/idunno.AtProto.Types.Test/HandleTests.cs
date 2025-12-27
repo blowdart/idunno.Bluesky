@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-namespace idunno.AtProto.Test
+namespace idunno.AtProto.Types.Test
 {
     public class HandleTests
     {

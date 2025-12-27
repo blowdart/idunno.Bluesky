@@ -244,6 +244,7 @@
     <File Path="src/.editorconfig" />
     <File Path="src/Directory.Build.props" />
     <Project Path="src/idunno.AtProto.OAuthCallback/idunno.AtProto.OAuthCallback.csproj" />
+    <Project Path="src/idunno.AtProto.Types/idunno.AtProto.Types.csproj" />
     <Project Path="src/idunno.AtProto/idunno.AtProto.csproj" />
     <Project Path="src/idunno.Bluesky/idunno.Bluesky.csproj" />
   </Folder>
@@ -259,6 +260,10 @@
       <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/idunno.AtProto.Test/idunno.AtProto.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="test/idunno.AtProto.Types.Test/idunno.AtProto.Types.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>

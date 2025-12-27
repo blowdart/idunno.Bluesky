@@ -1,0 +1,7 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\idunno.AtProto.Types\idunno.AtProto.Types.csproj" />
+  </ItemGroup>
+
+</Project>

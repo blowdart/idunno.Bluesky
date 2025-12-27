@@ -72,6 +72,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\idunno.AtProto.Types\idunno.AtProto.Types.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Update="Resource.Designer.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
