@@ -33,6 +33,7 @@ namespace idunno.Bluesky.RichText
         /// The json type discriminator to use when serializing.
         /// </summary>
         [JsonInclude]
+        [JsonPropertyName("$type")]
         public static string Type => "app.bsky.richtext.facet";
 
         /// <summary>
