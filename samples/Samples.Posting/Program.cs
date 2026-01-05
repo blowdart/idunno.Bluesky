@@ -370,6 +370,7 @@ namespace Samples.Posting
                     AtProtoHttpResult<CreateRecordResult> createPostResult = await agent.Post("Another test post, for reposting.", cancellationToken: cancellationToken);
                     if (createPostResult.Succeeded)
                     {
+                        // Test repost, and directly deleting the repost record.
                         AtProtoHttpResult<CreateRecordResult> repostResult = await agent.Repost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
                         Debugger.Break();
 
@@ -382,6 +383,21 @@ namespace Samples.Posting
 
                         // Clean up again
                         _ = await agent.DeleteRepost(repostResult.Result.StrongReference, cancellationToken: cancellationToken);
+
+                        // Test repost via the original post AT-URI
+                        repostResult = await agent.Repost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
+                        Debugger.Break();
+
+                        if (!repostResult.Succeeded)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine($"{repostResult.StatusCode} occurred when creating the repost.");
+                            return;
+                        }
+
+                        // Clean up again
+                        _ = await agent.DeleteRepost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
+
                         _ = await agent.DeletePost(createPostResult.Result.StrongReference, cancellationToken: cancellationToken);
                     }
                     else

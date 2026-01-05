@@ -1420,63 +1420,84 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Deletes the repost record for the post referenced by <see cref="Uri"/>.
+        /// Deletes the repost record. If a post <see cref="AtUri"/> is specified, it will delete the repost of that post. If a repost <see cref="AtUri"/> is specified, it will delete that repost record.
         /// </summary>
-        /// <param name="uri">The <see cref="AtUri"/> of the post to delete the repost of.</param>
+        /// <param name="uri">The <see cref="AtUri"/> of the post to delete the repost of, or the direct <see cref="AtUri"/> to a repost record..</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky feed repost record, or its RecordKey is null.</exception>
+        /// <exception cref="BlueskyException">Thrown when the repost record discovery returns an invalid <see cref="AtUri"/> with no record key.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteRepost(AtUri uri, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uri);
             ArgumentNullException.ThrowIfNull(uri.Collection);
-            ArgumentOutOfRangeException.ThrowIfNotEqual(uri.Collection, CollectionNsid.Post);
             ArgumentNullException.ThrowIfNull(uri.RecordKey);
+
+            if (uri.Collection != CollectionNsid.Post && uri.Collection != CollectionNsid.Repost)
+            {
+                throw new ArgumentException($"uri does not point to an {CollectionNsid.Post} or {CollectionNsid.Repost} record", nameof(uri));
+            }
 
             if (!IsAuthenticated)
             {
                 throw new AuthenticationRequiredException();
             }
 
-            // Get the post view for the specified post so we can get the repost record uri if one exists.
-            AtProtoHttpResult<Feed.PostView> postViewResult = await GetPostView(uri, cancellationToken: cancellationToken).ConfigureAwait(false);
+            RecordKey rKey;
 
-            if (postViewResult.StatusCode != HttpStatusCode.OK)
+            if (uri.Collection == CollectionNsid.Post)
             {
-                return new AtProtoHttpResult<Commit>(
-                    null,
-                    statusCode: postViewResult.StatusCode,
-                    httpResponseHeaders: postViewResult.HttpResponseHeaders,
-                    atErrorDetail: postViewResult.AtErrorDetail,
-                    rateLimit: postViewResult.RateLimit);
-            }
+                // Get the post view for the specified post so we can get the repost record uri if one exists.
+                AtProtoHttpResult<Feed.PostView> postViewResult = await GetPostView(uri, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            if (postViewResult.Result is null)
-            {
-                return new AtProtoHttpResult<Commit>(
-                    null,
-                    statusCode: HttpStatusCode.BadRequest,
-                    httpResponseHeaders: postViewResult.HttpResponseHeaders,
-                    atErrorDetail: new AtErrorDetail("RecordNotFound", "Could not locate record:{uri}"),
-                    rateLimit: postViewResult.RateLimit);
+                if (postViewResult.StatusCode != HttpStatusCode.OK)
+                {
+                    return new AtProtoHttpResult<Commit>(
+                        null,
+                        statusCode: postViewResult.StatusCode,
+                        httpResponseHeaders: postViewResult.HttpResponseHeaders,
+                        atErrorDetail: postViewResult.AtErrorDetail,
+                        rateLimit: postViewResult.RateLimit);
+                }
+
+                if (postViewResult.Result is null)
+                {
+                    return new AtProtoHttpResult<Commit>(
+                        null,
+                        statusCode: HttpStatusCode.BadRequest,
+                        httpResponseHeaders: postViewResult.HttpResponseHeaders,
+                        atErrorDetail: new AtErrorDetail("RecordNotFound", "Could not locate record:{uri}"),
+                        rateLimit: postViewResult.RateLimit);
+                }
+                else if (postViewResult.Result.Viewer is null ||
+                    postViewResult.Result.Viewer.Repost is null)
+                {
+                    return new AtProtoHttpResult<Commit>(
+                        null,
+                        statusCode: HttpStatusCode.NotFound,
+                        httpResponseHeaders: postViewResult.HttpResponseHeaders,
+                        atErrorDetail: new AtErrorDetail("RepostNotFound", "No repost record for the was found in {uri}."),
+                        rateLimit: postViewResult.RateLimit);
+                }
+                else if (postViewResult.Result.Viewer.Repost.RecordKey is null)
+                {
+                    throw new BlueskyException("Repost RecordKey is null in post view result for uri:{uri}");
+                }
+
+                rKey = postViewResult.Result.Viewer.Repost.RecordKey;
             }
-            else if (postViewResult.Result.Viewer is null ||
-                postViewResult.Result.Viewer.Repost is null)
+            else
             {
-                return new AtProtoHttpResult<Commit>(
-                    null,
-                    statusCode: HttpStatusCode.NotFound,
-                    httpResponseHeaders: postViewResult.HttpResponseHeaders,
-                    atErrorDetail: new AtErrorDetail("RepostNotFound", "No repost record for the was found in {uri}."),
-                    rateLimit: postViewResult.RateLimit);
+                ArgumentNullException.ThrowIfNull(uri.RecordKey);
+                rKey = uri.RecordKey;
             }
 
             return await DeleteRecord(
-                collection: CollectionNsid.Repost,
-                rKey: postViewResult.Result.Viewer.Repost.RecordKey!,
-                cancellationToken:cancellationToken).ConfigureAwait(false);
+                 collection: CollectionNsid.Repost,
+                 rKey: rKey,
+                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>

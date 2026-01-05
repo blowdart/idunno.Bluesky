@@ -8,6 +8,14 @@
 
 * Add support for Bluesky authentication in ASP.NET Razor Pages.
 
+## 1.3.0 - Unrelease, In Progress
+
+### Changed
+
+#### idunno.Bluesky
+
+* Change DeleteRepost to accept either a repost AT-URI, or the AT-URI of the original post.
+
 ## 1.2.0 - 2025-12-27
 
 ### Added
