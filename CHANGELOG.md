@@ -12,9 +12,13 @@
 
 ### Changed
 
+#### idunno.AtProto
+
+* Bump `ZstdSharp.Port` from 0.8.6 to 0.8.7.
+
 #### idunno.Bluesky
 
-* Change DeleteRepost to accept either a repost AT-URI, or the AT-URI of the original post.
+* Change `DeleteRepost` to accept either a repost AT-URI, or the AT-URI of the original post.
 
 ## 1.2.0 - 2025-12-27
 
