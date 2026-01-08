@@ -19,7 +19,7 @@ namespace idunno.Bluesky.RichText
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="index"/> or <paramref name="features"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="features"/> has no <see cref="FacetFeature"/>s.</exception>
         [JsonConstructor]
-        internal Facet(ByteSlice index, IList<FacetFeature> features)
+        public Facet(ByteSlice index, IList<FacetFeature> features)
         {
             ArgumentNullException.ThrowIfNull(index);
             ArgumentNullException.ThrowIfNull(features);

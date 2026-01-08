@@ -10,11 +10,18 @@ namespace idunno.Bluesky.RichText
     /// </summary>
     public abstract record PostBuilderFacetFeature
     {
-        private protected PostBuilderFacetFeature()
+        /// <summary>
+        /// Constructs a new instance of the <see cref="PostBuilderFacetFeature"/> class.
+        /// </summary>
+        protected PostBuilderFacetFeature()
         {
         }
 
-        private protected PostBuilderFacetFeature(string text)
+        /// <summary>
+        /// Constructs a new instance of the <see cref="PostBuilderFacetFeature"/> class with the specified text.
+        /// </summary>
+        /// <param name="text">The text to wrap the facet feature around.</param>
+        protected PostBuilderFacetFeature(string text)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(text);
             Text = text;
