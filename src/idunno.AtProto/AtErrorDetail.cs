@@ -41,6 +41,11 @@ namespace idunno.AtProto
         [JsonInclude]
         public string? Message { get; internal set; }
 
+        /// <summary>
+        /// The raw content of the response.
+        /// </summary>
+        [JsonIgnore]
+        internal string RawContent { get; set; } = string.Empty;
 
         /// <summary>
         /// A list of keys and element data that do not map to any strongly typed properties.
