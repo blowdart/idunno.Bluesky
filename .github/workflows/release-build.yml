@@ -50,7 +50,7 @@ jobs:
         persist-credentials: false
  
     - name: 'Setup .NET SDK'
-      uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
+      uses: actions/setup-dotnet@2016bd2012dba4e32de620c46fe006a3ac9f0602 # v5.0.1
       with:
         dotnet-version: | 
           8.0.x
@@ -107,7 +107,7 @@ jobs:
 
     steps:
     - name: 'Setup .NET SDK'
-      uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
+      uses: actions/setup-dotnet@2016bd2012dba4e32de620c46fe006a3ac9f0602 # v5.0.1
 
     - name: 'Install Sign CLI'
       run: dotnet tool install --tool-path ./sign sign --version 0.9.1-beta.25169.2
@@ -160,7 +160,7 @@ jobs:
         egress-policy: audit
 
     - name: 'Setup .NET SDK'
-      uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
+      uses: actions/setup-dotnet@2016bd2012dba4e32de620c46fe006a3ac9f0602 # v5.0.1
 
     - name: 'Gather nupkgs from signing output'
       uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
