@@ -21,6 +21,245 @@ namespace idunno.AtProto
     /// <summary>
     /// A helper class to perform HTTP requests against an AT Proto service.
     /// </summary>
+    /// <remarks>
+    /// <para>This class performs no serialization of request bodies or deserialization of response bodies, requests should already be json serialized strings.</para>
+    /// </remarks>
+    public class AtProtoHttpClient
+    {
+        static readonly HttpClientHandler s_defaultClientHandler = new()
+        {
+            AutomaticDecompression = DecompressionMethods.All,
+            UseCookies = false
+        };
+
+        private readonly AtProtoHttpClient<string> _internalClient;
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoHttpClient"/>
+        /// </summary>
+        /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
+        public AtProtoHttpClient(ILoggerFactory? loggerFactory = null)
+        {
+            _internalClient = new AtProtoHttpClient<string>(loggerFactory);
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoHttpClient"/>
+        /// </summary>
+        /// <param name="serviceProxy">The service a PDS should proxy the request to.</param>
+        /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
+        public AtProtoHttpClient(string serviceProxy, ILoggerFactory? loggerFactory = null)
+        {
+            _internalClient = new AtProtoHttpClient<string>(serviceProxy, loggerFactory);
+        }
+
+        /// <summary>
+        /// Gets or sets a function called when a request is about to be sent.
+        /// </summary>
+        public Func<HttpRequestMessage, CancellationToken, Task> OnSendingRequest => _internalClient.OnSendingRequest;
+
+        /// <summary>
+        /// Gets or sets a function called when a response has been received.
+        /// </summary>
+        public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived => _internalClient.OnResponseReceived;
+
+        /// <summary>
+        /// Gets the result of an AT Proto GET request, returning the raw response wrapped in an <see cref="AtProtoHttpResult{TResult}"/>.
+        /// </summary>
+        /// <param name="service">The <see cref="Uri"/> of service to send the request to.</param>
+        /// <param name="endpoint">The endpoint on the service to send the request to.</param>
+        /// <param name="credentials">The <see cref="AtProtoCredential"/> to authenticate with, if any.</param>
+        /// <param name="httpClient">The <see cref="HttpClient"/> to use, in any.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
+        /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
+        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="endpoint"/> is null or empty.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "Using a return type of string avoids json serialization and deserialization in the typed client.")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "Using a return type of string avoids json serialization and deserialization in the typed client.")]
+        public async Task<AtProtoHttpResult<string>> Get(
+            Uri service,
+            string endpoint,
+            AtProtoCredential? credentials = null,
+            HttpClient? httpClient = null,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
+            ICollection<NameValueHeaderValue>? requestHeaders = null,
+            IEnumerable<Did>? subscribedLabelers = null,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentException.ThrowIfNullOrEmpty(endpoint);
+
+            using (HttpClient internalClient = new(
+                handler : s_defaultClientHandler,
+                disposeHandler: false)
+            {
+                DefaultRequestVersion = HttpVersion.Version20,
+                DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
+            })
+            {
+                return await _internalClient.Get(
+                    service: service,
+                    endpoint: endpoint,
+                    credentials: credentials,
+                    httpClient: httpClient ?? internalClient,
+                    onCredentialsUpdated: onCredentialsUpdated,
+                    requestHeaders: requestHeaders,
+                    subscribedLabelers: subscribedLabelers,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Gets the result of an AT Proto GET request, returning the raw response wrapped in an <see cref="AtProtoHttpResult{TResult}"/>.
+        /// </summary>
+        /// <param name="service">The location of service to send the request to. This must be a uri string.</param>
+        /// <param name="endpoint">The endpoint on the service to send the request to.</param>
+        /// <param name="credentials">The <see cref="AtProtoCredential"/> to authenticate with, if any.</param>
+        /// <param name="httpClient">The <see cref="HttpClient"/> to use, in any.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
+        /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
+        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="service"/> or <paramref name="endpoint"/> is null or empty.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "Using a return type of string avoids json serialization and deserialization in the typed client.")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "Using a return type of string avoids json serialization and deserialization in the typed client.")]
+        public async Task<AtProtoHttpResult<string>> Get(
+            string service,
+            string endpoint,
+            AtProtoCredential? credentials = null,
+            HttpClient? httpClient = null,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
+            ICollection<NameValueHeaderValue>? requestHeaders = null,
+            IEnumerable<Did>? subscribedLabelers = null,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(service);
+            ArgumentException.ThrowIfNullOrEmpty(endpoint);
+
+            return await Get(
+                service: new Uri(service),
+                endpoint: endpoint,
+                credentials: credentials,
+                httpClient: httpClient,
+                onCredentialsUpdated: onCredentialsUpdated,
+                requestHeaders: requestHeaders,
+                subscribedLabelers: subscribedLabelers,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Posts the specified <paramref name="body"/> to the <paramref name="service"/> <paramref name="endpoint"/> and returns the result.
+        /// </summary>
+        /// <param name="service">The <see cref="Uri"/> of service to send the request to.</param>
+        /// <param name="endpoint">The endpoint on the service to send the request to.</param>
+        /// <param name="body">The body of the request to send.</param>
+        /// <param name="credentials">The <see cref="AtProtoCredential"/> to authenticate with, if any.</param>
+        /// <param name="httpClient">The <see cref="HttpClient"/> to use, in any.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
+        /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
+        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="endpoint"/> is null or empty.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "Using a return type of string avoids json serialization and deserialization in the typed client.")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "Using a return type of string avoids json serialization and deserialization in the typed client.")]
+        public async Task<AtProtoHttpResult<string>> Post(
+            Uri service,
+            string endpoint,
+            string? body,
+            AtProtoCredential? credentials = null,
+            HttpClient? httpClient = null,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
+            ICollection<NameValueHeaderValue>? requestHeaders = null,
+            IEnumerable<Did>? subscribedLabelers = null,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentException.ThrowIfNullOrEmpty(endpoint);
+
+            using (HttpClient internalClient = new(
+                handler: s_defaultClientHandler,
+                disposeHandler: false)
+            {
+                DefaultRequestVersion = HttpVersion.Version20,
+                DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
+            })
+            {
+                return await _internalClient.Post(
+                    service: service,
+                    endpoint: endpoint,
+                    record: body,
+                    credentials: credentials,
+                    httpClient: httpClient ?? internalClient,
+                    onCredentialsUpdated: onCredentialsUpdated,
+                    requestHeaders: requestHeaders,
+                    subscribedLabelers: subscribedLabelers,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Posts the specified <paramref name="body"/> to the <paramref name="service"/> <paramref name="endpoint"/> and returns the result.
+        /// </summary>
+        /// <param name="service">The location of service to send the request to. This must be a uri string.</param>
+        /// <param name="endpoint">The endpoint on the service to send the request to.</param>
+        /// <param name="body">The body of the request to send.</param>
+        /// <param name="credentials">The <see cref="AtProtoCredential"/> to authenticate with, if any.</param>
+        /// <param name="httpClient">The <see cref="HttpClient"/> to use, in any.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
+        /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
+        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="endpoint"/> is null or empty.</exception>
+        public async Task<AtProtoHttpResult<string>> Post(
+            string service,
+            string endpoint,
+            string? body,
+            AtProtoCredential? credentials = null,
+            HttpClient? httpClient = null,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
+            ICollection<NameValueHeaderValue>? requestHeaders = null,
+            IEnumerable<Did>? subscribedLabelers = null,
+            CancellationToken cancellationToken = default)
+        {
+            return await Post(
+                service: new Uri(service),
+                endpoint: endpoint,
+                credentials: credentials,
+                body: body,
+                httpClient: httpClient,
+                onCredentialsUpdated: onCredentialsUpdated,
+                requestHeaders: requestHeaders,
+                subscribedLabelers: subscribedLabelers,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// A helper class to perform HTTP requests against an AT Proto service.
+    /// </summary>
     /// <typeparam name="TResult">The type of class to use when deserializing results from an AT Proto API call.</typeparam>
     public class AtProtoHttpClient<TResult> where TResult : class
     {
@@ -35,7 +274,7 @@ namespace idunno.AtProto
 
         private readonly bool _suppressProxyHeaderCheck;
 
-        private readonly JsonSerializerOptions _jsonSerializationOptionsDefault =  new(JsonSerializerDefaults.Web)
+        private readonly JsonSerializerOptions _jsonSerializationOptionsDefault = new(JsonSerializerDefaults.Web)
         {
             AllowOutOfOrderMetadataProperties = true,
             AllowTrailingCommas = true,
@@ -740,31 +979,32 @@ namespace idunno.AtProto
                 HttpMethod = request.Method
             };
 
+            string responseContent = await responseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            errorDetail.RawContent = responseContent;
+
+
             if (responseMessage.Content.Headers.ContentType is not null &&
                 responseMessage.Content.Headers.ContentType.MediaType is not null &&
-                responseMessage.Content.Headers.ContentType.MediaType.Equals(MediaTypeNames.Application.Json, StringComparison.OrdinalIgnoreCase))
+                responseMessage.Content.Headers.ContentType.MediaType.Equals(MediaTypeNames.Application.Json, StringComparison.OrdinalIgnoreCase) &&
+                responseContent is not null &&
+                responseContent.Length > 0)
             {
-                string responseContent = await responseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
-                if (responseContent is not null && responseContent.Length > 0)
+                try
                 {
-                    try
-                    {
-                        AtErrorDetail? responseAtErrorDetail = JsonSerializer.Deserialize<AtErrorDetail>(
-                            responseContent,
-                            SourceGenerationContext.Default.AtErrorDetail);
+                    AtErrorDetail? responseAtErrorDetail = JsonSerializer.Deserialize<AtErrorDetail>(
+                        responseContent,
+                        SourceGenerationContext.Default.AtErrorDetail);
 
-                        if (responseAtErrorDetail is not null)
-                        {
-                            errorDetail.Error = responseAtErrorDetail.Error;
-                            errorDetail.Message = responseAtErrorDetail.Message;
-                            errorDetail.ExtensionData = responseAtErrorDetail.ExtensionData;
-                        }
+                    if (responseAtErrorDetail is not null)
+                    {
+                        errorDetail.Error = responseAtErrorDetail.Error;
+                        errorDetail.Message = responseAtErrorDetail.Message;
+                        errorDetail.ExtensionData = responseAtErrorDetail.ExtensionData;
                     }
-                    catch (NotSupportedException) { }
-                    catch (JsonException) { }
-                    catch (ArgumentNullException) { }
                 }
+                catch (NotSupportedException) { }
+                catch (JsonException) { }
+                catch (ArgumentNullException) { }
             }
 
             return errorDetail;
@@ -980,8 +1220,12 @@ namespace idunno.AtProto
                             httpRequestMessage.Content = new ByteArrayContent(blob);
                             break;
 
+                        case string stringContent:
+                            httpRequestMessage.Content = new StringContent(stringContent, Encoding.UTF8, MediaTypeNames.Application.Json);
+                            break;
+
                         default:
-                            string content = JsonSerializer.Serialize<TRecord>(record, jsonSerializerOptions);
+                            string content = JsonSerializer.Serialize(record, jsonSerializerOptions);
 
                             httpRequestMessage.Content = new StringContent(content, Encoding.UTF8, MediaTypeNames.Application.Json);
                             break;
@@ -1020,7 +1264,16 @@ namespace idunno.AtProto
                             Logger.AtProtoClientRequestSucceeded
                                 (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
 
-                            if (typeof(TResult) != typeof(EmptyResponse))
+                            if (typeof(TResult) == typeof(EmptyResponse))
+                            {
+                                result.Result = new EmptyResponse() as TResult;
+                            }
+                            else if (typeof(TResult) == typeof(string))
+                            {
+                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                                result.Result = responseContent as TResult;
+                            }
+                            else
                             {
                                 string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
@@ -1034,10 +1287,6 @@ namespace idunno.AtProto
                                 {
                                     Logger.AtProtoClientResponseDeserializationThrew(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, ex);
                                 }
-                            }
-                            else
-                            {
-                                result.Result = new EmptyResponse() as TResult;
                             }
                         }
                         else
@@ -1079,6 +1328,11 @@ namespace idunno.AtProto
                             }
 
                             result.AtErrorDetail = atErrorDetail;
+
+                            if (typeof(TResult) == typeof(string))
+                            {
+                                result.Result = atErrorDetail.RawContent as TResult;
+                            }
 
                             Logger.AtProtoClientRequestFailed
                                 (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, httpResponseMessage.StatusCode, result.AtErrorDetail.Error, result.AtErrorDetail.Message);
