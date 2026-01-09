@@ -52,6 +52,7 @@
     <File Path="docs/docs/posting.md" />
     <File Path="docs/docs/profileEditing.md" />
     <File Path="docs/docs/profiles.md" />
+    <File Path="docs/docs/rawClient.md" />
     <File Path="docs/docs/requestsAndResponses.md" />
     <File Path="docs/docs/savingAndRestoringAuthentication.md" />
     <File Path="docs/docs/sourceGeneration.md" />

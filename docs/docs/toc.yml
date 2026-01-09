@@ -1,4 +1,4 @@
-items:
+﻿items:
   - name: Getting started
     items:
       - name: Getting Started
@@ -53,6 +53,8 @@ items:
     items:
       - name: Labels
         href: labels.md
+      - name: Sending "raw" requests
+        href: rawClient.md
       - name: Using the Jetstream
         href: jetstream.md
       - name: Configuring logging

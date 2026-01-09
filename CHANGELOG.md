@@ -10,6 +10,13 @@
 
 ## 1.3.0 - Unrelease, In Progress
 
+### Added
+
+#### idunno.AtProto
+
+* Add non-generic version of `AtProtoHttpClient` to allow for "raw" get/post operations.
+* Add `AccessTokenCredential` to wrap an access jwt for which no refresh token is available.
+
 ### Changed
 
 #### idunno.AtProto
@@ -19,6 +26,7 @@
 #### idunno.Bluesky
 
 * Change `DeleteRepost` to accept either a repost AT-URI, or the AT-URI of the original post.
+* Change access modifiers on the constructors for `Facet` and `PostBuilderFacetFeature` to `public`.
 
 ## 1.2.0 - 2025-12-27
 
