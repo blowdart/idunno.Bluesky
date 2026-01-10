@@ -26,18 +26,6 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Gets the length of a string in graphemes.
-        /// </summary>
-        /// <param name="s">The string whose length to calculate.</param>
-        /// <returns></returns>
-        public static int GetGraphemeLength(this string s)
-        {
-            StringInfo stringInfo = new(s);
-
-            return stringInfo.LengthInTextElements;
-        }
-
-        /// <summary>
         /// Gets the UTF8 index position of <paramref name="index"/> in <paramref name="s"/>.
         /// </summary>
         /// <param name="s">The string in which the <paramref name="index"/> is based.</param>

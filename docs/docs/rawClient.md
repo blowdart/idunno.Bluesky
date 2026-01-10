@@ -12,7 +12,8 @@ to send requests to the endpoint.
 
 ## Making GET requests
 
-For example, if you wanted to call the [getRecord](https://docs.bsky.app/docs/api/com-atproto-repo-get-record) endpoint on the on the PDS hosted at `gomphidius.us-west.host.bsky.network`
+For example, if you wanted to call the [getRecord](https://docs.bsky.app/docs/api/com-atproto-repo-get-record) endpoint,
+which is an HTTP GET operation, to retrieve a Bluesky post record on the on the PDS hosted at `gomphidius.us-west.host.bsky.network`
 you would do:
 
 ```csharp
@@ -39,9 +40,13 @@ for example
 }
 ```
 
-### Making POST requests
+> [!TIP]
+> You can resolve the PDS for a handle using `Resolution.ResolvePds(handle)`, and the DID for a handle with `Resolution.ResolveDid(handle)`.
+> There is no need to spin up a full agent to do this.
 
-You can also send raw JSON payloads using the `Post()` method. Most posts will need authentication.
+## Making POST requests
+
+You can also send raw JSON payloads using the `Post()` method. Most POST requests will need authentication.
 
 For example, to create a new Bluesky post, using the [createRecord](https://docs.bsky.app/docs/api/com-atproto-repo-create-record) API
 on the PDS hosted at `gomphidius.us-west.host.bsky.network`, for which you have an access token for the `did:plc:ec72yg6n2sydzjvtovvdlxrk` actor

@@ -63,6 +63,8 @@
         href: savingAndRestoringAuthentication.md
       - name: Json Source Generation, AOT & Trimming
         href: sourceGeneration.md
+      - name: Custom Lexicons and Records
+        href: customLexiconsAndRecords.md
       - name: Unspecced APIS
         href: unspecced.md
 

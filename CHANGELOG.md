@@ -16,6 +16,8 @@
 
 * Add non-generic version of `AtProtoHttpClient` to allow for "raw" get/post operations.
 * Add `AccessTokenCredential` to wrap an access jwt for which no refresh token is available.
+* Add `Resolution` class with static methods to resolve DIDs for handles,and DidDocuments and PDS URIs for handles and DIDs without needing to instantiate a client.
+* Add `GetGraphemeLength` extension method on `string` to get the grapheme length of a string.
 
 ### Changed
 

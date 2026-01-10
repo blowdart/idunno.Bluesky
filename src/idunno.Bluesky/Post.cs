@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using System.Text.Json.Serialization;
 
+using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Record;

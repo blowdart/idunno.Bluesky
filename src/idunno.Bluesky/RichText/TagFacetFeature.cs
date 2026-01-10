@@ -3,6 +3,8 @@
 
 using System.Text.Json.Serialization;
 
+using idunno.AtProto;
+
 namespace idunno.Bluesky.RichText
 {
     /// <summary>

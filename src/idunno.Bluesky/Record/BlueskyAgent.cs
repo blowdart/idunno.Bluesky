@@ -15,7 +15,6 @@ using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Graph;
 using idunno.Bluesky.Record;
-using idunno.Bluesky.RichText;
 
 namespace idunno.Bluesky
 {
