@@ -8,7 +8,7 @@
 
 * Add support for Bluesky authentication in ASP.NET Razor Pages.
 
-## 1.3.0 - Unrelease, In Progress
+## 1.3.0 - 2026-01-26
 
 ### Added
 
@@ -18,6 +18,11 @@
 * Add `AccessTokenCredential` to wrap an access jwt for which no refresh token is available.
 * Add `Resolution` class with static methods to resolve DIDs for handles,and DidDocuments and PDS URIs for handles and DIDs without needing to instantiate a client.
 * Add `GetGraphemeLength` extension method on `string` to get the grapheme length of a string.
+
+### Documentation
+
+* Add documentation for using the raw client
+* Add documentation on using your own record types with typed client, and an approach to mapping a lexicon definition to a C# POCO.
 
 ### Changed
 
