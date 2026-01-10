@@ -195,3 +195,80 @@ and [deleteRecord](https://docs.bsky.app/docs/api/com-atproto-repo-delete-record
 as [listRecords](https://docs.bsky.app/docs/api/com-atproto-repo-list-records) to enumerate records in a collection, and
 [applyWrites](https://docs.bsky.app/docs/api/com-atproto-repo-apply-writes) to allow for batched transactional operations on a repository.
 Each of these endpoints has the equivalent method on `AtProtoAgent` that you can use with your custom records.
+
+## A note on lexicon unions
+
+AtProto lexicons can uses unions to mingle record types, for example,
+the [rich text facet definition](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/richtext/facet.json) for Bluesky posts
+has a part that looks like this
+
+```json
+  "defs": {
+    "main": {
+      "type": "object",
+      "description": "Annotation of a sub-string within rich text.",
+      "required": ["index", "features"],
+      "properties": {
+        "index": { "type": "ref", "ref": "#byteSlice" },
+        "features": {
+          "type": "array",
+          "items": { "type": "union", "refs": ["#mention", "#link", "#tag"] }
+        }
+      }
+    },
+```
+
+You can approximate this behavior using
+[json polymorphic serialization and deserialization](https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/polymorphism).
+
+Taking facets as the example, `idunno.Bluesky` has a base class, `FacetFeature`, and sub classes for mentions, links and hashtags.
+
+```c#
+namespace idunno.Bluesky.RichText
+{
+    [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
+    [JsonDerivedType(typeof(MentionFacetFeature), typeDiscriminator: "app.bsky.richtext.facet#mention")]
+    [JsonDerivedType(typeof(LinkFacetFeature), typeDiscriminator: "app.bsky.richtext.facet#link")]
+    [JsonDerivedType(typeof(TagFacetFeature), typeDiscriminator: "app.bsky.richtext.facet#tag")]
+    public record FacetFeature
+    {
+        [JsonExtensionData]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Needs to be writable for json deserialization")]
+        public IDictionary<string, JsonElement>? ExtensionData { get; set; } = new Dictionary<string, JsonElement>();
+    }
+}
+```
+
+The base class, shown above uses the c# `[JsonPolymorphic]` and `[JsonDerivedType]` attributes to map `$type` declarations in JSON to individual classes. For example,
+the `MentionFacetFeature` class, inheriting from `FacetFeature` looks as follows;
+
+```c#
+namespace idunno.Bluesky.RichText
+{
+    public sealed record MentionFacetFeature : FacetFeature
+    {
+        [JsonConstructor]
+        public MentionFacetFeature(Did did)
+        {
+            ArgumentNullException.ThrowIfNull(did);
+            Did = did;
+        }
+
+        [JsonInclude]
+        [JsonRequired]
+        public Did Did { get; init; }
+    }
+}
+```
+
+The use of `[JsonExtensionData]` allows the [handling of overflow data](https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/handle-overflow),
+just in case the definitions change and a developer might need the data that hasn't yet been mapped in a library update.
+
+It's important to note when using this approach you must use the base class in your records for polymorphic serialization and deserialization to work correctly.
+The facet record definition in `idunno.Bluesky` contains the following snippet for the facet feature list;
+
+```c#
+        [JsonInclude]
+        [JsonRequired]
+        public IList<FacetFeature> Features { get; init; }
+```
