@@ -186,6 +186,9 @@ var createResult = await agent.CreateRecord(
 The result from `CreateRecord`, an `AtProtoHttpResult<CreateRecordResult>` allows you to check for success with the `Succeeded` property,
 and the `Result` property includes a `StrongReference` to the newly created record.
 
+The [Custom Records sample](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.CustomRecords) shows how to define a sample
+record and use it with `AtProtoAgent` to create a new entry in a repository collection.
+
 AtProto provides [createRecord](https://docs.bsky.app/docs/api/com-atproto-repo-create-record),
 [getRecord](https://docs.bsky.app/docs/api/com-atproto-repo-get-record), [putRecord](https://docs.bsky.app/docs/api/com-atproto-repo-put-record)
 and [deleteRecord](https://docs.bsky.app/docs/api/com-atproto-repo-delete-record) endpoints to manipulate records in a repository, as well

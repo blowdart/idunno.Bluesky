@@ -71,6 +71,7 @@
 ### idunno.Bluesky
 
 * Update 3rd party dependencies.
+* Add Uri and Cid to statusView on profile responses. See [[APP-1750] Add uri and cid to statusView on profile responses](https://github.com/bluesky-social/atproto/pull/4516).
 
 ### Breaking Changes
 

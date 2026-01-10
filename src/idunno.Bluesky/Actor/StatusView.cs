@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Nodes;
-
+using idunno.AtProto;
 using idunno.Bluesky.Embed;
 
 namespace idunno.Bluesky.Actor
@@ -15,7 +15,9 @@ namespace idunno.Bluesky.Actor
     /// <param name="Embed">An optional <see cref="EmbeddedView"/> associated with the status.</param>
     /// <param name="ExpiresAt">An optional <see cref="DateTimeOffset" /> when this status will expire</param>
     /// <param name="IsActive">Gets a flag indicating if the status is not expired. Only present <paramref name="ExpiresAt"/> was set.</param>
-    public sealed record StatusView(string Status, JsonNode Record, EmbeddedView? Embed, DateTimeOffset? ExpiresAt, bool? IsActive)
+    /// <param name="uri">The <see cref="AtUri"/> of the status.</param>
+    /// <param name="cid">The <see cref="Cid" /> of the status.</param>
+    public sealed record StatusView(string Status, JsonNode Record, EmbeddedView? Embed, DateTimeOffset? ExpiresAt, bool? IsActive, AtUri? uri, Cid? cid)
     {
     }
 }
