@@ -123,24 +123,42 @@ minisign -Vm <package-path> -P RWTsT4BHHChe/Rj/GBAuZHg3RaZFnfBDqaZ7KzLvr44a7mO6f
 
 ## Pre-releases
 
+[![Prerelease Version](https://img.shields.io/myget/blowdart/vpre/idunno.Bluesky?label=idunno.Bluesky)](https://www.myget.org/gallery/blowdart)
+
 If you want to test pre-releases you can find them in the [myget feed](https://www.myget.org/gallery/blowdart).
 
 You can add this as a Package Source in [Visual Studio](https://learn.microsoft.com/en-us/nuget/consume-packages/install-use-packages-visual-studio#package-sources)
-or through the [command line](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-nuget-add-source)
+or through the [command line](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-nuget-add-source), or by using the sample `nuget.config` file shown below:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+    <add key="blowdart.myget.org" value="https://www.myget.org/F/blowdart/api/v3/index.json" />
+  </packageSources>
+
+  <packageSourceMapping>
+    <packageSource key="blowdart.myget.org">
+      <package pattern="idunno.AtProto" />
+      <package pattern="idunno.AtProto.*" />
+      <package pattern="idunno.Bluesky" />
+    </packageSource>
+    <packageSource key="nuget.org">
+      <package pattern="*" />
+    </packageSource>
+  </packageSourceMapping>
+</configuration>
+```
 
 The package source URI is https://www.myget.org/F/blowdart/api/v3/index.json
 
-Due to the way pre-release builds are stamped with the git commit the "latest" version on myget
-may not always be the latest version.
-
-Either check the Last Updated column in the [myget gallery](https://www.myget.org/gallery/blowdart) on the individual package
-details to find the true latest version, or if you want to get a pre-release for a specific commit, if one was produced,
+To match a pre-release for a specific commit, if a build was produced for that commit
 
 1. Check the version value in [version.json](https://github.com/blowdart/idunno.Bluesky/blob/main/version.json),
-1. Check [Pre-release publish runs](https://github.com/blowdart/idunno.Bluesky/actions/workflows/prerelease-build.yml),
-1. Select the latest run
-1. The latest pre-release package will have the first 10 digits of the commit sha, prefixed with a `g`
-as the build number.
+1. Check if there was a [Pre-release publish runs](https://github.com/blowdart/idunno.Bluesky/actions/workflows/prerelease-build.yml) for the commit you are interested in,
+1. The pre-release package will have the first 10 digits of the commit sha, prefixed with a `g` as the build number.
 
 For example, commit [190d63e](https://github.com/blowdart/idunno.Bluesky/commit/190d63e20d3d59e86912fd8cfe315915d101f6a8)
 produced a nightly build and packages. The package build number is be 1.1.0-prerelease.`g190d63e20d`
