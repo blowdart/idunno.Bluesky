@@ -72,6 +72,18 @@ Trimming is supported for applications targeting .NET 9.0 or later.
 `idunno.Bluesky`, `idunno.AtProto`, `idunno.AtProto.OAuthCallBack` and `idunno.AtProto.Types` are available under the MIT license,
 see the [LICENSE](LICENSE) file for more information.
 
+## Tipping / Sponsoring
+
+If you find this library useful please consider donating to
+* a local food bank,
+* a local animal rescue or shelter, or
+* a national Multiple Sclerosis charity in your country
+  * US: [National Multiple Sclerosis Society](https://www.nationalmssociety.org/)
+  * UK: [MS Society UK](https://www.mssociety.org.uk/)
+  * Canada: [MS Canada](https://mscanada.ca/)
+
+If you want to give me the warm fuzzies, you can tag me on Bluesky at [@blowdart.me](https://bsky.app/profile/blowdart.me) to let me know.
+
 ## Release History
 
 The [releases page](https://github.com/blowdart/idunno.Bluesky/releases) provides details of each release and what was added, changed or removed.
