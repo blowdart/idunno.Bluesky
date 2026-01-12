@@ -53,6 +53,33 @@ namespace idunno.Bluesky.Test
         }
 
         [Theory]
+        [InlineData("aapl text", 0)]
+        [InlineData("$aapl", 1)]
+        [InlineData("$aapl text", 1)]
+        [InlineData("$aapl $msft text", 2)]
+        [InlineData("$aapl $msft", 2)]
+        [InlineData("$aapl $!msft", 1)]
+        [InlineData("$aapl $!", 1)]
+        [InlineData("$aapl $msft $abpww", 3)]
+        public async Task CashTagsShouldCountCorrectly(string text, int expectedCount)
+        {
+            DefaultFacetExtractor extractor = new(MockResolver);
+
+            IList<Facet> results = await extractor.ExtractFacets(text, TestContext.Current.CancellationToken);
+
+            Assert.NotNull(results);
+            Assert.Equal(expectedCount, results.Count);
+
+            foreach (Facet facet in results)
+            {
+                Assert.NotNull(facet.Features);
+                Assert.Single(facet.Features);
+
+                Assert.IsType<TagFacetFeature>(facet.Features[0]);
+            }
+        }
+
+        [Theory]
         [InlineData("#tag", 0, 4)]
         [InlineData("#tag.", 0, 4)]
         [InlineData("#tag!", 0, 4)]
@@ -90,6 +117,37 @@ namespace idunno.Bluesky.Test
         }
 
         [Theory]
+        [InlineData("$aapl", 0, 5)]
+        [InlineData("$aapl.", 0, 5)]
+        [InlineData("$appl!", 0, 5)]
+        [InlineData("$appl ", 0, 5)]
+        [InlineData(" $aapl", 1, 6)]
+        [InlineData(" $aapl ", 1, 6)]
+        [InlineData(" $aapl  ", 1, 6)]
+        [InlineData("  $aapl", 2, 7)]
+        [InlineData("  $aapl ", 2, 7)]
+        [InlineData("  $aapl  ", 2, 7)]
+        public async Task CashTagsShouldPositionCorrectly(string text, int expectedStartPosition, int expectedEndPosition)
+        {
+            DefaultFacetExtractor extractor = new(MockResolver);
+
+            IList<Facet> results = await extractor.ExtractFacets(text, TestContext.Current.CancellationToken);
+
+            Assert.NotNull(results);
+            Assert.NotEmpty(results);
+            Assert.Single(results);
+
+            foreach (Facet facet in results)
+            {
+                Assert.NotNull(facet.Features);
+                Assert.Single(facet.Features);
+                Assert.IsType<TagFacetFeature>(facet.Features[0]);
+                Assert.Equal(facet.Index.ByteStart, expectedStartPosition);
+                Assert.Equal(facet.Index.ByteEnd, expectedEndPosition);
+            }
+        }
+
+        [Theory]
         [InlineData("#tag", "tag")]
         [InlineData("#tag!", "tag")]
         [InlineData(" #tag!", "tag")]
@@ -99,6 +157,30 @@ namespace idunno.Bluesky.Test
         [InlineData(" #tag", "tag")]
         [InlineData(" ##tag", "#tag")]
         public async Task HashTagsShouldExtractTheTagCorrectly(string text, string expectedTag)
+        {
+            DefaultFacetExtractor extractor = new(MockResolver);
+
+            IList<Facet> results = await extractor.ExtractFacets(text, TestContext.Current.CancellationToken);
+
+            Assert.NotNull(results);
+            Assert.NotEmpty(results);
+            Assert.Single(results);
+
+            foreach (Facet facet in results)
+            {
+                Assert.NotNull(facet.Features);
+                Assert.Single(facet.Features);
+                Assert.IsType<TagFacetFeature>(facet.Features[0]);
+
+                TagFacetFeature tagFeature = (TagFacetFeature)facet.Features[0];
+
+                Assert.Equal(expectedTag, tagFeature.Tag);
+            }
+        }
+
+        [Theory]
+        [InlineData("$money", "$money")]
+        public async Task CashTagsShouldExtractTheTagCorrectly(string text, string expectedTag)
         {
             DefaultFacetExtractor extractor = new(MockResolver);
 

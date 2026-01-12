@@ -8,6 +8,14 @@
 
 * Add support for Bluesky authentication in ASP.NET Razor Pages.
 
+## 1.4.0 - Unrelease, In Progress
+
+### Added
+
+#### idunno.Bluesky
+
+* Add "cashtag" facet detection to the default facet extractor. See [Add cashtag support for stock ticker discussions](https://github.com/bluesky-social/social-app/pull/9689)
+
 ## 1.3.0 - 2026-01-26
 
 ### Added

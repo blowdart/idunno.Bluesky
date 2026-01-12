@@ -25,6 +25,9 @@ namespace idunno.Bluesky.RichText
         [GeneratedRegex(@"@\w+(\.\w+)*", RegexOptions.IgnoreCase, 5000)]
         private static partial Regex s_MentionRegex();
 
+        [GeneratedRegex(@"(^|\s|\()\$([A-Za-z][A-Za-z0-9]{0,4})(?=\s|$|[.,;:!?)""'’])", RegexOptions.IgnoreCase, 5000)]
+        private static partial Regex s_CashTagRegex();
+
         /// <summary>
         /// Construct a new instance of <see cref="DefaultFacetExtractor"/>.
         /// </summary>
@@ -53,6 +56,12 @@ namespace idunno.Bluesky.RichText
                 facets.AddRange(hashTagFacets);
             }
 
+            List<Facet> cashTagFacets = ExtractCashTags(text);
+            if (cashTagFacets.Count > 0)
+            {
+                facets.AddRange(cashTagFacets);
+            }
+
             List<Facet> linkFacets = ExtractUris(text);
             if (linkFacets.Count > 0)
             {
@@ -71,9 +80,9 @@ namespace idunno.Bluesky.RichText
         private static List<Facet> ExtractHashTags(string text)
         {
             List<Facet> hashTags = [];
-            MatchCollection matches = s_HashTagRegex().Matches(text);
+            MatchCollection hashTagMatches = s_HashTagRegex().Matches(text);
 
-            foreach (Match match in matches)
+            foreach (Match match in hashTagMatches)
             {
                 // This will have the # prefix.
                 string extractedTag = match.Value;
@@ -111,6 +120,38 @@ namespace idunno.Bluesky.RichText
             }
 
             return hashTags;
+        }
+
+        private static List<Facet> ExtractCashTags(string text)
+        {
+            List<Facet> cashTags = [];
+
+            MatchCollection cashTagMatches = s_CashTagRegex().Matches(text);
+
+            foreach (Match match in cashTagMatches)
+            {
+                // This will have the $ prefix.
+                string extractedTag = match.Value;
+
+                if (extractedTag.Length <=2)
+                {
+                    break;
+                }
+
+                int offset = 0;
+                if (match.Value[0] == ' ')
+                {
+                    offset = 1;
+                    extractedTag = extractedTag[1..];
+                }
+
+                TagFacetFeature tagFacetFeature = new(extractedTag);
+
+                ByteSlice index = new(text.GetUtf8BytePosition(match.Index + offset), text.GetUtf8BytePosition(match.Index + offset + extractedTag.Length));
+                cashTags.Add(new Facet(index, [tagFacetFeature]));
+            }
+
+            return cashTags;
         }
 
         private static List<Facet> ExtractUris(string text)
