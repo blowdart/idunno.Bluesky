@@ -75,3 +75,8 @@ var result = await client.Post(
 ```
 
 AtProto and Bluesky payload formats are defined in the [AtProto and Bluesky lexicons](https://github.com/bluesky-social/atproto/tree/main/lexicons).
+
+> [!WARNING]
+> Displaying raw results can be dangerous and lead to [XSS vulnerabilities](https://owasp.org/www-community/attacks/xss/) if you
+> are writing a web app. For example, the link facet tag allows any text to be included as a link, which could include javascript:// URIs.
+> Ensure you properly sanitize any raw JSON before displaying it in a web app, and you HTML encode the JSON as appropriate.
