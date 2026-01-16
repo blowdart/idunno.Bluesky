@@ -13,14 +13,20 @@ namespace idunno.AtProto.Labels
     public sealed class SelfLabels
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+#if NET9_0_OR_GREATER
+        private readonly Lock _syncLock = new();
+#else
         private readonly object _syncLock = new();
+#endif
+
+        List<SelfLabel> _values;
 
         /// <summary>
         /// Creates a new instance of <see cref="SelfLabels"/>.
         /// </summary>
         public SelfLabels()
         {
-            Values = [];
+            _values = [];
         }
 
         /// <summary>
@@ -33,7 +39,7 @@ namespace idunno.AtProto.Labels
             ArgumentNullException.ThrowIfNull(values);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(values.Count, 10);
 
-            Values = new List<SelfLabel>(values).AsReadOnly();
+            _values = [.. values];
         }
 
         /// <summary>
@@ -48,7 +54,20 @@ namespace idunno.AtProto.Labels
         /// </summary>
         [JsonInclude]
         [JsonRequired]
-        public IReadOnlyList<SelfLabel> Values { get; internal set; }
+        public IReadOnlyList<SelfLabel> Values
+        {
+            get => _values.AsReadOnly();
+
+            set
+            {
+                ArgumentNullException.ThrowIfNull(value);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Count, 10);
+                lock (_syncLock)
+                {
+                    _values = [.. value];
+                }
+            }
+        }
 
         /// <summary>
         /// Returns a flag indicating whether the specified <paramref name="label"/> is present.
@@ -74,7 +93,7 @@ namespace idunno.AtProto.Labels
             {
                 if (!Contains(name))
                 {
-                    List<string> values = [.. from existingLabel in Values select existingLabel.Value, name];
+                    List<string> values = [.. from existingLabel in _values select existingLabel.Value, name];
 
                     List<SelfLabel> updatedLabels = [];
                     foreach (string value in values)
@@ -82,7 +101,7 @@ namespace idunno.AtProto.Labels
                         updatedLabels.Add(new SelfLabel(value));
                     }
 
-                    Values = updatedLabels.AsReadOnly();
+                    _values = updatedLabels;
                 }
             }
         }
@@ -106,7 +125,7 @@ namespace idunno.AtProto.Labels
                         updatedLabels.Add(new SelfLabel(value));
                     }
 
-                    Values = updatedLabels.AsReadOnly();
+                    _values = updatedLabels;
                 }
             }
         }
