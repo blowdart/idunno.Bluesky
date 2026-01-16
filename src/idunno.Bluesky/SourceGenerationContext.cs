@@ -43,6 +43,7 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(Follow))]
     [JsonSerializable(typeof(Record.Like))]
     [JsonSerializable(typeof(Repost))]
+    [JsonSerializable(typeof(Status))]
 
     [JsonSerializable(typeof(Actor.Model.GetPreferencesResponse), TypeInfoPropertyName = "ActorGetPreferencesResponse")]
     [JsonSerializable(typeof(GetProfilesResponse))]
@@ -239,6 +240,7 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(Profile))]
     [JsonSerializable(typeof(AtProtoRepositoryRecord<Profile>))]
     [JsonSerializable(typeof(SelfLabels))]
+    [JsonSerializable(typeof(SelfLabel))]
     [JsonSerializable(typeof(StarterPack))]
     [JsonSerializable(typeof(Verification))]
     [JsonSerializable(typeof(AtProtoRepositoryRecord<Verification>))]

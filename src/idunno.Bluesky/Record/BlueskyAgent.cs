@@ -1,18 +1,12 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
-using System.Security.Claims;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
+
 using idunno.AtProto;
-using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
+using idunno.Bluesky.Embed;
 using idunno.Bluesky.Graph;
 using idunno.Bluesky.Record;
 
@@ -64,7 +58,7 @@ namespace idunno.Bluesky
                 throw new AuthenticationRequiredException();
             }
 
-            AtProtoHttpResult<CreateRecordResult> result = await CreateRecord<BlueskyRecord>(
+            AtProtoHttpResult<CreateRecordResult> result = await CreateRecord(
                 record: record,
                 jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
                 collection: collection,
@@ -791,6 +785,94 @@ namespace idunno.Bluesky
                 httpResponseHeaders: listEntriesResult.HttpResponseHeaders,
                 atErrorDetail: new AtErrorDetail("NotFound", $"{handle} not found in list {uri}"),
                 rateLimit: listEntriesResult.RateLimit);
+        }
+
+        /// <summary>
+        /// Sets the profile status for the current authenticated user to indicate a live stream.
+        /// </summary>
+        /// <param name="uri">The uri of the live stream.</param>
+        /// <param name="title">The title of the stream.</param>
+        /// <param name="description">An optional description of the stream.</param>
+        /// <param name="previewBlob">An optional <see cref="Blob"/> containing a preview image for the stream.</param>
+        /// <param name="durationMinutes">The optional duration of the stream in minutes.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is null.</exception>
+        public async Task<AtProtoHttpResult<CreateRecordResult>> SetLiveStatus(
+            Uri uri,
+            string title,
+            string? description = null,
+            Blob? previewBlob =null,
+            int? durationMinutes = null,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(uri);
+            ArgumentNullException.ThrowIfNull(title);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            Status status = new (
+                "app.bsky.actor.status#live",
+                embed: new EmbeddedExternal(
+                    uri: uri,
+                    title: title,
+                    description: description,
+                    thumbnail: previewBlob),
+                durationMinutes: durationMinutes);
+
+            return await SetStatus(
+                status: status,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+
+        /// <summary>
+        /// Sets the profile status for the current authenticated user.
+        /// </summary>
+        /// <param name="status">The status to set</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="status"/> is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<CreateRecordResult>> SetStatus(
+            Status status,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(status);
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            return await CreateBlueskyRecord(
+                record: status,
+                collection: CollectionNsid.Status,
+                rKey: "self",
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Deletes the profile status for the current authenticated user.
+        /// </summary>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        public async Task<AtProtoHttpResult<Commit>> DeleteStatus(
+            CancellationToken cancellationToken = default)
+        {
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            AtUri statusUri = new($"at://{Did}/{CollectionNsid.Status}/self");
+            AtProtoHttpResult<Commit> deleteResult = await DeleteRecord(
+                uri: statusUri,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            return deleteResult;
         }
     }
 }

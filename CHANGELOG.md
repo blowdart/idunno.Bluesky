@@ -15,6 +15,7 @@
 #### idunno.Bluesky
 
 * Add "cashtag" facet detection to the default facet extractor. See [Add cashtag support for stock ticker discussions](https://github.com/bluesky-social/social-app/pull/9689)
+* Add `SetLiveStatus` to indicate if a user is live streaming, and `SetStatus` and `DeleteStatus` to set and delete a user's live status.
 
 ## 1.3.0 - 2026-01-26
 
