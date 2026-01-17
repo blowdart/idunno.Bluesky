@@ -12,6 +12,10 @@
 
 ### Added
 
+#### idunno.AtProto
+* Add public `AtProtoJsonSerializerOptions` to enable easier creation of `JsonSerializerOptions` with chained resolvers
+for custom `AtProtoRecord` classes.
+
 #### idunno.Bluesky
 
 * Add "cashtag" facet detection to the default facet extractor. See [Add cashtag support for stock ticker discussions](https://github.com/bluesky-social/social-app/pull/9689)
