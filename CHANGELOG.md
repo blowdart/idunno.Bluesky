@@ -15,6 +15,7 @@
 #### idunno.AtProto
 * Add public `AtProtoJsonSerializerOptions` to enable easier creation of `JsonSerializerOptions` with chained resolvers
 for custom `AtProtoRecord` classes.
+* Update `Value` property on `AtRepositoryRecord` to be settable.
 
 #### idunno.Bluesky
 

@@ -24,9 +24,9 @@ namespace idunno.AtProto.Repo
         }
 
         /// <summary>
-        /// Gets the value of the record.
+        /// Gets or sets the value of the record.
         /// </summary>
-        public AtProtoRecord? Value { get; init; }
+        public AtProtoRecord? Value { get; set; }
 
         /// <summary>
         /// A list of keys and element data that do not map to any strongly typed properties.
@@ -54,10 +54,10 @@ namespace idunno.AtProto.Repo
         }
 
         /// <summary>
-        /// Gets the value of the record.
+        /// Gets or sets the value of the record.
         /// </summary>
         [JsonRequired]
-        public TRecord Value { get; init; }
+        public TRecord Value { get; set; }
 
         /// <summary>
         /// A list of keys and element data that do not map to any strongly typed properties.
