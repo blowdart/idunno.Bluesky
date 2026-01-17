@@ -24,6 +24,7 @@ namespace idunno.Bluesky.Record
     [JsonDerivedType(typeof(BlueskyList), RecordType.List)]
     [JsonDerivedType(typeof(BlueskyListItem), RecordType.ListItem)]
     [JsonDerivedType(typeof(Notifications.Declaration), RecordType.NotificationDeclaration)]
+    [JsonDerivedType(typeof(Status), RecordType.Status)]
     public record BlueskyRecord : AtProtoRecord
     {
         /// <summary>

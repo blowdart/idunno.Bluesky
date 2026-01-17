@@ -365,6 +365,11 @@ namespace idunno.Bluesky
         /// Indicates a declaration of notification preferences.
         /// </summary>
         public const string NotificationDeclaration = "app.bsky.notification.declaration";
+
+        /// <summary>
+        /// Indicates a status record
+        /// </summary>
+        public const string Status = "app.bsky.actor.status";
     }
 
     /// <summary>
