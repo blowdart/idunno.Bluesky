@@ -22,7 +22,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Gets the default set of <see cref="JsonSerializerOptions"/> for AtProto types.
         /// </summary>
-        public static JsonSerializerOptions Options => s_options;
+        public static JsonSerializerOptions Options => new(s_options);
 
         /// <summary>
         /// Gets the default <see cref="IJsonTypeInfoResolver"/> for AtProto types.
