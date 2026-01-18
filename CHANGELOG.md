@@ -8,7 +8,7 @@
 
 * Add support for Bluesky authentication in ASP.NET Razor Pages.
 
-## 1.4.0 - Unreleased, In Progress
+## 1.4.0 - 2026-18-01
 
 ### Added
 
@@ -32,8 +32,8 @@ for custom `AtProtoRecord` classes.
 ### Changed
 
 #### idunno.AtProto
-* Update `Value` property on `AtRepositoryRecord` to be settable.
 
+* Update `Value` property on `AtRepositoryRecord` to be settable.
 
 ## 1.3.0 - 2026-01-10
 
