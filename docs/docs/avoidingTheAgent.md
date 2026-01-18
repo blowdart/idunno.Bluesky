@@ -152,7 +152,7 @@ var putRecordResult = await AtProtoServer.PutRecord(
     accessCredentials: accessCredentials);
 ```
 
-Here you can use the swapRecord parameter to ensure you are updating the version of the record you think you are. If
+Here you can use the `swapRecord` parameter to ensure you are updating the version of the record you think you are. If
 the record has been updated since you retrieved it the update will fail.
 
 Finally, to delete the record you just created you would do:
