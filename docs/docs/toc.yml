@@ -55,6 +55,8 @@
         href: labels.md
       - name: Sending "raw" requests
         href: rawClient.md
+      - name: Performing CRUD operations directly without an agent.
+        href: avoidingTheAgent.md
       - name: Using the Jetstream
         href: jetstream.md
       - name: Configuring logging

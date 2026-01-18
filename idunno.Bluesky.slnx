@@ -39,6 +39,7 @@
   </Folder>
   <Folder Name="/docs/docs/">
     <File Path="docs/docs/asp.net.md" />
+    <File Path="docs/docs/avoidingTheAgent.md" />
     <File Path="docs/docs/commonTerms.md" />
     <File Path="docs/docs/connecting.md" />
     <File Path="docs/docs/conversationsAndMessages.md" />
