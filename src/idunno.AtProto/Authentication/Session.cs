@@ -138,5 +138,33 @@ namespace idunno.AtProto.Authentication
         /// A flag indicating whether the session required an email based authentication token.
         /// </summary>
         public bool? EmailAuthFactor { get; init; }
+
+        /// <summary>
+        /// Creates an <see cref="AccessTokenCredential"/> from the session's Access JWT and Refresh JWT.
+        /// </summary>
+        /// <param name="service">The service <see cref="Uri"/> the credential was issued from.</param>
+        /// <param name="authenticationType">The type of authentication that was used to acquire the credentials.</param>
+        /// <returns>An <see cref="AccessCredentials"/> instance.</returns>
+        public AccessCredentials ToAccessCredentials(Uri service, AuthenticationType authenticationType = AuthenticationType.Unknown)
+        {
+            return new AccessCredentials(service, authenticationType, AccessJwt, RefreshJwt);
+        }
+
+        /// <summary>
+        /// Creates an <see cref="AccessTokenCredential"/> from the session's Access JWT and Refresh JWT.
+        /// </summary>
+        /// <param name="service">The service <see cref="Uri"/> the credential was issued from.</param>
+        /// <returns>An <see cref="AccessTokenCredential"/> instance.</returns>
+        public AccessTokenCredential ToAccessTokenCredential(Uri? service = null)
+        {
+            if (service is null)
+            {
+                return new AccessTokenCredential(AccessJwt);
+            }
+            else
+            {
+                return new AccessTokenCredential(service, AccessJwt);
+            }
+        }
     }
 }

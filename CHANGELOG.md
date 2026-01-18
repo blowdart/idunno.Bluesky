@@ -15,20 +15,27 @@
 #### idunno.AtProto
 * Add public `AtProtoJsonSerializerOptions` to enable easier creation of `JsonSerializerOptions` with chained resolvers
 for custom `AtProtoRecord` classes.
-* Update `Value` property on `AtRepositoryRecord` to be settable.
+* Add `ToAccessCredentials` and `ToAccessTokenCredential` methods to `Session`.
 
 #### idunno.Bluesky
 
 * Add "cashtag" facet detection to the default facet extractor. See [Add cashtag support for stock ticker discussions](https://github.com/bluesky-social/social-app/pull/9689)
 * Add `SetLiveStatus` to indicate if a user is live streaming, and `SetStatus` and `DeleteStatus` to set and delete a user's status.
+* Add `BlueskyJsonSerializerOptions` to enable easier creation of `JsonSerializerOptions` with chained resolvers
 
-### Changed
+### Fixed
 
 #### idunno.AtProto
 
 * Fix `PutRecord<TRecord>(AtProtoRepositoryRecord<TRecord>)` to use the record CID for `swapRecord`, not the `swapCommit`.
 
-## 1.3.0 - 2026-01-26
+### Changed
+
+#### idunno.AtProto
+* Update `Value` property on `AtRepositoryRecord` to be settable.
+
+
+## 1.3.0 - 2026-01-10
 
 ### Added
 
@@ -41,7 +48,7 @@ for custom `AtProtoRecord` classes.
 
 ### Documentation
 
-* Add documentation for using the raw client
+* Add documentation for using the raw client.
 * Add documentation on using your own record types with typed client, and an approach to mapping a lexicon definition to a C# POCO.
 
 ### Changed
