@@ -8,6 +8,18 @@
 
 * Add support for Bluesky authentication in ASP.NET Razor Pages.
 
+## 1.5.0 - Unreleased, In Progress
+
+### Added
+
+#### idunno.AtProto
+
+* Added `TypeResolver` static class.
+
+#### idunno.Bluesky
+
+* Added `TypeResolver` static class.
+
 ## 1.4.0 - 2026-18-01
 
 ### Added
