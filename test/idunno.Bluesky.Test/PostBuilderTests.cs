@@ -216,10 +216,10 @@ namespace idunno.Bluesky.Test
                 "Image Test",
                 images:
                 [
-                        new (new Blob(new BlobReference("link"), "image/jpg", 1), "alt text"),
-                        new (new Blob(new BlobReference("link"), "image/jpg", 1), "alt text"),
-                        new (new Blob(new BlobReference("link"), "image/jpg", 1), "alt text"),
-                        new (new Blob(new BlobReference("link"), "image/jpg", 1), "alt text"),
+                        new (new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
+                        new (new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
+                        new (new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
+                        new (new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
                 ]);
 
             ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>("images", () =>
@@ -228,11 +228,11 @@ namespace idunno.Bluesky.Test
                     "Image Test",
                     images:
                     [
-                        new (new Blob(new BlobReference("link"), "image/jpg", 1), "alt text"),
-                        new (new Blob(new BlobReference("link"), "image/jpg", 1), "alt text"),
-                        new (new Blob(new BlobReference("link"), "image/jpg", 1), "alt text"),
-                        new (new Blob(new BlobReference("link"), "image/jpg", 1), "alt text"),
-                        new (new Blob(new BlobReference("link"), "image/jpg", 1), "alt text")
+                        new (new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
+                        new (new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
+                        new (new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
+                        new (new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
+                        new (new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text")
                     ]);
             });
         }

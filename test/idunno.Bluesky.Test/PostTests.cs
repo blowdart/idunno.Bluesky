@@ -342,7 +342,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void ConstructorDoesNotThrowWhenImageAndTextIsProvided()
         {
-            var image = new EmbeddedImage(new Blob(new BlobReference("https://example.org/image"), "image/jpg", 1024), "alt text");
+            var image = new EmbeddedImage(new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text");
 
             var post = new Post("text", image);
 
@@ -367,7 +367,7 @@ namespace idunno.Bluesky.Test
         [Fact]
         public void ConstructorDoesNotThrowWhenImageAndTextAndCreatedAtIsProvided()
         {
-            var image = new EmbeddedImage(new Blob(new BlobReference("https://example.org/image"), "image/jpg", 1024), "alt text");
+            var image = new EmbeddedImage(new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text");
 
             var post = new Post("text", DateTimeOffset.UtcNow, image);
 
@@ -426,7 +426,7 @@ namespace idunno.Bluesky.Test
 
             for (int i = 0; i <= Maximum.ImagesInPost; i++)
             {
-                images.Add(new EmbeddedImage(new Blob(new BlobReference("https://example.org/image"), "image/jpg", 1024), "alt text"));
+                images.Add(new EmbeddedImage(new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text"));
             }
 
             ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("text", images: images));
@@ -441,7 +441,7 @@ namespace idunno.Bluesky.Test
 
             for (int i = 0; i < Maximum.ImagesInPost; i++)
             {
-                images.Add(new EmbeddedImage(new Blob(new BlobReference("https://example.org/image"), "image/jpg", 1024), "alt text"));
+                images.Add(new EmbeddedImage(new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text"));
             }
 
             var post = new Post("text", images);
@@ -461,7 +461,7 @@ namespace idunno.Bluesky.Test
 
             for (int i = 0; i <= Maximum.ImagesInPost; i++)
             {
-                images.Add(new EmbeddedImage(new Blob(new BlobReference("https://example.org/image"), "image/jpg", 1024), "alt text"));
+                images.Add(new EmbeddedImage(new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text"));
             }
 
             ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("text", createdAt: DateTimeOffset.UtcNow, images: images));
@@ -476,7 +476,7 @@ namespace idunno.Bluesky.Test
 
             for (int i = 0; i < Maximum.ImagesInPost; i++)
             {
-                images.Add(new EmbeddedImage(new Blob(new BlobReference("https://example.org/image"), "image/jpg", 1024), "alt text"));
+                images.Add(new EmbeddedImage(new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text"));
             }
 
             var post = new Post("text", DateTimeOffset.UtcNow, images);
@@ -631,7 +631,7 @@ namespace idunno.Bluesky.Test
 
             for (int i = 0; i < Maximum.ImagesInPost; i++)
             {
-                images.Add(new EmbeddedImage(new Blob(new BlobReference("https://example.org/image"), "image/jpg", 1024), "alt text"));
+                images.Add(new EmbeddedImage(new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text"));
             }
 
             Post post = new (null, images: images);

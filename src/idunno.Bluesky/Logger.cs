@@ -66,7 +66,7 @@ namespace idunno.Bluesky
         internal static partial void CreatePostWithGatesFailed(ILogger logger, HttpStatusCode statusCode, Did did, string? error, string? message);
 
         [LoggerMessage(50, LogLevel.Debug, "ImageUpload succeeded for {did} {link}")]
-        internal static partial void ImageUploadSucceed(ILogger logger, Did did, string link);
+        internal static partial void ImageUploadSucceed(ILogger logger, Did did, Cid link);
 
         [LoggerMessage(51, LogLevel.Error, "ImageUpload for {did} with a status code {statusCode}, at error {error} message {message}")]
         internal static partial void ImageUploadFailed(ILogger logger, HttpStatusCode statusCode, Did did, string? error, string? message);
