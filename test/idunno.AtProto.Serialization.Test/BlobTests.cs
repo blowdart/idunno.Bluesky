@@ -14,21 +14,21 @@ namespace idunno.AtProto.Serialization.Test
         [Fact]
         public void BlobSerializesProperlyWithSourceGeneratedJsonContext()
         {
-            Blob blob = new (new BlobReference("https://link.test"), mimeType: "mime/type", size: 1024);
+            Blob blob = new (new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), mimeType: "mime/type", size: 1024);
 
             string blobAsJson = JsonSerializer.Serialize(blob, AtProtoServer.AtProtoJsonSerializerOptions);
 
-            Assert.Equal("{\"$type\":\"blob\",\"ref\":{\"$link\":\"https://link.test\"},\"mimeType\":\"mime/type\",\"size\":1024}", blobAsJson);
+            Assert.Equal("{\"$type\":\"blob\",\"ref\":{\"$link\":\"bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a\"},\"mimeType\":\"mime/type\",\"size\":1024}", blobAsJson);
         }
 
         [Fact]
         public void BlobSerializesProperlyWithNoSourceGeneration()
         {
-            Blob blob = new(new BlobReference("https://link.test"), mimeType: "mime/type", size: 1024);
+            Blob blob = new(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), mimeType: "mime/type", size: 1024);
 
             string blobAsJson = JsonSerializer.Serialize(blob, _jsonSerializerOptions);
 
-            Assert.Equal("{\"$type\":\"blob\",\"ref\":{\"$link\":\"https://link.test\"},\"mimeType\":\"mime/type\",\"size\":1024}", blobAsJson);
+            Assert.Equal("{\"$type\":\"blob\",\"ref\":{\"$link\":\"bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a\"},\"mimeType\":\"mime/type\",\"size\":1024}", blobAsJson);
         }
 
         [Fact]
@@ -38,7 +38,7 @@ namespace idunno.AtProto.Serialization.Test
             {
                 "$type":"blob",
                 "ref":{
-                    "$link":"https://link.test"
+                    "$link":"bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"
                  },
                  "mimeType":"mime/type",
                  "size":1024
@@ -51,7 +51,7 @@ namespace idunno.AtProto.Serialization.Test
             Assert.Equal("mime/type", blob.MimeType);
             Assert.Equal(1024, blob.Size);
             Assert.NotNull(blob.Reference);
-            Assert.Equal("https://link.test", blob.Reference.Link);
+            Assert.Equal(new Cid("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), blob.Reference.Link);
         }
 
         [Fact]
@@ -61,7 +61,7 @@ namespace idunno.AtProto.Serialization.Test
             {
                 "$type":"blob",
                 "ref":{
-                    "$link":"https://link.test"
+                    "$link":"bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"
                  },
                  "mimeType":"mime/type",
                  "size":1024
@@ -74,7 +74,7 @@ namespace idunno.AtProto.Serialization.Test
             Assert.Equal("mime/type", blob.MimeType);
             Assert.Equal(1024, blob.Size);
             Assert.NotNull(blob.Reference);
-            Assert.Equal("https://link.test", blob.Reference.Link);
+            Assert.Equal(new Cid("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), blob.Reference.Link);
         }
     }
 }

@@ -20,6 +20,10 @@
 
 * Added `TypeResolver` static class.
 
+### Breaking Changes
+
+* `BlobReferences` now enforces that the link property is a CID.
+
 ## 1.4.0 - 2026-18-01
 
 ### Added
