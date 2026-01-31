@@ -84,6 +84,7 @@ namespace idunno.AtProto
         /// Creates an <see cref="Nsid"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
+        /// <returns>An <see cref="Nsid"/> instance created from the specified string.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator Nsid(string s) => new(s);
 
@@ -91,6 +92,7 @@ namespace idunno.AtProto
         /// Creates an <see cref="Nsid"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
+        /// <returns>An <see cref="Nsid"/> instance created from the specified string.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Nsid FromString(string s) => s;
 

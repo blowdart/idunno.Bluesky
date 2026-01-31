@@ -22,10 +22,8 @@ namespace idunno.Bluesky.Feed.Gates
         /// <param name="rules">The list of rules for replies to the specified <paramref name="post"/>.</param>
         /// <param name="hiddenRepliesUris">A list of reply <see cref="AtUri"/>s that will be hidden for <see cref="Post"/></param>
         /// <exception cref="ArgumentNullException">if post is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">
-        ///   if <paramref name="post"/> does not point to a post record,
-        ///   or if <paramref name="rules"/> or <paramref name="hiddenRepliesUris"/> have more than the maximum number of entries.
-        /// </exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="rules"/> or <paramref name="hiddenRepliesUris"/> have more than the maximum number of entries.</exception>
+        /// <exception cref="ArgumentException">if <paramref name="post"/> does not point to a Post record.</exception>
         public ThreadGate(AtUri post, ICollection<ThreadGateRule>? rules = null, ICollection<AtUri>? hiddenRepliesUris = null)
         {
             ArgumentNullException.ThrowIfNull(post);

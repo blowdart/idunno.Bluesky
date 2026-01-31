@@ -18,6 +18,7 @@ namespace idunno.Bluesky
         /// <param name="seenAt">An optional <see cref="DateTimeOffset"/> indicating when notifications were last checked.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>An <see cref="AtProtoHttpResult{T}"/> wrapping an integer indicating the unread notification count.</returns>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<int>> GetNotificationUnreadCount(DateTimeOffset? seenAt = null, CancellationToken cancellationToken = default)
         {
             if (!IsAuthenticated)
@@ -119,6 +120,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<Declaration>>> GetNotificationDeclaration(CancellationToken cancellationToken = default)
         {
             if (!IsAuthenticated)

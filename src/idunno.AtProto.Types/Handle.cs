@@ -103,6 +103,7 @@ namespace idunno.AtProto
         /// Creates a <see cref="Handle"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
+        /// <returns>A <see cref="Handle"/> created from the specified string.</returns>
         /// <remarks>
         /// <para>Note that handles do not begin with an @ sign, that is just how they are typically displayed in applications.</para>
         /// </remarks>
@@ -113,6 +114,7 @@ namespace idunno.AtProto
         /// Creates a <see cref="Handle"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
+        /// <returns>A <see cref="Handle"/> created from the specified string.</returns>
         /// <remarks>
         /// <para>Note that handles do not begin with an @ sign, that is just how they are typically displayed in applications.</para>
         /// </remarks>
@@ -123,7 +125,6 @@ namespace idunno.AtProto
         /// Returns the hash code for this <see cref="Handle"/>.
         /// </summary>
         /// <returns>The hash code for this <see cref="Handle"/>.</returns>
-
         public override int GetHashCode() => Value.GetHashCode(StringComparison.OrdinalIgnoreCase);
 
         /// <summary>

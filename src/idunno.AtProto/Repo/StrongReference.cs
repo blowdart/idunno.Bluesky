@@ -37,6 +37,7 @@ namespace idunno.AtProto.Repo
         /// <summary>
         /// Returns a string representation of this instance.
         /// </summary>
+        /// <returns>A string representation of this instance.</returns>
         public override string ToString() => $"{Uri}#{Cid}";
     }
 }

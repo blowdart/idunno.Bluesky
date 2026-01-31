@@ -23,6 +23,11 @@ namespace idunno.Bluesky.Feed.Gates
         /// <param name="rules">The list of rules for post gate, if any.</param>
         /// <param name="detachedEmbeddingUris">The list of <see cref="AtUri"/> posts embedding <paramref name="post"/> to be detached, if any.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a Post record.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// Thrown when <paramref name="rules"/> exceeds the maximum allowed number of post gate rules,
+        /// or when <paramref name="detachedEmbeddingUris"/> exceeds the maximum allowed number of detached embedding posts.
+        /// </exception>
         public PostGate(AtUri post, ICollection<PostGateRule>? rules, ICollection<AtUri>? detachedEmbeddingUris = null)
         {
             ArgumentNullException.ThrowIfNull(post);
@@ -53,8 +58,8 @@ namespace idunno.Bluesky.Feed.Gates
         /// </summary>
         /// <param name="post">The <see cref="AtUri"/> of the post to apply the gate rules too.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the record was created on.</param>
-        /// <param name="detachedEmbeddingUris">The list of <see cref="AtUri"/> posts embedding <paramref name="post"/> to be detached, if any.</param>
         /// <param name="rules">The list of rules for post gate, if any.</param>
+        /// <param name="detachedEmbeddingUris">The list of <see cref="AtUri"/> posts embedding <paramref name="post"/> to be detached, if any.</param>
         public PostGate(AtUri post, DateTimeOffset createdAt, ICollection<PostGateRule>? rules, ICollection<AtUri>? detachedEmbeddingUris) :
             this(post, rules, detachedEmbeddingUris)
         {

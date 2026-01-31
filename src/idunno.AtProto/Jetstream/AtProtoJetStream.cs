@@ -298,7 +298,6 @@ namespace idunno.AtProto.Jetstream
         /// Connect to the JetStream instance via a WebSocket connection.
         /// </summary>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         [MemberNotNull(nameof(_client))]
         public async Task ConnectAsync(
             CancellationToken cancellationToken = default)
@@ -315,7 +314,6 @@ namespace idunno.AtProto.Jetstream
         /// <param name="uri">The URI of the jetstream server to connection to. Defaults to the URI passed during construction</param>
         /// <param name="startFrom">A Unix microseconds timestamp cursor to begin playback from. A value of null results in live-tail operation.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         [MemberNotNull(nameof(_client))]
         public async Task ConnectAsync(
             Uri? uri = null,
@@ -338,7 +336,6 @@ namespace idunno.AtProto.Jetstream
         /// <param name="uri">The URI of the jetstream server to connection to. Defaults to the URI passed during construction</param>
         /// <param name="cursor">A Unix microseconds timestamp cursor to begin playback from. A value of null results in live-tail operation.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         [MemberNotNull(nameof(_client))]
         [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Suppressing dispose exceptions on purpose.")]
         [SuppressMessage("Minor Code Smell", "S2486:Generic exceptions should not be ignored", Justification = "Suppressing dispose exceptions on purpose.")]
@@ -460,7 +457,7 @@ namespace idunno.AtProto.Jetstream
         /// <param name="status">Status for the shutdown. Defaults to <see cref="WebSocketCloseStatus.NormalClosure"/>.</param>
         /// <param name="statusDescription">Reason for the shutdown.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+        /// <exception cref="ObjectDisposedException">Thrown if the underlying WebSocket has been disposed.</exception>
         [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Catch all exceptions to avoid cancellation exceptions")]
         public async Task CloseAsync(
             WebSocketCloseStatus status = WebSocketCloseStatus.NormalClosure,

@@ -74,12 +74,14 @@ namespace idunno.AtProto
         /// Implicitly converts <see cref="AtIdentifier"/> to its equivalent string representation.
         /// </summary>
         /// <param name="atIdentifier">The <see cref="AtIdentifier"/> to convert to a string.</param>
+        /// <returns>The string representation of the <see cref="AtIdentifier"/>.</returns>
         public static implicit operator string?(AtIdentifier atIdentifier) => atIdentifier?.ToString() ?? null;
 
         /// <summary>
         /// Creates a <see cref="AtIdentifier"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
+        /// <returns>An <see cref="AtIdentifier"/> created from the specified string.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator AtIdentifier(string s) => Create(s);
 
@@ -87,6 +89,7 @@ namespace idunno.AtProto
         /// Creates a <see cref="AtIdentifier"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
+        /// <returns>An <see cref="AtIdentifier"/> created from the specified string.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static AtIdentifier FromString(string s) => s;
 

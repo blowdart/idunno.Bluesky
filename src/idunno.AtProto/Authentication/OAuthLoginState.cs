@@ -202,6 +202,7 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Gets the <see cref="AuthorizeState"/> for this instance.
         /// </summary>
+        /// <returns>An instance of <see cref="AuthorizeState"/> representing this instance.</returns>
         public AuthorizeState ToAuthorizeState()
         {
             return new AuthorizeState()
@@ -219,6 +220,7 @@ namespace idunno.AtProto.Authentication
         /// Converts this instance of <see cref="OAuthLoginState"/> to a new instance of <see cref="AuthorizeState"/>.
         /// </summary>
         /// <param name="state">The <see cref="OAuthLoginState"/> to convert.</param>
+        /// <returns>An instance of <see cref="AuthorizeState"/> representing this instance.</returns>
         public static implicit operator AuthorizeState?(OAuthLoginState state) => state?.ToAuthorizeState();
 
         /// <summary>

@@ -21,8 +21,8 @@ namespace idunno.AtProto
         /// <summary>
         /// Creates a new instance of <see cref="AtProtoHttpResult{TResult}"/>.
         /// </summary>
-        /// <param name="statusCode">The underlying HTTP status code returned by the API call.</param>
         /// <param name="result">The resulting object of type <typeparamref name="TResult"/> returned by the API call, if any.</param>
+        /// <param name="statusCode">The underlying HTTP status code returned by the API call.</param>
         /// <param name="httpResponseHeaders">The <see cref="HttpResponseHeaders"/> returned by the request</param>
         /// <param name="atErrorDetail">The <see cref="AtErrorDetail"/> returned by the API call, if any.</param>
         /// <param name="rateLimit">The API rate limit for the current user, if the response included one.</param>

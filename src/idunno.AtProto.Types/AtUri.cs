@@ -41,10 +41,10 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="AtUri"/> class with the specified ATUri.
+        /// Creates a new instance of the <see cref="AtUri"/> class from <paramref name="s"/>.
         /// </summary>
-        /// <param name="s"></param>
-        /// <exception cref="UriFormatException"></exception>
+        /// <param name="s">A string to construct an <see cref="AtUri"/> from.</param>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> is not a valid AT URI, or is null, empty or whitespace.</exception>
         public AtUri(string s)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(s);
@@ -218,6 +218,7 @@ namespace idunno.AtProto
         /// Creates a <see cref="AtUri"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
+        /// <returns>An <see cref="AtUri"/> from the specified string.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator AtUri(string s) => new(s);
 
@@ -225,6 +226,7 @@ namespace idunno.AtProto
         /// Creates a <see cref="AtUri"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
+        /// <returns>An <see cref="AtUri"/> from the specified string.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static AtUri FromString(string s) => s;
 

@@ -38,6 +38,9 @@ namespace idunno.AtProto
         /// Creates a new instance of <see cref="TimestampIdentifier"/>
         /// </summary>
         /// <param name="s">The string to create a <see cref="TimestampIdentifier"/> from.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="s"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="s"/> is not the correct length for a <see cref="TimestampIdentifier"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> is not a valid <see cref="TimestampIdentifier"/>.</exception>
         public TimestampIdentifier(string s)
         {
             ArgumentNullException.ThrowIfNull(s);
@@ -69,9 +72,9 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Creates a <see cref="RecordKey"/> from the current time.
+        /// Creates a unique <see cref="RecordKey"/> from the current time.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>A unique <see cref="RecordKey"/> from the current time.</returns>
         [SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Not a cryptographic function.")]
         public static RecordKey Next()
         {
@@ -100,6 +103,7 @@ namespace idunno.AtProto
         /// Creates a <see cref="TimestampIdentifier"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
+        /// <returns>A <see cref="TimestampIdentifier"/> from the specified string.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static TimestampIdentifier FromString(string s) => new(s);
 
@@ -107,12 +111,14 @@ namespace idunno.AtProto
         /// Creates a <see cref="TimestampIdentifier"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
+        /// <returns>A <see cref="TimestampIdentifier"/> from the specified string.</returns>
         public static implicit operator TimestampIdentifier(string s) => TimestampIdentifier.FromString(s);
 
         /// <summary>
         /// Converts the specified <see cref="TimestampIdentifier"/> to a string.
         /// </summary>
         /// <param name="tid">The <see cref="TimestampIdentifier"/> to convert.</param>
+        /// <returns>A <see cref="TimestampIdentifier"/> from the specified string.</returns>
         public static implicit operator string(TimestampIdentifier tid)
         {
             if (tid is null)

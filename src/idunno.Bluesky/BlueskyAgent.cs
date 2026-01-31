@@ -324,6 +324,7 @@ namespace idunno.Bluesky
         /// </remarks>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an unexpected format.</exception>
+        /// <exception cref="HandleResolutionException">Thrown when the handle in <paramref name="uri"/> could not be resolved to a <see cref="AtProto.Did"/>.</exception>
         public async Task<AtUri> BuildAtUriFromBlueskyWebUri(Uri uri, CancellationToken cancellationToken = default)
         {
             // Bluesky web client URIs should be in the format

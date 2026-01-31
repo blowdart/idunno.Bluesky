@@ -73,6 +73,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>> GetActorLikes(
             int? limit = null,
             string? cursor = null,
@@ -461,7 +462,7 @@ namespace idunno.Bluesky
         /// Gets a strong reference to parent post for the specified Bluesky post.
         /// </summary>
         /// <param name="strongReference">The <see cref="StrongReference" /> of the post to return the parent <paramref name="strongReference"/> for.</param>
-        /// <param name="cancellationToken"></param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
         public async Task<AtProtoHttpResult<StrongReference>> GetPostParent(
@@ -509,7 +510,7 @@ namespace idunno.Bluesky
         /// Gets a strong reference to root post for the specified Bluesky post.
         /// </summary>
         /// <param name="strongReference">A <see cref="StrongReference"/> to the post whose root <see cref="StrongReference"/> should be retrieved.</param>
-        /// <param name="cancellationToken"></param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
         public async Task<AtProtoHttpResult<StrongReference>> GetPostRoot(
@@ -557,7 +558,7 @@ namespace idunno.Bluesky
         /// Gets the <see cref="ReplyReferences"/> for the specified Bluesky post, suitable for using when making a reply post.
         /// </summary>
         /// <param name="strongReference">A <see cref="StrongReference"/> to the post whose <see cref="ReplyReferences"/> should be retrieved.</param>
-        /// <param name="cancellationToken"></param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
         public async Task<AtProtoHttpResult<ReplyReferences>> GetReplyReferences(
@@ -794,9 +795,9 @@ namespace idunno.Bluesky
         /// Find posts matching search criteria, returning views of those posts
         /// </summary>
         /// <param name="query">Search query string; syntax, phrase, boolean, and faceting is unspecified, but Lucene query syntax is recommended.</param>
-        /// <param name="searchOrder">Specifies the ranking order of results.</param>
         /// <param name="since">Filter results for posts after the indicated datetime (inclusive). Expected to use 'sortAt' timestamp, which may not match 'createdAt'.</param>
         /// <param name="until">Filter results for posts before the indicated datetime (not inclusive). Expected to use 'sortAt' timestamp, which may not match 'createdAt'.</param>
+        /// <param name="searchOrder">Specifies the ranking order of results.</param>
         /// <param name="mentions">Filter to posts which mention the given account. Handles are resolved to DID before query-time. Only matches rich-text facet mentions.</param>
         /// <param name="author">Filter to posts by the given account. Handles are resolved to DID before query-time.</param>
         /// <param name="lang">Filter to posts in the given language. Expected to be based on post language field, though server may override language detection.</param>
@@ -857,9 +858,9 @@ namespace idunno.Bluesky
         /// Find posts matching search criteria, returning views of those posts
         /// </summary>
         /// <param name="query">Search query string; syntax, phrase, boolean, and faceting is unspecified, but Lucene query syntax is recommended.</param>
-        /// <param name="searchOrder">Specifies the ranking order of results.</param>
         /// <param name="since">Filter results for posts after the indicated datetime (inclusive). Expected to use 'sortAt' timestamp, which may not match 'createdAt'.</param>
         /// <param name="until">Filter results for posts before the indicated datetime (not inclusive). Expected to use 'sortAt' timestamp, which may not match 'createdAt'.</param>
+        /// <param name="searchOrder">Specifies the ranking order of results.</param>
         /// <param name="mentions">Filter to posts which mention the given account. Handles are resolved to DID before query-time. Only matches rich-text facet mentions.</param>
         /// <param name="author">Filter to posts by the given account. Handles are resolved to DID before query-time.</param>
         /// <param name="lang">Filter to posts in the given language. Expected to be based on post language field, though server may override language detection.</param>

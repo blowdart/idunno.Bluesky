@@ -29,7 +29,6 @@ namespace idunno.Bluesky
         private List<ThreadGateRule>? _threadGateRules;
         private List<PostGateRule>? _postGateRules;
         private bool _disableReplies;
-        private bool _disableEmbedding;
 
         /// <summary>
         /// Creates a new instance of a <see cref="PostBuilder"/>.
@@ -255,6 +254,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets a copy of the text for this instance.
         /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when setting a value that is too long.</exception>
         public string? Text
         {
             get
@@ -508,6 +508,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets or sets the <see cref="StrongReference"/> of the post being quoted.
         /// </summary>
+        /// <exception cref="ArgumentException">Thrown when setting a value and the underlying post <see cref="EmbeddedRecord"/> is a type that cannot be quoted.</exception>
         /// <remarks>
         /// <para>
         ///   Replying to a post and quoting a post are mutually exclusive operations.
@@ -644,18 +645,15 @@ namespace idunno.Bluesky
         /// </summary>
         public bool DisableEmbedding
         {
-            get
-            {
-                return _disableEmbedding;
-            }
+            get;
 
             set
             {
                 lock (_syncLock)
                 {
-                    _disableEmbedding = value;
+                    field = value;
 
-                    if (_disableEmbedding)
+                    if (field)
                     {
 
                         bool needToAddToRules = true;
@@ -797,7 +795,6 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="facetExtractor">The facet extractor to use</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="facetExtractor"/> is null.</exception>
         /// <remarks>
         /// <para>If this instance of <see cref="PostBuilder"/> already has <see cref="Facet"/>s extraction will not run.</para>
@@ -1406,6 +1403,7 @@ namespace idunno.Bluesky
         /// Converts the specified <paramref name="postBuilder"/> to a <see cref="Post"/>.
         /// </summary>
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to convert.</param>
+        /// <returns>A <see cref="Post"/> whose built from <paramref name="postBuilder"/>.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is null.</exception>
         public static implicit operator Post(PostBuilder postBuilder)
         {
@@ -1459,7 +1457,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="obj">The object to compare with the current object.</param>
         /// <returns><see langword="true"/> if the specified object is equal to the current object; otherwise, <see langword="false"/>.</returns>
-        public override bool Equals(object? obj) => obj is PostBuilder builder && EqualityComparer<Post>.Default.Equals(_post, builder._post) && EqualityComparer<List<EmbeddedImage>>.Default.Equals(_embeddedImages, builder._embeddedImages) && EqualityComparer<List<ThreadGateRule>?>.Default.Equals(_threadGateRules, builder._threadGateRules) && EqualityComparer<List<PostGateRule>?>.Default.Equals(_postGateRules, builder._postGateRules) && _disableEmbedding == builder._disableEmbedding;
+        public override bool Equals(object? obj) => obj is PostBuilder builder && EqualityComparer<Post>.Default.Equals(_post, builder._post) && EqualityComparer<List<EmbeddedImage>>.Default.Equals(_embeddedImages, builder._embeddedImages) && EqualityComparer<List<ThreadGateRule>?>.Default.Equals(_threadGateRules, builder._threadGateRules) && EqualityComparer<List<PostGateRule>?>.Default.Equals(_postGateRules, builder._postGateRules) && DisableEmbedding == builder.DisableEmbedding;
 
         /// <summary>
         /// Determines whether two specified <see cref="PostBuilder"/>s the same value."/>

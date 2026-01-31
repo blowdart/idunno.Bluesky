@@ -3,6 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="CommentSense" Version="0.1.0" />
     <PackageVersion Include="Coravel" Version="6.0.2" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="DotNet.ReproducibleBuilds" Version="1.2.39" />

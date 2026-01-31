@@ -331,8 +331,10 @@ namespace idunno.AtProto
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="service"/>,
+        /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="record"/> cannot be serialized to JSON.</exception>
         [RequiresDynamicCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
         public static async Task<AtProtoHttpResult<CreateRecordResult>> CreateRecord<TRecord>(
@@ -427,8 +429,10 @@ namespace idunno.AtProto
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="service"/>,
+        /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="record"/> cannot be serialized to JSON.</exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public static async Task<AtProtoHttpResult<CreateRecordResult>> CreateRecord<TRecord>(
@@ -684,6 +688,7 @@ namespace idunno.AtProto
         /// Thrown when <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="rKey"/>, <paramref name="service"/>,
         /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="record"/> cannot be serialized to JSON.</exception>
         [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
         public static async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecord>(
@@ -762,6 +767,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <typeparam name="TRecord">The type of the value of record to update.</typeparam>
         /// <param name="repositoryRecord"><para>The record to update.</para></param>
+        /// <param name="jsonSerializerOptions"><para><see cref="JsonSerializerOptions"/> to use when serializing <typeparamref name="TRecord"/>.</para></param>
         /// <param name="validate">
         ///   <para>Flag indicating what validation will be performed, if any.</para>
         ///   <para>A value of <keyword>true</keyword> requires lexicon schema validation of record data.</para>
@@ -775,7 +781,6 @@ namespace idunno.AtProto
         /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
         /// <param name="onCredentialsUpdated"><para>An <see cref="Action{T}" /> to call if the credentials in the request need updating.</para></param>
         /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
-        /// <param name="jsonSerializerOptions"><para><see cref="JsonSerializerOptions"/> to use when serializing <typeparamref name="TRecord"/>.</para></param>
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
@@ -827,6 +832,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <typeparam name="TRecord">The type of the record to update or create.</typeparam>
         /// <param name="record"><para>A json representation of record to be created.</para></param>
+        /// <param name="jsonSerializerOptions"><para><see cref="JsonSerializerOptions"/> to apply during deserialization.</para></param>
         /// <param name="collection"><para>The NSID of collection the record should be created in.</para></param>
         /// <param name="creator"><para>The <see cref="AtIdentifier"/> of the creating actor.</para></param>
         /// <param name="rKey"><para>The record key, if any, of the record to be created.</para></param>
@@ -845,13 +851,13 @@ namespace idunno.AtProto
         /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
         /// <param name="onCredentialsUpdated"><para>An <see cref="Action{T}" /> to call if the credentials in the request need updating.</para></param>
         /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
-        /// <param name="jsonSerializerOptions"><para><see cref="JsonSerializerOptions"/> to apply during deserialization.</para></param>
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
         /// Thrown when <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="rKey"/>, <paramref name="service"/>,
         /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
         /// </exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="record"/> cannot be serialized to JSON.</exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public static async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecord>(
@@ -1005,10 +1011,10 @@ namespace idunno.AtProto
         /// <param name="service">The service to retrieve the record from.</param>
         /// <param name="accessCredentials">Optional access credentials for the specified service.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
-        /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">

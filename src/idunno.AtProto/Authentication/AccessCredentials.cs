@@ -73,7 +73,6 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Gets the <see cref="DateTimeOffset"/> the <see cref="AccessJwt"/> expires on.
         /// </summary>
-        /// <returns>The value of the 'exp' claim converted to a <see cref="DateTimeOffset"/> from the jwt.</returns>
         /// <remarks>
         /// <para>Identifies the expiration time on or after which the JWT MUST NOT be accepted for processing. See: https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.4.</para>
         /// <para>If the 'exp' claim is not found, then <see cref="DateTimeOffset.MinValue">MinValue</see> is returned.</para>

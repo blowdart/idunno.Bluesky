@@ -22,7 +22,7 @@ namespace idunno.Bluesky
         /// Creates a follow record in the authenticated user's repo for the specified <paramref name="handle"/>.
         /// </summary>
         /// <param name="handle">The <see cref="Handle"/> of the actor to follow.</param>
-        /// <param name="cancellationToken"></param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
@@ -58,7 +58,7 @@ namespace idunno.Bluesky
         /// Creates a follow record in the authenticated user's repo for the specified <paramref name="did"/>.
         /// </summary>
         /// <param name="did">The <see cref="Did"/> of the actor to follow.</param>
-        /// <param name="cancellationToken"></param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
@@ -103,7 +103,7 @@ namespace idunno.Bluesky
         /// Unfollows the specified <paramref name="handle"/>.
         /// </summary>
         /// <param name="handle">The <see cref="Handle"/> of the actor to unfollow.</param>
-        /// <param name="cancellationToken"></param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
@@ -146,7 +146,7 @@ namespace idunno.Bluesky
         /// Unfollows the specified <paramref name="did"/>.
         /// </summary>
         /// <param name="did">The <see cref="Did"/> of the actor to unfollow.</param>
-        /// <param name="cancellationToken"></param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
@@ -245,7 +245,7 @@ namespace idunno.Bluesky
         /// Creates a block record in the authenticated user's repo for the specified <paramref name="did"/>.
         /// </summary>
         /// <param name="did">The <see cref="Did"/> of the actor to follow.</param>
-        /// <param name="cancellationToken"></param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
@@ -279,7 +279,7 @@ namespace idunno.Bluesky
         /// Unblocks the specified <paramref name="handle"/>.
         /// </summary>
         /// <param name="handle">The <see cref="Handle"/> of the actor to unblock.</param>
-        /// <param name="cancellationToken"></param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
@@ -317,7 +317,7 @@ namespace idunno.Bluesky
         /// Unblocks the specified <paramref name="did"/>.
         /// </summary>
         /// <param name="did">The <see cref="Did"/> of the actor to unfollow.</param>
-        /// <param name="cancellationToken"></param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
@@ -416,8 +416,8 @@ namespace idunno.Bluesky
         /// Creates a Bluesky post record.
         /// </summary>
         /// <param name="text">The text of the post record to create.</param>
-        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
         /// <param name="langs">The languages the post was written in.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
         /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
@@ -717,6 +717,12 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// Thrown when
+        /// <paramref name="text"/> length is greater than the maximum number of characters or graphemes, or
+        /// <paramref name="threadGateRules"/> contains more than the maximum allowed number of rules, or
+        /// <paramref name="postGateRules"/> contains more than the maximum allowed number of rules
+        /// </exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
             string? text,
             EmbeddedVideo video,
@@ -840,8 +846,8 @@ namespace idunno.Bluesky
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
         /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
-        /// <param name="tags">Optional of tags to apply to the post.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
+        /// <param name="tags">Optional collection of tags to apply to the post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="externalCard"/> is null, empty or whitespace.</exception>
@@ -1282,6 +1288,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="post"/> does not point to a Bluesky feed post record.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <remarks>
         /// <para>You should prefer to use <see cref="Repost(FeedViewPost, CancellationToken)"/> as this will ensure reposts of reposts create the right notifications.</para>
@@ -1964,6 +1971,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="images"/> has too many images, or <paramref name="tags"/> has too many tags, or a tag that exceeds the maximum length.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when the ApplyWrites() result is not as expected.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",

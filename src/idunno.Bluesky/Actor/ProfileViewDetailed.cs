@@ -24,22 +24,22 @@ namespace idunno.Bluesky.Actor
         /// <param name="did">The <see cref="Did"/> of the actor.</param>
         /// <param name="handle">The <see cref="Handle"/> of the actor.</param>
         /// <param name="displayName">The display name for the actor.</param>
-        /// <param name="avatar">A <see cref="Uri"/> to the actor's avatar, if any.</param>
-        /// <param name="associated">Properties associated with the actor.</param>
-        /// <param name="viewer">Metadata about the current user's relationship to the actor.</param>
         /// <param name="description">The actor's description from their profile.</param>
         /// <param name="pronouns">The pronouns for the account, if any.</param>
         /// <param name="website">The website for the account, if any.</param>
+        /// <param name="avatar">A <see cref="Uri"/> to the actor's avatar, if any.</param>
+        /// <param name="banner">A <see cref="Uri"/> to the actor's banner image.</param>
+        /// <param name="associated">Properties associated with the actor.</param>
+        /// <param name="viewer">Metadata about the current user's relationship to the actor.</param>
         /// <param name="labels">Labels applied to the actor.</param>
         /// <param name="indexedAt">The date and time the actor was last indexed.</param>
         /// <param name="createdAt">The date and time the actor was created.</param>
-        /// <param name="banner">A <see cref="Uri"/> to the actor's banner image.</param>
         /// <param name="verification">The <see cref="VerificationState"/> of the actor, if any.</param>
+        /// <param name="joinedViaStarterPack">A view over the start pack the user joined using, if any.</param>
+        /// <param name="pinnedPost">A <see cref="StrongReference"/> to the actor's pinned post, if any.</param>
         /// <param name="followersCount">The actor's current follower count.</param>
         /// <param name="followsCount">The number of actors the actor follows.</param>
         /// <param name="postsCount">The number of posts the actor has made.</param>
-        /// <param name="joinedViaStarterPack">A view over the start pack the user joined using, if any.</param>
-        /// <param name="pinnedPost">A <see cref="StrongReference"/> to the actor's pinned post, if any.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> or <paramref name="handle"/> are null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///   Thrown when <paramref name="displayName"/> is not null and has a character length greater than 640 or a grapheme length greater than 64.
@@ -109,6 +109,7 @@ namespace idunno.Bluesky.Actor
         /// Gets a string representation of the <see cref="ProfileView"/>.
         /// This returns the actor's display name, if any, otherwise returns the actor's handle.
         /// </summary>
+        /// <returns>A string representation of the <see cref="ProfileView"/>.</returns>
         public override string ToString()
         {
             if (!string.IsNullOrWhiteSpace(DisplayName))

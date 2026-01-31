@@ -6,9 +6,7 @@ namespace idunno.AtProto.Jetstream.Events
     /// <summary>
     /// Encapsulates information given when a the message received from a jetstream instance.
     /// </summary>
-    /// <remarks>
-    /// <para>Creates a new instance of <see cref="MessageReceivedEventArgs"/></para>
-    /// </remarks>
+    /// <param name="message">The message received from the jetstream.</param>
     public sealed class MessageReceivedEventArgs(string message) : EventArgs
     {
 

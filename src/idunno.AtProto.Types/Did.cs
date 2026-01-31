@@ -66,7 +66,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Creates a new instance of <see cref="Did"/> using the specified <paramref name="s"/> as the identifier.
         /// </summary>
-        /// <param name="s"></param>
+        /// <param name="s">A string to construct the <see cref="Did"/> from.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="s"/> is null or empty.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> does not pass validation.</exception>
         [JsonConstructor]
@@ -147,6 +147,7 @@ namespace idunno.AtProto
         /// Creates a Did from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
+        /// <returns>A <see cref="Did"/> created from the specified string.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator Did(string s) => new(s);
 
@@ -154,6 +155,7 @@ namespace idunno.AtProto
         /// Creates a Did from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
+        /// <returns>A <see cref="Did"/> created from the specified string.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static new Did FromString(string s) => s;
 
@@ -161,6 +163,7 @@ namespace idunno.AtProto
         /// Converts the specified did to a string.
         /// </summary>
         /// <param name="d">The Did to convert.</param>
+        /// <returns>A string representation of the Did.</returns>
         public static implicit operator string(Did d)
         {
             if (d is null)

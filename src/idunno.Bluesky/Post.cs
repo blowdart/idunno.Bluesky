@@ -43,14 +43,15 @@ namespace idunno.Bluesky
         /// Creates a new instance of <see cref="Post"/>.
         /// </summary>
         /// <param name="text">The text for the post.</param>
-        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
+        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created on.</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
         /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
         /// <param name="embeddedRecord">The embedded record for the post, if any.</param>
+        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
-        /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created on.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is null and <paramref name="embeddedRecord"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when a tag position is null or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///    Thrown when <paramref name="text"/> exceeds the maximum length or.
         ///    <paramref name="tags"/> exceeds the maximum number of tags or has a value that exceeds the maximum tag length.
@@ -192,10 +193,10 @@ namespace idunno.Bluesky
         /// Creates a new instance of <see cref="Post"/>.
         /// </summary>
         /// <param name="text">The text for the post.</param>
-        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
         /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
         /// <param name="embeddedRecord">The embedded record for the post, if any.</param>
+        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is null and <paramref name="embeddedRecord"/> is null.</exception>
@@ -221,10 +222,10 @@ namespace idunno.Bluesky
         /// Creates a new instance of <see cref="Post"/>.
         /// </summary>
         /// <param name="text">The text for the post.</param>
-        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
+        /// <param name="image">The <see cref="EmbeddedImage"/> to embed in the post..</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
         /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
-        /// <param name="image">The <see cref="EmbeddedImage"/> to embed in the post..</param>
+        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is null.</exception>
@@ -253,10 +254,10 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="text">The text for the post.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created on.</param>
-        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
+        /// <param name="image">The <see cref="EmbeddedImage"/> to embed in the post..</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
         /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
-        /// <param name="image">The <see cref="EmbeddedImage"/> to embed in the post..</param>
+        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is null.</exception>
@@ -285,10 +286,10 @@ namespace idunno.Bluesky
         /// Creates a new instance of <see cref="Post"/>.
         /// </summary>
         /// <param name="text">The text for the post.</param>
-        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
+        /// <param name="images">The <see cref="EmbeddedImage"/> to embed in the post..</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
         /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
-        /// <param name="images">The <see cref="EmbeddedImage"/> to embed in the post..</param>
+        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="images"/> is null.</exception>
@@ -321,10 +322,10 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="text">The text for the post.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created on.</param>
-        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
+        /// <param name="images">The <see cref="EmbeddedImage"/> to embed in the post..</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
         /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
-        /// <param name="images">The <see cref="EmbeddedImage"/> to embed in the post..</param>
+        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="images"/> is null.</exception>
@@ -358,9 +359,9 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="text">The text for the post.</param>
         /// <param name="video">The <see cref="EmbeddedVideo"/> to embed in the post.</param>
-        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
         /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
+        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null.</exception>
@@ -390,9 +391,9 @@ namespace idunno.Bluesky
         /// <param name="text">The text for the post.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created on.</param>
         /// <param name="video">The <see cref="EmbeddedVideo"/> to embed in the post.</param>
-        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
         /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
+        /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null.</exception>

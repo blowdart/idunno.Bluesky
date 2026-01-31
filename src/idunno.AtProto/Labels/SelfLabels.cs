@@ -73,7 +73,7 @@ namespace idunno.AtProto.Labels
         /// Returns a flag indicating whether the specified <paramref name="label"/> is present.
         /// </summary>
         /// <param name="label">The label to search for.</param>
-        /// <returns></returns>
+        /// <returns>A flag indicating whether the label is present.</returns>
         public bool Contains(string label)
         {
             lock (_syncLock)

@@ -331,6 +331,7 @@ namespace idunno.Bluesky
         /// <param name="profile">The <see cref="AtProtoRepositoryRecord{Profile}"/> to update.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="profile"/> is not valid.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -798,6 +799,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> SetLiveStatus(
             Uri uri,
             string title,
@@ -859,6 +861,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteStatus(
             CancellationToken cancellationToken = default)
         {

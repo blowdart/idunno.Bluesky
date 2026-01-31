@@ -134,7 +134,7 @@ namespace idunno.AtProto.OAuthCallback
         /// <summary>
         /// Releases the underlying WebApplication.
         /// </summary>
-        /// <returns><see cref="ValueTask"/></returns>
+        /// <returns>The task object representing the asynchronous operation.</returns>
         private async ValueTask DisposeAsyncCore()
         {
             if (_listener is not null)
@@ -149,7 +149,6 @@ namespace idunno.AtProto.OAuthCallback
         /// <summary>
         /// Disposes the Callback object and its underlying WebApplication.
         /// </summary>
-        /// <returns><see cref="ValueTask"/></returns>
         public async ValueTask DisposeAsync()
         {
             await DisposeAsyncCore().ConfigureAwait(false);
@@ -160,7 +159,7 @@ namespace idunno.AtProto.OAuthCallback
         /// <summary>
         /// Finds a port to start the callback server on.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>A port number that is free and can be used to bind the callback server to.</returns>
         public static int GetRandomUnusedPort()
         {
             using (var listener = new TcpListener(IPAddress.Loopback, 0))

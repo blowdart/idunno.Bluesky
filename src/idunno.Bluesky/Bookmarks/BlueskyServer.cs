@@ -136,8 +136,8 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets a pageable list of the specified user's bookmarks.
         /// </summary>
-        /// <param name="limit">The maximum number of suggested actors to return.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
+        /// <param name="limit">The maximum number of suggested actors to return.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>

@@ -30,6 +30,9 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Creates a new instance of <see cref="OAuthOptions"/>.
         /// </summary>
+        /// <param name="clientId">The OAuth client id.</param>
+        /// <param name="returnUri">The return <see cref="Uri"/> an oauth authentication flow should return to.</param>
+        /// <param name="scopes">The list of permissions to request.</param>
         public OAuthOptions(string clientId, Uri? returnUri = null, IEnumerable<string>? scopes = null)
         {
             ClientId = clientId;

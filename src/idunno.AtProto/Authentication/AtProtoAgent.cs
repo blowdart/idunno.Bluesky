@@ -139,6 +139,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Creates a new instance of <see cref="OAuthClient"/>.
         /// </summary>
+        /// <returns>The new <see cref="OAuthClient"/> instance.</returns>
         public OAuthClient CreateOAuthClient()
         {
             return new OAuthClient(ConfigureHttpClient, CreateProxyHttpClientHandler, LoggerFactory, Options?.OAuthOptions);
@@ -148,6 +149,7 @@ namespace idunno.AtProto
         /// Creates a new instance of <see cref="OAuthClient"/>.
         /// </summary>
         /// <param name="state">The state to restore in the <see cref="OAuthClient"/>.</param>
+        /// <returns>The new <see cref="OAuthClient"/> instance, with the state restored from <paramref name="state"/>.</returns>
         public OAuthClient CreateOAuthClient(OAuthLoginState state)
         {
             ArgumentNullException.ThrowIfNull(state);
@@ -308,6 +310,7 @@ namespace idunno.AtProto
         ///   Thrown when <paramref name="service"/>, <paramref name="audience"/> or <paramref name="lxm"/> is null.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="expiry"/> is specified but is zero or negative.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ServiceCredential>> GetServiceAuth(
             Uri service,
             Did audience,
@@ -379,6 +382,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Session>> GetSession(
             CancellationToken cancellationToken = default)
         {
@@ -534,6 +538,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="handle" /> or <paramref name="password"/> is null or empty.</exception>
+        /// <exception cref="SecurityTokenValidationException">Thrown when the token returned from the server is invalid.</exception>
         public async Task<AtProtoHttpResult<bool>> Login(
             Handle handle,
             string password,
@@ -651,6 +656,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="did" /> or <paramref name="password"/> is null or empty.</exception>
+        /// <exception cref="SecurityTokenValidationException">Thrown when the token returned from the server is invalid.</exception>
         public async Task<AtProtoHttpResult<bool>> Login(
             Did did,
             string password,
@@ -809,9 +815,9 @@ namespace idunno.AtProto
         /// Clears the internal session state used by the agent and tells the service for this agent's current session to cancel the session.
         /// </summary>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="CredentialException">Thrown when the current agent authentication state does not have enough information to call the DeleteSession API.</exception>
         /// <exception cref="LogoutException">Thrown when the DeleteSession API call fails.</exception>
+        /// <exception cref="OAuthException">Thrown if the OAuth configuration on the agent is not specified or is not configured on the agent.<see cref="Options"/>.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -981,6 +987,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticationRequiredException">Thrown when agent is not authenticated.</exception>
+        /// <exception cref="CredentialException">Thrown when agent credentials are not valid for refreshing.</exception>
         public async Task<bool> RefreshCredentials(CancellationToken cancellationToken = default)
         {
             if (Credentials is null || Credentials.RefreshToken is null)
@@ -1018,6 +1025,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticationRequiredException">Thrown when agent is not authenticated.</exception>
+        /// <exception cref="CredentialException">Thrown when agent credentials are not valid for refreshing.</exception>
         public async Task<bool> RefreshCredentials(AtProtoCredential credential, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(credential);

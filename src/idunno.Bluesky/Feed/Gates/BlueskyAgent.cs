@@ -28,6 +28,9 @@ namespace idunno.Bluesky
         ///   Thrown when <paramref name="rules"/> or <paramref name="hiddenReplies"/> have more than the maximum number of entries.
         /// </exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
+        /// <exception cref="ArgumentException">
+        /// Thrown when <paramref name="post"/> is not owned by the current user, or the <paramref name="post"/> does not point to a valid post record.
+        /// </exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> AddThreadGate(
             AtUri post,
             ICollection<ThreadGateRule>? rules = null,
@@ -78,6 +81,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="threadGate"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="threadGate"/>'s post is not owned by the current user.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",

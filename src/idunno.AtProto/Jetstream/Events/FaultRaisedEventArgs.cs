@@ -6,12 +6,9 @@ namespace idunno.AtProto.Jetstream.Events
     /// <summary>
     /// Encapsulates information given when a fault occurs in jetstream processing.
     /// </summary>
-    /// <remarks>
-    /// Creates a new instance of <see cref="FaultRaisedEventArgs"/>
-    /// </remarks>
+    /// <param name="fault">The fault message.</param>
     public class FaultRaisedEventArgs(string fault) : EventArgs
     {
-
         /// <summary>
         /// The message received from the jetstream.
         /// </summary>

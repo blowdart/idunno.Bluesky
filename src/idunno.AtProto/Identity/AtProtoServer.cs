@@ -44,6 +44,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="handle"/> is not a valid DNS name.</exception>"
         public static async Task<Did?> ResolveHandle(
             Handle handle,
             HttpClient httpClient,

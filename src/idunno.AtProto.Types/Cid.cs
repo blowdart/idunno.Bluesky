@@ -185,6 +185,7 @@ namespace idunno.AtProto
         /// Creates a <see cref="Cid"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
+        /// <returns>An instance of <see cref="Cid"/>. from the specified string.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator Cid(string s) => new(s);
 
@@ -192,6 +193,7 @@ namespace idunno.AtProto
         /// Creates a <see cref="Cid"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
+        /// <returns>An instance of <see cref="Cid"/>. from the specified string.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Cid FromString(string s) => new(s);
 

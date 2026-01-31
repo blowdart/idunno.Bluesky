@@ -13,7 +13,7 @@ namespace idunno.Bluesky.Actor
         /// <summary>
         /// Creates an instance of <see cref="ProfileAssociatedChat"/>
         /// </summary>
-        /// <param name="allowIncoming"></param>
+        /// <param name="allowIncoming">Value indicating type of chats that will be allowed.</param>
         public ProfileAssociatedChat(AllowIncomingChat allowIncoming) => AllowIncoming = allowIncoming;
 
         /// <summary>

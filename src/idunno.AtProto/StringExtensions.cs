@@ -14,7 +14,7 @@ namespace idunno.AtProto
         /// Gets the length of a string in graphemes.
         /// </summary>
         /// <param name="s">The string whose length to calculate.</param>
-        /// <returns></returns>
+        /// <returns>The length of a string in graphemes.</returns>
         public static int GetGraphemeLength(this string s)
         {
             if (string.IsNullOrEmpty(s))

@@ -52,6 +52,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Returns a string representation of this <see cref="RecordKey"/>.
         /// </summary>
+        /// <returns>The string representation of this <see cref="RecordKey"/>.</returns>
         public override string ToString()
         {
             return Value;
@@ -61,6 +62,7 @@ namespace idunno.AtProto
         /// Creates a RecordKey from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
+        /// <returns>A <see cref="RecordKey"/> created from the specified string.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator RecordKey(string s) => new(s);
 
@@ -68,6 +70,7 @@ namespace idunno.AtProto
         /// Creates a RecordKey from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
+        /// <returns>A <see cref="RecordKey"/> created from the specified string.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static RecordKey FromString(string s) => s;
 

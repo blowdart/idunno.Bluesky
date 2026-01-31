@@ -17,8 +17,8 @@ namespace idunno.Bluesky.Record
         /// </summary>
         /// <param name="handle">The <see cref="AtProto.Handle"/> to verify.</param>
         /// <param name="subject">The <see cref="Did"/> to verify.</param>
-        /// <param name="displayName">The display name to verify.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the record value was created at.</param>
+        /// <param name="displayName">The display name to verify.</param>
         [JsonConstructor]
         public Verification(Handle handle, Did subject, DateTimeOffset createdAt, string displayName)
         {

@@ -52,7 +52,9 @@ namespace idunno.AtProto.Authentication
         /// <param name="dPoPProofKey">The string representation of the DPoP proof key to use when signing requests.</param>
         /// <param name="dPoPNonce">The string representation of the DPoP nonce to use when signing requests.</param>
         /// <returns>An appropriate subtype of <see cref="AtProtoCredential"/>, depending on the combination of the specified parameters.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is null.</exception>
         /// <exception cref="AtProtoException">Thrown when the combination of parameters does not match a known AtProtoCredentials subtype.</exception>
+        /// <exception cref="ArgumentException">Thrown when required parameters for the specified <paramref name="authenticationType"/> are missing or invalid.</exception>
         public static AtProtoCredential Create(
             Uri service,
             AuthenticationType authenticationType,

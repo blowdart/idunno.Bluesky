@@ -767,6 +767,7 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null, </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="strongReference"/> is not valid.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteRecord(
             StrongReference strongReference,
             Cid? swapRecord = null,
@@ -1343,8 +1344,8 @@ namespace idunno.AtProto
         /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the record from.</param>
         /// <param name="collection">The NSID of the collection the record should be retrieved from.</param>
         /// <param name="rKey">The record key, identifying the record to be retrieved.</param>
-        /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
         /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use when deserializing <typeparamref name="TRecord"/>.</param>
+        /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
         /// <param name="service">The service to retrieve the record from.</param>
         /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -1642,6 +1643,8 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="fileName"/> or if <paramref name="mimeType"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> or if <paramref name="mimeType"/> is empty.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
+        /// <exception cref="FileNotFoundException">Thrown when the file specified by <paramref name="fileName"/> could not be found.</exception>
+        /// <exception cref="HttpRequestException">Thrown when there is a problem uploading the blob to the server.</exception>
         public async Task<AtProtoHttpResult<Blob>> UploadBlob(
             string fileName,
             string mimeType,
@@ -1705,6 +1708,7 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="blob"/> has a zero length or if <paramref name="mimeType"/> is null or empty.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
+        /// <exception cref="HttpRequestException">Thrown when there is a problem uploading the blob to the server.</exception>
         public async Task<AtProtoHttpResult<Blob>> UploadBlob(
             byte[] blob,
             string mimeType,

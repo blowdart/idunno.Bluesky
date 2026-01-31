@@ -95,6 +95,7 @@ namespace idunno.Bluesky
         /// Thrown when <paramref name="conversationId"/>, <paramref name="messageId"/> or <paramref name="value"/> is null.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> has a grapheme length that does not equal 1.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<MessageView>> AddReaction(
             string conversationId,
             string messageId,
@@ -346,6 +347,7 @@ namespace idunno.Bluesky
         /// Thrown when <paramref name="conversationId"/>, <paramref name="messageId"/> or <paramref name="value"/> is null.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> has a grapheme length that does not equal 1.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<MessageView>> RemoveReaction(
             string conversationId,
             string messageId,

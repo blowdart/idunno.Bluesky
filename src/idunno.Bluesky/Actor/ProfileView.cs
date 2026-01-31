@@ -24,10 +24,10 @@ namespace idunno.Bluesky.Actor
         /// <param name="website">The actor's website, if any.</param>
         /// <param name="avatar">A <see cref="Uri"/> to the actor's avatar, if any.</param>
         /// <param name="associated">Properties associated with the actor.</param>
-        /// <param name="indexedAt">The date and time the actor was last indexed.</param>
-        /// <param name="createdAt">The date and time the actor was created.</param>
         /// <param name="viewer">Metadata about the current user's relationship to the actor.</param>
         /// <param name="labels">Labels applied to the actor.</param>
+        /// <param name="indexedAt">The date and time the actor was last indexed.</param>
+        /// <param name="createdAt">The date and time the actor was created.</param>
         /// <param name="verification">The <see cref="VerificationState"/> of the actor, if any.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> or <paramref name="handle"/> are null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
@@ -68,6 +68,7 @@ namespace idunno.Bluesky.Actor
         /// Gets a string representation of the <see cref="ProfileView"/>.
         /// This returns the actor's display name, if any, otherwise returns the actor's handle.
         /// </summary>
+        /// <returns>A string representation of the <see cref="ProfileView"/>.</returns>
         public override string ToString()
         {
             if (!string.IsNullOrWhiteSpace(DisplayName))

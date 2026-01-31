@@ -569,9 +569,9 @@ namespace idunno.AtProto
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
         /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the provided have been updated during the HTTP POST.</param>
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
-        /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
@@ -640,8 +640,8 @@ namespace idunno.AtProto
         /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
         /// <param name="record">An optional object to serialize to JSON and send as the request body.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
+        /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
@@ -714,9 +714,9 @@ namespace idunno.AtProto
         /// <param name="record">An optional object to serialize to JSON and send as the request body.</param>
         /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the provided have been updated during the HTTP POST.</param>
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
-        /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
@@ -802,9 +802,9 @@ namespace idunno.AtProto
         /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
         /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the provided have been updated during the HTTP POST.</param>
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
-        /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
@@ -913,8 +913,8 @@ namespace idunno.AtProto
         /// <param name="contentHeaders">A collection of HTTP content headers to send with the request content.</param>
         /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="blob"/> is an empty array.</exception>

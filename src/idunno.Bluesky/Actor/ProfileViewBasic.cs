@@ -155,6 +155,7 @@ namespace idunno.Bluesky.Actor
         /// Gets a string representation of the <see cref="ProfileView"/>.
         /// This returns the actor's display name, if any, otherwise returns the actor's handle.
         /// </summary>
+        /// <returns>A string representation of the <see cref="ProfileView"/>.</returns>
         public override string ToString()
         {
             if (!string.IsNullOrWhiteSpace(DisplayName))

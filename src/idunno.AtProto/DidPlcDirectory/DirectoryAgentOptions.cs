@@ -14,17 +14,14 @@ namespace idunno.DidPlcDirectory
     /// </summary>
     public sealed class DirectoryAgentOptions
     {
-        private Uri _plcdirectoryUri = DirectoryAgent.s_defaultDirectoryServer;
-
         /// <summary>
         /// Specifies the server to use when resolving plc DIDs.
         /// </summary>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> is not an HTTPS URI.</exception>>
         public Uri PlcDirectoryUri
         {
-            get
-            {
-                return _plcdirectoryUri;
-            }
+            get;
 
             set
             {
@@ -35,9 +32,9 @@ namespace idunno.DidPlcDirectory
                     throw new ArgumentException("The PLC directory server must be an HTTPS URI.", nameof(value));
                 }
 
-                _plcdirectoryUri = value;
+                field = value;
             }
-        }
+        } = DirectoryAgent.s_defaultDirectoryServer;
 
         /// <summary>
         /// Gets or sets any HttpClient options for the agent.

@@ -126,6 +126,7 @@ namespace idunno.AtProto.Server.Models
         /// <summary>
         /// Provides a string representation of this Contact.
         /// </summary>
+        /// <returns>The string representation of this contact.</returns>
         public override string ToString() => Email;
     }
 }
