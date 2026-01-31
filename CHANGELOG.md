@@ -19,6 +19,7 @@
 #### idunno.Bluesky
 
 * Added `TypeResolver` static class.
+* Added support for `GetActorStarterPacks()`.
 
 ### Breaking Changes
 

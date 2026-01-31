@@ -1,4 +1,4 @@
-# API Endpoint Implementation Status
+﻿# API Endpoint Implementation Status
 
 ## Bluesky Endpoints
 
@@ -46,7 +46,8 @@
 | | [app.bsky.feed.getSuggestedFeeds](https://docs.bsky.app/docs/api/app-bsky-feed-get-suggested-feeds) | `BlueskyAgent.GetSuggestedFeeds()` | ✔ |
 | | [app.bsky.feed.getTimeline](https://docs.bsky.app/docs/api/app-bsky-feed-get-timeline) | `BlueskyAgent.GetTimeline()` | ✔ |
 | | [app.bsky.feed.searchPosts](https://docs.bsky.app/docs/api/app-bsky-feed-search-posts) | `BlueskyAgent.SearchPosts()` | ✔ |
-| **Graph** | [app.bsky.graph.getBlocks](https://docs.bsky.app/docs/api/app-bsky-graph-get-blocks) | `BlueskyAgent.GetBlocks()` | ✔ |
+| **Graph** | [app.bsky.graph.getActorStarterPacks](https://docs.bsky.app/docs/api/app-bsky-graph-get-actor-starter-packs) | `BlueskyAgent.GetActorStarterPacks()` | ✔ |
+| | [app.bsky.graph.getBlocks](https://docs.bsky.app/docs/api/app-bsky-graph-get-blocks) | `BlueskyAgent.GetBlocks()` | ✔ |
 | | [app.bsky.graph.getFollowers](https://docs.bsky.app/docs/api/app-bsky-graph-get-followers) | `BlueskyAgent.GetFollowers()` | ✔ |
 | | [app.bsky.graph.getFollows](https://docs.bsky.app/docs/api/app-bsky-graph-get-follows) | `BlueskyAgent.GetFollows()` | ✔ |
 | | [app.bsky.graph.getKnownFollowers](https://docs.bsky.app/docs/api/app-bsky-graph-get-known-followers) | `BlueskyAgent.GetKnownFollowers()` | ✔ |
