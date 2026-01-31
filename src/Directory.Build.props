@@ -55,6 +55,10 @@
         <PackageReference Include="DotNet.ReproducibleBuilds" PrivateAssets="All" />
         <PackageReference Include="Nerdbank.GitVersioning" PrivateAssets="All" />
         <PackageReference Include="SonarAnalyzer.CSharp" PrivateAssets="All" />
+        <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+        </PackageReference>
       </ItemGroup>
     </When>
   </Choose>

@@ -197,6 +197,7 @@ where the `$type` property is not the first property in the JSON object.
 ### External analyzers used during builds
 * [DotNetAnalyzers.DocumentationAnalyzers](https://github.com/DotNetAnalyzers/DocumentationAnalyzers) - used to validate XML docs on public types.
 * [CommentSense](https://www.nuget.org/packages/CommentSense) - used to validate XML docs on public types.
+* [Microsoft.CodeAnalysis.PublicApiAnalyzers](https://github.com/dotnet/roslyn-analyzers/blob/main/src/PublicApiAnalyzers/PublicApiAnalyzers.Help.md) - used to track public API changes.
 * [SonarAnalyzer.CSharp](https://www.sonarsource.com/products/sonarlint/features/visual-studio/) - used for common code smell detection.
 
 ### External build &amp; testing tools

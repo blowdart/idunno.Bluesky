@@ -1,0 +1,917 @@
+﻿#nullable enable
+abstract idunno.AtProto.Authentication.AtProtoCredential.SetAuthenticationHeaders(System.Net.Http.HttpRequestMessage! httpRequestMessage) -> void
+const idunno.AtProto.AtProtoAgentOptions.AtProtoAgent = "AtProtoAgent" -> string!
+const idunno.AtProto.Authentication.AtProtoClaims.AccessToken = "atproto:token:access" -> string!
+const idunno.AtProto.Authentication.AtProtoClaims.Did = "atproto:did" -> string!
+const idunno.AtProto.Authentication.AtProtoClaims.DPoPNonce = "atproto:dpop:nonce" -> string!
+const idunno.AtProto.Authentication.AtProtoClaims.DPoPProof = "atproto:dpop:proof" -> string!
+const idunno.AtProto.Authentication.AtProtoClaims.RefreshToken = "atproto:token:refresh" -> string!
+const idunno.AtProto.Authentication.OAuthOptions.AtProto = "AtProto" -> string!
+const idunno.AtProto.Authentication.OAuthOptions.AtProtoOAuth = "OAuth" -> string!
+const idunno.AtProto.HttpClientOptions.AtProtoHttpClient = "AtProtoHttpClient" -> string!
+idunno.AtProto.AccountStatus
+idunno.AtProto.AccountStatus.Deactivated = 2 -> idunno.AtProto.AccountStatus
+idunno.AtProto.AccountStatus.Deleted = 3 -> idunno.AtProto.AccountStatus
+idunno.AtProto.AccountStatus.Suspended = 1 -> idunno.AtProto.AccountStatus
+idunno.AtProto.AccountStatus.Takendown = 0 -> idunno.AtProto.AccountStatus
+idunno.AtProto.Admin.RepoReference
+idunno.AtProto.Admin.RepoReference.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Admin.RepoReference.Did.init -> void
+idunno.AtProto.Agent
+idunno.AtProto.Agent.Agent(idunno.AtProto.HttpClientOptions? httpClientOptions, idunno.AtProto.JsonOptions? jsonOptions) -> void
+idunno.AtProto.Agent.Agent(System.Net.Http.IHttpClientFactory! httpClientFactory, idunno.AtProto.JsonOptions? jsonOptions) -> void
+idunno.AtProto.Agent.ConfigureHttpClient(System.Net.Http.HttpClient! client) -> System.Net.Http.HttpClient!
+idunno.AtProto.Agent.CreateProxyHttpClientHandler() -> System.Net.Http.HttpClientHandler!
+idunno.AtProto.Agent.Dispose() -> void
+idunno.AtProto.Agent.HttpClient.get -> System.Net.Http.HttpClient!
+idunno.AtProto.Agent.HttpClientFactory.get -> System.Net.Http.IHttpClientFactory!
+idunno.AtProto.Agent.HttpClientFactory.init -> void
+idunno.AtProto.Agent.HttpClientHandler.get -> System.Net.Http.HttpClientHandler!
+idunno.AtProto.Agent.JsonOptions.get -> idunno.AtProto.JsonOptions!
+idunno.AtProto.AtErrorDetail
+idunno.AtProto.AtErrorDetail.AtErrorDetail(string? error, string? message) -> void
+idunno.AtProto.AtErrorDetail.Error.get -> string?
+idunno.AtProto.AtErrorDetail.ExtensionData.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>?
+idunno.AtProto.AtErrorDetail.ExtensionData.set -> void
+idunno.AtProto.AtErrorDetail.HttpMethod.get -> System.Net.Http.HttpMethod?
+idunno.AtProto.AtErrorDetail.Instance.get -> System.Uri?
+idunno.AtProto.AtErrorDetail.Message.get -> string?
+idunno.AtProto.AtProtoAgent
+idunno.AtProto.AtProtoAgent.ApplyWrites(System.Collections.Generic.ICollection<idunno.AtProto.Repo.WriteOperation!>! operations, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, idunno.AtProto.Did! repo, bool? validate, idunno.AtProto.Cid? cid = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.ApplyWritesResults!>!>!
+idunno.AtProto.AtProtoAgent.AtProtoAgent(System.Security.Claims.ClaimsIdentity! identity, idunno.AtProto.AtProtoAgentOptions? options = null) -> void
+idunno.AtProto.AtProtoAgent.AtProtoAgent(System.Security.Claims.ClaimsIdentity! identity, System.Net.Http.IHttpClientFactory! httpClientFactory, idunno.AtProto.AtProtoAgentOptions? options = null) -> void
+idunno.AtProto.AtProtoAgent.AtProtoAgent(System.Security.Claims.ClaimsPrincipal! principal, idunno.AtProto.AtProtoAgentOptions? options = null) -> void
+idunno.AtProto.AtProtoAgent.AtProtoAgent(System.Security.Claims.ClaimsPrincipal! principal, System.Net.Http.IHttpClientFactory! httpClientFactory, idunno.AtProto.AtProtoAgentOptions? options = null) -> void
+idunno.AtProto.AtProtoAgent.AtProtoAgent(System.Uri! service, idunno.AtProto.AtProtoAgentOptions? options = null) -> void
+idunno.AtProto.AtProtoAgent.AtProtoAgent(System.Uri! service, System.Net.Http.IHttpClientFactory! httpClientFactory, idunno.AtProto.AtProtoAgentOptions? options = null) -> void
+idunno.AtProto.AtProtoAgent.Authenticated -> System.EventHandler<idunno.AtProto.Events.AuthenticatedEventArgs!>?
+idunno.AtProto.AtProtoAgent.BuildOAuth2LoginUri(idunno.AtProto.Authentication.OAuthClient! oAuthClient, idunno.AtProto.Handle! handle, System.Collections.Generic.IEnumerable<string!>? scopes = null, System.Uri? returnUri = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string!, string!>>? uriExtraParameters = null, System.Collections.Generic.Dictionary<string!, string!>? stateExtraProperties = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Uri!>!
+idunno.AtProto.AtProtoAgent.CreateModerationReport(idunno.AtProto.Did! labelerDid, idunno.AtProto.Moderation.SubjectType! reportSubject, string! reasonType, string? reason, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Moderation.ModerationReport!>!>!
+idunno.AtProto.AtProtoAgent.CreateOAuthClient() -> idunno.AtProto.Authentication.OAuthClient!
+idunno.AtProto.AtProtoAgent.CreateOAuthClient(idunno.AtProto.Authentication.OAuthLoginState! state) -> idunno.AtProto.Authentication.OAuthClient!
+idunno.AtProto.AtProtoAgent.CreateRecord<TRecord>(TRecord! record, idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey? rKey = null, bool? validate = true, idunno.AtProto.Cid? swapCommit = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.AtProto.AtProtoAgent.CreateRecord<TRecord>(TRecord! record, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey? rKey = null, bool? validate = true, idunno.AtProto.Cid? swapCommit = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.AtProto.AtProtoAgent.Credentials.get -> idunno.AtProto.Authentication.AccessCredentials?
+idunno.AtProto.AtProtoAgent.Credentials.set -> void
+idunno.AtProto.AtProtoAgent.CredentialsUpdated -> System.EventHandler<idunno.AtProto.Events.CredentialsUpdatedEventArgs!>?
+idunno.AtProto.AtProtoAgent.DeleteRecord(idunno.AtProto.AtIdentifier! repo, idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey! rKey, idunno.AtProto.Cid? swapRecord = null, idunno.AtProto.Cid? swapCommit = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Commit!>!>!
+idunno.AtProto.AtProtoAgent.DeleteRecord(idunno.AtProto.AtUri! uri, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Commit!>!>!
+idunno.AtProto.AtProtoAgent.DeleteRecord(idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey! rKey, idunno.AtProto.Cid? swapRecord = null, idunno.AtProto.Cid? swapCommit = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Commit!>!>!
+idunno.AtProto.AtProtoAgent.DeleteRecord(idunno.AtProto.Repo.StrongReference! strongReference, idunno.AtProto.Cid? swapRecord = null, idunno.AtProto.Cid? swapCommit = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Commit!>!>!
+idunno.AtProto.AtProtoAgent.DescribeRepo(idunno.AtProto.AtIdentifier! repo, System.Uri? service = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.RepoDescription!>!>!
+idunno.AtProto.AtProtoAgent.DescribeServer(System.Uri? server, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Server.Models.ServerDescription!>!>!
+idunno.AtProto.AtProtoAgent.Did.get -> idunno.AtProto.Did?
+idunno.AtProto.AtProtoAgent.GetRecord<TRecord>(idunno.AtProto.AtIdentifier! repo, idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey! rKey, idunno.AtProto.Cid? cid = null, System.Uri? service = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord!>!>!>!
+idunno.AtProto.AtProtoAgent.GetRecord<TRecord>(idunno.AtProto.AtIdentifier! repo, idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey! rKey, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, idunno.AtProto.Cid? cid = null, System.Uri? service = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord!>!>!>!
+idunno.AtProto.AtProtoAgent.GetRecord<TRecord>(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid? cid = null, System.Uri? service = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord!>!>!>!
+idunno.AtProto.AtProtoAgent.GetRecord<TRecord>(idunno.AtProto.AtUri! uri, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, idunno.AtProto.Cid? cid = null, System.Uri? service = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord!>!>!>!
+idunno.AtProto.AtProtoAgent.GetRevocationEndpoint(System.Uri! authorizationServer, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Uri?>!
+idunno.AtProto.AtProtoAgent.GetServiceAuth(System.Uri! service, idunno.AtProto.Did! audience, idunno.AtProto.Nsid! lxm, System.TimeSpan? expiry = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Authentication.ServiceCredential!>!>!
+idunno.AtProto.AtProtoAgent.GetSession(idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Authentication.Session!>!>!
+idunno.AtProto.AtProtoAgent.GetSession(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Authentication.Session!>!>!
+idunno.AtProto.AtProtoAgent.GetTokenEndpoint(System.Uri! authorizationServer, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Uri?>!
+idunno.AtProto.AtProtoAgent.ListRecords<TRecord>(idunno.AtProto.AtIdentifier! repo, idunno.AtProto.Nsid! collection, int? limit = 50, string? cursor = null, bool reverse = false, System.Uri? service = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord!>!>!>!>!
+idunno.AtProto.AtProtoAgent.ListRecords<TRecord>(idunno.AtProto.AtIdentifier! repo, idunno.AtProto.Nsid! collection, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, int? limit = 50, string? cursor = null, bool reverse = false, System.Uri? service = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord!>!>!>!>!
+idunno.AtProto.AtProtoAgent.ListRecords<TRecord>(idunno.AtProto.Nsid! collection, int? limit = 50, string? cursor = null, bool reverse = false, System.Uri? service = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord!>!>!>!>!
+idunno.AtProto.AtProtoAgent.ListRecords<TRecord>(idunno.AtProto.Nsid! collection, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, int? limit = 50, string? cursor = null, bool reverse = false, System.Uri? service = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord!>!>!>!>!
+idunno.AtProto.AtProtoAgent.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory!
+idunno.AtProto.AtProtoAgent.LoggerFactory.init -> void
+idunno.AtProto.AtProtoAgent.Login(idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+idunno.AtProto.AtProtoAgent.Login(idunno.AtProto.Authentication.DPoPAccessCredentials! dPoPAccessCredentials, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+idunno.AtProto.AtProtoAgent.Login(idunno.AtProto.Did! did, string! password, string? authFactorToken = null, System.Uri? service = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<bool>!>!
+idunno.AtProto.AtProtoAgent.Login(idunno.AtProto.Handle! handle, string! password, string? authFactorToken = null, System.Uri? service = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<bool>!>!
+idunno.AtProto.AtProtoAgent.Login(string! identifier, string! password, string? authFactorToken = null, System.Uri? service = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<bool>!>!
+idunno.AtProto.AtProtoAgent.Logout(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+idunno.AtProto.AtProtoAgent.Options.get -> idunno.AtProto.AtProtoAgentOptions?
+idunno.AtProto.AtProtoAgent.Options.init -> void
+idunno.AtProto.AtProtoAgent.OriginalService.get -> System.Uri!
+idunno.AtProto.AtProtoAgent.OriginalService.set -> void
+idunno.AtProto.AtProtoAgent.ProcessOAuth2LoginResponse(idunno.AtProto.Authentication.OAuthClient! oAuthClient, string! callbackData, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+idunno.AtProto.AtProtoAgent.PutRecord<TRecord>(idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord!>! repositoryRecord, bool? validate = true, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.AtProto.AtProtoAgent.PutRecord<TRecord>(idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord!>! repositoryRecord, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, bool? validate = true, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.AtProto.AtProtoAgent.PutRecord<TRecord>(TRecord! record, idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey! rKey, bool? validate = true, idunno.AtProto.Cid? swapCommit = null, idunno.AtProto.Cid? swapRecord = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.AtProto.AtProtoAgent.PutRecord<TRecord>(TRecord! record, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey! rKey, bool? validate = true, idunno.AtProto.Cid? swapCommit = null, idunno.AtProto.Cid? swapRecord = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.AtProto.AtProtoAgent.QueryLabels(System.Collections.Generic.IEnumerable<string!>! uriPatterns, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? sources, int? limit, string? cursor, System.Uri? service, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Labels.Label!>!>!>!
+idunno.AtProto.AtProtoAgent.RefreshCredentials(idunno.AtProto.Authentication.AtProtoCredential! credential, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+idunno.AtProto.AtProtoAgent.RefreshCredentials(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+idunno.AtProto.AtProtoAgent.ResolveAuthorizationServer(string! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Uri?>!
+idunno.AtProto.AtProtoAgent.ResolveAuthorizationServer(System.Uri! pds, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Uri?>!
+idunno.AtProto.AtProtoAgent.ResolveDidDocument(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.DidDocument?>!
+idunno.AtProto.AtProtoAgent.ResolveHandle(idunno.AtProto.Handle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Did?>!
+idunno.AtProto.AtProtoAgent.ResolveHandle(string! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Did?>!
+idunno.AtProto.AtProtoAgent.ResolvePds(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Uri?>!
+idunno.AtProto.AtProtoAgent.ResolvePds(string! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Uri?>!
+idunno.AtProto.AtProtoAgent.Service.get -> System.Uri!
+idunno.AtProto.AtProtoAgent.Service.set -> void
+idunno.AtProto.AtProtoAgent.TokenRefreshFailed -> System.EventHandler<idunno.AtProto.Events.TokenRefreshFailedEventArgs!>?
+idunno.AtProto.AtProtoAgent.Unauthenticated -> System.EventHandler<idunno.AtProto.Events.UnauthenticatedEventArgs!>?
+idunno.AtProto.AtProtoAgent.UploadBlob(byte[]! blob, string! mimeType, System.Uri? service = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Blob!>!>!
+idunno.AtProto.AtProtoAgent.UploadBlob(string! fileName, string! mimeType, System.Uri? service = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Blob!>!>!
+idunno.AtProto.AtProtoAgentBuilder
+idunno.AtProto.AtProtoAgentBuilder.AtProtoAgentBuilder() -> void
+idunno.AtProto.AtProtoAgentBuilder.BackgroundTokenRefreshEnabled.get -> bool
+idunno.AtProto.AtProtoAgentBuilder.BackgroundTokenRefreshEnabled.set -> void
+idunno.AtProto.AtProtoAgentBuilder.ConfigureHttpClientOptions(System.Action<idunno.AtProto.HttpClientOptions!>! configure) -> idunno.AtProto.AtProtoAgentBuilder!
+idunno.AtProto.AtProtoAgentBuilder.ConfigureHttpJsonOptions(System.Action<idunno.AtProto.JsonOptions!>! configure) -> idunno.AtProto.AtProtoAgentBuilder!
+idunno.AtProto.AtProtoAgentBuilder.ConfigureOAuthOptions(System.Action<idunno.AtProto.Authentication.OAuthOptions!>! configure) -> idunno.AtProto.AtProtoAgentBuilder!
+idunno.AtProto.AtProtoAgentBuilder.DirectoryService.get -> System.Uri!
+idunno.AtProto.AtProtoAgentBuilder.DirectoryService.set -> void
+idunno.AtProto.AtProtoAgentBuilder.DisableBackgroundTokenRefresh() -> idunno.AtProto.AtProtoAgentBuilder!
+idunno.AtProto.AtProtoAgentBuilder.EnableBackgroundTokenRefresh() -> idunno.AtProto.AtProtoAgentBuilder!
+idunno.AtProto.AtProtoAgentBuilder.ForService(string! service) -> idunno.AtProto.AtProtoAgentBuilder!
+idunno.AtProto.AtProtoAgentBuilder.ForService(System.Uri! service) -> idunno.AtProto.AtProtoAgentBuilder!
+idunno.AtProto.AtProtoAgentBuilder.HttpClientFactory.get -> System.Net.Http.IHttpClientFactory?
+idunno.AtProto.AtProtoAgentBuilder.HttpClientFactory.set -> void
+idunno.AtProto.AtProtoAgentBuilder.HttpClientOptions.get -> idunno.AtProto.HttpClientOptions?
+idunno.AtProto.AtProtoAgentBuilder.HttpClientOptions.set -> void
+idunno.AtProto.AtProtoAgentBuilder.JsonOptions.get -> idunno.AtProto.JsonOptions?
+idunno.AtProto.AtProtoAgentBuilder.JsonOptions.set -> void
+idunno.AtProto.AtProtoAgentBuilder.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory!
+idunno.AtProto.AtProtoAgentBuilder.LoggerFactory.set -> void
+idunno.AtProto.AtProtoAgentBuilder.OAuthOptions.get -> idunno.AtProto.Authentication.OAuthOptions?
+idunno.AtProto.AtProtoAgentBuilder.OAuthOptions.set -> void
+idunno.AtProto.AtProtoAgentBuilder.Service.get -> System.Uri!
+idunno.AtProto.AtProtoAgentBuilder.Service.set -> void
+idunno.AtProto.AtProtoAgentBuilder.WithDirectoryService(string! directoryService) -> idunno.AtProto.AtProtoAgentBuilder!
+idunno.AtProto.AtProtoAgentBuilder.WithDirectoryService(System.Uri! directoryService) -> idunno.AtProto.AtProtoAgentBuilder!
+idunno.AtProto.AtProtoAgentBuilder.WithHttpClientFactory(System.Net.Http.IHttpClientFactory! httpClientFactory) -> idunno.AtProto.AtProtoAgentBuilder!
+idunno.AtProto.AtProtoAgentBuilder.WithLoggerFactory(Microsoft.Extensions.Logging.ILoggerFactory! logger) -> idunno.AtProto.AtProtoAgentBuilder!
+idunno.AtProto.AtProtoAgentOptions
+idunno.AtProto.AtProtoAgentOptions.AtProtoAgentOptions() -> void
+idunno.AtProto.AtProtoAgentOptions.AtProtoAgentOptions(Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory, bool enableBackgroundTokenRefresh = true, System.Uri? plcDirectoryServer = null, idunno.AtProto.Authentication.OAuthOptions? oAuthOptions = null, idunno.AtProto.HttpClientOptions? httpClientOptions = null) -> void
+idunno.AtProto.AtProtoAgentOptions.AtProtoAgentOptions(Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory, idunno.AtProto.JsonOptions! httpJsonOptions, idunno.AtProto.Authentication.OAuthOptions? oAuthOptions = null, idunno.AtProto.HttpClientOptions? httpClientOptions = null, bool enableBackgroundTokenRefresh = true, System.Uri? plcDirectoryServer = null) -> void
+idunno.AtProto.AtProtoAgentOptions.EnableBackgroundTokenRefresh.get -> bool
+idunno.AtProto.AtProtoAgentOptions.EnableBackgroundTokenRefresh.set -> void
+idunno.AtProto.AtProtoAgentOptions.HttpClientOptions.get -> idunno.AtProto.HttpClientOptions?
+idunno.AtProto.AtProtoAgentOptions.HttpClientOptions.set -> void
+idunno.AtProto.AtProtoAgentOptions.HttpJsonOptions.get -> idunno.AtProto.JsonOptions?
+idunno.AtProto.AtProtoAgentOptions.HttpJsonOptions.set -> void
+idunno.AtProto.AtProtoAgentOptions.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory?
+idunno.AtProto.AtProtoAgentOptions.LoggerFactory.set -> void
+idunno.AtProto.AtProtoAgentOptions.OAuthOptions.get -> idunno.AtProto.Authentication.OAuthOptions?
+idunno.AtProto.AtProtoAgentOptions.OAuthOptions.set -> void
+idunno.AtProto.AtProtoAgentOptions.PlcDirectoryServer.get -> System.Uri!
+idunno.AtProto.AtProtoAgentOptions.PlcDirectoryServer.set -> void
+idunno.AtProto.AtProtoException
+idunno.AtProto.AtProtoException.AtProtoException() -> void
+idunno.AtProto.AtProtoException.AtProtoException(string! message) -> void
+idunno.AtProto.AtProtoException.AtProtoException(string! message, System.Exception! inner) -> void
+idunno.AtProto.AtProtoException.AtProtoException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
+idunno.AtProto.AtProtoHttpClient
+idunno.AtProto.AtProtoHttpClient.AtProtoHttpClient(Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null) -> void
+idunno.AtProto.AtProtoHttpClient.AtProtoHttpClient(string! serviceProxy, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null) -> void
+idunno.AtProto.AtProtoHttpClient.Get(string! service, string! endpoint, idunno.AtProto.Authentication.AtProtoCredential? credentials = null, System.Net.Http.HttpClient? httpClient = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? requestHeaders = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<string!>!>!
+idunno.AtProto.AtProtoHttpClient.Get(System.Uri! service, string! endpoint, idunno.AtProto.Authentication.AtProtoCredential? credentials = null, System.Net.Http.HttpClient? httpClient = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? requestHeaders = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<string!>!>!
+idunno.AtProto.AtProtoHttpClient.OnResponseReceived.get -> System.Func<System.Net.Http.HttpResponseMessage!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>!
+idunno.AtProto.AtProtoHttpClient.OnSendingRequest.get -> System.Func<System.Net.Http.HttpRequestMessage!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>!
+idunno.AtProto.AtProtoHttpClient.Post(string! service, string! endpoint, string? body, idunno.AtProto.Authentication.AtProtoCredential? credentials = null, System.Net.Http.HttpClient? httpClient = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? requestHeaders = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<string!>!>!
+idunno.AtProto.AtProtoHttpClient.Post(System.Uri! service, string! endpoint, string? body, idunno.AtProto.Authentication.AtProtoCredential? credentials = null, System.Net.Http.HttpClient? httpClient = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? requestHeaders = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<string!>!>!
+idunno.AtProto.AtProtoHttpClient<TResult>
+idunno.AtProto.AtProtoHttpClient<TResult>.AtProtoHttpClient(string! serviceProxy, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>! requestHeaders, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null) -> void
+idunno.AtProto.AtProtoHttpClient<TResult>.AtProtoHttpClient(string! serviceProxy, System.Net.Http.Headers.NameValueHeaderValue! requestHeader, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null) -> void
+idunno.AtProto.AtProtoHttpClient<TResult>.AtProtoHttpClient(string? serviceProxy, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null) -> void
+idunno.AtProto.AtProtoHttpClient<TResult>.Get(System.Uri! service, string! endpoint, idunno.AtProto.Authentication.AtProtoCredential? credentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? requestHeaders = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<TResult!>!>!
+idunno.AtProto.AtProtoHttpClient<TResult>.Get(System.Uri! service, string! endpoint, idunno.AtProto.Authentication.AtProtoCredential? credentials, System.Net.Http.HttpClient! httpClient, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? requestHeaders = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<TResult!>!>!
+idunno.AtProto.AtProtoHttpClient<TResult>.Get(System.Uri! service, string! endpoint, System.Net.Http.HttpClient! httpClient, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<TResult!>!>!
+idunno.AtProto.AtProtoHttpClient<TResult>.Get(System.Uri! service, string! endpoint, System.Net.Http.HttpClient! httpClient, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<TResult!>!>!
+idunno.AtProto.AtProtoHttpClient<TResult>.OnResponseReceived.get -> System.Func<System.Net.Http.HttpResponseMessage!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>!
+idunno.AtProto.AtProtoHttpClient<TResult>.OnResponseReceived.set -> void
+idunno.AtProto.AtProtoHttpClient<TResult>.OnSendingRequest.get -> System.Func<System.Net.Http.HttpRequestMessage!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>!
+idunno.AtProto.AtProtoHttpClient<TResult>.OnSendingRequest.set -> void
+idunno.AtProto.AtProtoHttpClient<TResult>.Post(System.Uri! service, string! endpoint, idunno.AtProto.Authentication.AtProtoCredential? credentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<TResult!>!>!
+idunno.AtProto.AtProtoHttpClient<TResult>.Post(System.Uri! service, string! endpoint, idunno.AtProto.Authentication.AtProtoCredential? credentials, System.Net.Http.HttpClient! httpClient, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<TResult!>!>!
+idunno.AtProto.AtProtoHttpClient<TResult>.Post<TRecord>(System.Uri! service, string! endpoint, TRecord? record, idunno.AtProto.Authentication.AtProtoCredential! credentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<TResult!>!>!
+idunno.AtProto.AtProtoHttpClient<TResult>.Post<TRecord>(System.Uri! service, string! endpoint, TRecord? record, idunno.AtProto.Authentication.AtProtoCredential! credentials, System.Net.Http.HttpClient! httpClient, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<TResult!>!>!
+idunno.AtProto.AtProtoHttpClient<TResult>.Post<TRecord>(System.Uri! service, string! endpoint, TRecord? record, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? requestHeaders, idunno.AtProto.Authentication.AtProtoCredential? credentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<TResult!>!>!
+idunno.AtProto.AtProtoHttpClient<TResult>.Post<TRecord>(System.Uri! service, string! endpoint, TRecord? record, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? requestHeaders, idunno.AtProto.Authentication.AtProtoCredential? credentials, System.Net.Http.HttpClient! httpClient, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<TResult!>!>!
+idunno.AtProto.AtProtoHttpClient<TResult>.Post<TRecord>(System.Uri! service, string! endpoint, TRecord? record, System.Net.Http.HttpClient! httpClient, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<TResult!>!>!
+idunno.AtProto.AtProtoHttpClient<TResult>.Post<TRecord>(System.Uri! service, string! endpoint, TRecord? record, System.Net.Http.HttpClient! httpClient, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<TResult!>!>!
+idunno.AtProto.AtProtoHttpClient<TResult>.PostBlob(System.Uri! service, string! endpoint, byte[]! blob, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? requestHeaders, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? contentHeaders, idunno.AtProto.Authentication.AtProtoCredential! credentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<TResult!>!>!
+idunno.AtProto.AtProtoHttpClient<TResult>.PostBlob(System.Uri! service, string! endpoint, byte[]! blob, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? requestHeaders, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? contentHeaders, idunno.AtProto.Authentication.AtProtoCredential! credentials, System.Net.Http.HttpClient! httpClient, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<TResult!>!>!
+idunno.AtProto.AtProtoHttpRequestException
+idunno.AtProto.AtProtoHttpRequestException.AtProtoHttpRequestException() -> void
+idunno.AtProto.AtProtoHttpRequestException.AtProtoHttpRequestException(string? message) -> void
+idunno.AtProto.AtProtoHttpRequestException.AtProtoHttpRequestException(string? message, System.Exception? innerException) -> void
+idunno.AtProto.AtProtoHttpRequestException.AtProtoHttpRequestException(string? message, System.Exception? innerException, System.Net.HttpStatusCode? statusCode) -> void
+idunno.AtProto.AtProtoHttpRequestException.AtProtoHttpRequestException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
+idunno.AtProto.AtProtoHttpResult<TResult>
+idunno.AtProto.AtProtoHttpResult<TResult>.AtErrorDetail.get -> idunno.AtProto.AtErrorDetail?
+idunno.AtProto.AtProtoHttpResult<TResult>.AtProtoHttpResult(TResult? result, System.Net.HttpStatusCode statusCode, System.Net.Http.Headers.HttpResponseHeaders? httpResponseHeaders, idunno.AtProto.AtErrorDetail? atErrorDetail = null, idunno.AtProto.RateLimit? rateLimit = null) -> void
+idunno.AtProto.AtProtoHttpResult<TResult>.EnsureSucceeded() -> idunno.AtProto.AtProtoHttpResult<TResult>!
+idunno.AtProto.AtProtoHttpResult<TResult>.HttpResponseHeaders.get -> System.Net.Http.Headers.HttpResponseHeaders?
+idunno.AtProto.AtProtoHttpResult<TResult>.RateLimit.get -> idunno.AtProto.RateLimit?
+idunno.AtProto.AtProtoHttpResult<TResult>.RateLimit.init -> void
+idunno.AtProto.AtProtoHttpResult<TResult>.Result.get -> TResult?
+idunno.AtProto.AtProtoHttpResult<TResult>.StatusCode.get -> System.Net.HttpStatusCode
+idunno.AtProto.AtProtoHttpResult<TResult>.Succeeded.get -> bool
+idunno.AtProto.AtProtoJsonSerializerOptions
+idunno.AtProto.AtProtoServer
+idunno.AtProto.Authentication.AccessCredentials
+idunno.AtProto.Authentication.AccessCredentials.AccessCredentials(System.Uri! service, idunno.AtProto.Authentication.AuthenticationType authenticationType, string! accessJwt, string! refreshToken) -> void
+idunno.AtProto.Authentication.AccessCredentials.AccessJwt.get -> string!
+idunno.AtProto.Authentication.AccessCredentials.AccessJwt.set -> void
+idunno.AtProto.Authentication.AccessCredentials.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Authentication.AccessCredentials.ExpiresOn.get -> System.DateTimeOffset
+idunno.AtProto.Authentication.AccessCredentials.ExtractJwtProperties(string! jwt) -> void
+idunno.AtProto.Authentication.AccessTokenCredential
+idunno.AtProto.Authentication.AccessTokenCredential.AccessJwt.get -> string!
+idunno.AtProto.Authentication.AccessTokenCredential.AccessJwt.set -> void
+idunno.AtProto.Authentication.AccessTokenCredential.AccessTokenCredential(string! jwt) -> void
+idunno.AtProto.Authentication.AccessTokenCredential.AccessTokenCredential(System.Uri! service, string! jwt) -> void
+idunno.AtProto.Authentication.AccessTokenCredential.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Authentication.AccessTokenCredential.ExpiresOn.get -> System.DateTimeOffset
+idunno.AtProto.Authentication.AtProtoClaims
+idunno.AtProto.Authentication.AtProtoCredential
+idunno.AtProto.Authentication.AtProtoCredential.AtProtoCredential(System.Uri! service, idunno.AtProto.Authentication.AuthenticationType authenticationType) -> void
+idunno.AtProto.Authentication.AtProtoCredential.AuthenticationType.get -> idunno.AtProto.Authentication.AuthenticationType
+idunno.AtProto.Authentication.AtProtoCredential.AuthenticationType.set -> void
+idunno.AtProto.Authentication.AtProtoCredential.ReaderWriterLockSlim.get -> System.Threading.ReaderWriterLockSlim!
+idunno.AtProto.Authentication.AtProtoCredential.Service.get -> System.Uri!
+idunno.AtProto.Authentication.AtProtoCredential.Service.set -> void
+idunno.AtProto.Authentication.AtProtoCredential.~AtProtoCredential() -> void
+idunno.AtProto.Authentication.AuthenticationType
+idunno.AtProto.Authentication.AuthenticationType.OAuth = 3 -> idunno.AtProto.Authentication.AuthenticationType
+idunno.AtProto.Authentication.AuthenticationType.Service = 4 -> idunno.AtProto.Authentication.AuthenticationType
+idunno.AtProto.Authentication.AuthenticationType.Unknown = 0 -> idunno.AtProto.Authentication.AuthenticationType
+idunno.AtProto.Authentication.AuthenticationType.UsernamePassword = 1 -> idunno.AtProto.Authentication.AuthenticationType
+idunno.AtProto.Authentication.AuthenticationType.UsernamePasswordAuthFactorToken = 2 -> idunno.AtProto.Authentication.AuthenticationType
+idunno.AtProto.Authentication.CredentialException
+idunno.AtProto.Authentication.CredentialException.Credential.get -> idunno.AtProto.Authentication.AtProtoCredential?
+idunno.AtProto.Authentication.CredentialException.Credential.init -> void
+idunno.AtProto.Authentication.CredentialException.CredentialException() -> void
+idunno.AtProto.Authentication.CredentialException.CredentialException(idunno.AtProto.Authentication.AtProtoCredential! credential) -> void
+idunno.AtProto.Authentication.CredentialException.CredentialException(idunno.AtProto.Authentication.AtProtoCredential! credential, string! message) -> void
+idunno.AtProto.Authentication.CredentialException.CredentialException(idunno.AtProto.Authentication.AtProtoCredential! credential, string! message, System.Exception! inner) -> void
+idunno.AtProto.Authentication.CredentialException.CredentialException(string! message) -> void
+idunno.AtProto.Authentication.CredentialException.CredentialException(string! message, System.Exception! inner) -> void
+idunno.AtProto.Authentication.CredentialException.CredentialException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
+idunno.AtProto.Authentication.DPoPAccessCredentials
+idunno.AtProto.Authentication.DPoPAccessCredentials.DPoPAccessCredentials(System.Uri! service, string! accessJwt, string! refreshToken, string! dPoPProofKey, string! dPoPNonce) -> void
+idunno.AtProto.Authentication.DPoPAccessCredentials.DPoPNonce.get -> string!
+idunno.AtProto.Authentication.DPoPAccessCredentials.DPoPNonce.set -> void
+idunno.AtProto.Authentication.DPoPAccessCredentials.DPoPProofKey.get -> string!
+idunno.AtProto.Authentication.DPoPAccessCredentials.DPoPProofKey.set -> void
+idunno.AtProto.Authentication.DPoPRefreshCredential
+idunno.AtProto.Authentication.DPoPRefreshCredential.DPoPNonce.get -> string!
+idunno.AtProto.Authentication.DPoPRefreshCredential.DPoPNonce.set -> void
+idunno.AtProto.Authentication.DPoPRefreshCredential.DPoPProofKey.get -> string!
+idunno.AtProto.Authentication.DPoPRefreshCredential.DPoPProofKey.set -> void
+idunno.AtProto.Authentication.DPoPRefreshCredential.DPoPRefreshCredential(idunno.AtProto.Authentication.DPoPAccessCredentials! dPoPAccessCredentials) -> void
+idunno.AtProto.Authentication.DPoPRefreshCredential.DPoPRefreshCredential(System.Uri! service, string! refreshToken, string! dPoPProofKey, string! dPoPNonce) -> void
+idunno.AtProto.Authentication.IAccessCredential
+idunno.AtProto.Authentication.IAccessCredential.AccessJwt.get -> string!
+idunno.AtProto.Authentication.IAccessCredential.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Authentication.IAccessCredential.ExpiresOn.get -> System.DateTimeOffset
+idunno.AtProto.Authentication.IAccessCredential.IsExpired.get -> bool
+idunno.AtProto.Authentication.IDPoPBoundCredential
+idunno.AtProto.Authentication.IDPoPBoundCredential.DPoPNonce.get -> string!
+idunno.AtProto.Authentication.IDPoPBoundCredential.DPoPNonce.set -> void
+idunno.AtProto.Authentication.IDPoPBoundCredential.DPoPProofKey.get -> string!
+idunno.AtProto.Authentication.IDPoPBoundCredential.DPoPProofKey.set -> void
+idunno.AtProto.Authentication.IRefreshCredential
+idunno.AtProto.Authentication.IRefreshCredential.RefreshToken.get -> string!
+idunno.AtProto.Authentication.Models.BaseSessionResponse
+idunno.AtProto.Authentication.Models.BaseSessionResponse.Active.get -> bool?
+idunno.AtProto.Authentication.Models.BaseSessionResponse.Active.init -> void
+idunno.AtProto.Authentication.Models.BaseSessionResponse.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Authentication.Models.BaseSessionResponse.Did.init -> void
+idunno.AtProto.Authentication.Models.BaseSessionResponse.DidDoc.get -> idunno.AtProto.DidDocument?
+idunno.AtProto.Authentication.Models.BaseSessionResponse.DidDoc.init -> void
+idunno.AtProto.Authentication.Models.BaseSessionResponse.Handle.get -> idunno.AtProto.Handle!
+idunno.AtProto.Authentication.Models.BaseSessionResponse.Handle.init -> void
+idunno.AtProto.Authentication.Models.BaseSessionResponse.Status.get -> string?
+idunno.AtProto.Authentication.Models.BaseSessionResponse.Status.init -> void
+idunno.AtProto.Authentication.OAuthClient
+idunno.AtProto.Authentication.OAuthClient.BuildOAuth2LoginUri(System.Uri! service, System.Uri! authority, System.Uri! returnUri, string? clientId = null, System.Collections.Generic.IEnumerable<string!>? scopes = null, idunno.AtProto.Handle? handle = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string!, string!>>? uriExtraParameters = null, System.Collections.Generic.IDictionary<string!, string!>? stateExtraProperties = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Uri!>!
+idunno.AtProto.Authentication.OAuthClient.ProcessOAuth2LoginResponse(string! callbackData, string? clientId = null, System.Collections.Generic.IEnumerable<string!>? scopes = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.DPoPAccessCredentials?>!
+idunno.AtProto.Authentication.OAuthClient.ProcessOAuth2Response(idunno.AtProto.Authentication.OAuthLoginState! state, string! callbackData, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.DPoPAccessCredentials?>!
+idunno.AtProto.Authentication.OAuthClient.RefreshCredentials(idunno.AtProto.Authentication.DPoPRefreshCredential! refreshCredential, System.Uri! authority, string? clientId = null, System.Collections.Generic.IEnumerable<string!>? scopes = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.DPoPAccessCredentials?>!
+idunno.AtProto.Authentication.OAuthClient.State.get -> idunno.AtProto.Authentication.OAuthLoginState?
+idunno.AtProto.Authentication.OAuthException
+idunno.AtProto.Authentication.OAuthException.OAuthException() -> void
+idunno.AtProto.Authentication.OAuthException.OAuthException(string! message) -> void
+idunno.AtProto.Authentication.OAuthException.OAuthException(string! message, System.Exception! inner) -> void
+idunno.AtProto.Authentication.OAuthException.OAuthException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
+idunno.AtProto.Authentication.OAuthLoginState
+idunno.AtProto.Authentication.OAuthLoginState.CodeVerifier.get -> string!
+idunno.AtProto.Authentication.OAuthLoginState.CodeVerifier.set -> void
+idunno.AtProto.Authentication.OAuthLoginState.CorrelationId.get -> System.Guid
+idunno.AtProto.Authentication.OAuthLoginState.CorrelationId.set -> void
+idunno.AtProto.Authentication.OAuthLoginState.Equals(idunno.AtProto.Authentication.OAuthLoginState? other) -> bool
+idunno.AtProto.Authentication.OAuthLoginState.Error.get -> string!
+idunno.AtProto.Authentication.OAuthLoginState.Error.set -> void
+idunno.AtProto.Authentication.OAuthLoginState.ErrorDescription.get -> string!
+idunno.AtProto.Authentication.OAuthLoginState.ErrorDescription.set -> void
+idunno.AtProto.Authentication.OAuthLoginState.ExpectedAuthority.get -> string!
+idunno.AtProto.Authentication.OAuthLoginState.ExpectedAuthority.set -> void
+idunno.AtProto.Authentication.OAuthLoginState.ExpectedService.get -> string!
+idunno.AtProto.Authentication.OAuthLoginState.ExpectedService.set -> void
+idunno.AtProto.Authentication.OAuthLoginState.ExtraProperties.get -> System.Collections.Generic.IDictionary<string!, string!>?
+idunno.AtProto.Authentication.OAuthLoginState.OAuthLoginState(Duende.IdentityModel.OidcClient.AuthorizeState! state, string! expectedAuthority, string! expectedService, string! proofKey, System.Guid correlationId, System.Collections.Generic.IDictionary<string!, string!>? extraProperties = null) -> void
+idunno.AtProto.Authentication.OAuthLoginState.OAuthLoginState(string! startUrl, string! state, string! codeVerifier, string! redirectUri, string! error, string! errorDescription, string! expectedAuthority, string! expectedService, string! proofKey, System.Guid correlationId, System.Collections.Generic.IDictionary<string!, string!>? extraProperties = null) -> void
+idunno.AtProto.Authentication.OAuthLoginState.ProofKey.get -> string!
+idunno.AtProto.Authentication.OAuthLoginState.ProofKey.set -> void
+idunno.AtProto.Authentication.OAuthLoginState.RedirectUri.get -> string!
+idunno.AtProto.Authentication.OAuthLoginState.RedirectUri.set -> void
+idunno.AtProto.Authentication.OAuthLoginState.StartUrl.get -> string?
+idunno.AtProto.Authentication.OAuthLoginState.StartUrl.set -> void
+idunno.AtProto.Authentication.OAuthLoginState.State.get -> string!
+idunno.AtProto.Authentication.OAuthLoginState.State.set -> void
+idunno.AtProto.Authentication.OAuthLoginState.ToAuthorizeState() -> Duende.IdentityModel.OidcClient.AuthorizeState!
+idunno.AtProto.Authentication.OAuthLoginState.ToJson() -> string!
+idunno.AtProto.Authentication.OAuthOptions
+idunno.AtProto.Authentication.OAuthOptions.ClientId.get -> string!
+idunno.AtProto.Authentication.OAuthOptions.ClientId.set -> void
+idunno.AtProto.Authentication.OAuthOptions.OAuthOptions() -> void
+idunno.AtProto.Authentication.OAuthOptions.OAuthOptions(string! clientId, System.Uri? returnUri = null, System.Collections.Generic.IEnumerable<string!>? scopes = null) -> void
+idunno.AtProto.Authentication.OAuthOptions.ReturnUri.get -> System.Uri?
+idunno.AtProto.Authentication.OAuthOptions.ReturnUri.set -> void
+idunno.AtProto.Authentication.OAuthOptions.Scopes.get -> System.Collections.Generic.IEnumerable<string!>!
+idunno.AtProto.Authentication.OAuthOptions.Scopes.set -> void
+idunno.AtProto.Authentication.OAuthOptions.Validate() -> void
+idunno.AtProto.Authentication.RefreshCredential
+idunno.AtProto.Authentication.RefreshCredential.RefreshCredential(idunno.AtProto.Authentication.AccessCredentials! accessCredentials) -> void
+idunno.AtProto.Authentication.RefreshCredential.RefreshCredential(System.Uri! service, idunno.AtProto.Authentication.AuthenticationType authenticationType, string! value) -> void
+idunno.AtProto.Authentication.RefreshCredential.RefreshToken.get -> string!
+idunno.AtProto.Authentication.RefreshCredential.RefreshToken.set -> void
+idunno.AtProto.Authentication.ServiceCredential
+idunno.AtProto.Authentication.ServiceCredential.AccessJwt.get -> string!
+idunno.AtProto.Authentication.ServiceCredential.AccessJwt.set -> void
+idunno.AtProto.Authentication.ServiceCredential.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Authentication.ServiceCredential.ExpiresOn.get -> System.DateTimeOffset
+idunno.AtProto.Authentication.ServiceCredential.ServiceCredential(System.Uri! service, string! accessJwt) -> void
+idunno.AtProto.Authentication.Session
+idunno.AtProto.Authentication.Session.AccessJwt.get -> string!
+idunno.AtProto.Authentication.Session.AccessJwt.init -> void
+idunno.AtProto.Authentication.Session.Active.get -> bool?
+idunno.AtProto.Authentication.Session.Active.init -> void
+idunno.AtProto.Authentication.Session.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Authentication.Session.Did.init -> void
+idunno.AtProto.Authentication.Session.DidDoc.get -> idunno.AtProto.DidDocument?
+idunno.AtProto.Authentication.Session.DidDoc.init -> void
+idunno.AtProto.Authentication.Session.Email.get -> string?
+idunno.AtProto.Authentication.Session.Email.init -> void
+idunno.AtProto.Authentication.Session.EmailAuthFactor.get -> bool?
+idunno.AtProto.Authentication.Session.EmailAuthFactor.init -> void
+idunno.AtProto.Authentication.Session.EmailConfirmed.get -> bool?
+idunno.AtProto.Authentication.Session.EmailConfirmed.init -> void
+idunno.AtProto.Authentication.Session.Handle.get -> idunno.AtProto.Handle!
+idunno.AtProto.Authentication.Session.Handle.init -> void
+idunno.AtProto.Authentication.Session.RefreshJwt.get -> string!
+idunno.AtProto.Authentication.Session.RefreshJwt.init -> void
+idunno.AtProto.Authentication.Session.Status.get -> idunno.AtProto.AccountStatus?
+idunno.AtProto.Authentication.Session.Status.init -> void
+idunno.AtProto.Authentication.Session.ToAccessCredentials(System.Uri! service, idunno.AtProto.Authentication.AuthenticationType authenticationType = idunno.AtProto.Authentication.AuthenticationType.Unknown) -> idunno.AtProto.Authentication.AccessCredentials!
+idunno.AtProto.Authentication.Session.ToAccessTokenCredential(System.Uri? service = null) -> idunno.AtProto.Authentication.AccessTokenCredential!
+idunno.AtProto.AuthenticationRequiredException
+idunno.AtProto.AuthenticationRequiredException.AuthenticationRequiredException() -> void
+idunno.AtProto.AuthenticationRequiredException.AuthenticationRequiredException(string! message) -> void
+idunno.AtProto.AuthenticationRequiredException.AuthenticationRequiredException(string! message, System.Exception! inner) -> void
+idunno.AtProto.AuthenticationRequiredException.AuthenticationRequiredException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
+idunno.AtProto.DidDocService
+idunno.AtProto.DidDocService.Id.get -> string!
+idunno.AtProto.DidDocService.Id.init -> void
+idunno.AtProto.DidDocService.ServiceEndpoint.get -> System.Uri!
+idunno.AtProto.DidDocService.ServiceEndpoint.init -> void
+idunno.AtProto.DidDocService.Type.get -> string!
+idunno.AtProto.DidDocService.Type.init -> void
+idunno.AtProto.DidDocument
+idunno.AtProto.DidDocument.AlsoKnownAs.get -> System.Collections.Generic.IReadOnlyList<string!>?
+idunno.AtProto.DidDocument.AlsoKnownAs.init -> void
+idunno.AtProto.DidDocument.Context.get -> System.Collections.Generic.IReadOnlyList<string!>!
+idunno.AtProto.DidDocument.Id.get -> idunno.AtProto.Did!
+idunno.AtProto.DidDocument.Id.init -> void
+idunno.AtProto.DidDocument.Services.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.DidDocService!>?
+idunno.AtProto.DidDocument.Services.init -> void
+idunno.AtProto.DidDocument.VerificationMethods.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.VerificationMethod!>?
+idunno.AtProto.DidDocument.VerificationMethods.init -> void
+idunno.AtProto.EmptyResponse
+idunno.AtProto.Events.AuthenticatedEventArgs
+idunno.AtProto.Events.AuthenticatedEventArgs.AccessCredentials.get -> idunno.AtProto.Authentication.AccessCredentials!
+idunno.AtProto.Events.AuthenticatedEventArgs.AuthenticatedEventArgs(idunno.AtProto.Did! did, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials) -> void
+idunno.AtProto.Events.BaseAuthenticationEventArgs
+idunno.AtProto.Events.BaseAuthenticationEventArgs.BaseAuthenticationEventArgs(idunno.AtProto.Did! did, System.Uri! service) -> void
+idunno.AtProto.Events.BaseAuthenticationEventArgs.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Events.BaseAuthenticationEventArgs.Service.get -> System.Uri!
+idunno.AtProto.Events.CredentialsUpdatedEventArgs
+idunno.AtProto.Events.CredentialsUpdatedEventArgs.AccessCredentials.get -> idunno.AtProto.Authentication.AccessCredentials!
+idunno.AtProto.Events.CredentialsUpdatedEventArgs.CredentialsUpdatedEventArgs(idunno.AtProto.Did! did, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials) -> void
+idunno.AtProto.Events.TokenRefreshFailedEventArgs
+idunno.AtProto.Events.TokenRefreshFailedEventArgs.Error.get -> idunno.AtProto.AtErrorDetail?
+idunno.AtProto.Events.TokenRefreshFailedEventArgs.RefreshToken.get -> string!
+idunno.AtProto.Events.TokenRefreshFailedEventArgs.StatusCode.get -> System.Net.HttpStatusCode?
+idunno.AtProto.Events.TokenRefreshFailedEventArgs.TokenRefreshFailedEventArgs(idunno.AtProto.Did! did, System.Uri! service, string! refreshToken, System.Net.HttpStatusCode? statusCode, idunno.AtProto.AtErrorDetail? error) -> void
+idunno.AtProto.Events.UnauthenticatedEventArgs
+idunno.AtProto.Events.UnauthenticatedEventArgs.UnauthenticatedEventArgs(idunno.AtProto.Did! did, System.Uri! service) -> void
+idunno.AtProto.HttpClientOptions
+idunno.AtProto.HttpClientOptions.CheckCertificateRevocationList.get -> bool
+idunno.AtProto.HttpClientOptions.CheckCertificateRevocationList.set -> void
+idunno.AtProto.HttpClientOptions.HttpClientOptions(string? httpUserAgent = null, System.Uri? proxyUri = null, bool checkCertificateRevocationList = true, System.TimeSpan? timeout = null) -> void
+idunno.AtProto.HttpClientOptions.HttpUserAgent.get -> string?
+idunno.AtProto.HttpClientOptions.HttpUserAgent.set -> void
+idunno.AtProto.HttpClientOptions.ProxyUri.get -> System.Uri?
+idunno.AtProto.HttpClientOptions.ProxyUri.set -> void
+idunno.AtProto.HttpClientOptions.Timeout.get -> System.TimeSpan?
+idunno.AtProto.HttpClientOptions.Timeout.set -> void
+idunno.AtProto.InvalidResponseTypeException
+idunno.AtProto.InvalidResponseTypeException.InvalidResponseTypeException() -> void
+idunno.AtProto.InvalidResponseTypeException.InvalidResponseTypeException(string! message) -> void
+idunno.AtProto.InvalidResponseTypeException.InvalidResponseTypeException(string! message, System.Exception! inner) -> void
+idunno.AtProto.InvalidResponseTypeException.InvalidResponseTypeException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
+idunno.AtProto.Jetstream.AtJetstreamAccount
+idunno.AtProto.Jetstream.AtJetstreamAccount.Active.get -> bool
+idunno.AtProto.Jetstream.AtJetstreamAccount.Active.set -> void
+idunno.AtProto.Jetstream.AtJetstreamAccount.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Jetstream.AtJetstreamAccount.Did.init -> void
+idunno.AtProto.Jetstream.AtJetstreamAccount.Sequence.get -> ulong
+idunno.AtProto.Jetstream.AtJetstreamAccount.Sequence.init -> void
+idunno.AtProto.Jetstream.AtJetstreamAccount.Status.get -> idunno.AtProto.AccountStatus?
+idunno.AtProto.Jetstream.AtJetstreamAccount.Status.init -> void
+idunno.AtProto.Jetstream.AtJetstreamAccount.TimeStamp.get -> System.DateTimeOffset
+idunno.AtProto.Jetstream.AtJetstreamAccount.TimeStamp.init -> void
+idunno.AtProto.Jetstream.AtJetstreamAccountEvent
+idunno.AtProto.Jetstream.AtJetstreamAccountEvent.Account.get -> idunno.AtProto.Jetstream.AtJetstreamAccount!
+idunno.AtProto.Jetstream.AtJetstreamAccountEvent.Account.set -> void
+idunno.AtProto.Jetstream.AtJetstreamCommit
+idunno.AtProto.Jetstream.AtJetstreamCommit.Cid.get -> idunno.AtProto.Cid?
+idunno.AtProto.Jetstream.AtJetstreamCommit.Cid.init -> void
+idunno.AtProto.Jetstream.AtJetstreamCommit.Collection.get -> idunno.AtProto.Nsid!
+idunno.AtProto.Jetstream.AtJetstreamCommit.Collection.init -> void
+idunno.AtProto.Jetstream.AtJetstreamCommit.Operation.get -> string!
+idunno.AtProto.Jetstream.AtJetstreamCommit.Operation.init -> void
+idunno.AtProto.Jetstream.AtJetstreamCommit.Record.get -> System.Text.Json.JsonDocument?
+idunno.AtProto.Jetstream.AtJetstreamCommit.Record.init -> void
+idunno.AtProto.Jetstream.AtJetstreamCommit.Rev.get -> string!
+idunno.AtProto.Jetstream.AtJetstreamCommit.Rev.init -> void
+idunno.AtProto.Jetstream.AtJetstreamCommit.RKey.get -> idunno.AtProto.RecordKey!
+idunno.AtProto.Jetstream.AtJetstreamCommit.RKey.init -> void
+idunno.AtProto.Jetstream.AtJetstreamCommitEvent
+idunno.AtProto.Jetstream.AtJetstreamCommitEvent.Commit.get -> idunno.AtProto.Jetstream.AtJetstreamCommit!
+idunno.AtProto.Jetstream.AtJetstreamCommitEvent.Commit.set -> void
+idunno.AtProto.Jetstream.AtJetstreamEvent
+idunno.AtProto.Jetstream.AtJetstreamEvent.DateTimeOffset.get -> System.DateTimeOffset
+idunno.AtProto.Jetstream.AtJetstreamEvent.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Jetstream.AtJetstreamEvent.Did.init -> void
+idunno.AtProto.Jetstream.AtJetstreamEvent.ExtensionData.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>?
+idunno.AtProto.Jetstream.AtJetstreamEvent.ExtensionData.set -> void
+idunno.AtProto.Jetstream.AtJetstreamEvent.Kind.get -> idunno.AtProto.Jetstream.JetStreamEventKind
+idunno.AtProto.Jetstream.AtJetstreamEvent.Kind.init -> void
+idunno.AtProto.Jetstream.AtJetstreamEvent.TimeStamp.get -> long
+idunno.AtProto.Jetstream.AtJetstreamEvent.TimeStamp.init -> void
+idunno.AtProto.Jetstream.AtJetStreamIdentity
+idunno.AtProto.Jetstream.AtJetStreamIdentity.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Jetstream.AtJetStreamIdentity.Did.init -> void
+idunno.AtProto.Jetstream.AtJetStreamIdentity.Handle.get -> idunno.AtProto.Handle!
+idunno.AtProto.Jetstream.AtJetStreamIdentity.Handle.init -> void
+idunno.AtProto.Jetstream.AtJetStreamIdentity.Sequence.get -> ulong
+idunno.AtProto.Jetstream.AtJetStreamIdentity.Sequence.init -> void
+idunno.AtProto.Jetstream.AtJetStreamIdentity.TimeStamp.get -> System.DateTimeOffset
+idunno.AtProto.Jetstream.AtJetStreamIdentity.TimeStamp.init -> void
+idunno.AtProto.Jetstream.AtJetstreamIdentityEvent
+idunno.AtProto.Jetstream.AtJetstreamIdentityEvent.Identity.get -> idunno.AtProto.Jetstream.AtJetStreamIdentity!
+idunno.AtProto.Jetstream.AtJetstreamIdentityEvent.Identity.init -> void
+idunno.AtProto.Jetstream.AtProtoJetstream
+idunno.AtProto.Jetstream.AtProtoJetstream.AtProtoJetstream(System.Uri? uri = null, idunno.AtProto.Jetstream.JetstreamOptions? options = null, idunno.AtProto.WebSocketOptions? webSocketOptions = null, System.Collections.Generic.ICollection<idunno.AtProto.Nsid!>? collections = null, System.Collections.Generic.ICollection<idunno.AtProto.Did!>? dids = null) -> void
+idunno.AtProto.Jetstream.AtProtoJetstream.ClientWebSocket.get -> System.Net.WebSockets.ClientWebSocket!
+idunno.AtProto.Jetstream.AtProtoJetstream.CloseAsync(System.Net.WebSockets.WebSocketCloseStatus status = System.Net.WebSockets.WebSocketCloseStatus.NormalClosure, string! statusDescription = "Client disconnect", System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+idunno.AtProto.Jetstream.AtProtoJetstream.CollectionFilter.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Nsid!>!
+idunno.AtProto.Jetstream.AtProtoJetstream.CollectionFilter.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstream.ConnectAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+idunno.AtProto.Jetstream.AtProtoJetstream.ConnectAsync(System.Uri? uri = null, long? cursor = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+idunno.AtProto.Jetstream.AtProtoJetstream.ConnectAsync(System.Uri? uri = null, System.DateTimeOffset? startFrom = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+idunno.AtProto.Jetstream.AtProtoJetstream.ConnectionStateChanged -> System.EventHandler<idunno.AtProto.Jetstream.Events.ConnectionStateChangedEventArgs!>?
+idunno.AtProto.Jetstream.AtProtoJetstream.DidFilter.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Did!>!
+idunno.AtProto.Jetstream.AtProtoJetstream.DidFilter.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstream.DisconnectedGracefully.get -> bool
+idunno.AtProto.Jetstream.AtProtoJetstream.Dispose() -> void
+idunno.AtProto.Jetstream.AtProtoJetstream.FaultRaised -> System.EventHandler<idunno.AtProto.Jetstream.Events.FaultRaisedEventArgs!>?
+idunno.AtProto.Jetstream.AtProtoJetstream.IsConnected.get -> bool
+idunno.AtProto.Jetstream.AtProtoJetstream.LogFault(string! fault = "Unspecified fault") -> void
+idunno.AtProto.Jetstream.AtProtoJetstream.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory!
+idunno.AtProto.Jetstream.AtProtoJetstream.LoggerFactory.init -> void
+idunno.AtProto.Jetstream.AtProtoJetstream.MessageLastReceived.get -> System.DateTimeOffset?
+idunno.AtProto.Jetstream.AtProtoJetstream.MessageReceived -> System.EventHandler<idunno.AtProto.Jetstream.Events.MessageReceivedEventArgs!>?
+idunno.AtProto.Jetstream.AtProtoJetstream.Options.get -> idunno.AtProto.Jetstream.JetstreamOptions!
+idunno.AtProto.Jetstream.AtProtoJetstream.Options.init -> void
+idunno.AtProto.Jetstream.AtProtoJetstream.RecordReceived -> System.EventHandler<idunno.AtProto.Jetstream.Events.RecordReceivedEventArgs!>?
+idunno.AtProto.Jetstream.AtProtoJetstream.State.get -> System.Net.WebSockets.WebSocketState
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.Build() -> idunno.AtProto.Jetstream.AtProtoJetstream!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.CollectionsToFilterOn.get -> System.Collections.Generic.ICollection<idunno.AtProto.Nsid!>?
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.CollectionsToFilterOn.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.CompressionDictionary.get -> byte[]!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.CompressionDictionary.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.ConnectTo(System.Uri! service) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.DidsToFilterOn.get -> System.Collections.Generic.ICollection<idunno.AtProto.Did!>?
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.DidsToFilterOn.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.EnableCompression.get -> bool
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.EnableCompression.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.FilterTo(idunno.AtProto.Did![]! dids) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.FilterTo(idunno.AtProto.Nsid![]! collections) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.LoggerFactory.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.MaximumMessageSize.get -> int
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.MaximumMessageSize.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.MeterFactory.get -> System.Diagnostics.Metrics.IMeterFactory?
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.MeterFactory.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.Service.get -> System.Uri!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.Service.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.SetMaximumMessageSize(int maximumMessageSize) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.TaskFactory.get -> System.Threading.Tasks.TaskFactory!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.TaskFactory.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.UseCompression(bool useCompression) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.WithCompressionDictionary(byte[]! compressionDictionary) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.WithLoggerFactory(Microsoft.Extensions.Logging.ILoggerFactory! logger) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.WithMeterFactory(System.Diagnostics.Metrics.IMeterFactory! meterFactory) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.WithTaskFactory(System.Threading.Tasks.TaskFactory! taskFactory) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.Events.ConnectionStateChangedEventArgs
+idunno.AtProto.Jetstream.Events.ConnectionStateChangedEventArgs.ConnectionStateChangedEventArgs(System.Net.WebSockets.WebSocketState state) -> void
+idunno.AtProto.Jetstream.Events.ConnectionStateChangedEventArgs.State.get -> System.Net.WebSockets.WebSocketState
+idunno.AtProto.Jetstream.Events.FaultRaisedEventArgs
+idunno.AtProto.Jetstream.Events.FaultRaisedEventArgs.Fault.get -> string!
+idunno.AtProto.Jetstream.Events.FaultRaisedEventArgs.FaultRaisedEventArgs(string! fault) -> void
+idunno.AtProto.Jetstream.Events.MessageReceivedEventArgs
+idunno.AtProto.Jetstream.Events.MessageReceivedEventArgs.Message.get -> string!
+idunno.AtProto.Jetstream.Events.MessageReceivedEventArgs.MessageReceivedEventArgs(string! message) -> void
+idunno.AtProto.Jetstream.Events.RecordReceivedEventArgs
+idunno.AtProto.Jetstream.Events.RecordReceivedEventArgs.ParsedEvent.get -> idunno.AtProto.Jetstream.AtJetstreamEvent!
+idunno.AtProto.Jetstream.Events.RecordReceivedEventArgs.RecordReceivedEventArgs(idunno.AtProto.Jetstream.AtJetstreamEvent! parsedEvent) -> void
+idunno.AtProto.Jetstream.JetStreamEventKind
+idunno.AtProto.Jetstream.JetStreamEventKind.Account = 1 -> idunno.AtProto.Jetstream.JetStreamEventKind
+idunno.AtProto.Jetstream.JetStreamEventKind.Commit = 2 -> idunno.AtProto.Jetstream.JetStreamEventKind
+idunno.AtProto.Jetstream.JetStreamEventKind.Identity = 3 -> idunno.AtProto.Jetstream.JetStreamEventKind
+idunno.AtProto.Jetstream.JetStreamEventKind.Unknown = 0 -> idunno.AtProto.Jetstream.JetStreamEventKind
+idunno.AtProto.Jetstream.JetstreamMetrics
+idunno.AtProto.Jetstream.JetstreamMetrics.EventsParsed(int quantity) -> void
+idunno.AtProto.Jetstream.JetstreamMetrics.JetstreamMetrics(System.Diagnostics.Metrics.IMeterFactory! meterFactory) -> void
+idunno.AtProto.Jetstream.JetstreamMetrics.MessagesReceived(int quantity) -> void
+idunno.AtProto.Jetstream.JetstreamOptions
+idunno.AtProto.Jetstream.JetstreamOptions.BufferSize.get -> int
+idunno.AtProto.Jetstream.JetstreamOptions.BufferSize.init -> void
+idunno.AtProto.Jetstream.JetstreamOptions.Dictionary.get -> byte[]?
+idunno.AtProto.Jetstream.JetstreamOptions.Dictionary.init -> void
+idunno.AtProto.Jetstream.JetstreamOptions.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory?
+idunno.AtProto.Jetstream.JetstreamOptions.LoggerFactory.set -> void
+idunno.AtProto.Jetstream.JetstreamOptions.MeterFactory.get -> System.Diagnostics.Metrics.IMeterFactory?
+idunno.AtProto.Jetstream.JetstreamOptions.MeterFactory.set -> void
+idunno.AtProto.Jetstream.JetstreamOptions.TaskFactory.get -> System.Threading.Tasks.TaskFactory!
+idunno.AtProto.Jetstream.JetstreamOptions.TaskFactory.init -> void
+idunno.AtProto.Jetstream.JetstreamOptions.UseCompression.get -> bool
+idunno.AtProto.Jetstream.JetstreamOptions.UseCompression.init -> void
+idunno.AtProto.JsonOptions
+idunno.AtProto.JsonOptions.JsonOptions() -> void
+idunno.AtProto.JsonOptions.JsonSerializerOptions.get -> System.Text.Json.JsonSerializerOptions!
+idunno.AtProto.Labels.Label
+idunno.AtProto.Labels.Label.Cid.get -> idunno.AtProto.Cid?
+idunno.AtProto.Labels.Label.Cid.init -> void
+idunno.AtProto.Labels.Label.CreationTimestamp.get -> System.DateTimeOffset
+idunno.AtProto.Labels.Label.CreationTimestamp.init -> void
+idunno.AtProto.Labels.Label.IsNegationLabel.get -> bool
+idunno.AtProto.Labels.Label.IsNegationLabel.init -> void
+idunno.AtProto.Labels.Label.Label(int? version, idunno.AtProto.Did! source, string! uri, idunno.AtProto.Cid? cid, string! value, bool isNegationLabel, System.DateTimeOffset creationTimestamp, System.Collections.Generic.IEnumerable<byte>! signature) -> void
+idunno.AtProto.Labels.Label.Signature.get -> System.Collections.Generic.IEnumerable<byte>!
+idunno.AtProto.Labels.Label.Signature.init -> void
+idunno.AtProto.Labels.Label.Source.get -> idunno.AtProto.Did!
+idunno.AtProto.Labels.Label.Source.init -> void
+idunno.AtProto.Labels.Label.Uri.get -> string!
+idunno.AtProto.Labels.Label.Uri.init -> void
+idunno.AtProto.Labels.Label.Value.get -> string!
+idunno.AtProto.Labels.Label.Value.init -> void
+idunno.AtProto.Labels.Label.Version.get -> int?
+idunno.AtProto.Labels.Label.Version.init -> void
+idunno.AtProto.Labels.LabelValueDefinition
+idunno.AtProto.Labels.LabelValueDefinition.AdultOnly.get -> bool
+idunno.AtProto.Labels.LabelValueDefinition.AdultOnly.init -> void
+idunno.AtProto.Labels.LabelValueDefinition.Blurs.get -> string!
+idunno.AtProto.Labels.LabelValueDefinition.Blurs.init -> void
+idunno.AtProto.Labels.LabelValueDefinition.DefaultSetting.get -> string!
+idunno.AtProto.Labels.LabelValueDefinition.DefaultSetting.init -> void
+idunno.AtProto.Labels.LabelValueDefinition.Identifier.get -> string!
+idunno.AtProto.Labels.LabelValueDefinition.Identifier.init -> void
+idunno.AtProto.Labels.LabelValueDefinition.Locales.get -> System.Collections.Generic.ICollection<idunno.AtProto.Labels.LabelValueDefinitionStrings!>!
+idunno.AtProto.Labels.LabelValueDefinition.Locales.init -> void
+idunno.AtProto.Labels.LabelValueDefinition.Severity.get -> string!
+idunno.AtProto.Labels.LabelValueDefinition.Severity.init -> void
+idunno.AtProto.Labels.LabelValueDefinitionStrings
+idunno.AtProto.Labels.LabelValueDefinitionStrings.Description.get -> string!
+idunno.AtProto.Labels.LabelValueDefinitionStrings.Description.init -> void
+idunno.AtProto.Labels.LabelValueDefinitionStrings.Lang.get -> string!
+idunno.AtProto.Labels.LabelValueDefinitionStrings.Lang.init -> void
+idunno.AtProto.Labels.LabelValueDefinitionStrings.Name.get -> string!
+idunno.AtProto.Labels.LabelValueDefinitionStrings.Name.init -> void
+idunno.AtProto.Labels.SelfLabel
+idunno.AtProto.Labels.SelfLabel.SelfLabel(string! value) -> void
+idunno.AtProto.Labels.SelfLabel.Value.get -> string!
+idunno.AtProto.Labels.SelfLabel.Value.init -> void
+idunno.AtProto.Labels.SelfLabels
+idunno.AtProto.Labels.SelfLabels.AddLabel(string! name) -> void
+idunno.AtProto.Labels.SelfLabels.Contains(string! label) -> bool
+idunno.AtProto.Labels.SelfLabels.RemoveLabel(string! name) -> void
+idunno.AtProto.Labels.SelfLabels.SelfLabels() -> void
+idunno.AtProto.Labels.SelfLabels.SelfLabels(System.Collections.Generic.IReadOnlyList<idunno.AtProto.Labels.SelfLabel!>! values) -> void
+idunno.AtProto.Labels.SelfLabels.Type.get -> string!
+idunno.AtProto.Labels.SelfLabels.Values.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.Labels.SelfLabel!>!
+idunno.AtProto.Labels.SelfLabels.Values.set -> void
+idunno.AtProto.LogoutException
+idunno.AtProto.LogoutException.Error.get -> idunno.AtProto.AtErrorDetail?
+idunno.AtProto.LogoutException.Error.set -> void
+idunno.AtProto.LogoutException.LogoutException() -> void
+idunno.AtProto.LogoutException.LogoutException(string! message) -> void
+idunno.AtProto.LogoutException.LogoutException(string! message, System.Exception! inner) -> void
+idunno.AtProto.LogoutException.LogoutException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
+idunno.AtProto.LogoutException.StatusCode.get -> System.Net.HttpStatusCode
+idunno.AtProto.LogoutException.StatusCode.set -> void
+idunno.AtProto.Moderation.ModerationReport
+idunno.AtProto.Moderation.ModerationReport.CreatedAt.get -> System.DateTimeOffset
+idunno.AtProto.Moderation.ModerationReport.CreatedAt.init -> void
+idunno.AtProto.Moderation.ModerationReport.Id.get -> ulong
+idunno.AtProto.Moderation.ModerationReport.Id.init -> void
+idunno.AtProto.Moderation.ModerationReport.Reason.get -> string?
+idunno.AtProto.Moderation.ModerationReport.Reason.init -> void
+idunno.AtProto.Moderation.ModerationReport.ReasonType.get -> string!
+idunno.AtProto.Moderation.ModerationReport.ReasonType.init -> void
+idunno.AtProto.Moderation.ModerationReport.ReportedBy.get -> idunno.AtProto.Did!
+idunno.AtProto.Moderation.ModerationReport.ReportedBy.init -> void
+idunno.AtProto.Moderation.ModerationReport.Subject.get -> idunno.AtProto.Moderation.SubjectType!
+idunno.AtProto.Moderation.ModerationReport.Subject.init -> void
+idunno.AtProto.Moderation.SubjectType
+idunno.AtProto.PagedReadOnlyCollection<T>
+idunno.AtProto.PagedReadOnlyCollection<T>.Cursor.get -> string?
+idunno.AtProto.PagedReadOnlyCollection<T>.PagedReadOnlyCollection(string? cursor = null) -> void
+idunno.AtProto.PagedReadOnlyCollection<T>.PagedReadOnlyCollection(System.Collections.Generic.IEnumerable<T!>! collection, string? cursor = null) -> void
+idunno.AtProto.PagedReadOnlyCollection<T>.PagedReadOnlyCollection(System.Collections.Generic.IList<T!>! list, string? cursor = null) -> void
+idunno.AtProto.RateLimit
+idunno.AtProto.RateLimit.Limit.get -> int
+idunno.AtProto.RateLimit.Limit.init -> void
+idunno.AtProto.RateLimit.Policy.get -> idunno.AtProto.RateLimitPolicy?
+idunno.AtProto.RateLimit.Policy.init -> void
+idunno.AtProto.RateLimit.Remaining.get -> int
+idunno.AtProto.RateLimit.Remaining.init -> void
+idunno.AtProto.RateLimit.Reset.get -> System.DateTimeOffset
+idunno.AtProto.RateLimit.Reset.init -> void
+idunno.AtProto.RateLimitPolicy
+idunno.AtProto.RateLimitPolicy.Read.get -> int
+idunno.AtProto.RateLimitPolicy.Read.init -> void
+idunno.AtProto.RateLimitPolicy.Write.get -> int
+idunno.AtProto.RateLimitPolicy.Write.init -> void
+idunno.AtProto.RecordException
+idunno.AtProto.RecordException.RecordException() -> void
+idunno.AtProto.RecordException.RecordException(string! message) -> void
+idunno.AtProto.RecordException.RecordException(string! message, System.Exception! inner) -> void
+idunno.AtProto.RecordException.RecordException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
+idunno.AtProto.Repo.ApplyWritesCreateResult
+idunno.AtProto.Repo.ApplyWritesCreateResult.Cid.get -> idunno.AtProto.Cid!
+idunno.AtProto.Repo.ApplyWritesCreateResult.StrongReference.get -> idunno.AtProto.Repo.StrongReference!
+idunno.AtProto.Repo.ApplyWritesCreateResult.Uri.get -> idunno.AtProto.AtUri!
+idunno.AtProto.Repo.ApplyWritesCreateResult.ValidationStatus.get -> idunno.AtProto.Repo.ValidationStatus?
+idunno.AtProto.Repo.ApplyWritesDeleteResult
+idunno.AtProto.Repo.ApplyWritesResults
+idunno.AtProto.Repo.ApplyWritesResults.Commit.get -> idunno.AtProto.Repo.Commit!
+idunno.AtProto.Repo.ApplyWritesResults.Results.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Repo.IApplyWritesResult!>!
+idunno.AtProto.Repo.ApplyWritesUpdateResult
+idunno.AtProto.Repo.ApplyWritesUpdateResult.Cid.get -> idunno.AtProto.Cid!
+idunno.AtProto.Repo.ApplyWritesUpdateResult.Cid.init -> void
+idunno.AtProto.Repo.ApplyWritesUpdateResult.StrongReference.get -> idunno.AtProto.Repo.StrongReference!
+idunno.AtProto.Repo.ApplyWritesUpdateResult.Uri.get -> idunno.AtProto.AtUri!
+idunno.AtProto.Repo.ApplyWritesUpdateResult.Uri.init -> void
+idunno.AtProto.Repo.AtProtoObject
+idunno.AtProto.Repo.AtProtoRecord
+idunno.AtProto.Repo.AtProtoRecord.AtProtoRecord() -> void
+idunno.AtProto.Repo.AtProtoRecord.AtProtoRecord(idunno.AtProto.Repo.AtProtoRecord! record) -> void
+idunno.AtProto.Repo.AtProtoRecord.ExtensionData.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>?
+idunno.AtProto.Repo.AtProtoRecord.ExtensionData.set -> void
+idunno.AtProto.Repo.AtProtoRepositoryObject
+idunno.AtProto.Repo.AtProtoRepositoryObject.AtProtoRepositoryObject(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid) -> void
+idunno.AtProto.Repo.AtProtoRepositoryObject.Cid.get -> idunno.AtProto.Cid!
+idunno.AtProto.Repo.AtProtoRepositoryObject.Cid.init -> void
+idunno.AtProto.Repo.AtProtoRepositoryObject.StrongReference.get -> idunno.AtProto.Repo.StrongReference!
+idunno.AtProto.Repo.AtProtoRepositoryObject.Uri.get -> idunno.AtProto.AtUri!
+idunno.AtProto.Repo.AtProtoRepositoryObject.Uri.init -> void
+idunno.AtProto.Repo.AtProtoRepositoryRecord
+idunno.AtProto.Repo.AtProtoRepositoryRecord.AtProtoRepositoryRecord(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid, idunno.AtProto.Repo.AtProtoRecord? value) -> void
+idunno.AtProto.Repo.AtProtoRepositoryRecord.ExtensionData.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>?
+idunno.AtProto.Repo.AtProtoRepositoryRecord.ExtensionData.set -> void
+idunno.AtProto.Repo.AtProtoRepositoryRecord.Value.get -> idunno.AtProto.Repo.AtProtoRecord?
+idunno.AtProto.Repo.AtProtoRepositoryRecord.Value.set -> void
+idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>
+idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.AtProtoRepositoryRecord(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid, TRecord! value) -> void
+idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.ExtensionData.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>?
+idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.ExtensionData.set -> void
+idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.Value.get -> TRecord!
+idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.Value.set -> void
+idunno.AtProto.Repo.Blob
+idunno.AtProto.Repo.Blob.Blob(idunno.AtProto.Repo.BlobReference! reference, string! mimeType, int size) -> void
+idunno.AtProto.Repo.Blob.MimeType.get -> string!
+idunno.AtProto.Repo.Blob.MimeType.init -> void
+idunno.AtProto.Repo.Blob.Reference.get -> idunno.AtProto.Repo.BlobReference!
+idunno.AtProto.Repo.Blob.Reference.init -> void
+idunno.AtProto.Repo.Blob.Size.get -> int
+idunno.AtProto.Repo.Blob.Size.init -> void
+idunno.AtProto.Repo.Blob.Type.get -> string!
+idunno.AtProto.Repo.BlobReference
+idunno.AtProto.Repo.BlobReference.BlobReference(idunno.AtProto.Cid! link) -> void
+idunno.AtProto.Repo.BlobReference.Link.get -> idunno.AtProto.Cid!
+idunno.AtProto.Repo.BlobReference.Link.init -> void
+idunno.AtProto.Repo.Commit
+idunno.AtProto.Repo.Commit.Cid.get -> idunno.AtProto.Cid!
+idunno.AtProto.Repo.Commit.Cid.init -> void
+idunno.AtProto.Repo.Commit.Rev.get -> string!
+idunno.AtProto.Repo.Commit.Rev.init -> void
+idunno.AtProto.Repo.CreateOperation
+idunno.AtProto.Repo.CreateOperation.CreateOperation(idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey! recordKey, object! recordValue) -> void
+idunno.AtProto.Repo.CreateOperation.CreateOperation(idunno.AtProto.Nsid! collection, object! recordValue) -> void
+idunno.AtProto.Repo.CreateOperation.RecordValue.get -> object!
+idunno.AtProto.Repo.CreateOperation.RecordValue.init -> void
+idunno.AtProto.Repo.CreateRecordResult
+idunno.AtProto.Repo.CreateRecordResult.Cid.get -> idunno.AtProto.Cid!
+idunno.AtProto.Repo.CreateRecordResult.Commit.get -> idunno.AtProto.Repo.Commit?
+idunno.AtProto.Repo.CreateRecordResult.CreateRecordResult(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid, idunno.AtProto.Repo.Commit? commit, idunno.AtProto.Repo.ValidationStatus? validationStatus) -> void
+idunno.AtProto.Repo.CreateRecordResult.CreateRecordResult(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid, idunno.AtProto.Repo.Commit? commit, string? validationStatus) -> void
+idunno.AtProto.Repo.CreateRecordResult.StrongReference.get -> idunno.AtProto.Repo.StrongReference!
+idunno.AtProto.Repo.CreateRecordResult.Uri.get -> idunno.AtProto.AtUri!
+idunno.AtProto.Repo.CreateRecordResult.ValidationStatus.get -> idunno.AtProto.Repo.ValidationStatus?
+idunno.AtProto.Repo.DeleteOperation
+idunno.AtProto.Repo.DeleteOperation.DeleteOperation(idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey! recordKey) -> void
+idunno.AtProto.Repo.IApplyWritesResult
+idunno.AtProto.Repo.PutRecordResult
+idunno.AtProto.Repo.PutRecordResult.Cid.get -> idunno.AtProto.Cid!
+idunno.AtProto.Repo.PutRecordResult.Commit.get -> idunno.AtProto.Repo.Commit?
+idunno.AtProto.Repo.PutRecordResult.StrongReference.get -> idunno.AtProto.Repo.StrongReference!
+idunno.AtProto.Repo.PutRecordResult.Uri.get -> idunno.AtProto.AtUri!
+idunno.AtProto.Repo.PutRecordResult.ValidationStatus.get -> idunno.AtProto.Repo.ValidationStatus?
+idunno.AtProto.Repo.RepoDescription
+idunno.AtProto.Repo.RepoDescription.Collections.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Nsid!>!
+idunno.AtProto.Repo.RepoDescription.Collections.init -> void
+idunno.AtProto.Repo.RepoDescription.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Repo.RepoDescription.Did.init -> void
+idunno.AtProto.Repo.RepoDescription.DidDoc.get -> idunno.AtProto.DidDocument!
+idunno.AtProto.Repo.RepoDescription.DidDoc.init -> void
+idunno.AtProto.Repo.RepoDescription.Handle.get -> idunno.AtProto.Handle!
+idunno.AtProto.Repo.RepoDescription.Handle.init -> void
+idunno.AtProto.Repo.RepoDescription.HandleIsCorrect.get -> bool
+idunno.AtProto.Repo.RepoDescription.HandleIsCorrect.init -> void
+idunno.AtProto.Repo.StrongReference
+idunno.AtProto.Repo.StrongReference.Cid.get -> idunno.AtProto.Cid!
+idunno.AtProto.Repo.StrongReference.Cid.init -> void
+idunno.AtProto.Repo.StrongReference.StrongReference(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid) -> void
+idunno.AtProto.Repo.StrongReference.Uri.get -> idunno.AtProto.AtUri!
+idunno.AtProto.Repo.StrongReference.Uri.init -> void
+idunno.AtProto.Repo.UpdateOperation
+idunno.AtProto.Repo.UpdateOperation.RecordValue.get -> object!
+idunno.AtProto.Repo.UpdateOperation.RecordValue.init -> void
+idunno.AtProto.Repo.UpdateOperation.UpdateOperation(idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey! recordKey, object! recordValue) -> void
+idunno.AtProto.Repo.ValidationStatus
+idunno.AtProto.Repo.ValidationStatus.Unknown = 0 -> idunno.AtProto.Repo.ValidationStatus
+idunno.AtProto.Repo.ValidationStatus.Valid = 1 -> idunno.AtProto.Repo.ValidationStatus
+idunno.AtProto.Repo.WriteOperation
+idunno.AtProto.Repo.WriteOperation.Collection.get -> idunno.AtProto.Nsid!
+idunno.AtProto.Repo.WriteOperation.Collection.init -> void
+idunno.AtProto.Repo.WriteOperation.RecordKey.get -> idunno.AtProto.RecordKey?
+idunno.AtProto.Repo.WriteOperation.RecordKey.init -> void
+idunno.AtProto.Repo.WriteOperation.WriteOperation(idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey? recordKey) -> void
+idunno.AtProto.Resolution
+idunno.AtProto.ResponseParseException
+idunno.AtProto.ResponseParseException.ResponseParseException() -> void
+idunno.AtProto.ResponseParseException.ResponseParseException(string! message) -> void
+idunno.AtProto.ResponseParseException.ResponseParseException(string! message, System.Exception! inner) -> void
+idunno.AtProto.ResponseParseException.ResponseParseException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
+idunno.AtProto.SecurityTokenValidationException
+idunno.AtProto.SecurityTokenValidationException.SecurityTokenValidationException() -> void
+idunno.AtProto.SecurityTokenValidationException.SecurityTokenValidationException(string! message) -> void
+idunno.AtProto.SecurityTokenValidationException.SecurityTokenValidationException(string! message, System.Exception! inner) -> void
+idunno.AtProto.SecurityTokenValidationException.SecurityTokenValidationException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
+idunno.AtProto.Server.Models.Contact
+idunno.AtProto.Server.Models.Contact.Contact(string! email) -> void
+idunno.AtProto.Server.Models.Contact.Email.get -> string!
+idunno.AtProto.Server.Models.Links
+idunno.AtProto.Server.Models.Links.PrivacyPolicy.get -> System.Uri?
+idunno.AtProto.Server.Models.Links.TermsOfService.get -> System.Uri?
+idunno.AtProto.Server.Models.ServerDescription
+idunno.AtProto.Server.Models.ServerDescription.AvailableUserDomains.get -> System.Collections.Generic.IReadOnlyList<string!>!
+idunno.AtProto.Server.Models.ServerDescription.Contact.get -> idunno.AtProto.Server.Models.Contact?
+idunno.AtProto.Server.Models.ServerDescription.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.Server.Models.ServerDescription.InviteCodeRequired.get -> bool
+idunno.AtProto.Server.Models.ServerDescription.Links.get -> idunno.AtProto.Server.Models.Links?
+idunno.AtProto.Server.Models.ServerDescription.PhoneVerificationRequired.get -> bool
+idunno.AtProto.ServiceCollectionExtensions
+idunno.AtProto.SessionRestorationFailedException
+idunno.AtProto.SessionRestorationFailedException.Error.get -> idunno.AtProto.AtErrorDetail?
+idunno.AtProto.SessionRestorationFailedException.Error.set -> void
+idunno.AtProto.SessionRestorationFailedException.SessionRestorationFailedException() -> void
+idunno.AtProto.SessionRestorationFailedException.SessionRestorationFailedException(string! message) -> void
+idunno.AtProto.SessionRestorationFailedException.SessionRestorationFailedException(string! message, System.Exception! inner) -> void
+idunno.AtProto.SessionRestorationFailedException.SessionRestorationFailedException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
+idunno.AtProto.SessionRestorationFailedException.StatusCode.get -> System.Net.HttpStatusCode
+idunno.AtProto.SessionRestorationFailedException.StatusCode.set -> void
+idunno.AtProto.StringExtensions
+idunno.AtProto.TypeResolver
+idunno.AtProto.VerificationMethod
+idunno.AtProto.VerificationMethod.Controller.get -> idunno.AtProto.Did!
+idunno.AtProto.VerificationMethod.Controller.init -> void
+idunno.AtProto.VerificationMethod.Id.get -> string!
+idunno.AtProto.VerificationMethod.Id.init -> void
+idunno.AtProto.VerificationMethod.Properties.get -> System.Collections.Generic.IDictionary<string!, object!>?
+idunno.AtProto.VerificationMethod.PublicKeyMultibase.get -> string?
+idunno.AtProto.VerificationMethod.PublicKeyMultibase.init -> void
+idunno.AtProto.VerificationMethod.Type.get -> string!
+idunno.AtProto.VerificationMethod.Type.init -> void
+idunno.AtProto.WebSocketOptions
+idunno.AtProto.WebSocketOptions.KeepAliveInterval.get -> System.TimeSpan?
+idunno.AtProto.WebSocketOptions.KeepAliveInterval.init -> void
+idunno.AtProto.WebSocketOptions.Proxy.get -> System.Net.IWebProxy?
+idunno.AtProto.WebSocketOptions.Proxy.init -> void
+idunno.DidPlcDirectory.DirectoryAgent
+idunno.DidPlcDirectory.DirectoryAgent.DirectoryAgent(idunno.DidPlcDirectory.DirectoryAgentOptions? options = null) -> void
+idunno.DidPlcDirectory.DirectoryAgent.DirectoryAgent(System.Net.Http.IHttpClientFactory! httpClientFactory, idunno.DidPlcDirectory.DirectoryAgentOptions? options = null) -> void
+idunno.DidPlcDirectory.DirectoryAgent.ResolveDidDocument(idunno.AtProto.Did! did, System.Uri? directory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.DidDocument!>!>!
+idunno.DidPlcDirectory.DirectoryAgentOptions
+idunno.DidPlcDirectory.DirectoryAgentOptions.DirectoryAgentOptions() -> void
+idunno.DidPlcDirectory.DirectoryAgentOptions.HttpClientOptions.get -> idunno.AtProto.HttpClientOptions?
+idunno.DidPlcDirectory.DirectoryAgentOptions.HttpClientOptions.set -> void
+idunno.DidPlcDirectory.DirectoryAgentOptions.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory?
+idunno.DidPlcDirectory.DirectoryAgentOptions.LoggerFactory.set -> void
+idunno.DidPlcDirectory.DirectoryAgentOptions.PlcDirectoryUri.get -> System.Uri!
+idunno.DidPlcDirectory.DirectoryAgentOptions.PlcDirectoryUri.set -> void
+override idunno.AtProto.AtProtoAgent.Dispose(bool disposing) -> void
+override idunno.AtProto.AtProtoAgent.IsAuthenticated.get -> bool
+override idunno.AtProto.Authentication.AccessCredentials.SetAuthenticationHeaders(System.Net.Http.HttpRequestMessage! httpRequestMessage) -> void
+override idunno.AtProto.Authentication.AccessTokenCredential.SetAuthenticationHeaders(System.Net.Http.HttpRequestMessage! httpRequestMessage) -> void
+override idunno.AtProto.Authentication.DPoPAccessCredentials.SetAuthenticationHeaders(System.Net.Http.HttpRequestMessage! httpRequestMessage) -> void
+override idunno.AtProto.Authentication.DPoPRefreshCredential.SetAuthenticationHeaders(System.Net.Http.HttpRequestMessage! httpRequestMessage) -> void
+override idunno.AtProto.Authentication.OAuthLoginState.Equals(object? obj) -> bool
+override idunno.AtProto.Authentication.OAuthLoginState.GetHashCode() -> int
+override idunno.AtProto.Authentication.RefreshCredential.SetAuthenticationHeaders(System.Net.Http.HttpRequestMessage! httpRequestMessage) -> void
+override idunno.AtProto.Authentication.ServiceCredential.SetAuthenticationHeaders(System.Net.Http.HttpRequestMessage! httpRequestMessage) -> void
+override idunno.AtProto.Repo.Commit.ToString() -> string!
+override idunno.AtProto.Repo.StrongReference.ToString() -> string!
+override idunno.AtProto.Server.Models.Contact.ToString() -> string!
+static idunno.AtProto.AtProtoAgent.CreateBuilder() -> idunno.AtProto.AtProtoAgentBuilder!
+static idunno.AtProto.AtProtoAgentBuilder.Create() -> idunno.AtProto.AtProtoAgentBuilder!
+static idunno.AtProto.AtProtoJsonSerializerOptions.Options.get -> System.Text.Json.JsonSerializerOptions!
+static idunno.AtProto.AtProtoJsonSerializerOptions.TypeInfoResolver.get -> System.Text.Json.Serialization.Metadata.IJsonTypeInfoResolver!
+static idunno.AtProto.AtProtoServer.ApplyWrites(System.Collections.Generic.ICollection<idunno.AtProto.Repo.WriteOperation!>! operations, idunno.AtProto.Did! repo, bool? validate, idunno.AtProto.Cid? cid, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, string? serviceProxy = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.ApplyWritesResults!>!>!
+static idunno.AtProto.AtProtoServer.ApplyWrites(System.Collections.Generic.ICollection<idunno.AtProto.Repo.WriteOperation!>! operations, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, idunno.AtProto.Did! repo, bool? validate, idunno.AtProto.Cid? cid, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, string? serviceProxy = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.ApplyWritesResults!>!>!
+static idunno.AtProto.AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(System.Text.Json.JsonSerializerOptions! jsonSerializerOptions) -> System.Text.Json.JsonSerializerOptions!
+static idunno.AtProto.AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(System.Text.Json.Serialization.Metadata.IJsonTypeInfoResolver! jsonTypeInfoResolver) -> System.Text.Json.JsonSerializerOptions!
+static idunno.AtProto.AtProtoServer.CreateModerationReport(idunno.AtProto.Did! labelerDid, idunno.AtProto.Moderation.SubjectType! subject, string! reportType, string? reason, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Moderation.ModerationReport!>!>!
+static idunno.AtProto.AtProtoServer.CreateRecord<TRecord>(TRecord! record, idunno.AtProto.Nsid! collection, idunno.AtProto.Did! creator, idunno.AtProto.RecordKey? rKey, bool? validate, idunno.AtProto.Cid? swapCommit, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, string? serviceProxy = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+static idunno.AtProto.AtProtoServer.CreateRecord<TRecord>(TRecord! record, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, idunno.AtProto.Nsid! collection, idunno.AtProto.Did! creator, idunno.AtProto.RecordKey? rKey, bool? validate, idunno.AtProto.Cid? swapCommit, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, string? serviceProxy = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+static idunno.AtProto.AtProtoServer.CreateSession(string! identifier, string! password, string? authFactorToken, System.Uri! service, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Authentication.Session!>!>!
+static idunno.AtProto.AtProtoServer.DeleteRecord(idunno.AtProto.AtIdentifier! repo, idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey! rKey, idunno.AtProto.Cid? swapRecord, idunno.AtProto.Cid? swapCommit, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, string? serviceProxy = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Commit!>!>!
+static idunno.AtProto.AtProtoServer.DeleteSession(idunno.AtProto.Authentication.RefreshCredential! refreshCredential, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+static idunno.AtProto.AtProtoServer.DescribeRepo(idunno.AtProto.AtIdentifier! repo, System.Uri! service, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.RepoDescription!>!>!
+static idunno.AtProto.AtProtoServer.DescribeServer(System.Uri! service, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Server.Models.ServerDescription!>!>!
+static idunno.AtProto.AtProtoServer.GetRecord<TRecord>(idunno.AtProto.AtIdentifier! repo, idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey! rKey, idunno.AtProto.Cid? cid, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, string? serviceProxy = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord!>!>!>!
+static idunno.AtProto.AtProtoServer.GetRecord<TRecord>(idunno.AtProto.AtIdentifier! repo, idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey! rKey, idunno.AtProto.Cid? cid, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, string? serviceProxy = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord!>!>!>!
+static idunno.AtProto.AtProtoServer.GetServiceAuth(idunno.AtProto.Did! audience, System.TimeSpan? expiry, idunno.AtProto.Nsid! lxm, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? accessCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Authentication.ServiceCredential!>!>!
+static idunno.AtProto.AtProtoServer.GetSession(idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? credentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Authentication.Session!>!>!
+static idunno.AtProto.AtProtoServer.ListRecords<TRecord>(idunno.AtProto.AtIdentifier! repo, idunno.AtProto.Nsid! collection, int? limit, string? cursor, bool reverse, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, string? serviceProxy = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord!>!>!>!>!
+static idunno.AtProto.AtProtoServer.ListRecords<TRecord>(idunno.AtProto.AtIdentifier! repo, idunno.AtProto.Nsid! collection, int? limit, string? cursor, bool reverse, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, string? serviceProxy = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord!>!>!>!>!
+static idunno.AtProto.AtProtoServer.PutRecord<TRecord>(idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord!>! repositoryRecord, bool? validate, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, string? serviceProxy = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+static idunno.AtProto.AtProtoServer.PutRecord<TRecord>(idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord!>! repositoryRecord, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, bool? validate, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, string? serviceProxy = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+static idunno.AtProto.AtProtoServer.PutRecord<TRecord>(TRecord! record, idunno.AtProto.Nsid! collection, idunno.AtProto.AtIdentifier! creator, idunno.AtProto.RecordKey! rKey, bool? validate, idunno.AtProto.Cid? swapCommit, idunno.AtProto.Cid? swapRecord, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, string? serviceProxy = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+static idunno.AtProto.AtProtoServer.PutRecord<TRecord>(TRecord! record, System.Text.Json.JsonSerializerOptions! jsonSerializerOptions, idunno.AtProto.Nsid! collection, idunno.AtProto.AtIdentifier! creator, idunno.AtProto.RecordKey! rKey, bool? validate, idunno.AtProto.Cid? swapCommit, idunno.AtProto.Cid? swapRecord, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, string? serviceProxy = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+static idunno.AtProto.AtProtoServer.QueryLabels(System.Collections.Generic.IEnumerable<string!>! uriPatterns, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? sources, int? limit, string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Labels.Label!>!>!>!
+static idunno.AtProto.AtProtoServer.RefreshSession(idunno.AtProto.Authentication.RefreshCredential! refreshCredential, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? credentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Authentication.Session!>!>!
+static idunno.AtProto.AtProtoServer.ResolveHandle(idunno.AtProto.Handle! handle, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Did?>!
+static idunno.AtProto.AtProtoServer.ResolveHandle(string! handle, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Did?>!
+static idunno.AtProto.AtProtoServer.UploadBlob(byte[]! blob, string! mimeType, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, string? serviceProxy = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Blob!>!>!
+static idunno.AtProto.Authentication.AtProtoCredential.Create(System.Security.Claims.ClaimsIdentity! identity) -> idunno.AtProto.Authentication.DPoPAccessCredentials!
+static idunno.AtProto.Authentication.AtProtoCredential.Create(System.Security.Claims.ClaimsPrincipal! principal) -> idunno.AtProto.Authentication.DPoPAccessCredentials!
+static idunno.AtProto.Authentication.AtProtoCredential.Create(System.Uri! service, idunno.AtProto.Authentication.AuthenticationType authenticationType, string? accessJwt = null, string? refreshToken = null, string? dPoPProofKey = null, string? dPoPNonce = null) -> idunno.AtProto.Authentication.AtProtoCredential!
+static idunno.AtProto.Authentication.OAuthClient.DefaultScopes.get -> System.Collections.Generic.IEnumerable<string!>!
+static idunno.AtProto.Authentication.OAuthClient.OpenBrowser(System.Uri! uri) -> void
+static idunno.AtProto.Authentication.OAuthLoginState.FromJson(string! json) -> idunno.AtProto.Authentication.OAuthLoginState?
+static idunno.AtProto.Authentication.OAuthLoginState.implicit operator Duende.IdentityModel.OidcClient.AuthorizeState?(idunno.AtProto.Authentication.OAuthLoginState! state) -> Duende.IdentityModel.OidcClient.AuthorizeState?
+static idunno.AtProto.Authentication.OAuthLoginState.operator !=(idunno.AtProto.Authentication.OAuthLoginState? lhs, idunno.AtProto.Authentication.OAuthLoginState? rhs) -> bool
+static idunno.AtProto.Authentication.OAuthLoginState.operator ==(idunno.AtProto.Authentication.OAuthLoginState? lhs, idunno.AtProto.Authentication.OAuthLoginState? rhs) -> bool
+static idunno.AtProto.Authentication.OAuthLoginState.ToJson(idunno.AtProto.Authentication.OAuthLoginState! state) -> string!
+static idunno.AtProto.Jetstream.AtProtoJetstream.CreateBuilder() -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+static idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.Create() -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+static idunno.AtProto.Resolution.ResolveDidDocument(idunno.AtProto.Did! did, System.Uri? plcDirectory = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Net.Http.HttpClient? httpClient = null, System.TimeSpan? timeout = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.DidDocument?>!
+static idunno.AtProto.Resolution.ResolveDidDocument(idunno.AtProto.Handle! handle, System.Uri? plcDirectory = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Net.Http.HttpClient? httpClient = null, System.TimeSpan? timeout = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.DidDocument?>!
+static idunno.AtProto.Resolution.ResolveDidDocument(string! atIdentifier, System.Uri? plcDirectory = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Net.Http.HttpClient? httpClient = null, System.TimeSpan? timeout = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.DidDocument?>!
+static idunno.AtProto.Resolution.ResolveHandle(idunno.AtProto.Handle! handle, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Net.Http.HttpClient? httpClient = null, System.TimeSpan? timeout = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Did?>!
+static idunno.AtProto.Resolution.ResolveHandle(string! handle, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Net.Http.HttpClient? httpClient = null, System.TimeSpan? timeout = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Did?>!
+static idunno.AtProto.Resolution.ResolvePds(idunno.AtProto.Did! did, System.Uri? plcDirectory = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Net.Http.HttpClient? httpClient = null, System.TimeSpan? timeout = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Uri?>!
+static idunno.AtProto.Resolution.ResolvePds(idunno.AtProto.Handle! handle, System.Uri? plcDirectory = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Net.Http.HttpClient? httpClient = null, System.TimeSpan? timeout = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Uri?>!
+static idunno.AtProto.Resolution.ResolvePds(string! atIdentifier, System.Uri? plcDirectory = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Net.Http.HttpClient? httpClient = null, System.TimeSpan? timeout = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Uri?>!
+static idunno.AtProto.ServiceCollectionExtensions.AddAtProtoAgentOptions(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, idunno.AtProto.AtProtoAgentOptions! configureOptions) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static idunno.AtProto.ServiceCollectionExtensions.AddAtProtoAgentOptions(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static idunno.AtProto.ServiceCollectionExtensions.AddAtProtoAgentOptions(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! configSectionPath = "AtProtoAgent") -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static idunno.AtProto.ServiceCollectionExtensions.AddAtProtoAgentOptions(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<idunno.AtProto.AtProtoAgentOptions!>! configureOptions) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static idunno.AtProto.StringExtensions.GetGraphemeLength(this string! s) -> int
+static idunno.AtProto.TypeResolver.JsonTypeInfoResolver.get -> System.Text.Json.Serialization.Metadata.IJsonTypeInfoResolver!
+virtual idunno.AtProto.Agent.Dispose(bool disposing) -> void
+virtual idunno.AtProto.Agent.IsAuthenticated.get -> bool
+virtual idunno.AtProto.AtProtoAgent.InternalOnCredentialsUpdatedCallBack(idunno.AtProto.Authentication.AtProtoCredential! credentials) -> void
+virtual idunno.AtProto.AtProtoAgent.OnAuthenticated(idunno.AtProto.Events.AuthenticatedEventArgs! e) -> void
+virtual idunno.AtProto.AtProtoAgent.OnCredentialsUpdated(idunno.AtProto.Events.CredentialsUpdatedEventArgs! e) -> void
+virtual idunno.AtProto.AtProtoAgent.OnTokenRefreshFailed(idunno.AtProto.Events.TokenRefreshFailedEventArgs! e) -> void
+virtual idunno.AtProto.AtProtoAgent.OnUnauthenticated(idunno.AtProto.Events.UnauthenticatedEventArgs! e) -> void
+virtual idunno.AtProto.AtProtoAgentBuilder.Build() -> idunno.AtProto.AtProtoAgent!
+virtual idunno.AtProto.Jetstream.AtProtoJetstream.Dispose(bool disposing) -> void
+virtual idunno.AtProto.Jetstream.AtProtoJetstream.OnConnectionStateChanged(idunno.AtProto.Jetstream.Events.ConnectionStateChangedEventArgs! e) -> void
+virtual idunno.AtProto.Jetstream.AtProtoJetstream.OnFaultRaised(idunno.AtProto.Jetstream.Events.FaultRaisedEventArgs! e) -> void
+virtual idunno.AtProto.Jetstream.AtProtoJetstream.OnMessageReceived(idunno.AtProto.Jetstream.Events.MessageReceivedEventArgs! e) -> void
+virtual idunno.AtProto.Jetstream.AtProtoJetstream.OnRecordReceived(idunno.AtProto.Jetstream.Events.RecordReceivedEventArgs! e) -> void

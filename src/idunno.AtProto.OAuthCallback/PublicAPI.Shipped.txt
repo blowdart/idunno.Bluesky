@@ -1,0 +1,16 @@
+﻿#nullable enable
+idunno.AtProto.OAuthCallback.CallbackServer
+idunno.AtProto.OAuthCallback.CallbackServer.CallbackServer(int port, string? path = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null) -> void
+idunno.AtProto.OAuthCallback.CallbackServer.DisposeAsync() -> System.Threading.Tasks.ValueTask
+idunno.AtProto.OAuthCallback.CallbackServer.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory!
+idunno.AtProto.OAuthCallback.CallbackServer.LoggerFactory.init -> void
+idunno.AtProto.OAuthCallback.CallbackServer.ResponseStyleSheet.get -> string?
+idunno.AtProto.OAuthCallback.CallbackServer.ResponseStyleSheet.set -> void
+idunno.AtProto.OAuthCallback.CallbackServer.SuccessBody.get -> string!
+idunno.AtProto.OAuthCallback.CallbackServer.SuccessBody.set -> void
+idunno.AtProto.OAuthCallback.CallbackServer.SuccessTitle.get -> string?
+idunno.AtProto.OAuthCallback.CallbackServer.SuccessTitle.set -> void
+idunno.AtProto.OAuthCallback.CallbackServer.Uri.get -> System.Uri!
+idunno.AtProto.OAuthCallback.CallbackServer.Uri.init -> void
+idunno.AtProto.OAuthCallback.CallbackServer.WaitForCallbackAsync(int timeoutInSeconds = 300, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
+static idunno.AtProto.OAuthCallback.CallbackServer.GetRandomUnusedPort() -> int
