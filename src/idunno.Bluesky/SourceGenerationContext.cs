@@ -219,6 +219,7 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(StarterPackView))]
     [JsonSerializable(typeof(StarterPackViewBasic))]
     [JsonSerializable(typeof(SuggestedActors))]
+    [JsonSerializable(typeof(GetActorStarterPacksResponse))]
 
     [JsonSerializable(typeof(Notifications.Model.GetPreferencesResponse), TypeInfoPropertyName = "NotificationGetPreferencesResponse")]
     [JsonSerializable(typeof(Notifications.Model.ListActivitySubscriptionsResponse))]

@@ -74,6 +74,9 @@ namespace idunno.Bluesky
         // https://docs.bsky.app/docs/api/app-bsky-graph-unmute-thread
         private const string UnmuteThreadEndpoint = "/xrpc/app.bsky.graph.unmuteThread";
 
+        // https://docs.bsky.app/docs/api/app-bsky-graph-get-actor-starter-packs
+        private const string GetActorStarterPacksEndpoint = "/xrpc/app.bsky.graph.getActorStarterPacks";
+
         /// <summary>
         /// Enumerates which accounts the requesting account is currently blocking. Requires authentication.
         /// </summary>
@@ -1459,6 +1462,71 @@ namespace idunno.Bluesky
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return response;
+        }
+
+        /// <summary>
+        /// Get a list of starter packs created by the <paramref name="actor"/>.
+        /// </summary>
+        /// <param name="actor">The <see cref="AtIdentifier"/> of the actor whose starter packs should be returned.</param>
+        /// <param name="service">The <see cref="Uri"/> of the service remove the mute from.</param>
+        /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
+        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+        public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<StarterPackViewBasic>>> GetActorStarterPacks(
+            AtIdentifier actor,
+            Uri service,
+            AccessCredentials? accessCredentials,
+            HttpClient httpClient,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
+            ILoggerFactory? loggerFactory = default,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(actor);
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(httpClient);
+
+            AtProtoHttpClient<GetActorStarterPacksResponse> client = new(AppViewProxy, loggerFactory);
+            AtProtoHttpResult<GetActorStarterPacksResponse> response = await client.Get(
+                service,
+                $"{GetActorStarterPacksEndpoint}?actor={Uri.EscapeDataString(actor.ToString())}",
+                credentials: accessCredentials,
+                httpClient: httpClient,
+                jsonSerializerOptions: BlueskyJsonSerializerOptions,
+                onCredentialsUpdated: onCredentialsUpdated,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (response.Succeeded)
+            {
+                PagedViewReadOnlyCollection<StarterPackViewBasic> pagedCollection =
+                    new(
+                        new List<StarterPackViewBasic>(response.Result.StarterPacks).AsReadOnly(),
+                        response.Result.Cursor);
+                return new AtProtoHttpResult<PagedViewReadOnlyCollection<StarterPackViewBasic>>(
+                    pagedCollection,
+                    response.StatusCode,
+                    response.HttpResponseHeaders,
+                    response.AtErrorDetail,
+                    response.RateLimit);
+            }
+            else
+            {
+                return new AtProtoHttpResult<PagedViewReadOnlyCollection<StarterPackViewBasic>>(
+                    null,
+                    response.StatusCode,
+                    response.HttpResponseHeaders,
+                    response.AtErrorDetail,
+                    response.RateLimit);
+            }
         }
     }
 }

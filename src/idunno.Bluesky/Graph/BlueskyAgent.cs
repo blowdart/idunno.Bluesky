@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Threading.Tasks;
 using idunno.AtProto;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
@@ -771,6 +772,28 @@ namespace idunno.Bluesky
 
             return await BlueskyServer.UnmuteThread(
                 rootUri,
+                service: Service,
+                accessCredentials: Credentials,
+                httpClient: HttpClient,
+                onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+                loggerFactory: LoggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Get a list of starter packs created by the <paramref name="actor"/>.
+        /// </summary>
+        /// <param name="actor">The <see cref="AtIdentifier"/> of the actor whose starter packs should be returned.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<StarterPackViewBasic>>> GetActorStarterPacks(
+            AtIdentifier actor,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(actor);
+
+            return await BlueskyServer.GetActorStarterPacks(
+                actor,
                 service: Service,
                 accessCredentials: Credentials,
                 httpClient: HttpClient,
