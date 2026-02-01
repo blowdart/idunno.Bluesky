@@ -1,4 +1,4 @@
-name: Release Build, Test, Sign, Publish
+﻿name: Release Build, Test, Sign, Publish
 on:
   workflow_dispatch:
     inputs:
@@ -110,7 +110,7 @@ jobs:
       uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
 
     - name: 'Install Sign CLI'
-      run: dotnet tool install --tool-path ./sign sign --version 0.9.1-beta.25169.2
+      run: dotnet tool install --tool-path ./sign sign --version 0.9.1-beta.25379.1
 
     - name: 'Gather nupkgs from build output'
       uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
