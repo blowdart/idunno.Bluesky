@@ -38,7 +38,7 @@
 #### idunno.Bluesky
 
 * Changed `StarterPack` `Feeds` property to be a list of `FeedItem`, fixes [#288](https://github.com/blowdart/idunno.Bluesky/issues/288)
-* Changed `StarterPack` constructor to take a list of `FeedItem` for feeds parameter. fixes [#288](https://github.com/blowdart/idunno.Bluesky/issues/288)
+* Changed `StarterPack` constructor to take a list of `FeedItem` for feeds parameter, fixes [#288](https://github.com/blowdart/idunno.Bluesky/issues/288)
 
 ####
 
