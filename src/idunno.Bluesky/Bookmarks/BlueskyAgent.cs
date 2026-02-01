@@ -54,6 +54,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticationRequiredException">Thrown if the agent is not authenticated.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> CreateBookmark(
             StrongReference strongReference,
             CancellationToken cancellationToken = default)
@@ -83,6 +84,8 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticationRequiredException">Thrown if the agent is not authenticated.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, or its Collection property is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/>'s Collection property does not point to a post.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> DeleteBookmark(
             AtUri uri,
             CancellationToken cancellationToken = default)
@@ -116,6 +119,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticationRequiredException">Thrown if the agent is not authenticated.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is less than 1 or greater than <see cref="Maximum.Bookmarks"/>.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<BookmarkView>>> GetBookmarks(
             int? limit,
             string? cursor = null,

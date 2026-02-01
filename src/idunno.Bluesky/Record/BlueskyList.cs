@@ -105,6 +105,8 @@ namespace idunno.Bluesky.Record
         /// <summary>
         /// Gets or sets the display name for the list.
         /// </summary>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> is null or empty.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> exceeds 64 characters.</exception>
         [JsonInclude]
         [JsonRequired]
         public string Name
@@ -126,6 +128,8 @@ namespace idunno.Bluesky.Record
         /// <summary>
         /// Gets or sets the description of the list, if any.
         /// </summary>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> is null or empty.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> exceeds 300 graphemes.</exception>
         [JsonInclude]
         public string? Description
         {

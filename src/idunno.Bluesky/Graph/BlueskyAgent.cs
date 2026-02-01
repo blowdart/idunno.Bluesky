@@ -172,6 +172,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<Followers>> GetKnownFollowers(
             AtIdentifier actor,
@@ -787,6 +788,7 @@ namespace idunno.Bluesky
         /// <param name="cursor">An optional cursor for pagination.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is <see langword="null" />.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<StarterPackViewBasic>>> GetActorStarterPacks(
             AtIdentifier actor,
             int? limit = null,

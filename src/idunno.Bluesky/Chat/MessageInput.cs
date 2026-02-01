@@ -20,6 +20,8 @@ namespace idunno.Bluesky.Chat
         /// <param name="text">The text for the message.</param>
         /// <param name="facets">The rich text <see cref="Facet"/>s for the message, if any.</param>
         /// <param name="embed">The <see cref="EmbeddedRecord"/> for the message, if any.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> exceeds the maximum allowed length.</exception>
         public MessageInput(string text, ICollection<Facet>? facets = null, EmbeddedRecord? embed = null)
         {
             ArgumentNullException.ThrowIfNull(text);

@@ -20,6 +20,7 @@ namespace idunno.Bluesky.Graph
         /// </summary>
         /// <param name="uri">The <see cref="AtUri"/> of list item.</param>
         /// <param name="subject">A <see cref="ProfileView"/> of the actor the list item refers to.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="subject"/> are <see langword="null"/>.</exception>
         public ListItemView(AtUri uri, ProfileView subject)
         {
             ArgumentNullException.ThrowIfNull(uri);

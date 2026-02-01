@@ -16,6 +16,7 @@ namespace idunno.AtProto.Repo
         /// </summary>
         /// <param name="collection">The <see cref="Nsid"/> identifying the collection the record will be created in.</param>
         /// <param name="recordValue">The value of the record to be created.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="collection"/> or <paramref name="recordValue"/> is <see langword="null"/>.</exception>
         public CreateOperation(Nsid collection, object recordValue) : base(collection, null)
         {
             ArgumentNullException.ThrowIfNull(collection);
@@ -30,6 +31,7 @@ namespace idunno.AtProto.Repo
         /// <param name="collection">The <see cref="Nsid"/> identifying the collection the record will be created in.</param>
         /// <param name="recordKey">The <see cref="RecordKey"/> the record will be created with.</param>
         /// <param name="recordValue">The value of the record to be created.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="collection"/>, <paramref name="recordKey"/>, or <paramref name="recordValue"/> is <see langword="null"/>.</exception>
         public CreateOperation(Nsid collection, RecordKey recordKey, object recordValue) : base(collection, recordKey)
         {
             ArgumentNullException.ThrowIfNull(collection);

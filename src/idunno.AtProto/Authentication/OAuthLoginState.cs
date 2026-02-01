@@ -23,6 +23,7 @@ namespace idunno.AtProto.Authentication
         /// <param name="proofKey">The DPoP proof key which was used to sign the token request.</param>
         /// <param name="correlationId">The correlation identifier used in logging to tie requests and responses together.</param>
         /// <param name="extraProperties">Any extra properties to save in state.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="state"/> is null.</exception>
         public OAuthLoginState(
             AuthorizeState state,
             string expectedAuthority,

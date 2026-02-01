@@ -201,6 +201,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="identity">The <see cref="ClaimsIdentity"/> to extract authentication properties from.</param>
         /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> is null.</exception>
         public AtProtoAgent(
             ClaimsIdentity identity,
             AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions)
@@ -245,6 +246,7 @@ namespace idunno.AtProto
         /// <param name="identity">The <see cref="ClaimsIdentity"/> to extract authentication properties from.</param>
         /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
         /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> is null.</exception>
         public AtProtoAgent(
             ClaimsIdentity identity,
             IHttpClientFactory httpClientFactory,

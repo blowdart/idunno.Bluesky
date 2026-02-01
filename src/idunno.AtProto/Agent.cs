@@ -70,6 +70,7 @@ namespace idunno.AtProto
         /// <remarks>
         /// <para>The agent will request a named HttpClient with a name of "idunno.AtProto".</para>
         /// </remarks>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClientFactory"/> is <see langword="null"/>.</exception>
         protected Agent(IHttpClientFactory httpClientFactory, JsonOptions? jsonOptions)
         {
             ArgumentNullException.ThrowIfNull(httpClientFactory);

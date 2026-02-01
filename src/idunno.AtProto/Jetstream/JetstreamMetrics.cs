@@ -31,6 +31,7 @@ namespace idunno.AtProto.Jetstream
         /// Creates a new instance of <see cref="JetstreamMetrics"/>.
         /// </summary>
         /// <param name="meterFactory">The <see cref="IMeterFactory"/> to use to create meters.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="meterFactory"/> is <see langword="null"/>.</exception>
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = " IMeterFactory automatically manages the lifetime of any Meter objects it create")]
         public JetstreamMetrics(IMeterFactory meterFactory)
         {

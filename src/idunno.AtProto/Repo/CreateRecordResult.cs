@@ -17,6 +17,7 @@ namespace idunno.AtProto.Repo
         /// <param name="cid">The <see cref="AtProto.Cid"/> for the newly created record.</param>
         /// <param name="commit">The <see cref="Commit"/> the record was created in.</param>
         /// <param name="validationStatus">The validation status of the record.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="cid"/> are <see langword="null"/>.</exception>
         public CreateRecordResult(AtUri uri, Cid cid, Commit? commit, string? validationStatus)
         {
             ArgumentNullException.ThrowIfNull("uri");
@@ -54,6 +55,7 @@ namespace idunno.AtProto.Repo
         /// <param name="cid">The <see cref="AtProto.Cid"/> for the newly created record.</param>
         /// <param name="commit">The <see cref="Commit"/> the record was created in.</param>
         /// <param name="validationStatus">The validation status of the record.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="cid"/> are <see langword="null"/>.</exception>
         public CreateRecordResult(AtUri uri, Cid cid, Commit? commit, ValidationStatus? validationStatus)
         {
             ArgumentNullException.ThrowIfNull("uri");

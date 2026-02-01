@@ -16,6 +16,7 @@ namespace idunno.Bluesky.Feed.Gates
         /// Creates a new instance of <see cref="ListRule"/>
         /// </summary>
         /// <param name="list">The <see cref="AtUri"/> of the list of actors that will be able to reply.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> is <see langword="null"/>.</exception>
         public ListRule(AtUri list)
         {
             ArgumentNullException.ThrowIfNull(list);

@@ -20,10 +20,6 @@ namespace idunno.Bluesky.Record
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private const string DiscourageLoggedOutUserLabelName = "!no-unauthenticated";
 
-        private string? _description;
-        private string? _displayName;
-        private string? _pronouns;
-
         /// <summary>
         /// Creates a new instance of <see cref="Profile"/>.
         /// </summary>
@@ -118,13 +114,11 @@ namespace idunno.Bluesky.Record
         /// <summary>
         /// Gets the display name of the account.
         /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the display name exceeds 640 characters or 64 graphemes.</exception>
         [JsonInclude]
         public string? DisplayName
         {
-            get
-            {
-                return _displayName;
-            }
+            get;
 
             set
             {
@@ -134,20 +128,18 @@ namespace idunno.Bluesky.Record
                     ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, Maximum.DisplayNameLength);
                 }
 
-                _displayName = value;
+                field = value;
             }
         }
 
         /// <summary>
         /// Gets the description for the account.
         /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the display name exceeds 2560 characters or 256 graphemes.</exception>
         [JsonInclude]
         public string? Description
         {
-            get
-            {
-                return _description;
-            }
+            get;
 
             set
             {
@@ -157,20 +149,18 @@ namespace idunno.Bluesky.Record
                     ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, Maximum.DescriptionLength);
                 }
 
-                _description = value;
+                field = value;
             }
         }
 
         /// <summary>
         /// Gets the pronouns for the account, if any.
         /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the pronouns exceed 2560 characters or 256 graphemes.</exception>
         [JsonInclude]
         public string? Pronouns
         {
-            get
-            {
-                return _pronouns;
-            }
+            get;
 
             set
             {
@@ -180,7 +170,7 @@ namespace idunno.Bluesky.Record
                     ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, Maximum.PronounLength);
                 }
 
-                _pronouns = value;
+                field = value;
             }
         }
 

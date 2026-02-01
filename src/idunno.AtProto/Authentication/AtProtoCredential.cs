@@ -145,6 +145,7 @@ namespace idunno.AtProto.Authentication
         /// <param name="identity">The <see cref="ClaimsIdentity"/> containing appropriate claims.</param>
         /// <returns>A <see cref="DPoPAccessCredentials"/> created from the claims in the specified <paramref name="identity"/>.</returns>
         /// <exception cref="CredentialException">Thrown when the <paramref name="identity"/> does not contain the required claims, or the claim values are invalid.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when the <paramref name="identity"/> is null.</exception>
         public static DPoPAccessCredentials Create(ClaimsIdentity identity)
         {
             ArgumentNullException.ThrowIfNull(identity);

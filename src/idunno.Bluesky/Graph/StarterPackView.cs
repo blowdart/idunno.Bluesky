@@ -29,6 +29,7 @@ namespace idunno.Bluesky.Graph
         /// <param name="list">A <see cref="ListViewBasic"/> over the starter pack.</param>
         /// <param name="listItemsSample">A collection of <see cref="ListItemView"/>s sampling the actors in the list.</param>
         /// <param name="feeds">A collection of <see cref="GeneratorView"/>s over any feeds in the list.</param>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="listItemsSample"/> contains more than 12 items.</exception>
         public StarterPackView(
             AtUri uri,
             Cid cid,

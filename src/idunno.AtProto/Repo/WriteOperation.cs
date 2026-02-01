@@ -16,6 +16,7 @@ namespace idunno.AtProto.Repo
         /// </summary>
         /// <param name="collection">The <see cref="Nsid"/> of the collection the operation will apply to.</param>
         /// <param name="recordKey">The <see cref="RecordKey"/> for the record the operation will apply to.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="collection"/> is <see langword="null"/>.</exception>
         protected WriteOperation(Nsid collection, RecordKey? recordKey)
         {
             ArgumentNullException.ThrowIfNull(collection);

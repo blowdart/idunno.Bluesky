@@ -18,8 +18,10 @@ namespace idunno.AtProto.Repo
         /// <param name="collection">The <see cref="Nsid"/> identifying the collection the record will be updated or created in.</param>
         /// <param name="recordKey">The <see cref="RecordKey"/> the record will be updated or created with.</param>
         /// <param name="recordValue">The value of the record to be updated or created.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="collection"/>, <paramref name="recordKey"/>, or <paramref name="recordValue"/> is <see langword="null"/>.</exception>
         public UpdateOperation(Nsid collection, RecordKey recordKey, object recordValue) : base(collection, recordKey)
         {
+            ArgumentNullException.ThrowIfNull(collection);
             ArgumentNullException.ThrowIfNull(recordKey);
             ArgumentNullException.ThrowIfNull(recordValue);
 

@@ -13,6 +13,7 @@ namespace idunno.AtProto.Repo
         /// </summary>
         /// <param name="collection">The <see cref="Nsid"/> identifying the collection the record will be deleted from.</param>
         /// <param name="recordKey">The value of the record to be deleted.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="recordKey"/> is <see langword="null"/>.</exception>
         public DeleteOperation(Nsid collection, RecordKey recordKey) : base(collection, recordKey)
         {
             ArgumentNullException.ThrowIfNull(recordKey);

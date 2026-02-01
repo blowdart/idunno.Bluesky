@@ -19,6 +19,7 @@ namespace idunno.Bluesky.Actor
         /// </summary>
         /// <param name="threadGateAllowRules"> List of rules defining who can reply to this users posts.</param>
         /// <param name="postGateEmbeddingRules">List of rules defining who can embed this users posts.</param>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when more than 5 rules are provided for either parameter.</exception>
         [JsonConstructor]
         public InteractionPreferences(ICollection<ThreadGateRule>? threadGateAllowRules, ICollection<PostGateRule>? postGateEmbeddingRules)
         {

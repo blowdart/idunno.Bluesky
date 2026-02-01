@@ -970,6 +970,7 @@ namespace idunno.Bluesky
         /// Applies the user's interaction preferences to this instance.
         /// </summary>
         /// <param name="interactionPreferences">The user's interaction preferences.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="interactionPreferences"/> is null.</exception>
         public void ApplyInteractionPreferences(InteractionPreferences interactionPreferences)
         {
             ArgumentNullException.ThrowIfNull(interactionPreferences);

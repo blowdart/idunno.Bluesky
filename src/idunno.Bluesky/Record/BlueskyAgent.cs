@@ -256,6 +256,7 @@ namespace idunno.Bluesky
         /// <param name="profile">The <see cref="Profile"/> to create.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -288,6 +289,7 @@ namespace idunno.Bluesky
         /// <param name="profile">The profile to create from or update to</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<PutRecordResult>> SetProfile(
             Profile profile,
@@ -309,6 +311,7 @@ namespace idunno.Bluesky
         /// <param name="profile">The profile update to</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/>, or its Value is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<PutRecordResult>> SetProfile(
             AtProtoRepositoryRecord<Profile> profile,
@@ -379,6 +382,7 @@ namespace idunno.Bluesky
         /// <param name="profile">The <see cref="Profile"/> to update with.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/> is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",

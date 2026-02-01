@@ -43,6 +43,7 @@ namespace idunno.DidPlcDirectory
         /// </summary>
         /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
         /// <param name="options">Any <see cref="DirectoryAgentOptions"/> to configure this instance with.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClientFactory"/> is <see langword="null"/>.</exception>
         public DirectoryAgent(
             IHttpClientFactory httpClientFactory,
             DirectoryAgentOptions? options = null) : base(httpClientFactory, null)
@@ -80,6 +81,7 @@ namespace idunno.DidPlcDirectory
         /// <param name="directory">The directory server used to retrieve the DID document from. This is ignored if the DID is a web DID.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<DidDocument>> ResolveDidDocument(Did did, Uri? directory = null, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(did);

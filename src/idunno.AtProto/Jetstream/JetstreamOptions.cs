@@ -43,6 +43,7 @@ namespace idunno.AtProto.Jetstream
         /// <summary>
         /// Gets the maximum size of messages to receive, in bytes.
         /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is less than or equal to zero.</exception>
         public int BufferSize
         {
             get

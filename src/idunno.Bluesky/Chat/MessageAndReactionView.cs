@@ -14,7 +14,8 @@ namespace idunno.Bluesky.Chat
         /// Creates a new instance of <see cref="MessageAndReactionView"/>
         /// </summary>
         /// <param name="message">The <see cref="MessageView"/> of the message.</param>
-        /// <param name="reaction">The <see cref="Reaction"/> of the reaction.</param>
+        /// <param name="reaction">The <see cref="ReactionView"/> of the reaction.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="message"/> or <paramref name="reaction"/> is <see langword="null"/>.</exception>
         public MessageAndReactionView(MessageView message, ReactionView reaction)
         {
             ArgumentNullException.ThrowIfNull(message);
@@ -32,7 +33,7 @@ namespace idunno.Bluesky.Chat
         public MessageView Message { get; init; }
 
         /// <summary>
-        /// Gets the <see cref="Reaction"/> of the reaction.
+        /// Gets the <see cref="ReactionView"/> of the reaction.
         /// </summary>
         [JsonInclude]
         [JsonRequired]

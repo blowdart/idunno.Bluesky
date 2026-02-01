@@ -21,6 +21,7 @@ namespace idunno.Bluesky.RichText
         /// Constructs a new instance of the <see cref="PostBuilderFacetFeature"/> class with the specified text.
         /// </summary>
         /// <param name="text">The text to wrap the facet feature around.</param>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/> or whitespace.</exception>
         protected PostBuilderFacetFeature(string text)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(text);

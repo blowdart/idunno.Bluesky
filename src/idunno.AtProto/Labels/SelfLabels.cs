@@ -33,6 +33,8 @@ namespace idunno.AtProto.Labels
         /// Creates a new instance of <see cref="SelfLabels"/>.
         /// </summary>
         /// <param name="values">The collection of labels applied to the record.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="values"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="values"/> contains more than 10 items.</exception>
         [JsonConstructor]
         public SelfLabels(IReadOnlyList<SelfLabel> values)
         {
@@ -52,6 +54,8 @@ namespace idunno.AtProto.Labels
         /// <summary>
         /// The collection of self labels applied to the record.
         /// </summary>
+        /// <exception cref="ArgumentNullException">Thrown when setting to <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when setting to a collection with more than 10 items.</exception>
         [JsonInclude]
         [JsonRequired]
         public IReadOnlyList<SelfLabel> Values

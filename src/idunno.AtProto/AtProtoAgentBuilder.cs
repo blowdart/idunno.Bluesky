@@ -77,6 +77,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="service">The <see cref="Uri"/> of the service to initially connect to.</param>
         /// <returns>The same instance of <see cref="AtProtoAgentBuilder"/> for chaining.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is <see langword="null"/>.</exception>
         public AtProtoAgentBuilder ForService(Uri service)
         {
             ArgumentNullException.ThrowIfNull(service);
@@ -90,6 +91,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="service">The <see cref="Uri"/> of the service to initially connect to.</param>
         /// <returns>The same instance of <see cref="AtProtoAgentBuilder"/> for chaining.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is <see langword="null"/>.</exception>
         public AtProtoAgentBuilder ForService(string service)
         {
             ArgumentNullException.ThrowIfNull(service);
@@ -102,6 +104,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="directoryService">The <see cref="Uri"/> of the directory service to use for resolving.</param>
         /// <returns>The same instance of <see cref="AtProtoAgentBuilder"/> for chaining.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="directoryService"/> is <see langword="null"/>.</exception>
         public AtProtoAgentBuilder WithDirectoryService(Uri directoryService)
         {
             ArgumentNullException.ThrowIfNull(directoryService);
@@ -115,6 +118,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="directoryService">The <see cref="Uri"/> of the directory service to use for resolving.</param>
         /// <returns>The same instance of <see cref="AtProtoAgentBuilder"/> for chaining.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="directoryService"/> is <see langword="null"/>.</exception>
         public AtProtoAgentBuilder WithDirectoryService(string directoryService)
         {
             ArgumentNullException.ThrowIfNull(directoryService);
@@ -127,6 +131,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="logger">The <see cref="ILoggerFactory"/> to use when creating loggers.</param>
         /// <returns>The same instance of <see cref="AtProtoAgentBuilder"/> for chaining.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="logger"/> is <see langword="null"/>.</exception>
         public AtProtoAgentBuilder WithLoggerFactory(ILoggerFactory logger)
         {
             ArgumentNullException.ThrowIfNull(logger);
@@ -140,6 +145,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="configure">The <see cref="OAuthOptions"/> to use using OAuth for authentication.</param>
         /// <returns>The same instance of <see cref="AtProtoAgentBuilder"/> for chaining.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="configure"/> is <see langword="null"/>.</exception>
         public AtProtoAgentBuilder ConfigureOAuthOptions(Action<OAuthOptions> configure)
         {
             ArgumentNullException.ThrowIfNull(configure);
@@ -158,6 +164,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="configure">The <see cref="JsonOptions"/> to use serializing or deserializing API calls.</param>
         /// <returns>The same instance of <see cref="AtProtoAgentBuilder"/> for chaining.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="configure"/> is <see langword="null"/>.</exception>
         public AtProtoAgentBuilder ConfigureHttpJsonOptions(Action<JsonOptions> configure)
         {
             ArgumentNullException.ThrowIfNull(configure);
@@ -180,6 +187,7 @@ namespace idunno.AtProto
         /// Setting <see cref="HttpClientOptions.CheckCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
         /// false if you are using a debugging proxy which does not support CRLs.
         /// </para>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="configure"/> is <see langword="null"/>.</exception>
         public AtProtoAgentBuilder ConfigureHttpClientOptions(Action<HttpClientOptions> configure)
         {
             ArgumentNullException.ThrowIfNull(configure);
@@ -220,6 +228,7 @@ namespace idunno.AtProto
         /// <remarks>
         ///<para>If an <see cref="IHttpClientFactory"/> is set then <see cref="HttpClientOptions"/> will be ignored.</para>
         /// </remarks>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClientFactory"/> is <see langword="null"/>.</exception>
         public AtProtoAgentBuilder WithHttpClientFactory(IHttpClientFactory httpClientFactory)
         {
             ArgumentNullException.ThrowIfNull(httpClientFactory);
@@ -232,6 +241,7 @@ namespace idunno.AtProto
         /// Builds the <see cref="AtProtoAgent"/>.
         /// </summary>
         /// <returns>A configured <see cref="AtProtoAgent"/>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when the underlying <see cref="AtProtoAgentBuilder.Service"/> or <see cref="AtProtoAgentBuilder.LoggerFactory"/> is <see langword="null"/>.</exception>
         public virtual AtProtoAgent Build()
         {
             ArgumentNullException.ThrowIfNull(Service);

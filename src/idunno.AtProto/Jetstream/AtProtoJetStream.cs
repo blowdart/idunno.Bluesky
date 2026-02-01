@@ -525,7 +525,10 @@ namespace idunno.AtProto.Jetstream
             OnFaultRaised(new FaultRaisedEventArgs(fault));
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Disposes all resources.
+        /// </summary>
+        /// <param name="disposing">Flag indicating whether managed resources should be disposed.</param>
         protected virtual void Dispose(bool disposing)
         {
             if (!_disposed)

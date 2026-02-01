@@ -162,8 +162,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="text">The text for the post.</param>
         /// <param name="lang">The language the post is written in.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="text" /> is null or empty.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="lang" /> is empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="text" /> is null or empty, or <paramref name="lang" /> is empty.</exception>
         public Post(
             string text,
             string lang) : this(text: text, langs: [lang])
@@ -177,8 +176,9 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="text">The text for the post.</param>
         /// <param name="langs">The languages the post is written in.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="text" /> is null or empty.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="langs"/> is an empty list.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="text" /> is null or empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="langs"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="langs"/> is empty.</exception>
         public Post(
             string text,
             ICollection<string> langs) : this(text: text, facets: null, langs: langs, embeddedRecord: null, reply: null, labels : null, tags : null)

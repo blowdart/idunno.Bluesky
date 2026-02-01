@@ -88,6 +88,7 @@ namespace idunno.AtProto.Authentication
         /// Add authentication headers to the specified <paramref name="httpRequestMessage"/>.
         /// </summary>
         /// <param name="httpRequestMessage">The <see cref="HttpRequestMessage"/> to add authentication headers to.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpRequestMessage"/> is null.</exception>
         public override void SetAuthenticationHeaders(HttpRequestMessage httpRequestMessage)
         {
             ArgumentNullException.ThrowIfNull(httpRequestMessage);

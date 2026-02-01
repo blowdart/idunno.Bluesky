@@ -17,6 +17,7 @@ namespace idunno.Bluesky.Actor
         /// </summary>
         /// <param name="list">A list of actor preferences.</param>
         /// <param name="enableBlueskyModerationLabeler">A flag indicating whether the Bluesky moderation labeler should be enabled as part of the actor's subscribed labelers.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> is <see langword="null"/>.</exception>
         public Preferences(IList<Preference> list, bool enableBlueskyModerationLabeler = true) : base(list)
         {
             ArgumentNullException.ThrowIfNull(list);

@@ -71,6 +71,8 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Gets or sets the list of permissions to request.
         /// </summary>
+        /// <exception cref="ArgumentNullException">Thrown when setting to <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when setting to an empty collection.</exception>
         public IEnumerable<string> Scopes
         {
             get
@@ -80,16 +82,10 @@ namespace idunno.AtProto.Authentication
 
             set
             {
-                if (value is null)
-                {
-                    ArgumentNullException.ThrowIfNull(value);
-                }
-                else
-                {
-                    ArgumentOutOfRangeException.ThrowIfZero(value.Count());
+                ArgumentNullException.ThrowIfNull(value);
+                ArgumentOutOfRangeException.ThrowIfZero(value.Count());
 
-                    _scopes = value.Distinct();
-                }
+                _scopes = value.Distinct();
             }
         }
     }

@@ -38,6 +38,7 @@ namespace idunno.Bluesky.Actor
         /// Creates a new instance of <see cref="LabelerPreference"/>.
         /// </summary>
         /// <param name="did">The <paramref name="did"/> of the labeler this preference applies to.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
         [JsonConstructor]
         public LabelerPreference(Did did)
         {

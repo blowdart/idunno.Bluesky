@@ -25,13 +25,14 @@ namespace idunno.Bluesky
         /// Creates a new <see cref="BlueskyAgentBuilder"/>.
         /// </summary>
         /// <returns>A new <see cref="BlueskyAgentBuilder"/></returns>
-        public new static BlueskyAgentBuilder Create() => new();
+        public static new BlueskyAgentBuilder Create() => new();
 
         /// <summary>
         /// Sets the app view URI the agent will use
         /// </summary>
         /// <param name="appViewUri">The public <see cref="Uri"/> of the app view the agent will use.</param>
         /// <returns>The same instance of <see cref="BlueskyAgentBuilder"/> for chaining.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="appViewUri"/> is <see langword="null"/>.</exception>
         public BlueskyAgentBuilder WithPublicAppViewUri(Uri appViewUri)
         {
             ArgumentNullException.ThrowIfNull(appViewUri);
@@ -44,6 +45,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="facetExtractor">The facet extractor to use.</param>
         /// <returns>The same instance of <see cref="BlueskyAgentBuilder"/> for chaining.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="facetExtractor"/> is <see langword="null"/>.</exception>
         public BlueskyAgentBuilder SetFacetExtractor(IFacetExtractor facetExtractor)
         {
             ArgumentNullException.ThrowIfNull(facetExtractor);
@@ -55,6 +57,7 @@ namespace idunno.Bluesky
         /// Builds the <see cref="AtProtoAgent"/>.
         /// </summary>
         /// <returns>A configured <see cref="AtProtoAgent"/>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when the underlying <see cref="AtProtoAgentBuilder.Service"/> or <see cref="AtProtoAgentBuilder.LoggerFactory"/> is <see langword="null"/>.</exception>
         public new BlueskyAgent Build()
         {
             ArgumentNullException.ThrowIfNull(Service);

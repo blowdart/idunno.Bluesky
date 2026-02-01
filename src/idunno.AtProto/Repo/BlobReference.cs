@@ -14,6 +14,7 @@ namespace idunno.AtProto.Repo
         /// Creates a new instance of <see cref="BlobReference"/>.
         /// </summary>
         /// <param name="link">The <see cref="Cid">content identifier</see> of the blob.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="link"/> is <see langword="null"/>.</exception>
         [JsonConstructor]
         public BlobReference(Cid link)
         {

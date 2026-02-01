@@ -196,6 +196,7 @@ namespace idunno.Bluesky
         /// <param name="principal">The <see cref="ClaimsPrincipal"/> to extract authentication properties from.</param>
         /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
         /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="principal"/> or <paramref name="httpClientFactory"/>is <see langword="null"/>.</exception>
         public BlueskyAgent(ClaimsPrincipal principal, IHttpClientFactory httpClientFactory, BlueskyAgentOptions? options = null) : base(
                 principal : principal,
                 httpClientFactory: httpClientFactory,
@@ -237,6 +238,7 @@ namespace idunno.Bluesky
         /// <param name="identity">The <see cref="ClaimsIdentity"/> to extract authentication properties from.</param>
         /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
         /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> or <paramref name="httpClientFactory"/>is <see langword="null"/>.</exception>
         public BlueskyAgent(ClaimsIdentity identity, IHttpClientFactory httpClientFactory, BlueskyAgentOptions? options = null) : base(
                 identity: identity,
                 httpClientFactory: httpClientFactory,

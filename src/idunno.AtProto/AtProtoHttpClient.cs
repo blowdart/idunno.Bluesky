@@ -354,6 +354,8 @@ namespace idunno.AtProto
         /// <param name="serviceProxy">The service a PDS should proxy the request to.</param>
         /// <param name="requestHeaders">Headers to add to the requests this instance makes.</param>
         /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="requestHeaders"/> is null/</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="requestHeaders"/> contains no items./</exception>
         public AtProtoHttpClient(string serviceProxy, ICollection<NameValueHeaderValue> requestHeaders, ILoggerFactory? loggerFactory = null) : this(serviceProxy, loggerFactory)
         {
             ArgumentNullException.ThrowIfNull(requestHeaders);
@@ -449,6 +451,8 @@ namespace idunno.AtProto
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClient"/>is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="endpoint"/> is null or empty.</exception>
         [RequiresDynamicCode("Use a Get overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a Get overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<TResult>> Get(
@@ -494,6 +498,8 @@ namespace idunno.AtProto
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="httpClient"/> or <paramref name="jsonSerializerOptions"/>is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="endpoint"/> is null or empty.</exception>
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<TResult>> Get(
@@ -759,6 +765,8 @@ namespace idunno.AtProto
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="endpoint"/> is null or empty.</exception>
         [RequiresDynamicCode("Use a Post overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a Post overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<TResult>> Post<TRecord>(
@@ -807,6 +815,8 @@ namespace idunno.AtProto
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="httpClient"/> or <paramref name="jsonSerializerOptions"/>is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="endpoint"/> is null or empty.</exception>
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<TResult>> Post<TRecord>(

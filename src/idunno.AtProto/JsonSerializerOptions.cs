@@ -37,6 +37,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to chain type resolution with.</param>
         /// <returns>An instance of <see cref="JsonSerializerOptions" /> with the type information resolvers chained.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="jsonSerializerOptions"/> or its TypeInfoResolver is null.</exception>
         public static JsonSerializerOptions BuildChainedTypeInfoResolverJsonSerializerOptions(JsonSerializerOptions jsonSerializerOptions)
         {
             ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
@@ -50,6 +51,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="jsonTypeInfoResolver">The type information resolver to insert into the type resolution chain.</param>
         /// <returns>An instance of <see cref="JsonSerializerOptions" /> with the type information resolvers chained.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="jsonTypeInfoResolver"/> is null.</exception>
         public static JsonSerializerOptions BuildChainedTypeInfoResolverJsonSerializerOptions(IJsonTypeInfoResolver jsonTypeInfoResolver)
         {
             ArgumentNullException.ThrowIfNull(jsonTypeInfoResolver);

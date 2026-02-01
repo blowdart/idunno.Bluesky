@@ -72,6 +72,7 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Gets or sets the state the needs to be held between starting the authorize request and the parsing the response
         /// </summary>
+        /// <exception cref="ArgumentNullException">Thrown when setting to <see langword="null"/>.</exception>
         public OAuthLoginState? State
         {
             get
@@ -239,6 +240,7 @@ namespace idunno.AtProto.Authentication
         /// <param name="scopes">A collection of scopes to request. Defaults to "atproto".</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="clientId"/> is null or white space and no default clientId has been set on options.</exception>
         /// <exception cref="OAuthException">Thrown when the internal state of this instance is faulty.</exception>
         public async Task<DPoPAccessCredentials?> ProcessOAuth2LoginResponse(
             string callbackData,
@@ -361,6 +363,7 @@ namespace idunno.AtProto.Authentication
         /// <param name="callbackData">The data returned to the callback URI</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="state"/> is null.</exception>
         /// <exception cref="OAuthException">Thrown when the internal state of this instance is faulty.</exception>
         public async Task<DPoPAccessCredentials?> ProcessOAuth2Response(OAuthLoginState state, string callbackData, CancellationToken cancellationToken = default)
         {
@@ -572,6 +575,7 @@ namespace idunno.AtProto.Authentication
         /// Opens a browser to the specified <paramref name="uri"/>
         /// </summary>
         /// <param name="uri">The uri to open.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
         public static void OpenBrowser(Uri uri)
         {
             ArgumentNullException.ThrowIfNull(uri);

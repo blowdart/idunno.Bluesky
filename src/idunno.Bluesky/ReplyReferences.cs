@@ -15,6 +15,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="parent">The parent <see cref="StrongReference"/></param>
         /// <param name="root">The root <see cref="StrongReference"/></param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/> or <paramref name="root"/> are <see langword="null"/>.</exception>
         public ReplyReferences(StrongReference parent, StrongReference root)
         {
             ArgumentNullException.ThrowIfNull(parent);

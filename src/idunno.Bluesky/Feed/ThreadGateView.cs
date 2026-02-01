@@ -25,6 +25,7 @@ namespace idunno.Bluesky.Feed
         /// <param name="cid">The <see cref="AtProto.Cid">content identifier</see> of the thread gate.</param>
         /// <param name="record">The record for the <see cref="ThreadGate"/>.</param>
         /// <param name="lists">A collection of rules for the thread gate.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="cid"/> are <see langword="null"/>.</exception>
         [JsonConstructor]
         public ThreadGateView(
             AtUri uri,

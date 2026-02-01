@@ -24,6 +24,7 @@ namespace idunno.Bluesky.Record
         /// </summary>
         /// <param name="subject">The <see cref="Did"/> to the actor to be blocked.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> for the repost creation date.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="subject"/> is <see langword="null"/>.</exception>
         [JsonConstructor]
         public Block(Did subject, DateTimeOffset createdAt) : base(createdAt)
         {

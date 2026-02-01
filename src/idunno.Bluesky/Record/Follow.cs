@@ -18,6 +18,7 @@ namespace idunno.Bluesky.Record
         /// </summary>
         /// <param name="subject">The <see cref="Did"/> to the actor to be followed.</param>
         /// <param name="via">A <see cref="StrongReference"/> to the starter pack the follow originated from, if any.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="subject"/> is <see langword="null"/>.</exception>
         public Follow(Did subject, StrongReference? via = null) : this(subject: subject, via: via, createdAt: DateTimeOffset.UtcNow)
         {
             ArgumentNullException.ThrowIfNull(subject);
@@ -28,6 +29,7 @@ namespace idunno.Bluesky.Record
         /// </summary>
         /// <param name="subject">The <see cref="Did"/> to the actor to be followed.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> for the repost creation date.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="subject"/> is <see langword="null"/>.</exception>
         public Follow(Did subject, DateTimeOffset createdAt) : this(subject: subject, via: null, createdAt: createdAt)
         {
             ArgumentNullException.ThrowIfNull(subject);
@@ -39,6 +41,7 @@ namespace idunno.Bluesky.Record
         /// <param name="subject">The <see cref="Did"/> to the actor to be followed.</param>
         /// <param name="via">A <see cref="StrongReference"/> to the starter pack the follow originated from, if any.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> for the repost creation date.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="subject"/> is <see langword="null"/>.</exception>
         [JsonConstructor]
         public Follow(Did subject, StrongReference? via, DateTimeOffset createdAt) : base(createdAt)
         {

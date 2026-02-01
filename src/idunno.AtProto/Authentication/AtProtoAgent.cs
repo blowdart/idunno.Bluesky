@@ -111,6 +111,7 @@ namespace idunno.AtProto
         /// Called internally by an <see cref="AtProtoHttpClient{TResult}"/> if the credentials were updated.
         /// </summary>
         /// <param name="credentials">The new credentials</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="credentials"/> is null.</exception>
         protected internal virtual void InternalOnCredentialsUpdatedCallBack(AtProtoCredential credentials)
         {
             ArgumentNullException.ThrowIfNull(credentials);
@@ -150,6 +151,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="state">The state to restore in the <see cref="OAuthClient"/>.</param>
         /// <returns>The new <see cref="OAuthClient"/> instance, with the state restored from <paramref name="state"/>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="state"/> is null.</exception>
         public OAuthClient CreateOAuthClient(OAuthLoginState state)
         {
             ArgumentNullException.ThrowIfNull(state);
@@ -282,6 +284,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="OAuthException">Thrown when the internal state of this instance is faulty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="oAuthClient"/> is null.</exception>
         public async Task<bool> ProcessOAuth2LoginResponse(OAuthClient oAuthClient, string callbackData, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(oAuthClient);
@@ -1026,6 +1029,7 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticationRequiredException">Thrown when agent is not authenticated.</exception>
         /// <exception cref="CredentialException">Thrown when agent credentials are not valid for refreshing.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="credential"/> is null.</exception>
         public async Task<bool> RefreshCredentials(AtProtoCredential credential, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(credential);
