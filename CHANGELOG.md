@@ -20,10 +20,20 @@
 
 * Added `TypeResolver` static class.
 * Added support for `GetActorStarterPacks()`.
+* Added `FeedItem` record to represent feeds added in a `StarterPack` record.
 
 ### Breaking Changes
 
+#### idunno.AtProto
+
 * `BlobReferences` now enforces that the link property is a CID.
+
+#### idunno.Bluesky
+
+* Corrected `StarterPack` `Feeds` property to be a list of `FeedItem`s.
+* Corrected `StarterPack` constructor to take a list of `FeedItem`s for feeds parameter.
+
+####
 
 ## 1.4.0 - 2026-18-01
 

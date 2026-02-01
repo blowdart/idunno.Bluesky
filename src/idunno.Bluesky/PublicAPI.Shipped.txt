@@ -1550,16 +1550,20 @@ idunno.Bluesky.Record.Repost.Subject.get -> idunno.AtProto.Repo.StrongReference!
 idunno.Bluesky.Record.Repost.Subject.init -> void
 idunno.Bluesky.Record.Repost.Via.get -> idunno.AtProto.Repo.StrongReference?
 idunno.Bluesky.Record.Repost.Via.init -> void
+idunno.Bluesky.Record.FeedItem
+idunno.Bluesky.Record.FeedItem.FeedItem(idunno.AtProto.AtUri! uri) -> void
+idunno.Bluesky.Record.FeedItem.Uri.get -> idunno.AtProto.AtUri!
+idunno.Bluesky.Record.FeedItem.Uri.init -> void
 idunno.Bluesky.Record.StarterPack
 idunno.Bluesky.Record.StarterPack.Description.get -> string?
 idunno.Bluesky.Record.StarterPack.Description.init -> void
-idunno.Bluesky.Record.StarterPack.Feeds.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Feed.GeneratorView!>!
+idunno.Bluesky.Record.StarterPack.Feeds.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Record.FeedItem!>?
 idunno.Bluesky.Record.StarterPack.Feeds.init -> void
 idunno.Bluesky.Record.StarterPack.List.get -> idunno.AtProto.AtUri!
 idunno.Bluesky.Record.StarterPack.List.set -> void
 idunno.Bluesky.Record.StarterPack.Name.get -> string!
 idunno.Bluesky.Record.StarterPack.Name.set -> void
-idunno.Bluesky.Record.StarterPack.StarterPack(string! name, string? description, idunno.AtProto.AtUri! list, System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Feed.GeneratorView!>! feeds, System.DateTimeOffset createdAt, System.DateTimeOffset? updatedAt) -> void
+idunno.Bluesky.Record.StarterPack.StarterPack(string! name, string? description, idunno.AtProto.AtUri! list, System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Record.FeedItem!>? feeds, System.DateTimeOffset createdAt, System.DateTimeOffset? updatedAt) -> void
 idunno.Bluesky.Record.StarterPack.UpdatedAt.get -> System.DateTimeOffset?
 idunno.Bluesky.Record.StarterPack.UpdatedAt.init -> void
 idunno.Bluesky.Record.Status
