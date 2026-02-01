@@ -27,7 +27,7 @@
 #### idunno.Bluesky
 
 * Added `Status` property to `ProfileViewBasic`, `ProfileView` and `ProfileViewDetailed` to represent live streaming status for a profile, if any.
-* Changed `Description` property in `ListView` to be nullable to match the API, fixes [https://github.com/blowdart/idunno.Bluesky/issues/289](#289)
+* Changed `Description` property in `ListView` to be nullable to match the API, fixes [#289](https://github.com/blowdart/idunno.Bluesky/issues/289)
 
 ### Breaking Changes
 
