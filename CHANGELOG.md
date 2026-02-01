@@ -32,6 +32,7 @@
 
 * Corrected `StarterPack` `Feeds` property to be a list of `FeedItem`s.
 * Corrected `StarterPack` constructor to take a list of `FeedItem`s for feeds parameter.
+* Added `Status` property to `ProfileViewBasic`, `ProfileView` and `ProfileViewDetailed` to represent live streaming status for a profile, if any.
 
 ####
 

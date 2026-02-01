@@ -33,6 +33,7 @@ namespace idunno.Bluesky.Actor
         /// <param name="labels">Labels applied to the actor.</param>
         /// <param name="createdAt">The date and time the actor was created.</param>
         /// <param name="verification">The <see cref="VerificationState"/> of the actor, if any.</param>
+        /// <param name="status">The <see cref="StatusView"/> of the actor, if any.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> or <paramref name="handle"/> are null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///   Thrown when <paramref name="displayName"/> is not null and has a character length greater than 640 or a grapheme length greater than 64.
@@ -49,7 +50,8 @@ namespace idunno.Bluesky.Actor
             ActorViewerState? viewer,
             IReadOnlyCollection<Label>? labels,
             DateTimeOffset? createdAt,
-            VerificationState? verification)
+            VerificationState? verification,
+            StatusView? status)
         {
             ArgumentNullException.ThrowIfNull(did);
             ArgumentNullException.ThrowIfNull(handle);
@@ -70,6 +72,7 @@ namespace idunno.Bluesky.Actor
             Viewer = viewer;
             CreatedAt = createdAt;
             Verification = verification;
+            Status = status;
 
             if (labels is null)
             {

@@ -29,6 +29,7 @@ namespace idunno.Bluesky.Actor
         /// <param name="indexedAt">The date and time the actor was last indexed.</param>
         /// <param name="createdAt">The date and time the actor was created.</param>
         /// <param name="verification">The <see cref="VerificationState"/> of the actor, if any.</param>
+        /// <param name="status">The <see cref="StatusView"/> of the actor, if any.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> or <paramref name="handle"/> are null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///   Thrown when <paramref name="displayName"/> is not null and has a character length greater than 640 or a grapheme length greater than 64.
@@ -47,11 +48,13 @@ namespace idunno.Bluesky.Actor
             IReadOnlyCollection<Label>? labels,
             DateTimeOffset? indexedAt,
             DateTimeOffset? createdAt,
-            VerificationState? verification
-            ) : base(did, handle, displayName, pronouns, website, avatar, associated, viewer, labels, createdAt, verification)
+            VerificationState? verification,
+            StatusView? status = null
+            ) : base(did, handle, displayName, pronouns, website, avatar, associated, viewer, labels, createdAt, verification, status)
         {
             Description = description;
             IndexedAt = indexedAt;
+            Status = status;
         }
 
         /// <summary>

@@ -210,7 +210,7 @@ idunno.Bluesky.Actor.ProfileView.Description.get -> string?
 idunno.Bluesky.Actor.ProfileView.Description.init -> void
 idunno.Bluesky.Actor.ProfileView.IndexedAt.get -> System.DateTimeOffset?
 idunno.Bluesky.Actor.ProfileView.IndexedAt.init -> void
-idunno.Bluesky.Actor.ProfileView.ProfileView(idunno.AtProto.Did! did, idunno.AtProto.Handle! handle, string? displayName, string? description, string? pronouns, System.Uri? website, System.Uri? avatar, idunno.Bluesky.Actor.ProfileAssociated? associated, idunno.Bluesky.Actor.ActorViewerState? viewer, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Labels.Label!>? labels, System.DateTimeOffset? indexedAt, System.DateTimeOffset? createdAt, idunno.Bluesky.Actor.VerificationState? verification) -> void
+idunno.Bluesky.Actor.ProfileView.ProfileView(idunno.AtProto.Did! did, idunno.AtProto.Handle! handle, string? displayName, string? description, string? pronouns, System.Uri? website, System.Uri? avatar, idunno.Bluesky.Actor.ProfileAssociated? associated, idunno.Bluesky.Actor.ActorViewerState? viewer, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Labels.Label!>? labels, System.DateTimeOffset? indexedAt, System.DateTimeOffset? createdAt, idunno.Bluesky.Actor.VerificationState? verification, idunno.Bluesky.Actor.StatusView? status = null) -> void
 idunno.Bluesky.Actor.ProfileViewBasic
 idunno.Bluesky.Actor.ProfileViewBasic.Associated.get -> idunno.Bluesky.Actor.ProfileAssociated?
 idunno.Bluesky.Actor.ProfileViewBasic.Associated.init -> void
@@ -226,7 +226,7 @@ idunno.Bluesky.Actor.ProfileViewBasic.Handle.get -> idunno.AtProto.Handle!
 idunno.Bluesky.Actor.ProfileViewBasic.Handle.init -> void
 idunno.Bluesky.Actor.ProfileViewBasic.Labels.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Labels.Label!>!
 idunno.Bluesky.Actor.ProfileViewBasic.Labels.init -> void
-idunno.Bluesky.Actor.ProfileViewBasic.ProfileViewBasic(idunno.AtProto.Did! did, idunno.AtProto.Handle! handle, string? displayName, string? pronouns, System.Uri? website, System.Uri? avatar, idunno.Bluesky.Actor.ProfileAssociated? associated, idunno.Bluesky.Actor.ActorViewerState? viewer, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Labels.Label!>? labels, System.DateTimeOffset? createdAt, idunno.Bluesky.Actor.VerificationState? verification) -> void
+idunno.Bluesky.Actor.ProfileViewBasic.ProfileViewBasic(idunno.AtProto.Did! did, idunno.AtProto.Handle! handle, string? displayName, string? pronouns, System.Uri? website, System.Uri? avatar, idunno.Bluesky.Actor.ProfileAssociated? associated, idunno.Bluesky.Actor.ActorViewerState? viewer, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Labels.Label!>? labels, System.DateTimeOffset? createdAt, idunno.Bluesky.Actor.VerificationState? verification, idunno.Bluesky.Actor.StatusView? status) -> void
 idunno.Bluesky.Actor.ProfileViewBasic.Pronouns.get -> string?
 idunno.Bluesky.Actor.ProfileViewBasic.Pronouns.init -> void
 idunno.Bluesky.Actor.ProfileViewBasic.Status.get -> idunno.Bluesky.Actor.StatusView?
@@ -250,7 +250,7 @@ idunno.Bluesky.Actor.ProfileViewDetailed.PinnedPost.get -> idunno.AtProto.Repo.S
 idunno.Bluesky.Actor.ProfileViewDetailed.PinnedPost.init -> void
 idunno.Bluesky.Actor.ProfileViewDetailed.PostsCount.get -> int
 idunno.Bluesky.Actor.ProfileViewDetailed.PostsCount.init -> void
-idunno.Bluesky.Actor.ProfileViewDetailed.ProfileViewDetailed(idunno.AtProto.Did! did, idunno.AtProto.Handle! handle, string? displayName, string? description, string? pronouns, System.Uri? website, System.Uri? avatar, System.Uri? banner, idunno.Bluesky.Actor.ProfileAssociated? associated, idunno.Bluesky.Actor.ActorViewerState? viewer, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Labels.Label!>? labels, System.DateTimeOffset? indexedAt, System.DateTimeOffset? createdAt, idunno.Bluesky.Actor.VerificationState? verification, idunno.Bluesky.Graph.StarterPackViewBasic? joinedViaStarterPack = null, idunno.AtProto.Repo.StrongReference? pinnedPost = null, int followersCount = 0, int followsCount = 0, int postsCount = 0) -> void
+idunno.Bluesky.Actor.ProfileViewDetailed.ProfileViewDetailed(idunno.AtProto.Did! did, idunno.AtProto.Handle! handle, string? displayName, string? description, string? pronouns, System.Uri? website, System.Uri? avatar, System.Uri? banner, idunno.Bluesky.Actor.ProfileAssociated? associated, idunno.Bluesky.Actor.ActorViewerState? viewer, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Labels.Label!>? labels, System.DateTimeOffset? indexedAt, System.DateTimeOffset? createdAt, idunno.Bluesky.Actor.VerificationState? verification, idunno.Bluesky.Actor.StatusView? status, idunno.Bluesky.Graph.StarterPackViewBasic? joinedViaStarterPack = null, idunno.AtProto.Repo.StrongReference? pinnedPost = null, int followersCount = 0, int followsCount = 0, int postsCount = 0) -> void
 idunno.Bluesky.Actor.SavedFeedPreference
 idunno.Bluesky.Actor.SavedFeedPreference.Pinned.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.AtUri!>!
 idunno.Bluesky.Actor.SavedFeedPreference.Pinned.init -> void

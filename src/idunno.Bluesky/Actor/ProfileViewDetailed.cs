@@ -35,6 +35,7 @@ namespace idunno.Bluesky.Actor
         /// <param name="indexedAt">The date and time the actor was last indexed.</param>
         /// <param name="createdAt">The date and time the actor was created.</param>
         /// <param name="verification">The <see cref="VerificationState"/> of the actor, if any.</param>
+        /// <param name="status">The <see cref="StatusView"/> of the actor, if any.</param>
         /// <param name="joinedViaStarterPack">A view over the start pack the user joined using, if any.</param>
         /// <param name="pinnedPost">A <see cref="StrongReference"/> to the actor's pinned post, if any.</param>
         /// <param name="followersCount">The actor's current follower count.</param>
@@ -60,12 +61,13 @@ namespace idunno.Bluesky.Actor
             DateTimeOffset? indexedAt,
             DateTimeOffset? createdAt,
             VerificationState? verification,
+            StatusView? status,
             StarterPackViewBasic? joinedViaStarterPack = null,
             StrongReference? pinnedPost = null,
             int followersCount = 0,
             int followsCount = 0,
             int postsCount = 0
-            ) : base(did, handle, displayName, description, pronouns, website, avatar, associated, viewer, labels, indexedAt, createdAt, verification)
+            ) : base(did, handle, displayName, description, pronouns, website, avatar, associated, viewer, labels, indexedAt, createdAt, verification, status)
         {
             Banner = banner;
             FollowersCount = followersCount;
