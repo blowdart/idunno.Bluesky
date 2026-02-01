@@ -6,7 +6,7 @@
     <PackageVersion Include="CommentSense" Version="0.2.0" />
     <PackageVersion Include="Coravel" Version="6.0.2" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
-    <PackageVersion Include="DotNet.ReproducibleBuilds" Version="2.0.1" />
+    <PackageVersion Include="DotNet.ReproducibleBuilds" Version="2.0.2" />
     <PackageVersion Include="DotNetAnalyzers.DocumentationAnalyzers" Version="1.0.0-beta.59" />
     <PackageVersion Include="DnsClient" Version="1.8.0" />
     <PackageVersion Include="Duende.IdentityModel.OidcClient" Version="7.0.0" />
@@ -22,10 +22,10 @@
     <PackageVersion Include="OpenGraph-Net" Version="4.0.1" />
     <PackageVersion Include="PeterO.Cbor" Version="4.5.5" />
     <PackageVersion Include="SimpleBase" Version="5.6.0" />
-    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.18.0.131500" />
-    <PackageVersion Include="System.CommandLine" Version="2.0.0" />
-    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
-    <PackageVersion Include="xunit.v3" Version="3.2.0" />
+    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.19.0.132793" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.2" />
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="ZstdSharp.Port" Version="0.8.7" />
   </ItemGroup>
