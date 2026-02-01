@@ -19,8 +19,15 @@
 #### idunno.Bluesky
 
 * Added `TypeResolver` static class.
-* Added support for `GetActorStarterPacks()`.
+* Added support for `GetActorStarterPacks()`, addresses [#288](https://github.com/blowdart/idunno.Bluesky/issues/288), thank you [j-childers](https://github.com/j-childers)
 * Added `FeedItem` record to represent feeds added in a `StarterPack` record.
+
+### Changed
+
+#### idunno.Bluesky
+
+* Added `Status` property to `ProfileViewBasic`, `ProfileView` and `ProfileViewDetailed` to represent live streaming status for a profile, if any.
+* Changed `Description` property in `ListView` to be nullable to match the API, fixes [https://github.com/blowdart/idunno.Bluesky/issues/289](#289)
 
 ### Breaking Changes
 
@@ -30,9 +37,8 @@
 
 #### idunno.Bluesky
 
-* Corrected `StarterPack` `Feeds` property to be a list of `FeedItem`s.
-* Corrected `StarterPack` constructor to take a list of `FeedItem`s for feeds parameter.
-* Added `Status` property to `ProfileViewBasic`, `ProfileView` and `ProfileViewDetailed` to represent live streaming status for a profile, if any.
+* Changed `StarterPack` `Feeds` property to be a list of `FeedItem`, fixes [#288](https://github.com/blowdart/idunno.Bluesky/issues/288)
+* Changed `StarterPack` constructor to take a list of `FeedItem` for feeds parameter. fixes [#288](https://github.com/blowdart/idunno.Bluesky/issues/288)
 
 ####
 

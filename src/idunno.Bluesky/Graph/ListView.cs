@@ -39,7 +39,7 @@ namespace idunno.Bluesky.Graph
             ProfileView creator,
             string name,
             ListPurpose purpose,
-            string description,
+            string? description,
             IReadOnlyCollection<Facet>? descriptionFacets,
             Uri? avatar,
             int? listItemCount,
@@ -61,8 +61,7 @@ namespace idunno.Bluesky.Graph
         /// <summary>
         /// Gets the description of the list.
         /// </summary>
-        [JsonRequired]
-        public string Description { get; init; }
+        public string? Description { get; init; }
 
         /// <summary>
         /// Gets any <see cref="Facet" />s applied to the <see cref="Description"/>.

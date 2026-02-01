@@ -1098,11 +1098,11 @@ idunno.Bluesky.Graph.ListPurpose.ReferenceList = 2 -> idunno.Bluesky.Graph.ListP
 idunno.Bluesky.Graph.ListView
 idunno.Bluesky.Graph.ListView.Creator.get -> idunno.Bluesky.Actor.ProfileView!
 idunno.Bluesky.Graph.ListView.Creator.init -> void
-idunno.Bluesky.Graph.ListView.Description.get -> string!
+idunno.Bluesky.Graph.ListView.Description.get -> string?
 idunno.Bluesky.Graph.ListView.Description.init -> void
 idunno.Bluesky.Graph.ListView.DescriptionFacets.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.RichText.Facet!>?
 idunno.Bluesky.Graph.ListView.DescriptionFacets.init -> void
-idunno.Bluesky.Graph.ListView.ListView(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid, idunno.Bluesky.Actor.ProfileView! creator, string! name, idunno.Bluesky.Graph.ListPurpose purpose, string! description, System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.RichText.Facet!>? descriptionFacets, System.Uri? avatar, int? listItemCount, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Labels.Label!>? labels, idunno.Bluesky.Graph.ListViewerState? viewer, System.DateTimeOffset? indexedAt) -> void
+idunno.Bluesky.Graph.ListView.ListView(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid, idunno.Bluesky.Actor.ProfileView! creator, string! name, idunno.Bluesky.Graph.ListPurpose purpose, string? description, System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.RichText.Facet!>? descriptionFacets, System.Uri? avatar, int? listItemCount, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Labels.Label!>? labels, idunno.Bluesky.Graph.ListViewerState? viewer, System.DateTimeOffset? indexedAt) -> void
 idunno.Bluesky.Graph.ListViewBasic
 idunno.Bluesky.Graph.ListViewBasic.Avatar.get -> System.Uri?
 idunno.Bluesky.Graph.ListViewBasic.Avatar.init -> void
