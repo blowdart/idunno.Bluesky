@@ -24,6 +24,7 @@ namespace idunno.AtProto
     [JsonSerializable(typeof(Handle))]
     [JsonSerializable(typeof(Nsid))]
     [JsonSerializable(typeof(RecordKey))]
+    [JsonSerializable(typeof(TimestampIdentifier))]
     internal partial class SourceGenerationContext : JsonSerializerContext
     {
     }

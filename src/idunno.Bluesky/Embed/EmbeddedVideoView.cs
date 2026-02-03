@@ -19,14 +19,16 @@ namespace idunno.Bluesky.Embed
         /// <param name="playlistUri">The <see cref="Uri"/> for the playlist of the video.</param>
         /// <param name="thumbnailUri">The <see cref="Uri"/> for the video thumbnail.</param>
         /// <param name="altText">The alt text description of the video, for accessibility.</param>
+        /// <param name="presentation">An optional hint to the client about how to present the video.</param>
         /// <param name="aspectRatio">An optional aspect ratio for the video.</param>
         [JsonConstructor]
-        internal EmbeddedVideoView(Cid cid, Uri playlistUri, Uri thumbnailUri, string altText, AspectRatio? aspectRatio)
+        internal EmbeddedVideoView(Cid cid, Uri playlistUri, Uri thumbnailUri, string altText, AspectRatio? aspectRatio, string? presentation)
         {
             Cid = cid;
             PlaylistUri = playlistUri;
             ThumbnailUri = thumbnailUri;
             AltText = altText;
+            Presentation = presentation;
             AspectRatio = aspectRatio;
         }
 
@@ -64,5 +66,12 @@ namespace idunno.Bluesky.Embed
         /// </summary>
         [JsonInclude]
         public AspectRatio? AspectRatio { get; init; }
+
+        /// <summary>
+        /// Gets an optional hint to the client about how to present the video.
+        /// Known values are provided by <see cref="VideoPresentationKnownValues"/>, but may contain any value.
+        /// </summary>
+        [JsonInclude]
+        public string? Presentation { get; init; }
     }
 }

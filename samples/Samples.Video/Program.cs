@@ -186,7 +186,7 @@ namespace Samples.Video
                         return;
                     }
 
-                    EmbeddedVideo video = new(videoUploadResult.Result.Blob, altText: "Alt Text", captions: captionUploadResult.Result);
+                    EmbeddedVideo video = new(videoUploadResult.Result.Blob, altText: "Alt Text", captions: [captionUploadResult.Result]);
 
                     var postResult = await agent.Post("With video and captions", video: video, cancellationToken: cancellationToken);
                     postResult.EnsureSucceeded();

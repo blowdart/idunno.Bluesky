@@ -8,6 +8,14 @@
 
 * Add support for Bluesky authentication in ASP.NET Razor Pages.
 
+## 1.6.0 - Unreleased, In Progress
+
+### Added
+
+#### idunno.Bluesky
+
+* Added support for drafts.
+
 ## 1.5.0 - Unreleased, In Progress
 
 ### Added
@@ -15,12 +23,22 @@
 #### idunno.AtProto
 
 * Added `TypeResolver` static class.
+* Added `TimestampIdentifier` to `SourceGenerationContext.`
+
+#### idunno.AtProto.Types
+
+* Added new constructor on `TimeStampIdentifier` to create from a `RecordKey`.
+* Added `TimeStampIdentifierJsonConverter` for `TimeStampIdentifier`.
+* Added explicit and implicit conversions between `TimeStampIdentifier` and `RecordKey`.
+* Added tests for `TimeStampIdentifier` serialization and deserialization.
 
 #### idunno.Bluesky
 
 * Added `TypeResolver` static class.
 * Added support for `GetActorStarterPacks()`, addresses [#288](https://github.com/blowdart/idunno.Bluesky/issues/288), thank you [j-childers](https://github.com/j-childers)
 * Added `FeedItem` record to represent feeds added in a `StarterPack` record.
+* Added `Presentation` property to `EmbeddedVideo` and `EmbeddedVideoView` to for video presentation hints.
+* Added `VideoPresentationKnowValues` static class with known presentation values for videos.
 
 ### Changed
 
@@ -28,6 +46,8 @@
 
 * Added `Status` property to `ProfileViewBasic`, `ProfileView` and `ProfileViewDetailed` to represent live streaming status for a profile, if any.
 * Changed `Description` property in `ListView` to be nullable to match the API, fixes [#289](https://github.com/blowdart/idunno.Bluesky/issues/289)
+* `EmbeddedVideo` and `EmbeddedVideoView` include the optional `Presentation` property. See [Add presentation to video embed as a hint to the client about how to display the video](https://github.com/bluesky-social/atproto/pull/4581).
+* `EmbeddedVideo` and `EmbeddedVideoView` constructors updated to take optional `presentation` parameter.
 
 ### Breaking Changes
 
@@ -39,6 +59,8 @@
 
 * Changed `StarterPack` `Feeds` property to be a list of `FeedItem`, fixes [#288](https://github.com/blowdart/idunno.Bluesky/issues/288)
 * Changed `StarterPack` constructor to take a list of `FeedItem` for feeds parameter, fixes [#288](https://github.com/blowdart/idunno.Bluesky/issues/288)
+* Changed `EmbeddedVideo` and `EmbeddedVideoView` to include the optional `Presentation` property.
+* `EmbeddedVideo` constructor overload that took a single `Caption` parameter has been removed. Use the constructor that takes an `ICollection` of `Caption`.
 
 ####
 

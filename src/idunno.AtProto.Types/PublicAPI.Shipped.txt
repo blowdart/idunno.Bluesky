@@ -81,6 +81,15 @@ idunno.AtProto.TimestampIdentifier.ClockId.get -> double
 idunno.AtProto.TimestampIdentifier.TimeStamp.get -> double
 idunno.AtProto.TimestampIdentifier.TimestampIdentifier(string! s) -> void
 idunno.AtProto.TimestampIdentifier.Value.get -> string!
+idunno.AtProto.TimestampIdentifier.TimestampIdentifier() -> void
+idunno.AtProto.TimestampIdentifier.ToRecordKey() -> idunno.AtProto.RecordKey!
+override idunno.AtProto.Json.TimestampIdentifierConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> idunno.AtProto.TimestampIdentifier?
+override idunno.AtProto.Json.TimestampIdentifierConverter.Write(System.Text.Json.Utf8JsonWriter! writer, idunno.AtProto.TimestampIdentifier! value, System.Text.Json.JsonSerializerOptions! options) -> void
+static idunno.AtProto.TimestampIdentifier.FromRecordKey(idunno.AtProto.RecordKey! rKey) -> idunno.AtProto.TimestampIdentifier!
+static idunno.AtProto.TimestampIdentifier.implicit operator idunno.AtProto.RecordKey!(idunno.AtProto.TimestampIdentifier! tid) -> idunno.AtProto.RecordKey!
+static idunno.AtProto.TimestampIdentifier.implicit operator idunno.AtProto.TimestampIdentifier!(idunno.AtProto.RecordKey! rKey) -> idunno.AtProto.TimestampIdentifier!
+idunno.AtProto.Json.TimestampIdentifierConverter
+idunno.AtProto.Json.TimestampIdentifierConverter.TimestampIdentifierConverter() -> void
 override idunno.AtProto.AtIdentifier.Equals(object? obj) -> bool
 override idunno.AtProto.AtIdentifier.GetHashCode() -> int
 override idunno.AtProto.AtIdentifier.ToString() -> string!
@@ -157,3 +166,4 @@ static idunno.AtProto.TimestampIdentifier.FromString(string! s) -> idunno.AtProt
 static idunno.AtProto.TimestampIdentifier.implicit operator idunno.AtProto.TimestampIdentifier!(string! s) -> idunno.AtProto.TimestampIdentifier!
 static idunno.AtProto.TimestampIdentifier.implicit operator string!(idunno.AtProto.TimestampIdentifier! tid) -> string!
 static idunno.AtProto.TimestampIdentifier.Next() -> idunno.AtProto.RecordKey!
+idunno.AtProto.TimestampIdentifier.TimestampIdentifier(idunno.AtProto.RecordKey! recordKey) -> void

@@ -761,8 +761,11 @@ idunno.Bluesky.Embed.EmbeddedVideo.AspectRatio.get -> idunno.Bluesky.Embed.Aspec
 idunno.Bluesky.Embed.EmbeddedVideo.AspectRatio.init -> void
 idunno.Bluesky.Embed.EmbeddedVideo.Captions.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Embed.Caption!>?
 idunno.Bluesky.Embed.EmbeddedVideo.Captions.init -> void
-idunno.Bluesky.Embed.EmbeddedVideo.EmbeddedVideo(idunno.AtProto.Repo.Blob! video, idunno.Bluesky.Embed.Caption! captions, string? altText = null, idunno.Bluesky.Embed.AspectRatio? aspectRatio = null) -> void
-idunno.Bluesky.Embed.EmbeddedVideo.EmbeddedVideo(idunno.AtProto.Repo.Blob! video, System.Collections.Generic.ICollection<idunno.Bluesky.Embed.Caption!>? captions = null, string? altText = null, idunno.Bluesky.Embed.AspectRatio? aspectRatio = null) -> void
+idunno.Bluesky.Embed.EmbeddedVideo.EmbeddedVideo(idunno.AtProto.Repo.Blob! video, idunno.Bluesky.Embed.Caption! caption, string? altText, idunno.Bluesky.Embed.AspectRatio? aspectRatio) -> void
+idunno.Bluesky.Embed.EmbeddedVideo.EmbeddedVideo(idunno.AtProto.Repo.Blob! video, System.Collections.Generic.ICollection<idunno.Bluesky.Embed.Caption!>? captions = null, string? altText = null, idunno.Bluesky.Embed.AspectRatio? aspectRatio = null, string? presentation = null) -> void
+idunno.Bluesky.Embed.EmbeddedVideo.EmbeddedVideo(idunno.AtProto.Repo.Blob! video, System.Collections.Generic.ICollection<idunno.Bluesky.Embed.Caption!>? captions, string? altText, idunno.Bluesky.Embed.AspectRatio? aspectRatio) -> void
+idunno.Bluesky.Embed.EmbeddedVideo.Presentation.get -> string?
+idunno.Bluesky.Embed.EmbeddedVideo.Presentation.init -> void
 idunno.Bluesky.Embed.EmbeddedVideo.Video.get -> idunno.AtProto.Repo.Blob!
 idunno.Bluesky.Embed.EmbeddedVideo.Video.init -> void
 idunno.Bluesky.Embed.EmbeddedVideoView
@@ -774,6 +777,8 @@ idunno.Bluesky.Embed.EmbeddedVideoView.Cid.get -> idunno.AtProto.Cid!
 idunno.Bluesky.Embed.EmbeddedVideoView.Cid.init -> void
 idunno.Bluesky.Embed.EmbeddedVideoView.PlaylistUri.get -> System.Uri!
 idunno.Bluesky.Embed.EmbeddedVideoView.PlaylistUri.init -> void
+idunno.Bluesky.Embed.EmbeddedVideoView.Presentation.get -> string?
+idunno.Bluesky.Embed.EmbeddedVideoView.Presentation.init -> void
 idunno.Bluesky.Embed.EmbeddedVideoView.ThumbnailUri.get -> System.Uri!
 idunno.Bluesky.Embed.EmbeddedVideoView.ThumbnailUri.init -> void
 idunno.Bluesky.Embed.EmbeddedView
@@ -788,6 +793,9 @@ idunno.Bluesky.Embed.ExternalProperties.Title.get -> string!
 idunno.Bluesky.Embed.ExternalProperties.Title.init -> void
 idunno.Bluesky.Embed.ExternalProperties.Uri.get -> System.Uri!
 idunno.Bluesky.Embed.ExternalProperties.Uri.init -> void
+idunno.Bluesky.Embed.VideoPresentationKnownValues
+static idunno.Bluesky.Embed.VideoPresentationKnownValues.Default.get -> string!
+static idunno.Bluesky.Embed.VideoPresentationKnownValues.Gif.get -> string!
 idunno.Bluesky.Embed.View
 idunno.Bluesky.Embed.ViewBlocked
 idunno.Bluesky.Embed.ViewBlocked.BlockedAuthor.get -> idunno.Bluesky.Feed.BlockedAuthor!

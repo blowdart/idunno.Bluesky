@@ -19,13 +19,15 @@ namespace idunno.Bluesky.Embed
         /// <param name="captions">A collection of <see cref="Caption"/>s for the video, if any.</param>
         /// <param name="altText">The alternative text for the video, if any.</param>
         /// <param name="aspectRatio">The <see cref="AspectRatio"/> of the video, if any.</param>
+        /// <param name="presentation">A hint to the client about how to present the video.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null.</exception>
         [JsonConstructor]
         public EmbeddedVideo(
             Blob video,
             ICollection<Caption>? captions = null,
             string? altText = null,
-            AspectRatio? aspectRatio = null)
+            AspectRatio? aspectRatio = null,
+            string? presentation = null)
         {
             ArgumentNullException.ThrowIfNull(video);
 
@@ -33,24 +35,44 @@ namespace idunno.Bluesky.Embed
             Captions = captions;
             AltText = altText;
             AspectRatio = aspectRatio;
+            Presentation = presentation;
         }
 
         /// <summary>
         /// Constructs a new instance of <see cref="EmbeddedVideo"/>
         /// </summary>
         /// <param name="video">The <see cref="Blob"/> containing the video.</param>
-        /// <param name="captions">A <see cref="Caption"/> for the video, if any.</param>
+        /// <param name="captions">A collection of <see cref="Caption"/>s for the video, if any.</param>
         /// <param name="altText">The alternative text for the video, if any.</param>
         /// <param name="aspectRatio">The <see cref="AspectRatio"/> of the video, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> or <paramref name="captions"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null.</exception>
+        // 1.4.0 BACKCOMPAT OVERLOAD -- DO NOT TOUCH
         public EmbeddedVideo(
             Blob video,
-            Caption captions,
-            string? altText = null,
-            AspectRatio? aspectRatio = null) : this(video, new List<Caption>() { captions }, altText, aspectRatio)
+            ICollection<Caption>? captions,
+            string? altText,
+            AspectRatio? aspectRatio) : this(video, captions, altText, aspectRatio, presentation: null)
         {
             ArgumentNullException.ThrowIfNull(video);
-            ArgumentNullException.ThrowIfNull(captions);
+        }
+
+        /// <summary>
+        /// Constructs a new instance of <see cref="EmbeddedVideo"/>
+        /// </summary>
+        /// <param name="video">The <see cref="Blob"/> containing the video.</param>
+        /// <param name="caption">A <see cref="Caption"/> for the video, if any.</param>
+        /// <param name="altText">The alternative text for the video, if any.</param>
+        /// <param name="aspectRatio">The <see cref="AspectRatio"/> of the video, if any.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> or <paramref name="caption"/> is null.</exception>
+        // 1.4.0 BACKCOMPAT OVERLOAD -- DO NOT TOUCH
+        public EmbeddedVideo(
+            Blob video,
+            Caption caption,
+            string? altText,
+            AspectRatio? aspectRatio) : this(video, [caption], altText, aspectRatio, presentation: null)
+        {
+            ArgumentNullException.ThrowIfNull(video);
+            ArgumentNullException.ThrowIfNull(caption);
         }
 
         /// <summary>
@@ -77,6 +99,30 @@ namespace idunno.Bluesky.Embed
         /// </summary>
         [JsonInclude]
         public AspectRatio? AspectRatio { get; init; }
+
+        /// <summary>
+        /// Gets a hint to the client about how to present the video.
+        /// Known values are provided by <see cref="VideoPresentationKnownValues"/>, but may contain any value.
+        /// </summary>
+        [JsonInclude]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Presentation { get; init; }
+    }
+
+    /// <summary>
+    /// Known values for the <see cref="EmbeddedVideo.Presentation"/> property.
+    /// </summary>
+    public static class VideoPresentationKnownValues
+    {
+        /// <summary>
+        /// The default presentation hint for an embedded video.
+        /// </summary>
+        public static string Default => "default";
+
+        /// <summary>
+        /// Hint to the client the presentation should like a GIF.
+        /// </summary>
+        public static string Gif => "gif";
     }
 
     /// <summary>

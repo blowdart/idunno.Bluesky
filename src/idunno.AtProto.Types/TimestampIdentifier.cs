@@ -10,12 +10,13 @@ using System.Text.RegularExpressions;
 namespace idunno.AtProto
 {
     /// <summary>
-    /// Utility class for Timestamp Identifiers (TID)
+    /// Encapsulates a timestamp-based unique identifier.
     /// </summary>
+    [JsonConverter(typeof(Json.TimestampIdentifierConverter))]
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
     public sealed partial class TimestampIdentifier
     {
-        [GeneratedRegex("^[234567abcdefghij][234567abcdefghijklmnopqrstuvwxyz]{12}$", RegexOptions.IgnoreCase, 100)]
+        [GeneratedRegex("^[234567abcdefghij][234567abcdefghijklmnopqrstuvwxyz]{12}$", RegexOptions.None, 100)]
         private static partial Regex s_Validator();
 
         private const int TidLength = 13;
@@ -35,11 +36,19 @@ namespace idunno.AtProto
         private readonly string _value;
 
         /// <summary>
+        /// Creates a new, unique, instance of <see cref="TimestampIdentifier"/> based on the current time.
+        /// </summary>
+        public TimestampIdentifier()
+        {
+            RecordKey next = Next();
+            _value = next.ToString();
+        }
+
+        /// <summary>
         /// Creates a new instance of <see cref="TimestampIdentifier"/>
         /// </summary>
         /// <param name="s">The string to create a <see cref="TimestampIdentifier"/> from.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="s"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="s"/> is not the correct length for a <see cref="TimestampIdentifier"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> is not a valid <see cref="TimestampIdentifier"/>.</exception>
         public TimestampIdentifier(string s)
         {
@@ -47,14 +56,31 @@ namespace idunno.AtProto
 
             s = s.Trim('-');
 
-            ArgumentOutOfRangeException.ThrowIfNotEqual(s.Length, TidLength);
-
-            if (!s_Validator().IsMatch(s))
+            if (s.Length != TidLength ||
+                !s_Validator().IsMatch(s))
             {
                 throw new ArgumentException("not a valid TimeStampIdentifier", nameof(s));
             }
 
             _value = s;
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="TimestampIdentifier"/>
+        /// </summary>
+        /// <param name="recordKey">The <see cref="RecordKey"/> to create a timestamp from.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="recordKey"/> is null.</exception>
+        /// <exception cref="ArgumentException"><paramref name="recordKey"/> is not a valid <see cref="TimestampIdentifier"/></exception>
+        public TimestampIdentifier(RecordKey recordKey)
+        {
+            ArgumentNullException.ThrowIfNull(recordKey);
+
+            if (recordKey.ToString().Length!= TidLength || !s_Validator().IsMatch(recordKey.ToString()))
+            {
+                throw new ArgumentException("not a valid TimeStampIdentifier", nameof(recordKey));
+            }
+
+            _value = recordKey.ToString();
         }
 
         /// <summary>
@@ -112,7 +138,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="s">The string to convert.</param>
         /// <returns>A <see cref="TimestampIdentifier"/> from the specified string.</returns>
-        public static implicit operator TimestampIdentifier(string s) => TimestampIdentifier.FromString(s);
+        public static implicit operator TimestampIdentifier(string s) => FromString(s);
 
         /// <summary>
         /// Converts the specified <see cref="TimestampIdentifier"/> to a string.
@@ -128,6 +154,44 @@ namespace idunno.AtProto
             else
             {
                 return tid.ToString();
+            }
+        }
+
+        /// <summary>
+        /// Creates a <see cref="TimestampIdentifier"/> from the specified record key.
+        /// </summary>
+        /// <param name="rKey">The record key to convert.</param>
+        /// <returns>A <see cref="TimestampIdentifier"/> from the specified record key.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static TimestampIdentifier FromRecordKey(RecordKey rKey) => new(rKey);
+
+        /// <summary>
+        /// Creates a <see cref="TimestampIdentifier"/> from the specified record key.
+        /// </summary>
+        /// <param name="rKey">The record key to convert.</param>
+        /// <returns>A <see cref="TimestampIdentifier"/> from the specified record key.</returns>
+        public static implicit operator TimestampIdentifier(RecordKey rKey) => FromRecordKey(rKey);
+
+        /// <summary>
+        /// Returns a string that represents the current <see cref="TimestampIdentifier"/>.
+        /// </summary>
+        /// <returns>A string that represents the current <see cref="TimestampIdentifier"/>.</returns>
+        public RecordKey ToRecordKey() => new(_value);
+
+        /// <summary>
+        /// Converts the specified <see cref="TimestampIdentifier"/> to a string.
+        /// </summary>
+        /// <param name="tid">The <see cref="TimestampIdentifier"/> to convert.</param>
+        /// <returns>A <see cref="TimestampIdentifier"/> from the specified string.</returns>
+        public static implicit operator RecordKey(TimestampIdentifier tid)
+        {
+            if (tid is null)
+            {
+                return string.Empty;
+            }
+            else
+            {
+                return tid.ToRecordKey();
             }
         }
 
