@@ -62,8 +62,6 @@
 * Changed `EmbeddedVideo` and `EmbeddedVideoView` to include the optional `Presentation` property.
 * `EmbeddedVideo` constructor overload that took a single `Caption` parameter has been removed. Use the constructor that takes an `ICollection` of `Caption`.
 
-####
-
 ## 1.4.0 - 2026-18-01
 
 ### Added
