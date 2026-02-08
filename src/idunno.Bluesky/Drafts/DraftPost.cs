@@ -17,18 +17,6 @@ namespace idunno.Bluesky.Drafts
     /// </remarks>
     public record DraftPost
     {
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private const string PornLabelName = "porn";
-
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private const string SexualLabelName = "sexual";
-
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private const string GraphicMediaLabelName = "graphic-media";
-
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private const string NudityLabelName = "nudity";
-
         /// <summary>
         /// Creates a new instance of <see cref="DraftPost"/> with the specified content and optional embedded media and labels.
         /// </summary>
@@ -265,7 +253,7 @@ namespace idunno.Bluesky.Drafts
             {
                 if (Labels is not null)
                 {
-                    return Labels.Contains(PornLabelName);
+                    return Labels.Contains(SelfLabelNames.Porn);
                 }
                 else
                 {
@@ -278,11 +266,11 @@ namespace idunno.Bluesky.Drafts
                 Labels ??= new SelfLabels();
                 if (value)
                 {
-                    Labels.AddLabel(PornLabelName);
+                    Labels.AddLabel(SelfLabelNames.Porn);
                 }
                 else
                 {
-                    Labels.RemoveLabel(PornLabelName);
+                    Labels.RemoveLabel(SelfLabelNames.Porn);
                 }
             }
         }
@@ -298,7 +286,7 @@ namespace idunno.Bluesky.Drafts
             {
                 if (Labels is not null)
                 {
-                    return Labels.Contains(SexualLabelName);
+                    return Labels.Contains(SelfLabelNames.Sexual);
                 }
                 else
                 {
@@ -311,11 +299,11 @@ namespace idunno.Bluesky.Drafts
                 Labels ??= new SelfLabels();
                 if (value)
                 {
-                    Labels.AddLabel(SexualLabelName);
+                    Labels.AddLabel(SelfLabelNames.Sexual);
                 }
                 else
                 {
-                    Labels.RemoveLabel(SexualLabelName);
+                    Labels.RemoveLabel(SelfLabelNames.Sexual);
                 }
             }
         }
@@ -334,7 +322,7 @@ namespace idunno.Bluesky.Drafts
                     return false;
                 }
 
-                return Labels.Contains(GraphicMediaLabelName);
+                return Labels.Contains(SelfLabelNames.GraphicMedia);
             }
 
             set
@@ -342,11 +330,11 @@ namespace idunno.Bluesky.Drafts
                 Labels ??= new SelfLabels();
                 if (value)
                 {
-                    Labels.AddLabel(GraphicMediaLabelName);
+                    Labels.AddLabel(SelfLabelNames.GraphicMedia);
                 }
                 else
                 {
-                    Labels.RemoveLabel(GraphicMediaLabelName);
+                    Labels.RemoveLabel(SelfLabelNames.GraphicMedia);
                 }
             }
         }
@@ -365,7 +353,7 @@ namespace idunno.Bluesky.Drafts
                     return false;
                 }
 
-                return Labels.Contains(NudityLabelName);
+                return Labels.Contains(SelfLabelNames.Nudity);
             }
 
             set
@@ -374,11 +362,11 @@ namespace idunno.Bluesky.Drafts
 
                 if (value)
                 {
-                    Labels.AddLabel(NudityLabelName);
+                    Labels.AddLabel(SelfLabelNames.Nudity);
                 }
                 else
                 {
-                    Labels.RemoveLabel(NudityLabelName);
+                    Labels.RemoveLabel(SelfLabelNames.Nudity);
                 }
             }
         }
