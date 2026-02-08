@@ -9,6 +9,8 @@ using idunno.Bluesky.Actor.Model;
 using idunno.Bluesky.Bookmarks.Model;
 using idunno.Bluesky.Chat;
 using idunno.Bluesky.Chat.Model;
+using idunno.Bluesky.Drafts;
+using idunno.Bluesky.Drafts.Model;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed;
 using idunno.Bluesky.Feed.Gates;
@@ -298,6 +300,22 @@ namespace idunno.Bluesky
     [JsonSerializable(typeof(GetTrendsResponse))]
     [JsonSerializable(typeof(AgeAssuranceStatus))]
     [JsonSerializable(typeof(GetAgeAssuranceStateResponse))]
+
+    [JsonSerializable(typeof(Draft))]
+    [JsonSerializable(typeof(DraftEmbedCaption))]
+    [JsonSerializable(typeof(DraftEmbedExternal))]
+    [JsonSerializable(typeof(DraftEmbedImage))]
+    [JsonSerializable(typeof(DraftEmbedLocalRef))]
+    [JsonSerializable(typeof(DraftEmbedRecord))]
+    [JsonSerializable(typeof(DraftEmbedVideo))]
+    [JsonSerializable(typeof(DraftPost))]
+    [JsonSerializable(typeof(DraftView))]
+    [JsonSerializable(typeof(DraftWithId))]
+    [JsonSerializable(typeof(CreateDraftRequest))]
+    [JsonSerializable(typeof(CreateDraftResponse))]
+    [JsonSerializable(typeof(GetDraftsResponse))]
+    [JsonSerializable(typeof(DeleteDraftRequest))]
+    [JsonSerializable(typeof(UpdateDraftRequest))]
 
     internal partial class SourceGenerationContext : JsonSerializerContext
     {

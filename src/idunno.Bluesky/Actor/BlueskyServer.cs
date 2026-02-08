@@ -223,7 +223,7 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Get a list of suggested actors for the authenticator users. The expected use is discovery of accounts to follow during new account onboarding.
+        /// Get a list of suggested actors for the authenticated user. The expected use is discovery of accounts to follow during new account onboarding.
         /// </summary>
         /// <param name="limit">The maximum number of suggested actors to return.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>

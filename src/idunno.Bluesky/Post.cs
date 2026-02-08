@@ -20,18 +20,6 @@ namespace idunno.Bluesky
     /// </remarks>
     public sealed record class Post : BlueskyTimestampedRecord
     {
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private const string PornLabelName = "porn";
-
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private const string SexualLabelName = "sexual";
-
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private const string GraphicMediaLabelName = "graphic-media";
-
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private const string NudityLabelName = "nudity";
-
         /// <summary>
         /// Creates a new instance of <see cref="Post"/> and sets <see cref="BlueskyTimestampedRecord.CreatedAt"/> to the current date and time.
         /// </summary>
@@ -539,7 +527,7 @@ namespace idunno.Bluesky
             {
                 if (Labels is not null)
                 {
-                    return Labels.Contains(PornLabelName);
+                    return Labels.Contains(SelfLabelNames.Porn);
                 }
                 else
                 {
@@ -552,11 +540,11 @@ namespace idunno.Bluesky
                 Labels ??= new SelfLabels();
                 if (value)
                 {
-                    Labels.AddLabel(PornLabelName);
+                    Labels.AddLabel(SelfLabelNames.Porn);
                 }
                 else
                 {
-                    Labels.RemoveLabel(PornLabelName);
+                    Labels.RemoveLabel(SelfLabelNames.Porn);
                 }
             }
         }
@@ -572,7 +560,7 @@ namespace idunno.Bluesky
             {
                 if (Labels is not null)
                 {
-                    return Labels.Contains(SexualLabelName);
+                    return Labels.Contains(SelfLabelNames.Sexual);
                 }
                 else
                 {
@@ -585,11 +573,11 @@ namespace idunno.Bluesky
                 Labels ??= new SelfLabels();
                 if (value)
                 {
-                    Labels.AddLabel(SexualLabelName);
+                    Labels.AddLabel(SelfLabelNames.Sexual);
                 }
                 else
                 {
-                    Labels.RemoveLabel(SexualLabelName);
+                    Labels.RemoveLabel(SelfLabelNames.Sexual);
                 }
             }
         }
@@ -608,7 +596,7 @@ namespace idunno.Bluesky
                     return false;
                 }
 
-                return Labels.Contains(GraphicMediaLabelName);
+                return Labels.Contains(SelfLabelNames.GraphicMedia);
             }
 
             set
@@ -616,11 +604,11 @@ namespace idunno.Bluesky
                 Labels ??= new SelfLabels();
                 if (value)
                 {
-                    Labels.AddLabel(GraphicMediaLabelName);
+                    Labels.AddLabel(SelfLabelNames.GraphicMedia);
                 }
                 else
                 {
-                    Labels.RemoveLabel(GraphicMediaLabelName);
+                    Labels.RemoveLabel(SelfLabelNames.GraphicMedia);
                 }
             }
         }
@@ -639,7 +627,7 @@ namespace idunno.Bluesky
                     return false;
                 }
 
-                return Labels.Contains(NudityLabelName);
+                return Labels.Contains(SelfLabelNames.Nudity);
             }
 
             set
@@ -648,11 +636,11 @@ namespace idunno.Bluesky
 
                 if (value)
                 {
-                    Labels.AddLabel(NudityLabelName);
+                    Labels.AddLabel(SelfLabelNames.Nudity);
                 }
                 else
                 {
-                    Labels.RemoveLabel(NudityLabelName);
+                    Labels.RemoveLabel(SelfLabelNames.Nudity);
                 }
             }
         }
@@ -695,6 +683,44 @@ namespace idunno.Bluesky
     /// </summary>
     public sealed record PostSelfLabels
     {
+        /// <summary>
+        /// Creates a new instance of <see cref="PostSelfLabels"/>
+        /// </summary>
+        public PostSelfLabels()
+        {
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="PostSelfLabels"/>
+        /// </summary>
+        /// <param name="labels">The AtProto <see cref="SelfLabels"/> to extract specific Bluesky post self labels from.</param>
+        public PostSelfLabels(SelfLabels labels)
+        {
+            if (labels is not null)
+            {
+                if (labels.Contains(SelfLabelNames.GraphicMedia))
+                {
+                    GraphicMedia = true;
+                }
+
+                if (labels.Contains(SelfLabelNames.Nudity))
+                {
+                    Nudity = true;
+                }
+
+                if (labels.Contains(SelfLabelNames.Porn))
+                {
+                    Porn = true;
+                }
+
+                if (labels.Contains(SelfLabelNames.Sexual))
+                {
+                    SexualContent = true;
+                }
+            }
+        }
+
+
         /// <summary>
         /// Gets or sets a flag indicating the post media contains porn.
         /// This puts a warning on images and can only be clicked through if the user is 18+ and has enabled adult content.

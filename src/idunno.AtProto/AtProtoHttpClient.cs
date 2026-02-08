@@ -1169,6 +1169,16 @@ namespace idunno.AtProto
             {
                 foreach (NameValueHeaderValue header in _extraRequestHeaders!)
                 {
+                    if (requestHeaders.Any(h => h.Name.Equals(header.Name, StringComparison.OrdinalIgnoreCase)) && header.Value != null)
+                    {
+                        continue;
+                    }
+
+                    if (requestHeaders.Any(h => h.Name.Equals(header.Name, StringComparison.OrdinalIgnoreCase) && h.Value == header.Value))
+                    {
+                        continue;
+                    }
+
                     requestHeaders.Add(header);
                 }
 

@@ -108,5 +108,17 @@ namespace idunno.Bluesky
 
         [LoggerMessage(90, LogLevel.Error, "GetLabelerServices failed because GetUserPreferencesFailed with {statusCode} error {error} message {message}")]
         internal static partial void GetUserPreferencesFailedInGetLabelerServices(ILogger logger, HttpStatusCode statusCode, string? error, string? message);
+
+        [LoggerMessage(100, LogLevel.Information, "Uploading image {fileName} from draft {draftId}")]
+        internal static partial void UploadingImageFromDraft(ILogger logger, string fileName, TimestampIdentifier draftId);
+
+        [LoggerMessage(101, LogLevel.Information, "Uploading video {fileName} from draft {draftId}")]
+        internal static partial void UploadingVideoFromDraft(ILogger logger, string fileName, TimestampIdentifier draftId);
+
+        [LoggerMessage(102, LogLevel.Information, "Uploading caption {fileName} from draft {draftId}")]
+        internal static partial void UploadingCaptionFromDraft(ILogger logger, string fileName, TimestampIdentifier draftId);
+
+        [LoggerMessage(103, LogLevel.Error, "DeleteDraft failed for {draftId} with status code {statusCode} error {error} message {message}")]
+        internal static partial void DeleteDraftFailed(ILogger logger, TimestampIdentifier draftId, HttpStatusCode statusCode, string? error, string? message);
     }
 }

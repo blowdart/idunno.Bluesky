@@ -1,1 +1,116 @@
 ﻿#nullable enable
+const idunno.Bluesky.SelfLabelNames.GraphicMedia = "graphic-media" -> string!
+const idunno.Bluesky.SelfLabelNames.Nudity = "nudity" -> string!
+const idunno.Bluesky.SelfLabelNames.Porn = "porn" -> string!
+const idunno.Bluesky.SelfLabelNames.Sexual = "sexual" -> string!
+idunno.Bluesky.BlueskyAgent.CreateDraft(idunno.Bluesky.Drafts.Draft! draft, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.TimestampIdentifier!>!>!
+idunno.Bluesky.BlueskyAgent.DeleteDraft(idunno.AtProto.TimestampIdentifier! draftId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+idunno.Bluesky.BlueskyAgent.GetDrafts(int? limit = null, string? cursor = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Drafts.DraftView!>!>!>!
+idunno.Bluesky.BlueskyAgent.Post(idunno.Bluesky.Drafts.DraftWithId! draftWithId, bool extractFacets, bool deleteDraft, idunno.Bluesky.Actor.InteractionPreferences? interactionPreferences, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.Collections.Generic.IReadOnlyList<idunno.AtProto.Repo.CreateRecordResult!>!>!>!
+idunno.Bluesky.BlueskyAgent.UpdateDraft(idunno.Bluesky.Drafts.DraftWithId! draftWithId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+idunno.Bluesky.Drafts.Draft
+idunno.Bluesky.Drafts.Draft.DeviceId.get -> System.Guid?
+idunno.Bluesky.Drafts.Draft.DeviceId.init -> void
+idunno.Bluesky.Drafts.Draft.DeviceName.get -> string?
+idunno.Bluesky.Drafts.Draft.DeviceName.init -> void
+idunno.Bluesky.Drafts.Draft.Draft(idunno.Bluesky.Drafts.DraftPost! post, System.Guid? deviceId) -> void
+idunno.Bluesky.Drafts.Draft.Draft(idunno.Bluesky.Drafts.DraftPost! post, System.Guid? deviceId, string? deviceName) -> void
+idunno.Bluesky.Drafts.Draft.Draft(string! text, System.Guid? deviceId) -> void
+idunno.Bluesky.Drafts.Draft.Draft(string! text, System.Guid? deviceId, string? deviceName) -> void
+idunno.Bluesky.Drafts.Draft.Draft(System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftPost!>! posts, System.Guid? deviceId, string? deviceName = null, System.Collections.Generic.ICollection<string!>? langs = null, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.PostGateRule!>? postGateEmbeddingRules = null, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.ThreadGateRule!>? threadGateAllowRules = null) -> void
+idunno.Bluesky.Drafts.Draft.Langs.get -> System.Collections.Generic.ICollection<string!>?
+idunno.Bluesky.Drafts.Draft.Langs.init -> void
+idunno.Bluesky.Drafts.Draft.PostGateEmbeddingRules.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.PostGateRule!>?
+idunno.Bluesky.Drafts.Draft.PostGateEmbeddingRules.init -> void
+idunno.Bluesky.Drafts.Draft.Posts.get -> System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftPost!>!
+idunno.Bluesky.Drafts.Draft.Posts.init -> void
+idunno.Bluesky.Drafts.Draft.ThreadGateAllowRules.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.ThreadGateRule!>?
+idunno.Bluesky.Drafts.Draft.ThreadGateAllowRules.init -> void
+idunno.Bluesky.Drafts.DraftEmbedCaption
+idunno.Bluesky.Drafts.DraftEmbedCaption.Content.get -> string!
+idunno.Bluesky.Drafts.DraftEmbedCaption.Content.set -> void
+idunno.Bluesky.Drafts.DraftEmbedCaption.DraftEmbedCaption(string! content, string! lang) -> void
+idunno.Bluesky.Drafts.DraftEmbedCaption.Lang.get -> string!
+idunno.Bluesky.Drafts.DraftEmbedCaption.Lang.set -> void
+idunno.Bluesky.Drafts.DraftEmbedExternal
+idunno.Bluesky.Drafts.DraftEmbedExternal.DraftEmbedExternal(System.Uri! uri) -> void
+idunno.Bluesky.Drafts.DraftEmbedExternal.Uri.get -> System.Uri!
+idunno.Bluesky.Drafts.DraftEmbedExternal.Uri.init -> void
+idunno.Bluesky.Drafts.DraftEmbedImage
+idunno.Bluesky.Drafts.DraftEmbedImage.AltText.get -> string?
+idunno.Bluesky.Drafts.DraftEmbedImage.AltText.set -> void
+idunno.Bluesky.Drafts.DraftEmbedImage.DraftEmbedImage(idunno.Bluesky.Drafts.DraftEmbedLocalRef! localRef, string? altText = null) -> void
+idunno.Bluesky.Drafts.DraftEmbedImage.LocalRef.get -> idunno.Bluesky.Drafts.DraftEmbedLocalRef!
+idunno.Bluesky.Drafts.DraftEmbedImage.LocalRef.init -> void
+idunno.Bluesky.Drafts.DraftEmbedLocalRef.DraftEmbedLocalRef(string! path) -> void
+idunno.Bluesky.Drafts.DraftEmbedLocalRef.Path.init -> void
+idunno.Bluesky.Drafts.DraftEmbedRecord
+idunno.Bluesky.Drafts.DraftEmbedRecord.DraftEmbedRecord(idunno.AtProto.Repo.StrongReference! record) -> void
+idunno.Bluesky.Drafts.DraftEmbedRecord.Record.get -> idunno.AtProto.Repo.StrongReference!
+idunno.Bluesky.Drafts.DraftEmbedRecord.Record.init -> void
+idunno.Bluesky.Drafts.DraftEmbedVideo
+idunno.Bluesky.Drafts.DraftEmbedVideo.AltText.get -> string?
+idunno.Bluesky.Drafts.DraftEmbedVideo.AltText.set -> void
+idunno.Bluesky.Drafts.DraftEmbedVideo.Captions.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Drafts.DraftEmbedCaption!>?
+idunno.Bluesky.Drafts.DraftEmbedVideo.Captions.init -> void
+idunno.Bluesky.Drafts.DraftEmbedVideo.DraftEmbedVideo(idunno.Bluesky.Drafts.DraftEmbedLocalRef! localRef, string? altText = null, System.Collections.Generic.ICollection<idunno.Bluesky.Drafts.DraftEmbedCaption!>? captions = null) -> void
+idunno.Bluesky.Drafts.DraftEmbedVideo.LocalRef.get -> idunno.Bluesky.Drafts.DraftEmbedLocalRef!
+idunno.Bluesky.Drafts.DraftEmbedVideo.LocalRef.init -> void
+idunno.Bluesky.Drafts.DraftException
+idunno.Bluesky.Drafts.DraftException.DraftException() -> void
+idunno.Bluesky.Drafts.DraftException.DraftException(string! message) -> void
+idunno.Bluesky.Drafts.DraftException.DraftException(string! message, System.Exception! inner) -> void
+idunno.Bluesky.Drafts.DraftException.DraftException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
+idunno.Bluesky.Drafts.DraftPost
+idunno.Bluesky.Drafts.DraftPost.ContainsGraphicMedia.get -> bool
+idunno.Bluesky.Drafts.DraftPost.ContainsGraphicMedia.set -> void
+idunno.Bluesky.Drafts.DraftPost.ContainsNudity.get -> bool
+idunno.Bluesky.Drafts.DraftPost.ContainsNudity.set -> void
+idunno.Bluesky.Drafts.DraftPost.ContainsPorn.get -> bool
+idunno.Bluesky.Drafts.DraftPost.ContainsPorn.set -> void
+idunno.Bluesky.Drafts.DraftPost.ContainsSexualContent.get -> bool
+idunno.Bluesky.Drafts.DraftPost.ContainsSexualContent.set -> void
+idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text) -> void
+idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, idunno.AtProto.Labels.SelfLabels! labels) -> void
+idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, idunno.AtProto.Labels.SelfLabels? labels, System.Collections.Generic.ICollection<idunno.Bluesky.Drafts.DraftEmbedImage!>? embedImages, System.Collections.Generic.ICollection<idunno.Bluesky.Drafts.DraftEmbedVideo!>? embedVideos, System.Collections.Generic.ICollection<idunno.Bluesky.Drafts.DraftEmbedExternal!>? embedExternals, System.Collections.Generic.ICollection<idunno.Bluesky.Drafts.DraftEmbedRecord!>? embedRecords) -> void
+idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, idunno.Bluesky.Drafts.DraftEmbedImage! embedImage) -> void
+idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, idunno.Bluesky.Drafts.DraftEmbedVideo! embedVideo) -> void
+idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, System.Collections.Generic.ICollection<idunno.Bluesky.Drafts.DraftEmbedImage!>! embedImages) -> void
+idunno.Bluesky.Drafts.DraftPost.EmbedExternals.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Drafts.DraftEmbedExternal!>?
+idunno.Bluesky.Drafts.DraftPost.EmbedExternals.init -> void
+idunno.Bluesky.Drafts.DraftPost.EmbedImages.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Drafts.DraftEmbedImage!>?
+idunno.Bluesky.Drafts.DraftPost.EmbedImages.init -> void
+idunno.Bluesky.Drafts.DraftPost.EmbedRecords.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Drafts.DraftEmbedRecord!>?
+idunno.Bluesky.Drafts.DraftPost.EmbedRecords.init -> void
+idunno.Bluesky.Drafts.DraftPost.EmbedVideos.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Drafts.DraftEmbedVideo!>?
+idunno.Bluesky.Drafts.DraftPost.EmbedVideos.init -> void
+idunno.Bluesky.Drafts.DraftPost.Labels.get -> idunno.AtProto.Labels.SelfLabels?
+idunno.Bluesky.Drafts.DraftPost.SetSelfLabels(idunno.Bluesky.PostSelfLabels! labels) -> void
+idunno.Bluesky.Drafts.DraftPost.Text.get -> string!
+idunno.Bluesky.Drafts.DraftPost.Text.set -> void
+idunno.Bluesky.Drafts.DraftView
+idunno.Bluesky.Drafts.DraftView.CreatedAt.get -> System.DateTimeOffset
+idunno.Bluesky.Drafts.DraftView.CreatedAt.init -> void
+idunno.Bluesky.Drafts.DraftView.Draft.get -> idunno.Bluesky.Drafts.Draft!
+idunno.Bluesky.Drafts.DraftView.Draft.init -> void
+idunno.Bluesky.Drafts.DraftView.Id.get -> idunno.AtProto.TimestampIdentifier!
+idunno.Bluesky.Drafts.DraftView.Id.init -> void
+idunno.Bluesky.Drafts.DraftView.UpdatedAt.get -> System.DateTimeOffset
+idunno.Bluesky.Drafts.DraftView.UpdatedAt.init -> void
+idunno.Bluesky.Drafts.DraftWithId
+idunno.Bluesky.Drafts.DraftWithId.Draft.get -> idunno.Bluesky.Drafts.Draft!
+idunno.Bluesky.Drafts.DraftWithId.Draft.init -> void
+idunno.Bluesky.Drafts.DraftWithId.DraftWithId(idunno.AtProto.TimestampIdentifier! id, idunno.Bluesky.Drafts.Draft! draft) -> void
+idunno.Bluesky.Drafts.DraftWithId.DraftWithId(idunno.Bluesky.Drafts.Draft! draft) -> void
+idunno.Bluesky.Drafts.DraftWithId.Id.get -> idunno.AtProto.TimestampIdentifier!
+idunno.Bluesky.Drafts.DraftEmbedLocalRef
+idunno.Bluesky.Drafts.DraftEmbedLocalRef.Path.get -> string!
+idunno.Bluesky.Drafts.DraftWithId.Id.init -> void
+idunno.Bluesky.PostSelfLabels.PostSelfLabels() -> void
+idunno.Bluesky.PostSelfLabels.PostSelfLabels(idunno.AtProto.Labels.SelfLabels! labels) -> void
+idunno.Bluesky.SelfLabelNames
+static idunno.Bluesky.BlueskyServer.CreateDraft(idunno.Bluesky.Drafts.Draft! draft, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.TimestampIdentifier!>!>!
+static idunno.Bluesky.BlueskyServer.DeleteDraft(idunno.AtProto.TimestampIdentifier! draftId, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+static idunno.Bluesky.BlueskyServer.GetDrafts(int? limit, string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Drafts.DraftView!>!>!>!
+static idunno.Bluesky.BlueskyServer.UpdateDraft(idunno.Bluesky.Drafts.DraftWithId! draftWithId, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+static readonly idunno.Bluesky.Maximum.ListedDrafts -> int
