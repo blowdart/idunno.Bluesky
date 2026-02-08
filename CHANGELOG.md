@@ -14,9 +14,10 @@
 
 #### idunno.Bluesky
 
-* Added support for drafts.
+* Added support for drafts, including `Draft` record, `CreateDraft()`, `GetDraft()`, `ListDrafts()`, `DeleteDraft()` and `PublishDraft()`.
+* Added `Post(DraftWithId)` to create a post from a draft.
 
-## 1.5.0 - Unreleased, In Progress
+## 1.5.0 - 2026-02-02
 
 ### Added
 
