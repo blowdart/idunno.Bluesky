@@ -8,6 +8,8 @@ namespace idunno.Bluesky.Drafts
     /// <summary>
     /// Encapsulates a embedded URI in a draft post.
     /// </summary>
+    [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
+    [JsonDerivedType(typeof(DraftEmbedExternal), typeDiscriminator: "app.bsky.draft.defs#draftEmbedExternal")]
     public record DraftEmbedExternal
     {
         /// <summary>

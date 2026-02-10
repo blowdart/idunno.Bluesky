@@ -8,7 +8,9 @@ namespace idunno.Bluesky.Drafts
     /// <summary>
     /// Encapsulates a local reference to a file to be embedded in a draft post.
     /// </summary>
-    public sealed record DraftEmbedLocalRef
+    [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
+    [JsonDerivedType(typeof(DraftEmbedLocalRef), typeDiscriminator: "app.bsky.draft.defs#draftEmbedLocalRef")]
+    public record DraftEmbedLocalRef
     {
         /// <summary>
         /// Creates a new instance of <see cref="DraftEmbedLocalRef"/> with the specified local path.

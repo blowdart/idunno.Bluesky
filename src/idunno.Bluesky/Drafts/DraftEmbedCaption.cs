@@ -8,7 +8,9 @@ namespace idunno.Bluesky.Drafts
     /// <summary>
     /// Represents an embedded caption associated with a draft.
     /// </summary>
-    public sealed record DraftEmbedCaption
+    [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
+    [JsonDerivedType(typeof(DraftEmbedCaption), typeDiscriminator: "app.bsky.draft.defs#draftEmbedCaption")]
+    public record DraftEmbedCaption
     {
         /// <summary>
         /// Creates a new instance of <see cref="DraftEmbedCaption"/> with the specified content and language.

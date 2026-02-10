@@ -10,6 +10,8 @@ namespace idunno.Bluesky.Drafts
     /// <summary>
     /// Encapsulates a local embedded image in a draft post.
     /// </summary>
+    [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
+    [JsonDerivedType(typeof(DraftEmbedImage), typeDiscriminator: "app.bsky.draft.defs#draftEmbedImage")]
     public record DraftEmbedImage
     {
         /// <summary>

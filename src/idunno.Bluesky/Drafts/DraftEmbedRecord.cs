@@ -10,6 +10,8 @@ namespace idunno.Bluesky.Drafts
     /// <summary>
     /// Encapsulates a reference to an <see cref="AtProtoRecord"/> in a draft post.
     /// </summary>
+    [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
+    [JsonDerivedType(typeof(DraftEmbedRecord), typeDiscriminator: "app.bsky.draft.defs#draftEmbedRecord")]
     public record DraftEmbedRecord
     {
         /// <summary>

@@ -10,6 +10,8 @@ namespace idunno.Bluesky.Drafts
     /// <summary>
     /// Encapsulates a local embedded video, and captions if any, in a draft post.
     /// </summary>
+    [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
+    [JsonDerivedType(typeof(DraftEmbedVideo), typeDiscriminator: "app.bsky.draft.defs#draftEmbedVideo")]
     public record DraftEmbedVideo
     {
         /// <summary>

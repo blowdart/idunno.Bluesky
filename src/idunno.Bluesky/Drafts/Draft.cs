@@ -10,6 +10,8 @@ namespace idunno.Bluesky.Drafts
     /// <summary>
     /// Encapsulates a draft containing an array of draft posts
     /// </summary>
+    [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
+    [JsonDerivedType(typeof(Draft), typeDiscriminator: "app.bsky.draft.defs#draft")]
     public record Draft
     {
         /// <summary>

@@ -1,7 +1,6 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
@@ -15,6 +14,8 @@ namespace idunno.Bluesky.Drafts
     /// <remarks>
     ///<para>See <see hcref="https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/draft/defs.json"/>draft/defs.json</para>
     /// </remarks>
+    [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
+    [JsonDerivedType(typeof(DraftPost), typeDiscriminator: "app.bsky.draft.defs#draftPost")]
     public record DraftPost
     {
         /// <summary>
