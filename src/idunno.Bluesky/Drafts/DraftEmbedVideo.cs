@@ -25,7 +25,7 @@ namespace idunno.Bluesky.Drafts
         ///     Thrown when <paramref name="altText"/> length is greater than 2000 grapheme clusters or <paramref name="captions"/> has more than 20 entries.
         /// </exception>
         [JsonConstructor]
-        public DraftEmbedVideo(DraftEmbedLocalRef localRef, string? altText = null, ICollection<DraftEmbedCaption>? captions = null)
+        public DraftEmbedVideo(DraftEmbedLocalRef localRef, string? altText = null, IList<DraftEmbedCaption>? captions = null)
         {
             ArgumentNullException.ThrowIfNull(localRef);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(
@@ -67,6 +67,6 @@ namespace idunno.Bluesky.Drafts
         /// <summary>
         /// A collection of <see cref="DraftEmbedCaption"/> associated with the video embed.
         /// </summary>
-        public ICollection<DraftEmbedCaption>? Captions { get; init; }
+        public IList<DraftEmbedCaption>? Captions { get; init; }
     }
 }

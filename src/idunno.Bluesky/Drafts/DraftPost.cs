@@ -33,10 +33,10 @@ namespace idunno.Bluesky.Drafts
         public DraftPost(
             string text,
             SelfLabels? labels,
-            ICollection<DraftEmbedImage>? embedImages,
-            ICollection<DraftEmbedVideo>? embedVideos,
-            ICollection<DraftEmbedExternal>? embedExternals,
-            ICollection<DraftEmbedRecord>? embedRecords)
+            IList<DraftEmbedImage>? embedImages,
+            IList<DraftEmbedVideo>? embedVideos,
+            IList<DraftEmbedExternal>? embedExternals,
+            IList<DraftEmbedRecord>? embedRecords)
         {
             ArgumentException.ThrowIfNullOrEmpty(text);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(
@@ -97,7 +97,7 @@ namespace idunno.Bluesky.Drafts
         /// <param name="embedImages">The images to embed in the post. (Maximum 4)</param>
         /// <exception cref="ArgumentException">Thrown when the text is null or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than 3000 characters or 300 graphemes, or when the number of embedded images exceeds 4.</exception>
-        public DraftPost(string text, ICollection<DraftEmbedImage> embedImages) : this(
+        public DraftPost(string text, IList<DraftEmbedImage> embedImages) : this(
             text: text,
             labels: null,
             embedImages: embedImages,
@@ -223,25 +223,25 @@ namespace idunno.Bluesky.Drafts
         /// Gets the embedded images for this draft.
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public ICollection<DraftEmbedImage>? EmbedImages { get; init; }
+        public IList<DraftEmbedImage>? EmbedImages { get; init; }
 
         /// <summary>
         /// Gets the embedded videos for this draft.
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public ICollection<DraftEmbedVideo>? EmbedVideos { get; init; }
+        public IList<DraftEmbedVideo>? EmbedVideos { get; init; }
 
         /// <summary>
         /// Gets the embedded external content for this draft.
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public ICollection<DraftEmbedExternal>? EmbedExternals { get; init; }
+        public IList<DraftEmbedExternal>? EmbedExternals { get; init; }
 
         /// <summary>
         /// Gets the embedded records for this draft.
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public ICollection<DraftEmbedRecord>? EmbedRecords { get; init; }
+        public IList<DraftEmbedRecord>? EmbedRecords { get; init; }
 
         /// <summary>
         /// Gets or sets a flag indicating the post media contains porn.

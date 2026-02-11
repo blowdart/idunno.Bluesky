@@ -1,7 +1,9 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
+
 using idunno.AtProto;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
@@ -149,8 +151,8 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="draftWithId"/> or its Draft property is null.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="DraftException">Thrown when <paramref name="draftWithId"/> cannot be converted to a post.</exception>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1199:Nested code blocks should not be used", Justification = "Nesting is due to a logger scope.")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "An overload for cancellationToken is a standard api")]
+        [SuppressMessage("Minor Code Smell", "S1199:Nested code blocks should not be used", Justification = "Nesting is due to a logger scope.")]
+        [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "An overload for cancellationToken is a standard api")]
         public async Task<AtProtoHttpResult<IReadOnlyList<CreateRecordResult>>> Post(
             DraftWithId draftWithId,
             bool extractFacets,
@@ -261,17 +263,17 @@ namespace idunno.Bluesky
                         postBuilder.PostGateRules = [.. interactionPreferences.PostGateEmbeddingRules];
                     }
 
-                    if (draftPost.EmbedExternals is not null && draftPost.EmbedExternals.First() is not null)
+                    if (draftPost.EmbedExternals is not null && draftPost.EmbedExternals[0] is not null)
                     {
                         EmbeddedExternal embeddedExternal = new(
-                            uri: draftPost.EmbedExternals.First().Uri,
-                            title: draftPost.EmbedExternals.First().Uri.ToString());
+                            uri: draftPost.EmbedExternals[0].Uri,
+                            title: draftPost.EmbedExternals[0].Uri.ToString());
                         postBuilder.Embed = embeddedExternal;
                     }
 
-                    if (draftPost.EmbedRecords is not null && draftPost.EmbedRecords.First() is not null)
+                    if (draftPost.EmbedRecords is not null && draftPost.EmbedRecords[0] is not null)
                     {
-                        EmbeddedRecord embeddedRecord = new(draftPost.EmbedRecords.First().Record);
+                        EmbeddedRecord embeddedRecord = new(draftPost.EmbedRecords[0].Record);
                         postBuilder.EmbedRecord(embeddedRecord);
                     }
 
@@ -425,6 +427,35 @@ namespace idunno.Bluesky
                     atErrorDetail: postResult?.AtErrorDetail,
                     rateLimit: postResult?.RateLimit);
             }
+        }
+
+        /// <summary>
+        /// Creates a Bluesky post record from the specified <paramref name="draftWithId"/> and deletes the draft if it is successfully posted.
+        /// </summary>
+        /// <param name="draftWithId">The <see cref="DraftWithId"/> to use to create the post record(s).</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="draftWithId"/> or its Draft property is null.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+        [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "An overload for cancellationToken is a standard api")]
+        public async Task<AtProtoHttpResult<IReadOnlyList<CreateRecordResult>>> Post(
+            DraftWithId draftWithId,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(draftWithId);
+            ArgumentNullException.ThrowIfNull(draftWithId.Draft);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+
+            return await Post(
+                draftWithId,
+                extractFacets: true,
+                deleteDraft: true,
+                interactionPreferences: null,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         private static string? MapExtensionToMimeType(string file)

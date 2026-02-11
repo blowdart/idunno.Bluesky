@@ -45,6 +45,7 @@
     <File Path="docs/docs/conversationsAndMessages.md" />
     <File Path="docs/docs/cursorsAndPagination.md" />
     <File Path="docs/docs/customLexiconsAndRecords.md" />
+    <File Path="docs/docs/drafts.md" />
     <File Path="docs/docs/endpointStatus.md" />
     <File Path="docs/docs/index.md" />
     <File Path="docs/docs/jetstream.md" />

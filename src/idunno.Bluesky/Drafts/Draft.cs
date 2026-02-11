@@ -30,9 +30,9 @@ namespace idunno.Bluesky.Drafts
             IList<DraftPost> posts,
             Guid? deviceId,
             string? deviceName = null,
-            ICollection<string>? langs = null,
-            ICollection<PostGateRule>? postGateEmbeddingRules = null,
-            ICollection<ThreadGateRule>? threadGateAllowRules = null)
+            IList<string>? langs = null,
+            IList<PostGateRule>? postGateEmbeddingRules = null,
+            IList<ThreadGateRule>? threadGateAllowRules = null)
         {
             ArgumentOutOfRangeException.ThrowIfGreaterThan(
                 deviceName?.Length ?? 0,
@@ -199,7 +199,7 @@ namespace idunno.Bluesky.Drafts
         /// </remarks>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the number of languages is less than one or greater than three.</exception>"
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public ICollection<string>? Langs { get; init; }
+        public IList<string>? Langs { get; init; }
 
         /// <summary>
         /// Gets the rules for the post gate to be created when this draft is published.
@@ -208,7 +208,7 @@ namespace idunno.Bluesky.Drafts
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the number of post gate rules is less than one or greater than five.</exception>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [JsonPropertyName("postgateEmbeddingRules")]
-        public ICollection<PostGateRule>? PostGateEmbeddingRules { get; init; }
+        public IList<PostGateRule>? PostGateEmbeddingRules { get; init; } = null;
 
         /// <summary>
         /// Gets the rules for the thread gates to be created when this draft is published.
@@ -217,6 +217,6 @@ namespace idunno.Bluesky.Drafts
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the number of thread gate rules is less than one or greater than five.</exception>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [JsonPropertyName("threadgateAllow")]
-        public ICollection<ThreadGateRule>? ThreadGateAllowRules { get; init; }
+        public IList<ThreadGateRule>? ThreadGateAllowRules { get; init; } = null;
     }
 }
