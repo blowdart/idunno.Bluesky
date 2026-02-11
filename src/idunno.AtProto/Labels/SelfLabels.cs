@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace idunno.AtProto.Labels
@@ -10,7 +9,9 @@ namespace idunno.AtProto.Labels
     /// <summary>
     /// Metadata tags on an atproto record, published by the author within the record.
     /// </summary>
-    public sealed class SelfLabels
+    [JsonPolymorphic]
+    [JsonDerivedType(typeof(SelfLabels), typeDiscriminator: "com.atproto.label.defs#selfLabels")]
+    public class SelfLabels
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
 #if NET9_0_OR_GREATER
@@ -43,13 +44,6 @@ namespace idunno.AtProto.Labels
 
             _values = [.. values];
         }
-
-        /// <summary>
-        /// The type discriminator for the class.
-        /// </summary>
-        [JsonPropertyName("$type")]
-        [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needs to an instance property for json serialization.")]
-        public string Type => "com.atproto.label.defs#selfLabels";
 
         /// <summary>
         /// The collection of self labels applied to the record.

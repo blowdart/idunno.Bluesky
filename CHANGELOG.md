@@ -17,6 +17,17 @@
 * Added support for drafts, including `Draft` record, `CreateDraft()`, `GetDraft()`, `ListDrafts()`, `DeleteDraft()` and `PublishDraft()`.
 * Added `Post(DraftWithId)` to create a post from a draft.
 
+### Changed
+
+#### idunno.AtProto
+
+* Removed `Type` property from `Blob`.
+* Removed `Type` property from `SelfLabels`.
+
+#### idunno.Bluesky
+
+* Removed `Type` property from `Facet`.
+
 ## 1.5.0 - 2026-02-02
 
 ### Added

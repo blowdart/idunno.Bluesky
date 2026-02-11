@@ -609,7 +609,6 @@ idunno.AtProto.Labels.SelfLabels.Contains(string! label) -> bool
 idunno.AtProto.Labels.SelfLabels.RemoveLabel(string! name) -> void
 idunno.AtProto.Labels.SelfLabels.SelfLabels() -> void
 idunno.AtProto.Labels.SelfLabels.SelfLabels(System.Collections.Generic.IReadOnlyList<idunno.AtProto.Labels.SelfLabel!>! values) -> void
-idunno.AtProto.Labels.SelfLabels.Type.get -> string!
 idunno.AtProto.Labels.SelfLabels.Values.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.Labels.SelfLabel!>!
 idunno.AtProto.Labels.SelfLabels.Values.set -> void
 idunno.AtProto.LogoutException
@@ -707,7 +706,6 @@ idunno.AtProto.Repo.Blob.Reference.get -> idunno.AtProto.Repo.BlobReference!
 idunno.AtProto.Repo.Blob.Reference.init -> void
 idunno.AtProto.Repo.Blob.Size.get -> int
 idunno.AtProto.Repo.Blob.Size.init -> void
-idunno.AtProto.Repo.Blob.Type.get -> string!
 idunno.AtProto.Repo.BlobReference
 idunno.AtProto.Repo.BlobReference.BlobReference(idunno.AtProto.Cid! link) -> void
 idunno.AtProto.Repo.BlobReference.Link.get -> idunno.AtProto.Cid!

@@ -9,6 +9,8 @@ namespace idunno.Bluesky.RichText
     /// <summary>
     /// Annotation of a sub-string within rich text.
     /// </summary>
+    [JsonPolymorphic]
+    [JsonDerivedType(typeof(Facet), typeDiscriminator: "app.bsky.richtext.facet")]
     public record Facet
     {
         /// <summary>
@@ -28,13 +30,6 @@ namespace idunno.Bluesky.RichText
             Index = index;
             Features = features;
         }
-
-        /// <summary>
-        /// The json type discriminator to use when serializing.
-        /// </summary>
-        [JsonInclude]
-        [JsonPropertyName("$type")]
-        public static string Type => "app.bsky.richtext.facet";
 
         /// <summary>
         /// A list of <see cref="FacetFeature"/>s for the facet.

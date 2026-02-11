@@ -11,6 +11,8 @@ namespace idunno.AtProto.Repo
     ///
     /// Typically this is used for image uploads for posts with embedded images or video uploads for posts with embedded videos.
     /// </summary>
+    [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
+    [JsonDerivedType(typeof(Blob), typeDiscriminator: "blob")]
     public record Blob
     {
         /// <summary>
@@ -25,13 +27,6 @@ namespace idunno.AtProto.Repo
             MimeType = mimeType;
             Size = size;
         }
-
-        /// <summary>
-        /// The json type data for a blob object
-        /// </summary>
-        [JsonPropertyName("$type")]
-        [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Needs to an instance property for json serialization.")]
-        public string Type => "blob";
 
         /// <summary>
         /// The reference to the blob.

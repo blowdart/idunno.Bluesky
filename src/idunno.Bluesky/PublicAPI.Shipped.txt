@@ -1882,7 +1882,6 @@ static idunno.Bluesky.PostBuilder.operator +(idunno.Bluesky.PostBuilder! postBui
 static idunno.Bluesky.PostBuilder.operator +(idunno.Bluesky.PostBuilder! postBuilder, string! s) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.operator +(idunno.Bluesky.PostBuilder! postBuilder, System.Collections.Generic.ICollection<idunno.Bluesky.Embed.EmbeddedImage!>! images) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.operator ==(idunno.Bluesky.PostBuilder? lhs, idunno.Bluesky.PostBuilder? rhs) -> bool
-static idunno.Bluesky.RichText.Facet.Type.get -> string!
 static idunno.Bluesky.ServiceCollectionExtensions.AddBlueskyAgentOptions(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, idunno.Bluesky.BlueskyAgentOptions! configureOptions) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static idunno.Bluesky.ServiceCollectionExtensions.AddBlueskyAgentOptions(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, Microsoft.Extensions.Configuration.IConfiguration! configuration) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static idunno.Bluesky.ServiceCollectionExtensions.AddBlueskyAgentOptions(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! configSectionPath = "BlueskyAgent") -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
