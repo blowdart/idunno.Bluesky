@@ -62,7 +62,7 @@ namespace idunno.AtProto
         /// Creates a RecordKey from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
-        /// <returns>A <see cref="RecordKey"/> created from the specified string.</returns>
+        /// <returns>A <see cref="RecordKey"/> created from <paramref name="s"/>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator RecordKey(string s) => new(s);
 
@@ -70,7 +70,7 @@ namespace idunno.AtProto
         /// Creates a RecordKey from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
-        /// <returns>A <see cref="RecordKey"/> created from the specified string.</returns>
+        /// <returns>A <see cref="RecordKey"/> created from <paramref name="s"/>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static RecordKey FromString(string s) => s;
 
@@ -85,20 +85,20 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="obj">An object to compare to this <see cref="RecordKey"/>.</param>
         /// <returns>
-        /// true if this <see cref="AtUri"/> and the specified <paramref name="obj"/>> refer to the same object,
+        /// <see langword="true"/> if this <see cref="RecordKey"/> and the specified <paramref name="obj"/>> refer to the same object,
         /// this RecordKey and the specified obj are both the same type of object and those objects are equal,
-        /// or if this RecordKey and the specified obj are both null, otherwise, false.
+        /// or if this RecordKey and the specified obj are both <see langword="null"/>, otherwise, <see langword="false"/>.
         /// </returns>
         public override bool Equals(object? obj) => Equals(obj as RecordKey);
 
         /// <summary>
         /// Indicates where this <see cref="RecordKey"/> equals another."/>
         /// </summary>
-        /// <param name="other">A <see cref="RecordKey"/> or null to compare to this <see cref="RecordKey"/>.</param>
+        /// <param name="other">A <see cref="RecordKey"/> or <see langword="null"/> to compare to this <see cref="RecordKey"/>.</param>
         /// <returns>
-        /// true if this <see cref="RecordKey"/> and the specified <paramref name="other"/>> refer to the same object,
+        /// <see langword="true"/> if this <see cref="RecordKey"/> and the specified <paramref name="other"/>> refer to the same object,
         /// this RecordKey and the specified obj are both the same type of object and those objects are equal,
-        /// or if this RecordKey and the specified obj are both null, otherwise, false.
+        /// or if this RecordKey and the specified obj are both <see langword="null"/>, otherwise, <see langword="false"/>.
         /// </returns>
         public bool Equals(RecordKey? other)
         {
@@ -123,9 +123,9 @@ namespace idunno.AtProto
         /// <summary>
         /// Determines whether two specified <see cref="RecordKey"/>s the same value."/>
         /// </summary>
-        /// <param name="lhs">The first <see cref="RecordKey"/> to compare, or null.</param>
-        /// <param name="rhs">The second <see cref="RecordKey"/> to compare, or null.</param>
-        /// <returns>true if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, false.</returns>
+        /// <param name="lhs">The first <see cref="RecordKey"/> to compare, or <see langword="null"/>.</param>
+        /// <param name="rhs">The second <see cref="RecordKey"/> to compare, or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, <see langword="false"/>.</returns>
         public static bool operator ==(RecordKey? lhs, RecordKey? rhs)
         {
             if (lhs is null)
@@ -144,9 +144,9 @@ namespace idunno.AtProto
         /// <summary>
         /// Determines whether two specified <see cref="RecordKey"/>s dot not have same value."/>
         /// </summary>
-        /// <param name="lhs">The first <see cref="RecordKey"/> to compare, or null.</param>
-        /// <param name="rhs">The second <see cref="RecordKey"/> to compare, or null.</param>
-        /// <returns>true if the value of <paramref name="lhs"/> is different to the value of <paramref name="rhs" />; otherwise, false.</returns>
+        /// <param name="lhs">The first <see cref="RecordKey"/> to compare, or <see langword="null"/>.</param>
+        /// <param name="rhs">The second <see cref="RecordKey"/> to compare, or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="lhs"/> is different to the value of <paramref name="rhs" />; otherwise, <see langword="false"/>.</returns>
         public static bool operator !=(RecordKey? lhs, RecordKey? rhs) => !(lhs == rhs);
 
         /// <summary>
@@ -156,11 +156,11 @@ namespace idunno.AtProto
         /// <param name="s">A string containing the id to convert.</param>
         /// <param name="result">
         /// When this method returns contains the <see cref="RecordKey"/> equivalent of the
-        /// string contained in s, or null if the conversion failed. The conversion fails if the <paramref name="s"/> parameter
-        /// is null or empty, or is not of the current format. This parameter is passed uninitialized; any value originally
+        /// string contained in s, or <see langword="null"/> if the conversion failed. The conversion fails if the <paramref name="s"/> parameter
+        /// is <see langword="null"/> or empty, or is not of the current format. This parameter is passed uninitialized; any value originally
         /// supplied in result will be overwritten.
         /// </param>
-        /// <returns>true if s was converted successfully; otherwise, false.</returns>
+        /// <returns><see langword="true"/> if <paramref name="s"/> was converted successfully; otherwise, <see langword="false"/>.</returns>
         public static bool TryParse(string s, out RecordKey? result)
         {
             if (string.IsNullOrEmpty(s))

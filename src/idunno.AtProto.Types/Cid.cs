@@ -19,7 +19,7 @@ namespace idunno.AtProto
         /// Creates a new instance of a <see cref="Cid"/> class using the specified parameters.
         /// </summary>
         /// <param name="value">The value of the content identifier.</param>
-        /// <exception cref="ArgumentNullException">Thrown when the provided value is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when the provided value is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when the provided value is empty.</exception>
         [JsonConstructor]
         public Cid(string value)
@@ -62,7 +62,7 @@ namespace idunno.AtProto
         /// Creates a new instance of a <see cref="Cid"/> class using the specified parameters.
         /// </summary>
         /// <param name="bytes">A byte array containing a Cid.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="bytes"/> is null or empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="bytes"/> is <see langword="null"/> or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="bytes"/> does not represent a Cid.</exception>
         public Cid(byte[] bytes)
         {
@@ -86,7 +86,7 @@ namespace idunno.AtProto
         /// Creates a new instance of a <see cref="Cid"/> class using the specified parameters.
         /// </summary>
         /// <param name="bytes">A byte array containing a Cid.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="bytes"/> is null or empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="bytes"/> is <see langword="null"/> or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="bytes"/> does not represent a Cid.</exception>
         public Cid(Span<byte> bytes)
         {
@@ -185,7 +185,7 @@ namespace idunno.AtProto
         /// Creates a <see cref="Cid"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
-        /// <returns>An instance of <see cref="Cid"/>. from the specified string.</returns>
+        /// <returns>An instance of <see cref="Cid"/>. from <paramref name="s"/>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator Cid(string s) => new(s);
 
@@ -193,7 +193,7 @@ namespace idunno.AtProto
         /// Creates a <see cref="Cid"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
-        /// <returns>An instance of <see cref="Cid"/>. from the specified string.</returns>
+        /// <returns>An instance of <see cref="Cid"/>. from <paramref name="s"/>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Cid FromString(string s) => new(s);
 

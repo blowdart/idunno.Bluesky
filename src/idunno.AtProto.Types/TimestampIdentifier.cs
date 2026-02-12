@@ -48,7 +48,7 @@ namespace idunno.AtProto
         /// Creates a new instance of <see cref="TimestampIdentifier"/>
         /// </summary>
         /// <param name="s">The string to create a <see cref="TimestampIdentifier"/> from.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="s"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="s"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> is not a valid <see cref="TimestampIdentifier"/>.</exception>
         public TimestampIdentifier(string s)
         {
@@ -69,7 +69,7 @@ namespace idunno.AtProto
         /// Creates a new instance of <see cref="TimestampIdentifier"/>
         /// </summary>
         /// <param name="recordKey">The <see cref="RecordKey"/> to create a timestamp from.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="recordKey"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="recordKey"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException"><paramref name="recordKey"/> is not a valid <see cref="TimestampIdentifier"/></exception>
         public TimestampIdentifier(RecordKey recordKey)
         {

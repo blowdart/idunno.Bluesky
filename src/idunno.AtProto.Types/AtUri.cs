@@ -44,7 +44,7 @@ namespace idunno.AtProto
         /// Creates a new instance of the <see cref="AtUri"/> class from <paramref name="s"/>.
         /// </summary>
         /// <param name="s">A string to construct an <see cref="AtUri"/> from.</param>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> is not a valid AT URI, or is null, empty or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> is not a valid AT URI, or is <see langword="null"/>, empty or whitespace.</exception>
         public AtUri(string s)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(s);
@@ -77,7 +77,7 @@ namespace idunno.AtProto
         public AtIdentifier Authority { get; internal set; }
 
         /// <summary>
-        /// Gets the absolute path for this <see cref="AtUri"/>, if it contains an absolute path, otherwise null.
+        /// Gets the absolute path for this <see cref="AtUri"/>, if it contains an absolute path, otherwise <see langword="null"/>.
         /// </summary>
         public string? AbsolutePath { get; internal set; }
 
@@ -88,13 +88,13 @@ namespace idunno.AtProto
         public AtIdentifier Repo => Authority;
 
         /// <summary>
-        /// Returns the collection segment of the <see cref="AtUri"/> or null if the <see cref="AtUri"/> does not contain a collection.
+        /// Returns the collection segment of the <see cref="AtUri"/> or <see langword="null"/> if the <see cref="AtUri"/> does not contain a collection.
         /// </summary>
         [JsonIgnore]
         public Nsid? Collection { get; internal set; }
 
         /// <summary>
-        /// Returns the record key of the AT URI or null if the URI does not contain one.
+        /// Returns the record key of the AT URI or <see langword="null"/> if the URI does not contain one.
         /// </summary>
         [JsonIgnore]
         public RecordKey? RecordKey { get; internal set; }
@@ -106,24 +106,24 @@ namespace idunno.AtProto
         public override int GetHashCode() => (Scheme, Authority, AbsolutePath).GetHashCode();
 
         /// <summary>
-        /// Indicates where an object is equal to this <see cref="AtUri"/>."/>
+        /// Indicates where an object is equal to this <see cref="AtUri"/>.
         /// </summary>
         /// <param name="obj">An object to compare to this <see cref="AtUri"/>.</param>
         /// <returns>
-        /// true if this <see cref="AtUri"/> and the specified <paramref name="obj"/>> refer to the same object,
+        /// <see langword="true"/> if this <see cref="AtUri"/> and the specified <paramref name="obj"/>> refer to the same object,
         /// this AtUri and the specified obj are both the same type of object and those objects are equal,
-        /// or if this AtUri and the specified obj are both null, otherwise, false.
+        /// or if this AtUri and the specified obj are both <see langword="null"/>, otherwise, <see langword="false"/>.
         /// </returns>
         public override bool Equals([NotNullWhen(true)] object? obj) => Equals(obj as AtUri);
 
         /// <summary>
-        /// Indicates where this <see cref="AtUri"/> equals another."/>
+        /// Indicates where this <see cref="AtUri"/> equals another.
         /// </summary>
-        /// <param name="other">A <see cref="AtUri"/> or null to compare to this <see cref="AtUri"/>.</param>
+        /// <param name="other">A <see cref="AtUri"/> or <see langword="null"/> to compare to this <see cref="AtUri"/>.</param>
         /// <returns>
-        /// true if this <see cref="AtUri"/> and the specified <paramref name="other"/>> refer to the same object,
+        /// <see langword="true"/> if this <see cref="AtUri"/> and the specified <paramref name="other"/>> refer to the same object,
         /// this AtUri and the specified obj are both the same type of object and those objects are equal,
-        /// or if this AtUri and the specified obj are both null, otherwise, false.
+        /// or if this AtUri and the specified obj are both <see langword="null"/>, otherwise, <see langword="false"/>.
         /// </returns>
         public bool Equals([NotNullWhen(true)] AtUri? other)
         {
@@ -160,11 +160,11 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Determines whether two specified <see cref="AtUri"/>s the same value."/>
+        /// Determines whether two specified <see cref="AtUri"/>s the same value.
         /// </summary>
-        /// <param name="lhs">The first <see cref="AtUri"/> to compare, or null.</param>
-        /// <param name="rhs">The second <see cref="AtUri"/> to compare, or null.</param>
-        /// <returns>true if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, false.</returns>
+        /// <param name="lhs">The first <see cref="AtUri"/> to compare, or <see langword="null"/>.</param>
+        /// <param name="rhs">The second <see cref="AtUri"/> to compare, or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, <see langword="false"/>.</returns>
         public static bool operator ==(AtUri? lhs, AtUri? rhs)
         {
             if (lhs is null)
@@ -181,11 +181,11 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Determines whether two specified <see cref="AtUri"/>s dot not have same value."/>
+        /// Determines whether two specified <see cref="AtUri"/>s dot not have same value.
         /// </summary>
-        /// <param name="lhs">The first <see cref="AtUri"/> to compare, or null.</param>
-        /// <param name="rhs">The second <see cref="AtUri"/> to compare, or null.</param>
-        /// <returns>true if the value of <paramref name="lhs"/> is different to the value of <paramref name="rhs" />; otherwise, false.</returns>
+        /// <param name="lhs">The first <see cref="AtUri"/> to compare, or <see langword="null"/>.</param>
+        /// <param name="rhs">The second <see cref="AtUri"/> to compare, or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="lhs"/> is different to the value of <paramref name="rhs" />; otherwise, <see langword="false"/>.</returns>
         public static bool operator !=(AtUri? lhs, AtUri? rhs) => !(lhs == rhs);
 
         /// <summary>
@@ -237,11 +237,11 @@ namespace idunno.AtProto
         /// <param name="s">A string containing the id to convert.</param>
         /// <param name="result">
         /// When this method returns contains the <see cref="AtUri"/> equivalent of the
-        /// string contained in s, or null if the conversion failed. The conversion fails if the <paramref name="s"/> parameter
-        /// is null or empty, or is not of the current format. This parameter is passed uninitialized; any value originally
+        /// string contained in s, or <see langword="null"/> if the conversion failed. The conversion fails if the <paramref name="s"/> parameter
+        /// is <see langword="null"/> or empty, or is not of the current format. This parameter is passed uninitialized; any value originally
         /// supplied in result will be overwritten.
         /// </param>
-        /// <returns>true if s was converted successfully; otherwise, false.</returns>
+        /// <returns><see langword="true"/> if <paramref name="s"/> was converted successfully; otherwise, <see langword="false"/>.</returns>
         public static bool TryParse(string s, [NotNullWhen(true)] out AtUri? result)
         {
             if (string.IsNullOrEmpty(s))

@@ -67,7 +67,7 @@ namespace idunno.AtProto
         /// Creates a new instance of <see cref="Did"/> using the specified <paramref name="s"/> as the identifier.
         /// </summary>
         /// <param name="s">A string to construct the <see cref="Did"/> from.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="s"/> is null or empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="s"/> is <see langword="null"/> or empty.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> does not pass validation.</exception>
         [JsonConstructor]
         public Did(string s) : this(s, true)
@@ -94,24 +94,24 @@ namespace idunno.AtProto
         public override int GetHashCode() => Value.GetHashCode(StringComparison.Ordinal);
 
         /// <summary>
-        /// Indicates where an object is equal to this <see cref="Did"/>."/>
+        /// Indicates where an object is equal to this <see cref="Did"/>.
         /// </summary>
         /// <param name="obj">An object to compare to this <see cref="Did"/>.</param>
         /// <returns>
-        /// true if this <see cref="Did"/> and the specified <paramref name="obj"/>> refer to the same object,
+        /// <see langword="true"/> if this <see cref="Did"/> and the specified <paramref name="obj"/> refer to the same object,
         /// this Did and the specified obj are both the same type of object and those objects are equal,
-        /// or if this Did and the specified obj are both null, otherwise, false.
+        /// or if this Did and the specified obj are both <see langword="null"/>, otherwise, <see langword="false"/>.
         /// </returns>
         public override bool Equals(object? obj) => Equals(obj as Did);
 
         /// <summary>
-        /// Indicates where this <see cref="Did"/> equals another."/>
+        /// Indicates where this <see cref="Did"/> equals another.
         /// </summary>
-        /// <param name="other">A <see cref="Did"/> or null to compare to this <see cref="Did"/>.</param>
+        /// <param name="other">A <see cref="Did"/> or <see langword="null"/> to compare to this <see cref="Did"/>.</param>
         /// <returns>
-        /// true if this <see cref="Did"/> and the specified <paramref name="other"/>> refer to the same object,
+        /// <see langword="true"/> if this <see cref="Did"/> and the specified <paramref name="other"/> refer to the same object,
         /// this Did and the specified obj are both the same type of object and those objects are equal,
-        /// or if this Did and the specified obj are both null, otherwise, false.
+        /// or if this Did and the specified obj are both <see langword="null"/>, otherwise, <see langword="false"/>.
         /// </returns>
         public bool Equals(Did? other)
         {
@@ -147,7 +147,7 @@ namespace idunno.AtProto
         /// Creates a Did from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
-        /// <returns>A <see cref="Did"/> created from the specified string.</returns>
+        /// <returns>A <see cref="Did"/> created from <paramref name="s"/>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator Did(string s) => new(s);
 
@@ -155,7 +155,7 @@ namespace idunno.AtProto
         /// Creates a Did from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
-        /// <returns>A <see cref="Did"/> created from the specified string.</returns>
+        /// <returns>A <see cref="Did"/> created from <paramref name="s"/>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static new Did FromString(string s) => s;
 
@@ -179,9 +179,9 @@ namespace idunno.AtProto
         /// <summary>
         /// Determines whether two specified <see cref="Did"/>s the same value."/>
         /// </summary>
-        /// <param name="lhs">The first <see cref="Did"/> to compare, or null.</param>
-        /// <param name="rhs">The second <see cref="Did"/> to compare, or null.</param>
-        /// <returns>true if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, false.</returns>
+        /// <param name="lhs">The first <see cref="Did"/> to compare, or <see langword="null"/>.</param>
+        /// <param name="rhs">The second <see cref="Did"/> to compare, or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, <see langword="false"/>.</returns>
         public static bool operator ==(Did? lhs, Did? rhs)
         {
             if (lhs is null)
@@ -199,11 +199,11 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Determines whether two specified <see cref="Did"/>s dot not have same value."/>
+        /// Determines whether two specified <see cref="Did"/>s dot not have same value.
         /// </summary>
-        /// <param name="lhs">The first <see cref="Did"/> to compare, or null.</param>
-        /// <param name="rhs">The second <see cref="Did"/> to compare, or null.</param>
-        /// <returns>true if the value of <paramref name="lhs"/> is different to the value of <paramref name="rhs" />; otherwise, false.</returns>
+        /// <param name="lhs">The first <see cref="Did"/> to compare, or <see langword="null"/>.</param>
+        /// <param name="rhs">The second <see cref="Did"/> to compare, or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="lhs"/> is different to the value of <paramref name="rhs" />; otherwise, <see langword="false"/>.</returns>
         public static bool operator !=(Did? lhs, Did? rhs) => !(lhs == rhs);
 
         /// <summary>
@@ -213,11 +213,11 @@ namespace idunno.AtProto
         /// <param name="s">A string containing the did to convert.</param>
         /// <param name="result">
         /// When this method returns contains the <see cref="Did"/> equivalent of the
-        /// string contained in s, or null if the conversion failed. The conversion fails if the <paramref name="s"/> parameter
-        /// is null or empty, or is not of the current format. This parameter is passed uninitialized; any value originally
+        /// string contained in <paramref name="s"/>, or <see langword="null"/> if the conversion failed. The conversion fails if the <paramref name="s"/> parameter
+        /// is <see langword="null"/> or empty, or is not of the current format. This parameter is passed uninitialized; any value originally
         /// supplied in result will be overwritten.
         /// </param>
-        /// <returns>true if s was converted successfully; otherwise, false.</returns>
+        /// <returns><see langword="true"/> if <paramref name="s"/> was converted successfully; otherwise, <see langword="false"/>.</returns>
         public static bool TryParse(string s, [NotNullWhen(true)] out Did? result)
         {
             return Parse(s, false, out result);

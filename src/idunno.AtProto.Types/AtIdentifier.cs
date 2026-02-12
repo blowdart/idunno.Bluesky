@@ -38,11 +38,11 @@ namespace idunno.AtProto
         /// <param name="s">A string containing the id to convert.</param>
         /// <param name="result">
         /// When this method returns contains the <see cref="AtIdentifier"/> equivalent of the
-        /// string contained in s, or null if the conversion failed. The conversion fails if the <paramref name="s"/> parameter
-        /// is null or empty, or is not of the current format. This parameter is passed uninitialized; any value originally
+        /// string contained in s, or <see langword="null"/> if the conversion failed. The conversion fails if the <paramref name="s"/> parameter
+        /// is <see langword="null"/> or empty, or is not of the current format. This parameter is passed uninitialized; any value originally
         /// supplied in result will be overwritten.
         /// </param>
-        /// <returns>true if s was converted successfully; otherwise, false.</returns>
+        /// <returns><see langword="true"/> if s was converted successfully; otherwise, <see langword="false"/>.</returns>
         public static bool TryParse(string s, [NotNullWhen(true)] out AtIdentifier? result)
         {
             if (!string.IsNullOrEmpty(s))
@@ -81,7 +81,7 @@ namespace idunno.AtProto
         /// Creates a <see cref="AtIdentifier"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
-        /// <returns>An <see cref="AtIdentifier"/> created from the specified string.</returns>
+        /// <returns>An <see cref="AtIdentifier"/> created from <paramref name="s"/>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator AtIdentifier(string s) => Create(s);
 
@@ -89,7 +89,7 @@ namespace idunno.AtProto
         /// Creates a <see cref="AtIdentifier"/> from the specified string.
         /// </summary>
         /// <param name="s">The string to convert.</param>
-        /// <returns>An <see cref="AtIdentifier"/> created from the specified string.</returns>
+        /// <returns>An <see cref="AtIdentifier"/> created from <paramref name="s"/>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static AtIdentifier FromString(string s) => s;
 

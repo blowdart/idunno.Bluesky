@@ -132,20 +132,20 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="obj">An object to compare to this <see cref="Handle"/>.</param>
         /// <returns>
-        /// true if this <see cref="Handle"/> and the specified <paramref name="obj"/>> refer to the same object,
+        /// <see langword="true"/> if this <see cref="Handle"/> and the specified <paramref name="obj"/>> refer to the same object,
         /// this Handle and the specified obj are both the same type of object and those objects are equal,
-        /// or if this Handle and the specified obj are both null, otherwise, false.
+        /// or if this Handle and the specified obj are both <see langword="null"/>, otherwise, <see langword="false"/>.
         /// </returns>
         public override bool Equals(object? obj) => Equals(obj as Handle);
 
         /// <summary>
         /// Indicates where this <see cref="Handle"/> equals another."/>
         /// </summary>
-        /// <param name="other">A <see cref="Handle"/> or null to compare to this <see cref="Handle"/>.</param>
+        /// <param name="other">A <see cref="Handle"/> or <see langword="null"/> to compare to this <see cref="Handle"/>.</param>
         /// <returns>
-        /// true if this <see cref="Handle"/> and the specified <paramref name="other"/>> refer to the same object,
+        /// <see langword="true"/> if this <see cref="Handle"/> and the specified <paramref name="other"/>> refer to the same object,
         /// this Handle and the specified obj are both the same type of object and those objects are equal,
-        /// or if this Handle and the specified obj are both null, otherwise, false.
+        /// or if this Handle and the specified obj are both <see langword="null"/>, otherwise, <see langword="false"/>.
         /// </returns>
         public bool Equals(Handle? other)
         {
@@ -173,9 +173,9 @@ namespace idunno.AtProto
         /// <summary>
         /// Determines whether two specified <see cref="Handle"/>s the same value."/>
         /// </summary>
-        /// <param name="lhs">The first <see cref="Handle"/> to compare, or null.</param>
-        /// <param name="rhs">The second <see cref="Handle"/> to compare, or null.</param>
-        /// <returns>true if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, false.</returns>
+        /// <param name="lhs">The first <see cref="Handle"/> to compare, or <see langword="null"/>.</param>
+        /// <param name="rhs">The second <see cref="Handle"/> to compare, or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, <see langword="false"/>.</returns>
         public static bool operator ==(Handle? lhs, Handle? rhs)
         {
             if (lhs is null)
@@ -195,9 +195,9 @@ namespace idunno.AtProto
         /// <summary>
         /// Determines whether two specified <see cref="Handle"/>s dot not have same value."/>
         /// </summary>
-        /// <param name="lhs">The first <see cref="Handle"/> to compare, or null.</param>
-        /// <param name="rhs">The second <see cref="Handle"/> to compare, or null.</param>
-        /// <returns>true if the value of <paramref name="lhs"/> is different to the value of <paramref name="rhs" />; otherwise, false.</returns>
+        /// <param name="lhs">The first <see cref="Handle"/> to compare, or <see langword="null"/>.</param>
+        /// <param name="rhs">The second <see cref="Handle"/> to compare, or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="lhs"/> is different to the value of <paramref name="rhs" />; otherwise, <see langword="false"/>.</returns>
         public static bool operator !=(Handle? lhs, Handle? rhs) => !(lhs == rhs);
 
         /// <summary>
@@ -207,11 +207,11 @@ namespace idunno.AtProto
         /// <param name="s">A string containing the id to convert.</param>
         /// <param name="result">
         /// When this method returns contains the <see cref="Handle"/> equivalent of the
-        /// string contained in s, or null if the conversion failed. The conversion fails if the <paramref name="s"/> parameter
-        /// is null or empty, or is not of the current format. This parameter is passed uninitialized; any value originally
+        /// string contained in s, or <see langword="null"/> if the conversion failed. The conversion fails if the <paramref name="s"/> parameter
+        /// is <see langword="null"/> or empty, or is not of the current format. This parameter is passed uninitialized; any value originally
         /// supplied in result will be overwritten.
         /// </param>
-        /// <returns>true if s was converted successfully; otherwise, false.</returns>
+        /// <returns><see langword="true"/> if s was converted successfully; otherwise, <see langword="false"/>.</returns>
         /// <remarks>
         /// <para>Note that handles do not begin with an @ sign, that is just how they are typically displayed in applications.</para>
         /// </remarks>
