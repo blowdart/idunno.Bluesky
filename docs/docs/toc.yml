@@ -28,6 +28,8 @@
         href: threadGatesAndPostGates.md
       - name: Adding videos to your posts
         href: video.md
+      - name: Working with Dafts
+        href: drafts.md
 
   - name: Notifications
     items:
@@ -51,20 +53,20 @@
 
   - name: Advanced Topics
     items:
+      - name: Configuring logging
+        href: logging.md
       - name: Labels
         href: labels.md
+      - name: Saving & restoring authentication state
+        href: savingAndRestoringAuthentication.md
+      - name: Using the Jetstream
+        href: jetstream.md
+      - name: Json Source Generation, AOT & Trimming
+        href: sourceGeneration.md
       - name: Sending "raw" requests
         href: rawClient.md
       - name: Performing CRUD operations directly without an agent.
         href: avoidingTheAgent.md
-      - name: Using the Jetstream
-        href: jetstream.md
-      - name: Configuring logging
-        href: logging.md
-      - name: Saving & restoring authentication state
-        href: savingAndRestoringAuthentication.md
-      - name: Json Source Generation, AOT & Trimming
-        href: sourceGeneration.md
       - name: Custom Lexicons and Records
         href: customLexiconsAndRecords.md
       - name: Unspecced APIS

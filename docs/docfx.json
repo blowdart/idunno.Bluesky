@@ -1,4 +1,4 @@
-{
+﻿{
     "$schema": "https://raw.githubusercontent.com/dotnet/docfx/main/schemas/docfx.schema.json",
     "metadata": [
         {
@@ -6,12 +6,19 @@
                 {
                     "src": "../src",
                     "files": [
-                        "**/*.csproj"
+                        "idunno.AtProto.Types/bin/Release/**/idunno.AtProto.Types.dll",
+                        "idunno.AtProto/bin/Release/**/idunno.AtProto.dll",
+                        "idunno.AtProto.OAuthCallback/bin/Release/**/idunno.AtProto.Callback.dll",
+                        "idunno.Bluesky/bin/Release/**/idunno.Bluesky.dll"
                     ]
                 }
             ],
             "dest": "api",
-            "outputFormat": "apiPage"
+            "outputFormat": "apiPage",
+            "disableDefaultFilter": false,
+            "properties": {
+                "TargetFramework": "net10.0"
+            }
         }
     ],
     "build": {

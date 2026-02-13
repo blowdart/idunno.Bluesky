@@ -1,4 +1,4 @@
-name: Generate and Publish docs
+﻿name: Generate and Publish docs
 
 on:
   workflow_dispatch:
@@ -46,8 +46,11 @@ jobs:
     - name: 'Setup .NET SDK'
       uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
 
-    - run: dotnet tool update -g docfx
-    - run: docfx ./docs/docfx.json
+    - name: 'Build projects'
+      run: dotnet build --configuration Release --property:PublicRelease=false
+
+    - name: 'Generate docs'
+      run: docfx ./docs/docfx.json
 
     - name: Upload Pages Artifact
       uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
