@@ -23,7 +23,7 @@ namespace idunno.Bluesky.Drafts
         /// <param name="langs">A collection of RFC5646 language codes for the draft. Maximum 3.</param>
         /// <param name="postGateEmbeddingRules">An collection of embedding rules for the draft posts. Maximum 5.</param>
         /// <param name="threadGateAllowRules">A collection of thread gate rules for the draft. Maximum 5.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="posts"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="posts"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when any of the collections, or <see cref="DeviceName"/> exceed their maximum allowed size.</exception>
         [JsonConstructor]
         public Draft(
@@ -89,7 +89,7 @@ namespace idunno.Bluesky.Drafts
         /// </summary>
         /// <param name="post">The draft post.</param>
         /// <param name="deviceId">UUIDv4 identifier of the device that created this draft.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
         public Draft(
             DraftPost post,
             Guid? deviceId): this(
@@ -109,7 +109,7 @@ namespace idunno.Bluesky.Drafts
         /// <param name="post">The draft post.</param>
         /// <param name="deviceId">UUIDv4 identifier of the device that created this draft.</param>
         /// <param name="deviceName">The device and/or platform on which the draft was created. Maximum 100 characters.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="deviceName"/> is specified and its length is greater than 100 characters.</exception>
         public Draft(
             DraftPost post,
@@ -133,7 +133,7 @@ namespace idunno.Bluesky.Drafts
         /// </summary>
         /// <param name="text">The text to create a draft post from.</param>
         /// <param name="deviceId">UUIDv4 identifier of the device that created this draft.</param>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is null or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/> or whitespace.</exception>
         public Draft(
             string text,
             Guid? deviceId) : this(
@@ -153,7 +153,7 @@ namespace idunno.Bluesky.Drafts
         /// <param name="text">The text to create a draft post from.</param>
         /// <param name="deviceId">UUIDv4 identifier of the device that created this draft.</param>
         /// <param name="deviceName">The device and/or platform on which the draft was created. Maximum 100 characters.</param>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is null or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/> or whitespace.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="deviceName"/> is specified and its length is greater than 100 characters.</exception>"
         public Draft(
             string text,

@@ -67,7 +67,7 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// The api rate limit, if the api returned one, otherwise null.
+        /// The api rate limit, if the api returned one, otherwise <see langword="null"/>.
         /// </summary>
         public RateLimit? RateLimit { get; init; }
 
@@ -77,7 +77,7 @@ namespace idunno.AtProto
         public HttpResponseHeaders? HttpResponseHeaders { get; internal set; }
 
         /// <summary>
-        /// Throw an <see cref="AtProtoHttpRequestException"/> if <see cref="Succeeded"/> is false.
+        /// Throw an <see cref="AtProtoHttpRequestException"/> if <see cref="Succeeded"/> is <see langword="false"/>.
         /// </summary>
         /// <returns>The AtProtoHttpResult if the call succeeded.</returns>
         /// <exception cref="AtProtoHttpRequestException">The AtProtoHttpResult did not succeed.</exception>

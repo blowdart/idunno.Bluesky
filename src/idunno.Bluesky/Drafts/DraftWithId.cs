@@ -17,7 +17,7 @@ namespace idunno.Bluesky.Drafts
         /// </summary>
         /// <param name="id">The <see cref="TimestampIdentifier"/> the draft was created at.</param>
         /// <param name="draft">The draft.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="id"/> or <paramref name="draft"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="id"/> or <paramref name="draft"/> is <see langword="null"/>.</exception>
         [JsonConstructor]
         public DraftWithId(TimestampIdentifier id, Draft draft)
         {
@@ -32,7 +32,7 @@ namespace idunno.Bluesky.Drafts
         /// Creates a new instance of <see cref="DraftWithId"/> with a new unique identifier.
         /// </summary>
         /// <param name="draft">The draft.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="draft"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="draft"/> is <see langword="null"/>.</exception>
         public DraftWithId(Draft draft) : this(TimestampIdentifier.Next(), draft)
         {
             ArgumentNullException.ThrowIfNull(draft);

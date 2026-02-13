@@ -36,14 +36,14 @@ namespace idunno.Bluesky.Actor
         }
 
         /// <summary>
-        /// List of rules defining who can reply to this users posts. If value is an empty array, no one can reply. If value is null, anyone can reply.
+        /// List of rules defining who can reply to this users posts. If value is an empty array, no one can reply. If value is <see langword="null"/>, anyone can reply.
         /// </summary>
         [JsonInclude]
         [JsonPropertyName("threadgateAllowRules")]
         public ICollection<ThreadGateRule>? ThreadGateAllowRules { get; init; }
 
         /// <summary>
-        /// List of rules defining who can embed this users posts. If value is an empty array or is null, no particular rules apply and anyone can embed.
+        /// List of rules defining who can embed this users posts. If value is an empty array or is <see langword="null"/>, no particular rules apply and anyone can embed.
         /// </summary>
         [JsonInclude]
         [JsonPropertyName("postgateEmbeddingRules")]

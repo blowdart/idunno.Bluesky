@@ -52,7 +52,7 @@ namespace idunno.AtProto.Authentication
         /// <param name="dPoPProofKey">The string representation of the DPoP proof key to use when signing requests.</param>
         /// <param name="dPoPNonce">The string representation of the DPoP nonce to use when signing requests.</param>
         /// <returns>An appropriate subtype of <see cref="AtProtoCredential"/>, depending on the combination of the specified parameters.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is <see langword="null"/>.</exception>
         /// <exception cref="AtProtoException">Thrown when the combination of parameters does not match a known AtProtoCredentials subtype.</exception>
         /// <exception cref="ArgumentException">Thrown when required parameters for the specified <paramref name="authenticationType"/> are missing or invalid.</exception>
         public static AtProtoCredential Create(
@@ -118,7 +118,7 @@ namespace idunno.AtProto.Authentication
         /// <param name="principal">The <see cref="ClaimsPrincipal"/> containing appropriate claims.</param>
         /// <returns>A <see cref="DPoPAccessCredentials"/> created from the claims in the specified <paramref name="principal"/>.</returns>
         /// <exception cref="ArgumentNullException">
-        ///   Thrown when the <paramref name="principal"/> is null, or its Identity property is null,
+        ///   Thrown when the <paramref name="principal"/> is <see langword="null"/>, or its Identity property is <see langword="null"/>,
         ///   or its Identity property is not a <see cref="ClaimsIdentity"/>.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="principal"/> contains more than one identity.</exception>
@@ -145,7 +145,7 @@ namespace idunno.AtProto.Authentication
         /// <param name="identity">The <see cref="ClaimsIdentity"/> containing appropriate claims.</param>
         /// <returns>A <see cref="DPoPAccessCredentials"/> created from the claims in the specified <paramref name="identity"/>.</returns>
         /// <exception cref="CredentialException">Thrown when the <paramref name="identity"/> does not contain the required claims, or the claim values are invalid.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when the <paramref name="identity"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when the <paramref name="identity"/> is <see langword="null"/>.</exception>
         public static DPoPAccessCredentials Create(ClaimsIdentity identity)
         {
             ArgumentNullException.ThrowIfNull(identity);

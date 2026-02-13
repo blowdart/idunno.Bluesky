@@ -16,7 +16,14 @@ namespace idunno.Bluesky.Serialization.Test
         [Fact]
         public void EmptyListNotificationsResponseDeserializationsFromJsonWithNoTypeResolver()
         {
-            string jsonString = File.ReadAllText(Path.Combine("json", "empty_listNotificationsResponse.json"));
+            string jsonString = """
+                {
+                    "notifications": [],
+                    "cursor": "cursor",
+                    "priority": false,
+                    "seenAt": "2024-01-01T00:00:00.000Z"
+                }
+                """;
 
             ListNotificationsResponse? notification = JsonSerializer.Deserialize<ListNotificationsResponse>(jsonString, _jsonSerializerOptions);
 
@@ -31,7 +38,14 @@ namespace idunno.Bluesky.Serialization.Test
         [Fact]
         public void EmptyListNotificationsResponseDeserializationsFromJsonWithTypeResolver()
         {
-            string jsonString = File.ReadAllText(Path.Combine("json", "empty_listNotificationsResponse.json"));
+            string jsonString = """
+                {
+                    "notifications": [],
+                    "cursor": "cursor",
+                    "priority": false,
+                    "seenAt": "2024-01-01T00:00:00.000Z"
+                }
+                """;
 
             ListNotificationsResponse? notification = JsonSerializer.Deserialize<ListNotificationsResponse>(jsonString, BlueskyServer.BlueskyJsonSerializerOptions);
 

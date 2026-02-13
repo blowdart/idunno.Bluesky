@@ -64,8 +64,8 @@ namespace idunno.AtProto.Jetstream
         /// <param name="uri">The host uri to connection to. Defaults to wss://jetstream1.us-west.bsky.network/.</param>
         /// <param name="options">Any options to configure this instance of <see cref="AtProtoJetstream"/>.</param>
         /// <param name="webSocketOptions">Any <see cref="AtProto.WebSocketOptions"/> to set on the underlying client WebSocket.</param>
-        /// <param name="collections">The <see cref="Nsid"/>s of any collection types to subscribe to. If null or empty all collection types will be subscribed to.</param>
-        /// <param name="dids">Any <see cref="Did"/>s to subscribe to. If null or empty all dids will be subscribed to.</param>
+        /// <param name="collections">The <see cref="Nsid"/>s of any collection types to subscribe to. If <see langword="null"/> or empty all collection types will be subscribed to.</param>
+        /// <param name="dids">Any <see cref="Did"/>s to subscribe to. If <see langword="null"/> or empty all dids will be subscribed to.</param>
         public AtProtoJetstream(
             Uri? uri = null,
             JetstreamOptions? options = null,
@@ -312,7 +312,7 @@ namespace idunno.AtProto.Jetstream
         /// Connect to the JetStream instance via a WebSocket connection.
         /// </summary>
         /// <param name="uri">The URI of the jetstream server to connection to. Defaults to the URI passed during construction</param>
-        /// <param name="startFrom">A Unix microseconds timestamp cursor to begin playback from. A value of null results in live-tail operation.</param>
+        /// <param name="startFrom">A Unix microseconds timestamp cursor to begin playback from. A value of <see langword="null"/> results in live-tail operation.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         [MemberNotNull(nameof(_client))]
         public async Task ConnectAsync(
@@ -334,7 +334,7 @@ namespace idunno.AtProto.Jetstream
         /// Connect to the JetStream instance via a WebSocket connection.
         /// </summary>
         /// <param name="uri">The URI of the jetstream server to connection to. Defaults to the URI passed during construction</param>
-        /// <param name="cursor">A Unix microseconds timestamp cursor to begin playback from. A value of null results in live-tail operation.</param>
+        /// <param name="cursor">A Unix microseconds timestamp cursor to begin playback from. A value of <see langword="null"/> results in live-tail operation.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         [MemberNotNull(nameof(_client))]
         [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Suppressing dispose exceptions on purpose.")]

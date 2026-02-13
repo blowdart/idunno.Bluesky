@@ -14,7 +14,7 @@ namespace idunno.Bluesky.RichText
         /// Constructs a new instance of <see cref="LinkFacetFeature"/>.
         /// </summary>
         /// <param name="uri">The <see cref="Uri"/> for the facet.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
         [JsonConstructor]
         public LinkFacetFeature(Uri uri)
         {

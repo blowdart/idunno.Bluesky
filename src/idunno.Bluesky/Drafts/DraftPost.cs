@@ -27,7 +27,7 @@ namespace idunno.Bluesky.Drafts
         /// <param name="embedVideos">The videos to embed in the post. (Maximum 1)</param>
         /// <param name="embedExternals">The external content to embed in the post. (Maximum 1)</param>
         /// <param name="embedRecords">The records to embed in the post. (Maximum 1)</param>
-        /// <exception cref="ArgumentException">Thrown when the text is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than 3000 characters or 300 graphemes, or when the number of embedded media or records exceeds the specified limits.</exception>
         [JsonConstructor]
         public DraftPost(
@@ -71,7 +71,7 @@ namespace idunno.Bluesky.Drafts
         /// Creates a new instance of <see cref="DraftPost"/> with the specified content.
         /// </summary>
         /// <param name="text">The primary post content.</param>
-        /// <exception cref="ArgumentException">Thrown when the text is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than 3000 characters or 300 graphemes.</exception>
         public DraftPost(string text) : this(
             text: text,
@@ -95,7 +95,7 @@ namespace idunno.Bluesky.Drafts
         /// </summary>
         /// <param name="text">The primary post content.</param>
         /// <param name="embedImages">The images to embed in the post. (Maximum 4)</param>
-        /// <exception cref="ArgumentException">Thrown when the text is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than 3000 characters or 300 graphemes, or when the number of embedded images exceeds 4.</exception>
         public DraftPost(string text, IList<DraftEmbedImage> embedImages) : this(
             text: text,
@@ -123,7 +123,7 @@ namespace idunno.Bluesky.Drafts
         /// </summary>
         /// <param name="text">The primary post content.</param>
         /// <param name="embedImage">The image to embed in the post.</param>
-        /// <exception cref="ArgumentException">Thrown when the text is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than 3000 characters or 300 graphemes.</exception>
         public DraftPost(string text, DraftEmbedImage embedImage) : this(
             text: text,
@@ -147,7 +147,7 @@ namespace idunno.Bluesky.Drafts
         /// </summary>
         /// <param name="text">The primary post content.</param>
         /// <param name="labels">The labels to apply to the post.</param>
-        /// <exception cref="ArgumentException">Thrown when the text is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than 3000 characters or 300 graphemes.</exception>
         public DraftPost(string text, SelfLabels labels) : this(
             text: text,
@@ -171,7 +171,7 @@ namespace idunno.Bluesky.Drafts
         /// </summary>
         /// <param name="text">The primary post content.</param>
         /// <param name="embedVideo">The video to embed in the post.</param>
-        /// <exception cref="ArgumentException">Thrown when the text is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than 3000 characters or 300 graphemes.</exception>
         public DraftPost(string text, DraftEmbedVideo embedVideo) : this(
             text: text,
@@ -191,9 +191,9 @@ namespace idunno.Bluesky.Drafts
         }
 
         /// <summary>
-        /// Gets or sets the the primary post content. Maximum 3000 characters and 300 graphemes. Cannot be null or empty.
+        /// Gets or sets the the primary post content. Maximum 3000 characters and 300 graphemes. Cannot be <see langword="null"/> or empty.
         /// </summary>
-        /// <exception cref="ArgumentException">Thrown when setting if the value is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when setting if the value is <see langword="null"/> or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when setting if the value length is greater than 3000 characters or 300 graphemes.</exception>
         [JsonRequired]
         public string Text
@@ -376,7 +376,7 @@ namespace idunno.Bluesky.Drafts
         /// Sets the self labels for the post to the values specified in <paramref name="labels"/>.
         /// </summary>
         /// <param name="labels">The self label values to set.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="labels"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="labels"/> is <see langword="null"/>.</exception>
         public void SetSelfLabels(PostSelfLabels labels)
         {
             ArgumentNullException.ThrowIfNull(labels);

@@ -63,7 +63,7 @@ namespace idunno.Bluesky.Record
         /// <param name="labels">The list's self labels, if any.</param>
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the list was created at. Defaults to <see cref="DateTimeOffset.UtcNow"/>.</param>
         /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="name"/> is &gt; 64 characters or <paramref name="description"/> &gt; 300 graphemes.</exception>
         public BlueskyList(
             string name,
@@ -105,7 +105,7 @@ namespace idunno.Bluesky.Record
         /// <summary>
         /// Gets or sets the display name for the list.
         /// </summary>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> is <see langword="null"/> or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> exceeds 64 characters.</exception>
         [JsonInclude]
         [JsonRequired]
@@ -128,7 +128,7 @@ namespace idunno.Bluesky.Record
         /// <summary>
         /// Gets or sets the description of the list, if any.
         /// </summary>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> is <see langword="null"/> or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> exceeds 300 graphemes.</exception>
         [JsonInclude]
         public string? Description

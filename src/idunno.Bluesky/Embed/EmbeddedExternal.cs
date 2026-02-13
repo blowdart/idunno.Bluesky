@@ -16,7 +16,7 @@ namespace idunno.Bluesky.Embed
         /// Creates a new instance of <see cref="EmbeddedExternal"/>
         /// </summary>
         /// <param name="external">The properties for the externally linked content.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="external"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="external"/> is <see langword="null"/>.</exception>
         [JsonConstructor]
         public EmbeddedExternal(ExternalProperties external)
         {
@@ -31,7 +31,7 @@ namespace idunno.Bluesky.Embed
         /// <param name="title">The title for the external link.</param>
         /// <param name="description">The description of the external link, if any.</param>
         /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
         public EmbeddedExternal(Uri uri, string title, string? description = null, Blob? thumbnail = null) :
             this(new ExternalProperties(uri, title, description, thumbnail))
         {
@@ -46,7 +46,7 @@ namespace idunno.Bluesky.Embed
         /// <param name="title">The title for the external link.</param>
         /// <param name="description">The description of the external link, if any.</param>
         /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
         public EmbeddedExternal(string uri, string title, string? description = null, Blob? thumbnail = null) :
             this(new ExternalProperties(new Uri(uri), title, description, thumbnail))
         {
@@ -74,7 +74,7 @@ namespace idunno.Bluesky.Embed
         /// <param name="title">The title for the external link.</param>
         /// <param name="description">The description of the external link, if any.</param>
         /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
         [JsonConstructor]
         public ExternalProperties(Uri uri, string title, string? description = null, Blob? thumbnail = null) : base()
         {
@@ -94,7 +94,7 @@ namespace idunno.Bluesky.Embed
         /// <param name="title">The title for the external link.</param>
         /// <param name="description">The description of the external link.</param>
         /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
         public ExternalProperties(string uri, string title, string? description = null, Blob? thumbnail = null) :
             this(new Uri(uri), title, description, thumbnail)
         {

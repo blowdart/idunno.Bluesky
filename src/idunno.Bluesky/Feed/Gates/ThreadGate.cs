@@ -21,9 +21,9 @@ namespace idunno.Bluesky.Feed.Gates
         /// <param name="post">The <see cref="AtUri"/> of the thread to be gated.</param>
         /// <param name="rules">The list of rules for replies to the specified <paramref name="post"/>.</param>
         /// <param name="hiddenRepliesUris">A list of reply <see cref="AtUri"/>s that will be hidden for <see cref="Post"/></param>
-        /// <exception cref="ArgumentNullException">if post is null.</exception>
+        /// <exception cref="ArgumentNullException">if <paramref name="post"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="rules"/> or <paramref name="hiddenRepliesUris"/> have more than the maximum number of entries.</exception>
-        /// <exception cref="ArgumentException">if <paramref name="post"/> does not point to a Post record.</exception>
+        /// <exception cref="ArgumentException">if <paramref name="post"/> does not point to a <see cref="Post"/> record.</exception>
         public ThreadGate(AtUri post, ICollection<ThreadGateRule>? rules = null, ICollection<AtUri>? hiddenRepliesUris = null)
         {
             ArgumentNullException.ThrowIfNull(post);
@@ -103,7 +103,7 @@ namespace idunno.Bluesky.Feed.Gates
         /// </summary>
         /// <param name="post">The <see cref="AtUri"/> of the post to gate.</param>
         /// <returns>A configured instance of <see cref="ThreadGate"/> which doesn't allow any replies.</returns>
-        /// <exception cref="ArgumentNullException">if <see cref="Post"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">if <see cref="Post"/> is <see langword="null"/>.</exception>
         public static ThreadGate NoReplies(AtUri post)
         {
             ArgumentNullException.ThrowIfNull(post);

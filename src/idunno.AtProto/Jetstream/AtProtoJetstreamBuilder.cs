@@ -43,7 +43,7 @@ namespace idunno.AtProto.Jetstream
         public bool EnableCompression { get; set; }
 
         /// <summary>
-        /// Gets or sets the compression dictionary used by zst decompression when <see cref="EnableCompression"/> is true.
+        /// Gets or sets the compression dictionary used by zst decompression when <see cref="EnableCompression"/> is <see langword="true"/>.
         /// </summary>
         [SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "zst expects a dictionary and we're not concerned about mutability.")]
         public byte[] CompressionDictionary { get; set; } = Resource.zstDictionary;
@@ -81,7 +81,7 @@ namespace idunno.AtProto.Jetstream
         /// </summary>
         /// <param name="service">The <see cref="Uri"/> of the service to initially connect to.</param>
         /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is null</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is <see langword="null"/></exception>
         public AtProtoJetstreamBuilder ConnectTo(Uri service)
         {
             ArgumentNullException.ThrowIfNull(service);
@@ -95,7 +95,7 @@ namespace idunno.AtProto.Jetstream
         /// </summary>
         /// <param name="logger">The <see cref="ILoggerFactory"/> to use when creating loggers.</param>
         /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="logger"/> is null</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="logger"/> is <see langword="null"/></exception>
         public AtProtoJetstreamBuilder WithLoggerFactory(ILoggerFactory logger)
         {
             ArgumentNullException.ThrowIfNull(logger);
@@ -109,7 +109,7 @@ namespace idunno.AtProto.Jetstream
         /// </summary>
         /// <param name="meterFactory">The <see cref="IMeterFactory"/> to use when creating loggers.</param>
         /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="meterFactory"/> is null</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="meterFactory"/> is <see langword="null"/></exception>
         public AtProtoJetstreamBuilder WithMeterFactory(IMeterFactory meterFactory)
         {
             ArgumentNullException.ThrowIfNull(meterFactory);
@@ -131,7 +131,7 @@ namespace idunno.AtProto.Jetstream
         }
 
         /// <summary>
-        /// Configures the compression dictionary to use when <see cref="EnableCompression"/> is true.
+        /// Configures the compression dictionary to use when <see cref="EnableCompression"/> is <see langword="true"/>.
         /// </summary>
         /// <param name="compressionDictionary">A byte[] containing a custom zst dictionary.</param>
         /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>

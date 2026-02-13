@@ -41,7 +41,7 @@ namespace idunno.DidPlcDirectory
         /// </summary>
         /// <para>
         /// Setting <see cref="HttpClientOptions.CheckCertificateRevocationList"/>to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
-        /// false if you are using a debugging proxy which does not support CRLs.
+        /// <see langword="false"/> if you are using a debugging proxy which does not support CRLs.
         /// </para>
         public HttpClientOptions? HttpClientOptions { get; set; }
 

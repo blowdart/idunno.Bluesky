@@ -41,9 +41,9 @@ namespace idunno.Bluesky.Actor
         /// <param name="followersCount">The actor's current follower count.</param>
         /// <param name="followsCount">The number of actors the actor follows.</param>
         /// <param name="postsCount">The number of posts the actor has made.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> or <paramref name="handle"/> are null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> or <paramref name="handle"/> are <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
-        ///   Thrown when <paramref name="displayName"/> is not null and has a character length greater than 640 or a grapheme length greater than 64.
+        ///   Thrown when <paramref name="displayName"/> is not <see langword="null"/> and has a character length greater than 640 or a grapheme length greater than 64.
         /// </exception>
         [JsonConstructor]
         public ProfileViewDetailed(

@@ -16,7 +16,7 @@ namespace idunno.Bluesky.Drafts
         /// Creates a new instance of <see cref="DraftEmbedExternal"/> with the specified external <see cref="Uri"/>.
         /// </summary>
         /// <param name="uri">The <see cref="Uri"/> to embed.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
         [JsonConstructor]
         public DraftEmbedExternal(Uri uri)
         {

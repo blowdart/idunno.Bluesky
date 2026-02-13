@@ -30,8 +30,8 @@ namespace idunno.Bluesky.Graph
         /// <param name="labels">Labels applied to the list</param>
         /// <param name="viewer">A view of the relationship between the view and the current user.</param>
         /// <param name="indexedAt">The date and time the list was last indexed at.</param>
-        /// <exception cref="ArgumentNullException">Throws if <paramref name="uri"/> or <paramref name="cid"/> is null.</exception>
-        /// <exception cref="ArgumentException">Throws if <paramref name="name"/> is null or whitespace.</exception>
+        /// <exception cref="ArgumentNullException">Throws if <paramref name="uri"/> or <paramref name="cid"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Throws if <paramref name="name"/> is <see langword="null"/> or whitespace.</exception>
         [JsonConstructor]
         public ListViewBasic(
             AtUri uri,

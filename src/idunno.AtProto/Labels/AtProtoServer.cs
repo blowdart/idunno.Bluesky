@@ -32,7 +32,7 @@ namespace idunno.AtProto
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uriPatterns" />, <paramref name="service"/> or <paramref name="httpClient"/> is null</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uriPatterns" />, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/></exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown <paramref name="uriPatterns"/> is empty or if <paramref name="limit"/> is &lt;1 or &gt;250.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",

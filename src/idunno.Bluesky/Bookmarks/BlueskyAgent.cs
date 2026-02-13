@@ -17,7 +17,7 @@ namespace idunno.Bluesky
         /// <param name="cid">The <see cref="Cid"/> of the post to bookmark</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="cid"/>are null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="cid"/>are <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/> does not point to a post</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> CreateBookmark(

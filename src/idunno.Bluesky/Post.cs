@@ -38,14 +38,14 @@ namespace idunno.Bluesky
         /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is null and <paramref name="embeddedRecord"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when a tag position is null or empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when both <paramref name="text"/> and <paramref name="embeddedRecord"/> are <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when a tag position is <see langword="null"/> or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///    Thrown when <paramref name="text"/> exceeds the maximum length or.
         ///    <paramref name="tags"/> exceeds the maximum number of tags or has a value that exceeds the maximum tag length.
         /// </exception>
         /// <remarks>
-        ///<para><paramref name="text"/> may be an empty string, if there are <paramref name="embeddedRecord"/> is not null.</para>
+        ///<para><paramref name="text"/> may be an empty string, if the <paramref name="embeddedRecord"/> is not <see langword="null"/>.</para>
         /// </remarks>
         [JsonConstructor]
         public Post(
@@ -150,7 +150,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="text">The text for the post.</param>
         /// <param name="lang">The language the post is written in.</param>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="text" /> is null or empty, or <paramref name="lang" /> is empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="text" /> is <see langword="null"/> or empty, or <paramref name="lang" /> is empty.</exception>
         public Post(
             string text,
             string lang) : this(text: text, langs: [lang])
@@ -164,8 +164,8 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="text">The text for the post.</param>
         /// <param name="langs">The languages the post is written in.</param>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="text" /> is null or empty.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="langs"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="text" /> is <see langword="null"/> or empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="langs"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="langs"/> is empty.</exception>
         public Post(
             string text,
@@ -187,13 +187,13 @@ namespace idunno.Bluesky
         /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is null and <paramref name="embeddedRecord"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="text"/> is <see langword="null"/> and <paramref name="embeddedRecord"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///    Thrown when <paramref name="text"/> exceeds the maximum length or.
         ///    <paramref name="tags"/> exceeds the maximum number of tags or has a value that exceeds the maximum tag length.
         /// </exception>
         /// <remarks>
-        ///<para><paramref name="text"/> may be an empty string, if there are <paramref name="embeddedRecord"/> is not null.</para>
+        ///<para><paramref name="text"/> may be an empty string, if there are <paramref name="embeddedRecord"/> is not <see langword="null"/>.</para>
         /// </remarks>
         public Post(
             string? text,
@@ -216,7 +216,7 @@ namespace idunno.Bluesky
         /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is <see langword="null"/>.</exception>
         public Post(
             string? text,
             EmbeddedImage image,
@@ -248,7 +248,7 @@ namespace idunno.Bluesky
         /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is <see langword="null"/>.</exception>
         public Post(
             string? text,
             DateTimeOffset createdAt,
@@ -280,7 +280,7 @@ namespace idunno.Bluesky
         /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="images"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="images"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="images"/> or empty, or contains more than the maximum allowed number of images.</exception>
         public Post(
             string? text,
@@ -316,7 +316,7 @@ namespace idunno.Bluesky
         /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="images"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="images"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="images"/> or empty, or contains more than the maximum allowed number of images.</exception>
         public Post(
             string? text,
@@ -352,7 +352,7 @@ namespace idunno.Bluesky
         /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is <see langword="null"/>.</exception>
         public Post(
             string? text,
             EmbeddedVideo video,
@@ -384,7 +384,7 @@ namespace idunno.Bluesky
         /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
         /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
         /// <param name="tags">A collection of tags to apply to the post, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is <see langword="null"/>.</exception>
         public Post(
             string? text,
             DateTimeOffset createdAt,
@@ -649,7 +649,7 @@ namespace idunno.Bluesky
         /// Sets the self labels for the post to the values specified in <paramref name="labels"/>.
         /// </summary>
         /// <param name="labels">The self label values to set.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="labels"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="labels"/> is <see langword="null"/>.</exception>
         public void SetSelfLabels(PostSelfLabels labels)
         {
             ArgumentNullException.ThrowIfNull(labels);

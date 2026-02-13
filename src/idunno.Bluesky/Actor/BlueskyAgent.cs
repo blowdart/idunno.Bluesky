@@ -34,7 +34,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<ProfileViewDetailed>> GetProfile(
             AtIdentifier actor,
             IEnumerable<Did>? subscribedLabelers = null,
@@ -60,7 +60,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actors"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actors"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="actors"/> is an empty collection or if it contains &gt;25 handles.</exception>
         public async Task<AtProtoHttpResult<IReadOnlyCollection<ProfileViewDetailed>>> GetProfiles(
             IEnumerable<AtIdentifier> actors,
@@ -136,7 +136,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// Get a list of suggested actors for the authenticator users. The expected use is discovery of accounts to follow during new account onboarding.
         /// </summary>
-        /// <param name="limit">The number of suggested actors to return. Defaults to 50 if null.</param>
+        /// <param name="limit">The number of suggested actors to return. Defaults to 50 if <see langword="null"/>.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -178,7 +178,7 @@ namespace idunno.Bluesky
         /// <param name="preference">The preference to update</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="preference"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="preference"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> PutPreference(Preference preference, CancellationToken cancellationToken = default)
         {
@@ -198,7 +198,7 @@ namespace idunno.Bluesky
         /// <param name="preference">The preference to update</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="preference"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="preference"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> PutPreferences(Preference preference, CancellationToken cancellationToken = default)
         {
@@ -220,7 +220,7 @@ namespace idunno.Bluesky
         /// <param name="preferences">The preferences to update</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="preferences"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="preferences"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="preferences"/> is empty.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> PutPreferences(IList<Preference> preferences, CancellationToken cancellationToken = default)
@@ -247,12 +247,12 @@ namespace idunno.Bluesky
         /// Find actors (profiles) matching search criteria. Does not require authentication.
         /// </summary>
         /// <param name="q">The search query string. Syntax, phrase, boolean, and faceting is unspecified, but Lucene query syntax is recommended.</param>
-        /// <param name="limit">The number of suggested actors to return. Defaults to 50 if null.</param>
+        /// <param name="limit">The number of suggested actors to return. Defaults to 50 if <see langword="null"/>.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="q" /> is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="q" /> is <see langword="null"/> or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt;=0 or &gt;100.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>> SearchActors(
             string q,
@@ -289,7 +289,7 @@ namespace idunno.Bluesky
         /// Find actor suggestions for a prefix search term. Expected use is for auto-completion during text field entry. Does not require authentication.
         /// </summary>
         /// <param name="q">Search query prefix; not a full query string.</param>
-        /// <param name="limit">The number of suggested actors to return. Defaults to 50 if null.</param>
+        /// <param name="limit">The number of suggested actors to return. Defaults to 50 if <see langword="null"/>.</param>
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>

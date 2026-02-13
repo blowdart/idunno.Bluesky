@@ -18,7 +18,7 @@ namespace idunno.Bluesky.RichText
         /// </summary>
         /// <param name="index">The byte slice the facet refers to.</param>
         /// <param name="features">A list of <see cref="FacetFeature"/>s for the facet.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="index"/> or <paramref name="features"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="index"/> or <paramref name="features"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="features"/> has no <see cref="FacetFeature"/>s.</exception>
         [JsonConstructor]
         public Facet(ByteSlice index, IList<FacetFeature> features)

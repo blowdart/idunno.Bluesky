@@ -24,7 +24,7 @@ namespace idunno.Bluesky.Chat
         ///   Thrown <paramref name="id" /> or <paramref name="revision"/> is white space.
         /// </exception>
         /// <exception cref="ArgumentNullException">
-        ///   Thrown when <paramref name="id" /> or <paramref name="revision"/>, <paramref name="sender"/> is null.
+        ///   Thrown when any of <paramref name="id" /> or <paramref name="revision"/>, <paramref name="sender"/> are <see langword="null"/>.
         /// </exception>
         [JsonConstructor]
         public MessageViewBase(string id, string revision, MessageViewSender sender, DateTimeOffset sentAt)

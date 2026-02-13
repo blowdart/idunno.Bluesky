@@ -12,12 +12,16 @@ namespace idunno.AtProto.Repo
     public sealed record StrongReference : SubjectType
     {
         /// <summary>
-        /// Creates a new <see cref="StrongReference"/> with the specified AT URI and CID.
+        /// Creates a new <see cref="StrongReference"/> with the specified <paramref name="uri"/> and <paramref name="cid"/>.
         /// </summary>
         /// <param name="uri">The <see cref="AtUri"/> for the new subject.</param>
         /// <param name="cid">The <see cref="AtProto.Cid"/> for the new subject</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="cid"/> are <see langword="null"/>.</exception>
         public StrongReference(AtUri uri, Cid cid)
         {
+            ArgumentNullException.ThrowIfNull(uri);
+            ArgumentNullException.ThrowIfNull(cid);
+
             Uri = uri;
             Cid = cid;
         }

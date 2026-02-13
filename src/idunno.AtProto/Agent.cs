@@ -31,7 +31,7 @@ namespace idunno.AtProto
         /// <remarks>
         /// <para>
         /// Setting <see cref="HttpClientOptions.CheckCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
-        /// false if you are using a debugging proxy which does not support CRLs.
+        /// <see langword="false"/> if you are using a debugging proxy which does not support CRLs.
         /// </para>
         /// </remarks>
         protected Agent(HttpClientOptions? httpClientOptions, JsonOptions? jsonOptions)
@@ -128,7 +128,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Releases the unmanaged resources used by the <see cref="Agent"/> and optionally disposes of the managed resources.
         /// </summary>
-        /// <param name="disposing">true to release both managed and unmanaged resources; false to releases only unmanaged resources.</param>
+        /// <param name="disposing"><see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to releases only unmanaged resources.</param>
         protected virtual void Dispose(bool disposing)
         {
             if (_disposed)

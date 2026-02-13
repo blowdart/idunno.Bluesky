@@ -23,7 +23,7 @@ namespace idunno.AtProto.Authentication
         /// <param name="proofKey">The DPoP proof key which was used to sign the token request.</param>
         /// <param name="correlationId">The correlation identifier used in logging to tie requests and responses together.</param>
         /// <param name="extraProperties">Any extra properties to save in state.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="state"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="state"/> is <see langword="null"/>.</exception>
         public OAuthLoginState(
             AuthorizeState state,
             string expectedAuthority,
@@ -172,7 +172,7 @@ namespace idunno.AtProto.Authentication
         /// </summary>
         /// <param name="state">The <see cref="OAuthLoginState"/> to convert to json.</param>
         /// <returns>A string containing the <paramref name="state"/> as json.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="state"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="state"/> is <see langword="null"/>.</exception>
         public static string ToJson(OAuthLoginState state)
         {
             ArgumentNullException.ThrowIfNull(state);
@@ -184,7 +184,7 @@ namespace idunno.AtProto.Authentication
         /// </summary>
         /// <param name="json">The json to convert.</param>
         /// <returns>An instance of <see cref="OAuthLoginState"/> deserialized from the supplied <paramref name="json"/> string.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or white space.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is <see langword="null"/> or white space.</exception>
         public static OAuthLoginState? FromJson(string json)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(json);
@@ -247,20 +247,20 @@ namespace idunno.AtProto.Authentication
         /// </summary>
         /// <param name="obj">An object to compare to this <see cref="OAuthLoginState"/>.</param>
         /// <returns>
-        /// true if this <see cref="OAuthLoginState"/> and the specified <paramref name="obj"/>> refer to the same object,
+        /// <see langword="true"/> if this <see cref="OAuthLoginState"/> and the specified <paramref name="obj"/>> refer to the same object,
         /// this OAuthLoginState and the specified obj are both the same type of object and those objects are equal,
-        /// or if this OAuthLoginStat and the specified obj are both null, otherwise, false.
+        /// or if this OAuthLoginStat and the specified obj are both <see langword="null"/>, otherwise, <see langword="false"/>.
         /// </returns>
         public override bool Equals([NotNullWhen(true)] object? obj) => Equals(obj as OAuthLoginState);
 
         /// <summary>
         /// Indicates where this <see cref="OAuthLoginState"/> equals another."/>
         /// </summary>
-        /// <param name="other">A <see cref="OAuthLoginState"/> or null to compare to this <see cref="OAuthLoginState"/>.</param>
+        /// <param name="other">A <see cref="OAuthLoginState"/> or <see langword="null"/> to compare to this <see cref="OAuthLoginState"/>.</param>
         /// <returns>
-        /// true if this <see cref="OAuthLoginState"/> and the specified <paramref name="other"/>> refer to the same object,
+        /// <see langword="true"/> if this <see cref="OAuthLoginState"/> and the specified <paramref name="other"/>> refer to the same object,
         /// this OAuthLoginState and the specified obj are both the same type of object and those objects are equal,
-        /// or if this OAuthLoginState and the specified obj are both null, otherwise, false.
+        /// or if this OAuthLoginState and the specified obj are both <see langword="null"/>, otherwise, <see langword="false"/>.
         /// </returns>
         public bool Equals([NotNullWhen(true)] OAuthLoginState? other)
         {
@@ -324,9 +324,9 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Determines whether two specified <see cref="OAuthLoginState"/>s the same value."/>
         /// </summary>
-        /// <param name="lhs">The first <see cref="OAuthLoginState"/> to compare, or null.</param>
-        /// <param name="rhs">The second <see cref="OAuthLoginState"/> to compare, or null.</param>
-        /// <returns>true if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, false.</returns>
+        /// <param name="lhs">The first <see cref="OAuthLoginState"/> to compare, or <see langword="null"/>.</param>
+        /// <param name="rhs">The second <see cref="OAuthLoginState"/> to compare, or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, <see langword="false"/>.</returns>
         public static bool operator ==(OAuthLoginState? lhs, OAuthLoginState? rhs)
         {
             if (lhs is null)
@@ -345,9 +345,9 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Determines whether two specified <see cref="OAuthLoginState"/>s dot not have same value."/>
         /// </summary>
-        /// <param name="lhs">The first <see cref="OAuthLoginState"/> to compare, or null.</param>
-        /// <param name="rhs">The second <see cref="OAuthLoginState"/> to compare, or null.</param>
-        /// <returns>true if the value of <paramref name="lhs"/> is different to the value of <paramref name="rhs" />; otherwise, false.</returns>
+        /// <param name="lhs">The first <see cref="OAuthLoginState"/> to compare, or <see langword="null"/>.</param>
+        /// <param name="rhs">The second <see cref="OAuthLoginState"/> to compare, or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="lhs"/> is different to the value of <paramref name="rhs" />; otherwise, <see langword="false"/>.</returns>
         public static bool operator !=(OAuthLoginState? lhs, OAuthLoginState? rhs) => !(lhs == rhs);
     }
 }

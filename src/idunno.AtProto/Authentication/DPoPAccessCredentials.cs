@@ -23,9 +23,9 @@ namespace idunno.AtProto.Authentication
         /// <param name="refreshToken">A string representation of the refresh token to use when a new access token is required.</param>
         /// <param name="dPoPProofKey">An optional string representation of the DPoP proof key to use when signing requests.</param>
         /// <param name="dPoPNonce">An optional string representation of the DPoP nonce to use when signing requests.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">
-        /// Thrown when <paramref name="accessJwt"/>, <paramref name="refreshToken"/>, <paramref name="dPoPProofKey"/> or <paramref name="dPoPNonce"/> is null or whitespace.
+        /// Thrown when <paramref name="accessJwt"/>, <paramref name="refreshToken"/>, <paramref name="dPoPProofKey"/> or <paramref name="dPoPNonce"/> is <see langword="null"/> or whitespace.
         /// </exception>
         public DPoPAccessCredentials(Uri service, string accessJwt, string refreshToken, string dPoPProofKey, string dPoPNonce) : base(service, AuthenticationType.OAuth, accessJwt, refreshToken)
         {
@@ -42,7 +42,7 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Gets or sets a string representation of the DPoP proof key to use when signing requests.
         /// </summary>
-        /// <exception cref="ArgumentException">Thrown when setting the value and the value is null or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when setting the value and the value is <see langword="null"/> or whitespace.</exception>
         public string DPoPProofKey {
             get
             {

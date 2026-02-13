@@ -14,7 +14,7 @@ namespace idunno.Bluesky.Embed
         /// Creates a new instance of <see cref="EmbeddedImages"/>.
         /// </summary>
         /// <param name="images">The images to embed in a post.</param>
-        /// <exception cref="ArgumentNullException">Thrown when images is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when images is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the images contains more than the maximum number of images for a post, or does not contain any images.</exception>
         public EmbeddedImages(ICollection<EmbeddedImage> images)
         {

@@ -190,7 +190,7 @@ namespace idunno.Bluesky
         /// <param name="replies">Flag indicating whether notifications should be enabled for replies. <paramref name="posts"/> must also be <see langword="true"/> for this setting to work.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="subject"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="subject"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="replies"/> is <see langword="true"/> but <paramref name="posts"/> is <see langword="false"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         public async Task<AtProtoHttpResult<SubjectActivitySubscription>> SetActivitySubscription(
@@ -249,7 +249,7 @@ namespace idunno.Bluesky
         /// <param name="declaration">The declaration record to update.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="declaration"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="declaration"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not authenticated.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -306,7 +306,7 @@ namespace idunno.Bluesky
         /// <param name="preferences">The notification preferences to set.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="preferences"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="preferences"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Notifications.Preferences>> SetNotificationPreferences(
             Notifications.Preferences preferences,

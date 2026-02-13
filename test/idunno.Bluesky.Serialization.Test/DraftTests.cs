@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+using System.Text.Json.Nodes;
+
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Drafts;
 using idunno.Bluesky.Feed.Gates;
@@ -320,6 +322,38 @@ namespace idunno.Bluesky.Serialization.Test
             Assert.Equal("Alt text", actual.Draft.Posts[0].EmbedImages![0].AltText);
             Assert.Equal(DateTimeOffset.Parse("2026-02-09T21:06:45.977Z"), actual.CreatedAt);
             Assert.Equal(DateTimeOffset.Parse("2026-02-09T21:06:45.977Z"), actual.UpdatedAt);
+        }
+
+        [Fact]
+        public void TextOnlyDraftSerializesCorrectly()
+        {
+            Guid expectedDeviceId = Guid.NewGuid();
+            string expectedDeviceName = "test harness";
+            string expectedDraftPostText = "Draft Post";
+            DraftPost expectedDraftPost = new(expectedDraftPostText);
+            Draft expectedDraft = new(
+                expectedDraftPost,
+                deviceId: expectedDeviceId,
+                deviceName: expectedDeviceName);
+
+            string json = JsonSerializer.Serialize(expectedDraft, BlueskyServer.BlueskyJsonSerializerOptions);
+
+            JsonNode? actual = JsonNode.Parse(json);
+
+            Assert.Equal("app.bsky.draft.defs#draft", actual!["$type"]!.GetValue<string>());
+            Assert.Equal(expectedDeviceId, actual["deviceId"]!.GetValue<Guid>());
+            Assert.Equal(expectedDeviceName, actual["deviceName"]!.GetValue<string>());
+
+            JsonArray draftPostsArray = actual["posts"]!.AsArray();
+            Assert.Equal(expectedDraft.Posts.Count, draftPostsArray.Count);
+
+            int offset = 0;
+            foreach (JsonNode draftPostNode in draftPostsArray!)
+            {
+                Assert.Equal("app.bsky.draft.defs#draftPost", draftPostNode["$type"]!.GetValue<string>());
+                Assert.Equal(expectedDraft.Posts[offset].Text, draftPostNode["text"]!.GetValue<string>());
+            }
+
         }
     }
 }

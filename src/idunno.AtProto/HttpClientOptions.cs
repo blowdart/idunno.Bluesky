@@ -13,7 +13,7 @@ namespace idunno.AtProto
     /// <remarks>
     /// <para>
     /// Setting <paramref name="checkCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
-    /// false if you are using a debugging proxy which does not support CRLs.
+    /// <see langword="false"/> if you are using a debugging proxy which does not support CRLs.
     /// </para>
     /// </remarks>
     public sealed class HttpClientOptions(
@@ -43,7 +43,7 @@ namespace idunno.AtProto
         /// <remarks>
         /// <para>
         /// Setting this to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
-        /// false if you are using a debugging proxy which does not support CRLs.
+        /// <see langword="false"/> if you are using a debugging proxy which does not support CRLs.
         /// </para>
         /// </remarks>
         public bool CheckCertificateRevocationList { get; set; } = checkCertificateRevocationList;

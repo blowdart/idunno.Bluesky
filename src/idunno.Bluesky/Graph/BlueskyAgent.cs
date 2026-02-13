@@ -52,7 +52,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<Followers>> GetFollowers(
             AtIdentifier actor,
             int? limit = null,
@@ -112,7 +112,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<Follows>> GetFollows(
             AtIdentifier actor,
             int? limit = null,
@@ -275,7 +275,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
         public async Task<AtProtoHttpResult<ListViewWithItems>> GetList(
             AtUri uri,
@@ -305,7 +305,7 @@ namespace idunno.Bluesky
         /// <param name="uri">The <see cref="AtUri"/> of the list record to get.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null or the uri collection property is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/> or the <see cref="AtUri.Collection"/> property is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/> does not point to a list record.</exception>
         public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<BlueskyList>>> GetListRecord(
             AtUri uri,
@@ -330,7 +330,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>> GetLists(
             AtIdentifier actor,
@@ -393,7 +393,7 @@ namespace idunno.Bluesky
         /// <param name="others">A list of other accounts to be related back to <paramref name="actor"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> or <paramref name="others"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> or <paramref name="others"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<ActorRelationships>> GetRelationships(
             Did actor,
             ICollection<Did> others,
@@ -419,7 +419,7 @@ namespace idunno.Bluesky
         /// <param name="others">A list of other accounts to be related back to current actor.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="others"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="others"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ActorRelationships>> GetRelationships(
             ICollection<Did> others,
@@ -445,7 +445,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/></exception>
         public async Task<AtProtoHttpResult<StarterPackView>> GetStarterPack(
             AtUri uri,
             IEnumerable<Did>? subscribedLabelers = null,
@@ -471,7 +471,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uris"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uris"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<IReadOnlyList<StarterPackViewBasic>>> GetStarterPacks(
             ICollection<AtUri> uris,
             IEnumerable<Did>? subscribedLabelers = null,
@@ -497,7 +497,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<SuggestedActors>> GetSuggestedFollowsByActor(
             AtIdentifier actor,
             IEnumerable<Did>? subscribedLabelers = null,
@@ -522,7 +522,7 @@ namespace idunno.Bluesky
         /// <param name="actor">The <see cref="AtIdentifier"/> of the actor to mute.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> Mute(
             AtIdentifier actor,
@@ -551,7 +551,7 @@ namespace idunno.Bluesky
         /// <param name="actor">The <see cref="AtIdentifier"/> of the actor to mute.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> MuteActor(
             AtIdentifier actor,
@@ -575,7 +575,7 @@ namespace idunno.Bluesky
         /// <param name="listUri">The <see cref="AtUri"/> of the list of actors to mute.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> MuteActorList(
             AtUri listUri,
@@ -604,7 +604,7 @@ namespace idunno.Bluesky
         /// <param name="listUri">The <see cref="AtUri"/> of the moderation list of actors to mute.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> MuteModList(
             AtUri listUri,
@@ -626,7 +626,7 @@ namespace idunno.Bluesky
         /// <param name="rootUri">The <see cref="AtUri"/> of the thread to mute</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="rootUri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="rootUri"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> MuteThread(
             AtUri rootUri,
@@ -655,7 +655,7 @@ namespace idunno.Bluesky
         /// <param name="listUri">The <see cref="AtUri"/> of the list of actors to unmute.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> UnmuteActorList(
             AtUri listUri,
@@ -684,7 +684,7 @@ namespace idunno.Bluesky
         /// <param name="listUri">The <see cref="AtUri"/> of the list of actors to unmute.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="listUri"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> UnmuteModeList(
             AtUri listUri,
@@ -706,7 +706,7 @@ namespace idunno.Bluesky
         /// <param name="actor">The <see cref="AtIdentifier"/> of the actor to unmute</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> Unmute(
             AtIdentifier actor,
@@ -735,7 +735,7 @@ namespace idunno.Bluesky
         /// <param name="actor">The <see cref="AtIdentifier"/> of the actor to unmute</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> UnmuteActor(
             AtIdentifier actor,
@@ -757,7 +757,7 @@ namespace idunno.Bluesky
         /// <param name="rootUri">The <see cref="AtUri"/> of the thread to unmute</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="rootUri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="rootUri"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> UnmuteThread(
             AtUri rootUri,

@@ -15,7 +15,7 @@ namespace idunno.Bluesky.RichText
         /// </summary>
         /// <param name="did">The <see cref="Did"/> of the actor being mentioned.</param>
         /// <param name="text">The text to "wrap" the mention around.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
         public Mention(Did did, string text) : base(text)
         {
             ArgumentNullException.ThrowIfNull(did);
@@ -27,7 +27,7 @@ namespace idunno.Bluesky.RichText
         /// </summary>
         /// <param name="did">The <see cref="Did"/> of the actor being mentioned.</param>
         /// <param name="handle">The <see cref="Handle"/> of the actor being mentioned, which will generate the text for the facet.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> or <see cref="Handle"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> or <paramref name="handle"/> is <see langword="null"/>.</exception>
         public Mention(Did did, Handle handle) : base()
 
         {

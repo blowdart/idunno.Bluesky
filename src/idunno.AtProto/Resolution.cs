@@ -38,10 +38,10 @@ namespace idunno.AtProto
         /// <param name="handle">The handle to resolve.</param>
         /// <param name="loggerFactory">An optional <see cref="LoggerFactory"/> to use to create a logger.</param>
         /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for HTTP requests.</param>
-        /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is null.</param>
+        /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is <see langword="null"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="handle"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
         public static async Task<Did?> ResolveHandle(
             string handle,
             ILoggerFactory? loggerFactory = null,
@@ -86,7 +86,7 @@ namespace idunno.AtProto
         /// <param name="timeout">An optional timeout for HTTP requests.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="handle"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
         public static async Task<Did?> ResolveHandle(
             Handle handle,
             ILoggerFactory? loggerFactory = null,
@@ -107,13 +107,13 @@ namespace idunno.AtProto
         /// Resolves the <see cref="DidDocument"/> for the specified <paramref name="did"/>.
         /// </summary>
         /// <param name="did">The <see cref="Did"/> to resolve the <see cref="DidDocument"/> for.</param>
-        /// <param name="plcDirectory">An optional <see cref="Uri"/> of the PLC directory server to use. If null the default directory server, https://plc.directory, will be used.</param>
+        /// <param name="plcDirectory">An optional <see cref="Uri"/> of the PLC directory server to use. If <see langword="null"/> the default directory server, https://plc.directory, will be used.</param>
         /// <param name="loggerFactory">An optional <see cref="LoggerFactory"/> to use to create a logger.</param>
         /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for HTTP requests.</param>
-        /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is null.</param>
+        /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is <see langword="null"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
         public static async Task<DidDocument?> ResolveDidDocument(
             Did did,
             Uri? plcDirectory = null,
@@ -160,13 +160,13 @@ namespace idunno.AtProto
         /// Resolves the <see cref="DidDocument"/> for the specified <paramref name="handle"/>.
         /// </summary>
         /// <param name="handle">The <see cref="Handle"/> to resolve the <see cref="DidDocument"/> for.</param>
-        /// <param name="plcDirectory">An optional <see cref="Uri"/> of the PLC directory server to use. If null the default directory server, https://plc.directory, will be used.</param>
+        /// <param name="plcDirectory">An optional <see cref="Uri"/> of the PLC directory server to use. If <see langword="null"/> the default directory server, https://plc.directory, will be used.</param>
         /// <param name="loggerFactory">An optional <see cref="LoggerFactory"/> to use to create a logger.</param>
         /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for HTTP requests.</param>
-        /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is null.</param>
+        /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is <see langword="null"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="handle"/> could not be resolved to a <see cref="Did"/>.</exception>
         public static async Task<DidDocument?> ResolveDidDocument(
             Handle handle,
@@ -221,13 +221,13 @@ namespace idunno.AtProto
         /// Resolves the <see cref="DidDocument"/> for the specified <paramref name="atIdentifier"/>.
         /// </summary>
         /// <param name="atIdentifier">The AtIdentifier to resolve the <see cref="DidDocument"/> for.</param>
-        /// <param name="plcDirectory">An optional <see cref="Uri"/> of the PLC directory server to use. If null the default directory server, https://plc.directory, will be used.</param>
+        /// <param name="plcDirectory">An optional <see cref="Uri"/> of the PLC directory server to use. If <see langword="null"/> the default directory server, https://plc.directory, will be used.</param>
         /// <param name="loggerFactory">An optional <see cref="LoggerFactory"/> to use to create a logger.</param>
         /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for HTTP requests.</param>
-        /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is null.</param>
+        /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is <see langword="null"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="atIdentifier"/> is null or empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="atIdentifier"/> is <see langword="null"/> or empty.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="atIdentifier"/> could not be resolved to a <see cref="Did"/> or a <see cref="Handle"/>.</exception>
         public static async Task<DidDocument?> ResolveDidDocument(
             string atIdentifier,
@@ -276,13 +276,13 @@ namespace idunno.AtProto
         /// Resolves the Personal Data Server (PDS) <see cref="Uri"/>for the specified <paramref name="did"/>.
         /// </summary>
         /// <param name="did">The <see cref="Did"/> to resolve the PDS <see cref="Uri"/> for.</param>
-        /// <param name="plcDirectory">An optional <see cref="Uri"/> of the PLC directory server to use. If null the default directory server, https://plc.directory, will be used.</param>
+        /// <param name="plcDirectory">An optional <see cref="Uri"/> of the PLC directory server to use. If <see langword="null"/> the default directory server, https://plc.directory, will be used.</param>
         /// <param name="loggerFactory">An optional <see cref="LoggerFactory"/> to use to create a logger.</param>
         /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for HTTP requests.</param>
-        /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is null.</param>
+        /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is <see langword="null"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
         public static async Task<Uri?> ResolvePds(
             Did did,
             Uri? plcDirectory = null,
@@ -325,13 +325,13 @@ namespace idunno.AtProto
         /// Resolves the Personal Data Server (PDS) <see cref="Uri"/>for the specified <paramref name="handle"/>.
         /// </summary>
         /// <param name="handle">The <see cref="Handle"/> to resolve the PDS <see cref="Uri"/> for.</param>
-        /// <param name="plcDirectory">An optional <see cref="Uri"/> of the PLC directory server to use. If null the default directory server, https://plc.directory, will be used.</param>
+        /// <param name="plcDirectory">An optional <see cref="Uri"/> of the PLC directory server to use. If <see langword="null"/> the default directory server, https://plc.directory, will be used.</param>
         /// <param name="loggerFactory">An optional <see cref="LoggerFactory"/> to use to create a logger.</param>
         /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for HTTP requests.</param>
-        /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is null.</param>
+        /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is <see langword="null"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="handle"/> could not be resolved to a <see cref="Did"/>.</exception>
         public static async Task<Uri?> ResolvePds(
             Handle handle,
@@ -363,13 +363,13 @@ namespace idunno.AtProto
         /// Resolves the Personal Data Server (PDS) <see cref="Uri"/>for the specified <paramref name="atIdentifier"/>.
         /// </summary>
         /// <param name="atIdentifier">The <see cref="Handle"/> to resolve the PDS <see cref="Uri"/> for.</param>
-        /// <param name="plcDirectory">An optional <see cref="Uri"/> of the PLC directory server to use. If null the default directory server, https://plc.directory, will be used.</param>
+        /// <param name="plcDirectory">An optional <see cref="Uri"/> of the PLC directory server to use. If <see langword="null"/> the default directory server, https://plc.directory, will be used.</param>
         /// <param name="loggerFactory">An optional <see cref="LoggerFactory"/> to use to create a logger.</param>
         /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for HTTP requests.</param>
-        /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is null.</param>
+        /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is <see langword="null"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="atIdentifier"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="atIdentifier"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="atIdentifier"/> could not be resolved to a <see cref="Did"/> or <see cref="Handle"/>.</exception>
         public static async Task<Uri?> ResolvePds(
             string atIdentifier,

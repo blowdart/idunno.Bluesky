@@ -22,8 +22,8 @@ namespace idunno.Bluesky.Feed.Gates
         /// <param name="post">The <see cref="AtUri"/> of the post to apply the gate rules too.</param>
         /// <param name="rules">The list of rules for post gate, if any.</param>
         /// <param name="detachedEmbeddingUris">The list of <see cref="AtUri"/> posts embedding <paramref name="post"/> to be detached, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a Post record.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a <see cref="Post"/> record.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         /// Thrown when <paramref name="rules"/> exceeds the maximum allowed number of post gate rules,
         /// or when <paramref name="detachedEmbeddingUris"/> exceeds the maximum allowed number of detached embedding posts.

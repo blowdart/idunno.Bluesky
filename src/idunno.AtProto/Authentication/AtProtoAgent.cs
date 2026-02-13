@@ -67,7 +67,7 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Gets the current <see cref="Did"/> of the agent's authenticated session, if any, otherwise returns null.
+        /// Gets the current <see cref="Did"/> of the agent's authenticated session, if any, otherwise returns <see langword="null"/>.
         /// </summary>
         public Did? Did
         {
@@ -111,7 +111,7 @@ namespace idunno.AtProto
         /// Called internally by an <see cref="AtProtoHttpClient{TResult}"/> if the credentials were updated.
         /// </summary>
         /// <param name="credentials">The new credentials</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="credentials"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="credentials"/> is <see langword="null"/>.</exception>
         protected internal virtual void InternalOnCredentialsUpdatedCallBack(AtProtoCredential credentials)
         {
             ArgumentNullException.ThrowIfNull(credentials);
@@ -151,7 +151,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="state">The state to restore in the <see cref="OAuthClient"/>.</param>
         /// <returns>The new <see cref="OAuthClient"/> instance, with the state restored from <paramref name="state"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="state"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="state"/> is <see langword="null"/>.</exception>
         public OAuthClient CreateOAuthClient(OAuthLoginState state)
         {
             ArgumentNullException.ThrowIfNull(state);
@@ -176,7 +176,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="oAuthClient"/> or <paramref name="handle"/> is null, or
+        /// Thrown when <paramref name="oAuthClient"/> or <paramref name="handle"/> is <see langword="null"/>, or
         /// <paramref name="scopes"/> or <paramref name="returnUri"/>is not specified and is not configured on the agent <see cref="Options"/>.
         /// </exception>
         /// <exception cref="OAuthException">
@@ -284,7 +284,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="OAuthException">Thrown when the internal state of this instance is faulty.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="oAuthClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="oAuthClient"/> is <see langword="null"/>.</exception>
         public async Task<bool> ProcessOAuth2LoginResponse(OAuthClient oAuthClient, string callbackData, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(oAuthClient);
@@ -310,7 +310,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        ///   Thrown when <paramref name="service"/>, <paramref name="audience"/> or <paramref name="lxm"/> is null.
+        ///   Thrown when any of <paramref name="service"/>, <paramref name="audience"/> or <paramref name="lxm"/> are <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="expiry"/> is specified but is zero or negative.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
@@ -405,8 +405,8 @@ namespace idunno.AtProto
         /// <param name="accessCredentials">The access credentials to authenticate with.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when the <paramref name="accessCredentials"/> is null.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when the <paramref name="accessCredentials"/>'s AccessJwt is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="accessCredentials"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when the <paramref name="accessCredentials"/>'s AccessJwt is <see langword="null"/> or empty.</exception>
         public async Task<AtProtoHttpResult<Session>> GetSession(
             AccessCredentials accessCredentials,
             CancellationToken cancellationToken = default)
@@ -423,7 +423,7 @@ namespace idunno.AtProto
         /// <param name="authorizationServer">The <see cref="Uri"/> of the the authorization server whose token endpoint uri should be retrieved.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="authorizationServer"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="authorizationServer"/> is <see langword="null"/>.</exception>
         public async Task<Uri?> GetTokenEndpoint(Uri authorizationServer, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(authorizationServer);
@@ -456,7 +456,7 @@ namespace idunno.AtProto
         /// <param name="authorizationServer">The <see cref="Uri"/> of the the authorization server whose token endpoint uri should be retrieved.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="authorizationServer"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="authorizationServer"/> is <see langword="null"/>.</exception>
         public async Task<Uri?> GetRevocationEndpoint(Uri authorizationServer, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(authorizationServer);
@@ -493,7 +493,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="identifier" /> or <paramref name="password"/> is empty.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="identifier" /> or <paramref name="password"/> is null or empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="identifier" /> or <paramref name="password"/> is <see langword="null"/> or empty.</exception>
         public async Task<AtProtoHttpResult<bool>> Login(
             string identifier,
             string password,
@@ -540,7 +540,7 @@ namespace idunno.AtProto
         /// <param name="service">The service to authenticate to.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="handle" /> or <paramref name="password"/> is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="handle" /> or <paramref name="password"/> is <see langword="null"/> or empty.</exception>
         /// <exception cref="SecurityTokenValidationException">Thrown when the token returned from the server is invalid.</exception>
         public async Task<AtProtoHttpResult<bool>> Login(
             Handle handle,
@@ -658,7 +658,7 @@ namespace idunno.AtProto
         /// <param name="service">The service to authenticate to.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="did" /> or <paramref name="password"/> is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="did" /> or <paramref name="password"/> is <see langword="null"/> or empty.</exception>
         /// <exception cref="SecurityTokenValidationException">Thrown when the token returned from the server is invalid.</exception>
         public async Task<AtProtoHttpResult<bool>> Login(
             Did did,
@@ -763,7 +763,7 @@ namespace idunno.AtProto
         /// <param name="accessCredentials"><see cref="AccessCredentials"/> to use when authenticating to the service.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/> or any of its properties are null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/> or any of its properties are <see langword="null"/>.</exception>
         [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Matching other login methods, so keeping cancellationToken for ease of use.")]
         public async Task<bool> Login(
             AccessCredentials accessCredentials,
@@ -793,7 +793,7 @@ namespace idunno.AtProto
         /// <param name="dPoPAccessCredentials"><see cref="DPoPAccessCredentials"/> to use when authenticating to the service.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="dPoPAccessCredentials"/> or any of its properties are null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="dPoPAccessCredentials"/> or any of its properties are <see langword="null"/>.</exception>
         [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Matching other login methods.")]
         public async Task<bool> Login(
             DPoPAccessCredentials dPoPAccessCredentials,
@@ -1029,7 +1029,7 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticationRequiredException">Thrown when agent is not authenticated.</exception>
         /// <exception cref="CredentialException">Thrown when agent credentials are not valid for refreshing.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="credential"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="credential"/> is <see langword="null"/>.</exception>
         public async Task<bool> RefreshCredentials(AtProtoCredential credential, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(credential);
@@ -1058,7 +1058,7 @@ namespace idunno.AtProto
         /// <param name="handle">The handle of the account to resolve the authorization server for.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="handle"/> is null or white space.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="handle"/> is <see langword="null"/> or white space.</exception>
         public async Task<Uri?> ResolveAuthorizationServer(string handle, CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(handle);
@@ -1076,7 +1076,7 @@ namespace idunno.AtProto
         /// <param name="pds">The <see cref="Uri"/> of the PDS to resolve the authorization server for.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="pds"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="pds"/> is <see langword="null"/>.</exception>
         public async Task<Uri?> ResolveAuthorizationServer(Uri pds, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(pds);

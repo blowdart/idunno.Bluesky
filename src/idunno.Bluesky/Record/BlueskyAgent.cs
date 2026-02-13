@@ -22,17 +22,17 @@ namespace idunno.Bluesky
         /// <param name="collection"><para>The collection the record should be created in.</para></param>
         /// <param name="rKey"><para>An optional <see cref="RecordKey"/> to create the record with.</para></param>
         /// <param name="validate">
-        ///   <para>Gets a flag indicating what validation will be performed, if any.</para>
-        ///   <para>A value of <keyword>true</keyword> requires lexicon schema validation of record data.</para>
-        ///   <para>A value of <keyword>false</keyword> will skip Lexicon schema validation of record data.</para>
-        ///   <para>A value of <keyword>null</keyword> to validate record data only for known lexicons.</para>
-        ///   <para>Defaults to <keyword>true</keyword>.</para>
+        ///   <para>Sets a flag indicating what validation will be performed, if any.</para>
+        ///   <para>A value of <see langword="true"/> requires lexicon schema validation of record data.</para>
+        ///   <para>A value of <see langword="false"/> will skip Lexicon schema validation of record data.</para>
+        ///   <para>A value of <see langword="null"/> to validate record data only for known lexicons.</para>
+        ///   <para>Defaults to <see langword="true"/>.</para>
         /// </param>
         /// <param name="swapCommit"><para>Compare and swap with the previous commit by CID.</para></param>
         /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns><para>The task object representing the asynchronous operation.</para></returns>
-        /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="record"/> or <paramref name="collection"/> is null.</para></exception>
+        /// <exception cref="ArgumentNullException"><para>Thrown when <paramref name="record"/> or <paramref name="collection"/> is <see langword="null"/>.</para></exception>
         /// <exception cref="AuthenticationRequiredException"><para>Thrown when the current agent is not authenticated.</para></exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -82,7 +82,7 @@ namespace idunno.Bluesky
         /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/>, <paramref name="collection"/> is null or empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/>, <paramref name="collection"/> is <see langword="null"/> or empty.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -120,7 +120,7 @@ namespace idunno.Bluesky
         /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, or its collection or rkey property is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, or its collection or rkey property is <see langword="null"/>.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -153,7 +153,7 @@ namespace idunno.Bluesky
         /// <param name="cid">An optional <see cref="Cid" /> of the post to return the <see cref="AtProtoRepositoryRecord{Post}"/> for.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<Post>>> GetPostRecord(
             AtUri uri,
             Cid? cid = null,
@@ -210,7 +210,7 @@ namespace idunno.Bluesky
         /// <param name="strongReference">The <see cref="StrongReference" /> of the post to return the <see cref="AtProtoRepositoryRecord{Post}"/> for.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<Post>>> GetPostRecord(
             StrongReference strongReference,
             CancellationToken cancellationToken = default)
@@ -256,7 +256,7 @@ namespace idunno.Bluesky
         /// <param name="profile">The <see cref="Profile"/> to create.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -289,7 +289,7 @@ namespace idunno.Bluesky
         /// <param name="profile">The profile to create from or update to</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<PutRecordResult>> SetProfile(
             Profile profile,
@@ -311,7 +311,7 @@ namespace idunno.Bluesky
         /// <param name="profile">The profile update to</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/>, or its Value is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/>, or its Value is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<PutRecordResult>> SetProfile(
             AtProtoRepositoryRecord<Profile> profile,
@@ -382,7 +382,7 @@ namespace idunno.Bluesky
         /// <param name="profile">The <see cref="Profile"/> to update with.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -419,7 +419,7 @@ namespace idunno.Bluesky
         /// <param name="list">The <see cref="BlueskyList"/> to create.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -452,7 +452,7 @@ namespace idunno.Bluesky
         /// <param name="uri">The <see cref="AtUri"/> of the list to delete.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or its collection property is null .</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or its collection property is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> does not point to a list.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteList(
@@ -479,7 +479,7 @@ namespace idunno.Bluesky
         /// <param name="list">The <see cref="AtProtoRepositoryRecord{TRecord}"/> referenced <see cref="BlueskyList"/> to update.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> or its Uri, or the URI Collection or RecordKey property is null .</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> or its Uri, or the URI Collection or RecordKey property is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown if <paramref name="list"/> does not point to a list.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<PutRecordResult>> UpdateList(
@@ -510,7 +510,7 @@ namespace idunno.Bluesky
         /// <param name="list">The <see cref="BlueskyList"/> to update the record with</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or its Collection or RecordKey property is null .</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or its Collection or RecordKey property is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> does not point to a list.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         [UnconditionalSuppressMessage(
@@ -551,7 +551,7 @@ namespace idunno.Bluesky
         /// <param name="did">The <see cref="Did"/> of the actor to add to the list.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="did"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="did"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -589,7 +589,7 @@ namespace idunno.Bluesky
         /// <param name="handle">The <see cref="Did"/> of the actor to add to the list.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="handle"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="handle"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -635,7 +635,7 @@ namespace idunno.Bluesky
         /// <param name="uri">The <see cref="AtUri"/> of the record to delete.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or its collection property is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or its collection property is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/> does not point to the list item collection.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         /// <remarks>
@@ -673,7 +673,7 @@ namespace idunno.Bluesky
         /// <param name="did">The <see cref="Did"/> of the subject to delete from the list</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/>, <paramref name="uri"/> or the uri collection property is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/>, <paramref name="uri"/> or the uri collection property is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/> does not point to the list item collection.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         /// <remarks>
@@ -736,7 +736,7 @@ namespace idunno.Bluesky
         /// <param name="handle">The <see cref="Handle"/> of the subject to delete from the list</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/>, <paramref name="uri"/> or the uri collection property is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/>, <paramref name="uri"/> or the uri collection property is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="uri"/> does not point to the list item collection.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         /// <remarks>
@@ -802,7 +802,7 @@ namespace idunno.Bluesky
         /// <param name="durationMinutes">The optional duration of the stream in minutes.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> SetLiveStatus(
             Uri uri,
@@ -841,7 +841,7 @@ namespace idunno.Bluesky
         /// <param name="status">The status to set</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="status"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="status"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> SetStatus(
             Status status,

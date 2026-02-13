@@ -37,7 +37,7 @@ namespace idunno.Bluesky.Record
 
         /// <summary>
         /// Gets the set of record types (collection <see cref="Nsid"/>s) which can be reported to this service.
-        /// If the value is null, as distinct from an empty collection the labeler accepts reports on any record type.
+        /// If the value is <see langword="null"/>, as distinct from an empty collection the labeler accepts reports on any record type.
         /// </summary>
         public ICollection<Nsid>? SubjectCollections { get; init; }
 

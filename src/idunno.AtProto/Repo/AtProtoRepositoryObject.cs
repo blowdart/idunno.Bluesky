@@ -15,7 +15,7 @@ namespace idunno.AtProto.Repo
         /// </summary>
         /// <param name="uri">The <see cref="AtUri"/> of the record.</param>
         /// <param name="cid">The <see cref="AtProto.Cid"/> of the record.</param>
-        /// <exception cref="ArgumentNullException">Throws if <paramref name="uri"/> or <paramref name="cid"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Throws if <paramref name="uri"/> or <paramref name="cid"/> is <see langword="null"/>.</exception>
         protected AtProtoRepositoryObject(AtUri uri, Cid cid)
         {
             ArgumentNullException.ThrowIfNull(uri);

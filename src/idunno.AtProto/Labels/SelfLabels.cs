@@ -34,7 +34,7 @@ namespace idunno.AtProto.Labels
         /// Creates a new instance of <see cref="SelfLabels"/>.
         /// </summary>
         /// <param name="values">The collection of labels applied to the record.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="values"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="values"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="values"/> contains more than 10 items.</exception>
         [JsonConstructor]
         public SelfLabels(IReadOnlyList<SelfLabel> values)

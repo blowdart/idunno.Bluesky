@@ -13,14 +13,14 @@ namespace idunno.Bluesky.Chat
         /// <summary>
         /// Creates a new instance of <see cref="AcceptConversationResponse"/>.
         /// </summary>
-        /// <param name="revision">Revision of when the conversation was accepted. If null, the conversation was already accepted.</param>
+        /// <param name="revision">Revision of when the conversation was accepted. If <see langword="null"/>, the conversation was already accepted.</param>
         public AcceptConversationResponse(string? revision)
         {
             Revision = revision;
         }
 
         /// <summary>
-        /// Revision of when the conversation was accepted. If null, the conversation was already accepted.
+        /// Revision of when the conversation was accepted. If <see langword="null"/>, the conversation was already accepted.
         /// </summary>
         [JsonPropertyName("rev")]
         public string? Revision { get; init; }

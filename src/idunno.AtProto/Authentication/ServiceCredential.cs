@@ -22,7 +22,7 @@ namespace idunno.AtProto.Authentication
         /// </summary>
         /// <param name="service">The <see cref="Uri"/> of the service the credentials were issued from.</param>
         /// <param name="accessJwt">A string representation of the JWT to use when making authenticated access requests.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="accessJwt"/>.</exception>
         public ServiceCredential(Uri service, string accessJwt) : base(service, AuthenticationType.Service)
         {
@@ -36,7 +36,7 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Gets a string representation of the JWT to use when making authenticated access requests.
         /// </summary>
-        /// <exception cref="ArgumentException">Thrown when setting the value and the value is null or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when setting the value and the value is <see langword="null"/> or whitespace.</exception>
         public string AccessJwt
         {
             get

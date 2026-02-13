@@ -14,7 +14,7 @@ namespace idunno.Bluesky.RichText
         /// Creates a new instance of <see cref="HashTag"/>.
         /// </summary>
         /// <param name="tag">The hash tag to add to a post. Do not include the '#' prefix except in the case of 'double hash tags'.</param>
-        /// <exception cref="ArgumentException">if <paramref name="tag"/> is null or white space.</exception>
+        /// <exception cref="ArgumentException">if <paramref name="tag"/> is <see langword="null"/> or white space.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         /// If <paramref name="tag"/> is longer than the allowed maximum.</exception>
         public HashTag(string tag)
@@ -35,7 +35,7 @@ namespace idunno.Bluesky.RichText
         /// </summary>
         /// <param name="tag">The hash tag to add to a post. Do not include the '#' prefix except in the case of 'double hash tags'.</param>
         /// <param name="text">The text to wrap the hashtag around, if any. The text usually includes a '#' prefix.</param>
-        /// <exception cref="ArgumentException">if <paramref name="tag"/> is null or white space.</exception>
+        /// <exception cref="ArgumentException">if <paramref name="tag"/> is <see langword="null"/> or white space.</exception>
         /// <exception cref="ArgumentOutOfRangeException">If <paramref name="tag"/> or <paramref name="text"/> are longer than the allowed maximums.</exception>
         /// <remarks>
         /// <para>If <paramref name="text"/> is not specified the <paramref name="tag"/> will be used as the facet feature text.</para>

@@ -21,7 +21,7 @@ namespace idunno.AtProto.Authentication
         /// Creates a new instance of <see cref="AccessCredentials"/> with the specified <paramref name="jwt"/>.
         /// </summary>
         /// <param name="jwt">A string representation of the JWT to use when making authenticated access requests.</param>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="jwt"/> is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="jwt"/> is <see langword="null"/> or empty.</exception>
         public AccessTokenCredential(string jwt) : this(s_invalidServiceUri, jwt)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(jwt);
@@ -32,8 +32,8 @@ namespace idunno.AtProto.Authentication
         /// </summary>
         /// <param name="service">The <see cref="Uri"/> of the service the credentials were issued from.</param>
         /// <param name="jwt">A string representation of the JWT to use when making authenticated access requests.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="jwt"/> is null or empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="jwt"/> is <see langword="null"/> or empty.</exception>
         public AccessTokenCredential(Uri service, string jwt) : base(service, AuthenticationType.Unknown)
         {
             ArgumentNullException.ThrowIfNull(service);
@@ -46,7 +46,7 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Gets a string representation of the JWT to use when making authenticated access requests.
         /// </summary>
-        /// <exception cref="ArgumentException">Thrown when setting the value and the value is null or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when setting the value and the value is <see langword="null"/> or whitespace.</exception>
         public string AccessJwt
         {
             get
@@ -97,7 +97,7 @@ namespace idunno.AtProto.Authentication
         /// Add authentication headers to the specified <paramref name="httpRequestMessage"/>.
         /// </summary>
         /// <param name="httpRequestMessage">The <see cref="HttpRequestMessage"/> to add authentication headers to.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpRequestMessage"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpRequestMessage"/> is <see langword="null"/>.</exception>
         public override void SetAuthenticationHeaders(HttpRequestMessage httpRequestMessage)
         {
             ArgumentNullException.ThrowIfNull(httpRequestMessage);

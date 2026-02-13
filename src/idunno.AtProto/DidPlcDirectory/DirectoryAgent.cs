@@ -75,10 +75,10 @@ namespace idunno.DidPlcDirectory
         internal Uri PlcDirectory { get; } = s_defaultDirectoryServer;
 
         /// <summary>
-        /// Gets the DID document for a DID.
+        /// Gets the <see cref="DidDocument" /> for a <paramref name="did"/>.
         /// </summary>
         /// <param name="did">The DID to retrieve the DID Document for.</param>
-        /// <param name="directory">The directory server used to retrieve the DID document from. This is ignored if the DID is a web DID.</param>
+        /// <param name="directory">The directory server used to retrieve the <see cref="DidDocument" /> from. This is ignored if the <paramref name="did"/> is a web <see cref="Did"/>.</param>
         /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>

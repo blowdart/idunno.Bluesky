@@ -122,8 +122,8 @@ namespace idunno.AtProto.Authentication
         /// <param name="stateExtraProperties">Any extra properties to attach to the state.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="clientId"/> is null or white space and no default clientId has been set on options.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="returnUri"/>, <paramref name="authority"/> or <paramref name="scopes"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="clientId"/> is <see langword="null"/> or white space and no default <see cref="OAuthOptions.ClientId" /> has been set on <see cref="OAuthOptions"/>.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="returnUri"/>, <paramref name="authority"/> or <paramref name="scopes"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="scopes"/> is empty.</exception>
         /// <exception cref="OAuthException">Thrown when the authorize state cannot be prepared or encounters an error during preparation.</exception>
         public async Task<Uri> BuildOAuth2LoginUri(
@@ -240,7 +240,7 @@ namespace idunno.AtProto.Authentication
         /// <param name="scopes">A collection of scopes to request. Defaults to "atproto".</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="clientId"/> is null or white space and no default clientId has been set on options.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="clientId"/> is <see langword="null"/> or white space and no default <see cref="OAuthOptions.ClientId" /> has been set on <see cref="OAuthOptions"/>.</exception>
         /// <exception cref="OAuthException">Thrown when the internal state of this instance is faulty.</exception>
         public async Task<DPoPAccessCredentials?> ProcessOAuth2LoginResponse(
             string callbackData,
@@ -363,7 +363,7 @@ namespace idunno.AtProto.Authentication
         /// <param name="callbackData">The data returned to the callback URI</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="state"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="state"/> is <see langword="null"/>.</exception>
         /// <exception cref="OAuthException">Thrown when the internal state of this instance is faulty.</exception>
         public async Task<DPoPAccessCredentials?> ProcessOAuth2Response(OAuthLoginState state, string callbackData, CancellationToken cancellationToken = default)
         {
@@ -422,8 +422,8 @@ namespace idunno.AtProto.Authentication
         /// <param name="scopes">Any scopes to be requested when refreshing the credentials.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="refreshCredential"/>, the refresh credential's service, or <paramref name="authority"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when the <paramref name="refreshCredential"/>'s refresh token is null or white space.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="refreshCredential"/>, the refresh credential's service, or <paramref name="authority"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="refreshCredential"/>'s refresh token is <see langword="null"/> or white space.</exception>
         /// <exception cref="CredentialException">Thrown when <paramref name="refreshCredential"/> was not issued via OAuth.</exception>
         /// <exception cref="OAuthException">Thrown when an error was returned from the refresh operation, or validation of the issued tokens has failed.</exception>
         public async Task<DPoPAccessCredentials?> RefreshCredentials(

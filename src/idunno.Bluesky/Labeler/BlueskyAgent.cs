@@ -18,7 +18,7 @@ namespace idunno.Bluesky
         /// <param name="identifier">The labeler <see cref="Handle"/> whose declaration record should be returned.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="identifier"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="identifier"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="identifier"/> cannot be converted to a <see cref="Did"/> or <see cref="Handle"/>.</exception>
         public async Task<AtProtoHttpResult<LabelerDeclaration>> GetLabelerDeclaration(
             AtIdentifier identifier,
@@ -47,7 +47,7 @@ namespace idunno.Bluesky
         /// <param name="handle">The labeler <see cref="Handle"/> whose declaration record should be returned.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<LabelerDeclaration>> GetLabelerDeclaration(
             Handle handle,
             CancellationToken cancellationToken = default)
@@ -73,7 +73,7 @@ namespace idunno.Bluesky
         /// <param name="did">The labeler <see cref="AtProto.Did" /> whose declaration record should be returned.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -165,7 +165,7 @@ namespace idunno.Bluesky
         /// <param name="getDetailedViews">Flag indicating whether a detailed view for each service should be returned.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="dids"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="dids"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="dids"/> is an empty collection.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when this instance of the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<ICollection<LabelerView>>> GetLabelerServices(

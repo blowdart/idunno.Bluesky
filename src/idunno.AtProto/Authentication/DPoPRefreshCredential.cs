@@ -21,9 +21,9 @@ namespace idunno.AtProto.Authentication
         /// <param name="refreshToken">A string representation of the JWT to use when a new access token is required.</param>
         /// <param name="dPoPProofKey">The string representation of the DPoP proof key to use when signing requests.</param>
         /// <param name="dPoPNonce">The string representation of the DPoP nonce to use when signing requests.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">
-        /// Thrown when <paramref name="refreshToken"/> or <paramref name="dPoPProofKey"/>  is null or whitespace.
+        /// Thrown when <paramref name="refreshToken"/> or <paramref name="dPoPProofKey"/> is <see langword="null"/> or whitespace.
         /// </exception>
         public DPoPRefreshCredential(Uri service, string refreshToken, string dPoPProofKey, string dPoPNonce) : base(service, AuthenticationType.OAuth, refreshToken)
         {
@@ -39,7 +39,7 @@ namespace idunno.AtProto.Authentication
         /// Creates a new instance of <see cref="DPoPRefreshCredential"/> from the specified <paramref name="dPoPAccessCredentials"/>.
         /// </summary>
         /// <param name="dPoPAccessCredentials">An instance of <see cref="DPoPAccessCredentials"/> to create the refresh token from/</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="dPoPAccessCredentials"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="dPoPAccessCredentials"/> is <see langword="null"/>.</exception>
         public DPoPRefreshCredential(DPoPAccessCredentials dPoPAccessCredentials) : this(
             dPoPAccessCredentials != null ? dPoPAccessCredentials.Service : throw new ArgumentNullException(nameof(dPoPAccessCredentials)),
             dPoPAccessCredentials.RefreshToken,
@@ -51,7 +51,7 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Gets or sets a string representation of the DPoP proof key to use when signing requests.
         /// </summary>
-        /// <exception cref="ArgumentException">Thrown when setting the value and the value is null or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when setting the value and the value is <see langword="null"/> or whitespace.</exception>
         public string DPoPProofKey
         {
             get
@@ -86,7 +86,7 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Gets a string representation of the DPoP nonce to use when signing requests.
         /// </summary>
-        /// <exception cref="ArgumentException">Thrown when setting the value and the value is null or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when setting the value and the value is <see langword="null"/> or whitespace.</exception>
         public string DPoPNonce
         {
             get
@@ -122,7 +122,7 @@ namespace idunno.AtProto.Authentication
         /// Add authentication headers to the specified <paramref name="httpRequestMessage"/>.
         /// </summary>
         /// <param name="httpRequestMessage">The <see cref="HttpRequestMessage"/> to add authentication headers to.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpRequestMessage"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpRequestMessage"/> is <see langword="null"/>.</exception>
         public override void SetAuthenticationHeaders(HttpRequestMessage httpRequestMessage)
         {
             ArgumentNullException.ThrowIfNull(httpRequestMessage);

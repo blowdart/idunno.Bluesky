@@ -17,7 +17,7 @@ namespace idunno.Bluesky.Drafts
         /// </summary>
         /// <param name="content">The caption content.</param>
         /// <param name="lang">The caption language.</param>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="content"/> or <paramref name="lang"/> is null or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="content"/> or <paramref name="lang"/> is <see langword="null"/> or whitespace.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="content"/> length is greater than 10000.</exception>
         [JsonConstructor]
         public DraftEmbedCaption(string content, string lang)
@@ -33,7 +33,7 @@ namespace idunno.Bluesky.Drafts
         /// <summary>
         /// Gets or sets the language of the caption in RFC5646 format.
         /// </summary>
-        /// <exception cref="ArgumentException">Thrown when setting if the value is null or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when setting if the value is <see langword="null"/> or whitespace.</exception>
         [JsonRequired]
         public string Lang
         {
@@ -50,7 +50,7 @@ namespace idunno.Bluesky.Drafts
         /// <summary>
         /// Gets or sets the caption content.
         /// </summary>
-        /// <exception cref="ArgumentException">Thrown when setting if the value is null or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when setting if the value is <see langword="null"/> or whitespace.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when setting if the value length is greater than 10000.</exception>
         [JsonRequired]
         public string Content

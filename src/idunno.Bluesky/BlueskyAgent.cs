@@ -26,7 +26,7 @@ namespace idunno.Bluesky
         /// <remarks>
         ///   <para>
         ///     Setting <see cref="HttpClientOptions.CheckCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
-        ///     false if you are using a debugging proxy which does not support CRLs.
+        ///     <see langword="false"/> if you are using a debugging proxy which does not support CRLs.
         ///   </para>
         /// </remarks>
         public BlueskyAgent(BlueskyAgentOptions ? options = null) : base (
@@ -65,11 +65,11 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="principal">The <see cref="ClaimsPrincipal"/> to extract authentication properties from.</param>
         /// <param name="options"><see cref="BlueskyAgentOptions"/> for the use in the creation of this instance of <see cref="BlueskyAgent"/>.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="principal"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="principal"/> is <see langword="null"/>.</exception>
         /// <remarks>
         ///   <para>
         ///     Setting <see cref="HttpClientOptions.CheckCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
-        ///     false if you are using a debugging proxy which does not support CRLs.
+        ///     <see langword="false"/> if you are using a debugging proxy which does not support CRLs.
         ///   </para>
         /// </remarks>
         public BlueskyAgent(ClaimsPrincipal principal, BlueskyAgentOptions? options = null) : base(
@@ -110,11 +110,11 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="identity">The <see cref="ClaimsPrincipal"/> to extract authentication properties from.</param>
         /// <param name="options"><see cref="BlueskyAgentOptions"/> for the use in the creation of this instance of <see cref="BlueskyAgent"/>.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> is <see langword="null"/>.</exception>
         /// <remarks>
         ///   <para>
         ///     Setting <see cref="HttpClientOptions.CheckCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
-        ///     false if you are using a debugging proxy which does not support CRLs.
+        ///     <see langword="false"/> if you are using a debugging proxy which does not support CRLs.
         ///   </para>
         /// </remarks>
 
@@ -155,7 +155,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
         /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClientFactory"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClientFactory"/> is <see langword="null"/>.</exception>
         public BlueskyAgent(IHttpClientFactory httpClientFactory, BlueskyAgentOptions? options = null) : base(
             service: DefaultServiceUris.BlueskyApiUri,
             httpClientFactory: httpClientFactory,
@@ -315,16 +315,16 @@ namespace idunno.Bluesky
         public static new BlueskyAgentBuilder CreateBuilder() => BlueskyAgentBuilder.Create();
 
         /// <summary>
-        /// Generates an AT URI from the specified Uri.
-        /// This Uri is very dependent on the Bluesky web client and its format is subject to change.
+        /// Generates an <see cref="AtUri"/> from the <paramref name="uri"/>.
+        /// This <see cref="AtUri"/> is very dependent on the Bluesky web client and its format is subject to change.
         /// </summary>
         /// <param name="uri">A URI from the Bluesky web client.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>An AT URI corresponding to the resource the Bluesky web client URI.</returns>
+        /// <returns>An <see cref="AtUri"/> corresponding to the resource the Bluesky web client <paramref name="uri"/>.</returns>
         /// <remarks>
-        /// <para>This method makes outgoing web requests to resolve the handle in a Bluesky URI to a <see cref="AtProto.Did"/>.</para>
+        /// <para>This method makes outgoing web requests to resolve the handle in a Bluesky <paramref name="uri"/> to a <see cref="AtProto.Did"/>.</para>
         /// </remarks>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an unexpected format.</exception>
         /// <exception cref="HandleResolutionException">Thrown when the handle in <paramref name="uri"/> could not be resolved to a <see cref="AtProto.Did"/>.</exception>
         public async Task<AtUri> BuildAtUriFromBlueskyWebUri(Uri uri, CancellationToken cancellationToken = default)
@@ -382,12 +382,12 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Generates an Bluesky Web URI from the specified <paramref name="atUri" />, if the AT URI is in the app.bsky.feed.post collection.
+        /// Generates an Bluesky Web URI from the specified <paramref name="atUri" />, if the <paramref name="atUri" /> is in the app.bsky.feed.post collection.
         /// This Uri is very dependent on the Bluesky web client and its format is subject to change.
         /// </summary>
         /// <param name="atUri">The <see cref="AtUri"/> to generate a web URI for.</param>
         /// <returns>A URI for the Bluesky Web Client which will display the record specified by the <paramref name="atUri"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="atUri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="atUri"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="atUri"/> is in an unexpected format or collection.</exception>
         public static Uri BuildBlueskyPostUriFromAtUri(AtUri atUri)
         {

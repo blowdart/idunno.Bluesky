@@ -45,15 +45,15 @@ namespace idunno.AtProto
         internal const string UploadBlobEndpoint = "/xrpc/com.atproto.repo.uploadBlob";
 
         /// <summary>
-        /// Performs a collection of creates, updates, and delete operations within a transaction against the specified repo. Requires authentication.
+        /// Performs a collection of creates, updates, and delete operations within a transaction against the specified <paramref name="repo"/>. Requires authentication.
         /// </summary>
         /// <param name="operations">A collection of write operations to perform in a transaction</param>
         /// <param name="repo">The <see cref="Did"/> of the repo to perform the operations against.</param>
         /// <param name="validate">
         ///     Flag indicating what level of validation the api should perform.
-        ///     If false skips lexicon schema validation of record data across all operations.
-        ///     If true requires validation
-        ///     if null validates only for known lexicons.
+        ///     If <see langword="false"/> skips lexicon schema validation of record data across all operations.
+        ///     If <see langword="true"/> requires validation
+        ///     if <see langword="null"/> validates only for known lexicons.
         ///</param>
         /// <param name="cid">
         ///   Optional commit ID. If provided, the entire operation will fail if the current repo commit CID does not match this value.
@@ -68,8 +68,8 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="operations"/>, <paramref name="repo"/>, <paramref name="service"/>,
-        /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
+        /// Thrown when any of <paramref name="operations"/>, <paramref name="repo"/>, <paramref name="service"/>,
+        /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="operations"/> is an empty collection.</exception>
         [RequiresUnreferencedCode("Use a ApplyWrites overload which takes JsonSerializerOptions instead.")]
@@ -175,16 +175,16 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Performs a collection of creates, updates, and delete operations within a transaction against the specified repo. Requires authentication.
+        /// Performs a collection of creates, updates, and delete operations within a transaction against the specified <paramref name="repo"/>. Requires authentication.
         /// </summary>
         /// <param name="operations">A collection of write operations to perform in a transaction</param>
         /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use when serializing the record values within an create or update operation.</param>
         /// <param name="repo">The <see cref="Did"/> of the repo to perform the operations against.</param>
         /// <param name="validate">
         ///     Flag indicating what level of validation the api should perform.
-        ///     If false skips lexicon schema validation of record data across all operations.
-        ///     If true requires validation
-        ///     if null validates only for known lexicons.
+        ///     If <see langword="false"/> skips lexicon schema validation of record data across all operations.
+        ///     If <see langword="true"/> requires validation
+        ///     if <see langword="null"/> validates only for known lexicons.
         ///</param>
         /// <param name="cid">
         ///   Optional commit ID. If provided, the entire operation will fail if the current repo commit CID does not match this value.
@@ -199,8 +199,8 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="operations"/>, <paramref name="repo"/>, <paramref name="service"/>,
-        /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
+        /// Thrown when any of <paramref name="operations"/>, <paramref name="repo"/>, <paramref name="service"/>,
+        /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="operations"/> is an empty collection.</exception>
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
@@ -307,7 +307,7 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Creates an atproto record in the specified collection. Requires authentication.
+        /// Creates an atproto record in the specified <paramref name="collection"/>. Requires authentication.
         /// </summary>
         /// <typeparam name="TRecord">The type of the record to create.</typeparam>
         /// <param name="record"><para>A json representation of record to be created.</para></param>
@@ -315,11 +315,10 @@ namespace idunno.AtProto
         /// <param name="creator"><para>The <see cref="Did"/> of the creating actor.</para></param>
         /// <param name="rKey"><para>The record key, if any, of the record to be created.</para></param>
         /// <param name="validate">
-        ///   <para>Flag indicating what validation will be performed, if any.</para>
-        ///   <para>A value of <keyword>true</keyword> requires lexicon schema validation of record data.</para>
-        ///   <para>A value of <keyword>false</keyword> will skip Lexicon schema validation of record data.</para>
-        ///   <para>A value of <keyword>null</keyword> to validate record data only for known lexicons.</para>
-        ///   <para>Defaults to <keyword>true</keyword>.</para>
+        ///     Flag indicating what level of validation the api should perform.
+        ///     If <see langword="false"/> skips lexicon schema validation of record data across all operations.
+        ///     If <see langword="true"/> requires validation
+        ///     if <see langword="null"/> validates only for known lexicons.
         /// </param>
         /// <param name="swapCommit"><para>The <see cref="Cid"/>, if any, to compare and swap with.</para></param>
         /// <param name="service"><para>The service to create the record on.</para></param>
@@ -331,8 +330,8 @@ namespace idunno.AtProto
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="service"/>,
-        /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
+        /// Thrown when any of <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="service"/>,
+        /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="record"/> cannot be serialized to JSON.</exception>
         [RequiresDynamicCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
@@ -404,7 +403,7 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Creates an atproto record in the specified collection. Requires authentication.
+        /// Creates an atproto record in the specified <paramref name="collection" />. Requires authentication.
         /// </summary>
         /// <typeparam name="TRecord">The type of the record to create.</typeparam>
         /// <param name="record"><para>A json representation of record to be created.</para></param>
@@ -413,11 +412,10 @@ namespace idunno.AtProto
         /// <param name="creator"><para>The <see cref="Did"/> of the creating actor.</para></param>
         /// <param name="rKey"><para>The record key, if any, of the record to be created.</para></param>
         /// <param name="validate">
-        ///   <para>Flag indicating what validation will be performed, if any.</para>
-        ///   <para>A value of <keyword>true</keyword> requires lexicon schema validation of record data.</para>
-        ///   <para>A value of <keyword>false</keyword> will skip Lexicon schema validation of record data.</para>
-        ///   <para>A value of <keyword>null</keyword> to validate record data only for known lexicons.</para>
-        ///   <para>Defaults to <keyword>true</keyword>.</para>
+        ///     Flag indicating what level of validation the api should perform.
+        ///     If <see langword="false"/> skips lexicon schema validation of record data across all operations.
+        ///     If <see langword="true"/> requires validation
+        ///     if <see langword="null"/> validates only for known lexicons.
         /// </param>
         /// <param name="swapCommit"><para>The <see cref="Cid"/>, if any, to compare and swap with.</para></param>
         /// <param name="service"><para>The service to create the record on.</para></param>
@@ -429,8 +427,8 @@ namespace idunno.AtProto
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="service"/>,
-        /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
+        /// Thrown when any of <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="service"/>,
+        /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="record"/> cannot be serialized to JSON.</exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
@@ -506,7 +504,7 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Deletes an atproto record, specified by its rKey, from specified repo/collection. Requires authentication.
+        /// Deletes an atproto record, specified by its <paramref name="rKey"/>, from specified <paramref name="repo"/>/<paramref name="collection"/>. Requires authentication.
         /// </summary>
         /// <param name="repo">The handle or Did of the repo to delete from. Typically this is the Did of the account that created the record.</param>
         /// <param name="collection">The NSID of the collection the record should be deleted from.</param>
@@ -522,8 +520,8 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="rKey"/>, <paramref name="service"/>,
-        /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
+        /// Thrown when any of <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="rKey"/>, <paramref name="service"/>,
+        /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -603,11 +601,10 @@ namespace idunno.AtProto
         /// <typeparam name="TRecord">The type of the value of record to update.</typeparam>
         /// <param name="repositoryRecord"><para>The record to update.</para></param>
         /// <param name="validate">
-        ///   <para>Flag indicating what validation will be performed, if any.</para>
-        ///   <para>A value of <keyword>true</keyword> requires lexicon schema validation of record data.</para>
-        ///   <para>A value of <keyword>false</keyword> will skip Lexicon schema validation of record data.</para>
-        ///   <para>A value of <keyword>null</keyword> to validate record data only for known lexicons.</para>
-        ///   <para>Defaults to <keyword>true</keyword>.</para>
+        ///     Flag indicating what level of validation the api should perform.
+        ///     If <see langword="false"/> skips lexicon schema validation of record data across all operations.
+        ///     If <see langword="true"/> requires validation
+        ///     if <see langword="null"/> validates only for known lexicons.
         /// </param>
         /// <param name="service"><para>The service to create the record on.</para></param>
         /// <param name="accessCredentials"><para><see cref="AccessCredentials"/> for the specified service</para></param>
@@ -618,7 +615,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="repositoryRecord"/>, <paramref name="service"/>, <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
+        /// Thrown when any of <paramref name="repositoryRecord"/>, <paramref name="service"/>, <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
         [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
@@ -668,11 +665,10 @@ namespace idunno.AtProto
         /// <param name="creator"><para>The <see cref="AtIdentifier"/> of the creating actor.</para></param>
         /// <param name="rKey"><para>The record key, if any, of the record to be created.</para></param>
         /// <param name="validate">
-        ///   <para>Flag indicating what validation will be performed, if any.</para>
-        ///   <para>A value of <keyword>true</keyword> requires lexicon schema validation of record data.</para>
-        ///   <para>A value of <keyword>false</keyword> will skip Lexicon schema validation of record data.</para>
-        ///   <para>A value of <keyword>null</keyword> to validate record data only for known lexicons.</para>
-        ///   <para>Defaults to <keyword>true</keyword>.</para>
+        ///     Flag indicating what level of validation the api should perform.
+        ///     If <see langword="false"/> skips lexicon schema validation of record data across all operations.
+        ///     If <see langword="true"/> requires validation
+        ///     if <see langword="null"/> validates only for known lexicons.
         /// </param>
         /// <param name="swapCommit"><para>The <see cref="Cid"/> of the commit, if any, to compare and swap with.</para></param>
         /// <param name="swapRecord"><para>The <see cref="Cid"/> of the record, if any, to compare and swap with.</para></param>
@@ -685,8 +681,8 @@ namespace idunno.AtProto
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="rKey"/>, <paramref name="service"/>,
-        /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
+        /// Thrown when any of <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="rKey"/>, <paramref name="service"/>,
+        /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="record"/> cannot be serialized to JSON.</exception>
         [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
@@ -769,11 +765,10 @@ namespace idunno.AtProto
         /// <param name="repositoryRecord"><para>The record to update.</para></param>
         /// <param name="jsonSerializerOptions"><para><see cref="JsonSerializerOptions"/> to use when serializing <typeparamref name="TRecord"/>.</para></param>
         /// <param name="validate">
-        ///   <para>Flag indicating what validation will be performed, if any.</para>
-        ///   <para>A value of <keyword>true</keyword> requires lexicon schema validation of record data.</para>
-        ///   <para>A value of <keyword>false</keyword> will skip Lexicon schema validation of record data.</para>
-        ///   <para>A value of <keyword>null</keyword> to validate record data only for known lexicons.</para>
-        ///   <para>Defaults to <keyword>true</keyword>.</para>
+        ///     Flag indicating what level of validation the api should perform.
+        ///     If <see langword="false"/> skips lexicon schema validation of record data across all operations.
+        ///     If <see langword="true"/> requires validation
+        ///     if <see langword="null"/> validates only for known lexicons.
         /// </param>
         /// <param name="service"><para>The service to create the record on.</para></param>
         /// <param name="accessCredentials"><para><see cref="AccessCredentials"/> for the specified service</para></param>
@@ -784,7 +779,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="repositoryRecord"/>, <paramref name="service"/>, <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
+        /// Thrown when any of <paramref name="repositoryRecord"/>, <paramref name="service"/>, <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
@@ -837,11 +832,10 @@ namespace idunno.AtProto
         /// <param name="creator"><para>The <see cref="AtIdentifier"/> of the creating actor.</para></param>
         /// <param name="rKey"><para>The record key, if any, of the record to be created.</para></param>
         /// <param name="validate">
-        ///   <para>Flag indicating what validation will be performed, if any.</para>
-        ///   <para>A value of <keyword>true</keyword> requires lexicon schema validation of record data.</para>
-        ///   <para>A value of <keyword>false</keyword> will skip Lexicon schema validation of record data.</para>
-        ///   <para>A value of <keyword>null</keyword> to validate record data only for known lexicons.</para>
-        ///   <para>Defaults to <keyword>true</keyword>.</para>
+        ///     Flag indicating what level of validation the api should perform.
+        ///     If <see langword="false"/> skips lexicon schema validation of record data across all operations.
+        ///     If <see langword="true"/> requires validation
+        ///     if <see langword="null"/> validates only for known lexicons.
         /// </param>
         /// <param name="swapCommit"><para>The <see cref="Cid"/> of the commit, if any, to compare and swap with.</para></param>
         /// <param name="swapRecord"><para>The <see cref="Cid"/> of the record, if any, to compare and swap with.</para></param>
@@ -854,8 +848,8 @@ namespace idunno.AtProto
         /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="rKey"/>, <paramref name="service"/>,
-        /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is null.
+        /// Thrown when any of <paramref name="record"/>, <paramref name="collection"/>, <paramref name="creator"/>, <paramref name="rKey"/>, <paramref name="service"/>,
+        /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="record"/> cannot be serialized to JSON.</exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
@@ -950,7 +944,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="rKey"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when any of <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="rKey"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
         [RequiresDynamicCode("Use a Get overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a Get overload which takes JsonSerializerOptions instead.")]
@@ -1018,7 +1012,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="rKey"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when any of <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="rKey"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
@@ -1088,7 +1082,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when any of <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is not &gt;0 and &lt;=100.</exception>
         [RequiresDynamicCode("Use a Get overload which takes JsonSerializerOptions instead.")]
@@ -1215,7 +1209,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when any of <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is not &gt;0 and &lt;=100.</exception>
         [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
@@ -1335,7 +1329,7 @@ namespace idunno.AtProto
         /// <remarks>
         /// <para>
         ///   The blob will be deleted if it is not referenced within a time window (eg, minutes).
-        ///   Blob restrictions (mime type, size, etc) are enforced when the reference is created.
+        ///   Restrictions (mime type, size, etc) are enforced when the reference is created.
         /// </para>
         /// </remarks>
         /// <param name="blob">The blob to upload.</param>
@@ -1348,7 +1342,7 @@ namespace idunno.AtProto
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="blob"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="blob"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="blob"/> is a zero length array.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="mimeType"/> is empty or not in the type/subtype format.</exception>
         [UnconditionalSuppressMessage(
@@ -1442,7 +1436,7 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="repo"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when any of <paramref name="repo"/>, <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
         [UnconditionalSuppressMessage(
             "Trimming",

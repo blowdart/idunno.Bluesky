@@ -20,9 +20,9 @@ namespace idunno.Bluesky
         /// <param name="hiddenReplies">A list of reply <see cref="AtUri"/>s that will be hidden for post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
-        ///   Thrown when <paramref name="post"/>has a null repo, does not point to a post record or the current user does not own the record pointed to.
+        ///   Thrown when <paramref name="post"/>has a <see langword="null"/> repo, does not point to a post record or the current user does not own the record pointed to.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///   Thrown when <paramref name="rules"/> or <paramref name="hiddenReplies"/> have more than the maximum number of entries.
@@ -80,7 +80,7 @@ namespace idunno.Bluesky
         /// <param name="threadGate">The <paramref name="threadGate"/> record to create.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="threadGate"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="threadGate"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="threadGate"/>'s post is not owned by the current user.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
         [UnconditionalSuppressMessage(
@@ -120,8 +120,8 @@ namespace idunno.Bluesky
         /// <param name="post">The <paramref name="post"/> to delete the thread gate from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteThreadGate(
             AtUri post,
@@ -161,9 +161,9 @@ namespace idunno.Bluesky
         /// <param name="threadGate">The <paramref name="threadGate"/> record to update.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="threadGate"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="threadGate"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">
-        ///     Thrown when the <paramref name="threadGate"/>'s RecordKey is null, or it does not point to a Post record or it does not belong to the current user.
+        ///     Thrown when the <paramref name="threadGate"/>'s RecordKey is <see langword="null"/>, or it does not point to a Post record or it does not belong to the current user.
         /// </exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
         [UnconditionalSuppressMessage(
@@ -213,8 +213,8 @@ namespace idunno.Bluesky
         /// <param name="post">The <see cref="AtUri"/> for the post whose thread gate should be retrieved.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -281,7 +281,7 @@ namespace idunno.Bluesky
         /// <param name="detachedEmbeddingUris">The collection of <see cref="AtUri"/>s of posts that the post will detach from (removing itself as a quoted post).</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> is not owned by the current user.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///   Thrown when <paramref name="rules"/> is empty or has larger than the maximum number of rules allowed, or
@@ -329,7 +329,7 @@ namespace idunno.Bluesky
         /// <param name="postGate">The <paramref name="postGate"/> record to create.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postGate"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postGate"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
         [UnconditionalSuppressMessage(
              "Trimming",
@@ -363,8 +363,8 @@ namespace idunno.Bluesky
         /// <param name="post">The <paramref name="post"/> to delete the post gate from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeletePostGate(
             AtUri post,
@@ -404,8 +404,8 @@ namespace idunno.Bluesky
         /// <param name="post">The <see cref="AtUri"/> for the post whose post gate should be retrieved.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="post"/> does not point to a post record, or its RecordKey is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
         [UnconditionalSuppressMessage(
              "Trimming",
@@ -470,9 +470,9 @@ namespace idunno.Bluesky
         /// <param name="postGate">The <paramref name="postGate"/> record to update.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postGate"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postGate"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">
-        ///     Thrown when the <paramref name="postGate"/>'s RecordKey is null, or it does not point to a Post record or it does not belong to the current user.
+        ///     Thrown when the <paramref name="postGate"/>'s RecordKey is <see langword="null"/>, or it does not point to a Post record or it does not belong to the current user.
         /// </exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
         [UnconditionalSuppressMessage(

@@ -24,7 +24,7 @@ namespace idunno.Bluesky
         /// <param name="handle">The <see cref="Handle"/> of the actor to follow.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Follow(Handle handle, CancellationToken cancellationToken = default)
         {
@@ -60,7 +60,7 @@ namespace idunno.Bluesky
         /// <param name="did">The <see cref="Did"/> of the actor to follow.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -105,7 +105,7 @@ namespace idunno.Bluesky
         /// <param name="handle">The <see cref="Handle"/> of the actor to unfollow.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> Unfollow(Handle handle, CancellationToken cancellationToken = default)
         {
@@ -148,7 +148,7 @@ namespace idunno.Bluesky
         /// <param name="did">The <see cref="Did"/> of the actor to unfollow.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> Unfollow(Did did, CancellationToken cancellationToken = default)
         {
@@ -196,9 +196,9 @@ namespace idunno.Bluesky
         /// <param name="uri">The <see cref="AtUri"/> of the follow record to delete.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky follow record, or its RecordKey is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky follow record, or its RecordKey is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteFollow(AtUri uri, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uri);
@@ -227,7 +227,7 @@ namespace idunno.Bluesky
         /// <param name="strongReference">The <see cref="StrongReference"/> of the follow record to delete.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteFollow(StrongReference strongReference, CancellationToken cancellationToken = default)
         {
@@ -247,7 +247,7 @@ namespace idunno.Bluesky
         /// <param name="did">The <see cref="Did"/> of the actor to follow.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -281,7 +281,7 @@ namespace idunno.Bluesky
         /// <param name="handle">The <see cref="Handle"/> of the actor to unblock.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> Unblock(Handle handle, CancellationToken cancellationToken = default)
         {
@@ -319,7 +319,7 @@ namespace idunno.Bluesky
         /// <param name="did">The <see cref="Did"/> of the actor to unfollow.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> Unblock(Did did, CancellationToken cancellationToken = default)
         {
@@ -367,9 +367,9 @@ namespace idunno.Bluesky
         /// <param name="uri">The <see cref="AtUri"/> of the block record to delete.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky block record, or its RecordKey is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky block record, or its RecordKey is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteBlock(AtUri uri, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uri);
@@ -398,7 +398,7 @@ namespace idunno.Bluesky
         /// <param name="strongReference">The <see cref="StrongReference"/> of the block record to delete.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteBlock(StrongReference strongReference, CancellationToken cancellationToken = default)
         {
@@ -420,13 +420,13 @@ namespace idunno.Bluesky
         /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
-        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
+        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is <see langword="null"/>.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
         /// <param name="tags">Any optional tags to apply to the post.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is null, empty or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/>, empty or whitespace.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
@@ -469,13 +469,13 @@ namespace idunno.Bluesky
         /// <param name="langs">The languages the post was written in.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
-        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
+        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is <see langword="null"/>.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
         /// <param name="tags">Any optional tags to apply to the post.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is null, empty or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/>, empty or whitespace.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
@@ -537,13 +537,13 @@ namespace idunno.Bluesky
         /// <param name="langs">The languages the post was written in.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
-        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
+        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is <see langword="null"/>.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
         /// <param name="tags">Any optional tags to apply to the post.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is null, empty or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/>, empty or whitespace.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
@@ -603,13 +603,13 @@ namespace idunno.Bluesky
         /// <param name="langs">The languages the post was written in.</param>
         /// <param name="threadGateRules">Any thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Any post gating rules to apply to the post, if any.</param>
-        /// <param name="interactionPreferences">Any default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
+        /// <param name="interactionPreferences">Any default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is <see langword="null"/>.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
         /// <param name="tags">Any optional tags to apply to the post.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is null, empty or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/>, empty or whitespace.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///   if <paramref name="text"/> length is greater than the maximum number of characters or graphemes, or
@@ -709,13 +709,13 @@ namespace idunno.Bluesky
         /// <param name="langs">The languages the post was written in.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
-        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
+        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is <see langword="null"/>.</param>
         /// <param name="labels">Any optional self label settings for the post media content.</param>
         /// <param name="tags">Any optional tags to apply to the post.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is <see langword="null"/></exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         /// Thrown when
@@ -801,12 +801,12 @@ namespace idunno.Bluesky
         /// <param name="langs">The languages the post was written in.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
-        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
+        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is <see langword="null"/>.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
         /// <param name="tags">Any optional tags to apply to the post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="externalCard"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="externalCard"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
             EmbeddedExternal externalCard,
@@ -844,13 +844,13 @@ namespace idunno.Bluesky
         /// <param name="langs">The languages the post was written in.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
         /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
-        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
+        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is <see langword="null"/>.</param>
         /// <param name="labels">Optional self label settings for the post media content.</param>
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from <paramref name="text" />.</param>
         /// <param name="tags">Optional collection of tags to apply to the post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="externalCard"/> is null, empty or whitespace.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="externalCard"/> is <see langword="null"/>, empty or whitespace.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
@@ -921,11 +921,11 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="post">The post to create the record from.</param>
         /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
-        /// <param name="postGateRules">Post gating rules to apply to the post, if any.</param>
-        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is null.</param>
+        /// <param name="postGateRules">Gating rules to apply to the <paramref name="post"/>, if any.</param>
+        /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is <see langword="null"/>.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
             Post post,
@@ -966,7 +966,7 @@ namespace idunno.Bluesky
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to use to create the record.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Post(PostBuilder postBuilder, CancellationToken cancellationToken = default)
         {
@@ -1012,9 +1012,9 @@ namespace idunno.Bluesky
         /// <param name="uri">The <see cref="AtUri"/> of the post to delete.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky feed post record, or its RecordKey is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky feed post record, or its RecordKey is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeletePost(AtUri uri, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uri);
@@ -1043,7 +1043,7 @@ namespace idunno.Bluesky
         /// <param name="strongReference">The <see cref="StrongReference"/> of the post to delete.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeletePost(StrongReference strongReference, CancellationToken cancellationToken = default)
         {
@@ -1106,8 +1106,8 @@ namespace idunno.Bluesky
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from the post text automatically.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a null or empty tag.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/>, <paramref name="text"/> or <paramref name="image"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/>, <paramref name="text"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///   Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes,
         ///   or <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
@@ -1166,8 +1166,8 @@ namespace idunno.Bluesky
         /// <param name="extractFacets">Flag indicating whether facets should be extracted from the post text automatically.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown <paramref name="text"/> is null or empty, or <paramref name="tags"/> contains a null or empty tag.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown <paramref name="text"/> is <see langword="null"/> or empty, or <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="parent"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///   Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes, or
         ///   <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
@@ -1287,7 +1287,7 @@ namespace idunno.Bluesky
         /// <param name="post">A <see cref="StrongReference"/> to the post to be reposted.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when the <paramref name="post"/> does not point to a Bluesky feed post record.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <remarks>
@@ -1318,7 +1318,7 @@ namespace idunno.Bluesky
         /// <param name="cid">The <see cref="idunno.AtProto.Cid"/> of the record to be reposted.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, the uri collection, or <paramref name="cid"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, the uri collection, or <paramref name="cid"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="uri"/> does not point to a post.</exception>
         /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         /// <remarks>
@@ -1346,8 +1346,8 @@ namespace idunno.Bluesky
         /// <param name="postView">A <see cref="PostView"/> of the post to be liked.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postView"/>, the PostView Uri, or the PostView Uri Collection is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when the postView Uri does not point to a post.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postView"/>, its Uri property, or the its Uri Collection value is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="postView"/> Uri does not point to a post.</exception>
         /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Repost(PostView postView, CancellationToken cancellationToken = default)
         {
@@ -1371,11 +1371,11 @@ namespace idunno.Bluesky
         /// <param name="post">A <see cref="FeedViewPost"/> of the post to be reposted.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/>, or its Post is null, or the collection for the Post property's URI is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/>, or its <see cref="FeedViewPost.Post"/> property is <see langword="null"/>, or its <see cref="PostView.Uri"/> collection is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
-        ///   Thrown when the Post property on <paramref name="post"/> does not point to a post, or.
-        ///   if a reason is present and the reason is typeof <see cref="ReasonRepost"/> and reason <see cref="StrongReference"/> is null, or the strong reference's
-        ///   Uri property is null, or the strong reference's URI does not point to a Repost record.
+        ///   Thrown when the <see cref="FeedViewPost.Post"/> property on <paramref name="post"/> does not point to a post, or.
+        ///   if a reason is present and the reason is typeof <see cref="ReasonRepost"/> and reason <see cref="StrongReference"/> is <see langword="null"/>, or the strong reference's
+        ///   Uri property is <see langword="null"/>, or the strong reference's URI does not point to a Repost record.
         /// </exception>
         /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Repost(FeedViewPost post, CancellationToken cancellationToken = default)
@@ -1432,9 +1432,9 @@ namespace idunno.Bluesky
         /// <param name="uri">The <see cref="AtUri"/> of the post to delete the repost of, or the direct <see cref="AtUri"/> to a repost record..</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky feed repost record, or its RecordKey is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky feed repost record, or its RecordKey is <see langword="null"/>.</exception>
         /// <exception cref="BlueskyException">Thrown when the repost record discovery returns an invalid <see cref="AtUri"/> with no record key.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteRepost(AtUri uri, CancellationToken cancellationToken = default)
         {
@@ -1513,7 +1513,7 @@ namespace idunno.Bluesky
         /// <param name="strongReference">The <see cref="StrongReference"/> of the post to delete the repost of.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteRepost(StrongReference strongReference, CancellationToken cancellationToken = default)
         {
@@ -1533,7 +1533,7 @@ namespace idunno.Bluesky
         /// <param name="strongReference">A <see cref="StrongReference"/> to the record to be liked.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or the strongReference uri collection is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or its <see cref="StrongReference.Uri"/> collection is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="strongReference"/> does not point to a post.</exception>
         /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         /// <remarks>
@@ -1564,7 +1564,7 @@ namespace idunno.Bluesky
         /// <param name="cid">The <see cref="idunno.AtProto.Cid"/> of the record to be liked.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, the uri collection, or <paramref name="cid"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, the uri collection, or <paramref name="cid"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="uri"/> does not point to a post.</exception>
         /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         /// <remarks>
@@ -1592,8 +1592,8 @@ namespace idunno.Bluesky
         /// <param name="postView">A <see cref="PostView"/> of the post to be liked.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postView"/>, the PostView Uri, or the PostView Uri Collection is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when the postView Uri does not point to a post.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postView"/>, the <see cref="PostView.Uri"/> property, or the <see cref="PostView.Uri"/> collection is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the <paramref name="postView"/> Uri does not point to a post.</exception>
         /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Like(PostView postView, CancellationToken cancellationToken = default)
         {
@@ -1617,11 +1617,11 @@ namespace idunno.Bluesky
         /// <param name="post">A <see cref="FeedViewPost"/> of the post to be liked.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/>, or its Post is null, or the collection for the Post property's URI is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/>, or its <see cref="FeedViewPost.Post"/> property, or it's collection is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
-        ///   Thrown when the Post property on <paramref name="post"/> does not point to a post, or.
-        ///   if a reason is present and the reason is typeof <see cref="ReasonRepost"/> and reason <see cref="StrongReference"/> is null, or the strong reference's
-        ///   Uri property is null, or the strong reference's URI does not point to a Repost record.
+        ///   Thrown when the <see cref="FeedViewPost.Post"/> property on <paramref name="post"/> does not point to a post, or.
+        ///   if a reason is present and the reason is typeof <see cref="ReasonRepost"/> and reason <see cref="StrongReference"/> is <see langword="null"/>, or the strong reference's
+        ///   Uri property is <see langword="null"/>, or the strong reference's URI does not point to a Repost record.
         /// </exception>
         /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<CreateRecordResult>> Like(FeedViewPost post, CancellationToken cancellationToken = default)
@@ -1678,9 +1678,9 @@ namespace idunno.Bluesky
         /// <param name="uri">The <see cref="AtUri"/> of the like record to delete.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">if <paramref name="uri"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">if the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky feed repost record, or its RecordKey is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="uri"/> does not point to a Bluesky feed repost record, or its RecordKey is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteLike(AtUri uri, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(uri);
@@ -1738,7 +1738,7 @@ namespace idunno.Bluesky
         /// <param name="strongReference">The <see cref="StrongReference"/> of the post whose like should be deleted.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteLike(StrongReference strongReference, CancellationToken cancellationToken = default)
         {
@@ -1760,8 +1760,8 @@ namespace idunno.Bluesky
         /// <param name="tags">Any tags to apply to the quote post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a null or empty tag.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///   Thrown when the text length is longer than the maximum permitted or
         ///   <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
@@ -1804,8 +1804,8 @@ namespace idunno.Bluesky
         /// <param name="tags">Any tags to apply to the quote post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is null or <paramref name="tags"/> contains a null or empty tag.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="image"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/> or <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///   Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes or
         ///   <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
@@ -1851,8 +1851,8 @@ namespace idunno.Bluesky
         /// <param name="tags">Any tags to apply to the quote post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a null or empty tag.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null or <paramref name="text"/> is null or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/> or <paramref name="text"/> is <see langword="null"/> or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///   Thrown when <paramref name="text"/>'s length is greater than the maximum allowed characters or graphemes or
         ///   <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
@@ -1921,8 +1921,8 @@ namespace idunno.Bluesky
         /// <param name="tags">Any tags to apply to the quote post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a null or empty tag.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is null</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is <see langword="null"/></exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///   Thrown when <paramref name="tags"/> contains a tag whose length is greater than the maximum allowed characters or graphemes.
         /// </exception>
@@ -1967,8 +1967,8 @@ namespace idunno.Bluesky
         /// <param name="tags">Any tags to apply to the quote post.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a null or empty tag.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/></exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="images"/> has too many images, or <paramref name="tags"/> has too many tags, or a tag that exceeds the maximum length.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="InvalidOperationException">Thrown when the ApplyWrites() result is not as expected.</exception>
@@ -2077,7 +2077,7 @@ namespace idunno.Bluesky
         /// <param name="uri">The <see cref="AtUri"/> of the quote to delete.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<Commit>> DeleteQuote(AtUri uri, CancellationToken cancellationToken = default)
         {
@@ -2097,7 +2097,7 @@ namespace idunno.Bluesky
         /// <param name="strongReference">The <see cref="StrongReference"/> of the quote to delete.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <remarks>
         /// <para>A quote record is really a post record, so DeletePost() would also work. This method is just here for ease of discover and consistency.</para>
@@ -2123,9 +2123,9 @@ namespace idunno.Bluesky
         /// <param name="aspectRatio">The image's aspect ratio.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="imageAsBytes"/> is null.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="imageAsBytes"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="mimeType"/> is null or empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="imageAsBytes"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="imageAsBytes"/> is empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="mimeType"/> is <see langword="null"/> or empty.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
         public async Task<AtProtoHttpResult<EmbeddedImage>> UploadImage(
             byte[] imageAsBytes,
@@ -2173,12 +2173,12 @@ namespace idunno.Bluesky
         }
 
         /// <summary>
-        /// Performs a reverse lookup on a DID and returns its handle.
+        /// Performs a reverse lookup on a <see cref="Did"/> and returns its handle.
         /// </summary>
         /// <param name="did">The <see cref="Did"/> to lookup.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="did"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
         public async Task<Handle?> LookupDid(Did did, CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrEmpty(did);

@@ -15,7 +15,7 @@
 
   <ItemGroup>
     <PackageReference Include="Coravel" Version="6.0.2" />
-    <PackageReference Include="idunno.Bluesky" Version="1.4.0" />
+    <PackageReference Include="idunno.Bluesky" Version="1.5.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.9" />
   </ItemGroup>
 

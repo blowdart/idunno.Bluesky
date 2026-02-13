@@ -25,7 +25,7 @@ namespace idunno.AtProto.Jetstream
         public IMeterFactory? MeterFactory { get; set; }
 
         /// <summary>
-        /// Gets a flag indicating whether the underlying WebSocket should use compression. Defaults to true.
+        /// Gets a flag indicating whether the underlying WebSocket should use compression. Defaults to <see langword="true"/>.
         /// </summary>
         public bool UseCompression { get; init; } = true;
 

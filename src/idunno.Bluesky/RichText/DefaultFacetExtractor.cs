@@ -32,7 +32,7 @@ namespace idunno.Bluesky.RichText
         /// Construct a new instance of <see cref="DefaultFacetExtractor"/>.
         /// </summary>
         /// <param name="resolveHandle">A <see cref="Func{T1, T2, TResult}"/> that returns a DID for a handle.</param>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="resolveHandle"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="resolveHandle"/> is <see langword="null"/>.</exception>
         public DefaultFacetExtractor(Func<string, CancellationToken, Task<Did?>> resolveHandle)
         {
             ArgumentNullException.ThrowIfNull(resolveHandle);

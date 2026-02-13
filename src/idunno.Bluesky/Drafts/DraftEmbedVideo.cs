@@ -20,7 +20,7 @@ namespace idunno.Bluesky.Drafts
         /// <param name="localRef">The device local reference to an image.</param>
         /// <param name="altText">The alt text for the image, if any. Maximum 2000 grapheme clusters.</param>
         /// <param name="captions">A collection of <see cref="DraftEmbedCaption"/> associated with the video embed. Maximum 20 captions.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="localRef"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="localRef"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">
         ///     Thrown when <paramref name="altText"/> length is greater than 2000 grapheme clusters or <paramref name="captions"/> has more than 20 entries.
         /// </exception>

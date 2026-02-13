@@ -15,7 +15,7 @@ namespace idunno.Bluesky.Embed
         /// </summary>
         /// <param name="record">The embedded record.</param>
         /// <param name="media">The media in the record.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="record"/> or <paramref name="media"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="record"/> or <paramref name="media"/> is <see langword="null"/>.</exception>
         [JsonConstructor]
         public EmbeddedRecordWithMedia(EmbeddedRecord record, EmbeddedMediaBase media)
         {

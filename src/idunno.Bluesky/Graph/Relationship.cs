@@ -18,7 +18,7 @@ namespace idunno.Bluesky.Graph
         /// Creates a new instance of <see cref="Relationship"/>.
         /// </summary>
         /// <param name="did">The <see cref="Did"/> of the target actor.</param>
-        /// <param name="following">If the actor follows this <see cref="Did"/>, this is the <see cref="AtUri"/> of the follow record, otherwise null</param>
+        /// <param name="following">If the actor follows this <see cref="Did"/>, this is the <see cref="AtUri"/> of the follow record, otherwise <see langword="null"/></param>
         /// <param name="followedBy">If the actor is followed by this <see cref="Did"/>, contains the <see cref="AtUri"/> of the follow record.</param>
         /// <param name="blocking">If the actor blocks this <see cref="Did" />, this is the <see cref="AtUri"/> of the block record.</param>
         /// <param name="blockedBy">If the actor is blocked by this <see cref="Did" />, contains the <see cref="AtUri"/> of the block record.</param>
@@ -44,7 +44,7 @@ namespace idunno.Bluesky.Graph
         public Did Did { get; init; }
 
         /// <summary>
-        /// If the actor follows this <see cref="Did"/>, this is the <see cref="AtUri"/> of the follow record, otherwise null.
+        /// If the actor follows this <see cref="Did"/>, this is the <see cref="AtUri"/> of the follow record, otherwise <see langword="null"/>.
         /// </summary>
         [JsonInclude]
         public AtUri? Following { get; init; }

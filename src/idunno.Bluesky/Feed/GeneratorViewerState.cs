@@ -24,7 +24,7 @@ namespace idunno.Bluesky.Feed
 
         /// <summary>
         /// An <see cref="AtUri"/> to the like record if the actor has liked this feed,
-        /// otherwise null.
+        /// otherwise <see langword="null"/>.
         /// </summary>
         [JsonInclude]
         [JsonPropertyName("like")]

@@ -22,8 +22,8 @@ namespace idunno.AtProto.Authentication
         /// <param name="authenticationType">The type of authentication used to acquire the credentials.</param>
         /// <param name="accessJwt">A string representation of the JWT to use when making authenticated access requests.</param>
         /// <param name="refreshToken">A string representation of the token to use when a new access token is required.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="accessJwt"/> or <paramref name="refreshToken"/> is null or whitespace.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="accessJwt"/> or <paramref name="refreshToken"/> is <see langword="null"/> or whitespace.</exception>
         public AccessCredentials(Uri service, AuthenticationType authenticationType, string accessJwt, string refreshToken) : base(service, authenticationType, refreshToken)
         {
             ArgumentNullException.ThrowIfNull(service);
@@ -37,7 +37,7 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Gets a string representation of the JWT to use when making authenticated access requests.
         /// </summary>
-        /// <exception cref="ArgumentException">Thrown when setting the value and the value is null or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when setting the value and the value is <see langword="null"/> or whitespace.</exception>
         public string AccessJwt
         {
             get
@@ -88,7 +88,7 @@ namespace idunno.AtProto.Authentication
         /// Add authentication headers to the specified <paramref name="httpRequestMessage"/>.
         /// </summary>
         /// <param name="httpRequestMessage">The <see cref="HttpRequestMessage"/> to add authentication headers to.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpRequestMessage"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpRequestMessage"/> is <see langword="null"/>.</exception>
         public override void SetAuthenticationHeaders(HttpRequestMessage httpRequestMessage)
         {
             ArgumentNullException.ThrowIfNull(httpRequestMessage);
@@ -120,7 +120,7 @@ namespace idunno.AtProto.Authentication
         /// Extracts the DID and expiration date from the specified jwt and sets the <see cref="Did"/> and <see cref="ExpiresOn"/> properties.
         /// </summary>
         /// <param name="jwt">A string representation of the jwt to extract the properties from</param>.
-        /// <exception cref="ArgumentException">Thrown when <paramref name="jwt"/> is null or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="jwt"/> is <see langword="null"/> or whitespace.</exception>
         [MemberNotNull(nameof(Did))]
         [MemberNotNull(nameof(ExpiresOn))]
         protected void ExtractJwtProperties(string jwt)

@@ -20,7 +20,7 @@ namespace idunno.Bluesky.Embed
         /// <param name="altText">The alternative text for the video, if any.</param>
         /// <param name="aspectRatio">The <see cref="AspectRatio"/> of the video, if any.</param>
         /// <param name="presentation">A hint to the client about how to present the video.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is <see langword="null"/>.</exception>
         [JsonConstructor]
         public EmbeddedVideo(
             Blob video,
@@ -45,7 +45,7 @@ namespace idunno.Bluesky.Embed
         /// <param name="captions">A collection of <see cref="Caption"/>s for the video, if any.</param>
         /// <param name="altText">The alternative text for the video, if any.</param>
         /// <param name="aspectRatio">The <see cref="AspectRatio"/> of the video, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is <see langword="null"/>.</exception>
         // 1.4.0 BACKCOMPAT OVERLOAD -- DO NOT TOUCH
         public EmbeddedVideo(
             Blob video,
@@ -63,7 +63,7 @@ namespace idunno.Bluesky.Embed
         /// <param name="caption">A <see cref="Caption"/> for the video, if any.</param>
         /// <param name="altText">The alternative text for the video, if any.</param>
         /// <param name="aspectRatio">The <see cref="AspectRatio"/> of the video, if any.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> or <paramref name="caption"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> or <paramref name="caption"/> is <see langword="null"/>.</exception>
         // 1.4.0 BACKCOMPAT OVERLOAD -- DO NOT TOUCH
         public EmbeddedVideo(
             Blob video,

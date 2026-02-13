@@ -130,6 +130,7 @@ namespace idunno.Bluesky.Moderation
     /// <summary>
     /// Known report reasons
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Documentation", "CSENSE019:Use langword for keywords", Justification = "Not a language keyword in this case.")]
     public enum ReportType
     {
         /// <summary>

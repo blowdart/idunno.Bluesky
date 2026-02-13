@@ -51,7 +51,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="actor"/>, <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -100,7 +100,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actors"/>, <paramref name="service"/> or <paramref name="httpClient" /> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="actors"/>, <paramref name="service"/> or <paramref name="httpClient" /> are <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="actors"/> is an empty collection or if it contains &gt;25 handles.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -175,7 +175,7 @@ namespace idunno.Bluesky
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>,<paramref name="accessCredentials"/> or <paramref name="httpClient"/> are null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="service"/>,<paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -235,7 +235,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt;=0 or &gt;100.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -308,7 +308,7 @@ namespace idunno.Bluesky
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>,<paramref name="accessCredentials"/> or <paramref name="httpClient"/> are null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="service"/>,<paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -350,7 +350,7 @@ namespace idunno.Bluesky
         /// Find actors (profiles) matching search criteria. Does not require authentication.
         /// </summary>
         /// <param name="q">The search query string. Syntax, phrase, Boolean, and faceting is unspecified, but Lucene query syntax is recommended.</param>
-        /// <param name="limit">The number of suggested actors to return. Defaults to 50 if null.</param>
+        /// <param name="limit">The number of suggested actors to return. Defaults to 50 if <see langword="null"/>.</param>
         /// <param name="cursor">An optional cursor for pagination.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
@@ -427,7 +427,7 @@ namespace idunno.Bluesky
         /// Find actor suggestions for a prefix search term. Expected use is for auto-completion during text field entry. Does not require authentication.
         /// </summary>
         /// <param name="q">"Search query prefix; not a full query string.</param>
-        /// <param name="limit">The number of suggested actors to return. Defaults to 50 if null.</param>
+        /// <param name="limit">The number of suggested actors to return. Defaults to 50 if <see langword="null"/>.</param>
         /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
@@ -436,8 +436,8 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="q"/> is null.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="q"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt;=0 or &gt;100.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",

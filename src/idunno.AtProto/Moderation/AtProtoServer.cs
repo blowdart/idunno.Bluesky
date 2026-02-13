@@ -21,7 +21,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Creates and sends a moderation report to the specified <paramref name="labelerDid"/>.
         /// </summary>
-        /// <param name="labelerDid">The <see cref="Did"/> of the labeller to report to.</param>
+        /// <param name="labelerDid">The <see cref="Did"/> of the labeler to report to.</param>
         /// <param name="subject">The subject of the report, a <see cref="StrongReference"/> to a record, or a <see cref="RepoReference"/> for an actor.</param>
         /// <param name="reportType">The reason for the report.</param>
         /// <param name="reason">Any notes to justify the report.</param>
@@ -33,10 +33,10 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="labelerDid"/>, <paramref name="subject"/>, <paramref name="reportType"/>, <paramref name="service"/> 
-        /// <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when any of <paramref name="labelerDid"/>, <paramref name="subject"/>, <paramref name="reportType"/>, <paramref name="service"/> 
+        /// <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="reason"/> is not null and is &gt; 20000 characters.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="reason"/> is not <see langword="null"/> and is &gt; 20000 characters.</exception>
         /// <remarks>
         /// <para>
         ///     Clients should not send reports to Labelers which do not match the subject and report type metadata in their declaration record.

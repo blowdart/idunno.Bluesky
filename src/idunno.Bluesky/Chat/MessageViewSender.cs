@@ -16,7 +16,7 @@ namespace idunno.Bluesky.Chat
         /// Creates a new instance of <see cref="MessageViewSender"/>.
         /// </summary>
         /// <param name="did">The <see cref="AtProto.Did"/> of the message author.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
         [JsonConstructor]
         public MessageViewSender(Did did)
         {

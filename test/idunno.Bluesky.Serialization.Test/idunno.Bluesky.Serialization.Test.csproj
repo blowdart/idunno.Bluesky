@@ -4,13 +4,4 @@
     <ProjectReference Include="..\..\src\idunno.Bluesky\idunno.Bluesky.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="json\empty_listNotificationsResponse.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="json\listNotificationsResponse.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>

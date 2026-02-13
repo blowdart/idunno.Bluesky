@@ -77,7 +77,7 @@ namespace idunno.Bluesky
         /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
         /// <param name="labels">Any self labels to apply to the post.</param>
         /// <param name="tags">Any tags to apply to the post.</param>
-        /// <exception cref="ArgumentException">Thrown when the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long or <paramref name="tags"/> contains a null or empty tag.</exception>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long or <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> for the post is too long or <paramref name="images"/> contains too many images, or <paramref name="tags"/> has too many tags, or a tag that exceeds the maximum length.</exception>
         public PostBuilder(
             string? text,
@@ -475,7 +475,7 @@ namespace idunno.Bluesky
         ///   Setting <see cref="InReplyTo"/> will remove the <see cref="QuotePost"/> if one has been set.
         ///</para>
         /// </remarks>
-        /// <exception cref="ArgumentException">Thrown when setting a value and <see cref="ThreadGateRules"/> is not null.</exception>
+        /// <exception cref="ArgumentException">Thrown when setting a value and <see cref="ThreadGateRules"/> is not <see langword="null"/>.</exception>
         public ReplyReferences? InReplyTo
         {
             get
@@ -564,7 +564,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// Gets or sets the thread gate rules to apply to the post.
         /// </summary>
-        /// <exception cref="ArgumentException">Thrown when <see cref="InReplyTo"/> is not null and rules are being set.</exception>
+        /// <exception cref="ArgumentException">Thrown when <see cref="InReplyTo"/> is not <see langword="null"/> and rules are being set.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the number of rules being set is greater than the maximum allowed.</exception>
         public IReadOnlyCollection<ThreadGateRule>? ThreadGateRules
         {
@@ -784,7 +784,7 @@ namespace idunno.Bluesky
         /// Embeds the specified <see cref="EmbeddedBase" /> in the post.
         /// </summary>
         /// <param name="embeddedRecord">The record to embed.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="embeddedRecord"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="embeddedRecord"/> is <see langword="null"/>.</exception>
         public void EmbedRecord(EmbeddedBase embeddedRecord)
         {
             ArgumentNullException.ThrowIfNull(embeddedRecord);
@@ -796,7 +796,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="facetExtractor">The facet extractor to use</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="facetExtractor"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="facetExtractor"/> is <see langword="null"/>.</exception>
         /// <remarks>
         /// <para>If this instance of <see cref="PostBuilder"/> already has <see cref="Facet"/>s extraction will not run.</para>
         /// </remarks>
@@ -856,8 +856,8 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="mention">The <see cref="Mention"/> to append.</param>
         /// <returns>A reference to this instance after the append operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="mention"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="mention"/>'s text is null or white space.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="mention"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="mention"/>'s text is <see langword="null"/> or white space.</exception>
         public PostBuilder Append(Mention mention)
         {
             ArgumentNullException.ThrowIfNull(mention);
@@ -912,8 +912,8 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="hashTag">The <see cref="HashTag"/> to append.</param>
         /// <returns>A reference to this instance after the append operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="hashTag"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="hashTag"/>'s text is null or whitespace.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="hashTag"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="hashTag"/>'s text is <see langword="null"/> or whitespace.</exception>
         public PostBuilder Append(HashTag hashTag)
         {
             ArgumentNullException.ThrowIfNull(hashTag);
@@ -942,8 +942,8 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="link">The <see cref="Link"/> to append.</param>
         /// <returns>A reference to this instance after the append operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when  <paramref name="link"/> is null or its text is null or whitespace.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="link"/>'s is null or whitespace.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when  <paramref name="link"/> is <see langword="null"/> or its text is <see langword="null"/> or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="link"/>'s is <see langword="null"/> or whitespace.</exception>
         public PostBuilder Append(Link link)
         {
             ArgumentNullException.ThrowIfNull(link);
@@ -971,7 +971,7 @@ namespace idunno.Bluesky
         /// Applies the user's interaction preferences to this instance.
         /// </summary>
         /// <param name="interactionPreferences">The user's interaction preferences.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="interactionPreferences"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="interactionPreferences"/> is <see langword="null"/>.</exception>
         public void ApplyInteractionPreferences(InteractionPreferences interactionPreferences)
         {
             ArgumentNullException.ThrowIfNull(interactionPreferences);
@@ -995,7 +995,7 @@ namespace idunno.Bluesky
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the string to.</param>
         /// <param name="s">The string to append</param>
         /// <returns>A reference to this instance after the append operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is <see langword="null"/>.</exception>
         public static PostBuilder Add(PostBuilder postBuilder, string s)
         {
             ArgumentNullException.ThrowIfNull(postBuilder);
@@ -1010,7 +1010,7 @@ namespace idunno.Bluesky
         /// <param name="c">The character to append</param>
         /// <param name="repeatCount">The number of times to repeat the <paramref name="c" />.</param>
         /// <returns>A reference to this instance after the append operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is <see langword="null"/>.</exception>
         public static PostBuilder Add(PostBuilder postBuilder, char c, int repeatCount = 1)
         {
             ArgumentNullException.ThrowIfNull(postBuilder);
@@ -1024,7 +1024,7 @@ namespace idunno.Bluesky
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the link to.</param>
         /// <param name="link">The <see cref="Link"/> to add.</param>
         /// <returns>A reference to this instance after the add operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="link"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="link"/> is <see langword="null"/>.</exception>
         public static PostBuilder Add(PostBuilder postBuilder, Link link)
         {
             ArgumentNullException.ThrowIfNull(postBuilder);
@@ -1039,7 +1039,7 @@ namespace idunno.Bluesky
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the mention to.</param>
         /// <param name="mention">The <see cref="Mention"/> to add.</param>
         /// <returns>A reference to this instance after the add operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="mention"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="mention"/> is <see langword="null"/>.</exception>
         public static PostBuilder Add(PostBuilder postBuilder, Mention mention)
         {
             ArgumentNullException.ThrowIfNull(postBuilder);
@@ -1054,7 +1054,7 @@ namespace idunno.Bluesky
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the hash tag to.</param>
         /// <param name="hashTag">The <see cref="HashTag"/> to add.</param>
         /// <returns>A reference to this instance after the add operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="hashTag"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="hashTag"/> is <see langword="null"/>.</exception>
         public static PostBuilder Add(PostBuilder postBuilder, HashTag hashTag)
         {
             ArgumentNullException.ThrowIfNull(postBuilder);
@@ -1068,7 +1068,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="image">The <see cref="EmbeddedImage"/> to embed.</param>
         /// <returns>A reference to this instance after the append operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the number of images in this instance is already equal to <see cref="MaxImages"/>.</exception>
         public PostBuilder Add(EmbeddedImage image)
         {
@@ -1093,7 +1093,7 @@ namespace idunno.Bluesky
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the image to.</param>
         /// <param name="image">The <see cref="EmbeddedImage"/> to add.</param>
         /// <returns>A reference to this instance after the add operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="image"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the number of images in this instance is already equal to <see cref="MaxImages"/>.</exception>
         public static PostBuilder Add(PostBuilder postBuilder, EmbeddedImage image)
         {
@@ -1119,7 +1119,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="images">The collection of <see cref="EmbeddedImage"/> to embed.</param>
         /// <returns>A reference to this instance after the append operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">if <paramref name="images"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">if <paramref name="images"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when adding the images in this instance is will result in an image count &gt;<see cref="MaxImages"/>.</exception>
         public PostBuilder Add(ICollection<EmbeddedImage> images)
         {
@@ -1144,7 +1144,7 @@ namespace idunno.Bluesky
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the images to.</param>
         /// <param name="images">The collection of <see cref="EmbeddedImages"/> to add.</param>
         /// <returns>A reference to this instance after the add operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="images"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="images"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when adding the images in this instance is will result in an image count &gt;<see cref="MaxImages"/>.</exception>
         public static PostBuilder Add(PostBuilder postBuilder, ICollection<EmbeddedImage> images)
         {
@@ -1169,7 +1169,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="video">The <see cref="EmbeddedVideo"/> to embed.</param>
         /// <returns>A reference to this instance after the append operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is <see langword="null"/>.</exception>
         public PostBuilder Add(EmbeddedVideo video)
         {
             ArgumentNullException.ThrowIfNull(video);
@@ -1188,7 +1188,7 @@ namespace idunno.Bluesky
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the video to.</param>
         /// <param name="video">The <see cref="EmbeddedVideo"/> to embed.</param>
         /// <returns>A reference to this instance after the append operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is <see langword="null"/>.</exception>
         public static PostBuilder Add(PostBuilder postBuilder, EmbeddedVideo video)
         {
             ArgumentNullException.ThrowIfNull(postBuilder);
@@ -1208,7 +1208,7 @@ namespace idunno.Bluesky
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the images to.</param>
         /// <param name="s">The string to append</param>
         /// <returns>A reference to this instance after the append operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is <see langword="null"/>.</exception>
         public static PostBuilder operator +(PostBuilder postBuilder, string s)
         {
             ArgumentNullException.ThrowIfNull(postBuilder);
@@ -1222,7 +1222,7 @@ namespace idunno.Bluesky
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the images to.</param>
         /// <param name="c">The character to append</param>
         /// <returns>A reference to this instance after the append operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is <see langword="null"/>.</exception>
         public static PostBuilder operator +(PostBuilder postBuilder, char c)
         {
             ArgumentNullException.ThrowIfNull(postBuilder);
@@ -1236,7 +1236,7 @@ namespace idunno.Bluesky
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the mention to.</param>
         /// <param name="mention">The <see cref="Mention"/> to add.</param>
         /// <returns>A reference to this instance after the add operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="mention"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="mention"/> is <see langword="null"/>.</exception>
         public static PostBuilder operator +(PostBuilder postBuilder, Mention mention)
         {
             ArgumentNullException.ThrowIfNull(postBuilder);
@@ -1251,7 +1251,7 @@ namespace idunno.Bluesky
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the hash tag to.</param>
         /// <param name="hashTag">The <see cref="HashTag"/> to add.</param>
         /// <returns>A reference to this instance after the add operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="hashTag"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="hashTag"/> is <see langword="null"/>.</exception>
         public static PostBuilder operator +(PostBuilder postBuilder, HashTag hashTag)
         {
             ArgumentNullException.ThrowIfNull(postBuilder);
@@ -1266,7 +1266,7 @@ namespace idunno.Bluesky
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the link tag to.</param>
         /// <param name="link">The <see cref="Link"/> to add.</param>
         /// <returns>A reference to this instance after the add operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="link"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="link"/> is <see langword="null"/>.</exception>
         public static PostBuilder operator +(PostBuilder postBuilder, Link link)
         {
             ArgumentNullException.ThrowIfNull(postBuilder);
@@ -1281,7 +1281,7 @@ namespace idunno.Bluesky
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the image to.</param>
         /// <param name="image">The <see cref="EmbeddedImage"/> to add.</param>
         /// <returns>A reference to this instance after the add operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="image"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
         public static PostBuilder operator +(PostBuilder postBuilder, EmbeddedImage image)
         {
             ArgumentNullException.ThrowIfNull(postBuilder);
@@ -1296,7 +1296,7 @@ namespace idunno.Bluesky
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the images to.</param>
         /// <param name="images">The collection of <see cref="EmbeddedImage"/>s to add.</param>
         /// <returns>A reference to this instance after the add operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="images"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="images"/> is <see langword="null"/>.</exception>
         public static PostBuilder operator +(PostBuilder postBuilder, ICollection<EmbeddedImage> images)
         {
             ArgumentNullException.ThrowIfNull(postBuilder);
@@ -1311,7 +1311,7 @@ namespace idunno.Bluesky
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the image to.</param>
         /// <param name="video">The <see cref="EmbeddedVideo"/> to add.</param>
         /// <returns>A reference to this instance after the add operation has completed.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="video"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="video"/> is <see langword="null"/>.</exception>
         public static PostBuilder operator +(PostBuilder postBuilder, EmbeddedVideo video)
         {
             ArgumentNullException.ThrowIfNull(postBuilder);
@@ -1324,7 +1324,7 @@ namespace idunno.Bluesky
         /// Sets the self labels for the post to the values specified in <paramref name="labels"/>.
         /// </summary>
         /// <param name="labels">The self label values to set.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="labels"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="labels"/> is <see langword="null"/>.</exception>
         public void SetSelfLabels(PostSelfLabels labels)
         {
             ArgumentNullException.ThrowIfNull(labels);
@@ -1337,7 +1337,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <returns>A <see cref="Post"/> whose value is the same as this instance.</returns>
         /// <exception cref="PostBuilderException">
-        ///  Thrown when <see cref="Text"/> is null or empty and this instance has no images, embedded records or video, or
+        ///  Thrown when <see cref="Text"/> is <see langword="null"/> or empty and this instance has no images, embedded records or video, or
         ///  this instance is both a reply and a quote, or this instance has both images and video.
         /// </exception>
         public Post ToPost()
@@ -1406,7 +1406,7 @@ namespace idunno.Bluesky
         /// </summary>
         /// <param name="postBuilder">The <see cref="PostBuilder"/> to convert.</param>
         /// <returns>A <see cref="Post"/> whose built from <paramref name="postBuilder"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is <see langword="null"/>.</exception>
         public static implicit operator Post(PostBuilder postBuilder)
         {
             ArgumentNullException.ThrowIfNull(postBuilder);
@@ -1464,9 +1464,9 @@ namespace idunno.Bluesky
         /// <summary>
         /// Determines whether two specified <see cref="PostBuilder"/>s the same value."/>
         /// </summary>
-        /// <param name="lhs">The first <see cref="PostBuilder"/> to compare, or null.</param>
-        /// <param name="rhs">The second <see cref="PostBuilder"/> to compare, or null.</param>
-        /// <returns>true if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, false.</returns>
+        /// <param name="lhs">The first <see cref="PostBuilder"/> to compare, or <see langword="null"/>.</param>
+        /// <param name="rhs">The second <see cref="PostBuilder"/> to compare, or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, <see langword="false"/>.</returns>
         public static bool operator ==(PostBuilder? lhs, PostBuilder? rhs)
         {
             if (lhs is null)
@@ -1485,9 +1485,9 @@ namespace idunno.Bluesky
         /// <summary>
         /// Determines whether two specified <see cref="PostBuilder"/>s dot not have same value."/>
         /// </summary>
-        /// <param name="lhs">The first <see cref="PostBuilder"/> to compare, or null.</param>
-        /// <param name="rhs">The second <see cref="PostBuilder"/> to compare, or null.</param>
-        /// <returns>true if the value of <paramref name="lhs"/> is different to the value of <paramref name="rhs" />; otherwise, false.</returns>
+        /// <param name="lhs">The first <see cref="PostBuilder"/> to compare, or <see langword="null"/>.</param>
+        /// <param name="rhs">The second <see cref="PostBuilder"/> to compare, or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="lhs"/> is different to the value of <paramref name="rhs" />; otherwise, <see langword="false"/>.</returns>
         public static bool operator !=(PostBuilder? lhs, PostBuilder? rhs) => !(lhs == rhs);
 
         /// <summary>

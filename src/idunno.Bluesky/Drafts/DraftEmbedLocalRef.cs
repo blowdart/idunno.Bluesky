@@ -16,7 +16,7 @@ namespace idunno.Bluesky.Drafts
         /// Creates a new instance of <see cref="DraftEmbedLocalRef"/> with the specified local path.
         /// </summary>
         /// <param name="path">The local path to the file to be embedded.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="path"/> is null/</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="path"/> is <see langword="null"/>/</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="path"/>is empty or whitespace.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when path length &gt; 1024 or &lt; 1.</exception>
         public DraftEmbedLocalRef(string path)

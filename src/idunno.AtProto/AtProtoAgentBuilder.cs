@@ -185,7 +185,7 @@ namespace idunno.AtProto
         /// <returns>The same instance of <see cref="AtProtoAgentBuilder"/> for chaining.</returns>
         /// <para>
         /// Setting <see cref="HttpClientOptions.CheckCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
-        /// false if you are using a debugging proxy which does not support CRLs.
+        /// <see langword="false"/> if you are using a debugging proxy which does not support CRLs.
         /// </para>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="configure"/> is <see langword="null"/>.</exception>
         public AtProtoAgentBuilder ConfigureHttpClientOptions(Action<HttpClientOptions> configure)

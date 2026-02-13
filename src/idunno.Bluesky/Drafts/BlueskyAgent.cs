@@ -22,7 +22,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentNullException">Thrown if <paramref name="draft"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="draft"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<TimestampIdentifier>> CreateDraft(
             Draft draft,
             CancellationToken cancellationToken = default)
@@ -51,7 +51,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="draftId"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="draftId"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> DeleteDraft(
             TimestampIdentifier draftId,
             CancellationToken cancellationToken = default)
@@ -117,7 +117,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="draftWithId"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="draftWithId"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<EmptyResponse>> UpdateDraft(
             DraftWithId draftWithId,
             CancellationToken cancellationToken = default)
@@ -148,7 +148,7 @@ namespace idunno.Bluesky
         /// <param name="interactionPreferences">The current user's interaction preferences, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="draftWithId"/> or its Draft property is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="draftWithId"/> or its Draft property is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         /// <exception cref="DraftException">Thrown when <paramref name="draftWithId"/> cannot be converted to a post.</exception>
         [SuppressMessage("Minor Code Smell", "S1199:Nested code blocks should not be used", Justification = "Nesting is due to a logger scope.")]
@@ -435,7 +435,7 @@ namespace idunno.Bluesky
         /// <param name="draftWithId">The <see cref="DraftWithId"/> to use to create the post record(s).</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="draftWithId"/> or its Draft property is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="draftWithId"/> or its Draft property is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "An overload for cancellationToken is a standard api")]
         public async Task<AtProtoHttpResult<IReadOnlyList<CreateRecordResult>>> Post(

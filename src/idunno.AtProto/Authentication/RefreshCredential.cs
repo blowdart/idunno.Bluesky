@@ -21,8 +21,8 @@ namespace idunno.AtProto.Authentication
         /// <param name="service">The service the credentials were issued from.</param>
         /// <param name="authenticationType">The type of authentication used to acquire the credentials.</param>
         /// <param name="value">The value for the refresh token.</param>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> is null or whitespace.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> is <see langword="null"/> or whitespace.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is <see langword="null"/>.</exception>
         public RefreshCredential(Uri service, AuthenticationType authenticationType, string value) : base(service, authenticationType)
         {
             ArgumentNullException.ThrowIfNull(service);
@@ -36,7 +36,7 @@ namespace idunno.AtProto.Authentication
         /// Creates a new instance of <see cref="RefreshCredential"/> from the specified <paramref name="accessCredentials"/>.
         /// </summary>
         /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to create the refresh credential from.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/> is <see langword="null"/>.</exception>
         public RefreshCredential(AccessCredentials accessCredentials) : this(
             accessCredentials != null ? accessCredentials.Service : throw new ArgumentNullException(nameof(accessCredentials)),
             accessCredentials.AuthenticationType,
@@ -47,7 +47,7 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Gets or sets a string representation of the token to use when a new access token is required.
         /// </summary>
-        /// <exception cref="ArgumentException">Thrown when setting the value and the value is null or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when setting the value and the value is <see langword="null"/> or whitespace.</exception>
         public string RefreshToken
         {
             get
@@ -83,7 +83,7 @@ namespace idunno.AtProto.Authentication
         /// Add authentication headers to the specified <paramref name="httpRequestMessage"/>.
         /// </summary>
         /// <param name="httpRequestMessage">The <see cref="HttpRequestMessage"/> to add authentication headers to.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpRequestMessage"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpRequestMessage"/> is <see langword="null"/>.</exception>
         public override void SetAuthenticationHeaders(HttpRequestMessage httpRequestMessage)
         {
             ArgumentNullException.ThrowIfNull(httpRequestMessage);

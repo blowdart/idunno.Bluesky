@@ -12,7 +12,7 @@ namespace idunno.Bluesky.RichText
         /// Creates a new instance of <see cref="Link"/>.
         /// </summary>
         /// <param name="uri">The <see cref="System.Uri"/> to add to a post.</param>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is null or is not a Uri.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is <see langword="null"/> or is not a valid <see cref="System.Uri"/>.</exception>
         public Link(string uri) : base()
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uri);
@@ -30,7 +30,7 @@ namespace idunno.Bluesky.RichText
         /// Creates a new instance of <see cref="Link"/>.
         /// </summary>
         /// <param name="uri">The <see cref="System.Uri"/> to add to a post.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
         public Link(Uri uri)
         {
             ArgumentNullException.ThrowIfNull(uri);
@@ -46,8 +46,8 @@ namespace idunno.Bluesky.RichText
         /// </summary>
         /// <param name="uri">The <see cref="Uri"/> to add to a post.</param>
         /// <param name="text">The text to wrap the hashtag around.</param>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is null or white space.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/> or white space.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
         public Link(Uri uri, string text) : base(text)
         {
             ArgumentNullException.ThrowIfNull(uri);
@@ -61,7 +61,7 @@ namespace idunno.Bluesky.RichText
         /// </summary>
         /// <param name="uri">The <see cref="System.Uri"/> to add to a post.</param>
         /// <param name="text">The text to wrap the hashtag around, if any. If not specified the <paramref name="uri"/> will be used..</param>
-        /// <exception cref="ArgumentException"> when <paramref name="uri"/> or <paramref name="text"/> is null or white space.</exception>
+        /// <exception cref="ArgumentException"> when <paramref name="uri"/> or <paramref name="text"/> is <see langword="null"/> or white space.</exception>
         public Link(string uri, string text) : base(text)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(uri);

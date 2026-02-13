@@ -16,10 +16,10 @@ namespace idunno.Bluesky.Chat
         /// <param name="sender">A view over the message author.</param>
         /// <param name="sentAt">The <see cref="DateTimeOffset"/> the message was sent on.</param>
         /// <exception cref="ArgumentException">
-        ///   Thrown when <paramref name="id" /> or <paramref name="revision"/> is null or whitespace.
+        ///   Thrown when <paramref name="id" /> or <paramref name="revision"/> is <see langword="null"/> or whitespace.
         /// </exception>
         /// <exception cref="ArgumentNullException">
-        ///   Thrown when <paramref name="sender"/> is null.
+        ///   Thrown when <paramref name="sender"/> is <see langword="null"/>.
         /// </exception>
         public DeletedMessageView(
             string id,

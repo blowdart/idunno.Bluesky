@@ -81,7 +81,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentException">
         /// Thrown when <paramref name="conversationId"/> is whitespace.</exception>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="conversationId"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when any of <paramref name="conversationId"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -137,7 +137,8 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/>, <paramref name="messageId"/> or <paramref name="value"/> is whitespace.</exception>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="conversationId"/>, <paramref name="messageId"/>, <paramref name="value"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when any of <paramref name="conversationId"/>, <paramref name="messageId"/>, <paramref name="value"/>, <paramref name="accessCredentials"/>,
+        /// <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> has a grapheme length that does not equal 1.</exception>
         [UnconditionalSuppressMessage(
@@ -215,7 +216,7 @@ namespace idunno.Bluesky
         /// <exception cref="ArgumentException">
         /// Thrown when <paramref name="conversationId"/> or <paramref name="messageId"/> is whitespace.</exception>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="conversationId"/> or <paramref name="messageId"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when any of <paramref name="conversationId"/>, <paramref name="messageId"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -270,7 +271,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        ///   Thrown when <paramref name="members"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        ///   Thrown when <paramref name="members"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="members"/> is empty or has greater than the maximum number of conversation members.</exception>
         [UnconditionalSuppressMessage(
@@ -349,7 +350,7 @@ namespace idunno.Bluesky
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/>is &lt;1 or &gt; the maximum number of conversations to list.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -433,8 +434,8 @@ namespace idunno.Bluesky
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is null or whitespace.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="id"/> is <see langword="null"/> or whitespace.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -498,7 +499,7 @@ namespace idunno.Bluesky
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -570,10 +571,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">
-        /// Thrown when <paramref name="id"/> is null or empty.
+        /// Thrown when <paramref name="id"/> is <see langword="null"/> or empty.
         /// </exception>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -663,10 +664,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">
-        /// Thrown when <paramref name="id"/> is null or empty.
+        /// Thrown when <paramref name="id"/> is <see langword="null"/> or empty.
         /// </exception>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -731,10 +732,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">
-        /// Thrown when <paramref name="id"/> is null or empty.
+        /// Thrown when <paramref name="id"/> is <see langword="null"/> or empty.
         /// </exception>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="id"/> is null or empty, or <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -807,7 +808,7 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/>, <paramref name="messageId"/> or <paramref name="value"/> is whitespace.</exception>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="conversationId"/>, <paramref name="messageId"/>, <paramref name="value"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="conversationId"/>, <paramref name="messageId"/>, <paramref name="value"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> has a grapheme length that does not equal 1.</exception>
         [UnconditionalSuppressMessage(
@@ -882,7 +883,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="batchedMessages"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="batchedMessages"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="batchedMessages"/> is empty or has greater than the maximum allowed number of messages.</exception>
         [UnconditionalSuppressMessage(
@@ -956,10 +957,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">
-        /// Thrown when <paramref name="id"/> is null or empty.
+        /// Thrown when <paramref name="id"/> is <see langword="null"/> or empty.
         /// </exception>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="message"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="message"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -1026,10 +1027,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">
-        /// Thrown when <paramref name="id"/> is null or empty.
+        /// Thrown when <paramref name="id"/> is <see langword="null"/> or empty.
         /// </exception>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -1099,7 +1100,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="status"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="status"/>, <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
         [UnconditionalSuppressMessage(
             "Trimming",
@@ -1168,10 +1169,10 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">
-        /// Thrown when <paramref name="conversationId"/> is null or whitespace, <paramref name="messageId"/> is empty or whitespace,
+        /// Thrown when <paramref name="conversationId"/> is <see langword="null"/> or whitespace, <paramref name="messageId"/> is empty or whitespace,
         /// </exception>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        /// Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
         [UnconditionalSuppressMessage(
             "Trimming",

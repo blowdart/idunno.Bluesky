@@ -40,8 +40,8 @@ namespace idunno.AtProto
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Throw if <paramref name="identifier"/> or <paramref name="password"/> is null.</exception>
-        /// <exception cref="ArgumentNullException">Throw if <paramref name="service"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentException">Throw if <paramref name="identifier"/> or <paramref name="password"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentNullException">Throw if <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
         [UnconditionalSuppressMessage("AOT",
             "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
             Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
@@ -105,8 +105,8 @@ namespace idunno.AtProto
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <remarks><para>Delete session requires the refresh token, not the access token.</para></remarks>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="refreshCredential"/>'s refresh token is null or whitespace.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="refreshCredential"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="refreshCredential"/>'s refresh token is <see langword="null"/> or whitespace.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="refreshCredential"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -147,8 +147,8 @@ namespace idunno.AtProto
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when the <paramref name="refreshCredential"/> has a null or whitespace refresh token.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="refreshCredential"/> or <paramref name="httpClient"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when the <paramref name="refreshCredential"/> has a <see langword="null"/> or whitespace refresh token.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="refreshCredential"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -211,8 +211,8 @@ namespace idunno.AtProto
         /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when the AccessJwt in <paramref name="accessCredentials"/> is null or whitespace.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when the AccessJwt in <paramref name="accessCredentials"/> is <see langword="null"/> or whitespace.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -277,9 +277,9 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
         ///   Thrown when <paramref name="expiry"/>, <paramref name="lxm"/>,
-        ///   <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is null.
+        ///   <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="audience"/> or the AccessJwt in <paramref name="accessCredentials"/> is null or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="audience"/> or the AccessJwt in <paramref name="accessCredentials"/> is <see langword="null"/> or whitespace.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="expiry"/> is zero or negative.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",

@@ -26,9 +26,9 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
-        /// Thrown when <paramref name="labelerDid"/> or <paramref name="subject"/> is null.
+        /// Thrown when <paramref name="labelerDid"/> or <paramref name="subject"/> is <see langword="null"/>.
         /// </exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="reason"/> is not null and is &gt; 20000 characters.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="reason"/> is not <see langword="null"/> and is &gt; 20000 characters.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
         /// <remarks>
         /// <para>

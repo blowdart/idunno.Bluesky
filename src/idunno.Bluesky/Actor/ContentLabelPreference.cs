@@ -16,9 +16,9 @@ namespace idunno.Bluesky.Actor
         /// Creates a new instance of <see cref="ContentLabelPreference"/>.
         /// </summary>
         /// <param name="label">The label name.</param>
-        /// <param name="labelerDid">The <see cref="Did"/> of the labeler. If null this preference applies globally.</param>
+        /// <param name="labelerDid">The <see cref="Did"/> of the labeler. If <see langword="null"/> this preference applies globally.</param>
         /// <param name="visibility">How the label should be treated in a UI.</param>
-        /// <exception cref="ArgumentException">Thrown if <paramref name="label"/> is null or white space.</exception>
+        /// <exception cref="ArgumentException">Thrown if <paramref name="label"/> is <see langword="null"/> or white space.</exception>
         [JsonConstructor]
         public ContentLabelPreference(string label, Did? labelerDid, LabelVisibility visibility)
         {
@@ -40,7 +40,7 @@ namespace idunno.Bluesky.Actor
 
         /// <summary>
         /// The labeler this preference applies.
-        /// If null the preference applies globally.
+        /// If <see langword="null"/> the preference applies globally.
         /// </summary>
         public Did? LabelerDid { get; init; }
 

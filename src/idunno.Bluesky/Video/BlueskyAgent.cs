@@ -27,7 +27,7 @@ namespace idunno.Bluesky
         /// <param name="jobId">The job id whose status should be queried.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="jobId"/> is null or whitespace.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="jobId"/> is <see langword="null"/> or whitespace.</exception>
         public async Task<AtProtoHttpResult<JobStatus>> GetVideoJobStatus(
             string jobId,
             CancellationToken cancellationToken = default)
@@ -130,8 +130,8 @@ namespace idunno.Bluesky
         /// <param name="video">The video to upload as bytes.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> is null or empty.</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> is <see langword="null"/> or empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="video"/> is empty.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         public async Task<AtProtoHttpResult<JobStatus>> UploadVideo(
@@ -241,8 +241,8 @@ namespace idunno.Bluesky
         /// <param name="captionLanguage">The language the captions are in.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="captionsAsBytes"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="captionLanguage"/> is null or empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="captionsAsBytes"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="captionLanguage"/> is <see langword="null"/> or empty.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="captionsAsBytes"/> is a zero length array.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
         public async Task<AtProtoHttpResult<Caption>> UploadCaptions(

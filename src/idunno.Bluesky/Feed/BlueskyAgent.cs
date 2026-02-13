@@ -18,7 +18,7 @@ namespace idunno.Bluesky
         /// <param name="generatorUri">The <see cref="Uri"/> of the generator whose description should be retrieved.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="generatorUri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="generatorUri"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<FeedGeneratorDescription>> GetFeedGeneratorDescription(
             Uri generatorUri,
             CancellationToken cancellationToken = default)
@@ -41,7 +41,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<GeneratorView>>> GetActorFeeds(
             AtIdentifier actor,
             int? limit = null,
@@ -109,7 +109,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>> GetAuthorFeed(
             Did actor,
             int? limit = null,
@@ -143,7 +143,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="feed"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="feed"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<FeedGenerator>> GetFeedGenerator(
             AtUri feed,
             IEnumerable<Did>? subscribedLabelers = null,
@@ -169,7 +169,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="feeds"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="feeds"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="feeds"/> is empty.</exception>
         public async Task<AtProtoHttpResult<IReadOnlyCollection<GeneratorView>>> GetFeedGenerators(
             IEnumerable<AtUri> feeds,
@@ -200,7 +200,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="feed"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="feed"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>> GetFeed(
             AtUri feed,
             int? limit = null,
@@ -234,7 +234,7 @@ namespace idunno.Bluesky
         /// <param name="cursor">An optional cursor for pagination.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>  is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<Likes>> GetLikes(
             AtUri uri,
             Cid? cid = null,
@@ -266,7 +266,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<FeedViewPost>>> GetListFeed(
             AtUri list,
             int? limit = null,
@@ -298,7 +298,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<PostThread>> GetPostThread(
             AtUri uri,
             int? depth = 6,
@@ -328,7 +328,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<PostView>> GetPost(
             AtUri uri,
             IEnumerable<Did>? subscribedLabelers = null,
@@ -368,7 +368,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uris"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uris"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<IReadOnlyCollection<PostView>>> GetPosts(
             IEnumerable<AtUri> uris,
             IEnumerable<Did>? subscribedLabelers = null,
@@ -394,7 +394,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<PostView>> GetPostView(
             StrongReference strongReference,
             IEnumerable<Did>? subscribedLabelers = null,
@@ -412,7 +412,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<PostView>> GetPostView(
             AtUri uri,
             IEnumerable<Did>? subscribedLabelers = null,
@@ -464,7 +464,7 @@ namespace idunno.Bluesky
         /// <param name="strongReference">The <see cref="StrongReference" /> of the post to return the parent <paramref name="strongReference"/> for.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<StrongReference>> GetPostParent(
             StrongReference strongReference,
             CancellationToken cancellationToken = default)
@@ -512,7 +512,7 @@ namespace idunno.Bluesky
         /// <param name="strongReference">A <see cref="StrongReference"/> to the post whose root <see cref="StrongReference"/> should be retrieved.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<StrongReference>> GetPostRoot(
             StrongReference strongReference,
             CancellationToken cancellationToken = default)
@@ -560,7 +560,7 @@ namespace idunno.Bluesky
         /// <param name="strongReference">A <see cref="StrongReference"/> to the post whose <see cref="ReplyReferences"/> should be retrieved.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<ReplyReferences>> GetReplyReferences(
             StrongReference strongReference,
             CancellationToken cancellationToken = default)
@@ -611,7 +611,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri" /> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri" /> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<QuotesCollection>> GetQuotes(
             AtUri uri,
             Cid? cid = null,
@@ -646,7 +646,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
         public async Task<AtProtoHttpResult<RepostedBy>> GetRepostedBy(
             AtUri uri,
             Cid? cid = null,
@@ -750,7 +750,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="query" /> is null or whitespace</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="query" /> is <see langword="null"/> or whitespace</exception>
         public async Task<AtProtoHttpResult<SearchResults>> SearchPosts(
             string query,
             SearchOrder? searchOrder = null,
@@ -810,7 +810,7 @@ namespace idunno.Bluesky
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentException">Thrown when <paramref name="query" /> is whitespace</exception>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="query" /> is null</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="query" /> is <see langword="null"/></exception>
         public async Task<AtProtoHttpResult<SearchResults>> SearchPosts(
             string query,
             DateTimeOffset since ,
@@ -872,7 +872,7 @@ namespace idunno.Bluesky
         /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="query" /> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="query" /> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="query" /> is whitespace.</exception>
         public async Task<AtProtoHttpResult<SearchResults>> SearchPosts(
             string query,

@@ -16,7 +16,7 @@ namespace idunno.Bluesky.RichText
         /// Creates a new instance of <see cref="MentionFacetFeature"/>.
         /// </summary>
         /// <param name="did">The <see cref="Did"/> of the account being mentioned.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
         [JsonConstructor]
         public MentionFacetFeature(Did did)
         {

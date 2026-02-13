@@ -18,7 +18,7 @@ namespace idunno.Bluesky.Drafts
         /// Creates a new instance of <see cref="DraftEmbedRecord"/> with the specified strong reference to a record.
         /// </summary>
         /// <param name="record">The record to embed.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="record"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="record"/> is <see langword="null"/>.</exception>
         [JsonConstructor]
         public DraftEmbedRecord(StrongReference record)
         {
