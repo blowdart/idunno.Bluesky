@@ -34,7 +34,7 @@ namespace Samples.ConsoleShell
             ArgumentException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
-            proxyUri = new Uri("http://localhost:8866");
+            // proxyUri = new Uri("http://localhost:8866");
 
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
@@ -106,30 +106,6 @@ namespace Samples.ConsoleShell
 
                 // Your code goes here
 
-                var deviceId = new Guid("5c76194c-fc19-4413-ac45-bf851a289459");
-                var deviceName = "Web";
-
-                var createDraftResult = await agent.CreateDraft(
-                    new Draft(
-                        new DraftPost("idunno.Bluesky created post"),
-                        deviceId: deviceId,
-                        deviceName: deviceName),
-                    cancellationToken: cancellationToken);
-                Debugger.Break();
-                createDraftResult.EnsureSucceeded();
-
-                var getDraftsResult = await agent.GetDrafts(cancellationToken: cancellationToken);
-                getDraftsResult.EnsureSucceeded();
-
-                foreach (var draftView in getDraftsResult.Result!)
-                {
-                    Console.WriteLine($"Draft {draftView.Id} created at {draftView.CreatedAt}, contains {draftView.Draft.Posts.Count} posts");
-                }
-
-                Debugger.Break();
-
-                var deleteDraftResult = await agent.DeleteDraft(createDraftResult.Result, cancellationToken: cancellationToken);
-                deleteDraftResult.EnsureSucceeded();
             }
         }
     }
