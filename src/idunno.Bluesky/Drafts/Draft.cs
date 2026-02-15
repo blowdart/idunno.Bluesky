@@ -89,25 +89,6 @@ namespace idunno.Bluesky.Drafts
         /// </summary>
         /// <param name="post">The draft post.</param>
         /// <param name="deviceId">UUIDv4 identifier of the device that created this draft.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
-        public Draft(
-            DraftPost post,
-            Guid? deviceId): this(
-                posts: [ post ],
-                deviceId: deviceId,
-                deviceName: null,
-                langs: null,
-                postGateEmbeddingRules: null,
-                threadGateAllowRules: null)
-        {
-            ArgumentNullException.ThrowIfNull(post);
-        }
-
-        /// <summary>
-        /// Creates a new instance of <see cref="Draft"/> with the specified properties.
-        /// </summary>
-        /// <param name="post">The draft post.</param>
-        /// <param name="deviceId">UUIDv4 identifier of the device that created this draft.</param>
         /// <param name="deviceName">The device and/or platform on which the draft was created. Maximum 100 characters.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="deviceName"/> is specified and its length is greater than 100 characters.</exception>

@@ -1937,7 +1937,6 @@ idunno.Bluesky.Drafts.Draft.DeviceId.get -> System.Guid?
 idunno.Bluesky.Drafts.Draft.DeviceId.init -> void
 idunno.Bluesky.Drafts.Draft.DeviceName.get -> string?
 idunno.Bluesky.Drafts.Draft.DeviceName.init -> void
-idunno.Bluesky.Drafts.Draft.Draft(idunno.Bluesky.Drafts.DraftPost! post, System.Guid? deviceId) -> void
 idunno.Bluesky.Drafts.Draft.Draft(idunno.Bluesky.Drafts.DraftPost! post, System.Guid? deviceId, string? deviceName) -> void
 idunno.Bluesky.Drafts.Draft.Draft(string! text, System.Guid? deviceId) -> void
 idunno.Bluesky.Drafts.Draft.Draft(string! text, System.Guid? deviceId, string? deviceName) -> void
@@ -2038,3 +2037,6 @@ static idunno.Bluesky.BlueskyServer.DeleteDraft(idunno.AtProto.TimestampIdentifi
 static idunno.Bluesky.BlueskyServer.GetDrafts(int? limit, string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Drafts.DraftView!>!>!>!
 static idunno.Bluesky.BlueskyServer.UpdateDraft(idunno.Bluesky.Drafts.DraftWithId! draftWithId, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 static readonly idunno.Bluesky.Maximum.ListedDrafts -> int
+idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, idunno.Bluesky.PostSelfLabels? postSelfLabels, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedImage!>? embedImages, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedVideo!>? embedVideos, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedExternal!>? embedExternals, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedRecord!>? embedRecords) -> void
+idunno.Bluesky.PostSelfLabels.ToSelfLabels() -> idunno.AtProto.Labels.SelfLabels!
+static idunno.Bluesky.PostSelfLabels.explicit operator idunno.AtProto.Labels.SelfLabels!(idunno.Bluesky.PostSelfLabels! postSelfLabels) -> idunno.AtProto.Labels.SelfLabels!

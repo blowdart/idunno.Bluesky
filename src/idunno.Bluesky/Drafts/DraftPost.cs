@@ -191,6 +191,35 @@ namespace idunno.Bluesky.Drafts
         }
 
         /// <summary>
+        /// Creates a new instance of <see cref="DraftPost"/> with the specified content and optional embedded media and labels.
+        /// </summary>
+        /// <param name="text">The primary post content.</param>
+        /// <param name="postSelfLabels">The labels to apply to the post.</param>
+        /// <param name="embedImages">The images to embed in the post. (Maximum 4)</param>
+        /// <param name="embedVideos">The videos to embed in the post. (Maximum 1)</param>
+        /// <param name="embedExternals">The external content to embed in the post. (Maximum 1)</param>
+        /// <param name="embedRecords">The records to embed in the post. (Maximum 1)</param>
+        public DraftPost(
+            string text,
+            PostSelfLabels? postSelfLabels,
+            IList<DraftEmbedImage>? embedImages,
+            IList<DraftEmbedVideo>? embedVideos,
+            IList<DraftEmbedExternal>? embedExternals,
+            IList<DraftEmbedRecord>? embedRecords) : this(
+                text: text,
+                labels: null,
+                embedImages: embedImages,
+                embedVideos: embedVideos,
+                embedExternals: embedExternals,
+                embedRecords: embedRecords)
+        {
+            if (postSelfLabels is not null)
+            {
+                Labels = (SelfLabels)postSelfLabels;
+            }
+        }
+
+        /// <summary>
         /// Gets or sets the the primary post content. Maximum 3000 characters and 300 graphemes. Cannot be <see langword="null"/> or empty.
         /// </summary>
         /// <exception cref="ArgumentException">Thrown when setting if the value is <see langword="null"/> or empty.</exception>
