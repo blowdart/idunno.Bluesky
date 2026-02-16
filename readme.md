@@ -23,7 +23,7 @@ BlueskyAgent agent = new ();
 var loginResult = await agent.Login(username, password);
 if (loginResult.Succeeded)
 {
-    var response = await agent.CreatePost("Hello World");
+    var response = await agent.Post("Hello World");
     if (response.Succeeded)
     {
     }
