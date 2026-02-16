@@ -315,10 +315,12 @@ namespace idunno.AtProto
         /// <param name="creator"><para>The <see cref="Did"/> of the creating actor.</para></param>
         /// <param name="rKey"><para>The record key, if any, of the record to be created.</para></param>
         /// <param name="validate">
+        /// <para>
         ///     Flag indicating what level of validation the api should perform.
         ///     If <see langword="false"/> skips lexicon schema validation of record data across all operations.
         ///     If <see langword="true"/> requires validation
         ///     if <see langword="null"/> validates only for known lexicons.
+        /// </para>
         /// </param>
         /// <param name="swapCommit"><para>The <see cref="Cid"/>, if any, to compare and swap with.</para></param>
         /// <param name="service"><para>The service to create the record on.</para></param>
@@ -412,10 +414,12 @@ namespace idunno.AtProto
         /// <param name="creator"><para>The <see cref="Did"/> of the creating actor.</para></param>
         /// <param name="rKey"><para>The record key, if any, of the record to be created.</para></param>
         /// <param name="validate">
+        /// <para>
         ///     Flag indicating what level of validation the api should perform.
         ///     If <see langword="false"/> skips lexicon schema validation of record data across all operations.
         ///     If <see langword="true"/> requires validation
         ///     if <see langword="null"/> validates only for known lexicons.
+        /// </para>
         /// </param>
         /// <param name="swapCommit"><para>The <see cref="Cid"/>, if any, to compare and swap with.</para></param>
         /// <param name="service"><para>The service to create the record on.</para></param>
@@ -601,10 +605,12 @@ namespace idunno.AtProto
         /// <typeparam name="TRecord">The type of the value of record to update.</typeparam>
         /// <param name="repositoryRecord"><para>The record to update.</para></param>
         /// <param name="validate">
+        /// <para>
         ///     Flag indicating what level of validation the api should perform.
         ///     If <see langword="false"/> skips lexicon schema validation of record data across all operations.
         ///     If <see langword="true"/> requires validation
         ///     if <see langword="null"/> validates only for known lexicons.
+        /// </para>
         /// </param>
         /// <param name="service"><para>The service to create the record on.</para></param>
         /// <param name="accessCredentials"><para><see cref="AccessCredentials"/> for the specified service</para></param>
@@ -665,10 +671,12 @@ namespace idunno.AtProto
         /// <param name="creator"><para>The <see cref="AtIdentifier"/> of the creating actor.</para></param>
         /// <param name="rKey"><para>The record key, if any, of the record to be created.</para></param>
         /// <param name="validate">
+        /// <para>
         ///     Flag indicating what level of validation the api should perform.
         ///     If <see langword="false"/> skips lexicon schema validation of record data across all operations.
         ///     If <see langword="true"/> requires validation
         ///     if <see langword="null"/> validates only for known lexicons.
+        /// </para>
         /// </param>
         /// <param name="swapCommit"><para>The <see cref="Cid"/> of the commit, if any, to compare and swap with.</para></param>
         /// <param name="swapRecord"><para>The <see cref="Cid"/> of the record, if any, to compare and swap with.</para></param>
@@ -765,10 +773,12 @@ namespace idunno.AtProto
         /// <param name="repositoryRecord"><para>The record to update.</para></param>
         /// <param name="jsonSerializerOptions"><para><see cref="JsonSerializerOptions"/> to use when serializing <typeparamref name="TRecord"/>.</para></param>
         /// <param name="validate">
+        /// <para>
         ///     Flag indicating what level of validation the api should perform.
         ///     If <see langword="false"/> skips lexicon schema validation of record data across all operations.
         ///     If <see langword="true"/> requires validation
         ///     if <see langword="null"/> validates only for known lexicons.
+        /// </para>
         /// </param>
         /// <param name="service"><para>The service to create the record on.</para></param>
         /// <param name="accessCredentials"><para><see cref="AccessCredentials"/> for the specified service</para></param>
@@ -832,10 +842,12 @@ namespace idunno.AtProto
         /// <param name="creator"><para>The <see cref="AtIdentifier"/> of the creating actor.</para></param>
         /// <param name="rKey"><para>The record key, if any, of the record to be created.</para></param>
         /// <param name="validate">
+        /// <para>
         ///     Flag indicating what level of validation the api should perform.
         ///     If <see langword="false"/> skips lexicon schema validation of record data across all operations.
         ///     If <see langword="true"/> requires validation
         ///     if <see langword="null"/> validates only for known lexicons.
+        /// </para>
         /// </param>
         /// <param name="swapCommit"><para>The <see cref="Cid"/> of the commit, if any, to compare and swap with.</para></param>
         /// <param name="swapRecord"><para>The <see cref="Cid"/> of the record, if any, to compare and swap with.</para></param>

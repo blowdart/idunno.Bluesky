@@ -684,7 +684,11 @@ namespace idunno.Bluesky
             if (extractFacets)
             {
                 IList<Facet> extractedFacets = await FacetExtractor.ExtractFacets(text, cancellationToken: cancellationToken).ConfigureAwait(false);
-                post.Facets = extractedFacets;
+
+                if (extractedFacets.Any())
+                {
+                    post.Facets = extractedFacets;
+                }
             }
 
             if (labels is not null)
@@ -776,7 +780,11 @@ namespace idunno.Bluesky
             if (extractFacets && text is not null)
             {
                 IList<Facet> extractedFacets = await FacetExtractor.ExtractFacets(text, cancellationToken: cancellationToken).ConfigureAwait(false);
-                post.Facets = extractedFacets;
+
+                if (extractedFacets.Any())
+                {
+                    post.Facets = extractedFacets;
+                }
             }
 
             if (labels is not null)

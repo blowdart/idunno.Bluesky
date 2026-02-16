@@ -806,7 +806,12 @@ namespace idunno.Bluesky
 
             if (!string.IsNullOrEmpty(_post.Text) && Facets.Count == 0)
             {
-                _post.Facets = await facetExtractor.ExtractFacets(_post.Text, cancellationToken).ConfigureAwait(false);
+                IList<Facet> facets = await facetExtractor.ExtractFacets(_post.Text, cancellationToken).ConfigureAwait(false);
+
+                if (facets.Any())
+                {
+                    _post.Facets = facets;
+                }
             }
         }
 
