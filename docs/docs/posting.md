@@ -2,7 +2,7 @@
 
 ## <a name="creatingAPost">Creating a post</a>
 
-Let's start off by creating a simple post with the `CreatePost()` method.
+Let's start off by creating a simple post with the `Post()` method.
 
 ```c#
 var postResult = await agent.Post("Hello world!");
