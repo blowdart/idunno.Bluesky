@@ -17,6 +17,12 @@
 * Added support for drafts, including `Draft` record, `CreateDraft()`, `GetDraft()`, `ListDrafts()`, `DeleteDraft()` and `PublishDraft()`.
 * Added `Post(DraftWithId)` to create a post from a draft.
 
+### Fixed
+
+#### Documentation
+
+* Removed erroneous references to `CreatePost()`, thanks [shiftkey](https://github.com/shiftkey)
+
 ### Changed
 
 #### idunno.AtProto
