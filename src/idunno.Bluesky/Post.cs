@@ -17,7 +17,9 @@ namespace idunno.Bluesky
     /// <remarks>
     /// <para>See <see href="https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/feed/post.json">post.json</see> for the lexicon definition.</para>
     /// </remarks>
-    public sealed record class Post : BlueskyTimestampedRecord
+    [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+    [JsonDerivedType(typeof(Post), typeDiscriminator: RecordType.Post)]
+    public record class Post : BlueskyTimestampedRecord
     {
         /// <summary>
         /// Creates a new instance of <see cref="Post"/> and sets <see cref="BlueskyTimestampedRecord.CreatedAt"/> to the current date and time.

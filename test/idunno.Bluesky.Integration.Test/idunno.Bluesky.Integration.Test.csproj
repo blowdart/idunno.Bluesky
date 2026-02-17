@@ -8,5 +8,11 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\idunno.Bluesky\idunno.Bluesky.csproj" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <None Update="image.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>
