@@ -189,7 +189,7 @@ namespace idunno.Bluesky
         /// <summary>
         /// The maximum length of text in an individual draft.
         /// </summary>
-        public static readonly int DraftTextLength = 10000;
+        public static readonly int DraftTextLengthInCharacters = 10000;
 
         /// <summary>
         /// The maximum length of text in an individual draft, in graphemes.

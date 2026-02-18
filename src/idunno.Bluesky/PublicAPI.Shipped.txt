@@ -1922,7 +1922,7 @@ static readonly idunno.Bluesky.Maximum.ThreadGateHiddenReplies -> int
 static readonly idunno.Bluesky.Maximum.ThreadGateRules -> int
 static readonly idunno.Bluesky.Maximum.TrendingTopics -> int
 static readonly idunno.Bluesky.Maximum.Trends -> int
-static readonly idunno.Bluesky.Maximum.DraftTextLength -> int
+static readonly idunno.Bluesky.Maximum.DraftTextLengthInCharacters -> int
 static readonly idunno.Bluesky.Maximum.DraftTextLengthInGraphemes -> int
 const idunno.Bluesky.SelfLabelNames.GraphicMedia = "graphic-media" -> string!
 const idunno.Bluesky.SelfLabelNames.Nudity = "nudity" -> string!

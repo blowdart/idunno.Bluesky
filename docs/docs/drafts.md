@@ -72,6 +72,20 @@ To turn a draft into a post, use the `Post` method, passing in the `DraftWithId`
 If you want the draft to be automatically deleted if the post is successfully created, set the `deleteDraft` parameter to true.
 If you want links and mentions in the draft to be parsed from the draft text set the `extractFacets` parameter to true.
 
+Draft posts allow a much greater post length than an actual post, to allow storing a larger text that can later be refined
+into smaller posts. If you attempt to Post a draft which contains a draft post which is too large a `DraftException` will be thrown.
+You can validate the length by checking the character length against
+`Maximum.PostLengthInCharacters` and the grapheme length of the post against `Maximum.PostLengthInGraphemes`. For example,
+
+```c#
+if (draftPost.Text.Length > Maximum.PostLengthInCharacters ||
+    draftPost.Text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
+{
+    // Inform the user that they need to split the draft into
+    // multiple posts under the individual post limit.
+}
+```
+
 >[!TIP]
 > Remember that if a draft contains media , that media must be available on the device you are posting from,
 > as media is not uploaded until the draft is turned into a post. If the media is not available an exception
