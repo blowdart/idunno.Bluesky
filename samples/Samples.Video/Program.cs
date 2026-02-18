@@ -123,8 +123,8 @@ namespace Samples.Video
                     videoUploadLimitsResult.EnsureSucceeded();
 
                     if (!videoUploadLimitsResult.Result.CanUpload ||
-                        videoUploadLimitsResult.Result.RemainingDailyVideos == 0 ||
-                        videoUploadLimitsResult.Result.RemainingDailyBytes < (ulong)videoAsBytes.LongLength)
+                        (videoUploadLimitsResult.Result.RemainingDailyVideos is not null && videoUploadLimitsResult.Result.RemainingDailyVideos == 0) ||
+                        (videoUploadLimitsResult.Result.RemainingDailyBytes is not null && videoUploadLimitsResult.Result.RemainingDailyBytes < videoAsBytes.LongLength))
                     {
                         ConsoleColor oldColor = Console.ForegroundColor;
                         Console.ForegroundColor = ConsoleColor.Red;

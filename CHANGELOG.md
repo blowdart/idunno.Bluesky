@@ -34,6 +34,12 @@
 
 * Removed `Type` property from `Facet`.
 
+### Breaking Changes
+
+#### idunno.Bluesky
+
+* Switched `RemainingDailyVideos` and `RemainingDailyBytes` in `UploadLimits` to `long?`
+
 ## 1.5.0 - 2026-02-02
 
 ### Added

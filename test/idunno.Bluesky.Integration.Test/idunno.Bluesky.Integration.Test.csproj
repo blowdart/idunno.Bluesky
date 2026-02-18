@@ -10,7 +10,13 @@
   </ItemGroup>
   
   <ItemGroup>
+    <None Update="fakeVideo.mp4">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="image.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="spinningEarth.mp4">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

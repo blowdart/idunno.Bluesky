@@ -1737,9 +1737,9 @@ idunno.Bluesky.Video.UploadLimits.Error.get -> string?
 idunno.Bluesky.Video.UploadLimits.Error.init -> void
 idunno.Bluesky.Video.UploadLimits.Message.get -> string?
 idunno.Bluesky.Video.UploadLimits.Message.init -> void
-idunno.Bluesky.Video.UploadLimits.RemainingDailyBytes.get -> ulong?
+idunno.Bluesky.Video.UploadLimits.RemainingDailyBytes.get -> long?
 idunno.Bluesky.Video.UploadLimits.RemainingDailyBytes.init -> void
-idunno.Bluesky.Video.UploadLimits.RemainingDailyVideos.get -> uint?
+idunno.Bluesky.Video.UploadLimits.RemainingDailyVideos.get -> long?
 idunno.Bluesky.Video.UploadLimits.RemainingDailyVideos.init -> void
 idunno.Bluesky.View
 idunno.Bluesky.View.ExtensionData.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>?

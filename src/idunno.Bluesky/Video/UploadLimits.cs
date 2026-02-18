@@ -13,8 +13,8 @@ namespace idunno.Bluesky.Video
         [JsonConstructor]
         internal UploadLimits(
             bool canUpload,
-            uint? remainingDailyVideos,
-            ulong? remainingDailyBytes,
+            long? remainingDailyVideos,
+            long? remainingDailyBytes,
             string? error,
             string? message)
         {
@@ -36,13 +36,13 @@ namespace idunno.Bluesky.Video
         /// Gets the number of videos remaining the user can upload today, if a limit is imposed.
         /// </summary>
         [JsonInclude]
-        public uint? RemainingDailyVideos { get; init; }
+        public long? RemainingDailyVideos { get; init; }
 
         /// <summary>
         /// Gets the number of bytes remaining the user can upload today, if a limit is imposed.
         /// </summary>
         [JsonInclude]
-        public ulong? RemainingDailyBytes { get; init; }
+        public long? RemainingDailyBytes { get; init; }
 
         /// <summary>
         /// Gets the error returned from the API, if any.

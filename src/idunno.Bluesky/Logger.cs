@@ -95,7 +95,7 @@ namespace idunno.Bluesky
         internal static partial void UploadVideoGetServerDescriptionFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
 
         [LoggerMessage(75, LogLevel.Debug, "GetUploadLimitsSucceeded succeeded for {did} CanUpload = {canUpload}, RemainingDailyVideos = {remainingDailyVideos} RemainingDailyBytes: {remainingDailyBytes}")]
-        internal static partial void GetUploadLimitsSucceeded(ILogger logger, Did did, bool canUpload, uint? remainingDailyVideos, ulong? remainingDailyBytes);
+        internal static partial void GetUploadLimitsSucceeded(ILogger logger, Did did, bool canUpload, long? remainingDailyVideos, long? remainingDailyBytes);
 
         [LoggerMessage(76, LogLevel.Error, "GetUploadLimitsSucceeded failed with {statusCode} for {did}, error {error} message {message}")]
         internal static partial void GetUploadLimitsFailed(ILogger logger, HttpStatusCode statusCode, Did did, string? error, string? message);

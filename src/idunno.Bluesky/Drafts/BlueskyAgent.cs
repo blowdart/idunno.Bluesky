@@ -175,6 +175,9 @@ namespace idunno.Bluesky
                 StrongReference? previousPostStrongReference = null;
                 AtProtoHttpResult<CreateRecordResult>? postResult = null;
 
+                int videoCount = 0;
+                long totalVideoUploadSize = 0;
+
                 // First we check that any local media exists
                 foreach (DraftPost? draftPost in draftWithId.Draft.Posts)
                 {
@@ -206,6 +209,28 @@ namespace idunno.Bluesky
                         {
                             throw new DraftException($"Embedded video {missingVideos[0].Path} not found.");
                         }
+                        else
+                        {
+                            foreach (DraftEmbedVideo videoPath in draftPost.EmbedVideos)
+                            {
+                                videoCount++;
+                                totalVideoUploadSize += new FileInfo(videoPath.LocalRef.Path).Length;
+                            }
+                        }
+                    }
+                }
+
+                // Now check the upload quote for videos if we have any.
+                if (videoCount > 0)
+                {
+                    AtProtoHttpResult<UploadLimits> videoUploadLimitsResult = await GetVideoUploadLimits(cancellationToken: cancellationToken).ConfigureAwait(false);
+                    videoUploadLimitsResult.EnsureSucceeded();
+
+                    if (!videoUploadLimitsResult.Result.CanUpload ||
+                        (videoUploadLimitsResult.Result.RemainingDailyVideos is not null && videoUploadLimitsResult.Result.RemainingDailyVideos < videoCount) ||
+                        (videoUploadLimitsResult.Result.RemainingDailyBytes is not null && videoUploadLimitsResult.Result.RemainingDailyBytes < totalVideoUploadSize))
+                    {
+                        throw new DraftException($"Video upload limits exceeded for all the videos in the draft.");
                     }
                 }
 
@@ -315,8 +340,8 @@ namespace idunno.Bluesky
                             videoUploadLimitsResult.EnsureSucceeded();
 
                             if (!videoUploadLimitsResult.Result.CanUpload ||
-                                videoUploadLimitsResult.Result.RemainingDailyVideos == 0 ||
-                                videoUploadLimitsResult.Result.RemainingDailyBytes < (ulong)fileBytes.LongLength)
+                                (videoUploadLimitsResult.Result.RemainingDailyVideos is not null && videoUploadLimitsResult.Result.RemainingDailyVideos == 0) ||
+                                (videoUploadLimitsResult.Result.RemainingDailyBytes is not null && videoUploadLimitsResult.Result.RemainingDailyBytes < fileBytes.LongLength))
                             {
                                 throw new DraftException($"Video upload limits exceeded. Cannot upload video {path}");
                             }
@@ -375,11 +400,11 @@ namespace idunno.Bluesky
                                     captions.Add(captionsUploadResult.Result);
                                 }
 
-                                postBuilder.Add(new EmbeddedVideo(uploadResult.Result.Blob, captions));
+                                postBuilder.Add(new EmbeddedVideo(uploadResult.Result.Blob, captions: captions, altText: embedVideo.AltText));
                             }
                             else
                             {
-                                postBuilder.Add(new EmbeddedVideo(uploadResult.Result.Blob));
+                                postBuilder.Add(new EmbeddedVideo(uploadResult.Result.Blob, altText: embedVideo.AltText));
                             }
                         }
                     }
