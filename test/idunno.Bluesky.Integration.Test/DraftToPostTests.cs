@@ -854,6 +854,10 @@ namespace idunno.Bluesky.Integration.Test
             }
         }
 
+        // Where video is too large
+        // Where total size of multiple videos is too large
+        // Text too long
+
         private static TestServer BuildTestServer(
             AccessCredentials expectedCredentials,
             Func<HttpContext, Task>? createRecordHandler = null,

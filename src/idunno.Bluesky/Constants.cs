@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Collections.ObjectModel;
 using idunno.AtProto;
 
 namespace idunno.Bluesky
@@ -184,6 +185,16 @@ namespace idunno.Bluesky
         /// The maximum number of drafts that can be requested from GetDrafts().
         /// </summary>
         public static readonly int ListedDrafts = 100;
+
+        /// <summary>
+        /// The maximum length of text in an individual draft.
+        /// </summary>
+        public static readonly int DraftTextLength = 10000;
+
+        /// <summary>
+        /// The maximum length of text in an individual draft, in graphemes.
+        /// </summary>
+        public static readonly int DraftTextLengthInGraphemes = 1000;
     }
 
     /// <summary>

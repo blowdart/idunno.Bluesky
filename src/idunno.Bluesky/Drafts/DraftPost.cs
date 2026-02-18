@@ -21,14 +21,17 @@ namespace idunno.Bluesky.Drafts
         /// <summary>
         /// Creates a new instance of <see cref="DraftPost"/> with the specified content and optional embedded media and labels.
         /// </summary>
-        /// <param name="text">The primary post content.</param>
+        /// <param name="text">The primary post content. It has a higher limit than post contents to allow storing a larger text that can later be refined into smaller posts.</param>
         /// <param name="labels">The labels to apply to the post.</param>
         /// <param name="embedImages">The images to embed in the post. (Maximum 4)</param>
         /// <param name="embedVideos">The videos to embed in the post. (Maximum 1)</param>
         /// <param name="embedExternals">The external content to embed in the post. (Maximum 1)</param>
         /// <param name="embedRecords">The records to embed in the post. (Maximum 1)</param>
         /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than 3000 characters or 300 graphemes, or when the number of embedded media or records exceeds the specified limits.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// Thrown when the text length is greater than <see cref="Maximum.DraftTextLength"/> characters or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes, or
+        /// when the number of embedded media or records exceeds the specified limits.
+        /// </exception>
         [JsonConstructor]
         public DraftPost(
             string text,
@@ -41,10 +44,10 @@ namespace idunno.Bluesky.Drafts
             ArgumentException.ThrowIfNullOrEmpty(text);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(
                 text.Length,
-                3000);
+                Maximum.DraftTextLength);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(
                 text.GetGraphemeLength(),
-                300);
+                Maximum.DraftTextLengthInGraphemes);
 
             ArgumentOutOfRangeException.ThrowIfGreaterThan(
                 embedImages?.Count ?? 0,
@@ -70,9 +73,9 @@ namespace idunno.Bluesky.Drafts
         /// <summary>
         /// Creates a new instance of <see cref="DraftPost"/> with the specified content.
         /// </summary>
-        /// <param name="text">The primary post content.</param>
+        /// <param name="text">The primary post content. It has a higher limit than post contents to allow storing a larger text that can later be refined into smaller posts.</param>
         /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than 3000 characters or 300 graphemes.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than <see cref="Maximum.DraftTextLength"/> characters or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes.</exception>
         public DraftPost(string text) : this(
             text: text,
             labels: null,
@@ -84,19 +87,19 @@ namespace idunno.Bluesky.Drafts
             ArgumentException.ThrowIfNullOrEmpty(text);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(
                 text.Length,
-                3000);
+                Maximum.DraftTextLength);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(
                 text.GetGraphemeLength(),
-                300);
+                Maximum.DraftTextLengthInGraphemes);
         }
 
         /// <summary>
         /// Creates a new instance of <see cref="DraftPost"/> with the specified content and embedded images.
         /// </summary>
-        /// <param name="text">The primary post content.</param>
+        /// <param name="text">The primary post content. It has a higher limit than post contents to allow storing a larger text that can later be refined into smaller posts.</param>
         /// <param name="embedImages">The images to embed in the post. (Maximum 4)</param>
         /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than 3000 characters or 300 graphemes, or when the number of embedded images exceeds 4.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than <see cref="Maximum.DraftTextLength"/> characters or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes, or when the number of embedded images exceeds 4.</exception>
         public DraftPost(string text, IList<DraftEmbedImage> embedImages) : this(
             text: text,
             labels: null,
@@ -108,10 +111,10 @@ namespace idunno.Bluesky.Drafts
             ArgumentException.ThrowIfNullOrEmpty(text);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(
                 text.Length,
-                3000);
+                Maximum.DraftTextLength);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(
                 text.GetGraphemeLength(),
-                300);
+                Maximum.DraftTextLengthInGraphemes);
 
             ArgumentOutOfRangeException.ThrowIfGreaterThan(
                 embedImages?.Count ?? 0,
@@ -121,10 +124,10 @@ namespace idunno.Bluesky.Drafts
         /// <summary>
         /// Creates a new instance of <see cref="DraftPost"/> with the specified content and embedded image.
         /// </summary>
-        /// <param name="text">The primary post content.</param>
+        /// <param name="text">The primary post content. It has a higher limit than post contents to allow storing a larger text that can later be refined into smaller posts.</param>
         /// <param name="embedImage">The image to embed in the post.</param>
         /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than 3000 characters or 300 graphemes.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than <see cref="Maximum.DraftTextLength"/> characters or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes.</exception>
         public DraftPost(string text, DraftEmbedImage embedImage) : this(
             text: text,
             labels: null,
@@ -136,19 +139,19 @@ namespace idunno.Bluesky.Drafts
             ArgumentException.ThrowIfNullOrEmpty(text);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(
                 text.Length,
-                3000);
+                Maximum.DraftTextLength);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(
                 text.GetGraphemeLength(),
-                300);
+                Maximum.DraftTextLengthInGraphemes);
         }
 
         /// <summary>
         /// Creates a new instance of <see cref="DraftPost"/> with the specified content and labels.
         /// </summary>
-        /// <param name="text">The primary post content.</param>
+        /// <param name="text">The primary post content. It has a higher limit than post contents to allow storing a larger text that can later be refined into smaller posts.</param>
         /// <param name="labels">The labels to apply to the post.</param>
         /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than 3000 characters or 300 graphemes.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than <see cref="Maximum.DraftTextLength"/> characters or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes.</exception>
         public DraftPost(string text, SelfLabels labels) : this(
             text: text,
             labels: labels,
@@ -160,19 +163,19 @@ namespace idunno.Bluesky.Drafts
             ArgumentException.ThrowIfNullOrEmpty(text);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(
                 text.Length,
-                3000);
+               Maximum.DraftTextLengthInGraphemes);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(
                 text.GetGraphemeLength(),
-                300);
+                Maximum.DraftTextLengthInGraphemes);
         }
 
         /// <summary>
         /// Creates a new instance of <see cref="DraftPost"/> with the specified content and embedded video.
         /// </summary>
-        /// <param name="text">The primary post content.</param>
+        /// <param name="text">The primary post content. It has a higher limit than post contents to allow storing a larger text that can later be refined into smaller posts.</param>
         /// <param name="embedVideo">The video to embed in the post.</param>
         /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than 3000 characters or 300 graphemes.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than <see cref="Maximum.DraftTextLength"/> characters or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes.</exception>
         public DraftPost(string text, DraftEmbedVideo embedVideo) : this(
             text: text,
             labels: null,
@@ -184,21 +187,23 @@ namespace idunno.Bluesky.Drafts
             ArgumentException.ThrowIfNullOrEmpty(text);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(
                 text.Length,
-                3000);
+                Maximum.DraftTextLength);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(
                 text.GetGraphemeLength(),
-                300);
+                Maximum.DraftTextLengthInGraphemes);
         }
 
         /// <summary>
         /// Creates a new instance of <see cref="DraftPost"/> with the specified content and optional embedded media and labels.
         /// </summary>
-        /// <param name="text">The primary post content.</param>
+        /// <param name="text">The primary post content. It has a higher limit than post contents to allow storing a larger text that can later be refined into smaller posts.</param>
         /// <param name="postSelfLabels">The labels to apply to the post.</param>
         /// <param name="embedImages">The images to embed in the post. (Maximum 4)</param>
         /// <param name="embedVideos">The videos to embed in the post. (Maximum 1)</param>
         /// <param name="embedExternals">The external content to embed in the post. (Maximum 1)</param>
         /// <param name="embedRecords">The records to embed in the post. (Maximum 1)</param>
+        /// <exception cref="ArgumentException">Thrown when the text is <see langword="null"/> or empty.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the text length is greater than <see cref="Maximum.DraftTextLength"/> characters or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes.</exception>.
         public DraftPost(
             string text,
             PostSelfLabels? postSelfLabels,
@@ -213,6 +218,15 @@ namespace idunno.Bluesky.Drafts
                 embedExternals: embedExternals,
                 embedRecords: embedRecords)
         {
+            ArgumentException.ThrowIfNullOrEmpty(text);
+
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(
+                text.Length,
+                Maximum.DraftTextLength);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(
+                text.GetGraphemeLength(),
+                Maximum.DraftTextLengthInGraphemes);
+
             if (postSelfLabels is not null)
             {
                 Labels = (SelfLabels)postSelfLabels;
@@ -220,10 +234,11 @@ namespace idunno.Bluesky.Drafts
         }
 
         /// <summary>
-        /// Gets or sets the the primary post content. Maximum 3000 characters and 300 graphemes. Cannot be <see langword="null"/> or empty.
+        /// Gets or sets the the primary post content.  It has a higher limit than post contents to allow storing a larger text that can later be refined into smaller posts.
+        /// Cannot be <see langword="null"/> or empty, cannot be larger than <see cref="Maximum.DraftTextLength"/> characters or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes.
         /// </summary>
         /// <exception cref="ArgumentException">Thrown when setting if the value is <see langword="null"/> or empty.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when setting if the value length is greater than 3000 characters or 300 graphemes.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when setting if the value length is greater than <see cref="Maximum.DraftTextLength"/> characters or <see cref="Maximum.DraftTextLengthInGraphemes"/> graphemes.</exception>.
         [JsonRequired]
         public string Text
         {
@@ -231,13 +246,19 @@ namespace idunno.Bluesky.Drafts
 
             set
             {
-                ArgumentException.ThrowIfNullOrEmpty(value);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(
-                    value.Length,
-                    3000);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(
-                    value.GetGraphemeLength(),
-                    300);
+                if ((EmbedImages is null || EmbedImages.Count == 0) &&
+                    (EmbedVideos is null || EmbedVideos.Count == 0))
+                {
+                    ArgumentException.ThrowIfNullOrEmpty(value);
+
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(
+                        value.Length,
+                        Maximum.DraftTextLength);
+                    ArgumentOutOfRangeException.ThrowIfGreaterThan(
+                        value.GetGraphemeLength(),
+                        Maximum.DraftTextLengthInGraphemes);
+                }
+
                 field = value;
             }
         }

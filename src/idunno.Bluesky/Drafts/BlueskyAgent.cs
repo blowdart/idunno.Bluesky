@@ -178,13 +178,23 @@ namespace idunno.Bluesky
                 int videoCount = 0;
                 long totalVideoUploadSize = 0;
 
+                int validationOffset = 0;
+
                 // First we check that any local media exists
                 foreach (DraftPost? draftPost in draftWithId.Draft.Posts)
                 {
+                    validationOffset++;
+
                     if (draftPost is null)
                     {
                         continue;
                     }
+
+                    if (draftPost.Text is not null && (draftPost.Text.Length > Maximum.PostLengthInCharacters || draftPost.Text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
+                    {
+                        throw new DraftException($"Draft text in DraftPost[{validationOffset}] is too long for a real post.");
+                    }
+
 
                     if (draftPost.EmbedImages is not null)
                     {
@@ -194,7 +204,7 @@ namespace idunno.Bluesky
 
                         if (missingImages.Count > 0)
                         {
-                            throw new DraftException($"Embedded image {missingImages[0].LocalRef.Path} not found.");
+                            throw new DraftException($"Embedded image {missingImages[0].LocalRef.Path} in DraftPost[{validationOffset}] not found.");
                         }
                     }
 
@@ -207,7 +217,7 @@ namespace idunno.Bluesky
 
                         if (missingVideos.Count > 0)
                         {
-                            throw new DraftException($"Embedded video {missingVideos[0].Path} not found.");
+                            throw new DraftException($"Embedded video {missingVideos[0].Path} in DraftPost[{validationOffset}] not found.");
                         }
                         else
                         {
