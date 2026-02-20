@@ -7,6 +7,7 @@ using Samples.Common;
 
 using idunno.AtProto;
 using idunno.Bluesky;
+using idunno.Bluesky.Record;
 
 namespace Samples.ConsoleShell
 {
@@ -31,7 +32,7 @@ namespace Samples.ConsoleShell
             ArgumentException.ThrowIfNullOrEmpty(password);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
-            // proxyUri = new Uri("http://localhost:8866");
+            proxyUri = new Uri("http://localhost:8866");
 
             // Uncomment the next line to route all requests  through Fiddler Classic
             // proxyUri = new Uri("http://localhost:8888");
@@ -102,7 +103,23 @@ namespace Samples.ConsoleShell
                 // END-AUTHENTICATION
 
                 // Your code goes here
+                var getRecordResult = await agent.GetRecord<Profile>(
+                    uri: new AtUri("at://blowdart.me/app.bsky.actor.profile/self"),
+                    jsonSerializerOptions: BlueskyJsonSerializerOptions.Options,
+                    cancellationToken: cancellationToken);
+                getRecordResult.EnsureSucceeded();
 
+                getRecordResult = await agent.GetRecord<Profile>(
+                    uri: new AtUri("at://beans.monster/app.bsky.actor.profile/self"),
+                    jsonSerializerOptions: BlueskyJsonSerializerOptions.Options,
+                    cancellationToken: cancellationToken);
+                getRecordResult.EnsureSucceeded();
+
+                // Your code goes here
+                var getrawRecordResult = await agent.GetRawRecord(
+                    uri: new AtUri("at://blowdart.me/app.bsky.actor.profile/self"),
+                    cancellationToken: cancellationToken);
+                getRecordResult.EnsureSucceeded();
             }
         }
     }

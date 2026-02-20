@@ -687,10 +687,9 @@ idunno.AtProto.Repo.AtProtoRepositoryObject.StrongReference.get -> idunno.AtProt
 idunno.AtProto.Repo.AtProtoRepositoryObject.Uri.get -> idunno.AtProto.AtUri!
 idunno.AtProto.Repo.AtProtoRepositoryObject.Uri.init -> void
 idunno.AtProto.Repo.AtProtoRepositoryRecord
-idunno.AtProto.Repo.AtProtoRepositoryRecord.AtProtoRepositoryRecord(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid, idunno.AtProto.Repo.AtProtoRecord? value) -> void
 idunno.AtProto.Repo.AtProtoRepositoryRecord.ExtensionData.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>?
 idunno.AtProto.Repo.AtProtoRepositoryRecord.ExtensionData.set -> void
-idunno.AtProto.Repo.AtProtoRepositoryRecord.Value.get -> idunno.AtProto.Repo.AtProtoRecord?
+idunno.AtProto.Repo.AtProtoRepositoryRecord.Value.get -> System.Text.Json.JsonDocument?
 idunno.AtProto.Repo.AtProtoRepositoryRecord.Value.set -> void
 idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>
 idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.AtProtoRepositoryRecord(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid, TRecord! value) -> void

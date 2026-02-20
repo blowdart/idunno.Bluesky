@@ -1418,6 +1418,234 @@ namespace idunno.AtProto
         }
 
         /// <summary>
+        /// Gets the record specified by the identifying parameters.
+        /// </summary>
+        /// <param name="uri">The <see cref="AtUri"/> of the record to retrieve.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an incorrect format or cannot be resolved to a PDS.</exception>
+        public async Task<AtProtoHttpResult<AtProtoRepositoryRecord>> GetRawRecord(
+            AtUri uri)
+        {
+            ArgumentNullException.ThrowIfNull(uri);
+
+            if (uri.Repo is null)
+            {
+                throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
+            }
+
+            if (uri.Collection is null)
+            {
+                throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+            }
+
+            if (uri.RecordKey is null)
+            {
+                throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+            }
+
+            Uri? service = null;
+
+            if (IsAuthenticated)
+            {
+                service = Service;
+            }
+
+            service ??= await ResolvePdsUriFromRepo(uri.Repo).ConfigureAwait(false);
+
+            return await GetRawRecord(uri.Repo, uri.Collection, uri.RecordKey, cid: null, service: service, serviceProxy : null).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Gets the record specified by the identifying parameters.
+        /// </summary>
+        /// <param name="uri">The <see cref="AtUri"/> of the record to retrieve.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an incorrect format or cannot be resolved to a PDS.</exception>
+        public async Task<AtProtoHttpResult<AtProtoRepositoryRecord>> GetRawRecord(
+            AtUri uri,
+            CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(uri);
+
+            if (uri.Repo is null)
+            {
+                throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
+            }
+
+            if (uri.Collection is null)
+            {
+                throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+            }
+
+            if (uri.RecordKey is null)
+            {
+                throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+            }
+
+            Uri? service = null;
+
+            if (IsAuthenticated)
+            {
+                service = Service;
+            }
+
+            service ??= await ResolvePdsUriFromRepo(uri.Repo, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            return await GetRawRecord(uri.Repo, uri.Collection, uri.RecordKey, cid: null, service: service, serviceProxy: null, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Gets the record specified by the identifying parameters.
+        /// </summary>
+        /// <param name="uri">The <see cref="AtUri"/> of the record to retrieve.</param>
+        /// <param name="cid">The CID of the version of the record to retrieve.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an incorrect format or cannot be resolved to a PDS.</exception>
+        public async Task<AtProtoHttpResult<AtProtoRepositoryRecord>> GetRawRecord(
+            AtUri uri,
+            Cid cid)
+        {
+            ArgumentNullException.ThrowIfNull(uri);
+
+            if (uri.Repo is null)
+            {
+                throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
+            }
+
+            if (uri.Collection is null)
+            {
+                throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+            }
+
+            if (uri.RecordKey is null)
+            {
+                throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+            }
+
+            Uri? service = null;
+
+            if (IsAuthenticated)
+            {
+                service = Service;
+            }
+
+            service ??= await ResolvePdsUriFromRepo(uri.Repo).ConfigureAwait(false);
+
+            return await GetRawRecord(uri.Repo, uri.Collection, uri.RecordKey, cid: cid, service: service, serviceProxy: null).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Gets the record specified by the identifying parameters.
+        /// </summary>
+        /// <param name="uri">The <see cref="AtUri"/> of the record to retrieve.</param>
+        /// <param name="cid">The CID of the version of the record to retrieve.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an incorrect format or cannot be resolved to a PDS.</exception>
+        public async Task<AtProtoHttpResult<AtProtoRepositoryRecord>> GetRawRecord(
+            AtUri uri,
+            Cid cid,
+            CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(uri);
+
+            if (uri.Repo is null)
+            {
+                throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
+            }
+
+            if (uri.Collection is null)
+            {
+                throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+            }
+
+            if (uri.RecordKey is null)
+            {
+                throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+            }
+
+            Uri? service = null;
+
+            if (IsAuthenticated)
+            {
+                service = Service;
+            }
+
+            service ??= await ResolvePdsUriFromRepo(uri.Repo, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            return await GetRawRecord(uri.Repo, uri.Collection, uri.RecordKey, cid: cid, service: service, serviceProxy: null, cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Gets the record specified by the identifying parameters.
+        /// </summary>
+        /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the record from.</param>
+        /// <param name="collection">The NSID of the collection the record should be retrieved from.</param>
+        /// <param name="rKey">The record key, identifying the record to be retrieved.</param>
+        /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
+        /// <param name="service">The service to retrieve the record from. If not specified the pds will be discovered based on <paramref name="repo"/>.</param>
+        /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/>, <paramref name="collection"/> is <see langword="null"/> or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="service"/> is <see langword="null"/> and <paramref name="repo"/> cannot be resolved to a pds.</exception>
+        public async Task<AtProtoHttpResult<AtProtoRepositoryRecord>> GetRawRecord(
+            AtIdentifier repo,
+            Nsid collection,
+            RecordKey rKey,
+            Cid? cid,
+            Uri? service,
+            string? serviceProxy = null,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(repo);
+            ArgumentNullException.ThrowIfNull(collection);
+            ArgumentNullException.ThrowIfNull(rKey);
+
+            AccessCredentials? accessCredentials = null;
+
+            service ??= await ResolvePdsUriFromRepo(repo, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            // Only send access credentials if the session is authenticated and the service being called is the service the session is authenticated to.
+            if (IsAuthenticated && service == Service)
+            {
+                accessCredentials = Credentials;
+            }
+
+            Logger.GetRecordCalled(_logger, repo, collection, rKey, service);
+
+            AtProtoHttpResult<AtProtoRepositoryRecord> result =
+                await AtProtoServer.GetRecord(
+                    repo: repo,
+                    collection: collection,
+                    rKey: rKey,
+                    cid: cid,
+                    service: service,
+                    accessCredentials: accessCredentials,
+                    httpClient: HttpClient,
+                    serviceProxy: serviceProxy,
+                    onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+                    loggerFactory: LoggerFactory,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (!result.Succeeded)
+            {
+                Logger.GetRecordFailed(_logger, result.StatusCode, repo, collection, rKey, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message, service);
+            }
+            else if (result.Result is null && result.StatusCode == HttpStatusCode.OK)
+            {
+                Logger.GetRecordSucceededButReturnedNullResult(_logger, repo, collection, rKey, service);
+            }
+
+            return result;
+        }
+
+        /// <summary>
         /// Gets a page of records in the specified <paramref name="collection"/> for the current user.
         /// </summary>
         /// <typeparam name="TRecord">The type of the record value to get.</typeparam>

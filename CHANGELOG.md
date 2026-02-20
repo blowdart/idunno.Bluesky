@@ -12,12 +12,21 @@
 
 ### Added
 
+#### idunno.AtProto
+
+* Added `AccessTokenException`, which will be thrown if a supplied access token is not valid for a service.
+* Added `GetRawRecord` to `AtProtoAgent` and `AtProtoServer`.
+
 #### idunno.Bluesky
 
 * Added support for drafts, including `Draft` record, `CreateDraft()`, `GetDraft()`, `ListDrafts()`, `DeleteDraft()` and `PublishDraft()`.
 * Added `Post(DraftWithId)` to create a post from a draft.
 
 ### Fixed
+
+#### idunno.Bluesky
+
+* Fixed `DeleteLike()` to use the correct collection when validating the `uri` parameter.
 
 #### Documentation
 
@@ -28,6 +37,8 @@
 #### idunno.AtProto
 
 * `GetRecord<T>` and `ListRecords<T>` will now attempt to resolve the PDS hosting the record if a service is not specified.
+* `GetRecord`, `CreateRecord`, `DeleteRecord`, `PutRecord`, `ListRecords` and `ApplyWrites` methods on `AtProtoServer` will now
+  throw `AccessTokenException` if any specified credentials have not been issued by the specified service.
 * Removed `Type` property from `Blob`.
 * Removed `Type` property from `SelfLabels`.
 

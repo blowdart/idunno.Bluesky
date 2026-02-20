@@ -72,6 +72,7 @@ namespace idunno.AtProto
         /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="operations"/> is an empty collection.</exception>
+        /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
         [RequiresUnreferencedCode("Use a ApplyWrites overload which takes JsonSerializerOptions instead.")]
         [RequiresDynamicCode("Use a ApplyWrites overload which takes JsonSerializerOptions instead.")]
         public static async Task<AtProtoHttpResult<ApplyWritesResults>> ApplyWrites(
@@ -96,6 +97,11 @@ namespace idunno.AtProto
             if (operations.Count == 0)
             {
                 throw new ArgumentException("cannot be an empty collection.", nameof(operations));
+            }
+
+            if (service != accessCredentials.Service)
+            {
+                throw new AccessTokenException("Credentials not valid for the specified service.");
             }
 
             ICollection<ApplyWritesRequestValueBase> mappedOperations = [];
@@ -203,6 +209,7 @@ namespace idunno.AtProto
         /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="operations"/> is an empty collection.</exception>
+        /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public static async Task<AtProtoHttpResult<ApplyWritesResults>> ApplyWrites(
@@ -229,6 +236,11 @@ namespace idunno.AtProto
             if (operations.Count == 0)
             {
                 throw new ArgumentException("cannot be an empty collection.", nameof(operations));
+            }
+
+            if (service != accessCredentials.Service)
+            {
+                throw new AccessTokenException("Credentials not valid for the specified service.");
             }
 
             ICollection<ApplyWritesRequestValueBase> mappedOperations = [];
@@ -336,6 +348,7 @@ namespace idunno.AtProto
         /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="record"/> cannot be serialized to JSON.</exception>
+        /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
         [RequiresDynamicCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
         public static async Task<AtProtoHttpResult<CreateRecordResult>> CreateRecord<TRecord>(
@@ -359,6 +372,11 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
+
+            if (service != accessCredentials.Service)
+            {
+                throw new AccessTokenException("Credentials not valid for the specified service.");
+            }
 
             JsonNode? serializedRecord = JsonSerializer.SerializeToNode(record, DefaultJsonSerializerOptionsWithNoTypeResolution) ?? throw new ArgumentException("Record cannot be serialized.", nameof(record));
 
@@ -435,6 +453,7 @@ namespace idunno.AtProto
         /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="record"/> cannot be serialized to JSON.</exception>
+        /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public static async Task<AtProtoHttpResult<CreateRecordResult>> CreateRecord<TRecord>(
@@ -459,6 +478,11 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
+
+            if (service != accessCredentials.Service)
+            {
+                throw new AccessTokenException("Credentials not valid for the specified service.");
+            }
 
             // To avoid callers having to json codegen PutRecordRequest<theirRecord> we manually serialize.
             // We don't mutate the parameter value because it will, in turn, be passed down to the AtProtoHttpClient.
@@ -527,6 +551,7 @@ namespace idunno.AtProto
         /// Thrown when any of <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="rKey"/>, <paramref name="service"/>,
         /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
+        /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -555,6 +580,11 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
+
+            if (service != accessCredentials.Service)
+            {
+                throw new AccessTokenException("Credentials not valid for the specified service.");
+            }
 
             DeleteRecordRequest deleteRecordRequest = new(repo, collection, rKey) { SwapRecord = swapRecord, SwapCommit = swapCommit };
 
@@ -623,6 +653,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">
         /// Thrown when any of <paramref name="repositoryRecord"/>, <paramref name="service"/>, <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
+        /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
         [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
         public static async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecord>(
@@ -644,6 +675,12 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
+
+            if (service != accessCredentials.Service)
+            {
+                throw new AccessTokenException("Credentials not valid for the specified service.");
+            }
+
 
             return await PutRecord(
                 record: repositoryRecord.Value,
@@ -693,6 +730,7 @@ namespace idunno.AtProto
         /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="record"/> cannot be serialized to JSON.</exception>
+        /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
         [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
         public static async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecord>(
@@ -718,6 +756,11 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
+
+            if (service != accessCredentials.Service)
+            {
+                throw new AccessTokenException("Credentials not valid for the specified service.");
+            }
 
             // To avoid callers having to json codegen PutRecordRequest<theirRecord> we manually serialize.
             // We don't mutate the parameter value because it will, in turn, be passed down to the AtProtoHttpClient.
@@ -791,6 +834,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">
         /// Thrown when any of <paramref name="repositoryRecord"/>, <paramref name="service"/>, <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
+        /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public static async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecord>(
@@ -813,6 +857,11 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
+
+            if (service != accessCredentials.Service)
+            {
+                throw new AccessTokenException("Credentials not valid for the specified service.");
+            }
 
             return await PutRecord(
                 record: repositoryRecord.Value,
@@ -864,6 +913,7 @@ namespace idunno.AtProto
         /// <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> are <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="record"/> cannot be serialized to JSON.</exception>
+        /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public static async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecord>(
@@ -890,6 +940,11 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
+
+            if (service != accessCredentials.Service)
+            {
+                throw new AccessTokenException("Credentials not valid for the specified service.");
+            }
 
             // To avoid callers having to json codegen PutRecordRequest<theirRecord> we manually serialize.
             // We don't mutate the parameter value because it will, in turn, be passed down to the AtProtoHttpClient.
@@ -958,6 +1013,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">
         /// Thrown when any of <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="rKey"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
+        /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are specified but are not valid for the specified <paramref name="service"/>.</exception>
         [RequiresDynamicCode("Use a Get overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a Get overload which takes JsonSerializerOptions instead.")]
         public static async Task<AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>>> GetRecord<TRecord>(
@@ -978,6 +1034,11 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(rKey);
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
+
+            if (accessCredentials is not null && service != accessCredentials.Service)
+            {
+                throw new AccessTokenException("Credentials not valid for the specified service.");
+            }
 
             AtProtoHttpClient<AtProtoRepositoryRecord<TRecord>> client;
 
@@ -1026,6 +1087,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">
         /// Thrown when any of <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="rKey"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
+        /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are specified but are not valid for the specified <paramref name="service"/>.</exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public static async Task<AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>>> GetRecord<TRecord>(
@@ -1049,6 +1111,11 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(httpClient);
 
             AtProtoHttpClient<AtProtoRepositoryRecord<TRecord>> client;
+
+            if (accessCredentials is not null && service != accessCredentials.Service)
+            {
+                throw new AccessTokenException("Credentials not valid for the specified service.");
+            }
 
             if (string.IsNullOrWhiteSpace(serviceProxy))
             {
@@ -1077,6 +1144,83 @@ namespace idunno.AtProto
         }
 
         /// <summary>
+        /// Gets a <see cref="StrongReference"/> wrapped record specified by the identifying parameters. May require authentication.
+        /// </summary>
+        /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the record from.</param>
+        /// <param name="collection">The NSID of the collection the record should be deleted from.</param>
+        /// <param name="rKey">The record key, identifying the record to be deleted.</param>
+        /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
+        /// <param name="service">The service to retrieve the record from.</param>
+        /// <param name="accessCredentials">Optional access credentials for the specified service.</param>
+        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+        /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
+        /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when any of <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="rKey"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
+        /// </exception>
+        /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are specified but are not valid for the specified <paramref name="service"/>.</exception>
+        [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "")]
+        [SuppressMessage("Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All serialization information is captured by the underlying options.")]
+        [UnconditionalSuppressMessage(
+            "AOT", "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.", Justification = "All serialization information is captured by the underlying options.")]
+        public static async Task<AtProtoHttpResult<AtProtoRepositoryRecord>> GetRecord(
+            AtIdentifier repo,
+            Nsid collection,
+            RecordKey rKey,
+            Cid? cid,
+            Uri service,
+            AccessCredentials? accessCredentials,
+            HttpClient httpClient,
+            string? serviceProxy = null,
+            Action<AtProtoCredential>? onCredentialsUpdated = null,
+            ILoggerFactory? loggerFactory = default,
+            CancellationToken cancellationToken = default) 
+        {
+            ArgumentNullException.ThrowIfNull(repo);
+            ArgumentNullException.ThrowIfNull(collection);
+            ArgumentNullException.ThrowIfNull(rKey);
+            ArgumentNullException.ThrowIfNull(service);
+            ArgumentNullException.ThrowIfNull(httpClient);
+
+            if (accessCredentials is not null && service != accessCredentials.Service)
+            {
+                throw new AccessTokenException("Credentials not valid for the specified service.");
+            }
+
+            AtProtoHttpClient<AtProtoRepositoryRecord> client;
+
+            if (string.IsNullOrWhiteSpace(serviceProxy))
+            {
+                client = new(loggerFactory);
+            }
+            else
+            {
+                client = new(serviceProxy, loggerFactory);
+            }
+
+            string queryString = $"repo={Uri.EscapeDataString(repo.ToString())}&collection={Uri.EscapeDataString(collection.ToString())}&rkey={Uri.EscapeDataString(rKey.ToString())}";
+
+            if (cid is not null)
+            {
+                queryString += $"&cid={Uri.EscapeDataString(cid.ToString())}";
+            }
+
+            return await client.Get(
+                service,
+                $"{GetRecordEndpoint}?{queryString}",
+                accessCredentials,
+                httpClient,
+                jsonSerializerOptions: AtProtoJsonSerializerOptions,
+                onCredentialsUpdated: onCredentialsUpdated,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
         /// Gets a page of records in the specified <paramref name="collection"/>. May require authentication.
         /// </summary>
         /// <typeparam name="TRecord">The type of the record value to get.</typeparam>
@@ -1097,6 +1241,7 @@ namespace idunno.AtProto
         /// Thrown when any of <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is not &gt;0 and &lt;=100.</exception>
+        /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are specified but not valid for the specified <paramref name="service"/>.</exception>
         [RequiresDynamicCode("Use a Get overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a Get overload which takes JsonSerializerOptions instead.")]
         public static async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TRecord>>>> ListRecords<TRecord>(
@@ -1117,6 +1262,11 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(collection);
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(httpClient);
+
+            if (accessCredentials is not null && service != accessCredentials.Service)
+            {
+                throw new AccessTokenException("Credentials not valid for the specified service.");
+            }
 
             if (limit is not null &&
                (limit < 1 || limit > 100))
@@ -1224,6 +1374,7 @@ namespace idunno.AtProto
         /// Thrown when any of <paramref name="repo"/>, <paramref name="collection"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is not &gt;0 and &lt;=100.</exception>
+        /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are specified but are not valid for the specified <paramref name="service"/>.</exception>
         [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
         public static async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TRecord>>>> ListRecords<TRecord>(
@@ -1250,6 +1401,11 @@ namespace idunno.AtProto
                (limit < 1 || limit > 100))
             {
                 throw new ArgumentOutOfRangeException(nameof(limit), "{limit} must be between 1 and 100.");
+            }
+
+            if (accessCredentials is not null && service != accessCredentials.Service)
+            {
+                throw new AccessTokenException("Credentials not valid for the specified service.");
             }
 
             string queryString = $"repo={Uri.EscapeDataString(repo.ToString())}&collection={Uri.EscapeDataString(collection.ToString())}";
@@ -1357,6 +1513,7 @@ namespace idunno.AtProto
         /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="blob"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="blob"/> is a zero length array.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="mimeType"/> is empty or not in the type/subtype format.</exception>
+        /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
         [UnconditionalSuppressMessage(
             "Trimming",
             "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -1388,6 +1545,11 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(service);
             ArgumentNullException.ThrowIfNull(accessCredentials);
             ArgumentNullException.ThrowIfNull(httpClient);
+
+            if (service != accessCredentials.Service)
+            {
+                throw new AccessTokenException("Credentials not valid for the specified service.");
+            }
 
             List<NameValueHeaderValue> contentHeaders =
             [

@@ -1693,7 +1693,7 @@ namespace idunno.Bluesky
         {
             ArgumentNullException.ThrowIfNull(uri);
             ArgumentNullException.ThrowIfNull(uri.Collection);
-            ArgumentOutOfRangeException.ThrowIfNotEqual(uri.Collection, CollectionNsid.Post);
+            ArgumentOutOfRangeException.ThrowIfNotEqual(uri.Collection, CollectionNsid.Like);
             ArgumentNullException.ThrowIfNull(uri.RecordKey);
 
             if (!IsAuthenticated)

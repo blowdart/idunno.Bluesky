@@ -102,6 +102,8 @@ namespace idunno.AtProto
     [JsonSerializable(typeof(OptionsUpdateMessage))]
 
     [JsonSerializable(typeof(OAuthLoginState))]
+
+    [JsonSerializable(typeof(AtProtoRepositoryRecord))]
     internal partial class SourceGenerationContext : JsonSerializerContext
     {
     }
