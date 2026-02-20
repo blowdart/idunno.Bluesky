@@ -1824,16 +1824,16 @@ namespace idunno.AtProto
             if (atIdentifier is Did did)
             {
                 pds = await ResolvePds(did, cancellationToken: cancellationToken).ConfigureAwait(false) ??
-                    throw new ArgumentException("{atIdentifier} cannot be resolved to a pds.", nameof(atIdentifier));
+                    throw new ArgumentException($"{atIdentifier} cannot be resolved to a pds.", nameof(atIdentifier));
             }
             else if (atIdentifier is Handle handle)
             {
                 pds = await ResolvePds(handle.ToString(), cancellationToken: cancellationToken).ConfigureAwait(false) ??
-                    throw new ArgumentException("{atIdentifier} cannot be resolved to a pds.", nameof(atIdentifier));
+                    throw new ArgumentException($"{atIdentifier} cannot be resolved to a pds.", nameof(atIdentifier));
             }
             else
             {
-                throw new ArgumentException("{atIdentifier} is not a valid AtIdentifier.", nameof(atIdentifier));
+                throw new ArgumentException($"{atIdentifier} is not a valid AtIdentifier.", nameof(atIdentifier));
             }
 
             return pds;

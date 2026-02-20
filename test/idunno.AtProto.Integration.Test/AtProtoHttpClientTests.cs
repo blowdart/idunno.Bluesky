@@ -66,6 +66,7 @@ namespace idunno.AtProto.Integration.Test
                 AtProtoHttpResult<AtProtoRepositoryRecord<TestRecord>> result = await agent.GetRecord<TestRecord>(
                     uri: new($"at://{repo}/{collection}/{rkey}"),
                     cid: new(cid),
+                    service: TestServerBuilder.DefaultUri,
                     serviceProxy: serviceProxy,
                     cancellationToken: TestContext.Current.CancellationToken);
 
@@ -129,6 +130,7 @@ namespace idunno.AtProto.Integration.Test
                 AtProtoHttpResult<AtProtoRepositoryRecord<TestRecord>> result = await agent.GetRecord<TestRecord>(
                     uri: new($"at://{repo}/{collection}/{rkey}"),
                     cid: new(cid),
+                    service: server,
                     cancellationToken: TestContext.Current.CancellationToken);
 
                 Assert.True(result.Succeeded);
