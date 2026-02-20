@@ -1470,7 +1470,7 @@ namespace idunno.AtProto
         /// <param name="limit">The number of records to return in each page.</param>
         /// <param name="cursor">The cursor position to start retrieving records from.</param>
         /// <param name="reverse">A flag indicating if records should be listed in reverse order.</param>
-        /// <param name="service">The service to retrieve the record from. If <see cref="null"/> it will be resolved from <paramref name="repo"/>.</param>
+        /// <param name="service">The service to retrieve the record from. If <see langword="null"/> it will be resolved from <paramref name="repo"/>.</param>
         /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
