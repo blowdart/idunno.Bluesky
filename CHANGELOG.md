@@ -27,6 +27,7 @@
 
 #### idunno.AtProto
 
+* `GetRecord<T>` and `ListRecords<T>` will now attempt to resolve the PDS hosting the record if a service is not specified.
 * Removed `Type` property from `Blob`.
 * Removed `Type` property from `SelfLabels`.
 
@@ -35,6 +36,10 @@
 * Removed `Type` property from `Facet`.
 
 ### Breaking Changes
+
+#### idunno.AtProto
+
+* The overloads for `ListRecords<T>` that requires authentication will ignore any service parameter passed to it.
 
 #### idunno.Bluesky
 

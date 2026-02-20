@@ -605,7 +605,7 @@ namespace idunno.AtProto
                 creator: Credentials.Did,
                 rKey: rKey,
                 validate: validate,
-                swapCommit : swapCommit,
+                swapCommit: swapCommit,
                 service: Service,
                 accessCredentials: Credentials,
                 httpClient: HttpClient,
@@ -1186,7 +1186,7 @@ namespace idunno.AtProto
                 repo,
                 service,
                 HttpClient,
-                loggerFactory : LoggerFactory,
+                loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
@@ -1196,12 +1196,12 @@ namespace idunno.AtProto
         /// <typeparam name="TRecord">The type of record to get.</typeparam>
         /// <param name="uri">The <see cref="AtUri"/> of the record to retrieve.</param>
         /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
-        /// <param name="service">The service to retrieve the record from.</param>
+        /// <param name="service">The service to retrieve the record from. If not specified the pds will be discovered based on <paramref name="uri"/>.</param>
         /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an incorrect format.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an incorrect format or cannot be resolved to a PDS.</exception>
         [RequiresDynamicCode("Use a GetRecord overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a GetRecord overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>>> GetRecord<TRecord>(
@@ -1228,6 +1228,8 @@ namespace idunno.AtProto
                 throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
             }
 
+            service ??= await ResolvePdsUriFromRepo(uri.Repo, cancellationToken: cancellationToken).ConfigureAwait(false);
+
             return await GetRecord<TRecord>(uri.Repo, uri.Collection, uri.RecordKey, cid, service, serviceProxy, cancellationToken).ConfigureAwait(false);
         }
 
@@ -1239,11 +1241,12 @@ namespace idunno.AtProto
         /// <param name="collection">The NSID of the collection the record should be retrieved from.</param>
         /// <param name="rKey">The record key, identifying the record to be retrieved.</param>
         /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
-        /// <param name="service">The service to retrieve the record from.</param>
+        /// <param name="service">The service to retrieve the record from. If not specified the pds will be discovered based on <paramref name="repo"/>.</param>
         /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/>, <paramref name="collection"/> is <see langword="null"/> or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="service"/> is not specified and <paramref name="repo"/> cannot be resolved to a pds.</exception>
         [RequiresDynamicCode("Use a GetRecord overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a GetRecord overload which takes JsonSerializerOptions instead.")]
         public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>>> GetRecord<TRecord>(
@@ -1253,7 +1256,7 @@ namespace idunno.AtProto
             Cid? cid = null,
             Uri? service = null,
             string? serviceProxy = null,
-            CancellationToken cancellationToken = default) where TRecord: AtProtoRecord
+            CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
         {
             ArgumentNullException.ThrowIfNull(repo);
             ArgumentNullException.ThrowIfNull(collection);
@@ -1265,7 +1268,10 @@ namespace idunno.AtProto
 
             AccessCredentials? accessCredentials = null;
 
-            if (IsAuthenticated)
+            service ??= await ResolvePdsUriFromRepo(repo, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            // Only send access credentials if the session is authenticated and the service being called is the service the session is authenticated to.
+            if (IsAuthenticated && service == Service)
             {
                 accessCredentials = Credentials;
             }
@@ -1303,12 +1309,12 @@ namespace idunno.AtProto
         /// <param name="uri">The <see cref="AtUri"/> of the record to retrieve.</param>
         /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use when deserializing <typeparamref name="TRecord"/>.</param>
         /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
-        /// <param name="service">The service to retrieve the record from.</param>
+        /// <param name="service">The service to retrieve the record from. If not specified the pds will be discovered based on <paramref name="uri"/>.</param>
         /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an incorrect format.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an incorrect format or cannot be resolved to a PDS.</exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>>> GetRecord<TRecord>(
@@ -1336,6 +1342,8 @@ namespace idunno.AtProto
                 throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
             }
 
+            service ??= await ResolvePdsUriFromRepo(uri.Repo, cancellationToken: cancellationToken).ConfigureAwait(false);
+
             return await GetRecord<TRecord>(uri.Repo, uri.Collection, uri.RecordKey, jsonSerializerOptions, cid, service, serviceProxy, cancellationToken).ConfigureAwait(false);
         }
 
@@ -1348,11 +1356,12 @@ namespace idunno.AtProto
         /// <param name="rKey">The record key, identifying the record to be retrieved.</param>
         /// <param name="jsonSerializerOptions">The <see cref="JsonSerializerOptions"/> to use when deserializing <typeparamref name="TRecord"/>.</param>
         /// <param name="cid">The CID of the version of the record. If not specified, then return the most recent version.</param>
-        /// <param name="service">The service to retrieve the record from.</param>
+        /// <param name="service">The service to retrieve the record from. If not specified the pds will be discovered based on <paramref name="repo"/>.</param>
         /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/>, <paramref name="collection"/> is <see langword="null"/> or empty.</exception>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="service"/> is <see langword="null"/> and <paramref name="repo"/> cannot be resolved to a pds.</exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>>> GetRecord<TRecord>(
@@ -1369,16 +1378,17 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(collection);
             ArgumentNullException.ThrowIfNull(rKey);
 
-            service ??= Service;
-
-            Logger.GetRecordCalled(_logger, repo, collection, rKey, service);
-
             AccessCredentials? accessCredentials = null;
 
-            if (IsAuthenticated)
+            service ??= await ResolvePdsUriFromRepo(repo, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            // Only send access credentials if the session is authenticated and the service being called is the service the session is authenticated to.
+            if (IsAuthenticated && service == Service)
             {
                 accessCredentials = Credentials;
             }
+
+            Logger.GetRecordCalled(_logger, repo, collection, rKey, service);
 
             AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>> result =
                 await AtProtoServer.GetRecord<TRecord>(
@@ -1415,7 +1425,7 @@ namespace idunno.AtProto
         /// <param name="limit">The number of records to return in each page.</param>
         /// <param name="cursor">The cursor position to start retrieving records from.</param>
         /// <param name="reverse">A flag indicating if records should be listed in reverse order.</param>
-        /// <param name="service">The service to retrieve the record from.</param>
+        /// <param name="service">The service to retrieve the record from. This parameter is ignored.</param>
         /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -1423,6 +1433,7 @@ namespace idunno.AtProto
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         [RequiresDynamicCode("Use a ListRecords overload which takes JsonSerializerOptions instead.")]
         [RequiresUnreferencedCode("Use a ListRecords overload which takes JsonSerializerOptions instead.")]
+        [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Kept for API compatibility")]
         public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TRecord>>>> ListRecords<TRecord>(
             Nsid collection,
             int? limit = 50,
@@ -1445,7 +1456,7 @@ namespace idunno.AtProto
                 limit: limit,
                 cursor: cursor,
                 reverse: reverse,
-                service: service,
+                service: Service,
                 serviceProxy: serviceProxy,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -1459,7 +1470,7 @@ namespace idunno.AtProto
         /// <param name="limit">The number of records to return in each page.</param>
         /// <param name="cursor">The cursor position to start retrieving records from.</param>
         /// <param name="reverse">A flag indicating if records should be listed in reverse order.</param>
-        /// <param name="service">The service to retrieve the record from.</param>
+        /// <param name="service">The service to retrieve the record from. If <see cref="null"/> it will be resolved from <paramref name="repo"/>.</param>
         /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -1480,11 +1491,12 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(repo);
             ArgumentNullException.ThrowIfNull(collection);
 
-            service ??= Service;
-
             AccessCredentials? accessCredentials = null;
 
-            if (IsAuthenticated)
+            service ??= await ResolvePdsUriFromRepo(repo, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            // Only send access credentials if the session is authenticated and the service being called is the service the session is authenticated to.
+            if (IsAuthenticated && service == Service)
             {
                 accessCredentials = Credentials;
             }
@@ -1526,7 +1538,7 @@ namespace idunno.AtProto
         /// <param name="limit">The number of records to return in each page.</param>
         /// <param name="cursor">The cursor position to start retrieving records from.</param>
         /// <param name="reverse">A flag indicating if records should be listed in reverse order.</param>
-        /// <param name="service">The service to retrieve the record from.</param>
+        /// <param name="service">The service to retrieve the record from. This parameter is ignored.</param>
         /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -1534,6 +1546,7 @@ namespace idunno.AtProto
         /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
         [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
         [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
+        [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Kept for compatibility")]
         public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TRecord>>>> ListRecords<TRecord>(
             Nsid collection,
             JsonSerializerOptions jsonSerializerOptions,
@@ -1558,7 +1571,7 @@ namespace idunno.AtProto
                 limit: limit,
                 cursor: cursor,
                 reverse: reverse,
-                service: service,
+                service: Service,
                 serviceProxy: serviceProxy,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
@@ -1573,7 +1586,7 @@ namespace idunno.AtProto
         /// <param name="limit">The number of records to return in each page.</param>
         /// <param name="cursor">The cursor position to start retrieving records from.</param>
         /// <param name="reverse">A flag indicating if records should be listed in reverse order.</param>
-        /// <param name="service">The service to retrieve the record from.</param>
+        /// <param name="service">The service to retrieve the records from. If <see langword="null" /> it will be resolved from <paramref name="repo"/>.</param>
         /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
@@ -1595,11 +1608,12 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(repo);
             ArgumentNullException.ThrowIfNull(collection);
 
-            service ??= Service;
-
             AccessCredentials? accessCredentials = null;
 
-            if (IsAuthenticated)
+            service ??= await ResolvePdsUriFromRepo(repo, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            // Only send access credentials if the session is authenticated and the service being called is the service the session is authenticated to.
+            if (IsAuthenticated && service == Service)
             {
                 accessCredentials = Credentials;
             }
@@ -1801,6 +1815,28 @@ namespace idunno.AtProto
                 onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task<Uri> ResolvePdsUriFromRepo(AtIdentifier atIdentifier, CancellationToken cancellationToken = default)
+        {
+            Uri? pds;
+
+            if (atIdentifier is Did did)
+            {
+                pds = await ResolvePds(did, cancellationToken: cancellationToken).ConfigureAwait(false) ??
+                    throw new ArgumentException("{atIdentifier} cannot be resolved to a pds.", nameof(atIdentifier));
+            }
+            else if (atIdentifier is Handle handle)
+            {
+                pds = await ResolvePds(handle.ToString(), cancellationToken: cancellationToken).ConfigureAwait(false) ??
+                    throw new ArgumentException("{atIdentifier} cannot be resolved to a pds.", nameof(atIdentifier));
+            }
+            else
+            {
+                throw new ArgumentException("{atIdentifier} is not a valid AtIdentifier.", nameof(atIdentifier));
+            }
+
+            return pds;
         }
     }
 }

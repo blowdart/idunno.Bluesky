@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Duende.IdentityModel.OidcClient.DPoP;
 
 using idunno.AtProto.Authentication;
+using System.Text.Json.Nodes;
 
 namespace idunno.AtProto
 {
@@ -1292,6 +1293,18 @@ namespace idunno.AtProto
                             {
                                 string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
                                 result.Result = responseContent as TResult;
+                            }
+                            else if (typeof(TResult) == typeof(JsonNode))
+                            {
+                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+                                result.Result = JsonNode.Parse(responseContent) as TResult;
+                            }
+                            else if (typeof(TResult) == typeof(JsonDocument))
+                            {
+                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+                                result.Result = JsonDocument.Parse(responseContent) as TResult;
                             }
                             else
                             {
