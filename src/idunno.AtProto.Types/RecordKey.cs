@@ -50,6 +50,13 @@ namespace idunno.AtProto
         public string Value { get; init; }
 
         /// <summary>
+        /// Gets a <see cref="RecordKey"/> where the value is self.
+        /// This is commonly used for records attached to an individual user, for which only
+        /// one record is provided, for example a user's profile record.
+        /// </summary>
+        public static RecordKey Self  => new("self");
+
+        /// <summary>
         /// Returns a string representation of this <see cref="RecordKey"/>.
         /// </summary>
         /// <returns>The string representation of this <see cref="RecordKey"/>.</returns>

@@ -71,6 +71,7 @@ idunno.AtProto.RecordKey.Equals(idunno.AtProto.RecordKey? other) -> bool
 idunno.AtProto.RecordKey.RecordKey(string! s) -> void
 idunno.AtProto.RecordKey.Value.get -> string!
 idunno.AtProto.RecordKey.Value.init -> void
+static idunno.AtProto.RecordKey.Self.get -> idunno.AtProto.RecordKey!
 idunno.AtProto.RecordKeyFormatException
 idunno.AtProto.RecordKeyFormatException.RecordKeyFormatException() -> void
 idunno.AtProto.RecordKeyFormatException.RecordKeyFormatException(string! message) -> void

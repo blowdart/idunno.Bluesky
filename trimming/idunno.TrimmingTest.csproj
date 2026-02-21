@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PublishTrimmed>true</PublishTrimmed>
@@ -20,7 +20,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\src\idunno.AtProto\idunno.AtProto.csproj" />
+    <ProjectReference Include="..\src\idunno.Bluesky\idunno.Bluesky.csproj" />
     <TrimmerRootAssembly Include="idunno.AtProto" />
+    <TrimmerRootAssembly Include="idunno.Bluesky" />
   </ItemGroup>
 
 </Project>

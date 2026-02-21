@@ -17,6 +17,10 @@
 * Added `AccessTokenException`, which will be thrown if a supplied access token is not valid for a service.
 * Added `GetRawRecord` to `AtProtoAgent` and `AtProtoServer`.
 
+#### idunno.AtProto.Types
+
+* Added `Self` property to `RecordKey` which returns a `RecordKey` with the value of `self`.
+
 #### idunno.Bluesky
 
 * Added support for drafts, including `Draft` record, `CreateDraft()`, `GetDraft()`, `ListDrafts()`, `DeleteDraft()` and `PublishDraft()`.

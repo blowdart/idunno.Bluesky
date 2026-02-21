@@ -1,9 +1,10 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using idunno.AtProto;
-
 using System.Text;
+
+using idunno.AtProto;
+using idunno.Bluesky;
 
 namespace idunno.TrimmingTest
 {
@@ -34,6 +35,20 @@ namespace idunno.TrimmingTest
                     describeServerResult.EnsureSucceeded();
 
                     Console.WriteLine(describeServerResult.Result.Did);
+
+                    var getRawRecordResult = await agent.GetRawRecord(
+                        uri: new AtUri("at://blowdart.me/app.bsky.actor.profile/self"), cancellationToken: cancellationToken);
+                    getRawRecordResult.EnsureSucceeded();
+
+                    Console.WriteLine(getRawRecordResult.Result.Value!.ToJsonString());
+                }
+
+                using (var blueskyAgent = new BlueskyAgent())
+                {
+                    var getProfileResult = await blueskyAgent.GetProfile(AtIdentifier.Create("blowdart.me"), cancellationToken: cancellationToken);
+                    getProfileResult.EnsureSucceeded();
+
+                    Console.WriteLine(getProfileResult.Result.DisplayName);
                 }
             }
 
