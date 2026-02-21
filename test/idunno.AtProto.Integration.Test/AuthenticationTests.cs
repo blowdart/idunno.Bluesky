@@ -381,5 +381,161 @@ namespace idunno.AtProto.Integration.Test
                 Assert.Equal("newNonce", credentialEventNonce);
             }
         }
+
+        [Fact]
+        public async Task UsingCredentialsIssuedFromADifferentServiceThrowsAccessTokenException()
+        {
+            Uri server = TestServerBuilder.DefaultUri;
+            const string endpoint = "/xrpc/com.atproto.repo.createRecord";
+
+            const string repo = "did:plc:identifier";
+            const string collection = "test.idunno.lexiconType";
+
+            TestServer testServer = TestServerBuilder.CreateServer(server, async context =>
+            {
+                HttpRequest request = context.Request;
+                HttpResponse response = context.Response;
+
+                if (request.Headers.Authorization.Count == 0)
+                {
+                    response.StatusCode = 401;
+                    return;
+                }
+                else if (request.Path == endpoint && request.Body is not null)
+                {
+                    JsonNode? requestJson = await JsonSerializer.DeserializeAsync<JsonNode>(request.Body);
+
+                    if (requestJson is null)
+                    {
+                        response.StatusCode = 400;
+                        return;
+                    }
+
+                    if ((string?)requestJson["repo"] != repo)
+                    {
+                        response.StatusCode = 401;
+                        var errorResponse = new AtErrorDetail()
+                        {
+                            Error = "NotAuthorized"
+                        };
+                        await response.WriteAsJsonAsync(errorResponse);
+                        return;
+                    }
+
+                    if ((string?)requestJson["collection"] != collection)
+                    {
+                        response.StatusCode = 400;
+                        var errorResponse = new AtErrorDetail()
+                        {
+                            Error = "InvalidCollection",
+                            Message = $"Invalid collection {(string?)requestJson["repo"]}."
+                        };
+                        await response.WriteAsJsonAsync(errorResponse);
+                        return;
+                    }
+
+                    response.StatusCode = 200;
+                    response.ContentType = "application/json";
+
+                    var createRecordResponse = new CreateRecordResponse(
+                        new($"at://{(string?)requestJson["repo"]}/{(string?)requestJson["collection"]}/rkey"),
+                        new("bafyreihd3v4j"))
+                    {
+                        Commit = null,
+                        ValidationStatus = "valid"
+                    };
+
+                    await response.WriteAsJsonAsync(createRecordResponse, _jsonSerializerOptions);
+                    return;
+                }
+            });
+
+            using (AtProtoAgent agent = new(server, new TestHttpClientFactory(testServer)))
+            {
+                AtProtoCredential credential = AtProtoCredential.Create(
+                    new Uri("https://server.invalid"),
+                    authenticationType: AuthenticationType.UsernamePassword,
+                    accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:identifier")),
+                    refreshToken: "refreshToken");
+
+                agent.Credentials = credential as AccessCredentials;
+
+                agent.Service = TestServerBuilder.DefaultUri;
+
+                TestRecord recordValue = new() { TestValue = "test" };
+
+                await Assert.ThrowsAsync<AccessTokenException>(async() => await agent.CreateRecord(recordValue, collection, cancellationToken: TestContext.Current.CancellationToken));
+            }
+        }
+
+        [Fact]
+        public async Task GetRecordDoesNotUseCredentialsIfTheyDoNotMatchTheService()
+        {
+            Uri server = TestServerBuilder.DefaultUri;
+            const string endpoint = "/xrpc/com.atproto.repo.getRecord";
+
+            const string repo = "did:plc:identifier";
+            const string collection = "test.idunno.lexiconType";
+            const string rkey = "rkey";
+
+            string jsonReturnValue = """
+                {
+                    "uri" : "at://did:plc:identifier/test.idunno.lexiconType/rkey",
+                    "cid" : "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
+                    "value" :
+                    {
+                        "testValue" : "test"
+                    }
+                }
+                """;
+
+            bool authenticationHeaderWasSent = false;
+
+            TestServer testServer = TestServerBuilder.CreateServer(server, async context =>
+            {
+                HttpRequest request = context.Request;
+                HttpResponse response = context.Response;
+
+                if (request.Headers.Authorization.Count != 0)
+                {
+                    authenticationHeaderWasSent = true;
+                }
+
+                if (request.Path == endpoint &&
+                    request.Query["repo"].FirstOrDefault() == repo &&
+                    request.Query["collection"].FirstOrDefault() == collection &&
+                    request.Query["rkey"].FirstOrDefault() == rkey)
+                {
+                    response.StatusCode = 200;
+                    response.ContentType = "application/json";
+                    await response.WriteAsync(jsonReturnValue);
+                    return;
+                }
+            });
+
+            using (AtProtoAgent agent = new(server, new TestHttpClientFactory(testServer)))
+            {
+                AtProtoCredential credential = AtProtoCredential.Create(
+                    new Uri("https://server.invalid"),
+                    authenticationType: AuthenticationType.UsernamePassword,
+                    accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:identifier")),
+                    refreshToken: "refreshToken");
+
+                agent.Credentials = credential as AccessCredentials;
+
+                agent.Service = TestServerBuilder.DefaultUri;
+
+                AtProtoHttpResult<AtProtoRepositoryRecord<TestRecord>> getRecordResult =
+                    await agent.GetRecord<TestRecord>(
+                        repo: repo,
+                        collection: collection,
+                        rKey: new RecordKey(rkey),
+                        service: TestServerBuilder.DefaultUri,
+                        cancellationToken: TestContext.Current.CancellationToken);
+                getRecordResult.EnsureSucceeded();
+
+                Assert.False(authenticationHeaderWasSent);
+            }
+        }
     }
 }

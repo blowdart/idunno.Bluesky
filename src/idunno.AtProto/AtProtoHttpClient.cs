@@ -1300,6 +1300,12 @@ namespace idunno.AtProto
 
                                 result.Result = JsonNode.Parse(responseContent) as TResult;
                             }
+                            else if (typeof(TResult) == typeof(JsonObject))
+                            {
+                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+                                result.Result = JsonObject.Parse(responseContent) as TResult;
+                            }
                             else if (typeof(TResult) == typeof(JsonDocument))
                             {
                                 string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);

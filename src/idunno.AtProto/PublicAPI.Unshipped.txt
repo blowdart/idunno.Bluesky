@@ -1,13 +1,1 @@
 ﻿#nullable enable
-idunno.AtProto.AccessTokenException
-idunno.AtProto.AccessTokenException.AccessTokenException() -> void
-idunno.AtProto.AccessTokenException.AccessTokenException(string! message) -> void
-idunno.AtProto.AccessTokenException.AccessTokenException(string! message, System.Exception! inner) -> void
-idunno.AtProto.AccessTokenException.AccessTokenException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
-idunno.AtProto.AtProtoAgent.GetRawRecord(idunno.AtProto.AtIdentifier! repo, idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey! rKey, idunno.AtProto.Cid? cid, System.Uri? service, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord!>!>!
-idunno.AtProto.AtProtoAgent.GetRawRecord(idunno.AtProto.AtUri! uri) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord!>!>!
-idunno.AtProto.AtProtoAgent.GetRawRecord(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord!>!>!
-idunno.AtProto.AtProtoAgent.GetRawRecord(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord!>!>!
-idunno.AtProto.AtProtoAgent.GetRawRecord(idunno.AtProto.AtUri! uri, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord!>!>!
-idunno.AtProto.Repo.AtProtoRepositoryRecord.AtProtoRepositoryRecord(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid, System.Text.Json.JsonDocument? value) -> void
-static idunno.AtProto.AtProtoServer.GetRecord(idunno.AtProto.AtIdentifier! repo, idunno.AtProto.Nsid! collection, idunno.AtProto.RecordKey! rKey, idunno.AtProto.Cid? cid, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, string? serviceProxy = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord!>!>!

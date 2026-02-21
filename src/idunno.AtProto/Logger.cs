@@ -218,6 +218,9 @@ namespace idunno.AtProto
         [LoggerMessage(180, LogLevel.Error, "GetSession failed for {service} as current session is not authenticated.")]
         internal static partial void GetSessionFailedAsSessionIsAnonymous(ILogger logger, Uri service);
 
+        [LoggerMessage(199, LogLevel.Debug, "Agent is authenticated from {credentialUri} but is making request to {service}. Credentials were not forwarded.")]
+        internal static partial void CredentialsNotForwarded(ILogger logger, Uri credentialUri, Uri service);
+
         // AtProtoClient logging
         [LoggerMessage(200, LogLevel.Debug, "{method} request to {requestUri} succeeded.")]
         internal static partial void AtProtoClientRequestSucceeded(ILogger logger, Uri requestUri, HttpMethod method);

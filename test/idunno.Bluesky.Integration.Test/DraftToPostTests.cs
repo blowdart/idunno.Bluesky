@@ -854,9 +854,473 @@ namespace idunno.Bluesky.Integration.Test
             }
         }
 
-        // Where video is too large
-        // Where total size of multiple videos is too large
-        // Text too long
+        [Fact]
+        public async Task DraftWithVideoDiskThrowsWhenVideoIsLargerThanUploadBytesLeft()
+        {
+            string imagePath = Path.GetFullPath("spinningEarth.mp4");
+
+            long videoSize = new FileInfo(imagePath).Length;
+
+            AccessCredentials expectedCredentials = new(
+                    service: TestServerBuilder.DefaultUri,
+                    authenticationType: AuthenticationType.UsernamePassword,
+                    accessJwt: JwtBuilder.CreateJwt(s_user, TestServerBuilder.DefaultUri.ToString()),
+                    refreshToken: "refreshToken");
+
+            AtUri expectedAtUri = new($"at://{s_user}/app.bsky.feed.post/{TimestampIdentifier.Next()}");
+            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+            TimestampIdentifier expectedDraftId = TimestampIdentifier.Next();
+            string expectedAltText = "Alt text";
+
+            HttpRequest capturedRequest;
+            string? capturedBody = null;
+
+            bool createCalled = false;
+            bool uploadCalled = false;
+            bool deleteCalled = false;
+
+            async Task captureCreateRequest(HttpContext context)
+            {
+                createCalled = true;
+                capturedRequest = context.Request;
+
+                using (var reader = new StreamReader(context.Request.Body))
+                {
+                    capturedBody = await reader.ReadToEndAsync(cancellationToken: TestContext.Current.CancellationToken);
+                }
+
+                if (capturedBody is null)
+                {
+                    context.Response.StatusCode = 500;
+                    return;
+                }
+
+                context.Response.StatusCode = 200;
+                var response = new CreateRecordResponse(expectedAtUri, expectedCid)
+                {
+                    Commit = new(expectedCid, "revision"),
+                    ValidationStatus = "valid"
+                };
+                await context.Response.WriteAsJsonAsync(
+                    response,
+                    options: AtProtoJsonSerializerOptions.Options,
+                    cancellationToken: TestContext.Current.CancellationToken);
+            }
+
+            async Task deleteDraft(HttpContext context)
+            {
+                deleteCalled = true;
+
+                if (context.Request.Query["id"].Count != 1 ||
+                    context.Request.Query["id"][0] == expectedDraftId)
+                {
+                    context.Response.StatusCode = 500;
+                    return;
+                }
+
+                context.Response.StatusCode = 200;
+                var response = new DeleteRecordResponse(new(expectedCid, "deleted"));
+                await context.Response.WriteAsJsonAsync(
+                    response,
+                    options: AtProtoJsonSerializerOptions.Options,
+                    cancellationToken: TestContext.Current.CancellationToken);
+            }
+
+            async Task uploadBlob(HttpContext context)
+            {
+                uploadCalled = true;
+
+                context.Response.StatusCode = 200;
+                var createBlobResponse = new CreateBlobResponse(
+                    new Blob(
+                        new BlobReference(s_expectedBlobCid),
+                        $"image/{Path.GetExtension(imagePath)[1..]}",
+                        (int)new FileInfo(imagePath).Length));
+
+                await context.Response.WriteAsJsonAsync(
+                    createBlobResponse,
+                    options: AtProtoJsonSerializerOptions.Options,
+                    cancellationToken: TestContext.Current.CancellationToken);
+            }
+
+            async Task getVideoUploads(HttpContext context)
+            {
+                context.Response.StatusCode = 200;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync("{");
+                await context.Response.WriteAsync("\"canUpload\":true,");
+                await context.Response.WriteAsync($"\"remainingDailyBytes\":{videoSize - 1}");
+                await context.Response.WriteAsync("}");
+                return;
+            }
+
+            TestServer testServer = BuildTestServer(expectedCredentials, captureCreateRequest, null, deleteDraft, uploadBlob, getVideoUploads);
+            HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+            using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
+            {
+                agent.Credentials = expectedCredentials;
+                agent.Service = TestServerBuilder.DefaultUri;
+
+                DraftPost expectedDraftPost = new(s_expectedDraftPostText, new DraftEmbedVideo(new DraftEmbedLocalRef(imagePath), expectedAltText));
+                Draft expectedDraft = new(
+                    [expectedDraftPost],
+                    deviceId: s_expectedDeviceId,
+                    deviceName: s_expectedDeviceName);
+                DraftWithId draftWithId = new(expectedDraftId, expectedDraft);
+
+                await Assert.ThrowsAsync<DraftException>(() => agent.Post(draftWithId, cancellationToken: TestContext.Current.CancellationToken));
+                Assert.False(uploadCalled);
+                Assert.False(createCalled);
+                Assert.False(deleteCalled);
+            }
+        }
+
+        [Fact]
+        public async Task DraftWithVideoDiskThrowsWhenRemainingDailyVideosIsLessThanVideoCount()
+        {
+            string imagePath = Path.GetFullPath("spinningEarth.mp4");
+
+            long videoSize = new FileInfo(imagePath).Length;
+
+            AccessCredentials expectedCredentials = new(
+                    service: TestServerBuilder.DefaultUri,
+                    authenticationType: AuthenticationType.UsernamePassword,
+                    accessJwt: JwtBuilder.CreateJwt(s_user, TestServerBuilder.DefaultUri.ToString()),
+                    refreshToken: "refreshToken");
+
+            AtUri expectedAtUri = new($"at://{s_user}/app.bsky.feed.post/{TimestampIdentifier.Next()}");
+            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+            TimestampIdentifier expectedDraftId = TimestampIdentifier.Next();
+            string expectedAltText = "Alt text";
+
+            HttpRequest capturedRequest;
+            string? capturedBody = null;
+
+            bool createCalled = false;
+            bool uploadCalled = false;
+            bool deleteCalled = false;
+
+            async Task captureCreateRequest(HttpContext context)
+            {
+                createCalled = true;
+                capturedRequest = context.Request;
+
+                using (var reader = new StreamReader(context.Request.Body))
+                {
+                    capturedBody = await reader.ReadToEndAsync(cancellationToken: TestContext.Current.CancellationToken);
+                }
+
+                if (capturedBody is null)
+                {
+                    context.Response.StatusCode = 500;
+                    return;
+                }
+
+                context.Response.StatusCode = 200;
+                var response = new CreateRecordResponse(expectedAtUri, expectedCid)
+                {
+                    Commit = new(expectedCid, "revision"),
+                    ValidationStatus = "valid"
+                };
+                await context.Response.WriteAsJsonAsync(
+                    response,
+                    options: AtProtoJsonSerializerOptions.Options,
+                    cancellationToken: TestContext.Current.CancellationToken);
+            }
+
+            async Task deleteDraft(HttpContext context)
+            {
+                deleteCalled = true;
+
+                if (context.Request.Query["id"].Count != 1 ||
+                    context.Request.Query["id"][0] == expectedDraftId)
+                {
+                    context.Response.StatusCode = 500;
+                    return;
+                }
+
+                context.Response.StatusCode = 200;
+                var response = new DeleteRecordResponse(new(expectedCid, "deleted"));
+                await context.Response.WriteAsJsonAsync(
+                    response,
+                    options: AtProtoJsonSerializerOptions.Options,
+                    cancellationToken: TestContext.Current.CancellationToken);
+            }
+
+            async Task uploadBlob(HttpContext context)
+            {
+                uploadCalled = true;
+
+                context.Response.StatusCode = 200;
+                var createBlobResponse = new CreateBlobResponse(
+                    new Blob(
+                        new BlobReference(s_expectedBlobCid),
+                        $"image/{Path.GetExtension(imagePath)[1..]}",
+                        (int)new FileInfo(imagePath).Length));
+
+                await context.Response.WriteAsJsonAsync(
+                    createBlobResponse,
+                    options: AtProtoJsonSerializerOptions.Options,
+                    cancellationToken: TestContext.Current.CancellationToken);
+            }
+
+            async Task getVideoUploads(HttpContext context)
+            {
+                context.Response.StatusCode = 200;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync("{");
+                await context.Response.WriteAsync("\"canUpload\":true,");
+                await context.Response.WriteAsync($"\"remainingDailyVideos\":0");
+                await context.Response.WriteAsync("}");
+                return;
+            }
+
+            TestServer testServer = BuildTestServer(expectedCredentials, captureCreateRequest, null, deleteDraft, uploadBlob, getVideoUploads);
+            HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+            using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
+            {
+                agent.Credentials = expectedCredentials;
+                agent.Service = TestServerBuilder.DefaultUri;
+
+                DraftPost expectedDraftPost = new(s_expectedDraftPostText, new DraftEmbedVideo(new DraftEmbedLocalRef(imagePath), expectedAltText));
+                Draft expectedDraft = new(
+                    [expectedDraftPost],
+                    deviceId: s_expectedDeviceId,
+                    deviceName: s_expectedDeviceName);
+                DraftWithId draftWithId = new(expectedDraftId, expectedDraft);
+
+                await Assert.ThrowsAsync<DraftException>(() => agent.Post(draftWithId, cancellationToken: TestContext.Current.CancellationToken));
+                Assert.False(uploadCalled);
+                Assert.False(createCalled);
+                Assert.False(deleteCalled);
+            }
+        }
+
+        [Fact]
+        public async Task DraftWithMultipleVideosThrowsWhenTotalVideoSizeIsLargerThanUploadBytesLeft()
+        {
+            string imagePath = Path.GetFullPath("spinningEarth.mp4");
+
+            long videoSize = new FileInfo(imagePath).Length;
+
+            AccessCredentials expectedCredentials = new(
+                    service: TestServerBuilder.DefaultUri,
+                    authenticationType: AuthenticationType.UsernamePassword,
+                    accessJwt: JwtBuilder.CreateJwt(s_user, TestServerBuilder.DefaultUri.ToString()),
+                    refreshToken: "refreshToken");
+
+            AtUri expectedAtUri = new($"at://{s_user}/app.bsky.feed.post/{TimestampIdentifier.Next()}");
+            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+            TimestampIdentifier expectedDraftId = TimestampIdentifier.Next();
+            string expectedAltText = "Alt text";
+
+            HttpRequest capturedRequest;
+            string? capturedBody = null;
+
+            bool createCalled = false;
+            bool uploadCalled = false;
+            bool deleteCalled = false;
+
+            async Task captureCreateRequest(HttpContext context)
+            {
+                createCalled = true;
+                capturedRequest = context.Request;
+
+                using (var reader = new StreamReader(context.Request.Body))
+                {
+                    capturedBody = await reader.ReadToEndAsync(cancellationToken: TestContext.Current.CancellationToken);
+                }
+
+                if (capturedBody is null)
+                {
+                    context.Response.StatusCode = 500;
+                    return;
+                }
+
+                context.Response.StatusCode = 200;
+                var response = new CreateRecordResponse(expectedAtUri, expectedCid)
+                {
+                    Commit = new(expectedCid, "revision"),
+                    ValidationStatus = "valid"
+                };
+                await context.Response.WriteAsJsonAsync(
+                    response,
+                    options: AtProtoJsonSerializerOptions.Options,
+                    cancellationToken: TestContext.Current.CancellationToken);
+            }
+
+            async Task deleteDraft(HttpContext context)
+            {
+                deleteCalled = true;
+
+                if (context.Request.Query["id"].Count != 1 ||
+                    context.Request.Query["id"][0] == expectedDraftId)
+                {
+                    context.Response.StatusCode = 500;
+                    return;
+                }
+
+                context.Response.StatusCode = 200;
+                var response = new DeleteRecordResponse(new(expectedCid, "deleted"));
+                await context.Response.WriteAsJsonAsync(
+                    response,
+                    options: AtProtoJsonSerializerOptions.Options,
+                    cancellationToken: TestContext.Current.CancellationToken);
+            }
+
+            async Task uploadBlob(HttpContext context)
+            {
+                uploadCalled = true;
+
+                context.Response.StatusCode = 200;
+                var createBlobResponse = new CreateBlobResponse(
+                    new Blob(
+                        new BlobReference(s_expectedBlobCid),
+                        $"image/{Path.GetExtension(imagePath)[1..]}",
+                        (int)new FileInfo(imagePath).Length));
+
+                await context.Response.WriteAsJsonAsync(
+                    createBlobResponse,
+                    options: AtProtoJsonSerializerOptions.Options,
+                    cancellationToken: TestContext.Current.CancellationToken);
+            }
+
+            async Task getVideoUploads(HttpContext context)
+            {
+                context.Response.StatusCode = 200;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync("{");
+                await context.Response.WriteAsync("\"canUpload\":true,");
+                await context.Response.WriteAsync($"\"remainingDailyBytes\":{videoSize*2 - 1}");
+                await context.Response.WriteAsync("}");
+                return;
+            }
+
+            TestServer testServer = BuildTestServer(expectedCredentials, captureCreateRequest, null, deleteDraft, uploadBlob, getVideoUploads);
+            HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+            using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
+            {
+                agent.Credentials = expectedCredentials;
+                agent.Service = TestServerBuilder.DefaultUri;
+
+                DraftPost expectedDraftPost = new(s_expectedDraftPostText, new DraftEmbedVideo(new DraftEmbedLocalRef(imagePath), expectedAltText));
+                Draft expectedDraft = new(
+                    [expectedDraftPost, expectedDraftPost],
+                    deviceId: s_expectedDeviceId,
+                    deviceName: s_expectedDeviceName);
+                DraftWithId draftWithId = new(expectedDraftId, expectedDraft);
+
+                await Assert.ThrowsAsync<DraftException>(() => agent.Post(draftWithId, cancellationToken: TestContext.Current.CancellationToken));
+                Assert.False(uploadCalled);
+                Assert.False(createCalled);
+                Assert.False(deleteCalled);
+            }
+        }
+
+
+        [Fact]
+        public async Task DraftWhereTextIsLongerThanAllowedPostTextThrows()
+        {
+            AccessCredentials expectedCredentials = new(
+                    service: TestServerBuilder.DefaultUri,
+                    authenticationType: AuthenticationType.UsernamePassword,
+                    accessJwt: JwtBuilder.CreateJwt(s_user, TestServerBuilder.DefaultUri.ToString()),
+                    refreshToken: "refreshToken");
+
+            AtUri expectedAtUri = new($"at://{s_user}/app.bsky.feed.post/{TimestampIdentifier.Next()}");
+            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+            TimestampIdentifier expectedDraftId = TimestampIdentifier.Next();
+
+            HttpRequest capturedRequest;
+            string? capturedBody = null;
+
+            bool createCalled = false;
+            bool uploadCalled = false;
+            bool deleteCalled = false;
+
+            async Task captureCreateRequest(HttpContext context)
+            {
+                createCalled = true;
+                capturedRequest = context.Request;
+
+                using (var reader = new StreamReader(context.Request.Body))
+                {
+                    capturedBody = await reader.ReadToEndAsync(cancellationToken: TestContext.Current.CancellationToken);
+                }
+
+                if (capturedBody is null)
+                {
+                    context.Response.StatusCode = 500;
+                    return;
+                }
+
+                context.Response.StatusCode = 200;
+                var response = new CreateRecordResponse(expectedAtUri, expectedCid)
+                {
+                    Commit = new(expectedCid, "revision"),
+                    ValidationStatus = "valid"
+                };
+                await context.Response.WriteAsJsonAsync(
+                    response,
+                    options: AtProtoJsonSerializerOptions.Options,
+                    cancellationToken: TestContext.Current.CancellationToken);
+            }
+
+            async Task deleteDraft(HttpContext context)
+            {
+                deleteCalled = true;
+
+                if (context.Request.Query["id"].Count != 1 ||
+                    context.Request.Query["id"][0] == expectedDraftId)
+                {
+                    context.Response.StatusCode = 500;
+                    return;
+                }
+
+                context.Response.StatusCode = 200;
+                var response = new DeleteRecordResponse(new(expectedCid, "deleted"));
+                await context.Response.WriteAsJsonAsync(
+                    response,
+                    options: AtProtoJsonSerializerOptions.Options,
+                    cancellationToken: TestContext.Current.CancellationToken);
+            }
+
+            async Task getVideoUploads(HttpContext context)
+            {
+                context.Response.StatusCode = 200;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsync("{");
+                await context.Response.WriteAsync("\"canUpload\":true,");
+                await context.Response.WriteAsync("}");
+                return;
+            }
+
+            TestServer testServer = BuildTestServer(expectedCredentials, captureCreateRequest, null, deleteDraft, null, getVideoUploads);
+            HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+            using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
+            {
+                agent.Credentials = expectedCredentials;
+                agent.Service = TestServerBuilder.DefaultUri;
+
+                string draftText = new ('-', Maximum.PostLengthInGraphemes + 1);
+
+                DraftPost expectedDraftPost = new(draftText);
+                Draft expectedDraft = new(
+                    [expectedDraftPost],
+                    deviceId: s_expectedDeviceId,
+                    deviceName: s_expectedDeviceName);
+                DraftWithId draftWithId = new(expectedDraftId, expectedDraft);
+
+                await Assert.ThrowsAsync<DraftException>(() => agent.Post(draftWithId, cancellationToken: TestContext.Current.CancellationToken));
+                Assert.False(uploadCalled);
+                Assert.False(createCalled);
+                Assert.False(deleteCalled);
+            }
+        }
 
         private static TestServer BuildTestServer(
             AccessCredentials expectedCredentials,

@@ -19,7 +19,7 @@ namespace idunno.AtProto.Repo
         /// <param name="uri">The <see cref="AtUri"/> of the record in an atproto repository.</param>
         /// <param name="cid">The <see cref="Cid"/> of the record in an atproto repository.</param>
         /// <param name="value">The value of the record.</param>
-        public AtProtoRepositoryRecord(AtUri uri, Cid cid, JsonDocument? value) : base(uri, cid)
+        public AtProtoRepositoryRecord(AtUri uri, Cid cid, JsonObject? value) : base(uri, cid)
         {
             Value = value;
         }
@@ -27,7 +27,7 @@ namespace idunno.AtProto.Repo
         /// <summary>
         /// Gets or sets the value of the record.
         /// </summary>
-        public JsonDocument? Value { get; set; }
+        public JsonObject? Value { get; }
 
         /// <summary>
         /// A list of keys and element data that do not map to any strongly typed properties.

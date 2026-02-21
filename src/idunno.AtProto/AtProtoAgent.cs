@@ -1271,9 +1271,13 @@ namespace idunno.AtProto
             service ??= await ResolvePdsUriFromRepo(repo, cancellationToken: cancellationToken).ConfigureAwait(false);
 
             // Only send access credentials if the session is authenticated and the service being called is the service the session is authenticated to.
-            if (IsAuthenticated && service == Service)
+            if (IsAuthenticated && service == Credentials.Service)
             {
                 accessCredentials = Credentials;
+            }
+            else if (IsAuthenticated)
+            {
+                Logger.CredentialsNotForwarded(_logger, Credentials.Service, service);
             }
 
             AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>> result =
@@ -1386,6 +1390,10 @@ namespace idunno.AtProto
             if (IsAuthenticated && service == Service)
             {
                 accessCredentials = Credentials;
+            }
+            else if (IsAuthenticated)
+            {
+                Logger.CredentialsNotForwarded(_logger, Credentials.Service, service);
             }
 
             Logger.GetRecordCalled(_logger, repo, collection, rKey, service);
@@ -1616,6 +1624,10 @@ namespace idunno.AtProto
             {
                 accessCredentials = Credentials;
             }
+            else if (IsAuthenticated)
+            {
+                Logger.CredentialsNotForwarded(_logger, Credentials.Service, service);
+            }
 
             Logger.GetRecordCalled(_logger, repo, collection, rKey, service);
 
@@ -1727,6 +1739,10 @@ namespace idunno.AtProto
             if (IsAuthenticated && service == Service)
             {
                 accessCredentials = Credentials;
+            }
+            else if (IsAuthenticated)
+            {
+                Logger.CredentialsNotForwarded(_logger, Credentials.Service, service);
             }
 
             Logger.ListRecordsCalled(_logger, repo, collection, service);
@@ -1844,6 +1860,10 @@ namespace idunno.AtProto
             if (IsAuthenticated && service == Service)
             {
                 accessCredentials = Credentials;
+            }
+            else if (IsAuthenticated)
+            {
+                Logger.CredentialsNotForwarded(_logger, Credentials.Service, service);
             }
 
             Logger.ListRecordsCalled(_logger, repo, collection, service);
