@@ -50,7 +50,7 @@ jobs:
       run: dotnet build --configuration Release --property:PublicRelease=true
 
     - name: 'Generate docs'
-      run: dotnet dnx docfx .\docs\docfx.json -y
+      run: dotnet dnx docfx ./docs/docfx.json -y
 
     - name: Upload Pages Artifact
       uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
