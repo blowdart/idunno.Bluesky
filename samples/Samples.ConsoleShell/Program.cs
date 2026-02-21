@@ -7,7 +7,6 @@ using Samples.Common;
 
 using idunno.AtProto;
 using idunno.Bluesky;
-using idunno.Bluesky.Record;
 
 namespace Samples.ConsoleShell
 {
