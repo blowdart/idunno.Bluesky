@@ -1,10 +1,11 @@
-name: CodeQL Scan
+﻿name: CodeQL Scan
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
+      - 'version/*'
     paths-ignore:
       - 'docs/**'
       - '.github/**'
