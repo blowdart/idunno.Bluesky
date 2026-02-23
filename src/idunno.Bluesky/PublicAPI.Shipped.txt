@@ -1197,8 +1197,12 @@ idunno.Bluesky.Graph.StarterPackViewBasic.StrongReference.get -> idunno.AtProto.
 idunno.Bluesky.Graph.StarterPackViewBasic.Uri.get -> idunno.AtProto.AtUri!
 idunno.Bluesky.Graph.StarterPackViewBasic.Uri.init -> void
 idunno.Bluesky.Graph.SuggestedActors
-idunno.Bluesky.Graph.SuggestedActors.IsFallback.get -> bool
+idunno.Bluesky.Graph.SuggestedActors.IsFallback.get -> bool?
 idunno.Bluesky.Graph.SuggestedActors.IsFallback.init -> void
+idunno.Bluesky.Graph.SuggestedActors.RecId.get -> long?
+idunno.Bluesky.Graph.SuggestedActors.RecId.init -> void
+idunno.Bluesky.Graph.SuggestedActors.RecIdStr.get -> string?
+idunno.Bluesky.Graph.SuggestedActors.RecIdStr.init -> void
 idunno.Bluesky.Graph.SuggestedActors.Suggestions.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Actor.ProfileView!>!
 idunno.Bluesky.Graph.SuggestedActors.Suggestions.init -> void
 idunno.Bluesky.HandleResolutionException
