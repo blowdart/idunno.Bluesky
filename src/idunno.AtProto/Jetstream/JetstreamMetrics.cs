@@ -32,12 +32,12 @@ namespace idunno.AtProto.Jetstream
         /// </summary>
         /// <param name="meterFactory">The <see cref="IMeterFactory"/> to use to create meters.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="meterFactory"/> is <see langword="null"/>.</exception>
-        [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = " IMeterFactory automatically manages the lifetime of any Meter objects it create")]
+        [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = " IMeterFactory automatically manages the lifetime of any Meter objects it creates")]
         public JetstreamMetrics(IMeterFactory meterFactory)
         {
             ArgumentNullException.ThrowIfNull(meterFactory);
 
-            Meter meter = meterFactory.Create(MeterName);
+            Meter meter = meterFactory.Create(MeterName, MeterVersion);
 
             Initialize(meter);
         }
@@ -54,19 +54,23 @@ namespace idunno.AtProto.Jetstream
         /// <param name="quantity">The quantity to increment the metric by</param>
         public void EventsParsed(int quantity) => _eventsParsedCounter.Add(quantity);
 
-        internal static string MeterName  => "idunno.Bluesky.Jetstream";
+        internal static string MeterName  => "idunno.AtProto.Jetstream";
+
+        internal static string MeterVersion => "1.0.0";
 
         [MemberNotNull(nameof(_messagesReceivedCounter), nameof(_eventsParsedCounter))]
         [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Guidelines suggest all lower case.")]
         private void Initialize(Meter meter)
         {
             _messagesReceivedCounter = meter.CreateCounter<long>(
-                name: $"{MeterName.ToLowerInvariant()}.message",
-                description: "Number of messages received from the jetstream.");
+                name: $"{MeterName.ToLowerInvariant()}.total_messages",
+                description: "Number of messages received from the jetstream.",
+                unit: "Messages per second");
 
             _eventsParsedCounter = meter.CreateCounter<long>(
-                name: $"{MeterName.ToLowerInvariant()}.event",
-                description: "Number of events parsed from the jetstream.");
+                name: $"{MeterName.ToLowerInvariant()}.total.events_parsed",
+                description: "Number of events parsed from the jetstream.",
+                unit: "Evens per second");
         }
     }
 }
