@@ -54,8 +54,6 @@ namespace idunno.AtProto.Jetstream
 
         private ClientWebSocket _client;
 
-        private bool _closedGracefully;
-
         /// <summary>
         /// Creates a new instance of <see cref="Jetstream"/>.
         /// </summary>
@@ -186,7 +184,7 @@ namespace idunno.AtProto.Jetstream
         /// by requesting a cancellation on the <see cref="CancellationToken"/> passed passed to <see cref="ConnectAsync(Uri?, long?, CancellationToken)"/> or
         /// by calling <see cref="CloseAsync(WebSocketCloseStatus, string, CancellationToken)"/>.
         /// </summary>
-        public bool DisconnectedGracefully => _client.State == WebSocketState.Closed && _closedGracefully;
+        public bool DisconnectedGracefully { get => _client.State == WebSocketState.Closed && field; private set; }
 
         /// <summary>
         /// Gets the <see cref="DateTimeOffset"/> indicating when last time a message from the JetsStream was received.
@@ -231,11 +229,11 @@ namespace idunno.AtProto.Jetstream
         protected virtual void OnMessageReceived(MessageReceivedEventArgs e)
         {
             EventHandler<MessageReceivedEventArgs>? messageReceived = MessageReceived;
+            _metrics.MessagesReceived(1);
+            MessageLastReceived = DateTimeOffset.UtcNow;
 
             if (!_disposed)
             {
-                MessageLastReceived = DateTimeOffset.UtcNow;
-                _metrics.MessagesReceived(1);
                 messageReceived?.Invoke(this, e);
             }
         }
@@ -247,10 +245,10 @@ namespace idunno.AtProto.Jetstream
         protected virtual void OnRecordReceived(RecordReceivedEventArgs e)
         {
             EventHandler<RecordReceivedEventArgs>? messageParsed = RecordReceived;
+            _metrics.EventsParsed(1);
 
             if (!_disposed)
             {
-                _metrics.EventsParsed(1);
                 messageParsed?.Invoke(this, e);
             }
         }
@@ -285,6 +283,7 @@ namespace idunno.AtProto.Jetstream
         protected virtual void OnFaultRaised(FaultRaisedEventArgs e)
         {
             EventHandler<FaultRaisedEventArgs>? faultRaised = FaultRaised;
+            _metrics.Faults(1);
 
             if (!_disposed)
             {
@@ -334,6 +333,7 @@ namespace idunno.AtProto.Jetstream
         /// <param name="uri">The URI of the jetstream server to connection to. Defaults to the URI passed during construction</param>
         /// <param name="cursor">A Unix microseconds timestamp cursor to begin playback from. A value of <see langword="null"/> results in live-tail operation.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <exception cref="Exception">Thrown when the underlying web socket throw an exception when connecting.</exception>
         [MemberNotNull(nameof(_client))]
         [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Suppressing dispose exceptions on purpose.")]
         [SuppressMessage("Minor Code Smell", "S2486:Generic exceptions should not be ignored", Justification = "Suppressing dispose exceptions on purpose.")]
@@ -428,10 +428,17 @@ namespace idunno.AtProto.Jetstream
             try
             {
                 await _client.ConnectAsync(serverUri, cancellationToken).ConfigureAwait(false);
+                _metrics.ConnectionsOpened(1);
             }
             catch (WebSocketException ex)
             {
                 JetStreamLogger.WebSocketException(_logger, ex);
+                _metrics.ConnectionFailures(1);
+            }
+            catch
+            {
+                _metrics.ConnectionFailures(1);
+                throw;
             }
 
             if (_client.State != previousState)
@@ -446,6 +453,7 @@ namespace idunno.AtProto.Jetstream
             else
             {
                 JetStreamLogger.ConnectionFailed(_logger, _client.State);
+                _metrics.ConnectionFailures(1);
             }
         }
 
@@ -473,7 +481,8 @@ namespace idunno.AtProto.Jetstream
                 try
                 {
                     await _client.CloseAsync(status, statusDescription, cancellationToken).ConfigureAwait(false);
-                    _closedGracefully = true;
+                    DisconnectedGracefully = true;
+                    _metrics.ConnectionsClosed(1);
                 }
                 catch (ObjectDisposedException)
                 {
@@ -487,12 +496,14 @@ namespace idunno.AtProto.Jetstream
                 {
                     JetStreamLogger.CloseError(_logger, ex);
                 }
+
             }
             else if (_client.State == WebSocketState.Connecting)
             {
                 try
                 {
                     _client.Abort();
+                    _metrics.ConnectionsClosed(1);
                 }
                 catch (ObjectDisposedException)
                 {
@@ -588,7 +599,7 @@ namespace idunno.AtProto.Jetstream
                     {
                         await _client.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, cancellationToken: cancellationToken).ConfigureAwait(false);
                         JetStreamLogger.CloseMessageReceived(_logger);
-                        _closedGracefully = false;
+                        DisconnectedGracefully = false;
                         continue;
                     }
 
@@ -619,8 +630,18 @@ namespace idunno.AtProto.Jetstream
                         Array.Copy(buffer, 0, receivedData, 0, message.Length);
                     }
 
+                    string? messageAsString = default;
+
                     // Now convert to a string
-                    string messageAsString = Encoding.UTF8.GetString(receivedData);
+                    try
+                    {
+                        messageAsString = Encoding.UTF8.GetString(receivedData);
+                    }
+                    catch
+                    {
+                        _metrics.MessageParsingFailures(1);
+                        throw;
+                    }
 
                     if (!string.IsNullOrEmpty(messageAsString))
                     {
@@ -637,6 +658,7 @@ namespace idunno.AtProto.Jetstream
                         {
                             LogFault("Message conversion to string failed.");
                             JetStreamLogger.MessageLoopFailedToConvert(_logger);
+                            _metrics.MessageParsingFailures(1);
                         }
                     }
                 }
@@ -662,6 +684,7 @@ namespace idunno.AtProto.Jetstream
             }
             catch (Exception ex)
             {
+                _metrics.MessageParsingFailures(1);
                 JetStreamLogger.ParseMessageGotNullOrEmptyMessage(logger);
                 return Task.FromException(ex);
             }
@@ -683,11 +706,13 @@ namespace idunno.AtProto.Jetstream
                     else
                     {
                         JetStreamLogger.ParseMessageDeserializationReturnedNull(logger, json);
+                        _metrics.MessageParsingFailures(1);
                     }
                 }
                 else
                 {
                     JetStreamLogger.ParseMessageDeserializationReturnedNull(logger, json);
+                    _metrics.MessageParsingFailures(1);
                 }
 
                 return Task.CompletedTask;
@@ -695,6 +720,7 @@ namespace idunno.AtProto.Jetstream
             catch (JsonException ex)
             {
                 JetStreamLogger.ParseMessageCouldNotProcessAsJson(logger, json, ex);
+                _metrics.MessageParsingFailures(1);
                 return Task.FromException(ex);
             }
             catch (ObjectDisposedException)
@@ -703,6 +729,7 @@ namespace idunno.AtProto.Jetstream
             }
             catch (Exception ex)
             {
+                _metrics.MessageParsingFailures(1);
                 JetStreamLogger.ParseMessageThrewException(logger, ex);
                 return Task.FromException(ex);
             }
@@ -769,6 +796,7 @@ namespace idunno.AtProto.Jetstream
                         Account = account
                     };
 
+                    _metrics.AccountEventsReceived(1);
                     _metrics.EventsParsed(1);
                     break;
 
@@ -790,6 +818,7 @@ namespace idunno.AtProto.Jetstream
                         Commit = commit
                     };
 
+                    _metrics.CommitEventsReceived(1);
                     _metrics.EventsParsed(1);
                     break;
 
@@ -811,10 +840,12 @@ namespace idunno.AtProto.Jetstream
                         Identity = identity
                     };
 
+                    _metrics.IdentityEventsReceived(1);
                     _metrics.EventsParsed(1);
                     break;
 
                 default:
+                    _metrics.UnknownEventsReceived(1);
                     break;
             }
 

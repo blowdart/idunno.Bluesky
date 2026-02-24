@@ -272,6 +272,7 @@ namespace idunno.AtProto.Serialization.Test
             Assert.NotNull(derivedCast);
 
             Assert.Equal("did:plc:g6ylltenitt4tp27bpwalh7b", derivedCast.Identity.Did);
+            Assert.NotNull(derivedCast.Identity.Handle);
             Assert.Equal("miyakotubaki.bsky.social", derivedCast.Identity.Handle);
             Assert.Equal(8948066763U, derivedCast.Identity.Sequence);
         }
