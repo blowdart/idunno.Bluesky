@@ -47,7 +47,7 @@ namespace Samples.Jetstream
             {
                 jetStream.ConnectionStateChanged += (sender, e) =>
                 {
-                    Console.WriteLine($"CONNECTION: status changed to {e.State}");
+                   //Console.WriteLine($"CONNECTION: status changed to {e.State}");
                 };
 
                 jetStream.MessageReceived += (sender, e) =>

@@ -201,3 +201,44 @@ using (var jetStream = new AtProtoJetstream(
 {
 }
 ```
+
+## Metrics
+
+`AtProtoJetstream` emits standard [.NET Metrics](https://learn.microsoft.com/en-us/dotnet/core/diagnostics/metrics),
+which you can use with [OpenTelemetry](https://opentelemetry.io/), [Aspire](https://aspire.dev/fundamentals/telemetry/),
+[Grafana](https://learn.microsoft.com/en-us/dotnet/core/diagnostics/metrics-collection#view-metrics-in-grafana-with-opentelemetry-and-prometheus)
+etc.
+
+All metrics are prefixed with `idunno.atproto.jetstream`. All the metrics are simple Counters.
+
+| Metric | Description |
+|--------|-------------|
+| total.messages | The number of messages read from the jetstream. |
+| total.events_parsed | The number of events parsed from jetstream messages. |
+| total.account_events | The number of account events parsed from the jetstream. |
+| total.commit_events | The number of commit events parsed from the jetstream. |
+| total.identity_events | The number of identity events parsed from the jetstream. |
+| total.unknown_events | The number of events from the jetstream that had an unknown event type. |
+| total.message_parsing_failures | The number of jetstream messages that could not be parsed. |
+| total.faults | The number of faults encountered in the underlying web socket. |
+| connections.opened | The number of jetstream connections that were opened. |
+| connections.closed |  The number of jetstream connections that were closed
+| connections.failures| The number of jetstream failures that were encountered during open or close attempts. ||
+
+For example the metrics over OpenTelemetry and use [Aspire](https://aspire.dev/) as the dashboard you would put your code in a
+[HostedService](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/host/hosted-services), then in your main
+method configure the host as follows
+
+```c#
+var builder = Host.CreateApplicationBuilder(args);
+builder.AddServiceDefaults();
+builder.Services.AddHostedService<Worker>();
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(metrics =>
+    {
+        metrics.AddMeter("idunno.AtProto.Jetstream");
+    });
+
+var host = builder.Build();
+host.Run();
+```
