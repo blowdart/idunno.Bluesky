@@ -650,6 +650,7 @@ namespace idunno.AtProto.Jetstream
                             LogFault("Message conversion to string failed.");
                             _metrics.MessageParsingFailures(1);
                             JetStreamLogger.MessageLoopFailedToConvert(_logger);
+                            _metrics.MessageParsingFailures(1);
                         }
                     }
                 }
