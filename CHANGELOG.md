@@ -8,6 +8,18 @@
 
 * Add support for Bluesky authentication in ASP.NET Razor Pages.
 
+## 1.7.0 - Unreleased
+
+### Changed
+
+#### idunno.AtProto
+
+* Added version to JetStream metrics.
+
+#### idunno.Bluesky
+
+* Updated `SuggestedActors` to include `RecIdStr`, see [Add recIdStr to suggested follows by actor](https://github.com/bluesky-social/atproto/pull/4644)
+
 ## 1.6.0 - 2026-02-21
 
 ### Added
