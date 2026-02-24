@@ -15,6 +15,24 @@ namespace idunno.AtProto.Jetstream
 
         private Counter<long> _eventsParsedCounter;
 
+        private Counter<long> _accountEventsReceived;
+
+        private Counter<long> _commitEventsReceived;
+
+        private Counter<long> _identityEventsReceived;
+
+        private Counter<long> _unknownEventTypesIgnored;
+
+        private Counter<long> _connectionsOpened;
+
+        private Counter<long> _connectionsClosed;
+
+        private Counter<long> _connectionFailures;
+
+        private Counter<long> _messageParsingFailures;
+
+        private Counter<long> _faults;
+
         /// <summary>
         /// Creates a new instance of <see cref="JetstreamMetrics"/>.
         /// </summary>
@@ -33,7 +51,7 @@ namespace idunno.AtProto.Jetstream
         /// <param name="meterFactory">The <see cref="IMeterFactory"/> to use to create meters.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="meterFactory"/> is <see langword="null"/>.</exception>
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = " IMeterFactory automatically manages the lifetime of any Meter objects it creates")]
-        public JetstreamMetrics(IMeterFactory meterFactory)
+        internal JetstreamMetrics(IMeterFactory meterFactory)
         {
             ArgumentNullException.ThrowIfNull(meterFactory);
 
@@ -46,31 +64,149 @@ namespace idunno.AtProto.Jetstream
         /// Increments the MessagesReceived metric by the specified amount.
         /// </summary>
         /// <param name="quantity">The quantity to increment the metric by</param>
-        public void MessagesReceived(int quantity) => _messagesReceivedCounter.Add(quantity);
+        internal void MessagesReceived(int quantity) => _messagesReceivedCounter.Add(quantity);
 
         /// <summary>
         /// Increments the EventsParsed metric by the specified amount.
         /// </summary>
         /// <param name="quantity">The quantity to increment the metric by</param>
-        public void EventsParsed(int quantity) => _eventsParsedCounter.Add(quantity);
+        internal void EventsParsed(int quantity) => _eventsParsedCounter.Add(quantity);
 
-        internal static string MeterName  => "idunno.AtProto.Jetstream";
+        /// <summary>
+        /// Increments the AccountEventsReceived metric by the specified amount.
+        /// </summary>
+        /// <param name="quantity">The quantity to increment the metric by</param>
+        internal void AccountEventsReceived(int quantity) => _accountEventsReceived.Add(quantity);
 
-        internal static string MeterVersion => "1.0.0";
+        /// <summary>
+        /// Increments the CommitEventsReceived metric by the specified amount.
+        /// </summary>
+        /// <param name="quantity">The quantity to increment the metric by</param>
+        internal void CommitEventsReceived(int quantity) => _commitEventsReceived.Add(quantity);
 
-        [MemberNotNull(nameof(_messagesReceivedCounter), nameof(_eventsParsedCounter))]
+        /// <summary>
+        /// Increments the IdentityEventsReceived metric by the specified amount.
+        /// </summary>
+        /// <param name="quantity">The quantity to increment the metric by</param>
+        internal void IdentityEventsReceived(int quantity) => _identityEventsReceived.Add(quantity);
+
+        /// <summary>
+        /// Increments the UnknownEventsReceived metric by the specified amount.
+        /// </summary>
+        /// <param name="quantity">The quantity to increment the metric by</param>
+        internal void UnknownEventsReceived(int quantity) => _unknownEventTypesIgnored.Add(quantity);
+
+        /// <summary>
+        /// Increments the ConnectionsOpened metric by the specified amount.
+        /// </summary>
+        /// <param name="quantity">The quantity to increment the metric by</param>
+        internal void ConnectionsOpened(int quantity) => _connectionsOpened.Add(quantity);
+
+        /// <summary>
+        /// Increments the ConnectionsClosed metric by the specified amount.
+        /// </summary>
+        /// <param name="quantity">The quantity to increment the metric by</param>
+        internal void ConnectionsClosed(int quantity) => _connectionsOpened.Add(quantity);
+
+        /// <summary>
+        /// Increments the ConnectionFailures metric by the specified amount.
+        /// </summary>
+        /// <param name="quantity">The quantity to increment the metric by</param>
+        internal void ConnectionFailures (int quantity) => _connectionsOpened.Add(quantity);
+
+        /// <summary>
+        /// Increments the MessageParsingFailures metric by the specified amount.
+        /// </summary>
+        /// <param name="quantity">The quantity to increment the metric by</param>
+        internal void MessageParsingFailures(int quantity) => _messageParsingFailures.Add(quantity);
+
+        /// <summary>
+        /// Increments the Faults metric by the specified amount.
+        /// </summary>
+        /// <param name="quantity">The quantity to increment the metric by</param>
+        internal void Faults(int quantity) => _faults.Add(quantity);
+
+        /// <summary>
+        /// Gets the meter name publishing metrics.
+        /// </summary>
+        public static string MeterName  => "idunno.AtProto.Jetstream";
+
+        /// <summary>
+        /// Gets the current version of the meter.
+        /// </summary>
+        public static string MeterVersion => "2.0.0";
+
+        [MemberNotNull(
+            nameof(_messagesReceivedCounter),
+            nameof(_eventsParsedCounter),
+            nameof(_accountEventsReceived),
+            nameof(_commitEventsReceived),
+            nameof(_identityEventsReceived),
+            nameof(_unknownEventTypesIgnored),
+            nameof(_connectionsOpened),
+            nameof(_connectionsClosed),
+            nameof(_connectionFailures),
+            nameof(_messageParsingFailures),
+            nameof(_faults)
+            )]
         [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Guidelines suggest all lower case.")]
         private void Initialize(Meter meter)
         {
             _messagesReceivedCounter = meter.CreateCounter<long>(
-                name: $"{MeterName.ToLowerInvariant()}.total_messages",
+                name: $"{MeterName.ToLowerInvariant()}.total.messages",
                 description: "Number of messages received from the jetstream.",
-                unit: "Messages per second");
+                unit: "Messages");
 
             _eventsParsedCounter = meter.CreateCounter<long>(
                 name: $"{MeterName.ToLowerInvariant()}.total.events_parsed",
                 description: "Number of events parsed from the jetstream.",
-                unit: "Evens per second");
+                unit: "Events");
+
+            _accountEventsReceived = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.total.account_events",
+                description: "Number of account events parsed from the jetstream.",
+                unit: "Events");
+
+            _commitEventsReceived = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.total.commit_events",
+                description: "Number of commit events parsed from the jetstream.",
+                unit: "Events");
+
+            _identityEventsReceived = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.total.identity_events",
+                description: "Number of identity events parsed from the jetstream.",
+                unit: "Events");
+
+            _unknownEventTypesIgnored = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.total.unknown_events",
+                description: "Number of unknown events skipped over.",
+                unit: "Events");
+
+            _connectionsOpened = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.connections.opened",
+                description: "Number of jetstream connections opened.",
+                unit: "Connections");
+
+            _connectionsClosed = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.connections.closed",
+                description: "Number of jetstream connections closed.",
+                unit: "Connections");
+
+            _connectionFailures = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.connections.failures",
+                description: "Number of connection failures.",
+                unit: "Failures");
+
+            _messageParsingFailures = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.total.message_parsing_failures",
+                description: "Number of message parsing failures.",
+                unit: "Failures");
+
+            _faults = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.total.faults",
+                description: "Number of faults.",
+                unit: "Faults");
+
         }
     }
 }

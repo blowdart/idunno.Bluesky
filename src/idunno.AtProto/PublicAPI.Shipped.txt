@@ -471,7 +471,7 @@ idunno.AtProto.Jetstream.AtJetstreamEvent.TimeStamp.init -> void
 idunno.AtProto.Jetstream.AtJetStreamIdentity
 idunno.AtProto.Jetstream.AtJetStreamIdentity.Did.get -> idunno.AtProto.Did!
 idunno.AtProto.Jetstream.AtJetStreamIdentity.Did.init -> void
-idunno.AtProto.Jetstream.AtJetStreamIdentity.Handle.get -> idunno.AtProto.Handle!
+idunno.AtProto.Jetstream.AtJetStreamIdentity.Handle.get -> idunno.AtProto.Handle?
 idunno.AtProto.Jetstream.AtJetStreamIdentity.Handle.init -> void
 idunno.AtProto.Jetstream.AtJetStreamIdentity.Sequence.get -> ulong
 idunno.AtProto.Jetstream.AtJetStreamIdentity.Sequence.init -> void
@@ -551,10 +551,6 @@ idunno.AtProto.Jetstream.JetStreamEventKind.Account = 1 -> idunno.AtProto.Jetstr
 idunno.AtProto.Jetstream.JetStreamEventKind.Commit = 2 -> idunno.AtProto.Jetstream.JetStreamEventKind
 idunno.AtProto.Jetstream.JetStreamEventKind.Identity = 3 -> idunno.AtProto.Jetstream.JetStreamEventKind
 idunno.AtProto.Jetstream.JetStreamEventKind.Unknown = 0 -> idunno.AtProto.Jetstream.JetStreamEventKind
-idunno.AtProto.Jetstream.JetstreamMetrics
-idunno.AtProto.Jetstream.JetstreamMetrics.EventsParsed(int quantity) -> void
-idunno.AtProto.Jetstream.JetstreamMetrics.JetstreamMetrics(System.Diagnostics.Metrics.IMeterFactory! meterFactory) -> void
-idunno.AtProto.Jetstream.JetstreamMetrics.MessagesReceived(int quantity) -> void
 idunno.AtProto.Jetstream.JetstreamOptions
 idunno.AtProto.Jetstream.JetstreamOptions.BufferSize.get -> int
 idunno.AtProto.Jetstream.JetstreamOptions.BufferSize.init -> void
@@ -568,6 +564,9 @@ idunno.AtProto.Jetstream.JetstreamOptions.TaskFactory.get -> System.Threading.Ta
 idunno.AtProto.Jetstream.JetstreamOptions.TaskFactory.init -> void
 idunno.AtProto.Jetstream.JetstreamOptions.UseCompression.get -> bool
 idunno.AtProto.Jetstream.JetstreamOptions.UseCompression.init -> void
+idunno.AtProto.Jetstream.JetstreamMetrics
+static idunno.AtProto.Jetstream.JetstreamMetrics.MeterName.get -> string!
+static idunno.AtProto.Jetstream.JetstreamMetrics.MeterVersion.get -> string!
 idunno.AtProto.JsonOptions
 idunno.AtProto.JsonOptions.JsonOptions() -> void
 idunno.AtProto.JsonOptions.JsonSerializerOptions.get -> System.Text.Json.JsonSerializerOptions!
