@@ -1,6 +1,6 @@
 ﻿# Version History
 
-## 2.0.0 - Unreleased, In Progress
+## 3.0.0 - Unreleased, In Progress
 
 ### Added
 
@@ -14,11 +14,19 @@
 
 #### idunno.AtProto
 
-* Added version to JetStream metrics.
+* Added more JetStream metrics.
+* Exposed `JetStream.MeterName` and `JetStream.MeterVersion` to allow for easy OTEL configuration.
 
 #### idunno.Bluesky
 
 * Updated `SuggestedActors` to include `RecIdStr`, see [Add recIdStr to suggested follows by actor](https://github.com/bluesky-social/atproto/pull/4644)
+
+### Breaking Changes
+
+#### idunno.AtProto
+
+* Changed `AtJetStreamIdentity` to make `Handle` property nullable.
+* Changed `JetStreamMetrics` from `public` to `internal` because it is not intended for public use.
 
 ## 1.6.0 - 2026-02-21
 
