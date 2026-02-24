@@ -8,7 +8,9 @@ namespace idunno.AtProto.Jetstream
     /// <summary>
     /// Encapsulates the properties of an account operation in a Jetstream event.
     /// </summary>
-    public sealed record AtJetstreamAccount
+    [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+    [JsonDerivedType(typeof(AtJetstreamAccount), "com.atproto.sync.subscribeRepos#account")]
+    public record AtJetstreamAccount
     {
         /// <summary>
         /// Flag indicating the active status of the account.
@@ -24,7 +26,7 @@ namespace idunno.AtProto.Jetstream
         /// Gets the sequence number for the change.
         /// </summary>
         [JsonPropertyName("seq")]
-        public ulong Sequence { get; init; }
+        public required ulong Sequence { get; init; }
 
         /// <summary>
         /// Gets the status for the account, if any.

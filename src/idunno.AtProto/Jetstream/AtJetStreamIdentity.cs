@@ -8,7 +8,9 @@ namespace idunno.AtProto.Jetstream
     /// <summary>
     /// Encapsulates the properties of a identity operation in a Jetstream event.
     /// </summary>
-    public sealed record AtJetStreamIdentity
+    [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+    [JsonDerivedType(typeof(AtJetStreamIdentity), "com.atproto.sync.subscribeRepos#identity")]
+    public record AtJetStreamIdentity
     {
         /// <summary>
         /// Gets the <see cref="AtProto.Did"/> of the account that triggered the event.
@@ -16,9 +18,9 @@ namespace idunno.AtProto.Jetstream
         public required Did Did { get; init; }
 
         /// <summary>
-        /// Gets the new <see cref="AtProto.Handle"/> for the <see cref="Did"/>.
+        /// Gets the <see cref="AtProto.Handle"/> for the <see cref="Did"/>, if any.
         /// </summary>
-        public required Handle Handle { get; init; }
+        public Handle? Handle { get; init; }
 
         /// <summary>
         /// Gets the sequence number for the change.
