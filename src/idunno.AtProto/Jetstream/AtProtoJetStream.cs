@@ -37,6 +37,10 @@ namespace idunno.AtProto.Jetstream
 
         private const string SubscribeEndpoint = "/subscribe";
 
+        private static readonly Meter s_fallbackMeter = new(JetstreamMetrics.MeterName);
+
+        private static readonly Meter s_fallbackMeter = new(JetstreamMetrics.MeterName);
+
         private readonly JetstreamMetrics _metrics;
 
         private readonly ILogger<AtProtoJetstream> _logger;
