@@ -33,6 +33,8 @@ namespace idunno.AtProto.Jetstream
 
         private Counter<long> _faults;
 
+        private Counter<long> _messageDecompressionFailures;
+
         /// <summary>
         /// Creates a new instance of <see cref="JetstreamMetrics"/>.
         /// </summary>
@@ -126,6 +128,8 @@ namespace idunno.AtProto.Jetstream
         /// <param name="quantity">The quantity to increment the metric by</param>
         internal void Faults(int quantity) => _faults.Add(quantity);
 
+        internal void MessageDecompressionFailures(int quantity) => _messageDecompressionFailures.Add(quantity);
+
         /// <summary>
         /// Gets the meter name publishing metrics.
         /// </summary>
@@ -147,7 +151,8 @@ namespace idunno.AtProto.Jetstream
             nameof(_connectionsClosed),
             nameof(_connectionFailures),
             nameof(_messageParsingFailures),
-            nameof(_faults)
+            nameof(_faults),
+            nameof(_messageDecompressionFailures)
             )]
         [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Guidelines suggest all lower case.")]
         private void Initialize(Meter meter)
@@ -183,30 +188,34 @@ namespace idunno.AtProto.Jetstream
                 unit: "Events");
 
             _connectionsOpened = meter.CreateCounter<long>(
-                name: $"{MeterName.ToLowerInvariant()}.connections.opened",
+                name: $"{MeterName.ToLowerInvariant()}.total.connections_opened",
                 description: "Number of jetstream connections opened.",
                 unit: "Connections");
 
             _connectionsClosed = meter.CreateCounter<long>(
-                name: $"{MeterName.ToLowerInvariant()}.connections.closed",
+                name: $"{MeterName.ToLowerInvariant()}.total.connections_closed",
                 description: "Number of jetstream connections closed.",
                 unit: "Connections");
 
             _connectionFailures = meter.CreateCounter<long>(
-                name: $"{MeterName.ToLowerInvariant()}.connections.failures",
+                name: $"{MeterName.ToLowerInvariant()}.total_connections_failed",
                 description: "Number of connection failures.",
-                unit: "Failures");
+                unit: "Connections");
 
             _messageParsingFailures = meter.CreateCounter<long>(
                 name: $"{MeterName.ToLowerInvariant()}.total.message_parsing_failures",
                 description: "Number of message parsing failures.",
-                unit: "Failures");
+                unit: "Messages");
 
             _faults = meter.CreateCounter<long>(
                 name: $"{MeterName.ToLowerInvariant()}.total.faults",
                 description: "Number of faults.",
                 unit: "Faults");
 
+            _messageDecompressionFailures = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.total.message_decompression_failures",
+                description: "Number of message decompression failures.",
+                unit: "Messages");
         }
     }
 }
