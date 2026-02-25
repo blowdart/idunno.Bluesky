@@ -36,8 +36,6 @@ namespace Samples.Jetstream
 
             Console.OutputEncoding = Encoding.UTF8;
 
-            AtProtoAgent agent = new(new Uri("https://public.api.bsky.app"));
-
             using (var jetStream = new AtProtoJetstream(
                 options: new JetstreamOptions()
                 {
@@ -47,12 +45,12 @@ namespace Samples.Jetstream
             {
                 jetStream.ConnectionStateChanged += (sender, e) =>
                 {
-                   //Console.WriteLine($"CONNECTION: status changed to {e.State}");
+                    Console.WriteLine($"CONNECTION: status changed to {e.State}");
                 };
 
                 jetStream.MessageReceived += (sender, e) =>
                 {
-                    //Console.WriteLine($"MESSAGE: Received message {e.Message}");
+                    Console.WriteLine($"MESSAGE   : Received message {e.Message}");
                 };
 
                 jetStream.RecordReceived += async (sender, e) =>
@@ -62,14 +60,15 @@ namespace Samples.Jetstream
                     switch (e.ParsedEvent)
                     {
                         case AtJetstreamCommitEvent commitEvent:
-                            //Console.WriteLine($"COMMIT : {commitEvent.Did} executed a {commitEvent.Commit.Operation} in {commitEvent.Commit.Collection} at {timeStamp}");
-
+                            Console.WriteLine($"COMMIT    : {commitEvent.Did} executed a {commitEvent.Commit.Operation} in {commitEvent.Commit.Collection} at {timeStamp}");
                             break;
 
                         case AtJetstreamAccountEvent accountEvent:
                             string eventBelongsTo = accountEvent.Did;
 
-                            DidDocument? didDoc = await agent.ResolveDidDocument(accountEvent.Did).ConfigureAwait(false);
+                            DidDocument? didDoc = await Resolution.ResolveDidDocument(
+                                accountEvent.Did,
+                                loggerFactory: loggerFactory).ConfigureAwait(false);
 
                             if (didDoc is not null)
                             {
@@ -86,31 +85,30 @@ namespace Samples.Jetstream
 
                             if (accountEvent.Account.Active)
                             {
-                                Console.WriteLine($"ACCOUNT : {eventBelongsTo} activated at {timeStamp}");
+                                Console.WriteLine($"ACCOUNT   : {eventBelongsTo} activated at {timeStamp}");
                             }
                             else if (accountEvent.Account.Status == AccountStatus.Deactivated)
                             {
-                                Console.WriteLine($"ACCOUNT : {eventBelongsTo} deactivated at {timeStamp}");
+                                Console.WriteLine($"ACCOUNT   : {eventBelongsTo} deactivated at {timeStamp}");
                             }
                             else if (accountEvent.Account.Status == AccountStatus.Deleted)
                             {
-                                Console.WriteLine($"ACCOUNT : {eventBelongsTo} deleted at {timeStamp}");
+                                Console.WriteLine($"ACCOUNT   : {eventBelongsTo} deleted at {timeStamp}");
                             }
                             else
                             {
-                                Console.WriteLine($"ACCOUNT : {eventBelongsTo} was {accountEvent.Account.Status.ToString()!.ToLowerInvariant()} at {timeStamp}");
+                                Console.WriteLine($"ACCOUNT   : {eventBelongsTo} was {accountEvent.Account.Status.ToString()!.ToLowerInvariant()} at {timeStamp}");
                             }
                             break;
 
                         case AtJetstreamIdentityEvent identityEvent:
                             if (identityEvent.Identity.Handle is not null)
                             {
-
-                                Console.WriteLine($"IDENTITY: {identityEvent.Did} changed handle to {identityEvent.Identity.Handle} at {timeStamp}");
+                                Console.WriteLine($"IDENTITY  : {identityEvent.Did} changed handle to {identityEvent.Identity.Handle} at {timeStamp}");
                             }
                             else
                             {
-                                Console.WriteLine($"IDENTITY: {identityEvent.Did} at {timeStamp}");
+                                Console.WriteLine($"IDENTITY  : {identityEvent.Did} at {timeStamp}");
                             }
                             break;
 

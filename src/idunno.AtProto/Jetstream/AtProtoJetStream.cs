@@ -620,6 +620,7 @@ namespace idunno.AtProto.Jetstream
                         catch (ZstdException ex)
                         {
                             // Can't decompress so ignore this message.
+                            _metrics.MessageDecompressionFailures(1);
                             JetStreamLogger.DecompressionException(_logger, ex);
                             continue;
                         }
@@ -657,8 +658,8 @@ namespace idunno.AtProto.Jetstream
                         if (_client.State == WebSocketState.Open)
                         {
                             LogFault("Message conversion to string failed.");
-                            JetStreamLogger.MessageLoopFailedToConvert(_logger);
                             _metrics.MessageParsingFailures(1);
+                            JetStreamLogger.MessageLoopFailedToConvert(_logger);
                         }
                     }
                 }
