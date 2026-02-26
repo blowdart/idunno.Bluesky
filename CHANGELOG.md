@@ -16,6 +16,7 @@
 
 * Added more JetStream metrics.
 * Exposed `JetStream.MeterName` and `JetStream.MeterVersion` to allow for easy OTEL configuration.
+* Added `Throttled` to `AccountStatus`.
 
 #### idunno.Bluesky
 
