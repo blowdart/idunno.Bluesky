@@ -29,6 +29,11 @@ namespace idunno.AtProto
         /// <summary>
         /// The account is deleted.
         /// </summary>
-        Deleted
+        Deleted,
+
+        /// <summary>
+        /// The account has been throttled
+        /// </summary>
+        Throttled
     }
 }

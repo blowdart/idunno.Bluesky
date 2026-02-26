@@ -4,6 +4,7 @@
 using System.Globalization;
 using System.Text;
 
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
@@ -36,6 +37,7 @@ namespace Samples.Jetstream
 
             Console.OutputEncoding = Encoding.UTF8;
 
+            using (var didHandleCache = new MemoryCache(new MemoryCacheOptions() { SizeLimit = 1024 }))
             using (var jetStream = new AtProtoJetstream(
                 options: new JetstreamOptions()
                 {
@@ -60,57 +62,90 @@ namespace Samples.Jetstream
                     switch (e.ParsedEvent)
                     {
                         case AtJetstreamCommitEvent commitEvent:
-                            Console.WriteLine($"COMMIT    : {commitEvent.Did} executed a {commitEvent.Commit.Operation} in {commitEvent.Commit.Collection} at {timeStamp}");
-                            break;
+                            {
+                                string eventBelongsTo = commitEvent.Did;
+
+                                if (didHandleCache.TryGetValue(commitEvent.Did, out string? handle))
+                                {
+                                    eventBelongsTo += $"/({handle})";
+                                }
+
+                                Console.WriteLine($"COMMIT    : {eventBelongsTo} executed a {commitEvent.Commit.Operation} in {commitEvent.Commit.Collection} at {timeStamp}");
+                                break;
+                            }
 
                         case AtJetstreamAccountEvent accountEvent:
-                            string eventBelongsTo = accountEvent.Did;
-
-                            DidDocument? didDoc = await Resolution.ResolveDidDocument(
-                                accountEvent.Did,
-                                loggerFactory: loggerFactory).ConfigureAwait(false);
-
-                            if (didDoc is not null)
                             {
-                                foreach (string alsoKnownAs in didDoc.AlsoKnownAs)
+                                string eventBelongsTo = accountEvent.Did;
+
+                                if (didHandleCache.TryGetValue(accountEvent.Did, out string? handle))
                                 {
-                                    if (alsoKnownAs.StartsWith("at://", StringComparison.InvariantCulture))
+                                    eventBelongsTo += $"/({handle})";
+                                }
+                                else
+                                {
+                                    DidDocument? didDoc = await Resolution.ResolveDidDocument(
+                                        accountEvent.Did,
+                                        loggerFactory: loggerFactory).ConfigureAwait(false);
+
+                                    if (didDoc is not null)
                                     {
-                                        eventBelongsTo += "/";
-                                        eventBelongsTo += alsoKnownAs[5..];
-                                        break;
+                                        foreach (string alsoKnownAs in didDoc.AlsoKnownAs)
+                                        {
+                                            if (alsoKnownAs.StartsWith("at://", StringComparison.InvariantCulture))
+                                            {
+                                                didHandleCache.Set(accountEvent.Did, alsoKnownAs[5..], new MemoryCacheEntryOptions()
+                                                {
+                                                    AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1),
+                                                    Size = 1
+                                                });
+                                                eventBelongsTo += "/";
+                                                eventBelongsTo += alsoKnownAs[5..];
+                                                break;
+                                            }
+                                        }
                                     }
                                 }
-                            }
 
-                            if (accountEvent.Account.Active)
-                            {
-                                Console.WriteLine($"ACCOUNT   : {eventBelongsTo} activated at {timeStamp}");
+                                if (accountEvent.Account.Active)
+                                {
+                                    Console.WriteLine($"ACCOUNT   : {eventBelongsTo} activated at {timeStamp}");
+                                }
+                                else if (accountEvent.Account.Status == AccountStatus.Deactivated)
+                                {
+                                    Console.WriteLine($"ACCOUNT   : {eventBelongsTo} deactivated at {timeStamp}");
+                                }
+                                else if (accountEvent.Account.Status == AccountStatus.Deleted)
+                                {
+                                    Console.WriteLine($"ACCOUNT   : {eventBelongsTo} deleted at {timeStamp}");
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"ACCOUNT   : {eventBelongsTo} was {accountEvent.Account.Status.ToString()!.ToLowerInvariant()} at {timeStamp}");
+                                }
+                                break;
                             }
-                            else if (accountEvent.Account.Status == AccountStatus.Deactivated)
-                            {
-                                Console.WriteLine($"ACCOUNT   : {eventBelongsTo} deactivated at {timeStamp}");
-                            }
-                            else if (accountEvent.Account.Status == AccountStatus.Deleted)
-                            {
-                                Console.WriteLine($"ACCOUNT   : {eventBelongsTo} deleted at {timeStamp}");
-                            }
-                            else
-                            {
-                                Console.WriteLine($"ACCOUNT   : {eventBelongsTo} was {accountEvent.Account.Status.ToString()!.ToLowerInvariant()} at {timeStamp}");
-                            }
-                            break;
 
                         case AtJetstreamIdentityEvent identityEvent:
-                            if (identityEvent.Identity.Handle is not null)
                             {
-                                Console.WriteLine($"IDENTITY  : {identityEvent.Did} changed handle to {identityEvent.Identity.Handle} at {timeStamp}");
+                                if (identityEvent.Identity.Handle is not null)
+                                {
+                                    Console.WriteLine($"IDENTITY  : {identityEvent.Did} changed handle to {identityEvent.Identity.Handle} at {timeStamp}");
+
+                                    didHandleCache.Set(identityEvent.Did, identityEvent.Identity.Handle, new MemoryCacheEntryOptions()
+                                    {
+                                        AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1),
+                                        Size = 1
+                                    });
+
+                                }
+                                else
+                                {
+                                    didHandleCache.Remove(identityEvent.Did);
+                                    Console.WriteLine($"IDENTITY  : {identityEvent.Did} at {timeStamp}");
+                                }
+                                break;
                             }
-                            else
-                            {
-                                Console.WriteLine($"IDENTITY  : {identityEvent.Did} at {timeStamp}");
-                            }
-                            break;
 
                         default:
                             break;
