@@ -19,6 +19,7 @@ idunno.AtProto.AccountStatus.Deactivated = 2 -> idunno.AtProto.AccountStatus
 idunno.AtProto.AccountStatus.Deleted = 3 -> idunno.AtProto.AccountStatus
 idunno.AtProto.AccountStatus.Suspended = 1 -> idunno.AtProto.AccountStatus
 idunno.AtProto.AccountStatus.Takendown = 0 -> idunno.AtProto.AccountStatus
+idunno.AtProto.AccountStatus.Throttled = 4 -> idunno.AtProto.AccountStatus
 idunno.AtProto.Admin.RepoReference
 idunno.AtProto.Admin.RepoReference.Did.get -> idunno.AtProto.Did!
 idunno.AtProto.Admin.RepoReference.Did.init -> void
