@@ -160,62 +160,62 @@ namespace idunno.AtProto.Jetstream
             _messagesReceivedCounter = meter.CreateCounter<long>(
                 name: $"{MeterName.ToLowerInvariant()}.total.messages",
                 description: "Number of messages received from the jetstream.",
-                unit: "Messages");
+                unit: "{messages}");
 
             _eventsParsedCounter = meter.CreateCounter<long>(
                 name: $"{MeterName.ToLowerInvariant()}.total.events_parsed",
                 description: "Number of events parsed from the jetstream.",
-                unit: "Events");
+                unit: "{events}");
 
             _accountEventsReceived = meter.CreateCounter<long>(
                 name: $"{MeterName.ToLowerInvariant()}.total.account_events",
                 description: "Number of account events parsed from the jetstream.",
-                unit: "Events");
+                unit: "{events}");
 
             _commitEventsReceived = meter.CreateCounter<long>(
                 name: $"{MeterName.ToLowerInvariant()}.total.commit_events",
                 description: "Number of commit events parsed from the jetstream.",
-                unit: "Events");
+                unit: "{events}");
 
             _identityEventsReceived = meter.CreateCounter<long>(
                 name: $"{MeterName.ToLowerInvariant()}.total.identity_events",
                 description: "Number of identity events parsed from the jetstream.",
-                unit: "Events");
+                unit: "{events}");
 
             _unknownEventTypesIgnored = meter.CreateCounter<long>(
                 name: $"{MeterName.ToLowerInvariant()}.total.unknown_events",
                 description: "Number of unknown events skipped over.",
-                unit: "Events");
+                unit: "{events}");
 
             _connectionsOpened = meter.CreateCounter<long>(
                 name: $"{MeterName.ToLowerInvariant()}.total.connections_opened",
                 description: "Number of jetstream connections opened.",
-                unit: "Connections");
+                unit: "{connections}");
 
             _connectionsClosed = meter.CreateCounter<long>(
                 name: $"{MeterName.ToLowerInvariant()}.total.connections_closed",
                 description: "Number of jetstream connections closed.",
-                unit: "Connections");
+                unit: "{connections}");
 
             _connectionFailures = meter.CreateCounter<long>(
                 name: $"{MeterName.ToLowerInvariant()}.total_connections_failed",
                 description: "Number of connection failures.",
-                unit: "Connections");
+                unit: "{connections}");
 
             _messageParsingFailures = meter.CreateCounter<long>(
                 name: $"{MeterName.ToLowerInvariant()}.total.message_parsing_failures",
                 description: "Number of message parsing failures.",
-                unit: "Messages");
+                unit: "{messages}");
 
             _faults = meter.CreateCounter<long>(
                 name: $"{MeterName.ToLowerInvariant()}.total.faults",
                 description: "Number of faults.",
-                unit: "Faults");
+                unit: "{faults}");
 
             _messageDecompressionFailures = meter.CreateCounter<long>(
                 name: $"{MeterName.ToLowerInvariant()}.total.message_decompression_failures",
                 description: "Number of message decompression failures.",
-                unit: "Messages");
+                unit: "{messages}");
         }
     }
 }
