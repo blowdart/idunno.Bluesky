@@ -1212,12 +1212,10 @@ namespace idunno.AtProto
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
-            var requestTimer = new Stopwatch();
+            long startTimestamp = Stopwatch.GetTimestamp();
 
             try
             {
-                requestTimer.Start();
-
                 // The Bluesky 2025 Protocol roadmap announced that the default PDS implementation would stop forwarding app.bsky.* endpoints to the the Bluesky API server
                 // at some future point, so log a warning if a request is made to any API endpoint not that is not a PDS endpoint (com.atproto.*).
                 // https://docs.bsky.app/blog/2025-protocol-roadmap-spring
@@ -1414,8 +1412,7 @@ namespace idunno.AtProto
             }
             finally
             {
-                requestTimer.Stop();
-                AtProtoHttpClientMetrics.RequestDuration.Record(requestTimer.ElapsedMilliseconds);
+                AtProtoHttpClientMetrics.RequestDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds);
             }
         }
 
