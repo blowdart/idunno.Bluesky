@@ -1,21 +1,19 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-
+using Duende.IdentityModel.OidcClient.DPoP;
+using idunno.AtProto.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-
-using Duende.IdentityModel.OidcClient.DPoP;
-
-using idunno.AtProto.Authentication;
-using System.Text.Json.Nodes;
 
 namespace idunno.AtProto
 {
@@ -53,6 +51,7 @@ namespace idunno.AtProto
         {
             _internalClient = new AtProtoHttpClient<string>(serviceProxy, loggerFactory);
         }
+
 
         /// <summary>
         /// Gets or sets a function called when a request is about to be sent.
@@ -470,6 +469,7 @@ namespace idunno.AtProto
             ArgumentException.ThrowIfNullOrEmpty(endpoint);
             ArgumentNullException.ThrowIfNull(httpClient);
 
+            AtProtoHttpClientMetrics.GetRequests.Add(1);
             return await MakeRequest<EmptyRequestBody>(
                 service: service,
                 endpoint: endpoint,
@@ -519,6 +519,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(httpClient);
             ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
 
+            AtProtoHttpClientMetrics.GetRequests.Add(1);
             return await MakeRequest<EmptyRequestBody>(
                 service: service,
                 endpoint: endpoint,
@@ -785,6 +786,7 @@ namespace idunno.AtProto
             ArgumentException.ThrowIfNullOrEmpty(endpoint);
             ArgumentNullException.ThrowIfNull(httpClient);
 
+            AtProtoHttpClientMetrics.PostRequests.Add(1);
             return await MakeRequest(
                 service: service,
                 endpoint: endpoint,
@@ -837,6 +839,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(httpClient);
             ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
 
+            AtProtoHttpClientMetrics.PostRequests.Add(1);
             return await MakeRequest(
                 service: service,
                 endpoint: endpoint,
@@ -897,6 +900,8 @@ namespace idunno.AtProto
             {
                 throw new ArgumentException("credentials must have access credential", nameof(credentials));
             }
+
+            AtProtoHttpClientMetrics.CreateBlob.Add(1);
 
             return await MakeRequest(
                 service: service,
@@ -962,6 +967,8 @@ namespace idunno.AtProto
                 throw new ArgumentException("credentials must have access credential", nameof(credentials));
             }
 
+            AtProtoHttpClientMetrics.CreateBlob.Add(1);
+
             return await MakeRequest(
                 service: service,
                 endpoint: endpoint,
@@ -992,7 +999,6 @@ namespace idunno.AtProto
 
             string responseContent = await responseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             errorDetail.RawContent = responseContent;
-
 
             if (responseMessage.Content.Headers.ContentType is not null &&
                 responseMessage.Content.Headers.ContentType.MediaType is not null &&
@@ -1206,190 +1212,210 @@ namespace idunno.AtProto
             IEnumerable<Did>? subscribedLabelers = null,
             CancellationToken cancellationToken = default)
         {
-            // The Bluesky 2025 Protocol roadmap announced that the default PDS implementation would stop forwarding app.bsky.* endpoints to the the Bluesky API server
-            // at some future point, so log a warning if a request is made to any API endpoint not that is not a PDS endpoint (com.atproto.*).
-            // https://docs.bsky.app/blog/2025-protocol-roadmap-spring
-            if (!_suppressProxyHeaderCheck &&
-                !endpoint.StartsWith("/xrpc/com.atproto", StringComparison.Ordinal) &&
-                !endpoint.StartsWith("/oauth/", StringComparison.Ordinal) &&
-                (requestHeaders is null ||
-                !requestHeaders.Any(nameValueHeaderValue => nameValueHeaderValue.Name.Equals("atproto-proxy", StringComparison.Ordinal))))
+            var requestTimer = new Stopwatch();
+
+            try
             {
-                Logger.AtProtoHttpClientMakingCallToNoneComAtProtoEndpointWithoutProxyHeader(_logger, endpoint);
-            }
+                requestTimer.Start();
 
-            using (var httpRequestMessage = new HttpRequestMessage(httpMethod, new Uri(service, endpoint)))
-            {
-                SetRequestHeaders(httpRequestMessage, httpClient, subscribedLabelers, _extraRequestHeaders);
-
-                // Add authentication headers
-                credentials?.SetAuthenticationHeaders(httpRequestMessage);
-
-                // Request bodies are, in theory, allowed for all methods except TRACE, however they are not commonly used except in PUT, POST and PATCH,
-                // so limit bodies to those methods. AtProto only accepts, for now, GET and POST methods anyway.
-                if (record is not null &&
-                    record is not EmptyRequestBody &&
-                    (httpMethod == HttpMethod.Post || httpMethod == HttpMethod.Patch || httpMethod == HttpMethod.Put))
+                // The Bluesky 2025 Protocol roadmap announced that the default PDS implementation would stop forwarding app.bsky.* endpoints to the the Bluesky API server
+                // at some future point, so log a warning if a request is made to any API endpoint not that is not a PDS endpoint (com.atproto.*).
+                // https://docs.bsky.app/blog/2025-protocol-roadmap-spring
+                if (!_suppressProxyHeaderCheck &&
+                    !endpoint.StartsWith("/xrpc/com.atproto", StringComparison.Ordinal) &&
+                    !endpoint.StartsWith("/oauth/", StringComparison.Ordinal) &&
+                    (requestHeaders is null ||
+                    !requestHeaders.Any(nameValueHeaderValue => nameValueHeaderValue.Name.Equals("atproto-proxy", StringComparison.Ordinal))))
                 {
-                    switch (record)
-                    {
-                        case HttpContent httpContent:
-                            httpRequestMessage.Content = httpContent;
-                            break;
-
-                        case byte[] blob:
-                            httpRequestMessage.Content = new ByteArrayContent(blob);
-                            break;
-
-                        case string stringContent:
-                            httpRequestMessage.Content = new StringContent(stringContent, Encoding.UTF8, MediaTypeNames.Application.Json);
-                            break;
-
-                        default:
-                            string content = JsonSerializer.Serialize(record, jsonSerializerOptions);
-
-                            httpRequestMessage.Content = new StringContent(content, Encoding.UTF8, MediaTypeNames.Application.Json);
-                            break;
-                    }
-
-                    if (contentHeaders is not null)
-                    {
-                        SetContentHeaders(httpRequestMessage, contentHeaders);
-                    }
+                    Logger.AtProtoHttpClientMakingCallToNoneComAtProtoEndpointWithoutProxyHeader(_logger, endpoint);
                 }
 
-                if (OnSendingRequest is not null)
+                using (var httpRequestMessage = new HttpRequestMessage(httpMethod, new Uri(service, endpoint)))
                 {
-                    await OnSendingRequest(httpRequestMessage, cancellationToken).ConfigureAwait(false);
-                }
+                    SetRequestHeaders(httpRequestMessage, httpClient, subscribedLabelers, _extraRequestHeaders);
 
-                try
-                {
-                    using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false))
+                    // Add authentication headers
+                    credentials?.SetAuthenticationHeaders(httpRequestMessage);
+
+                    // Request bodies are, in theory, allowed for all methods except TRACE, however they are not commonly used except in PUT, POST and PATCH,
+                    // so limit bodies to those methods. AtProto only accepts, for now, GET and POST methods anyway.
+                    if (record is not null &&
+                        record is not EmptyRequestBody &&
+                        (httpMethod == HttpMethod.Post || httpMethod == HttpMethod.Patch || httpMethod == HttpMethod.Put))
                     {
-                        if (OnResponseReceived is not null)
+                        switch (record)
                         {
-                            await OnResponseReceived(httpResponseMessage, cancellationToken).ConfigureAwait(false);
+                            case HttpContent httpContent:
+                                httpRequestMessage.Content = httpContent;
+                                break;
+
+                            case byte[] blob:
+                                httpRequestMessage.Content = new ByteArrayContent(blob);
+                                break;
+
+                            case string stringContent:
+                                httpRequestMessage.Content = new StringContent(stringContent, Encoding.UTF8, MediaTypeNames.Application.Json);
+                                break;
+
+                            default:
+                                string content = JsonSerializer.Serialize(record, jsonSerializerOptions);
+
+                                httpRequestMessage.Content = new StringContent(content, Encoding.UTF8, MediaTypeNames.Application.Json);
+                                break;
                         }
 
-                        AtProtoHttpResult<TResult> result = new()
+                        if (contentHeaders is not null)
                         {
-                            StatusCode = httpResponseMessage.StatusCode,
-                            RateLimit = ExtractRateLimitFromResponse(httpResponseMessage.Headers)
-                        };
+                            SetContentHeaders(httpRequestMessage, contentHeaders);
+                        }
+                    }
 
-                        RaiseCredentialsUpdatedOnDPoPNonceChange(credentials, httpRequestMessage, httpResponseMessage, onCredentialsUpdated);
+                    if (OnSendingRequest is not null)
+                    {
+                        await OnSendingRequest(httpRequestMessage, cancellationToken).ConfigureAwait(false);
+                    }
 
-                        if (httpResponseMessage.IsSuccessStatusCode)
+                    try
+                    {
+                        AtProtoHttpClientMetrics.RequestsSent.Add(1);
+                        using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false))
                         {
-                            Logger.AtProtoClientRequestSucceeded
-                                (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
+                            AtProtoHttpClientMetrics.ResponsesReceived.Add(1);
 
-                            if (typeof(TResult) == typeof(EmptyResponse))
+                            if (OnResponseReceived is not null)
                             {
-                                result.Result = new EmptyResponse() as TResult;
+                                await OnResponseReceived(httpResponseMessage, cancellationToken).ConfigureAwait(false);
                             }
-                            else if (typeof(TResult) == typeof(string))
-                            {
-                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-                                result.Result = responseContent as TResult;
-                            }
-                            else if (typeof(TResult) == typeof(JsonNode))
-                            {
-                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
-                                result.Result = JsonNode.Parse(responseContent) as TResult;
-                            }
-                            else if (typeof(TResult) == typeof(JsonObject))
+                            AtProtoHttpResult<TResult> result = new()
                             {
-                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                                StatusCode = httpResponseMessage.StatusCode,
+                                RateLimit = ExtractRateLimitFromResponse(httpResponseMessage.Headers)
+                            };
 
-                                result.Result = JsonObject.Parse(responseContent) as TResult;
-                            }
-                            else if (typeof(TResult) == typeof(JsonDocument))
+                            RaiseCredentialsUpdatedOnDPoPNonceChange(credentials, httpRequestMessage, httpResponseMessage, onCredentialsUpdated);
+
+                            if (httpResponseMessage.IsSuccessStatusCode)
                             {
-                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                                AtProtoHttpClientMetrics.SuccessfulRequests.Add(1);
+                                Logger.AtProtoClientRequestSucceeded
+                                    (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
 
-                                result.Result = JsonDocument.Parse(responseContent) as TResult;
+                                if (typeof(TResult) == typeof(EmptyResponse))
+                                {
+                                    result.Result = new EmptyResponse() as TResult;
+                                }
+                                else if (typeof(TResult) == typeof(string))
+                                {
+                                    string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                                    result.Result = responseContent as TResult;
+                                }
+                                else if (typeof(TResult) == typeof(JsonNode))
+                                {
+                                    string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+                                    result.Result = JsonNode.Parse(responseContent) as TResult;
+                                }
+                                else if (typeof(TResult) == typeof(JsonObject))
+                                {
+                                    string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+                                    result.Result = JsonObject.Parse(responseContent) as TResult;
+                                }
+                                else if (typeof(TResult) == typeof(JsonDocument))
+                                {
+                                    string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+                                    result.Result = JsonDocument.Parse(responseContent) as TResult;
+                                }
+                                else
+                                {
+                                    string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+                                    try
+                                    {
+                                        result.Result = JsonSerializer.Deserialize<TResult>(
+                                            responseContent,
+                                            jsonSerializerOptions);
+                                    }
+                                    catch (JsonException ex)
+                                    {
+                                        AtProtoHttpClientMetrics.DeserializationFailures.Add(1);
+                                        Logger.AtProtoClientResponseDeserializationThrew(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, ex);
+                                    }
+                                }
                             }
                             else
                             {
-                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                                AtProtoHttpClientMetrics.FailedRequests.Add(1);
+                                AtErrorDetail atErrorDetail = await ExtractErrorDetailFromResponse(httpRequestMessage, httpResponseMessage, cancellationToken).ConfigureAwait(false);
 
-                                try
+                                // Retry if the error returned is there has been a DPoP nonce change and we're sending a DPoP authenticated request.
+                                // BadRequest comes from an authorization server, Unauthorized comes from a resource server (the PDS).
+                                if (credentials is IDPoPBoundCredential dPoPBoundCredential &&
+                                    (httpResponseMessage.StatusCode == HttpStatusCode.Unauthorized || httpResponseMessage.StatusCode == HttpStatusCode.BadRequest) &&
+                                    retry &&
+                                    string.Equals(DPoPNonceRetryError, atErrorDetail.Error, StringComparison.OrdinalIgnoreCase))
                                 {
-                                    result.Result = JsonSerializer.Deserialize<TResult>(
-                                        responseContent,
-                                        jsonSerializerOptions);
+                                    // Update nonce
+
+                                    string? updatedDPoPNonce = httpResponseMessage.GetDPoPNonce();
+
+                                    if (!string.IsNullOrEmpty(updatedDPoPNonce))
+                                    {
+                                        dPoPBoundCredential.DPoPNonce = updatedDPoPNonce;
+
+                                        AtProtoHttpClientMetrics.DPoPRetries.Add(1);
+
+                                        // Retry
+                                        return await MakeRequest(
+                                            service: service,
+                                            endpoint: endpoint,
+                                            record: record,
+                                            httpMethod: httpMethod,
+                                            requestHeaders: requestHeaders,
+                                            contentHeaders: contentHeaders,
+                                            credentials: credentials,
+                                            httpClient: httpClient,
+                                            retry: false,
+                                            onCredentialsUpdated: onCredentialsUpdated,
+                                            subscribedLabelers: subscribedLabelers,
+                                            jsonSerializerOptions: jsonSerializerOptions,
+                                            cancellationToken: cancellationToken).ConfigureAwait(false);
+                                    }
+
                                 }
-                                catch (JsonException ex)
+
+                                result.AtErrorDetail = atErrorDetail;
+
+                                if (typeof(TResult) == typeof(string))
                                 {
-                                    Logger.AtProtoClientResponseDeserializationThrew(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, ex);
+                                    result.Result = atErrorDetail.RawContent as TResult;
                                 }
+
+                                Logger.AtProtoClientRequestFailed
+                                    (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, httpResponseMessage.StatusCode, result.AtErrorDetail.Error, result.AtErrorDetail.Message);
+
                             }
+
+                            result.HttpResponseHeaders = httpResponseMessage.Headers;
+
+                            return result;
                         }
-                        else
-                        {
-                            AtErrorDetail atErrorDetail = await ExtractErrorDetailFromResponse(httpRequestMessage, httpResponseMessage, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        Logger.AtProtoClientRequestCancelled
+                            (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
 
-                            // Retry if the error returned is there has been a DPoP nonce change and we're sending a DPoP authenticated request.
-                            // BadRequest comes from an authorization server, Unauthorized comes from a resource server (the PDS).
-                            if (credentials is IDPoPBoundCredential dPoPBoundCredential &&
-                                (httpResponseMessage.StatusCode == HttpStatusCode.Unauthorized || httpResponseMessage.StatusCode == HttpStatusCode.BadRequest) &&
-                                retry &&
-                                string.Equals(DPoPNonceRetryError, atErrorDetail.Error, StringComparison.OrdinalIgnoreCase))
-                            {
-                                // Update nonce
-
-                                string? updatedDPoPNonce = httpResponseMessage.GetDPoPNonce();
-
-                                if (!string.IsNullOrEmpty(updatedDPoPNonce))
-                                {
-                                    dPoPBoundCredential.DPoPNonce = updatedDPoPNonce;
-
-                                    // Retry
-                                    return await MakeRequest(
-                                        service: service,
-                                        endpoint: endpoint,
-                                        record: record,
-                                        httpMethod: httpMethod,
-                                        requestHeaders: requestHeaders,
-                                        contentHeaders: contentHeaders,
-                                        credentials: credentials,
-                                        httpClient: httpClient,
-                                        retry: false,
-                                        onCredentialsUpdated: onCredentialsUpdated,
-                                        subscribedLabelers: subscribedLabelers,
-                                        jsonSerializerOptions: jsonSerializerOptions,
-                                        cancellationToken: cancellationToken).ConfigureAwait(false);
-                                }
-
-                            }
-
-                            result.AtErrorDetail = atErrorDetail;
-
-                            if (typeof(TResult) == typeof(string))
-                            {
-                                result.Result = atErrorDetail.RawContent as TResult;
-                            }
-
-                            Logger.AtProtoClientRequestFailed
-                                (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, httpResponseMessage.StatusCode, result.AtErrorDetail.Error, result.AtErrorDetail.Message);
-
-                        }
-
-                        result.HttpResponseHeaders = httpResponseMessage.Headers;
-
-                        return result;
+                        return new AtProtoHttpResult<TResult>(null, System.Net.HttpStatusCode.OK, null);
                     }
                 }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    Logger.AtProtoClientRequestCancelled
-                        (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
-
-                    return new AtProtoHttpResult<TResult>(null, System.Net.HttpStatusCode.OK, null);
-                }
+            }
+            finally
+            {
+                requestTimer.Stop();
+                AtProtoHttpClientMetrics.RequestDuration.Record(requestTimer.ElapsedMilliseconds);
             }
         }
 

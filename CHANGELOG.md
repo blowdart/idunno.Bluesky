@@ -14,6 +14,7 @@
 
 #### idunno.AtProto
 
+* Added metrics in `AtProtoHttpClientMetrics` including request duration, request count and failure count.
 * Added more JetStream metrics.
 * Exposed `JetStream.MeterName` and `JetStream.MeterVersion` to allow for easy OTEL configuration.
 * Added `Throttled` to `AccountStatus`.
