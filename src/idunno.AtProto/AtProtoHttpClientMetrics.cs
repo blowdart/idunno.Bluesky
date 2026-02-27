@@ -33,7 +33,7 @@ namespace idunno.AtProto
         } = s_meter.CreateCounter<long>(
             name: $"{MeterName.ToLowerInvariant()}.requests.total",
             description: "Total requests sent",
-            unit: "Requests");
+            unit: "{requests}");
 
         internal static Counter<long> ResponsesReceived
         {
@@ -41,7 +41,7 @@ namespace idunno.AtProto
         } = s_meter.CreateCounter<long>(
             name: $"{MeterName.ToLowerInvariant()}.responses.total",
             description: "Total responses received",
-            unit: "Requests");
+            unit: "{requests}");
 
         internal static Counter<long> SuccessfulRequests
         {
@@ -49,7 +49,7 @@ namespace idunno.AtProto
         } = s_meter.CreateCounter<long>(
             name: $"{MeterName.ToLowerInvariant()}.requests.total.successful",
             description: "Total successful requests",
-            unit: "Requests");
+            unit: "{requests}");
 
         internal static Counter<long> FailedRequests
         {
@@ -57,7 +57,7 @@ namespace idunno.AtProto
         } = s_meter.CreateCounter<long>(
             name: $"{MeterName.ToLowerInvariant()}.requests.total.failure",
             description: "Total failed requests",
-            unit: "Requests");
+            unit: "{requests}");
 
         internal static Counter<long> DPoPRetries
         {
@@ -65,7 +65,7 @@ namespace idunno.AtProto
         } = s_meter.CreateCounter<long>(
             name: $"{MeterName.ToLowerInvariant()}.requests.total.dpop_retry",
             description: "Total request retries due to DPoP nonce rotation",
-            unit: "Requests");
+            unit: "{requests}");
 
         internal static Counter<long> DeserializationFailures
         {
@@ -73,7 +73,7 @@ namespace idunno.AtProto
         } = s_meter.CreateCounter<long>(
             name: $"{MeterName.ToLowerInvariant()}.requests.total.deserialization_failure",
             description: "Total Deserialization failures",
-            unit: "Requests");
+            unit: "{requests}");
 
         internal static Counter<long> CreateBlob
         {
@@ -81,7 +81,7 @@ namespace idunno.AtProto
         } = s_meter.CreateCounter<long>(
             name: $"{MeterName.ToLowerInvariant()}.requests.total.blob_post_request",
             description: "Total POST Blob requests",
-            unit: "Requests");
+            unit: "{requests}");
 
         internal static Counter<long> GetRequests
         {
@@ -89,7 +89,7 @@ namespace idunno.AtProto
         } = s_meter.CreateCounter<long>(
             name: $"{MeterName.ToLowerInvariant()}.requests.total.get_request",
             description: "Total GET requests",
-            unit: "Requests");
+            unit: "{requests}");
 
         internal static Counter<long> PostRequests
         {
@@ -105,7 +105,7 @@ namespace idunno.AtProto
         } = s_meter.CreateHistogram<double>(
             name: $"{MeterName.ToLowerInvariant()}.request.duration",
             description: "Request duration",
-            unit: "Milliseconds",
+            unit: "s",
             advice: new InstrumentAdvice<double> { HistogramBucketBoundaries = s_shortSecondsBucketBoundaries });
     }
 }

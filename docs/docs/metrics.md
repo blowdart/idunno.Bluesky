@@ -60,7 +60,7 @@ The `idunno.AtProto.AtProtoHttpClient` Meter reports measures from the `idunno.A
 ### Metric: request.duration
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `request.duration` | Histogram&lt;double&gt; | Milliseconds | Duration of individual requests made by the `idunno.AtProto.AtProtoHttpClient`. |
+| `request.duration` | Histogram&lt;double&gt; | Seconds | Duration of individual requests made by the `idunno.AtProto.AtProtoHttpClient`. |
 
 ## idunno.AtProto.JetStream
 
