@@ -51,6 +51,7 @@
     <File Path="docs/docs/jetstream.md" />
     <File Path="docs/docs/labels.md" />
     <File Path="docs/docs/logging.md" />
+    <File Path="docs/docs/metrics.md" />
     <File Path="docs/docs/notifications.md" />
     <File Path="docs/docs/posting.md" />
     <File Path="docs/docs/profileEditing.md" />

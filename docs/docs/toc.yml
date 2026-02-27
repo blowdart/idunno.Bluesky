@@ -55,6 +55,8 @@
     items:
       - name: Configuring logging
         href: logging.md
+      - name: Built-in Metrics
+        href: metrics.md
       - name: Labels
         href: labels.md
       - name: Saving & restoring authentication state
