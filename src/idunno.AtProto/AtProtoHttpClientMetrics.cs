@@ -18,7 +18,7 @@ namespace idunno.AtProto
         /// <summary>
         /// Gets the meter name publishing metrics.
         /// </summary>
-        public static string MeterName => "idunno.AtProto.AtProtoAgent";
+        public static string MeterName => "idunno.AtProto.AtProtoHttpClient";
 
         /// <summary>
         /// Gets the current version of the meter.
