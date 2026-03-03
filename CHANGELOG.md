@@ -21,7 +21,7 @@
 
 ### Documentation
 
-* * Added documentation for metrics.
+* Added documentation for metrics.
 
 ### Changed
 
