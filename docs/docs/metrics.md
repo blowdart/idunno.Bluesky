@@ -2,9 +2,17 @@
 
 This is a reference for metrics built-in for .NET, produced using the [System.Diagnostics.Metrics](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.metric) API.
 
->[!TIP]
->For more information about how to collect and report these metrics, see the .NET documentation
-[Collecting metrics](https://learn.microsoft.com/en-us/dotnet/core/diagnostics/metrics-collection).
+> [!TIP]
+> For more information about how to collect and report these metrics, see the .NET documentation
+> [Collecting metrics](https://learn.microsoft.com/en-us/dotnet/core/diagnostics/metrics-collection).
+>
+> During development you can use the [dotnet-counters](https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-counters) tool to
+> observe these metrics in real time. e.g.
+> ```c#
+> dotnet-counters monitor --process-id <pid> --counters idunno.AtProto.AtProtoHttpClient
+> ```
+> For production environments, you can use a variety of exporters to send these metrics to monitoring systems
+> like Aspire, Prometheus, Grafana, or Azure Monitor.
 
 
 ## idunno.AtProto.AtProtoHttpClient
@@ -15,52 +23,52 @@ The `idunno.AtProto.AtProtoHttpClient` Meter reports measures from the `idunno.A
 
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `requests.total` | Counter&lt;long&gt; | Requests | Total number of requests made by the `idunno.AtProto.AtProtoHttpClient`.|
+| `requests.total` | Counter&lt;long&gt; | Requests | Total number of requests made by an instance of `idunno.AtProto.AtProtoHttpClient`.|
 
 ### Metric: responses.total
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `responses.total` | Counter&lt;long&gt; | Responses | Total number of responses received by the `idunno.AtProto.AtProtoHttpClient`. |
+| `responses.total` | Counter&lt;long&gt; | Responses | Total number of responses received by an instance of `idunno.AtProto.AtProtoHttpClient`. |
 
 ### Metric: requests.total.successful
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `requests.total.successful` | Counter&lt;long&gt; | Requests | Total number of successful requests made by the `idunno.AtProto.AtProtoHttpClient`. |
+| `requests.total.successful` | Counter&lt;long&gt; | Requests | Total number of successful requests made by an instance of `idunno.AtProto.AtProtoHttpClient`. |
 
 ### Metric: requests.total.failure
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `requests.total.failure` | Counter&lt;long&gt; | Requests | Total number of failed requests made by the `idunno.AtProto.AtProtoHttpClient`. |
+| `requests.total.failure` | Counter&lt;long&gt; | Requests | Total number of failed requests made by an instance of `idunno.AtProto.AtProtoHttpClient`. |
 
 ### Metric: requests.total.dpop_retry
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `requests.total.dpop_retry` | Counter&lt;long&gt; | Requests | Total number of requests retried due to DPoP nonce rotation or other DPoP related issues by the `idunno.AtProto.AtProtoHttpClient`. |
+| `requests.total.dpop_retry` | Counter&lt;long&gt; | Requests | Total number of requests retried due to DPoP nonce rotation or other DPoP related issues by an instance of the `idunno.AtProto.AtProtoHttpClient`. |
 
-### Metric: requests.total.deserialization_failure
+### Metric: responses.total.deserialization_failure
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `requests.total.deserialization_failure` | Counter&lt;long&gt; | Requests | Total number of responses that could not be deserialized from JSON by the `idunno.AtProto.AtProtoHttpClient`. |
+| `responses.total.deserialization_failure` | Counter&lt;long&gt; | Requests | Total number of responses that could not be deserialized from JSON by an instance of the `idunno.AtProto.AtProtoHttpClient`. |
 
-### Metric: requests.total.blob_post_request
+### Metric: requests.total.blob_create_request
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `requests.total.blob_post_request` | Counter&lt;long&gt; | Requests | Total number of blob creation requests made by the `idunno.AtProto.AtProtoHttpClient`. |
+| `requests.total.blob_create_request` | Counter&lt;long&gt; | Requests | Total number of blob creation requests made by an instance of `idunno.AtProto.AtProtoHttpClient`. |
 
 ### Metric: requests.total.get_request
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `requests.total.get_request` | Counter&lt;long&gt; | Requests | Total number of HTTP GET requests made by the `idunno.AtProto.AtProtoHttpClient`. |
+| `requests.total.get_request` | Counter&lt;long&gt; | Requests | Total number of HTTP GET requests made by an instance of the `idunno.AtProto.AtProtoHttpClient`. |
 
 ### Metric: requests.total.post_request
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `requests.total.post_request` | Counter&lt;long&gt; | Requests | Total number of HTTP POST requests made by the `idunno.AtProto.AtProtoHttpClient`, excluding blob creation requests. |
+| `requests.total.post_request` | Counter&lt;long&gt; | Requests | Total number of HTTP POST requests made by an instance of the `idunno.AtProto.AtProtoHttpClient`. |
 
 ### Metric: request.duration
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `request.duration` | Histogram&lt;double&gt; | Seconds | Duration of individual requests made by the `idunno.AtProto.AtProtoHttpClient`. |
+| `request.duration` | Histogram&lt;double&gt; | s | Duration of individual requests made by an instance of the `idunno.AtProto.AtProtoHttpClient`. |
 
 ## idunno.AtProto.JetStream
 

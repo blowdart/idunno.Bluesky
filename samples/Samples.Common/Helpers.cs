@@ -61,6 +61,12 @@ namespace Samples.Common
             HelpName = "Uri"
         };
 
+        static readonly Option<bool> s_metricsDelayOption = new("--metricsDelay")
+        {
+            Description = "Adds a delay to allow time for metrics collection.",
+            HelpName = "bool"
+        };
+
         /// <summary>
         /// Returns a command line parser configured with the common command line parameters,
         /// which will call <paramref name="runCode"/> when the <see cref="ParseResult"/>'s InvokeAsync is called.
@@ -97,6 +103,49 @@ namespace Samples.Common
                     parseResult.GetValue(s_authCodeOption),
                     parseResult.GetValue(s_proxyOption),
                     cancellationToken);
+            });
+
+            return rootCommand.Parse(args);
+        }
+
+        /// <summary>
+        /// Returns a command line parser configured with the common command line parameters,
+        /// which will call <paramref name="runCode"/> when the <see cref="ParseResult"/>'s InvokeAsync is called.
+        /// </summary>
+        /// <param name="runCode">The function to run when InvokeAsync is called on the parser.</param>
+        /// <returns>A preconfigured command line <see cref="ParseResult"/>.</returns>
+        public static ParseResult ConfigureCommandLineWithMetricsDelay(
+            string[] args,
+            string commandDescription,
+            Func<string?, string?, string?, Uri?, bool, CancellationToken, Task> runCode)
+        {
+            var rootCommand = new RootCommand(commandDescription)
+            {
+                s_handleOption,
+                s_passwordOption,
+                s_authCodeOption,
+                s_proxyOption,
+                s_metricsDelayOption
+            };
+
+            for (int i = 0; i < rootCommand.Options.Count; i++)
+            {
+                if (rootCommand.Options[i] is HelpOption defaultHelpOption)
+                {
+                    defaultHelpOption.Action = new CustomHelpHandlePasswordAction((HelpAction)defaultHelpOption.Action!);
+                    break;
+                }
+            }
+
+            rootCommand.SetAction((parseResult, cancellationToken) =>
+            {
+                return runCode(
+                   parseResult.GetValue(s_handleOption),
+                   parseResult.GetValue(s_passwordOption),
+                   parseResult.GetValue(s_authCodeOption),
+                   parseResult.GetValue(s_proxyOption),
+                   parseResult.GetValue(s_metricsDelayOption),
+                   cancellationToken);
             });
 
             return rootCommand.Parse(args);

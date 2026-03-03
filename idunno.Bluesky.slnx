@@ -205,6 +205,10 @@
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
+    <Project Path="samples/Samples.OAuthNonceRollover/Samples.OAuthNonceRollover.csproj" Id="9496d983-ce61-4835-abbd-0833d9357d03">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
     <Project Path="samples/Samples.Posting/Samples.Posting.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />

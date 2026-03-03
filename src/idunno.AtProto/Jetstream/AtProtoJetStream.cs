@@ -37,9 +37,6 @@ namespace idunno.AtProto.Jetstream
 
         private const string SubscribeEndpoint = "/subscribe";
 
-        // Fall back meter for non-DI aware scenarios.
-        private static readonly Meter s_fallbackMeter = new(JetstreamMetrics.MeterName, JetstreamMetrics.MeterVersion);
-
         private readonly JetstreamMetrics _metrics;
 
         private readonly ILogger<AtProtoJetstream> _logger;
@@ -94,14 +91,7 @@ namespace idunno.AtProto.Jetstream
                 LoggerFactory = NullLoggerFactory.Instance;
             }
 
-            if (Options.MeterFactory is not null)
-            {
-                _metrics = new JetstreamMetrics(Options.MeterFactory);
-            }
-            else
-            {
-                _metrics = new JetstreamMetrics(s_fallbackMeter);
-            }
+            _metrics = new JetstreamMetrics(Options.MeterFactory);
 
             if (Options.UseCompression)
             {

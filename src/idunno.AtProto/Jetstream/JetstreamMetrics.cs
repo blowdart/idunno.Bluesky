@@ -35,17 +35,8 @@ namespace idunno.AtProto.Jetstream
 
         private Counter<long> _messageDecompressionFailures;
 
-        /// <summary>
-        /// Creates a new instance of <see cref="JetstreamMetrics"/>.
-        /// </summary>
-        /// <param name="meter">The meter to use to create counters on.</param>
-        /// <remarks><para>This is a fallback constructor for non-DI aware environments.</para></remarks>
-        internal JetstreamMetrics(Meter meter)
-        {
-            ArgumentNullException.ThrowIfNull(meter);
-
-            Initialize(meter);
-        }
+        // For non-DI scenarios, see https://learn.microsoft.com/en-us/dotnet/core/diagnostics/metrics-instrumentation#best-practices
+        private static readonly Meter s_meter = new(MeterName, MeterVersion);
 
         /// <summary>
         /// Creates a new instance of <see cref="JetstreamMetrics"/>.
@@ -53,13 +44,16 @@ namespace idunno.AtProto.Jetstream
         /// <param name="meterFactory">The <see cref="IMeterFactory"/> to use to create meters.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="meterFactory"/> is <see langword="null"/>.</exception>
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = " IMeterFactory automatically manages the lifetime of any Meter objects it creates")]
-        internal JetstreamMetrics(IMeterFactory meterFactory)
+        internal JetstreamMetrics(IMeterFactory? meterFactory)
         {
-            ArgumentNullException.ThrowIfNull(meterFactory);
-
-            Meter meter = meterFactory.Create(MeterName, MeterVersion);
-
-            Initialize(meter);
+            if (meterFactory == null)
+            {
+                Initialize(s_meter);
+            }
+            else
+            {
+                Initialize(meterFactory.Create(MeterName, MeterVersion));
+            }
         }
 
         /// <summary>
