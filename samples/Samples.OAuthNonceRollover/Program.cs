@@ -211,18 +211,6 @@ namespace Samples.OAuthNonceRollover
                 AtProtoHttpResult<int> getNotificationCount = await agent.GetNotificationUnreadCount(cancellationToken: cancellationToken);
                 getNotificationCount.EnsureSucceeded();
 
-                Console.WriteLine($"Immediately making another request, no nonce rotation should occur.");
-                getNotificationCount = await agent.GetNotificationUnreadCount(cancellationToken: cancellationToken);
-                getNotificationCount.EnsureSucceeded();
-                if (credentialsUpdatedEventFired)
-                {
-                    ConsoleColor oldColor = Console.ForegroundColor;
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("CredentialsUpdated event unexpectedly fired.");
-                    Console.ForegroundColor = oldColor;
-                    return;
-                }
-
                 Console.WriteLine("Waiting for 90 seconds for the nonce to rotate.");
                 Thread.Sleep(TimeSpan.FromSeconds(90));
                 Console.WriteLine("Waking up and making another request...");
