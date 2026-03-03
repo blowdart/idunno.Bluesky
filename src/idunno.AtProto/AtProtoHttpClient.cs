@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Metrics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Mime;
@@ -10,10 +11,13 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using Duende.IdentityModel.OidcClient.DPoP;
-using idunno.AtProto.Authentication;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+
+using Duende.IdentityModel.OidcClient.DPoP;
+
+using idunno.AtProto.Authentication;
 
 namespace idunno.AtProto
 {
@@ -21,9 +25,12 @@ namespace idunno.AtProto
     /// A helper class to perform HTTP requests against an AT Proto service.
     /// </summary>
     /// <remarks>
-    /// <para>This class performs no serialization of request bodies or deserialization of response bodies, requests should already be json serialized strings.</para>
+    /// <para>Creates a new instance of <see cref="AtProtoHttpClient"/></para>
     /// </remarks>
-    public class AtProtoHttpClient
+    /// <param name="serviceProxy">Any service a PDS should proxy the request to.</param>
+    /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
+    /// <param name="meterFactory">An optional meter factory to create meters from.</param>
+    public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? loggerFactory = null, IMeterFactory? meterFactory = null)
     {
         static readonly HttpClientHandler s_defaultClientHandler = new()
         {
@@ -31,27 +38,11 @@ namespace idunno.AtProto
             UseCookies = false
         };
 
-        private readonly AtProtoHttpClient<string> _internalClient;
-
-        /// <summary>
-        /// Creates a new instance of <see cref="AtProtoHttpClient"/>
-        /// </summary>
-        /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
-        public AtProtoHttpClient(ILoggerFactory? loggerFactory = null)
-        {
-            _internalClient = new AtProtoHttpClient<string>(loggerFactory);
-        }
-
-        /// <summary>
-        /// Creates a new instance of <see cref="AtProtoHttpClient"/>
-        /// </summary>
-        /// <param name="serviceProxy">The service a PDS should proxy the request to.</param>
-        /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
-        public AtProtoHttpClient(string serviceProxy, ILoggerFactory? loggerFactory = null)
-        {
-            _internalClient = new AtProtoHttpClient<string>(serviceProxy, loggerFactory);
-        }
-
+        private readonly AtProtoHttpClient<string> _internalClient = new(
+                serviceProxy: serviceProxy,
+                requestHeaders: null,
+                loggerFactory: loggerFactory,
+                meterFactory: meterFactory);
 
         /// <summary>
         /// Gets or sets a function called when a request is about to be sent.
@@ -113,6 +104,7 @@ namespace idunno.AtProto
                     onCredentialsUpdated: onCredentialsUpdated,
                     requestHeaders: requestHeaders,
                     subscribedLabelers: subscribedLabelers,
+                    jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
             }
         }
@@ -214,6 +206,7 @@ namespace idunno.AtProto
                     onCredentialsUpdated: onCredentialsUpdated,
                     requestHeaders: requestHeaders,
                     subscribedLabelers: subscribedLabelers,
+                    jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
             }
         }
@@ -233,6 +226,13 @@ namespace idunno.AtProto
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">Thrown when <paramref name="endpoint"/> is <see langword="null"/> or empty.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "Using a return type of string avoids json serialization and deserialization in the typed client.")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "Using a return type of string avoids json serialization and deserialization in the typed client.")]
         public async Task<AtProtoHttpResult<string>> Post(
             string service,
             string endpoint,
@@ -270,6 +270,8 @@ namespace idunno.AtProto
 
         private readonly ILogger<AtProtoHttpClient<TResult>> _logger;
 
+        private readonly AtProtoHttpClientMetrics _metrics;
+
         private readonly ICollection<NameValueHeaderValue>? _extraRequestHeaders;
 
         private readonly bool _suppressProxyHeaderCheck;
@@ -289,11 +291,37 @@ namespace idunno.AtProto
         /// <summary>
         /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
         /// </summary>
-        /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
-        internal AtProtoHttpClient(ILoggerFactory? loggerFactory = null)
+        internal AtProtoHttpClient() : this(loggerFactory: null)
         {
-            loggerFactory ??= NullLoggerFactory.Instance;
-            _logger = loggerFactory.CreateLogger<AtProtoHttpClient<TResult>>();
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
+        /// </summary>
+        /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
+        internal AtProtoHttpClient(ILoggerFactory? loggerFactory) : this(
+            serviceProxy: null,
+            requestHeaders: null,
+            loggerFactory: loggerFactory,
+            meterFactory: null)
+        {
+        }
+
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
+        /// </summary>
+        /// <param name="serviceProxy">The service a PDS should proxy the request to.</param>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="serviceProxy"/> is <see langword="null"/> or white space.</exception>
+        /// <remarks>
+        ///<para>Passing <see langword="null"/> as the <paramref name="serviceProxy"/> value will suppress the checks for the presence of the atproto-proxy header on requests by this instance.</para>
+        /// </remarks>
+        public AtProtoHttpClient(string? serviceProxy) : this(
+            serviceProxy: serviceProxy,
+            requestHeaders: null,
+            loggerFactory: null,
+            meterFactory: null)
+        {
         }
 
         /// <summary>
@@ -305,8 +333,109 @@ namespace idunno.AtProto
         /// <remarks>
         ///<para>Passing <see langword="null"/> as the <paramref name="serviceProxy"/> value will suppress the checks for the presence of the atproto-proxy header on requests by this instance.</para>
         /// </remarks>
-        public AtProtoHttpClient(string? serviceProxy, ILoggerFactory? loggerFactory = null)
+        public AtProtoHttpClient(string? serviceProxy, ILoggerFactory? loggerFactory) :this(
+            serviceProxy: serviceProxy,
+            requestHeaders: null,
+            loggerFactory: loggerFactory,
+            meterFactory: null)
         {
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
+        /// </summary>
+        /// <param name="serviceProxy">The service a PDS should proxy the request to.</param>
+        /// <param name="requestHeader">An header to add to the requests this instance makes.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="requestHeader"/> is <see langword="null"/>.</exception>
+        public AtProtoHttpClient(string serviceProxy, NameValueHeaderValue requestHeader) :
+            this(
+                serviceProxy: serviceProxy,
+                requestHeaders: [requestHeader],
+                loggerFactory: null,
+                meterFactory: null)
+        {
+            ArgumentNullException.ThrowIfNull(requestHeader);
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
+        /// </summary>
+        /// <param name="serviceProxy">The service a PDS should proxy the request to.</param>
+        /// <param name="requestHeader">An header to add to the requests this instance makes.</param>
+        /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="requestHeader"/> is <see langword="null"/>.</exception>
+        public AtProtoHttpClient(string serviceProxy, NameValueHeaderValue requestHeader, ILoggerFactory? loggerFactory) :
+            this(
+                serviceProxy : serviceProxy,
+                requestHeaders: [requestHeader],
+                loggerFactory: loggerFactory,
+                meterFactory: null)
+        {
+            ArgumentNullException.ThrowIfNull(requestHeader);
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
+        /// </summary>
+        /// <param name="serviceProxy">The service a PDS should proxy the request to.</param>
+        /// <param name="requestHeader">An header to add to the requests this instance makes.</param>
+        /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
+        /// <param name="meterFactory">An optional meter factory to create meters from.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="requestHeader"/> is <see langword="null"/>.</exception>
+        public AtProtoHttpClient(string serviceProxy, NameValueHeaderValue requestHeader, ILoggerFactory? loggerFactory, IMeterFactory? meterFactory) :
+            this(
+                serviceProxy: serviceProxy,
+                requestHeaders: [requestHeader],
+                loggerFactory: loggerFactory,
+                meterFactory: meterFactory)
+        {
+            ArgumentNullException.ThrowIfNull(requestHeader);
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
+        /// </summary>
+        /// <param name="serviceProxy">The service a PDS should proxy the request to.</param>
+        /// <param name="requestHeaders">Optional headers to add to the requests this instance makes.</param>
+        public AtProtoHttpClient(string serviceProxy, ICollection<NameValueHeaderValue>? requestHeaders) :
+            this(
+                serviceProxy: serviceProxy,
+                requestHeaders: requestHeaders,
+                loggerFactory: null,
+                meterFactory: null)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
+        /// </summary>
+        /// <param name="serviceProxy">The service a PDS should proxy the request to.</param>
+        /// <param name="requestHeaders">Optional headers to add to the requests this instance makes.</param>
+        /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
+        public AtProtoHttpClient(string serviceProxy, ICollection<NameValueHeaderValue>? requestHeaders, ILoggerFactory? loggerFactory) :
+            this(
+                serviceProxy: serviceProxy,
+                requestHeaders: requestHeaders,
+                loggerFactory: loggerFactory,
+                meterFactory: null)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
+        /// </summary>
+        /// <param name="serviceProxy">The service a PDS should proxy the request to.</param>
+        /// <param name="requestHeaders">Optional headers to add to the requests this instance makes.</param>
+        /// <param name="loggerFactory">An optional logger factory to create loggers from.</param>
+        /// <param name="meterFactory">An optional meter factory to create meters from.</param>
+        public AtProtoHttpClient(
+            string? serviceProxy,
+            ICollection<NameValueHeaderValue>? requestHeaders,
+            ILoggerFactory? loggerFactory,
+            IMeterFactory? meterFactory) 
+        {
+            requestHeaders ??= [];
+
             if (serviceProxy is not null)
             {
                 if (_extraRequestHeaders == null)
@@ -323,44 +452,6 @@ namespace idunno.AtProto
                 _suppressProxyHeaderCheck = true;
             }
 
-            loggerFactory ??= NullLoggerFactory.Instance;
-            _logger = loggerFactory.CreateLogger<AtProtoHttpClient<TResult>>();
-        }
-
-        /// <summary>
-        /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
-        /// </summary>
-        /// <param name="serviceProxy">The service a PDS should proxy the request to.</param>
-        /// <param name="requestHeader">An header to add to the requests this instance makes.</param>
-        /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="requestHeader"/> is <see langword="null"/>.</exception>
-        public AtProtoHttpClient(string serviceProxy, NameValueHeaderValue requestHeader, ILoggerFactory? loggerFactory = null) : this(serviceProxy, loggerFactory)
-        {
-            ArgumentNullException.ThrowIfNull(requestHeader);
-
-            if (_extraRequestHeaders == null)
-            {
-                _extraRequestHeaders = [requestHeader];
-            }
-            else
-            {
-                _extraRequestHeaders.Add(requestHeader);
-            }
-        }
-
-        /// <summary>
-        /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
-        /// </summary>
-        /// <param name="serviceProxy">The service a PDS should proxy the request to.</param>
-        /// <param name="requestHeaders">Headers to add to the requests this instance makes.</param>
-        /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="requestHeaders"/> is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="requestHeaders"/> contains no items./</exception>
-        public AtProtoHttpClient(string serviceProxy, ICollection<NameValueHeaderValue> requestHeaders, ILoggerFactory? loggerFactory = null) : this(serviceProxy, loggerFactory)
-        {
-            ArgumentNullException.ThrowIfNull(requestHeaders);
-            ArgumentOutOfRangeException.ThrowIfZero(requestHeaders.Count);
-
             if (_extraRequestHeaders is null)
             {
                 _extraRequestHeaders = [.. requestHeaders];
@@ -372,6 +463,11 @@ namespace idunno.AtProto
                     _extraRequestHeaders.Add(header);
                 }
             }
+
+            loggerFactory ??= NullLoggerFactory.Instance;
+            _logger = loggerFactory.CreateLogger<AtProtoHttpClient<TResult>>();
+
+            _metrics = new AtProtoHttpClientMetrics(meterFactory);
         }
 
         /// <summary>
@@ -469,7 +565,7 @@ namespace idunno.AtProto
             ArgumentException.ThrowIfNullOrEmpty(endpoint);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClientMetrics.GetRequests.Add(1);
+            _metrics.GetRequests.Add(1);
             return await MakeRequest<EmptyRequestBody>(
                 service: service,
                 endpoint: endpoint,
@@ -519,7 +615,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(httpClient);
             ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
 
-            AtProtoHttpClientMetrics.GetRequests.Add(1);
+            _metrics.GetRequests.Add(1);
             return await MakeRequest<EmptyRequestBody>(
                 service: service,
                 endpoint: endpoint,
@@ -786,7 +882,7 @@ namespace idunno.AtProto
             ArgumentException.ThrowIfNullOrEmpty(endpoint);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            AtProtoHttpClientMetrics.PostRequests.Add(1);
+            _metrics.PostRequests.Add(1);
             return await MakeRequest(
                 service: service,
                 endpoint: endpoint,
@@ -839,7 +935,7 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(httpClient);
             ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
 
-            AtProtoHttpClientMetrics.PostRequests.Add(1);
+            _metrics.PostRequests.Add(1);
             return await MakeRequest(
                 service: service,
                 endpoint: endpoint,
@@ -901,7 +997,8 @@ namespace idunno.AtProto
                 throw new ArgumentException("credentials must have access credential", nameof(credentials));
             }
 
-            AtProtoHttpClientMetrics.CreateBlob.Add(1);
+            _metrics.PostRequests.Add(1);
+            _metrics.CreateBlob.Add(1);
 
             return await MakeRequest(
                 service: service,
@@ -967,7 +1064,8 @@ namespace idunno.AtProto
                 throw new ArgumentException("credentials must have access credential", nameof(credentials));
             }
 
-            AtProtoHttpClientMetrics.CreateBlob.Add(1);
+            _metrics.PostRequests.Add(1);
+            _metrics.CreateBlob.Add(1);
 
             return await MakeRequest(
                 service: service,
@@ -1133,7 +1231,7 @@ namespace idunno.AtProto
             HttpResponseMessage httpResponseMessage,
             Action<AtProtoCredential>? credentialsUpdated)
         {
-            if (credentials is null || credentialsUpdated is null || credentials is not IAccessCredential)
+            if (credentials is null || credentialsUpdated is null || (credentials is not IAccessCredential && credentials is not DPoPRevokeCredentials))
             {
                 return;
             }
@@ -1275,10 +1373,10 @@ namespace idunno.AtProto
 
                     try
                     {
-                        AtProtoHttpClientMetrics.RequestsSent.Add(1);
+                        _metrics.RequestsSent.Add(1);
                         using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false))
                         {
-                            AtProtoHttpClientMetrics.ResponsesReceived.Add(1);
+                            _metrics.ResponsesReceived.Add(1);
 
                             if (OnResponseReceived is not null)
                             {
@@ -1295,7 +1393,7 @@ namespace idunno.AtProto
 
                             if (httpResponseMessage.IsSuccessStatusCode)
                             {
-                                AtProtoHttpClientMetrics.SuccessfulRequests.Add(1);
+                                _metrics.SuccessfulRequests.Add(1);
                                 Logger.AtProtoClientRequestSucceeded
                                     (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
 
@@ -1338,50 +1436,84 @@ namespace idunno.AtProto
                                     }
                                     catch (JsonException ex)
                                     {
-                                        AtProtoHttpClientMetrics.DeserializationFailures.Add(1);
+                                        _metrics.DeserializationFailures.Add(1);
                                         Logger.AtProtoClientResponseDeserializationThrew(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, ex);
                                     }
                                 }
                             }
                             else
                             {
-                                AtProtoHttpClientMetrics.FailedRequests.Add(1);
+                                _metrics.FailedRequests.Add(1);
                                 AtErrorDetail atErrorDetail = await ExtractErrorDetailFromResponse(httpRequestMessage, httpResponseMessage, cancellationToken).ConfigureAwait(false);
 
                                 // Retry if the error returned is there has been a DPoP nonce change and we're sending a DPoP authenticated request.
                                 // BadRequest comes from an authorization server, Unauthorized comes from a resource server (the PDS).
-                                if (credentials is IDPoPBoundCredential dPoPBoundCredential &&
-                                    (httpResponseMessage.StatusCode == HttpStatusCode.Unauthorized || httpResponseMessage.StatusCode == HttpStatusCode.BadRequest) &&
+
+                                bool containsDPoPHeader = httpResponseMessage.Headers.ContainsDPoPNonce();
+
+                                if (credentials is IDPoPBoundCredential _ &&
                                     retry &&
-                                    string.Equals(DPoPNonceRetryError, atErrorDetail.Error, StringComparison.OrdinalIgnoreCase))
+                                    containsDPoPHeader)
                                 {
-                                    // Update nonce
+                                    bool isAuthorizationServerNonceError = httpResponseMessage.StatusCode == HttpStatusCode.BadRequest &&
+                                        string.Equals(DPoPNonceRetryError, atErrorDetail.Error, StringComparison.OrdinalIgnoreCase);
 
-                                    string? updatedDPoPNonce = httpResponseMessage.GetDPoPNonce();
+                                    bool isAuthorizationServerNonceErrorInHeader = httpResponseMessage.StatusCode == HttpStatusCode.BadRequest &&
+                                        httpResponseMessage.Headers.WwwAuthenticate is not null &&
+                                        httpResponseMessage.Headers.WwwAuthenticate.Count == 1 &&
+                                        httpResponseMessage.Headers.WwwAuthenticate.First().Parameter is not null &&
+                                        httpResponseMessage.Headers.WwwAuthenticate.First().Scheme == "DPoP" &&
+                                        httpResponseMessage.Headers.WwwAuthenticate.First().Parameter!.StartsWith("error=\"use_dpop_nonce\"", StringComparison.OrdinalIgnoreCase);
 
-                                    if (!string.IsNullOrEmpty(updatedDPoPNonce))
+                                    bool isResourceServerNonceErrorInBody = httpResponseMessage.StatusCode == HttpStatusCode.Unauthorized &&
+                                        string.Equals(DPoPNonceRetryError, atErrorDetail.Error, StringComparison.OrdinalIgnoreCase);
+
+                                    bool isResourceServerNonceErrorInHeader = httpResponseMessage.StatusCode == HttpStatusCode.Unauthorized &&
+                                        httpResponseMessage.Headers.WwwAuthenticate is not null &&
+                                        httpResponseMessage.Headers.WwwAuthenticate.Count == 1 &&
+                                        httpResponseMessage.Headers.WwwAuthenticate.First().Parameter is not null &&
+                                        httpResponseMessage.Headers.WwwAuthenticate.First().Scheme == "DPoP" &&
+                                        httpResponseMessage.Headers.WwwAuthenticate.First().Parameter!.StartsWith("error=\"use_dpop_nonce\"", StringComparison.OrdinalIgnoreCase);
+
+                                    if (isAuthorizationServerNonceError ||
+                                        isAuthorizationServerNonceErrorInHeader ||
+                                        isResourceServerNonceErrorInBody ||
+                                        isResourceServerNonceErrorInHeader)
                                     {
-                                        dPoPBoundCredential.DPoPNonce = updatedDPoPNonce;
+                                        // We have an error indicating that the DPoP nonce is invalid, and we have a new nonce in the header,
+                                        // so update the nonce in the credentials and retry the request with the new nonce.
 
-                                        AtProtoHttpClientMetrics.DPoPRetries.Add(1);
+                                        string? updatedDPoPNonce = httpResponseMessage.GetDPoPNonce();
 
-                                        // Retry
-                                        return await MakeRequest(
-                                            service: service,
-                                            endpoint: endpoint,
-                                            record: record,
-                                            httpMethod: httpMethod,
-                                            requestHeaders: requestHeaders,
-                                            contentHeaders: contentHeaders,
-                                            credentials: credentials,
-                                            httpClient: httpClient,
-                                            retry: false,
-                                            onCredentialsUpdated: onCredentialsUpdated,
-                                            subscribedLabelers: subscribedLabelers,
-                                            jsonSerializerOptions: jsonSerializerOptions,
-                                            cancellationToken: cancellationToken).ConfigureAwait(false);
+                                        if (!string.IsNullOrEmpty(updatedDPoPNonce))
+                                        {
+                                            // dPoP nonce was already updated in RaiseCredentialsUpdatedOnDPoPNonceChange,
+                                            // but raise the event again to ensure that any credential update logic that needs to run on a nonce change runs before the retry.
+                                            RaiseCredentialsUpdatedOnDPoPNonceChange(credentials, httpRequestMessage, httpResponseMessage, onCredentialsUpdated);
+
+                                            _metrics.DPoPRetries.Add(1);
+
+                                            // Retry
+                                            return await MakeRequest(
+                                                service: service,
+                                                endpoint: endpoint,
+                                                record: record,
+                                                httpMethod: httpMethod,
+                                                requestHeaders: requestHeaders,
+                                                contentHeaders: contentHeaders,
+                                                credentials: credentials,
+                                                httpClient: httpClient,
+                                                retry: false,
+                                                onCredentialsUpdated: onCredentialsUpdated,
+                                                subscribedLabelers: subscribedLabelers,
+                                                jsonSerializerOptions: jsonSerializerOptions,
+                                                cancellationToken: cancellationToken).ConfigureAwait(false);
+                                        }
+                                        else
+                                        {
+                                            Logger.AtProtoClientEncounteredDPoPNonceErrorWithoutANonceHeader(_logger, service, httpMethod);
+                                        }
                                     }
-
                                 }
 
                                 result.AtErrorDetail = atErrorDetail;
@@ -1412,7 +1544,7 @@ namespace idunno.AtProto
             }
             finally
             {
-                AtProtoHttpClientMetrics.RequestDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds);
+                _metrics.RequestDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds);
             }
         }
 

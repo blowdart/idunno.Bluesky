@@ -878,8 +878,27 @@ namespace idunno.AtProto
                     accessCredentials.Service,
                     accessCredentials.RefreshToken,
                     accessCredentials.DPoPProofKey,
-                    accessCredentials.DPoPNonce);
+                    string.Empty);
 
+                // Revocation credential specific callback to update the DPoP nonce in credentials if the nonce needs updating ,
+                // so that automatic retry in AtProtoHttpClient will have the updated nonce for the retry attempt.
+                void logoutCredentialsUpdated(AtProtoCredential credentials)
+                {
+                    ArgumentNullException.ThrowIfNull(credentials);
+
+                    if (credentials is DPoPRevokeCredentials refreshedCredentials)
+                    {
+                        dPoPRevokeCredentials.DPoPNonce = refreshedCredentials.DPoPNonce;
+
+                        Logger.OnCredentialUpdatedCallbackCalled(_logger);
+                    }
+                    else
+                    {
+                        throw new CredentialException("Logout credentials updated callback was called with credentials of an unexpected type.");
+                    }
+                }
+
+                // First revoke the refresh token, then revoke the access token.
                 using (var formData = new FormUrlEncodedContent(
                 [
                     new KeyValuePair<string, string>("token", accessCredentials.RefreshToken),
@@ -893,6 +912,7 @@ namespace idunno.AtProto
                         record: formData,
                         jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
                         credentials: dPoPRevokeCredentials,
+                        onCredentialsUpdated: logoutCredentialsUpdated,
                         httpClient: HttpClient,
                         cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -907,10 +927,10 @@ namespace idunno.AtProto
                     }
                 }
 
-                dPoPRevokeCredentials = new (
+                dPoPRevokeCredentials = new(
                     accessCredentials.Service,
                     accessCredentials.AccessJwt,
-                    accessCredentials.DPoPProofKey,
+                    dPoPRevokeCredentials.DPoPProofKey,
                     accessCredentials.DPoPNonce);
 
                 using (var formData = new FormUrlEncodedContent(
@@ -926,6 +946,7 @@ namespace idunno.AtProto
                         record: formData,
                         jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
                         credentials: dPoPRevokeCredentials,
+                        onCredentialsUpdated: logoutCredentialsUpdated,
                         httpClient: HttpClient,
                         cancellationToken: cancellationToken).ConfigureAwait(false);
 

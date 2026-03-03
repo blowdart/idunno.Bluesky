@@ -10,14 +10,24 @@
 
 ## 1.7.0 - Unreleased
 
+### Added
+
+#### idunno.AtProto
+* Added metrics in `AtProtoHttpClientMetrics` including request duration, request count and failure count.
+* Added new constructor overloads for `AtProtoHttpClient` to allow for use with `MetricsFactory`.
+* Added more JetStream metrics.
+* Added `Throttled` to `AccountStatus`.
+
+### Documentation
+* Added documentation for metrics.
+
 ### Changed
 
 #### idunno.AtProto
 
-* Added metrics in `AtProtoHttpClientMetrics` including request duration, request count and failure count.
-* Added more JetStream metrics.
-* Exposed `JetStream.MeterName` and `JetStream.MeterVersion` to allow for easy OTEL configuration.
-* Added `Throttled` to `AccountStatus`.
+* Changed `AtJetStreamIdentity` class to make `Handle` property nullable.
+* Made `JetStream.MeterName` and `JetStream.MeterVersion` properties public to allow for easy OTEL configuration.
+* Fixed OAuth logout.
 
 #### idunno.Bluesky
 
@@ -27,7 +37,6 @@
 
 #### idunno.AtProto
 
-* Changed `AtJetStreamIdentity` to make `Handle` property nullable.
 * Changed `JetStreamMetrics` from `public` to `internal` because it is not intended for public use.
 
 ## 1.6.0 - 2026-02-21

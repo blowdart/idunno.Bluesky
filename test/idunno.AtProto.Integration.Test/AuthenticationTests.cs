@@ -215,6 +215,14 @@ namespace idunno.AtProto.Integration.Test
                 bool credentialsUpdatedEventRaised = false;
                 string? credentialEventNonce = null;
 
+                var credential = AtProtoCredential.Create(
+                    server,
+                    authenticationType: AuthenticationType.OAuth,
+                    accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:identifier")),
+                    refreshToken: "refreshToken",
+                    dPoPProofKey: JsonWebKeys.CreateRsaJson(),
+                    dPoPNonce: "nonce");
+
                 agent.CredentialsUpdated += (sender, args) =>
                 {
                     credentialsUpdatedEventRaised = true;
@@ -224,14 +232,6 @@ namespace idunno.AtProto.Integration.Test
                         credentialEventNonce = dPopAccessCredentials.DPoPNonce;
                     }
                 };
-
-                var credential = AtProtoCredential.Create(
-                    server,
-                    authenticationType: AuthenticationType.OAuth,
-                    accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:identifier")),
-                    refreshToken: "refreshToken",
-                    dPoPProofKey: JsonWebKeys.CreateRsaJson(),
-                    dPoPNonce: "nonce");
 
                 agent.Credentials = (DPoPAccessCredentials)credential;
 

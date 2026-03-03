@@ -24,7 +24,7 @@ namespace Samples.Posting
             // Necessary to render emojis.
             Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-            var parser = Helpers.ConfigureCommandLine(
+            var parser = Helpers.ConfigureCommandLineWithMetricsDelay(
                 args,
                 "BlueskyAgent Posting Sample",
                 PerformOperations);
@@ -32,10 +32,12 @@ namespace Samples.Posting
             return await parser.InvokeAsync();
         }
 
-        static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
+        static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, bool addMetricsDelay, CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrEmpty(handle);
             ArgumentException.ThrowIfNullOrEmpty(password);
+
+            TimeSpan delay = TimeSpan.FromSeconds(5);
 
             // Uncomment the next line to route all requests through Fiddler Everywhere
             // proxyUri = new Uri("http://localhost:8866");
@@ -105,6 +107,14 @@ namespace Samples.Posting
                     }
                 }
 
+                if (addMetricsDelay)
+                {
+                    Process currentProcess = Process.GetCurrentProcess();
+                    Console.WriteLine("Delaying for 30 seconds to allow time to attach a profiler...");
+                    Console.WriteLine($"e.g. dotnet counters monitor --process-id {currentProcess.Id} --counters idunno.AtProto.AtProtoHttpClient");
+                    await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+                }
+
                 {
                     // Simple post creation and deletion.
                     AtProtoHttpResult<CreateRecordResult> createPostResult = await agent.Post("Hello world", cancellationToken: cancellationToken);
@@ -127,6 +137,11 @@ namespace Samples.Posting
                         Console.WriteLine($"{delete.StatusCode} occurred when deleting the post.");
                         return;
                     }
+                }
+
+                if (addMetricsDelay)
+                {
+                    await Task.Delay(delay, cancellationToken);
                 }
 
                 {
@@ -155,6 +170,11 @@ namespace Samples.Posting
                     }
                 }
 
+                if (addMetricsDelay)
+                {
+                    await Task.Delay(delay, cancellationToken);
+                }
+
                 {
                     // Simple post creation with a detected hashtag.
                     AtProtoHttpResult<CreateRecordResult> createPostResult = await agent.Post("Hello world #helloWorld", cancellationToken: cancellationToken);
@@ -177,6 +197,11 @@ namespace Samples.Posting
                         Console.WriteLine($"{delete.StatusCode} occurred when deleting the post.");
                         return;
                     }
+                }
+
+                if (addMetricsDelay)
+                {
+                    await Task.Delay(delay, cancellationToken);
                 }
 
                 {
@@ -220,6 +245,11 @@ namespace Samples.Posting
                         }
                         return;
                     }
+                }
+
+                if (addMetricsDelay)
+                {
+                    await Task.Delay(delay, cancellationToken);
                 }
 
                 {
@@ -365,6 +395,11 @@ namespace Samples.Posting
 
                 }
 
+                if (addMetricsDelay)
+                {
+                    await Task.Delay(delay, cancellationToken);
+                }
+
                 {
                     // Repost
                     AtProtoHttpResult<CreateRecordResult> createPostResult = await agent.Post("Another test post, for reposting.", cancellationToken: cancellationToken);
@@ -412,6 +447,11 @@ namespace Samples.Posting
                     }
                 }
 
+                if (addMetricsDelay)
+                {
+                    await Task.Delay(delay, cancellationToken);
+                }
+
                 {
                     // Like
                     AtProtoHttpResult<CreateRecordResult> createPostResult = await agent.Post("Another test post, for liking.", cancellationToken: cancellationToken);
@@ -441,6 +481,11 @@ namespace Samples.Posting
                         }
                         return;
                     }
+                }
+
+                if (addMetricsDelay)
+                {
+                    await Task.Delay(delay, cancellationToken);
                 }
 
                 {
@@ -491,6 +536,11 @@ namespace Samples.Posting
                         }
                         return;
                     }
+                }
+
+                if (addMetricsDelay)
+                {
+                    await Task.Delay(delay, cancellationToken);
                 }
 
                 {
@@ -547,6 +597,12 @@ namespace Samples.Posting
                         await agent.DeletePost(facetedCreatePostResponse.Result.Uri, cancellationToken: cancellationToken);
                         Debugger.Break();
                     }
+                }
+
+                if (addMetricsDelay)
+                {
+                    Console.WriteLine("Delaying for 30 seconds to allow time for profile metrics collection to finish.");
+                    await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
                 }
             }
         }
