@@ -10,10 +10,99 @@ namespace idunno.AtProto
     /// AtProtoAgent metrics.
     /// </summary>
     [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "Metric names are typically lower case.")]
-    public static class AtProtoHttpClientMetrics
+    public class AtProtoHttpClientMetrics
     {
         // Follows boundaries from http.server.request.duration/http.client.request.duration
         private static readonly IReadOnlyList<double> s_shortSecondsBucketBoundaries = [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10];
+
+        // For non-DI scenarios, see https://learn.microsoft.com/en-us/dotnet/core/diagnostics/metrics-instrumentation#best-practices
+        private static readonly Meter s_meter = new (MeterName, MeterVersion);
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoHttpClientMetrics"/> using the provided <see cref="IMeterFactory"/> to create the underlying <see cref="Meter"/>.
+        /// </summary>
+        /// <param name="meterFactory">An optional <see cref="IMeterFactory"/> to use for creating the underlying <see cref="Meter"/>.</param>
+        [SuppressMessage(
+            "Reliability",
+            "CA2000:Dispose objects before losing scope",
+            Justification = "but IMeterFactory automatically manages the lifetime of any Meter objects it creates, disposing them when the DI container is disposed.")]
+        public AtProtoHttpClientMetrics(IMeterFactory? meterFactory)
+        {
+            if (meterFactory == null)
+            {
+                Initialize(s_meter);
+            }
+            else
+            {
+                Initialize(meterFactory.Create(MeterName, MeterVersion));
+            }
+        }
+
+        [MemberNotNull(
+            nameof(RequestsSent),
+            nameof(ResponsesReceived),
+            nameof(SuccessfulRequests),
+            nameof(FailedRequests),
+            nameof(DPoPRetries),
+            nameof(DeserializationFailures),
+            nameof(CreateBlob),
+            nameof(GetRequests),
+            nameof(PostRequests),
+            nameof(RequestDuration)
+            )]
+        private void Initialize(Meter meter)
+        {
+            RequestsSent = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.requests.total",
+                description: "Total requests sent",
+                unit: "{requests}");
+
+            ResponsesReceived = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.responses.total",
+                description: "Total responses received",
+                unit: "{responses}");
+
+            SuccessfulRequests = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.requests.total.successful",
+                description: "Total successful requests",
+                unit: "{requests}");
+
+            FailedRequests = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.requests.total.failure",
+                description: "Total failed requests",
+                unit: "{requests}");
+
+            DPoPRetries =  meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.requests.total.dpop_retry",
+                description: "Total request retries due to DPoP nonce rotation",
+                unit: "{requests}");
+
+            DeserializationFailures = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.responses.total.deserialization_failure",
+                description: "Total Deserialization failures",
+                unit: "{requests}");
+
+            CreateBlob = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.requests.total.blob_create_request",
+                description: "Total Blob creation requests",
+                unit: "{requests}");
+
+            GetRequests = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.requests.total.get_request",
+                description: "Total GET requests",
+                unit: "{requests}");
+
+            PostRequests = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.requests.total.post_request",
+                description: "Total POST requests",
+                unit: "{requests}");
+
+            RequestDuration = meter.CreateHistogram<double>(
+                name: $"{MeterName.ToLowerInvariant()}.request.duration",
+                description: "Request duration",
+                unit: "s",
+                advice: new InstrumentAdvice<double> { HistogramBucketBoundaries = s_shortSecondsBucketBoundaries });
+        }
 
         /// <summary>
         /// Gets the meter name publishing metrics.
@@ -25,87 +114,24 @@ namespace idunno.AtProto
         /// </summary>
         public static string MeterVersion => "1.0.0";
 
-        internal static readonly Meter s_meter = new(MeterName, MeterVersion);
+        internal Counter<long> RequestsSent { get; private set; }
 
-        internal static Counter<long> RequestsSent
-        {
-            get;
-        } = s_meter.CreateCounter<long>(
-            name: $"{MeterName.ToLowerInvariant()}.requests.total",
-            description: "Total requests sent",
-            unit: "{requests}");
+        internal Counter<long> ResponsesReceived { get; private set; }
 
-        internal static Counter<long> ResponsesReceived
-        {
-            get;
-        } = s_meter.CreateCounter<long>(
-            name: $"{MeterName.ToLowerInvariant()}.responses.total",
-            description: "Total responses received",
-            unit: "{requests}");
+        internal Counter<long> SuccessfulRequests { get; private set; }
 
-        internal static Counter<long> SuccessfulRequests
-        {
-            get;
-        } = s_meter.CreateCounter<long>(
-            name: $"{MeterName.ToLowerInvariant()}.requests.total.successful",
-            description: "Total successful requests",
-            unit: "{requests}");
+        internal Counter<long> FailedRequests { get; private set; }
 
-        internal static Counter<long> FailedRequests
-        {
-            get;
-        } = s_meter.CreateCounter<long>(
-            name: $"{MeterName.ToLowerInvariant()}.requests.total.failure",
-            description: "Total failed requests",
-            unit: "{requests}");
+        internal Counter<long> DPoPRetries { get; private set; }
 
-        internal static Counter<long> DPoPRetries
-        {
-            get;
-        } = s_meter.CreateCounter<long>(
-            name: $"{MeterName.ToLowerInvariant()}.requests.total.dpop_retry",
-            description: "Total request retries due to DPoP nonce rotation",
-            unit: "{requests}");
+        internal Counter<long> DeserializationFailures { get; private set; }
 
-        internal static Counter<long> DeserializationFailures
-        {
-            get;
-        } = s_meter.CreateCounter<long>(
-            name: $"{MeterName.ToLowerInvariant()}.requests.total.deserialization_failure",
-            description: "Total Deserialization failures",
-            unit: "{requests}");
+        internal Counter<long> CreateBlob { get; private set; }
 
-        internal static Counter<long> CreateBlob
-        {
-            get;
-        } = s_meter.CreateCounter<long>(
-            name: $"{MeterName.ToLowerInvariant()}.requests.total.blob_post_request",
-            description: "Total POST Blob requests",
-            unit: "{requests}");
+        internal Counter<long> GetRequests { get; private set; }
 
-        internal static Counter<long> GetRequests
-        {
-            get;
-        } = s_meter.CreateCounter<long>(
-            name: $"{MeterName.ToLowerInvariant()}.requests.total.get_request",
-            description: "Total GET requests",
-            unit: "{requests}");
+        internal Counter<long> PostRequests { get; private set; }
 
-        internal static Counter<long> PostRequests
-        {
-            get;
-        } = s_meter.CreateCounter<long>(
-            name: $"{MeterName.ToLowerInvariant()}.requests.total.post_request",
-            description: "Total POST requests",
-            unit: "Requests");
-
-        internal static Histogram<double> RequestDuration
-        {
-            get;
-        } = s_meter.CreateHistogram<double>(
-            name: $"{MeterName.ToLowerInvariant()}.request.duration",
-            description: "Request duration",
-            unit: "s",
-            advice: new InstrumentAdvice<double> { HistogramBucketBoundaries = s_shortSecondsBucketBoundaries });
+        internal Histogram<double> RequestDuration { get; private set; }
     }
 }

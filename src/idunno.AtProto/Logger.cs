@@ -237,6 +237,9 @@ namespace idunno.AtProto
         [LoggerMessage(204, LogLevel.Error, "AtProtoHttpClient threw when deserializing the response from {method} call to {requestUri}")]
         internal static partial void AtProtoClientResponseDeserializationThrew(ILogger logger, Uri requestUri, HttpMethod method, Exception exception);
 
+        [LoggerMessage(205, LogLevel.Error, "DPoP nonce error encountered on {method} to {service} but no DPoP nonce header was found")]
+        internal static partial void AtProtoClientEncounteredDPoPNonceErrorWithoutANonceHeader(ILogger logger, Uri service, HttpMethod method);
+
         // Service Auth logging
         [LoggerMessage(250, LogLevel.Debug, "Requesting {lxm} service token from {endpoint} for {audience} with a validity of {expires}")]
         internal static partial void RequestingServiceAuthToken(ILogger logger, Uri endpoint, Did audience, string expires, Nsid lxm);

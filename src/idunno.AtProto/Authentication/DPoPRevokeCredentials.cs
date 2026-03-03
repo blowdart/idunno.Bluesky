@@ -22,14 +22,13 @@ namespace idunno.AtProto.Authentication
         /// <param name="dPoPNonce">An optional string representation of the DPoP nonce to use when signing requests.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is null.</exception>
         /// <exception cref="ArgumentException">
-        /// Thrown when <paramref name="token"/>,  <paramref name="dPoPProofKey"/> or <paramref name="dPoPNonce"/> is null or whitespace.
+        /// Thrown when <paramref name="token"/> or <paramref name="dPoPProofKey"/> is null or whitespace.
         /// </exception>
         public DPoPRevokeCredentials(Uri service, string token, string dPoPProofKey, string dPoPNonce) : base(service, AuthenticationType.OAuth)
         {
             ArgumentNullException.ThrowIfNull(service);
             ArgumentException.ThrowIfNullOrWhiteSpace(token);
             ArgumentException.ThrowIfNullOrEmpty(dPoPProofKey);
-            ArgumentException.ThrowIfNullOrEmpty(dPoPNonce);
 
             _dPoPProofKey = dPoPProofKey;
             _dPoPNonce = dPoPNonce;
@@ -49,6 +48,8 @@ namespace idunno.AtProto.Authentication
             _dPoPNonce = accessCredentials.DPoPNonce;
             _token = accessCredentials.AccessJwt;
         }
+
+        internal string Token => _token;
 
         /// <summary>
         /// Gets or sets a string representation of the DPoP proof key to use when signing requests.

@@ -7,8 +7,6 @@
     <Nullable>enable</Nullable>
     <Configurations>Debug;Release;CodeQL</Configurations>
     <LangVersion>latest</LangVersion>
-    <!-- Needed for meters -->
-    <EventSourceSupport>true</EventSourceSupport>
   </PropertyGroup>
 
   <ItemGroup>
@@ -42,6 +40,9 @@
   <PropertyGroup>
     <IsAotCompatible>true</IsAotCompatible>
     <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+    <!-- Needed for meters -->
+    <!-- See https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/diagnostics#observability-and-telemetry -->
+    <EventSourceSupport>true</EventSourceSupport>
   </PropertyGroup>
 
   <Choose>
