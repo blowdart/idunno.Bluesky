@@ -11,8 +11,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using Duende.IdentityModel.OidcClient.DPoP;
-using idunno.AtProto.Authentication;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -42,7 +41,6 @@ namespace idunno.AtProto
                 requestHeaders: null,
                 loggerFactory: loggerFactory,
                 meterFactory: meterFactory);
-
 
         /// <summary>
         /// Gets or sets a function called when a request is about to be sent.
