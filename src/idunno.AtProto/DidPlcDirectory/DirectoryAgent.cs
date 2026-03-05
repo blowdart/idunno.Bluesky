@@ -5,6 +5,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using idunno.AtProto;
+using idunno.AtProto.DidPlcDirectory;
+using System.Diagnostics.Metrics;
 
 namespace idunno.DidPlcDirectory
 {
@@ -17,6 +19,8 @@ namespace idunno.DidPlcDirectory
 
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger<DirectoryAgent> _logger;
+        private readonly IMeterFactory? _meterFactory;
+
 
         /// <summary>
         /// Creates a new instance of <see cref="DirectoryAgent"/>.
@@ -36,6 +40,11 @@ namespace idunno.DidPlcDirectory
             }
 
             _logger = _loggerFactory.CreateLogger<DirectoryAgent>();
+
+            if (options?.MeterFactory is not null)
+            {
+                _meterFactory = options.MeterFactory;
+            }
         }
 
         /// <summary>
@@ -61,17 +70,13 @@ namespace idunno.DidPlcDirectory
             }
 
             _logger = _loggerFactory.CreateLogger<DirectoryAgent>();
+
+            if (options?.MeterFactory is not null)
+            {
+                _meterFactory = options.MeterFactory;
+            }
         }
 
-        /// <summary>
-        /// Gets the default directory server used to issue commands against.
-        /// </summary>
-        /// <value>
-        /// The default directory server used to issue commands against.
-        /// </value>
-        /// <remarks>
-        /// <para>This directory is ignored if the DID is a web DID.</para>
-        /// </remarks>
         internal Uri PlcDirectory { get; } = s_defaultDirectoryServer;
 
         /// <summary>
@@ -95,6 +100,7 @@ namespace idunno.DidPlcDirectory
                 directory: directory,
                 httpClient: HttpClient,
                 loggerFactory: _loggerFactory,
+                meterFactory: _meterFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (!result.Succeeded)

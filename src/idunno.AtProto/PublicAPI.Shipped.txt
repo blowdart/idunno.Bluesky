@@ -179,6 +179,7 @@ idunno.AtProto.AtProtoHttpClient.AtProtoHttpClient(string? serviceProxy = null, 
 idunno.AtProto.AtProtoHttpClient<TResult>
 idunno.AtProto.AtProtoHttpClient<TResult>.AtProtoHttpClient(string! serviceProxy, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? requestHeaders) -> void
 idunno.AtProto.AtProtoHttpClient<TResult>.AtProtoHttpClient(string! serviceProxy, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? requestHeaders, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory) -> void
+idunno.AtProto.AtProtoHttpClient<TResult>.AtProtoHttpClient(string? serviceProxy, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory, System.Diagnostics.Metrics.IMeterFactory? meterFactory) -> void
 idunno.AtProto.AtProtoHttpClient<TResult>.AtProtoHttpClient(string! serviceProxy, System.Net.Http.Headers.NameValueHeaderValue! requestHeader) -> void
 idunno.AtProto.AtProtoHttpClient<TResult>.AtProtoHttpClient(string! serviceProxy, System.Net.Http.Headers.NameValueHeaderValue! requestHeader, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory) -> void
 idunno.AtProto.AtProtoHttpClient<TResult>.AtProtoHttpClient(string! serviceProxy, System.Net.Http.Headers.NameValueHeaderValue! requestHeader, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory, System.Diagnostics.Metrics.IMeterFactory? meterFactory) -> void
@@ -845,8 +846,14 @@ idunno.DidPlcDirectory.DirectoryAgentOptions.HttpClientOptions.get -> idunno.AtP
 idunno.DidPlcDirectory.DirectoryAgentOptions.HttpClientOptions.set -> void
 idunno.DidPlcDirectory.DirectoryAgentOptions.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory?
 idunno.DidPlcDirectory.DirectoryAgentOptions.LoggerFactory.set -> void
+idunno.DidPlcDirectory.DirectoryAgentOptions.MeterFactory.get -> System.Diagnostics.Metrics.IMeterFactory?
+idunno.DidPlcDirectory.DirectoryAgentOptions.MeterFactory.set -> void
 idunno.DidPlcDirectory.DirectoryAgentOptions.PlcDirectoryUri.get -> System.Uri!
 idunno.DidPlcDirectory.DirectoryAgentOptions.PlcDirectoryUri.set -> void
+idunno.AtProto.DidPlcDirectory.DirectoryMetrics
+idunno.AtProto.DidPlcDirectory.DirectoryMetrics.DirectoryMetrics(System.Diagnostics.Metrics.IMeterFactory? meterFactory) -> void
+static idunno.AtProto.DidPlcDirectory.DirectoryMetrics.MeterName.get -> string!
+static idunno.AtProto.DidPlcDirectory.DirectoryMetrics.MeterVersion.get -> string!
 override idunno.AtProto.AtProtoAgent.Dispose(bool disposing) -> void
 override idunno.AtProto.AtProtoAgent.IsAuthenticated.get -> bool
 override idunno.AtProto.Authentication.AccessCredentials.SetAuthenticationHeaders(System.Net.Http.HttpRequestMessage! httpRequestMessage) -> void

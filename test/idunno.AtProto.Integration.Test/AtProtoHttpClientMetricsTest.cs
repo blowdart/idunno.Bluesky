@@ -328,6 +328,10 @@ namespace idunno.AtProto.Integration.Test
 
             IReadOnlyList<CollectedMeasurement<long>> failureMeasurements = failureCollector.GetMeasurementSnapshot();
             Assert.Single(failureMeasurements);
+            Assert.True(failureMeasurements[0]!.ContainsTags("http_status_code"));
+            Assert.Equal(
+                404,
+                failureMeasurements[0]!.Tags["http_status_code"]);
 
             IReadOnlyList<CollectedMeasurement<long>> dPoPMeasurements = dPoPRetriesCollector.GetMeasurementSnapshot();
             Assert.Empty(dPoPMeasurements);
@@ -578,6 +582,10 @@ namespace idunno.AtProto.Integration.Test
 
             IReadOnlyList<CollectedMeasurement<long>> deserializationFailureMeasurements = deserializationFailuresCollector.GetMeasurementSnapshot();
             Assert.Single(deserializationFailureMeasurements);
+            Assert.True(deserializationFailureMeasurements[0]!.ContainsTags("type"));
+            Assert.Equal(
+                "idunno.AtProto.Integration.Test.TestRecord",
+                deserializationFailureMeasurements[0]!.Tags["type"]);
 
             IReadOnlyList<CollectedMeasurement<long>> createBlobMeasurements = createBlobCollector.GetMeasurementSnapshot();
             Assert.Empty(createBlobMeasurements);
@@ -898,6 +906,10 @@ namespace idunno.AtProto.Integration.Test
 
             IReadOnlyList<CollectedMeasurement<long>> failureMeasurements = failureCollector.GetMeasurementSnapshot();
             Assert.Single(failureMeasurements);
+            Assert.True(failureMeasurements[0]!.ContainsTags("http_status_code"));
+            Assert.Equal(
+                404,
+                failureMeasurements[0]!.Tags["http_status_code"]);
 
             IReadOnlyList<CollectedMeasurement<long>> dPoPMeasurements = dPoPRetriesCollector.GetMeasurementSnapshot();
             Assert.Empty(dPoPMeasurements);
@@ -1064,6 +1076,10 @@ namespace idunno.AtProto.Integration.Test
 
             IReadOnlyList<CollectedMeasurement<long>> deserializationFailureMeasurements = deserializationFailuresCollector.GetMeasurementSnapshot();
             Assert.Single(deserializationFailureMeasurements);
+            Assert.True(deserializationFailureMeasurements[0]!.ContainsTags("type"));
+            Assert.Equal(
+                "idunno.AtProto.Repo.AtProtoRepositoryRecord`1[[idunno.AtProto.Integration.Test.TestRecord, idunno.AtProto.Integration.Test, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5289fcbcf27e814d]]",
+                deserializationFailureMeasurements[0]!.Tags["type"]);
 
             IReadOnlyList<CollectedMeasurement<long>> createBlobMeasurements = createBlobCollector.GetMeasurementSnapshot();
             Assert.Empty(createBlobMeasurements);

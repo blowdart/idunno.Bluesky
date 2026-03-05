@@ -15,6 +15,7 @@
 #### idunno.AtProto
 
 * Added metrics in `AtProtoHttpClientMetrics` including request duration, request count and failure count.
+* Added metrics in `DidPlcDirectory` including request duration, request count and failure count.
 * Added new constructor overloads for `AtProtoHttpClient` to allow for use with `MetricsFactory`.
 * Added more JetStream metrics.
 * Added `Throttled` to `AccountStatus`.

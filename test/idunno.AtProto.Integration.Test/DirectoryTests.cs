@@ -1,12 +1,16 @@
 ﻿// Copyright(c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+using System.Diagnostics.Metrics;
 using System.Net;
 using System.Text.Json;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 
+using idunno.AtProto.DidPlcDirectory;
 using idunno.DidPlcDirectory;
 
 namespace idunno.AtProto.Integration.Test
@@ -22,15 +26,19 @@ namespace idunno.AtProto.Integration.Test
             _jsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
         }
 
-        /// Server, and then directory agent tests
-        /// Then also via atproto tests to check configuration chaining
-
         [Fact]
         public async Task DirectServerResolveDidDocumentSucceedsWithKnownPlcDid()
         {
             const string directoryServerHostName = "directory.invalid";
             const string expectedPdsHostName = "pds.invalid";
             const string knownDid = "did:plc:ec72yg6n2sydzjvtovvdlxrk";
+
+            IServiceProvider services = CreateServiceProvider();
+            IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+            var totalRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total");
+            var totalFailedRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.failed");
+            var totalSucceededRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.succeeded");
+            var requestDurationCollector = new MetricCollector<double>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.request.duration");
 
             TestServer testServer = TestServerBuilder.CreateServer(directoryServerHostName, async context =>
             {
@@ -74,10 +82,31 @@ namespace idunno.AtProto.Integration.Test
                 directory: new Uri($"https://{directoryServerHostName}"),
                 httpClient: testServer.CreateClient(),
                 loggerFactory: null,
-                TestContext.Current.CancellationToken);
+                meterFactory: meterFactory,
+                cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(result.Succeeded);
             Assert.Equal(new Did(knownDid), result.Result.Id);
+
+            IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
+            Assert.Single(requestMeasurements);
+            Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+            Assert.Equal(
+                "plc",
+                requestMeasurements[0]!.Tags["did.type"]);
+
+            IReadOnlyList<CollectedMeasurement<long>> succeededMeasurements = totalSucceededRequestsCollector.GetMeasurementSnapshot();
+            Assert.Single(succeededMeasurements);
+            Assert.True(succeededMeasurements[0]!.ContainsTags("did.type"));
+            Assert.Equal(
+                "plc",
+                succeededMeasurements[0]!.Tags["did.type"]);
+
+            IReadOnlyList<CollectedMeasurement<long>> failedMeasurements = totalFailedRequestsCollector.GetMeasurementSnapshot();
+            Assert.Empty(failedMeasurements);
+
+            IReadOnlyList <CollectedMeasurement<double>> durationMeasurements = requestDurationCollector.GetMeasurementSnapshot();
+            Assert.Single(durationMeasurements);
         }
 
         [Fact]
@@ -85,6 +114,13 @@ namespace idunno.AtProto.Integration.Test
         {
             const string expectedPdsHostName = "test.invalid";
             const string knownDid = $"did:web:{expectedPdsHostName}";
+
+            IServiceProvider services = CreateServiceProvider();
+            IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+            var totalRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total");
+            var totalFailedRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.failed");
+            var totalSucceededRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.succeeded");
+            var requestDurationCollector = new MetricCollector<double>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.request.duration");
 
             TestServer testServer = TestServerBuilder.CreateServer(expectedPdsHostName, async context =>
             {
@@ -128,10 +164,31 @@ namespace idunno.AtProto.Integration.Test
                 directory: new Uri($"https://directory.invalid"),
                 httpClient: testServer.CreateClient(),
                 loggerFactory: null,
+                meterFactory: meterFactory,
                 TestContext.Current.CancellationToken);
 
             Assert.True(result.Succeeded);
             Assert.Equal(new Did(knownDid), result.Result.Id);
+
+            IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
+            Assert.Single(requestMeasurements);
+            Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+            Assert.Equal(
+                "web",
+                requestMeasurements[0]!.Tags["did.type"]);
+
+            IReadOnlyList<CollectedMeasurement<long>> succeededMeasurements = totalSucceededRequestsCollector.GetMeasurementSnapshot();
+            Assert.Single(succeededMeasurements);
+            Assert.True(succeededMeasurements[0]!.ContainsTags("did.type"));
+            Assert.Equal(
+                "web",
+                succeededMeasurements[0]!.Tags["did.type"]);
+
+            IReadOnlyList<CollectedMeasurement<long>> failedMeasurements = totalFailedRequestsCollector.GetMeasurementSnapshot();
+            Assert.Empty(failedMeasurements);
+
+            IReadOnlyList<CollectedMeasurement<double>> durationMeasurements = requestDurationCollector.GetMeasurementSnapshot();
+            Assert.Single(durationMeasurements);
         }
 
         [Fact]
@@ -139,6 +196,13 @@ namespace idunno.AtProto.Integration.Test
         {
             const string expectedPdsHostName = "test.invalid";
             const string did = $"did:invalid:{expectedPdsHostName}";
+
+            IServiceProvider services = CreateServiceProvider();
+            IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+            var totalRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total");
+            var totalFailedRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.failed");
+            var totalSucceededRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.succeeded");
+            var requestDurationCollector = new MetricCollector<double>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.request.duration");
 
             TestServer testServer = TestServerBuilder.CreateServer(expectedPdsHostName, async context =>
             {
@@ -184,8 +248,28 @@ namespace idunno.AtProto.Integration.Test
                     directory: new Uri($"https://directory.invalid"),
                     httpClient: testServer.CreateClient(),
                     loggerFactory: null,
-                    TestContext.Current.CancellationToken);
+                    meterFactory: meterFactory,
+                    cancellationToken: TestContext.Current.CancellationToken);
             });
+
+            IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
+            Assert.Single(requestMeasurements);
+            Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+            Assert.Equal(
+                "unknown",
+                requestMeasurements[0]!.Tags["did.type"]);
+
+            IReadOnlyList<CollectedMeasurement<long>> succeededMeasurements = totalSucceededRequestsCollector.GetMeasurementSnapshot();
+            Assert.Empty(succeededMeasurements);
+
+            IReadOnlyList<CollectedMeasurement<long>> failedMeasurements = totalFailedRequestsCollector.GetMeasurementSnapshot();
+            Assert.Single(failedMeasurements);
+            Assert.True(failedMeasurements[0]!.ContainsTags("did.type"));
+            Assert.Equal(
+                "unknown",
+                failedMeasurements[0]!.Tags["did.type"]);
+            IReadOnlyList<CollectedMeasurement<double>> durationMeasurements = requestDurationCollector.GetMeasurementSnapshot();
+            Assert.Single(durationMeasurements);
         }
 
         [Fact]
@@ -195,6 +279,13 @@ namespace idunno.AtProto.Integration.Test
             const string expectedPdsHostName = "pds.invalid";
             const string knownDid = "did:plc:ec72yg6n2sydzjvtovvdlxrk";
             const string unknownDid = "did:plc:ec72yg6n2sydzjvtovvdlxrz";
+
+            IServiceProvider services = CreateServiceProvider();
+            IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+            var totalRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total");
+            var totalFailedRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.failed");
+            var totalSucceededRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.succeeded");
+            var requestDurationCollector = new MetricCollector<double>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.request.duration");
 
             TestServer testServer = TestServerBuilder.CreateServer(directoryServerHostName, async context =>
             {
@@ -238,10 +329,35 @@ namespace idunno.AtProto.Integration.Test
                 directory: new Uri($"https://{directoryServerHostName}"),
                 httpClient: testServer.CreateClient(),
                 loggerFactory: null,
-                TestContext.Current.CancellationToken);
+                meterFactory: meterFactory,
+                cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.False(result.Succeeded);
             Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
+
+            IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
+            Assert.Single(requestMeasurements);
+            Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+            Assert.Equal(
+                "plc",
+                requestMeasurements[0]!.Tags["did.type"]);
+
+            IReadOnlyList<CollectedMeasurement<long>> succeededMeasurements = totalSucceededRequestsCollector.GetMeasurementSnapshot();
+            Assert.Empty(succeededMeasurements);
+
+            IReadOnlyList<CollectedMeasurement<long>> failedMeasurements = totalFailedRequestsCollector.GetMeasurementSnapshot();
+            Assert.Single(failedMeasurements);
+            Assert.True(failedMeasurements[0]!.ContainsTags("did.type"));
+            Assert.Equal(
+                "plc",
+                failedMeasurements[0]!.Tags["did.type"]);
+            Assert.True(failedMeasurements[0]!.ContainsTags("http_status_code"));
+            Assert.Equal(
+                404,
+                failedMeasurements[0]!.Tags["http_status_code"]);
+
+            IReadOnlyList<CollectedMeasurement<double>> durationMeasurements = requestDurationCollector.GetMeasurementSnapshot();
+            Assert.Single(durationMeasurements);
         }
 
         [Fact]
@@ -249,6 +365,13 @@ namespace idunno.AtProto.Integration.Test
         {
             const string expectedPdsHostName = "test2.invalid";
             const string unknownDid = $"did:web:test2.invalid";
+
+            IServiceProvider services = CreateServiceProvider();
+            IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+            var totalRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total");
+            var totalFailedRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.failed");
+            var totalSucceededRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.succeeded");
+            var requestDurationCollector = new MetricCollector<double>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.request.duration");
 
             TestServer testServer = TestServerBuilder.CreateServer(expectedPdsHostName, async context =>
             {
@@ -277,10 +400,35 @@ namespace idunno.AtProto.Integration.Test
                 directory: new Uri($"https://directory.invalid"),
                 httpClient: testServer.CreateClient(),
                 loggerFactory: null,
-                TestContext.Current.CancellationToken);
+                meterFactory: meterFactory,
+                cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.False(result.Succeeded);
             Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
+
+            IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
+            Assert.Single(requestMeasurements);
+            Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+            Assert.Equal(
+                "web",
+                requestMeasurements[0]!.Tags["did.type"]);
+
+            IReadOnlyList<CollectedMeasurement<long>> succeededMeasurements = totalSucceededRequestsCollector.GetMeasurementSnapshot();
+            Assert.Empty(succeededMeasurements);
+
+            IReadOnlyList<CollectedMeasurement<long>> failedMeasurements = totalFailedRequestsCollector.GetMeasurementSnapshot();
+            Assert.Single(failedMeasurements);
+            Assert.True(failedMeasurements[0]!.ContainsTags("did.type"));
+            Assert.Equal(
+                "web",
+                failedMeasurements[0]!.Tags["did.type"]);
+            Assert.True(failedMeasurements[0]!.ContainsTags("http_status_code"));
+            Assert.Equal(
+                404,
+                failedMeasurements[0]!.Tags["http_status_code"]);
+
+            IReadOnlyList<CollectedMeasurement<double>> durationMeasurements = requestDurationCollector.GetMeasurementSnapshot();
+            Assert.Single(durationMeasurements);
         }
 
         [Fact]
@@ -289,6 +437,13 @@ namespace idunno.AtProto.Integration.Test
             const string directoryServerHostName = "directory.invalid";
             const string expectedPdsHostName = "pds.invalid";
             const string knownDid = "did:plc:ec72yg6n2sydzjvtovvdlxrk";
+
+            IServiceProvider services = CreateServiceProvider();
+            IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+            var totalRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total");
+            var totalFailedRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.failed");
+            var totalSucceededRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.succeeded");
+            var requestDurationCollector = new MetricCollector<double>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.request.duration");
 
             TestServer testServer = TestServerBuilder.CreateServer(directoryServerHostName, async context =>
             {
@@ -331,7 +486,8 @@ namespace idunno.AtProto.Integration.Test
                 new TestHttpClientFactory(testServer),
                 new DirectoryAgentOptions()
                 {
-                    PlcDirectoryUri = new Uri($"https://{directoryServerHostName}")
+                    PlcDirectoryUri = new Uri($"https://{directoryServerHostName}"),
+                    MeterFactory = meterFactory,
                 }))
             {
                 AtProtoHttpResult<DidDocument> result = await agent.ResolveDidDocument(
@@ -340,14 +496,41 @@ namespace idunno.AtProto.Integration.Test
 
                 Assert.True(result.Succeeded);
                 Assert.Equal(new Did(knownDid), result.Result.Id);
+
+                IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
+                Assert.Single(requestMeasurements);
+                Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+                Assert.Equal(
+                    "plc",
+                    requestMeasurements[0]!.Tags["did.type"]);
+
+                IReadOnlyList<CollectedMeasurement<long>> succeededMeasurements = totalSucceededRequestsCollector.GetMeasurementSnapshot();
+                Assert.Single(succeededMeasurements);
+                Assert.True(succeededMeasurements[0]!.ContainsTags("did.type"));
+                Assert.Equal(
+                    "plc",
+                    succeededMeasurements[0]!.Tags["did.type"]);
+
+                IReadOnlyList<CollectedMeasurement<long>> failedMeasurements = totalFailedRequestsCollector.GetMeasurementSnapshot();
+                Assert.Empty(failedMeasurements);
+
+                IReadOnlyList<CollectedMeasurement<double>> durationMeasurements = requestDurationCollector.GetMeasurementSnapshot();
+                Assert.Single(durationMeasurements);
             }
         }
 
         [Fact]
-        public async Task AgentResolveDidDocumentSucceedsWithKnownWebDid()
+        public async Task DirectoryAgentResolveDidDocumentSucceedsWithKnownWebDid()
         {
             const string expectedPdsHostName = "test.invalid";
             const string knownDid = $"did:web:{expectedPdsHostName}";
+
+            IServiceProvider services = CreateServiceProvider();
+            IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+            var totalRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total");
+            var totalFailedRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.failed");
+            var totalSucceededRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.succeeded");
+            var requestDurationCollector = new MetricCollector<double>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.request.duration");
 
             TestServer testServer = TestServerBuilder.CreateServer(expectedPdsHostName, async context =>
             {
@@ -390,7 +573,8 @@ namespace idunno.AtProto.Integration.Test
                 new TestHttpClientFactory(testServer),
                 new DirectoryAgentOptions()
                 {
-                    PlcDirectoryUri = new Uri($"https://directory.invalid")
+                    PlcDirectoryUri = new Uri($"https://directory.invalid"),
+                    MeterFactory = meterFactory,
                 }))
             {
                 AtProtoHttpResult<DidDocument> result = await agent.ResolveDidDocument(
@@ -398,14 +582,41 @@ namespace idunno.AtProto.Integration.Test
                     cancellationToken: TestContext.Current.CancellationToken);
 
                 Assert.True(result.Succeeded);
+
+                IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
+                Assert.Single(requestMeasurements);
+                Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+                Assert.Equal(
+                    "web",
+                    requestMeasurements[0]!.Tags["did.type"]);
+
+                IReadOnlyList<CollectedMeasurement<long>> succeededMeasurements = totalSucceededRequestsCollector.GetMeasurementSnapshot();
+                Assert.Single(succeededMeasurements);
+                Assert.True(succeededMeasurements[0]!.ContainsTags("did.type"));
+                Assert.Equal(
+                    "web",
+                    succeededMeasurements[0]!.Tags["did.type"]);
+
+                IReadOnlyList<CollectedMeasurement<long>> failedMeasurements = totalFailedRequestsCollector.GetMeasurementSnapshot();
+                Assert.Empty(failedMeasurements);
+
+                IReadOnlyList<CollectedMeasurement<double>> durationMeasurements = requestDurationCollector.GetMeasurementSnapshot();
+                Assert.Single(durationMeasurements);
             }
         }
 
         [Fact]
-        public async Task AgentResolveDidDocumentFailsWithWithUnknownDidType()
+        public async Task DirectoryAgentResolveDidDocumentFailsWithWithUnknownDidType()
         {
             const string expectedPdsHostName = "test.invalid";
             const string did = $"did:invalid:{expectedPdsHostName}";
+
+            IServiceProvider services = CreateServiceProvider();
+            IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+            var totalRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total");
+            var totalFailedRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.failed");
+            var totalSucceededRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.succeeded");
+            var requestDurationCollector = new MetricCollector<double>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.request.duration");
 
             TestServer testServer = TestServerBuilder.CreateServer(expectedPdsHostName, async context =>
             {
@@ -448,7 +659,8 @@ namespace idunno.AtProto.Integration.Test
                 new TestHttpClientFactory(testServer),
                 new DirectoryAgentOptions()
                 {
-                    PlcDirectoryUri = new Uri($"https://directory.invalid")
+                    PlcDirectoryUri = new Uri($"https://directory.invalid"),
+                    MeterFactory = meterFactory,
                 }))
             {
 
@@ -458,16 +670,42 @@ namespace idunno.AtProto.Integration.Test
                         did: new Did(did),
                         cancellationToken: TestContext.Current.CancellationToken);
                 });
+
+                IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
+                Assert.Single(requestMeasurements);
+                Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+                Assert.Equal(
+                    "unknown",
+                    requestMeasurements[0]!.Tags["did.type"]);
+
+                IReadOnlyList<CollectedMeasurement<long>> succeededMeasurements = totalSucceededRequestsCollector.GetMeasurementSnapshot();
+                Assert.Empty(succeededMeasurements);
+
+                IReadOnlyList<CollectedMeasurement<long>> failedMeasurements = totalFailedRequestsCollector.GetMeasurementSnapshot();
+                Assert.Single(failedMeasurements);
+                Assert.True(failedMeasurements[0]!.ContainsTags("did.type"));
+                Assert.Equal(
+                    "unknown",
+                    failedMeasurements[0]!.Tags["did.type"]);
+                IReadOnlyList<CollectedMeasurement<double>> durationMeasurements = requestDurationCollector.GetMeasurementSnapshot();
+                Assert.Single(durationMeasurements);
             }
         }
 
         [Fact]
-        public async Task AgentResolveDidDocumentFailsWithUnknownPlcDid()
+        public async Task DirectoryAgentResolveDidDocumentFailsWithUnknownPlcDid()
         {
             const string directoryServerHostName = "directory.invalid";
             const string expectedPdsHostName = "pds.invalid";
             const string knownDid = "did:plc:ec72yg6n2sydzjvtovvdlxrk";
             const string unknownDid = "did:plc:ec72yg6n2sydzjvtovvdlxrz";
+
+            IServiceProvider services = CreateServiceProvider();
+            IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+            var totalRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total");
+            var totalFailedRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.failed");
+            var totalSucceededRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.succeeded");
+            var requestDurationCollector = new MetricCollector<double>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.request.duration");
 
             TestServer testServer = TestServerBuilder.CreateServer(directoryServerHostName, async context =>
             {
@@ -510,7 +748,8 @@ namespace idunno.AtProto.Integration.Test
                 new TestHttpClientFactory(testServer),
                 new DirectoryAgentOptions()
                 {
-                    PlcDirectoryUri = new Uri($"https://{directoryServerHostName}")
+                    PlcDirectoryUri = new Uri($"https://{directoryServerHostName}"),
+                    MeterFactory = meterFactory
                 }))
             {
                 AtProtoHttpResult<DidDocument> result = await agent.ResolveDidDocument(
@@ -519,14 +758,44 @@ namespace idunno.AtProto.Integration.Test
 
                 Assert.False(result.Succeeded);
                 Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
+
+                IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
+                Assert.Single(requestMeasurements);
+                Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+                Assert.Equal(
+                    "plc",
+                    requestMeasurements[0]!.Tags["did.type"]);
+
+                IReadOnlyList<CollectedMeasurement<long>> succeededMeasurements = totalSucceededRequestsCollector.GetMeasurementSnapshot();
+                Assert.Empty(succeededMeasurements);
+
+                IReadOnlyList<CollectedMeasurement<long>> failedMeasurements = totalFailedRequestsCollector.GetMeasurementSnapshot();
+                Assert.Single(failedMeasurements);
+                Assert.True(failedMeasurements[0]!.ContainsTags("did.type"));
+                Assert.Equal(
+                    "plc",
+                    failedMeasurements[0]!.Tags["did.type"]);
+                Assert.True(failedMeasurements[0]!.ContainsTags("http_status_code"));
+                Assert.Equal(
+                    404,
+                    failedMeasurements[0]!.Tags["http_status_code"]);
+                IReadOnlyList<CollectedMeasurement<double>> durationMeasurements = requestDurationCollector.GetMeasurementSnapshot();
+                Assert.Single(durationMeasurements);
             }
         }
 
         [Fact]
-        public async Task AgentResolveDidDocumentFailsWithUnknownWebDid()
+        public async Task DirectoryAgentResolveDidDocumentFailsWithUnknownWebDid()
         {
             const string expectedPdsHostName = "test2.invalid";
             const string unknownDid = $"did:web:test2.invalid";
+
+            IServiceProvider services = CreateServiceProvider();
+            IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+            var totalRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total");
+            var totalFailedRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.failed");
+            var totalSucceededRequestsCollector = new MetricCollector<long>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.requests.total.succeeded");
+            var requestDurationCollector = new MetricCollector<double>(meterFactory, DirectoryMetrics.MeterName, "idunno.atproto.directory.request.duration");
 
             TestServer testServer = TestServerBuilder.CreateServer(expectedPdsHostName, async context =>
             {
@@ -554,7 +823,8 @@ namespace idunno.AtProto.Integration.Test
                 new TestHttpClientFactory(testServer),
                 new DirectoryAgentOptions()
                 {
-                    PlcDirectoryUri = new Uri($"https://directory.invalid")
+                    PlcDirectoryUri = new Uri($"https://directory.invalid"),
+                    MeterFactory = meterFactory
                 }))
             {
                 AtProtoHttpResult<DidDocument> result = await agent.ResolveDidDocument(
@@ -563,7 +833,37 @@ namespace idunno.AtProto.Integration.Test
 
                 Assert.False(result.Succeeded);
                 Assert.Equal(HttpStatusCode.NotFound, result.StatusCode);
+
+                IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = totalRequestsCollector.GetMeasurementSnapshot();
+                Assert.Single(requestMeasurements);
+                Assert.True(requestMeasurements[0]!.ContainsTags("did.type"));
+                Assert.Equal(
+                    "web",
+                    requestMeasurements[0]!.Tags["did.type"]);
+
+                IReadOnlyList<CollectedMeasurement<long>> succeededMeasurements = totalSucceededRequestsCollector.GetMeasurementSnapshot();
+                Assert.Empty(succeededMeasurements);
+
+                IReadOnlyList<CollectedMeasurement<long>> failedMeasurements = totalFailedRequestsCollector.GetMeasurementSnapshot();
+                Assert.Single(failedMeasurements);
+                Assert.True(failedMeasurements[0]!.ContainsTags("did.type"));
+                Assert.Equal(
+                    "web",
+                    failedMeasurements[0]!.Tags["did.type"]);
+                Assert.True(failedMeasurements[0]!.ContainsTags("http_status_code"));
+                Assert.Equal(
+                    404,
+                    failedMeasurements[0]!.Tags["http_status_code"]);
+                IReadOnlyList<CollectedMeasurement<double>> durationMeasurements = requestDurationCollector.GetMeasurementSnapshot();
+                Assert.Single(durationMeasurements);
             }
+        }
+
+        private static ServiceProvider CreateServiceProvider()
+        {
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddMetrics();
+            return serviceCollection.BuildServiceProvider();
         }
     }
 }

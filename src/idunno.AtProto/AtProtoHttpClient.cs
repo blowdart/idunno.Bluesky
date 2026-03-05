@@ -347,8 +347,7 @@ namespace idunno.AtProto
         /// <param name="serviceProxy">The service a PDS should proxy the request to.</param>
         /// <param name="requestHeader">An header to add to the requests this instance makes.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="requestHeader"/> is <see langword="null"/>.</exception>
-        public AtProtoHttpClient(string serviceProxy, NameValueHeaderValue requestHeader) :
-            this(
+        public AtProtoHttpClient(string serviceProxy, NameValueHeaderValue requestHeader) : this(
                 serviceProxy: serviceProxy,
                 requestHeaders: [requestHeader],
                 loggerFactory: null,
@@ -364,8 +363,7 @@ namespace idunno.AtProto
         /// <param name="requestHeader">An header to add to the requests this instance makes.</param>
         /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="requestHeader"/> is <see langword="null"/>.</exception>
-        public AtProtoHttpClient(string serviceProxy, NameValueHeaderValue requestHeader, ILoggerFactory? loggerFactory) :
-            this(
+        public AtProtoHttpClient(string serviceProxy, NameValueHeaderValue requestHeader, ILoggerFactory? loggerFactory) : this(
                 serviceProxy : serviceProxy,
                 requestHeaders: [requestHeader],
                 loggerFactory: loggerFactory,
@@ -382,8 +380,7 @@ namespace idunno.AtProto
         /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
         /// <param name="meterFactory">An optional meter factory to create meters from.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="requestHeader"/> is <see langword="null"/>.</exception>
-        public AtProtoHttpClient(string serviceProxy, NameValueHeaderValue requestHeader, ILoggerFactory? loggerFactory, IMeterFactory? meterFactory) :
-            this(
+        public AtProtoHttpClient(string serviceProxy, NameValueHeaderValue requestHeader, ILoggerFactory? loggerFactory, IMeterFactory? meterFactory) : this(
                 serviceProxy: serviceProxy,
                 requestHeaders: [requestHeader],
                 loggerFactory: loggerFactory,
@@ -397,8 +394,7 @@ namespace idunno.AtProto
         /// </summary>
         /// <param name="serviceProxy">The service a PDS should proxy the request to.</param>
         /// <param name="requestHeaders">Optional headers to add to the requests this instance makes.</param>
-        public AtProtoHttpClient(string serviceProxy, ICollection<NameValueHeaderValue>? requestHeaders) :
-            this(
+        public AtProtoHttpClient(string serviceProxy, ICollection<NameValueHeaderValue>? requestHeaders) : this(
                 serviceProxy: serviceProxy,
                 requestHeaders: requestHeaders,
                 loggerFactory: null,
@@ -412,12 +408,30 @@ namespace idunno.AtProto
         /// <param name="serviceProxy">The service a PDS should proxy the request to.</param>
         /// <param name="requestHeaders">Optional headers to add to the requests this instance makes.</param>
         /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
-        public AtProtoHttpClient(string serviceProxy, ICollection<NameValueHeaderValue>? requestHeaders, ILoggerFactory? loggerFactory) :
-            this(
+        public AtProtoHttpClient(string serviceProxy,
+            ICollection<NameValueHeaderValue>? requestHeaders,
+            ILoggerFactory? loggerFactory) : this(
                 serviceProxy: serviceProxy,
                 requestHeaders: requestHeaders,
                 loggerFactory: loggerFactory,
                 meterFactory: null)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
+        /// </summary>
+        /// <param name="serviceProxy">The service a PDS should proxy the request to.</param>
+        /// <param name="loggerFactory">An optional logger factory to create loggers from.</param>
+        /// <param name="meterFactory">An optional meter factory to create meters from.</param>
+        public AtProtoHttpClient(
+            string? serviceProxy,
+            ILoggerFactory? loggerFactory,
+            IMeterFactory? meterFactory) : this(
+                serviceProxy: serviceProxy,
+                requestHeaders: null,
+                loggerFactory: loggerFactory,
+                meterFactory: meterFactory)
         {
         }
 
@@ -1436,14 +1450,14 @@ namespace idunno.AtProto
                                     }
                                     catch (JsonException ex)
                                     {
-                                        _metrics.DeserializationFailures.Add(1);
+                                        _metrics.DeserializationFailures.Add(1, new KeyValuePair<string, object?>("type", typeof(TResult).FullName));
                                         Logger.AtProtoClientResponseDeserializationThrew(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, ex);
                                     }
                                 }
                             }
                             else
                             {
-                                _metrics.FailedRequests.Add(1);
+                                _metrics.FailedRequests.Add(1, new KeyValuePair<string, object?>("http_status_code", (int)httpResponseMessage.StatusCode));
                                 AtErrorDetail atErrorDetail = await ExtractErrorDetailFromResponse(httpRequestMessage, httpResponseMessage, cancellationToken).ConfigureAwait(false);
 
                                 // Retry if the error returned is there has been a DPoP nonce change and we're sending a DPoP authenticated request.

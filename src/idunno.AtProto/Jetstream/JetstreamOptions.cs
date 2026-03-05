@@ -12,8 +12,6 @@ namespace idunno.AtProto.Jetstream
     /// </summary>
     public record JetstreamOptions
     {
-        private int _readBufferSize = 8096;
-
         /// <summary>
         /// Gets or sets the <see cref="ILoggerFactory"/>, if any, to use when creating loggers.
         /// </summary>
@@ -41,22 +39,19 @@ namespace idunno.AtProto.Jetstream
         public TaskFactory TaskFactory { get; init; } = new TaskFactory(TaskScheduler.Default);
 
         /// <summary>
-        /// Gets the maximum size of messages to receive, in bytes.
+        /// Gets the maximum size of messages to receive, in bytes. Defaults to 8096 bytes (8 KB).
         /// </summary>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is less than or equal to zero.</exception>
         public int BufferSize
         {
-            get
-            {
-                return _readBufferSize;
-            }
+            get;
 
             init
             {
                 ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
 
-                _readBufferSize = value;
+                field = value;
             }
-        }
+        } = 8096;
 }
 }

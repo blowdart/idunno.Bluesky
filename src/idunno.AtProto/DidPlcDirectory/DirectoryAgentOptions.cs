@@ -1,8 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
-
+using System.Diagnostics.Metrics;
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
@@ -49,5 +48,10 @@ namespace idunno.DidPlcDirectory
         /// Gets or sets the <see cref="ILoggerFactory"/>, if any, to use when creating loggers.
         /// </summary>
         public ILoggerFactory? LoggerFactory { get; set; }
+
+        /// <summary>
+        /// Gets or sets the <see cref="IMeterFactory"/>, if any, to use when creating meters.
+        /// </summary>
+        public IMeterFactory? MeterFactory { get; set; } 
     }
 }
