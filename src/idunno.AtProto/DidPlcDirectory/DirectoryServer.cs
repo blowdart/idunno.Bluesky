@@ -7,10 +7,12 @@ using System.Diagnostics.Metrics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Web;
-using idunno.AtProto;
-using idunno.AtProto.DidPlcDirectory;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+
+using idunno.AtProto;
+using idunno.AtProto.DidPlcDirectory;
 
 namespace idunno.DidPlcDirectory
 {
