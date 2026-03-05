@@ -1571,7 +1571,21 @@ namespace idunno.AtProto
             }
             finally
             {
-                _metrics.RequestDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds);
+                if (endpoint.StartsWith("/xrpc/", StringComparison.Ordinal))
+                {
+                    string xrpcEndpoint = endpoint.Substring("/xrpc/".Length).Split('/').FirstOrDefault() ?? "unknown";
+
+                    if (xrpcEndpoint.Contains('?', StringComparison.Ordinal))
+                    {
+                        xrpcEndpoint = xrpcEndpoint.Split('?')[0];
+                    }
+
+                    _metrics.RequestDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds, new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint));
+                }
+                else
+                {
+                    _metrics.RequestDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds);
+                }
             }
         }
 
