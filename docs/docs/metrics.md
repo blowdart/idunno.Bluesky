@@ -150,3 +150,27 @@ The `idunno.AtProto.Jetstream` Meter reports measures from the `idunno.AtProto.J
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
 | `total.connections_failed` | Counter&lt;long&gt; | Connections | Total number of WebSocket connections to the JetStream that failed by a `AtProtoJetstream` instance. |
+
+## idunno.AtProto.Directory
+
+The `idunno.AtProto.Directory` Meter reports measures from the `idunno.DidPlcDirectory` service.
+
+### Metric: idunno.atproto.directory.requests.total
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `requests.total` | Counter&lt;long&gt; | Requests | Total number of requests made for DID documents.|
+
+### Metric: idunno.atproto.directory.requests.total.failed
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `requests.total.failed` | Counter&lt;long&gt; | Requests | Total number of requests made for DID documents that failed. |
+
+### Metric: idunno.atproto.directory.requests.total.succeeded
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `requests.total.succeeded` | Counter&lt;long&gt; | Requests | Total number of requests made for DID documents that succeeded. |
+
+### Metric: idunno.atproto.directory.requests.duration
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `requests.duration` | Histogram&lt;double&gt; | s | Duration of individual requests made for DID documents. |
