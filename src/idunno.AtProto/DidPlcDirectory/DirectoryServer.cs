@@ -38,8 +38,6 @@ namespace idunno.DidPlcDirectory
         /// <param name="did">The DID to resolve.</param>
         /// <param name="directory">The directory server to use to resolve the <paramref name="did"/>.</param>
         /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="directory"/>.</param>
-        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
-        /// <param name="meterFactory">An instance of <see cref="IMeterFactory"/> to use to create a meter.</param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         [UnconditionalSuppressMessage(
