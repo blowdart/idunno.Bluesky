@@ -938,3 +938,7 @@ virtual idunno.AtProto.Jetstream.AtProtoJetstream.OnConnectionStateChanged(idunn
 virtual idunno.AtProto.Jetstream.AtProtoJetstream.OnFaultRaised(idunno.AtProto.Jetstream.Events.FaultRaisedEventArgs! e) -> void
 virtual idunno.AtProto.Jetstream.AtProtoJetstream.OnMessageReceived(idunno.AtProto.Jetstream.Events.MessageReceivedEventArgs! e) -> void
 virtual idunno.AtProto.Jetstream.AtProtoJetstream.OnRecordReceived(idunno.AtProto.Jetstream.Events.RecordReceivedEventArgs! e) -> void
+OpenTelemetry.Metrics.AtProtoMetricsExtensions
+static OpenTelemetry.Metrics.AtProtoMetricsExtensions.AddAtProtoHttpClientMetrics(this OpenTelemetry.Metrics.MeterProviderBuilder! builder) -> OpenTelemetry.Metrics.MeterProviderBuilder!
+static OpenTelemetry.Metrics.AtProtoMetricsExtensions.AddAtProtoDirectoryMetrics(this OpenTelemetry.Metrics.MeterProviderBuilder! builder) -> OpenTelemetry.Metrics.MeterProviderBuilder!
+static OpenTelemetry.Metrics.AtProtoMetricsExtensions.AddAtProtoJetstreamMetrics(this OpenTelemetry.Metrics.MeterProviderBuilder! builder) -> OpenTelemetry.Metrics.MeterProviderBuilder!
