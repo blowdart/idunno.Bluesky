@@ -56,6 +56,14 @@ namespace Samples.Posting
                 checkCertificateRevocationList = false;
             }
 
+            if (addMetricsDelay)
+            {
+                Process currentProcess = Process.GetCurrentProcess();
+                Console.WriteLine("Delaying for 30 seconds to allow time to attach a profiler...");
+                Console.WriteLine($"e.g. dotnet counters monitor --process-id {currentProcess.Id} --counters idunno.AtProto.AtProtoHttpClient");
+                await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+            }
+
             // Change the log level in the ConfigureConsoleLogging() to enable logging
             using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
 
@@ -105,14 +113,6 @@ namespace Samples.Posting
                             return;
                         }
                     }
-                }
-
-                if (addMetricsDelay)
-                {
-                    Process currentProcess = Process.GetCurrentProcess();
-                    Console.WriteLine("Delaying for 30 seconds to allow time to attach a profiler...");
-                    Console.WriteLine($"e.g. dotnet counters monitor --process-id {currentProcess.Id} --counters idunno.AtProto.AtProtoHttpClient");
-                    await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
                 }
 
                 {

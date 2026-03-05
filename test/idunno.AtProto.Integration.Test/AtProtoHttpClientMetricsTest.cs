@@ -35,6 +35,7 @@ namespace idunno.AtProto.Integration.Test
             var createBlobCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.blob_create_request");
             var getRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.get_request");
             var postRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.post_request");
+            var xrpcRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.xrpc_request");
 
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
@@ -103,6 +104,13 @@ namespace idunno.AtProto.Integration.Test
 
             IReadOnlyList<CollectedMeasurement<long>> postRequestMeasurements = postRequestCollector.GetMeasurementSnapshot();
             Assert.Single(postRequestMeasurements);
+
+            IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
+            Assert.Single(xrpcRequestMeasurements);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+            Assert.Equal(
+                "com.atproto.repo.createRecord",
+                xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
         }
 
         [Fact]
@@ -119,6 +127,8 @@ namespace idunno.AtProto.Integration.Test
             var createBlobCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.blob_create_request");
             var getRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.get_request");
             var postRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.post_request");
+            var xrpcRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.xrpc_request");
+
 
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
@@ -177,6 +187,13 @@ namespace idunno.AtProto.Integration.Test
 
             IReadOnlyList<CollectedMeasurement<long>> postRequestMeasurements = postRequestCollector.GetMeasurementSnapshot();
             Assert.Empty(postRequestMeasurements);
+
+            IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
+            Assert.Single(xrpcRequestMeasurements);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+            Assert.Equal(
+                "com.atproto.repo.getRecord",
+                xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
         }
 
         [Fact]

@@ -81,6 +81,11 @@ The `idunno.AtProto.AtProtoHttpClient` Meter reports measures from the `idunno.A
 | --- | --- | --- | --- |
 | `request.duration` | Histogram&lt;double&gt; | s | Duration of individual requests made by an instance of the `idunno.AtProto.AtProtoHttpClient`. |
 
+### Metric: requests.total.xrpc_request
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `requests.total.xrpc_request` | Counter&lt;long&gt; | Requests | Total number of xRPC requests made by an instance of the `idunno.AtProto.AtProtoHttpClient`, tagged with the xrpc_endpoint. |
+
 ## idunno.AtProto.JetStream
 
 The `idunno.AtProto.Jetstream` Meter reports measures from the `idunno.AtProto.JetStream.AtProtoJetstream` client.

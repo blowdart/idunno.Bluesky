@@ -1388,6 +1388,19 @@ namespace idunno.AtProto
                     try
                     {
                         _metrics.RequestsSent.Add(1);
+
+                        if (endpoint.StartsWith("/xrpc/", StringComparison.Ordinal))
+                        {
+                            string xrpcEndpoint = endpoint.Substring("/xrpc/".Length).Split('/').FirstOrDefault() ?? "unknown";
+
+                            if (xrpcEndpoint.Contains('?', StringComparison.Ordinal))
+                            {
+                                xrpcEndpoint = xrpcEndpoint.Split('?')[0];
+                            }
+
+                            _metrics.XrpcRequests.Add(1, new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint));
+                        }
+
                         using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false))
                         {
                             _metrics.ResponsesReceived.Add(1);

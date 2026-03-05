@@ -48,7 +48,8 @@ namespace idunno.AtProto
             nameof(CreateBlob),
             nameof(GetRequests),
             nameof(PostRequests),
-            nameof(RequestDuration)
+            nameof(RequestDuration),
+            nameof(XrpcRequests)
             )]
         private void Initialize(Meter meter)
         {
@@ -102,6 +103,11 @@ namespace idunno.AtProto
                 description: "Request duration",
                 unit: "s",
                 advice: new InstrumentAdvice<double> { HistogramBucketBoundaries = s_shortSecondsBucketBoundaries });
+
+            XrpcRequests = meter.CreateCounter<long>(
+                name: $"{MeterName.ToLowerInvariant()}.requests.total.xrpc_request",
+                description: "Total XRPC requests",
+                unit: "{requests}");
         }
 
         /// <summary>
@@ -133,5 +139,7 @@ namespace idunno.AtProto
         internal Counter<long> PostRequests { get; private set; }
 
         internal Histogram<double> RequestDuration { get; private set; }
+
+        internal Counter<long> XrpcRequests { get; private set; }
     }
 }
