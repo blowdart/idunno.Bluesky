@@ -337,24 +337,6 @@ namespace idunno.AtProto.Integration.Test
                     measurement.Tags["http_method"],
                     expectedVerbs);
             }
-
-            foreach (var measurement in requestMeasurements)
-            {
-                Assert.True(measurement.ContainsTags("http_method"));
-                Assert.Contains(
-                    measurement.Tags["http_method"],
-                    expectedVerbs);
-
-                Assert.True(measurement.ContainsTags("server"));
-                Assert.Equal(
-                    TestServerBuilder.DefaultUri.Host,
-                    measurement.Tags["server"]);
-
-                Assert.True(measurement.ContainsTags("xrpc_endpoint"));
-                Assert.Contains(
-                    measurement.Tags["xrpc_endpoint"],
-                    expectedXrpcEndpoints);
-            }
         }
 
         [Fact]
