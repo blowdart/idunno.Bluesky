@@ -51,6 +51,8 @@ namespace idunno.AtProto.Jetstream
 
         private ClientWebSocket _client;
 
+        private Uri? _server;
+
         /// <summary>
         /// Creates a new instance of <see cref="Jetstream"/>.
         /// </summary>
@@ -219,7 +221,6 @@ namespace idunno.AtProto.Jetstream
         protected virtual void OnMessageReceived(MessageReceivedEventArgs e)
         {
             EventHandler<MessageReceivedEventArgs>? messageReceived = MessageReceived;
-            _metrics.MessagesReceived(1);
             MessageLastReceived = DateTimeOffset.UtcNow;
 
             if (!_disposed)
@@ -235,7 +236,6 @@ namespace idunno.AtProto.Jetstream
         protected virtual void OnRecordReceived(RecordReceivedEventArgs e)
         {
             EventHandler<RecordReceivedEventArgs>? messageParsed = RecordReceived;
-            _metrics.EventsParsed(1);
 
             if (!_disposed)
             {
@@ -273,7 +273,7 @@ namespace idunno.AtProto.Jetstream
         protected virtual void OnFaultRaised(FaultRaisedEventArgs e)
         {
             EventHandler<FaultRaisedEventArgs>? faultRaised = FaultRaised;
-            _metrics.Faults(1);
+            _metrics.Faults.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
 
             if (!_disposed)
             {
@@ -359,6 +359,7 @@ namespace idunno.AtProto.Jetstream
             }
 
             uri ??= _uri;
+            _server = uri;
 
             Uri endpoint = new(uri, SubscribeEndpoint);
 
@@ -409,25 +410,25 @@ namespace idunno.AtProto.Jetstream
                 uriBuilder.Length--;
             }
 
-            Uri serverUri = new(uriBuilder.ToString());
+            Uri jetStreamUri = new(uriBuilder.ToString());
 
             WebSocketState previousState = _client.State;
 
-            JetStreamLogger.ConnectingTo(_logger, serverUri);
+            JetStreamLogger.ConnectingTo(_logger, jetStreamUri);
 
             try
             {
-                await _client.ConnectAsync(serverUri, cancellationToken).ConfigureAwait(false);
-                _metrics.ConnectionsOpened(1);
+                await _client.ConnectAsync(jetStreamUri, cancellationToken).ConfigureAwait(false);
+                _metrics.ConnectionsOpened.Add(1, new KeyValuePair<string, object?>("server", jetStreamUri.ToString()));
             }
             catch (WebSocketException ex)
             {
                 JetStreamLogger.WebSocketException(_logger, ex);
-                _metrics.ConnectionFailures(1);
+                _metrics.ConnectionFailures.Add(1, new KeyValuePair<string, object?>("server", jetStreamUri.ToString()));
             }
             catch
             {
-                _metrics.ConnectionFailures(1);
+                _metrics.ConnectionFailures.Add(1, new KeyValuePair<string, object?>("server", jetStreamUri.ToString()));
                 throw;
             }
 
@@ -443,7 +444,7 @@ namespace idunno.AtProto.Jetstream
             else
             {
                 JetStreamLogger.ConnectionFailed(_logger, _client.State);
-                _metrics.ConnectionFailures(1);
+                _metrics.ConnectionFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
             }
         }
 
@@ -472,7 +473,7 @@ namespace idunno.AtProto.Jetstream
                 {
                     await _client.CloseAsync(status, statusDescription, cancellationToken).ConfigureAwait(false);
                     DisconnectedGracefully = true;
-                    _metrics.ConnectionsClosed(1);
+                    _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
                 }
                 catch (ObjectDisposedException)
                 {
@@ -493,7 +494,7 @@ namespace idunno.AtProto.Jetstream
                 try
                 {
                     _client.Abort();
-                    _metrics.ConnectionsClosed(1);
+                    _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
                 }
                 catch (ObjectDisposedException)
                 {
@@ -610,7 +611,7 @@ namespace idunno.AtProto.Jetstream
                         catch (ZstdException ex)
                         {
                             // Can't decompress so ignore this message.
-                            _metrics.MessageDecompressionFailures(1);
+                            _metrics.MessageDecompressionFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
                             JetStreamLogger.DecompressionException(_logger, ex);
                             continue;
                         }
@@ -630,12 +631,14 @@ namespace idunno.AtProto.Jetstream
                     }
                     catch
                     {
-                        _metrics.MessageParsingFailures(1);
+                        _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
                         throw;
                     }
 
                     if (!string.IsNullOrEmpty(messageAsString))
                     {
+                        _metrics.MessagesReceived.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+
                         OnMessageReceived(new MessageReceivedEventArgs(messageAsString));
 
                         // Now go to handle message in a new task.
@@ -648,7 +651,7 @@ namespace idunno.AtProto.Jetstream
                         if (_client.State == WebSocketState.Open)
                         {
                             LogFault("Message conversion to string failed.");
-                            _metrics.MessageParsingFailures(1);
+                            _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
                             JetStreamLogger.MessageLoopFailedToConvert(_logger);
                         }
                     }
@@ -675,7 +678,7 @@ namespace idunno.AtProto.Jetstream
             }
             catch (Exception ex)
             {
-                _metrics.MessageParsingFailures(1);
+                _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
                 JetStreamLogger.ParseMessageGotNullOrEmptyMessage(logger);
                 return Task.FromException(ex);
             }
@@ -697,13 +700,13 @@ namespace idunno.AtProto.Jetstream
                     else
                     {
                         JetStreamLogger.ParseMessageDeserializationReturnedNull(logger, json);
-                        _metrics.MessageParsingFailures(1);
+                        _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
                     }
                 }
                 else
                 {
                     JetStreamLogger.ParseMessageDeserializationReturnedNull(logger, json);
-                    _metrics.MessageParsingFailures(1);
+                    _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
                 }
 
                 return Task.CompletedTask;
@@ -711,7 +714,7 @@ namespace idunno.AtProto.Jetstream
             catch (JsonException ex)
             {
                 JetStreamLogger.ParseMessageCouldNotProcessAsJson(logger, json, ex);
-                _metrics.MessageParsingFailures(1);
+                _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
                 return Task.FromException(ex);
             }
             catch (ObjectDisposedException)
@@ -720,7 +723,7 @@ namespace idunno.AtProto.Jetstream
             }
             catch (Exception ex)
             {
-                _metrics.MessageParsingFailures(1);
+                _metrics.MessageParsingFailures.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
                 JetStreamLogger.ParseMessageThrewException(logger, ex);
                 return Task.FromException(ex);
             }
@@ -787,8 +790,7 @@ namespace idunno.AtProto.Jetstream
                         Account = account
                     };
 
-                    _metrics.AccountEventsReceived(1);
-                    _metrics.EventsParsed(1);
+                    _metrics.EventsParsed.Add(1, new KeyValuePair<string, object?>("event_type", "account"), new KeyValuePair<string, object?>("server", _server?.ToString()));
                     break;
 
                 case JetStreamEventKind.Commit:
@@ -809,8 +811,8 @@ namespace idunno.AtProto.Jetstream
                         Commit = commit
                     };
 
-                    _metrics.CommitEventsReceived(1);
-                    _metrics.EventsParsed(1);
+                    _metrics.EventsParsed.Add(1, new KeyValuePair<string, object?>("event_type", "commit"), new KeyValuePair<string, object?>("server", _server?.ToString()));
+
                     break;
 
                 case JetStreamEventKind.Identity:
@@ -831,12 +833,12 @@ namespace idunno.AtProto.Jetstream
                         Identity = identity
                     };
 
-                    _metrics.IdentityEventsReceived(1);
-                    _metrics.EventsParsed(1);
+                    _metrics.EventsParsed.Add(1, new KeyValuePair<string, object?>("event_type", "identity"), new KeyValuePair<string, object?>("server", _server?.ToString()));
+
                     break;
 
                 default:
-                    _metrics.UnknownEventsReceived(1);
+                    _metrics.UnknownEventsReceived.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
                     break;
             }
 

@@ -108,24 +108,6 @@ The `idunno.AtProto.Jetstream` Meter reports measures from the `idunno.AtProto.J
 | --- | --- | --- | --- |
 | `total.events_parsed` | Counter&lt;long&gt; | Events | Total number of events parsed from received messages by a `AtProtoJetstream` instance. |
 
-### Metric: total.account_events
-
-| Name | Instrument Type | Unit | Description |
-| --- | --- | --- | --- |
-| `total.account_events` | Counter&lt;long&gt; | Events | Total number of account events received in messages by a `AtProtoJetstream` instance. |
-
-### Metric: total.commit_events
-
-| Name | Instrument Type | Unit | Description |
-| --- | --- | --- | --- |
-| `total.commit_events` | Counter&lt;long&gt; | Events | Total number of commit events received in messages by a `AtProtoJetstream` instance. |
-
-### Metric: total.identity_events
-
-| Name | Instrument Type | Unit | Description |
-| --- | --- | --- | --- |
-| `total.identity_events` | Counter&lt;long&gt; | Events | Total number of identity events received in messages by a `AtProtoJetstream` instance. |
-
 ### Metric: total.unknown_events
 
 | Name | Instrument Type | Unit | Description |
