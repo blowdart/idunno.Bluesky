@@ -57,23 +57,6 @@ The `idunno.AtProto.AtProtoHttpClient` Meter reports measures from the `idunno.A
 | --- | --- | --- | --- |
 | `responses.total.deserialization_failure` | Counter&lt;long&gt; | Requests | Total number of responses that could not be deserialized from JSON by an instance of the `idunno.AtProto.AtProtoHttpClient`. |
 
-### Metric: requests.total.blob_create_request
-
-| Name | Instrument Type | Unit | Description |
-| --- | --- | --- | --- |
-| `requests.total.blob_create_request` | Counter&lt;long&gt; | Requests | Total number of blob creation requests made by an instance of `idunno.AtProto.AtProtoHttpClient`. |
-
-### Metric: requests.total.get_request
-
-| Name | Instrument Type | Unit | Description |
-| --- | --- | --- | --- |
-| `requests.total.get_request` | Counter&lt;long&gt; | Requests | Total number of HTTP GET requests made by an instance of the `idunno.AtProto.AtProtoHttpClient`. |
-
-### Metric: requests.total.post_request
-
-| Name | Instrument Type | Unit | Description |
-| --- | --- | --- | --- |
-| `requests.total.post_request` | Counter&lt;long&gt; | Requests | Total number of HTTP POST requests made by an instance of the `idunno.AtProto.AtProtoHttpClient`. |
 
 ### Metric: request.duration
 

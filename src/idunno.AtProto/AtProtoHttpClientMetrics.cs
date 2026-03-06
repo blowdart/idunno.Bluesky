@@ -45,9 +45,6 @@ namespace idunno.AtProto
             nameof(FailedRequests),
             nameof(DPoPRetries),
             nameof(DeserializationFailures),
-            nameof(CreateBlob),
-            nameof(GetRequests),
-            nameof(PostRequests),
             nameof(RequestDuration),
             nameof(XrpcRequests)
             )]
@@ -83,21 +80,6 @@ namespace idunno.AtProto
                 description: "Total Deserialization failures",
                 unit: "{requests}");
 
-            CreateBlob = meter.CreateCounter<long>(
-                name: $"{MeterName.ToLowerInvariant()}.requests.total.blob_create_request",
-                description: "Total Blob creation requests",
-                unit: "{requests}");
-
-            GetRequests = meter.CreateCounter<long>(
-                name: $"{MeterName.ToLowerInvariant()}.requests.total.get_request",
-                description: "Total GET requests",
-                unit: "{requests}");
-
-            PostRequests = meter.CreateCounter<long>(
-                name: $"{MeterName.ToLowerInvariant()}.requests.total.post_request",
-                description: "Total POST requests",
-                unit: "{requests}");
-
             RequestDuration = meter.CreateHistogram<double>(
                 name: $"{MeterName.ToLowerInvariant()}.request.duration",
                 description: "Request duration",
@@ -131,12 +113,6 @@ namespace idunno.AtProto
         internal Counter<long> DPoPRetries { get; private set; }
 
         internal Counter<long> DeserializationFailures { get; private set; }
-
-        internal Counter<long> CreateBlob { get; private set; }
-
-        internal Counter<long> GetRequests { get; private set; }
-
-        internal Counter<long> PostRequests { get; private set; }
 
         internal Histogram<double> RequestDuration { get; private set; }
 

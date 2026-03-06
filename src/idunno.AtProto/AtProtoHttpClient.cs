@@ -579,7 +579,6 @@ namespace idunno.AtProto
             ArgumentException.ThrowIfNullOrEmpty(endpoint);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            _metrics.GetRequests.Add(1);
             return await MakeRequest<EmptyRequestBody>(
                 service: service,
                 endpoint: endpoint,
@@ -629,7 +628,6 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(httpClient);
             ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
 
-            _metrics.GetRequests.Add(1);
             return await MakeRequest<EmptyRequestBody>(
                 service: service,
                 endpoint: endpoint,
@@ -896,7 +894,6 @@ namespace idunno.AtProto
             ArgumentException.ThrowIfNullOrEmpty(endpoint);
             ArgumentNullException.ThrowIfNull(httpClient);
 
-            _metrics.PostRequests.Add(1);
             return await MakeRequest(
                 service: service,
                 endpoint: endpoint,
@@ -949,7 +946,6 @@ namespace idunno.AtProto
             ArgumentNullException.ThrowIfNull(httpClient);
             ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
 
-            _metrics.PostRequests.Add(1);
             return await MakeRequest(
                 service: service,
                 endpoint: endpoint,
@@ -1010,9 +1006,6 @@ namespace idunno.AtProto
             {
                 throw new ArgumentException("credentials must have access credential", nameof(credentials));
             }
-
-            _metrics.PostRequests.Add(1);
-            _metrics.CreateBlob.Add(1);
 
             return await MakeRequest(
                 service: service,
@@ -1077,9 +1070,6 @@ namespace idunno.AtProto
             {
                 throw new ArgumentException("credentials must have access credential", nameof(credentials));
             }
-
-            _metrics.PostRequests.Add(1);
-            _metrics.CreateBlob.Add(1);
 
             return await MakeRequest(
                 service: service,
@@ -1387,23 +1377,33 @@ namespace idunno.AtProto
 
                     try
                     {
-                        _metrics.RequestsSent.Add(1);
+                        _metrics.RequestsSent.Add(
+                            1,
+                            new KeyValuePair<string, object?>("server", service.Host.ToString()),
+                            new KeyValuePair<string, object?>("http_method", httpMethod.ToString()));
+
+                        string xrpcEndpoint = "unknown";
 
                         if (endpoint.StartsWith("/xrpc/", StringComparison.Ordinal))
                         {
-                            string xrpcEndpoint = endpoint.Substring("/xrpc/".Length).Split('/').FirstOrDefault() ?? "unknown";
+                            xrpcEndpoint = endpoint.Substring("/xrpc/".Length).Split('/').FirstOrDefault() ?? "unknown";
 
                             if (xrpcEndpoint.Contains('?', StringComparison.Ordinal))
                             {
                                 xrpcEndpoint = xrpcEndpoint.Split('?')[0];
                             }
 
-                            _metrics.XrpcRequests.Add(1, new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint));
+                            _metrics.XrpcRequests.Add(1,
+                                new TagList(
+                                    new KeyValuePair<string, object?>("server", service.Host.ToString()),
+                                    new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint),
+                                    new KeyValuePair<string, object?>("http_method", httpMethod.ToString())
+                                    ));
                         }
 
                         using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false))
                         {
-                            _metrics.ResponsesReceived.Add(1);
+                            _metrics.ResponsesReceived.Add(1, new KeyValuePair<string, object?>("server", service.Host.ToString()));
 
                             if (OnResponseReceived is not null)
                             {
@@ -1420,7 +1420,12 @@ namespace idunno.AtProto
 
                             if (httpResponseMessage.IsSuccessStatusCode)
                             {
-                                _metrics.SuccessfulRequests.Add(1);
+                                _metrics.SuccessfulRequests.Add(
+                                    1,
+                                    new KeyValuePair<string, object?>("server", service.Host.ToString()),
+                                    new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint),
+                                    new KeyValuePair<string, object?>("http_method", httpMethod.ToString()));
+
                                 Logger.AtProtoClientRequestSucceeded
                                     (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
 
@@ -1463,14 +1468,25 @@ namespace idunno.AtProto
                                     }
                                     catch (JsonException ex)
                                     {
-                                        _metrics.DeserializationFailures.Add(1, new KeyValuePair<string, object?>("type", typeof(TResult).FullName));
+                                        _metrics.DeserializationFailures.Add(
+                                            1,
+                                            new KeyValuePair<string, object?>("server", service.Host.ToString()),
+                                            new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint),
+                                            new KeyValuePair<string, object?>("http_method", httpMethod.ToString()),
+                                            new KeyValuePair<string, object?>("type", typeof(TResult).FullName));
                                         Logger.AtProtoClientResponseDeserializationThrew(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, ex);
                                     }
                                 }
                             }
                             else
                             {
-                                _metrics.FailedRequests.Add(1, new KeyValuePair<string, object?>("http_status_code", (int)httpResponseMessage.StatusCode));
+                                _metrics.FailedRequests.Add(
+                                    1,
+                                    new KeyValuePair<string, object?>("server", service.Host.ToString()),
+                                    new KeyValuePair<string, object?>("http_status_code", (int)httpResponseMessage.StatusCode),
+                                    new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint),
+                                    new KeyValuePair<string, object?>("http_method", httpMethod.ToString()));
+
                                 AtErrorDetail atErrorDetail = await ExtractErrorDetailFromResponse(httpRequestMessage, httpResponseMessage, cancellationToken).ConfigureAwait(false);
 
                                 // Retry if the error returned is there has been a DPoP nonce change and we're sending a DPoP authenticated request.
@@ -1518,7 +1534,7 @@ namespace idunno.AtProto
                                             // but raise the event again to ensure that any credential update logic that needs to run on a nonce change runs before the retry.
                                             RaiseCredentialsUpdatedOnDPoPNonceChange(credentials, httpRequestMessage, httpResponseMessage, onCredentialsUpdated);
 
-                                            _metrics.DPoPRetries.Add(1);
+                                            _metrics.DPoPRetries.Add(1, new KeyValuePair<string, object?>("server", service.Host.ToString()));
 
                                             // Retry
                                             return await MakeRequest(
@@ -1565,7 +1581,7 @@ namespace idunno.AtProto
                         Logger.AtProtoClientRequestCancelled
                             (_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method);
 
-                        return new AtProtoHttpResult<TResult>(null, System.Net.HttpStatusCode.OK, null);
+                        return new AtProtoHttpResult<TResult>(null, HttpStatusCode.OK, null);
                     }
                 }
             }
@@ -1580,11 +1596,16 @@ namespace idunno.AtProto
                         xrpcEndpoint = xrpcEndpoint.Split('?')[0];
                     }
 
-                    _metrics.RequestDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds, new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint));
+                    _metrics.RequestDuration.Record(
+                        Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds,
+                        new KeyValuePair<string, object?>("server", service.Host.ToString()),
+                        new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint));
                 }
                 else
                 {
-                    _metrics.RequestDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds);
+                    _metrics.RequestDuration.Record(
+                        Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds,
+                        new KeyValuePair<string, object?>("server", service.Host.ToString()));
                 }
             }
         }

@@ -32,9 +32,6 @@ namespace idunno.AtProto.Integration.Test
             var failureCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.failure");
             var dPoPRetriesCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.dpop_retry");
             var deserializationFailuresCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.responses.total.deserialization_failure");
-            var createBlobCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.blob_create_request");
-            var getRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.get_request");
-            var postRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.post_request");
             var xrpcRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.xrpc_request");
 
             Did expectedDid = "did:plc:test";
@@ -80,12 +77,28 @@ namespace idunno.AtProto.Integration.Test
 
             IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
             Assert.Single(requestMeasurements);
+            Assert.True(requestMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "POST",
+                requestMeasurements[0]!.Tags["http_method"]);
+            Assert.True(requestMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                requestMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
             Assert.Single(responseMeasurements);
+            Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                responseMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
             Assert.Single(successfulMeasurements);
+            Assert.True(successfulMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                successfulMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> failureMeasurements = failureCollector.GetMeasurementSnapshot();
             Assert.Empty(failureMeasurements);
@@ -96,21 +109,20 @@ namespace idunno.AtProto.Integration.Test
             IReadOnlyList<CollectedMeasurement<long>> deserializationFailureMeasurements = deserializationFailuresCollector.GetMeasurementSnapshot();
             Assert.Empty(deserializationFailureMeasurements);
 
-            IReadOnlyList<CollectedMeasurement<long>> createBlobMeasurements = createBlobCollector.GetMeasurementSnapshot();
-            Assert.Empty(createBlobMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> getRequestMeasurements = getRequestCollector.GetMeasurementSnapshot();
-            Assert.Empty(getRequestMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> postRequestMeasurements = postRequestCollector.GetMeasurementSnapshot();
-            Assert.Single(postRequestMeasurements);
-
             IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
             Assert.Single(xrpcRequestMeasurements);
             Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
             Assert.Equal(
                 "com.atproto.repo.createRecord",
                 xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                xrpcRequestMeasurements[0]!.Tags["server"]);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "POST",
+                xrpcRequestMeasurements[0]!.Tags["http_method"]);
         }
 
         [Fact]
@@ -124,11 +136,7 @@ namespace idunno.AtProto.Integration.Test
             var failureCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.failure");
             var dPoPRetriesCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.dpop_retry");
             var deserializationFailuresCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.responses.total.deserialization_failure");
-            var createBlobCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.blob_create_request");
-            var getRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.get_request");
-            var postRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.post_request");
             var xrpcRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.xrpc_request");
-
 
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
@@ -163,12 +171,26 @@ namespace idunno.AtProto.Integration.Test
 
             IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
             Assert.Single(requestMeasurements);
+            Assert.True(requestMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                requestMeasurements[0]!.Tags["http_method"]);
+            Assert.True(requestMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                requestMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
             Assert.Single(responseMeasurements);
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                responseMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
             Assert.Single(successfulMeasurements);
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                successfulMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> failureMeasurements = failureCollector.GetMeasurementSnapshot();
             Assert.Empty(failureMeasurements);
@@ -179,21 +201,20 @@ namespace idunno.AtProto.Integration.Test
             IReadOnlyList<CollectedMeasurement<long>> deserializationFailureMeasurements = deserializationFailuresCollector.GetMeasurementSnapshot();
             Assert.Empty(deserializationFailureMeasurements);
 
-            IReadOnlyList<CollectedMeasurement<long>> createBlobMeasurements = createBlobCollector.GetMeasurementSnapshot();
-            Assert.Empty(createBlobMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> getRequestMeasurements = getRequestCollector.GetMeasurementSnapshot();
-            Assert.Single(getRequestMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> postRequestMeasurements = postRequestCollector.GetMeasurementSnapshot();
-            Assert.Empty(postRequestMeasurements);
-
             IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
             Assert.Single(xrpcRequestMeasurements);
             Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
             Assert.Equal(
                 "com.atproto.repo.getRecord",
                 xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                xrpcRequestMeasurements[0]!.Tags["server"]);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                xrpcRequestMeasurements[0]!.Tags["http_method"]);
         }
 
         [Fact]
@@ -207,15 +228,15 @@ namespace idunno.AtProto.Integration.Test
             var failureCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.failure");
             var dPoPRetriesCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.dpop_retry");
             var deserializationFailuresCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.responses.total.deserialization_failure");
-            var createBlobCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.blob_create_request");
-            var getRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.get_request");
-            var postRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.post_request");
+            var xrpcRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.xrpc_request");
 
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
             RecordKey expectedRecordKey = TimestampIdentifier.Next();
             AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
             Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+            string[] expectedVerbs = ["GET", "POST"];
+            string[] expectedXrpcEndpoints = ["com.atproto.repo.getRecord", "com.atproto.repo.createRecord"];
 
             AccessCredentials expectedCredentials = new(
                     service: TestServerBuilder.DefaultUri,
@@ -262,9 +283,27 @@ namespace idunno.AtProto.Integration.Test
 
             IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
             Assert.Equal(2, requestMeasurements.Count);
+            foreach (var measurement in requestMeasurements)
+            {
+                Assert.True(measurement!.ContainsTags("http_method"));
+                Assert.Contains(
+                    measurement.Tags["http_method"],
+                    expectedVerbs);
+                Assert.True(measurement.ContainsTags("server"));
+                Assert.Equal(
+                    TestServerBuilder.DefaultUri.Host,
+                    measurement.Tags["server"]);
+            }
 
             IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
             Assert.Equal(2, responseMeasurements.Count);
+            foreach (var measurement in requestMeasurements)
+            {
+                Assert.True(measurement.ContainsTags("server"));
+                Assert.Equal(
+                    TestServerBuilder.DefaultUri.Host,
+                    measurement.Tags["server"]);
+            }
 
             IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
             Assert.Equal(2, successfulMeasurements.Count);
@@ -278,14 +317,44 @@ namespace idunno.AtProto.Integration.Test
             IReadOnlyList<CollectedMeasurement<long>> deserializationFailureMeasurements = deserializationFailuresCollector.GetMeasurementSnapshot();
             Assert.Empty(deserializationFailureMeasurements);
 
-            IReadOnlyList<CollectedMeasurement<long>> createBlobMeasurements = createBlobCollector.GetMeasurementSnapshot();
-            Assert.Empty(createBlobMeasurements);
+            IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
+            Assert.Equal(2, xrpcRequestMeasurements.Count);
+            for (int i = 0; i < xrpcRequestMeasurements.Count; i++)
+            {
+                CollectedMeasurement<long> measurement = xrpcRequestMeasurements[i];
+                Assert.True(measurement.ContainsTags("server"));
+                Assert.Equal(
+                    TestServerBuilder.DefaultUri.Host,
+                    measurement.Tags["server"]);
 
-            IReadOnlyList<CollectedMeasurement<long>> getRequestMeasurements = getRequestCollector.GetMeasurementSnapshot();
-            Assert.Single(getRequestMeasurements);
+                Assert.True(measurement.ContainsTags("xrpc_endpoint"));
+                Assert.Contains(
+                    measurement.Tags["xrpc_endpoint"],
+                    expectedXrpcEndpoints);
 
-            IReadOnlyList<CollectedMeasurement<long>> postRequestMeasurements = postRequestCollector.GetMeasurementSnapshot();
-            Assert.Single(postRequestMeasurements);
+                Assert.True(measurement.ContainsTags("http_method"));
+                Assert.Contains(
+                    measurement.Tags["http_method"],
+                    expectedVerbs);
+            }
+
+            foreach (var measurement in requestMeasurements)
+            {
+                Assert.True(measurement.ContainsTags("http_method"));
+                Assert.Contains(
+                    measurement.Tags["http_method"],
+                    expectedVerbs);
+
+                Assert.True(measurement.ContainsTags("server"));
+                Assert.Equal(
+                    TestServerBuilder.DefaultUri.Host,
+                    measurement.Tags["server"]);
+
+                Assert.True(measurement.ContainsTags("xrpc_endpoint"));
+                Assert.Contains(
+                    measurement.Tags["xrpc_endpoint"],
+                    expectedXrpcEndpoints);
+            }
         }
 
         [Fact]
@@ -299,9 +368,7 @@ namespace idunno.AtProto.Integration.Test
             var failureCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.failure");
             var dPoPRetriesCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.dpop_retry");
             var deserializationFailuresCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.responses.total.deserialization_failure");
-            var createBlobCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.blob_create_request");
-            var getRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.get_request");
-            var postRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.post_request");
+            var xrpcRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.xrpc_request");
 
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
@@ -336,9 +403,21 @@ namespace idunno.AtProto.Integration.Test
 
             IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
             Assert.Single(requestMeasurements);
+            Assert.True(requestMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                requestMeasurements[0]!.Tags["http_method"]);
+            Assert.True(requestMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                requestMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
             Assert.Single(responseMeasurements);
+            Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                responseMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
             Assert.Empty(successfulMeasurements);
@@ -349,6 +428,10 @@ namespace idunno.AtProto.Integration.Test
             Assert.Equal(
                 404,
                 failureMeasurements[0]!.Tags["http_status_code"]);
+            Assert.True(failureMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                failureMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> dPoPMeasurements = dPoPRetriesCollector.GetMeasurementSnapshot();
             Assert.Empty(dPoPMeasurements);
@@ -356,14 +439,20 @@ namespace idunno.AtProto.Integration.Test
             IReadOnlyList<CollectedMeasurement<long>> deserializationFailureMeasurements = deserializationFailuresCollector.GetMeasurementSnapshot();
             Assert.Empty(deserializationFailureMeasurements);
 
-            IReadOnlyList<CollectedMeasurement<long>> createBlobMeasurements = createBlobCollector.GetMeasurementSnapshot();
-            Assert.Empty(createBlobMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> getRequestMeasurements = getRequestCollector.GetMeasurementSnapshot();
-            Assert.Single(getRequestMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> postRequestMeasurements = postRequestCollector.GetMeasurementSnapshot();
-            Assert.Empty(postRequestMeasurements);
+            IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
+            Assert.Single(xrpcRequestMeasurements);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+            Assert.Equal(
+                "com.atproto.repo.getRecord",
+                xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                xrpcRequestMeasurements[0]!.Tags["server"]);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                xrpcRequestMeasurements[0]!.Tags["http_method"]);
         }
 
         [Fact]
@@ -377,9 +466,7 @@ namespace idunno.AtProto.Integration.Test
             var failureCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.failure");
             var dPoPRetriesCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.dpop_retry");
             var deserializationFailuresCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.responses.total.deserialization_failure");
-            var createBlobCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.blob_create_request");
-            var getRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.get_request");
-            var postRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.post_request");
+            var xrpcRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.xrpc_request");
 
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
@@ -418,15 +505,48 @@ namespace idunno.AtProto.Integration.Test
 
             IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
             Assert.Equal(2, requestMeasurements.Count);
+            Assert.True(requestMeasurements[0].ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                requestMeasurements[0].Tags["http_method"]);
+            Assert.True(requestMeasurements[0].ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                requestMeasurements[0].Tags["server"]);
+
+            Assert.True(requestMeasurements[1].ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                requestMeasurements[1].Tags["http_method"]);
+            Assert.True(requestMeasurements[1].ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                requestMeasurements[1].Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
             Assert.Equal(2, responseMeasurements.Count);
+            Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                responseMeasurements[0]!.Tags["server"]);
+            Assert.True(responseMeasurements[1]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                responseMeasurements[1]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
             Assert.Single(successfulMeasurements);
+            Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                responseMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> failureMeasurements = failureCollector.GetMeasurementSnapshot();
             Assert.Single(failureMeasurements);
+            Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                responseMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> dPoPMeasurements = dPoPRetriesCollector.GetMeasurementSnapshot();
             Assert.Single(dPoPMeasurements);
@@ -434,14 +554,33 @@ namespace idunno.AtProto.Integration.Test
             IReadOnlyList<CollectedMeasurement<long>> deserializationFailureMeasurements = deserializationFailuresCollector.GetMeasurementSnapshot();
             Assert.Empty(deserializationFailureMeasurements);
 
-            IReadOnlyList<CollectedMeasurement<long>> createBlobMeasurements = createBlobCollector.GetMeasurementSnapshot();
-            Assert.Empty(createBlobMeasurements);
+            IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
+            Assert.Equal(2, xrpcRequestMeasurements.Count);
+            Assert.True(xrpcRequestMeasurements[0].ContainsTags("xrpc_endpoint"));
+            Assert.Equal(
+                "com.atproto.repo.getRecord",
+                xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
+            Assert.True(xrpcRequestMeasurements[0].ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                xrpcRequestMeasurements[0]!.Tags["server"]);
+            Assert.True(xrpcRequestMeasurements[0].ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                xrpcRequestMeasurements[0]!.Tags["http_method"]);
 
-            IReadOnlyList<CollectedMeasurement<long>> getRequestMeasurements = getRequestCollector.GetMeasurementSnapshot();
-            Assert.Single(getRequestMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> postRequestMeasurements = postRequestCollector.GetMeasurementSnapshot();
-            Assert.Empty(postRequestMeasurements);
+            Assert.True(xrpcRequestMeasurements[1].ContainsTags("xrpc_endpoint"));
+            Assert.Equal(
+                "com.atproto.repo.getRecord",
+                xrpcRequestMeasurements[1].Tags["xrpc_endpoint"]);
+            Assert.True(xrpcRequestMeasurements[1].ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                xrpcRequestMeasurements[1].Tags["server"]);
+            Assert.True(xrpcRequestMeasurements[1].ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                xrpcRequestMeasurements[1].Tags["http_method"]);
         }
 
         [Fact]
@@ -455,9 +594,7 @@ namespace idunno.AtProto.Integration.Test
             var failureCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.failure");
             var dPoPRetriesCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.dpop_retry");
             var deserializationFailuresCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.responses.total.deserialization_failure");
-            var createBlobCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.blob_create_request");
-            var getRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.get_request");
-            var postRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.post_request");
+            var xrpcRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.xrpc_request");
 
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
@@ -504,12 +641,29 @@ namespace idunno.AtProto.Integration.Test
 
             IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
             Assert.Single(requestMeasurements);
+            Assert.Single(requestMeasurements);
+            Assert.True(requestMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "POST",
+                requestMeasurements[0]!.Tags["http_method"]);
+            Assert.True(requestMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                requestMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
             Assert.Single(responseMeasurements);
+            Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                responseMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
             Assert.Single(successfulMeasurements);
+            Assert.True(successfulMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                successfulMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> failureMeasurements = failureCollector.GetMeasurementSnapshot();
             Assert.Empty(failureMeasurements);
@@ -520,14 +674,20 @@ namespace idunno.AtProto.Integration.Test
             IReadOnlyList<CollectedMeasurement<long>> deserializationFailureMeasurements = deserializationFailuresCollector.GetMeasurementSnapshot();
             Assert.Empty(deserializationFailureMeasurements);
 
-            IReadOnlyList<CollectedMeasurement<long>> createBlobMeasurements = createBlobCollector.GetMeasurementSnapshot();
-            Assert.Single(createBlobMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> getRequestMeasurements = getRequestCollector.GetMeasurementSnapshot();
-            Assert.Empty(getRequestMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> postRequestMeasurements = postRequestCollector.GetMeasurementSnapshot();
-            Assert.Single(postRequestMeasurements);
+            IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
+            Assert.Single(xrpcRequestMeasurements);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+            Assert.Equal(
+                "com.atproto.repo.uploadBlob",
+                xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                xrpcRequestMeasurements[0]!.Tags["server"]);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "POST",
+                xrpcRequestMeasurements[0]!.Tags["http_method"]);
         }
 
         [Fact]
@@ -541,9 +701,7 @@ namespace idunno.AtProto.Integration.Test
             var failureCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.failure");
             var dPoPRetriesCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.dpop_retry");
             var deserializationFailuresCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.responses.total.deserialization_failure");
-            var createBlobCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.blob_create_request");
-            var getRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.get_request");
-            var postRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.post_request");
+            var xrpcRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.xrpc_request");
 
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
@@ -584,12 +742,28 @@ namespace idunno.AtProto.Integration.Test
 
             IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
             Assert.Single(requestMeasurements);
+            Assert.True(requestMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                requestMeasurements[0]!.Tags["http_method"]);
+            Assert.True(requestMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                requestMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
             Assert.Single(responseMeasurements);
+            Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                responseMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
             Assert.Single(successfulMeasurements);
+            Assert.True(successfulMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                successfulMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> failureMeasurements = failureCollector.GetMeasurementSnapshot();
             Assert.Empty(failureMeasurements);
@@ -603,15 +777,33 @@ namespace idunno.AtProto.Integration.Test
             Assert.Equal(
                 "idunno.AtProto.Integration.Test.TestRecord",
                 deserializationFailureMeasurements[0]!.Tags["type"]);
+            Assert.True(deserializationFailureMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                deserializationFailureMeasurements[0]!.Tags["server"]);
+            Assert.True(deserializationFailureMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+            Assert.Equal(
+                "com.atproto.repo.getRecord",
+                deserializationFailureMeasurements[0]!.Tags["xrpc_endpoint"]);
+            Assert.True(deserializationFailureMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                deserializationFailureMeasurements[0]!.Tags["http_method"]);
 
-            IReadOnlyList<CollectedMeasurement<long>> createBlobMeasurements = createBlobCollector.GetMeasurementSnapshot();
-            Assert.Empty(createBlobMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> getRequestMeasurements = getRequestCollector.GetMeasurementSnapshot();
-            Assert.Single(getRequestMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> postRequestMeasurements = postRequestCollector.GetMeasurementSnapshot();
-            Assert.Empty(postRequestMeasurements);
+            IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
+            Assert.Single(xrpcRequestMeasurements);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+            Assert.Equal(
+                "com.atproto.repo.getRecord",
+                xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                xrpcRequestMeasurements[0]!.Tags["server"]);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                xrpcRequestMeasurements[0]!.Tags["http_method"]);
         }
 
         [Fact]
@@ -625,9 +817,7 @@ namespace idunno.AtProto.Integration.Test
             var failureCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.failure");
             var dPoPRetriesCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.dpop_retry");
             var deserializationFailuresCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.responses.total.deserialization_failure");
-            var createBlobCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.blob_create_request");
-            var getRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.get_request");
-            var postRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.post_request");
+            var xrpcRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.xrpc_request");
 
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
@@ -671,12 +861,28 @@ namespace idunno.AtProto.Integration.Test
 
             IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
             Assert.Single(requestMeasurements);
+            Assert.True(requestMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "POST",
+                requestMeasurements[0]!.Tags["http_method"]);
+            Assert.True(requestMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                requestMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
             Assert.Single(responseMeasurements);
+            Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                responseMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
             Assert.Single(successfulMeasurements);
+            Assert.True(successfulMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                successfulMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> failureMeasurements = failureCollector.GetMeasurementSnapshot();
             Assert.Empty(failureMeasurements);
@@ -687,14 +893,20 @@ namespace idunno.AtProto.Integration.Test
             IReadOnlyList<CollectedMeasurement<long>> deserializationFailureMeasurements = deserializationFailuresCollector.GetMeasurementSnapshot();
             Assert.Empty(deserializationFailureMeasurements);
 
-            IReadOnlyList<CollectedMeasurement<long>> createBlobMeasurements = createBlobCollector.GetMeasurementSnapshot();
-            Assert.Empty(createBlobMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> getRequestMeasurements = getRequestCollector.GetMeasurementSnapshot();
-            Assert.Empty(getRequestMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> postRequestMeasurements = postRequestCollector.GetMeasurementSnapshot();
-            Assert.Single(postRequestMeasurements);
+            IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
+            Assert.Single(xrpcRequestMeasurements);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+            Assert.Equal(
+                "com.atproto.repo.createRecord",
+                xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                xrpcRequestMeasurements[0]!.Tags["server"]);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "POST",
+                xrpcRequestMeasurements[0]!.Tags["http_method"]);
         }
 
         [Fact]
@@ -708,9 +920,7 @@ namespace idunno.AtProto.Integration.Test
             var failureCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.failure");
             var dPoPRetriesCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.dpop_retry");
             var deserializationFailuresCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.responses.total.deserialization_failure");
-            var createBlobCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.blob_create_request");
-            var getRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.get_request");
-            var postRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.post_request");
+            var xrpcRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.xrpc_request");
 
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
@@ -746,12 +956,26 @@ namespace idunno.AtProto.Integration.Test
 
             IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
             Assert.Single(requestMeasurements);
+            Assert.True(requestMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                requestMeasurements[0]!.Tags["http_method"]);
+            Assert.True(requestMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                requestMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
             Assert.Single(responseMeasurements);
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                responseMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
             Assert.Single(successfulMeasurements);
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                successfulMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> failureMeasurements = failureCollector.GetMeasurementSnapshot();
             Assert.Empty(failureMeasurements);
@@ -762,14 +986,20 @@ namespace idunno.AtProto.Integration.Test
             IReadOnlyList<CollectedMeasurement<long>> deserializationFailureMeasurements = deserializationFailuresCollector.GetMeasurementSnapshot();
             Assert.Empty(deserializationFailureMeasurements);
 
-            IReadOnlyList<CollectedMeasurement<long>> createBlobMeasurements = createBlobCollector.GetMeasurementSnapshot();
-            Assert.Empty(createBlobMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> getRequestMeasurements = getRequestCollector.GetMeasurementSnapshot();
-            Assert.Single(getRequestMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> postRequestMeasurements = postRequestCollector.GetMeasurementSnapshot();
-            Assert.Empty(postRequestMeasurements);
+            IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
+            Assert.Single(xrpcRequestMeasurements);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+            Assert.Equal(
+                "com.atproto.repo.getRecord",
+                xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                xrpcRequestMeasurements[0]!.Tags["server"]);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                xrpcRequestMeasurements[0]!.Tags["http_method"]);
         }
 
         [Fact]
@@ -783,15 +1013,15 @@ namespace idunno.AtProto.Integration.Test
             var failureCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.failure");
             var dPoPRetriesCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.dpop_retry");
             var deserializationFailuresCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.responses.total.deserialization_failure");
-            var createBlobCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.blob_create_request");
-            var getRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.get_request");
-            var postRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.post_request");
+            var xrpcRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.xrpc_request");
 
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
             RecordKey expectedRecordKey = TimestampIdentifier.Next();
             AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
             Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+            string[] expectedVerbs = ["GET", "POST"];
+            string[] expectedXrpcEndpoints = ["com.atproto.repo.getRecord", "com.atproto.repo.createRecord"];
 
             AccessCredentials expectedCredentials = new(
                     service: TestServerBuilder.DefaultUri,
@@ -840,9 +1070,27 @@ namespace idunno.AtProto.Integration.Test
 
             IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
             Assert.Equal(2, requestMeasurements.Count);
+            foreach (var measurement in requestMeasurements)
+            {
+                Assert.True(measurement!.ContainsTags("http_method"));
+                Assert.Contains(
+                    measurement.Tags["http_method"],
+                    expectedVerbs);
+                Assert.True(measurement.ContainsTags("server"));
+                Assert.Equal(
+                    TestServerBuilder.DefaultUri.Host,
+                    measurement.Tags["server"]);
+            }
 
             IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
             Assert.Equal(2, responseMeasurements.Count);
+            foreach (var measurement in requestMeasurements)
+            {
+                Assert.True(measurement.ContainsTags("server"));
+                Assert.Equal(
+                    TestServerBuilder.DefaultUri.Host,
+                    measurement.Tags["server"]);
+            }
 
             IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
             Assert.Equal(2, successfulMeasurements.Count);
@@ -856,14 +1104,26 @@ namespace idunno.AtProto.Integration.Test
             IReadOnlyList<CollectedMeasurement<long>> deserializationFailureMeasurements = deserializationFailuresCollector.GetMeasurementSnapshot();
             Assert.Empty(deserializationFailureMeasurements);
 
-            IReadOnlyList<CollectedMeasurement<long>> createBlobMeasurements = createBlobCollector.GetMeasurementSnapshot();
-            Assert.Empty(createBlobMeasurements);
+            IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
+            Assert.Equal(2, xrpcRequestMeasurements.Count);
+            for (int i = 0; i < xrpcRequestMeasurements.Count; i++)
+            {
+                CollectedMeasurement<long> measurement = xrpcRequestMeasurements[i];
+                Assert.True(measurement.ContainsTags("server"));
+                Assert.Equal(
+                    TestServerBuilder.DefaultUri.Host,
+                    measurement.Tags["server"]);
 
-            IReadOnlyList<CollectedMeasurement<long>> getRequestMeasurements = getRequestCollector.GetMeasurementSnapshot();
-            Assert.Single(getRequestMeasurements);
+                Assert.True(measurement.ContainsTags("xrpc_endpoint"));
+                Assert.Contains(
+                    measurement.Tags["xrpc_endpoint"],
+                    expectedXrpcEndpoints);
 
-            IReadOnlyList<CollectedMeasurement<long>> postRequestMeasurements = postRequestCollector.GetMeasurementSnapshot();
-            Assert.Single(postRequestMeasurements);
+                Assert.True(measurement.ContainsTags("http_method"));
+                Assert.Contains(
+                    measurement.Tags["http_method"],
+                    expectedVerbs);
+            }
         }
 
         [Fact]
@@ -877,9 +1137,7 @@ namespace idunno.AtProto.Integration.Test
             var failureCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.failure");
             var dPoPRetriesCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.dpop_retry");
             var deserializationFailuresCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.responses.total.deserialization_failure");
-            var createBlobCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.blob_create_request");
-            var getRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.get_request");
-            var postRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.post_request");
+            var xrpcRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.xrpc_request");
 
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
@@ -914,9 +1172,21 @@ namespace idunno.AtProto.Integration.Test
 
             IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
             Assert.Single(requestMeasurements);
+            Assert.True(requestMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                requestMeasurements[0]!.Tags["http_method"]);
+            Assert.True(requestMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                requestMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
             Assert.Single(responseMeasurements);
+            Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                responseMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
             Assert.Empty(successfulMeasurements);
@@ -927,6 +1197,10 @@ namespace idunno.AtProto.Integration.Test
             Assert.Equal(
                 404,
                 failureMeasurements[0]!.Tags["http_status_code"]);
+            Assert.True(failureMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                failureMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> dPoPMeasurements = dPoPRetriesCollector.GetMeasurementSnapshot();
             Assert.Empty(dPoPMeasurements);
@@ -934,14 +1208,20 @@ namespace idunno.AtProto.Integration.Test
             IReadOnlyList<CollectedMeasurement<long>> deserializationFailureMeasurements = deserializationFailuresCollector.GetMeasurementSnapshot();
             Assert.Empty(deserializationFailureMeasurements);
 
-            IReadOnlyList<CollectedMeasurement<long>> createBlobMeasurements = createBlobCollector.GetMeasurementSnapshot();
-            Assert.Empty(createBlobMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> getRequestMeasurements = getRequestCollector.GetMeasurementSnapshot();
-            Assert.Single(getRequestMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> postRequestMeasurements = postRequestCollector.GetMeasurementSnapshot();
-            Assert.Empty(postRequestMeasurements);
+            IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
+            Assert.Single(xrpcRequestMeasurements);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+            Assert.Equal(
+                "com.atproto.repo.getRecord",
+                xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                xrpcRequestMeasurements[0]!.Tags["server"]);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                xrpcRequestMeasurements[0]!.Tags["http_method"]);
         }
 
         [Fact]
@@ -955,9 +1235,7 @@ namespace idunno.AtProto.Integration.Test
             var failureCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.failure");
             var dPoPRetriesCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.dpop_retry");
             var deserializationFailuresCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.responses.total.deserialization_failure");
-            var createBlobCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.blob_create_request");
-            var getRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.get_request");
-            var postRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.post_request");
+            var xrpcRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.xrpc_request");
 
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
@@ -997,15 +1275,48 @@ namespace idunno.AtProto.Integration.Test
 
             IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
             Assert.Equal(2, requestMeasurements.Count);
+            Assert.True(requestMeasurements[0].ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                requestMeasurements[0].Tags["http_method"]);
+            Assert.True(requestMeasurements[0].ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                requestMeasurements[0].Tags["server"]);
+
+            Assert.True(requestMeasurements[1].ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                requestMeasurements[1].Tags["http_method"]);
+            Assert.True(requestMeasurements[1].ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                requestMeasurements[1].Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
             Assert.Equal(2, responseMeasurements.Count);
+            Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                responseMeasurements[0]!.Tags["server"]);
+            Assert.True(responseMeasurements[1]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                responseMeasurements[1]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
             Assert.Single(successfulMeasurements);
+            Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                responseMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> failureMeasurements = failureCollector.GetMeasurementSnapshot();
             Assert.Single(failureMeasurements);
+            Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                responseMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> dPoPMeasurements = dPoPRetriesCollector.GetMeasurementSnapshot();
             Assert.Single(dPoPMeasurements);
@@ -1013,14 +1324,33 @@ namespace idunno.AtProto.Integration.Test
             IReadOnlyList<CollectedMeasurement<long>> deserializationFailureMeasurements = deserializationFailuresCollector.GetMeasurementSnapshot();
             Assert.Empty(deserializationFailureMeasurements);
 
-            IReadOnlyList<CollectedMeasurement<long>> createBlobMeasurements = createBlobCollector.GetMeasurementSnapshot();
-            Assert.Empty(createBlobMeasurements);
+            IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
+            Assert.Equal(2, xrpcRequestMeasurements.Count);
+            Assert.True(xrpcRequestMeasurements[0].ContainsTags("xrpc_endpoint"));
+            Assert.Equal(
+                "com.atproto.repo.getRecord",
+                xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
+            Assert.True(xrpcRequestMeasurements[0].ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                xrpcRequestMeasurements[0]!.Tags["server"]);
+            Assert.True(xrpcRequestMeasurements[0].ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                xrpcRequestMeasurements[0]!.Tags["http_method"]);
 
-            IReadOnlyList<CollectedMeasurement<long>> getRequestMeasurements = getRequestCollector.GetMeasurementSnapshot();
-            Assert.Single(getRequestMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> postRequestMeasurements = postRequestCollector.GetMeasurementSnapshot();
-            Assert.Empty(postRequestMeasurements);
+            Assert.True(xrpcRequestMeasurements[1].ContainsTags("xrpc_endpoint"));
+            Assert.Equal(
+                "com.atproto.repo.getRecord",
+                xrpcRequestMeasurements[1].Tags["xrpc_endpoint"]);
+            Assert.True(xrpcRequestMeasurements[1].ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                xrpcRequestMeasurements[1].Tags["server"]);
+            Assert.True(xrpcRequestMeasurements[1].ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                xrpcRequestMeasurements[1].Tags["http_method"]);
         }
 
         [Fact]
@@ -1034,9 +1364,7 @@ namespace idunno.AtProto.Integration.Test
             var failureCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.failure");
             var dPoPRetriesCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.dpop_retry");
             var deserializationFailuresCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.responses.total.deserialization_failure");
-            var createBlobCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.blob_create_request");
-            var getRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.get_request");
-            var postRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.post_request");
+            var xrpcRequestCollector = new MetricCollector<long>(meterFactory, AtProtoHttpClientMetrics.MeterName, "idunno.atproto.atprotohttpclient.requests.total.xrpc_request");
 
             Did expectedDid = "did:plc:test";
             Nsid expectedCollection = "blue.idunno.test";
@@ -1078,12 +1406,28 @@ namespace idunno.AtProto.Integration.Test
 
             IReadOnlyList<CollectedMeasurement<long>> requestMeasurements = requestCollector.GetMeasurementSnapshot();
             Assert.Single(requestMeasurements);
+            Assert.True(requestMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                requestMeasurements[0]!.Tags["http_method"]);
+            Assert.True(requestMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                requestMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> responseMeasurements = responseCollector.GetMeasurementSnapshot();
             Assert.Single(responseMeasurements);
+            Assert.True(responseMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                responseMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> successfulMeasurements = successfulCollector.GetMeasurementSnapshot();
             Assert.Single(successfulMeasurements);
+            Assert.True(successfulMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                successfulMeasurements[0]!.Tags["server"]);
 
             IReadOnlyList<CollectedMeasurement<long>> failureMeasurements = failureCollector.GetMeasurementSnapshot();
             Assert.Empty(failureMeasurements);
@@ -1097,15 +1441,33 @@ namespace idunno.AtProto.Integration.Test
             Assert.Equal(
                 "idunno.AtProto.Repo.AtProtoRepositoryRecord`1[[idunno.AtProto.Integration.Test.TestRecord, idunno.AtProto.Integration.Test, Version=1.0.0.0, Culture=neutral, PublicKeyToken=5289fcbcf27e814d]]",
                 deserializationFailureMeasurements[0]!.Tags["type"]);
+            Assert.True(deserializationFailureMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                deserializationFailureMeasurements[0]!.Tags["server"]);
+            Assert.True(deserializationFailureMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+            Assert.Equal(
+                "com.atproto.repo.getRecord",
+                deserializationFailureMeasurements[0]!.Tags["xrpc_endpoint"]);
+            Assert.True(deserializationFailureMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                deserializationFailureMeasurements[0]!.Tags["http_method"]);
 
-            IReadOnlyList<CollectedMeasurement<long>> createBlobMeasurements = createBlobCollector.GetMeasurementSnapshot();
-            Assert.Empty(createBlobMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> getRequestMeasurements = getRequestCollector.GetMeasurementSnapshot();
-            Assert.Single(getRequestMeasurements);
-
-            IReadOnlyList<CollectedMeasurement<long>> postRequestMeasurements = postRequestCollector.GetMeasurementSnapshot();
-            Assert.Empty(postRequestMeasurements);
+            IReadOnlyList<CollectedMeasurement<long>> xrpcRequestMeasurements = xrpcRequestCollector.GetMeasurementSnapshot();
+            Assert.Single(xrpcRequestMeasurements);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("xrpc_endpoint"));
+            Assert.Equal(
+                "com.atproto.repo.getRecord",
+                xrpcRequestMeasurements[0]!.Tags["xrpc_endpoint"]);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("server"));
+            Assert.Equal(
+                TestServerBuilder.DefaultUri.Host,
+                xrpcRequestMeasurements[0]!.Tags["server"]);
+            Assert.True(xrpcRequestMeasurements[0]!.ContainsTags("http_method"));
+            Assert.Equal(
+                "GET",
+                xrpcRequestMeasurements[0]!.Tags["http_method"]);
         }
 
         private static TestServer CreateTestServer(
