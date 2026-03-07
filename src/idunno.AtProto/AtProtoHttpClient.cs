@@ -1382,11 +1382,11 @@ namespace idunno.AtProto
                             new KeyValuePair<string, object?>("server", service.Host.ToString()),
                             new KeyValuePair<string, object?>("http_method", httpMethod.ToString()));
 
-                        string xrpcEndpoint = "unknown";
+                        string xrpcEndpoint = string.Empty;
 
                         if (endpoint.StartsWith("/xrpc/", StringComparison.Ordinal))
                         {
-                            xrpcEndpoint = endpoint.Substring("/xrpc/".Length).Split('/').FirstOrDefault() ?? "unknown";
+                            xrpcEndpoint = endpoint.Substring("/xrpc/".Length).Split('/').FirstOrDefault() ?? string.Empty;
 
                             if (xrpcEndpoint.Contains('?', StringComparison.Ordinal))
                             {
@@ -1587,26 +1587,26 @@ namespace idunno.AtProto
             }
             finally
             {
+                TagList tags = [new KeyValuePair<string, object?>("server", service.Host.ToString())];
+
                 if (endpoint.StartsWith("/xrpc/", StringComparison.Ordinal))
                 {
-                    string xrpcEndpoint = endpoint.Substring("/xrpc/".Length).Split('/').FirstOrDefault() ?? "unknown";
+                    string xrpcEndpoint = endpoint.Substring("/xrpc/".Length).Split('/').FirstOrDefault() ?? string.Empty;
 
                     if (xrpcEndpoint.Contains('?', StringComparison.Ordinal))
                     {
                         xrpcEndpoint = xrpcEndpoint.Split('?')[0];
                     }
 
-                    _metrics.RequestDuration.Record(
-                        Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds,
-                        new KeyValuePair<string, object?>("server", service.Host.ToString()),
-                        new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint));
+                    if (!string.IsNullOrEmpty(xrpcEndpoint))
+                    {
+                        tags.Add(new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint));
+                    }
                 }
-                else
-                {
-                    _metrics.RequestDuration.Record(
+
+                _metrics.RequestDuration.Record(
                         Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds,
-                        new KeyValuePair<string, object?>("server", service.Host.ToString()));
-                }
+                        tags);
             }
         }
 
