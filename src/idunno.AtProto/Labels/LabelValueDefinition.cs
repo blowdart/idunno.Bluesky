@@ -12,7 +12,7 @@ namespace idunno.AtProto.Labels
     public sealed record LabelValueDefinition
     {
         /// <summary>
-        /// Gets the identifer of the label
+        /// Gets the identifier of the label
         /// </summary>
         public required string Identifier { get; init; }
 

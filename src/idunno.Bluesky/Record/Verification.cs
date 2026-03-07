@@ -10,7 +10,10 @@ namespace idunno.Bluesky.Record
     /// <summary>
     /// Encapsulates a verification record.
     /// </summary>
-    public sealed record Verification : BlueskyTimestampedRecord
+    [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
+                     UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+    [JsonDerivedType(typeof(Verification), typeDiscriminator: RecordType.Verification)]
+    public record Verification : BlueskyTimestampedRecord
     {
         /// <summary>
         /// Creates a new instance of <see cref="Verification"/>.

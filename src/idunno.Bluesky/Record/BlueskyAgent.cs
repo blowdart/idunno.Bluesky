@@ -857,6 +857,7 @@ namespace idunno.Bluesky
                 record: status,
                 collection: CollectionNsid.Status,
                 rKey: "self",
+                validate: null,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 

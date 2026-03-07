@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
+
 using idunno.AtProto;
 
 namespace idunno.Bluesky.Record
@@ -9,7 +10,10 @@ namespace idunno.Bluesky.Record
     /// <summary>
     /// Encapsulates the information needed to create a block record.
     /// </summary>
-    public sealed record Block : BlueskyTimestampedRecord
+    [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
+                     UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+    [JsonDerivedType(typeof(Block), typeDiscriminator: RecordType.Block)]
+    public record Block : BlueskyTimestampedRecord
     {
         /// <summary>
         /// Creates a new instance of <see cref="Block"/> with <see cref="BlueskyTimestampedRecord.CreatedAt"/> set to the current date and time.

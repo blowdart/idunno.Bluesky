@@ -11,6 +11,9 @@ namespace idunno.Bluesky.Record
     /// <summary>
     ///  Encapsulates a Bluesky starter pack.
     /// </summary>
+    [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
+                 UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+    [JsonDerivedType(typeof(StarterPack), typeDiscriminator: RecordType.StarterPack)]
     public record StarterPack : BlueskyTimestampedRecord
     {
         /// <summary>

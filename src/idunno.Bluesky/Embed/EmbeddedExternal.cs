@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto.Repo;
@@ -65,7 +66,10 @@ namespace idunno.Bluesky.Embed
     /// <summary>
     /// The properties for an embedded external media record.
     /// </summary>
-    public sealed record ExternalProperties
+    [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
+                     UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+    [JsonDerivedType(typeof(ExternalProperties), typeDiscriminator: "app.bsky.embed.external#external")]
+    public record ExternalProperties
     {
         /// <summary>
         /// Creates a new instance of <see cref="ExternalProperties"/>.
@@ -119,7 +123,9 @@ namespace idunno.Bluesky.Embed
         /// The description of the external link.
         /// </summary>
         [JsonInclude]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [JsonRequired]
+        [NotNull]
         public string? Description { get; init; }
 
         /// <summary>
@@ -127,6 +133,7 @@ namespace idunno.Bluesky.Embed
         /// </summary>
         [JsonInclude]
         [JsonPropertyName("thumb")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public Blob? Thumbnail { get; init; }
     }
 }

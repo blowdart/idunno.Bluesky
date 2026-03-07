@@ -15,10 +15,17 @@ namespace idunno.Bluesky.Record
     /// Encapsulates a Bluesky account profile.
     /// </summary>
     [SuppressMessage("Naming", "CA1724", Justification = "The System.Web Profile class is part of ASP.NET and has not been carried over to .NET")]
-    public sealed record Profile : BlueskyRecord
+    [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
+                     UnknownDerivedTypeHandling =JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+    [JsonDerivedType(typeof(Profile), typeDiscriminator: RecordType.Profile)]
+    public record Profile : BlueskyRecord
     {
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private const string DiscourageLoggedOutUserLabelName = "!no-unauthenticated";
+        private const string DiscourageLoggedOutUserLabelValue = "!no-unauthenticated";
+
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private const string BotLabelValue = "!bot";
+
 
         /// <summary>
         /// Creates a new instance of <see cref="Profile"/>.
@@ -223,18 +230,42 @@ namespace idunno.Bluesky.Record
         {
             get
             {
-                return Labels.Contains(DiscourageLoggedOutUserLabelName);
+                return Labels.Contains(DiscourageLoggedOutUserLabelValue);
             }
 
             set
             {
                 if (value)
                 {
-                    Labels.AddLabel(DiscourageLoggedOutUserLabelName);
+                    Labels.AddLabel(DiscourageLoggedOutUserLabelValue);
                 }
                 else
                 {
-                    Labels.RemoveLabel(DiscourageLoggedOutUserLabelName);
+                    Labels.RemoveLabel(DiscourageLoggedOutUserLabelValue);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets a flag indicating whether this profile self identifies as a bot.
+        /// </summary>
+        [JsonIgnore]
+        public bool Bot
+        {
+            get
+            {
+                return Labels.Contains(BotLabelValue);
+            }
+
+            set
+            {
+                if (value)
+                {
+                    Labels.AddLabel(BotLabelValue);
+                }
+                else
+                {
+                    Labels.RemoveLabel(BotLabelValue);
                 }
             }
         }

@@ -9,9 +9,12 @@ using idunno.AtProto.Repo;
 namespace idunno.Bluesky.Record
 {
     /// <summary>
-    /// Encapsulates the a follow record.
+    /// Encapsulates a follow record.
     /// </summary>
-    public sealed record Follow : BlueskyTimestampedRecord
+    [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
+                     UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
+    [JsonDerivedType(typeof(Follow), RecordType.Follow)]
+    public record Follow : BlueskyTimestampedRecord
     {
         /// <summary>
         /// Creates a new instance of <see cref="Follow"/> with <see cref="BlueskyTimestampedRecord.CreatedAt"/> set to the current date and time.

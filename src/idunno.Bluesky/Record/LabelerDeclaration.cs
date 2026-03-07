@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json.Serialization;
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 
@@ -11,7 +12,10 @@ namespace idunno.Bluesky.Record
     /// <summary>
     /// Encapsulates a declaration of the existence of a labeler service.
     /// </summary>
-    public sealed record LabelerDeclaration : BlueskyRecord
+    [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
+                     UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+    [JsonDerivedType(typeof(LabelerDeclaration), typeDiscriminator: RecordType.LabelerDeclaration)]
+    public record LabelerDeclaration : BlueskyRecord
     {
         // See https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/labeler/service.json
 

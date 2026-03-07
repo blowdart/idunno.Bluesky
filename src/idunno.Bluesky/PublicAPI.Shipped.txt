@@ -1268,8 +1268,9 @@ idunno.Bluesky.Notifications.ActivitySubscription.Reply.get -> bool
 idunno.Bluesky.Notifications.ActivitySubscription.Reply.init -> void
 idunno.Bluesky.Notifications.Declaration
 idunno.Bluesky.Notifications.Declaration.AllowSubscriptions.get -> idunno.Bluesky.Notifications.NotificationAllowedFrom?
-idunno.Bluesky.Notifications.Declaration.AllowSubscriptions.init -> void
-idunno.Bluesky.Notifications.Declaration.Declaration(idunno.Bluesky.Notifications.NotificationAllowedFrom? AllowSubscriptions = idunno.Bluesky.Notifications.NotificationAllowedFrom.Followers) -> void
+idunno.Bluesky.Notifications.Declaration.AllowSubscriptions.set -> void
+idunno.Bluesky.Notifications.Declaration.Declaration() -> void
+idunno.Bluesky.Notifications.Declaration.Declaration(idunno.Bluesky.Notifications.NotificationAllowedFrom? declaration) -> void
 idunno.Bluesky.Notifications.Notification
 idunno.Bluesky.Notifications.Notification.Author.get -> idunno.Bluesky.Actor.ProfileViewBasic!
 idunno.Bluesky.Notifications.Notification.Author.init -> void
@@ -1535,6 +1536,8 @@ idunno.Bluesky.Record.Profile.Avatar.get -> idunno.AtProto.Repo.Blob?
 idunno.Bluesky.Record.Profile.Avatar.set -> void
 idunno.Bluesky.Record.Profile.Banner.get -> idunno.AtProto.Repo.Blob?
 idunno.Bluesky.Record.Profile.Banner.set -> void
+idunno.Bluesky.Record.Profile.Bot.get -> bool
+idunno.Bluesky.Record.Profile.Bot.set -> void
 idunno.Bluesky.Record.Profile.CreatedAt.get -> System.DateTimeOffset?
 idunno.Bluesky.Record.Profile.CreatedAt.set -> void
 idunno.Bluesky.Record.Profile.Description.get -> string?

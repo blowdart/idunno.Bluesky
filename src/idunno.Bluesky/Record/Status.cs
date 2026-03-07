@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
+
 using idunno.Bluesky.Embed;
 
 namespace idunno.Bluesky.Record
@@ -9,7 +10,10 @@ namespace idunno.Bluesky.Record
     /// <summary>
     /// A profile status
     /// </summary>
-    public record Status :  BlueskyTimestampedRecord
+    [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
+                     UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+    [JsonDerivedType(typeof(Status), typeDiscriminator: RecordType.Status)]
+    public record Status : BlueskyTimestampedRecord
     {
         /// <summary>
         /// Creates a new instance of <see cref="Status"/>.

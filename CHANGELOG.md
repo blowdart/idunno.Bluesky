@@ -17,8 +17,13 @@
 * Added metrics in `AtProtoHttpClientMetrics` including request duration, request count and failure count.
 * Added metrics in `DidPlcDirectory` including request duration, request count and failure count.
 * Added new constructor overloads for `AtProtoHttpClient` to allow for use with `MetricsFactory`.
-* Added more JetStream metrics.
 * Added `Throttled` to `AccountStatus`.
+* Added extensions for `OpenTelemetry.Metrics`: `AddAtProtoHttpClientMetrics`, `AddAtProtoDirectoryMetrics`, and `AddAtProtoJetStreamMetrics`.
+
+### idunno.Bluesky
+
+* Added `Bot` property to `Profile` record to check, and set or unset the profile self label indicating a bot account, see [[APP-1928] add bot/automated account badge and self-labeling settings](https://github.com/bluesky-social/social-app/pull/10008/)
+* Added `JsonPolymorphic` attributes to individual records to remove the extraneous `ExtensionData` entries.
 
 ### Documentation
 
@@ -35,6 +40,7 @@
 #### idunno.Bluesky
 
 * Updated `SuggestedActors` to include `RecIdStr`, see [Add recIdStr to suggested follows by actor](https://github.com/bluesky-social/atproto/pull/4644)
+* Added setter to `Notification.Declaration.AllowSubscriptions` for easy updating of the value.
 
 ### Breaking Changes
 

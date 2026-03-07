@@ -12,7 +12,10 @@ namespace idunno.Bluesky.Record
     /// Encapsulates the information needed to create a like record.
     /// </summary>
     [SuppressMessage("Naming", "CA1716:Identifiers should not match keywords", Justification = "It's like in the Bluesky lexicon.")]
-    public sealed record Like : BlueskyTimestampedRecord
+    [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
+                     UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+    [JsonDerivedType(typeof(Like), typeDiscriminator: RecordType.Like)]
+    public record Like : BlueskyTimestampedRecord
     {
         /// <summary>
         /// Creates a new instance of <see cref="Like"/> with <see cref="BlueskyTimestampedRecord.CreatedAt"/> set to the current date and time.

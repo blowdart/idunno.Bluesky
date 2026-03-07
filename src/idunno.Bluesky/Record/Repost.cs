@@ -9,7 +9,10 @@ namespace idunno.Bluesky.Record
     /// <summary>
     /// Encapsulates the information needed to create a repost record.
     /// </summary>
-    public sealed record Repost : BlueskyTimestampedRecord
+    [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
+                     UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+    [JsonDerivedType(typeof(Repost), typeDiscriminator: RecordType.Repost)]
+    public record Repost : BlueskyTimestampedRecord
     {
         /// <summary>
         /// Creates a new instance of <see cref="Repost"/> with<see cref = "BlueskyTimestampedRecord.CreatedAt" /> set to the current date and time.
