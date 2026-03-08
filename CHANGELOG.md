@@ -17,7 +17,7 @@
 * Added metrics in `AtProtoHttpClientMetrics` including request duration, request count and failure count.
 * Added metrics in `DidPlcDirectory` including request duration, request count and failure count.
 * Added new constructor overloads for `AtProtoHttpClient` to allow for use with `MetricsFactory`.
-* Added `Throttled` to `AccountStatus`.
+* Added `Throttled` to `AccountStatus` in Jetstream account events.
 * Added extensions for `OpenTelemetry.Metrics`: `AddAtProtoHttpClientMetrics`, `AddAtProtoDirectoryMetrics`, and `AddAtProtoJetStreamMetrics`.
 
 ### idunno.Bluesky
