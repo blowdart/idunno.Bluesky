@@ -786,14 +786,14 @@ namespace idunno.Bluesky
 
             return new AtProtoHttpResult<Commit>(
                 result: null,
-                statusCode: System.Net.HttpStatusCode.NotFound,
+                statusCode: HttpStatusCode.NotFound,
                 httpResponseHeaders: listEntriesResult.HttpResponseHeaders,
                 atErrorDetail: new AtErrorDetail("NotFound", $"{handle} not found in list {uri}"),
                 rateLimit: listEntriesResult.RateLimit);
         }
 
         /// <summary>
-        /// Sets the profile status for the current authenticated user to indicate a live stream.
+        /// Creates a profile status for the current authenticated user to indicate a live stream.
         /// </summary>
         /// <param name="uri">The uri of the live stream.</param>
         /// <param name="title">The title of the stream.</param>
@@ -804,7 +804,31 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+        [Obsolete("Use CreateLiveStatus() instead.")]
         public async Task<AtProtoHttpResult<CreateRecordResult>> SetLiveStatus(
+            Uri uri,
+            string title,
+            string? description = null,
+            Blob? previewBlob = null,
+            int? durationMinutes = null,
+            CancellationToken cancellationToken = default)
+        {
+            return await CreateLiveStatus(uri, title, description, previewBlob, durationMinutes, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Creates a profile status for the current authenticated user to indicate a live stream.
+        /// </summary>
+        /// <param name="uri">The uri of the live stream.</param>
+        /// <param name="title">The title of the stream.</param>
+        /// <param name="description">An optional description of the stream.</param>
+        /// <param name="previewBlob">An optional <see cref="Blob"/> containing a preview image for the stream.</param>
+        /// <param name="durationMinutes">The optional duration of the stream in minutes.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<CreateRecordResult>> CreateLiveStatus(
             Uri uri,
             string title,
             string? description = null,
@@ -821,19 +845,19 @@ namespace idunno.Bluesky
             }
 
             Status status = new (
-                "app.bsky.actor.status#live",
+                KnownStatusValues.Live,
                 embed: new EmbeddedExternal(
                     uri: uri,
                     title: title,
                     description: description,
                     thumbnail: previewBlob),
-                durationMinutes: durationMinutes);
+                durationMinutes: durationMinutes,
+                createdAt: DateTimeOffset.UtcNow);
 
-            return await SetStatus(
+            return await CreateStatus(
                 status: status,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
-
 
         /// <summary>
         /// Sets the profile status for the current authenticated user.
@@ -843,7 +867,23 @@ namespace idunno.Bluesky
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="status"/> is <see langword="null"/>.</exception>
         /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+        [Obsolete("Use CreateStatus() instead.")]
         public async Task<AtProtoHttpResult<CreateRecordResult>> SetStatus(
+            Status status,
+            CancellationToken cancellationToken = default)
+        {
+            return await CreateStatus(status, cancellationToken).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Creates a profile status for the current authenticated user.
+        /// </summary>
+        /// <param name="status">The status to set</param>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="status"/> is <see langword="null"/>.</exception>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<CreateRecordResult>> CreateStatus(
             Status status,
             CancellationToken cancellationToken = default)
         {
@@ -881,6 +921,74 @@ namespace idunno.Bluesky
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return deleteResult;
+        }
+
+        /// <summary>
+        /// Gets the current profile status, if any, for the authenticated user.
+        /// </summary>
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>The task object representing the asynchronous operation.</returns>
+        /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+        public async Task<AtProtoHttpResult<AtProtoRepositoryRecord<Status>>> GetStatus(CancellationToken cancellationToken = default)
+        {
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+            
+            AtUri statusUri = new($"at://{Did}/{CollectionNsid.Status}/self");
+            AtProtoHttpResult<AtProtoRepositoryRecord<Status>> getResult = await GetBlueskyRecord<Status>(
+                uri: statusUri,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            return getResult;
+        }
+
+        /// <summary>
+        /// Updates the status record for the authenticated user
+        /// </summary>
+        /// <param name="status">The status record to update. The record's URI authority must match the current user's decentralized identifier (DID).</param>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the asynchronous operation.</param>
+        /// <returns>A task that represents the asynchronous update operation. The task result contains the outcome of the
+        /// update, including the updated record information.</returns>
+        /// <exception cref="AuthenticationRequiredException">Thrown if the user is not authenticated when attempting to update the status.</exception>
+        /// <exception cref="ArgumentException">Thrown if the status record's URI authority is not a valid DID or does not match the current user's DID.</exception>
+        [UnconditionalSuppressMessage(
+            "Trimming",
+            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+        [UnconditionalSuppressMessage("AOT",
+            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+        public async Task<AtProtoHttpResult<PutRecordResult>> UpdateStatus(
+            AtProtoRepositoryRecord<Status> status,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(status);
+            ArgumentNullException.ThrowIfNull(status.Value);
+
+            if (!IsAuthenticated)
+            {
+                throw new AuthenticationRequiredException();
+            }
+            if (status.Uri.Authority is not Did recordDid)
+            {
+                throw new ArgumentException("Uri authority is not a DID", nameof(status));
+            }
+            if (recordDid != Did)
+            {
+                throw new ArgumentException("Uri authority does not match the current user", nameof(status));
+            }
+
+            return await PutRecord(
+                record: status.Value,
+                jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
+                collection: CollectionNsid.Status,
+                rKey: "self",
+                validate: null,
+                swapCommit: null,
+                swapRecord: status.Cid,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
     }
 }

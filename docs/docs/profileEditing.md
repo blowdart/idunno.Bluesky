@@ -1,4 +1,4 @@
-# <a name="profileEditing">Changing a user's profile</a>
+﻿# <a name="profileEditing">Changing a user's profile</a>
 
 A user's profile consists of the user's title, a description, a profile picture and a banner picture, all of which can be left empty, as
 well as other settings like a pinned post that is shown when someone views the account's profile page, a setting to discourage applications
@@ -64,3 +64,63 @@ if (profileRecordResult.Succeeded)
 
 To remove the hint set the property to `false` and update the profile record.
 
+## <a name="status">Setting a Profile Status</a>
+
+Bluesky allows users to set a live status on their profiles, to indicate that a user is streaming on a supported
+service.
+
+To create a status indicating the current user is live streaming use `CreateLiveStatus()`.
+
+```c#
+var createLiveStatusREsult = await agent.CreateLiveStatus(
+    uri: new Uri("https://twitch.tv/streamer"),
+    title: "BeanEater",
+    description: "Rolling that beautiful bean footage",
+    durationMinutes: 5);
+```
+
+You can include a thumbnail preview for your stream with the `PreviewBlob` parameter, using an blob reference
+you previously uploaded with [UploadImage](posting.md#images).
+
+To delete a status before it expires use `DeleteStatus`.
+
+If you try to create a status whilst the user already has an active status Bluesky will return an HTTP status code
+of 500 (Internal Server Error). You can update an existing status by getting the current status with `GetStatus`,
+changing whatever properties you want, and then using `UpdateStatus`.
+
+```c#
+var getLiveStatus = await agent.GetStatus();
+if (getLiveStatus.Succeeded)
+{
+    getLiveStatus.Result.Value.DurationMinutes = 10;
+
+    var updateStatus = await agent.UpdateStatus(getLiveStatus.Result);
+    updateStatus.EnsureSucceeded();
+}
+```
+
+> [!TIP]
+> If you use `GetStatus` you will see the underlying `Status` record structure. The URI, title and description
+> are mapped into the `Embed` property, specifically an `EmbeddedExternal` instance (although according
+> to the API documentation other embedded records could theoretically be used).
+>
+> To change the URI, title, or description you will need to validate the type, set the properties you want
+> to change, and then reset the `Embed` property on the retrieved status before calling `Update`. For example,
+>
+> ```c#
+> var getLiveStatus = await agent.GetStatus();
+>
+> if (getLiveStatus.Succeeded)
+> {
+>     getLiveStatus.Result.Value.DurationMinutes = 10;
+>
+>     if (getLiveStatus.Result.Value.Embed is EmbeddedExternal embeddedExternal)
+>     {
+>         embeddedExternal.External.Description = "Finishing up the beans";
+>         getLiveStatus.Result.Value.Embed = embeddedExternal;
+>     }
+>
+>     var updateStatus = await agent.UpdateStatus(getLiveStatus.Result);
+> }
+>
+>```

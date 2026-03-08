@@ -24,10 +24,13 @@
 
 * Added `Bot` property to `Profile` record to check, and set or unset the profile self label indicating a bot account, see [[APP-1928] add bot/automated account badge and self-labeling settings](https://github.com/bluesky-social/social-app/pull/10008/)
 * Added `JsonPolymorphic` attributes to individual records to remove the extraneous `ExtensionData` entries.
+* Added `GetStatus` and `UpdateStatus` to `BlueskyAgent`.
+* Added a setter to `DurationMinutes on `Status` and setters to `ExternalProperties` to allow for updating of an existing profile status.
 
 ### Documentation
 
 * Added documentation for metrics.
+* Added documentation for setting a status on a profile.
 
 ### Changed
 

@@ -104,36 +104,35 @@ namespace idunno.Bluesky.Embed
         {
         }
 
-
         /// <summary>
-        /// Gets the external <see cref="Uri"/>.
+        /// Gets or sets the external <see cref="Uri"/>.
         /// </summary>
         [JsonInclude]
         [JsonRequired]
-        public Uri Uri { get; init; }
+        public Uri Uri { get; set; }
 
         /// <summary>
-        /// The title for the external link.
+        /// Gets or sets the title for the external link.
         /// </summary>
         [JsonInclude]
         [JsonRequired]
-        public string Title { get; init; }
+        public string Title { get; set; }
 
         /// <summary>
-        /// The description of the external link.
+        /// Gets or sets the description of the external link.
         /// </summary>
         [JsonInclude]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [JsonRequired]
         [NotNull]
-        public string? Description { get; init; }
+        public string? Description { get; set; }
 
         /// <summary>
-        /// The <see cref="Uri"/> to a thumbnail image for the external link.
+        /// Gets or sets the <see cref="Uri"/> to a thumbnail image for the external link.
         /// </summary>
         [JsonInclude]
         [JsonPropertyName("thumb")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public Blob? Thumbnail { get; init; }
+        public Blob? Thumbnail { get; set; }
     }
 }
