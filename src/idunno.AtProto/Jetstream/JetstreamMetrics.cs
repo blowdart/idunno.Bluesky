@@ -46,10 +46,6 @@ namespace idunno.AtProto.Jetstream
 
         internal Counter<long> MessageParsingFailures { get; private set; }
 
-        /// <summary>
-        /// Increments the Faults metric by the specified amount.
-        /// </summary>
-        /// <param name="quantity">The quantity to increment the metric by</param>
         internal Counter<long> Faults { get; private set; }
 
         internal Counter<long> MessageDecompressionFailures { get; private set; }
