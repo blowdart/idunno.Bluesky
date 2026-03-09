@@ -155,6 +155,29 @@ namespace idunno.Bluesky.Actor
         public StatusView? Status { get; init; }
 
         /// <summary>
+        /// Returns a list of label values for labels that appear to have been applied by the actor to themselves, based on the label source and uri.
+        /// </summary>
+        /// <remarks>
+        /// <para>Known Bluesky label values can be found in <see cref="SelfLabelNames"/>.</para>
+        /// </remarks>
+        [JsonIgnore]
+        public IReadOnlyList<string> SelfLabels
+        {
+            get
+            {
+                field ??= Labels
+                    .Where(l => (l.Source == Did &&
+                                 l.Uri == $"at://{Did}/app.bsky.actor.profile/self"))
+                    .Select(v => v.Value)
+                    .Distinct().ToList().AsReadOnly();
+
+                return field;
+            }
+
+            private set;
+        }
+
+        /// <summary>
         /// Gets a string representation of the <see cref="ProfileView"/>.
         /// This returns the actor's display name, if any, otherwise returns the actor's handle.
         /// </summary>

@@ -20,13 +20,6 @@ namespace idunno.Bluesky.Record
     [JsonDerivedType(typeof(Profile), typeDiscriminator: RecordType.Profile)]
     public record Profile : BlueskyRecord
     {
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private const string DiscourageLoggedOutUserLabelValue = "!no-unauthenticated";
-
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private const string BotLabelValue = "!bot";
-
-
         /// <summary>
         /// Creates a new instance of <see cref="Profile"/>.
         /// </summary>
@@ -230,18 +223,18 @@ namespace idunno.Bluesky.Record
         {
             get
             {
-                return Labels.Contains(DiscourageLoggedOutUserLabelValue);
+                return Labels.Contains(SelfLabelNames.DiscourageShowingToLoggedOutUser);
             }
 
             set
             {
                 if (value)
                 {
-                    Labels.AddLabel(DiscourageLoggedOutUserLabelValue);
+                    Labels.AddLabel(SelfLabelNames.DiscourageShowingToLoggedOutUser);
                 }
                 else
                 {
-                    Labels.RemoveLabel(DiscourageLoggedOutUserLabelValue);
+                    Labels.RemoveLabel(SelfLabelNames.DiscourageShowingToLoggedOutUser);
                 }
             }
         }
@@ -254,18 +247,18 @@ namespace idunno.Bluesky.Record
         {
             get
             {
-                return Labels.Contains(BotLabelValue);
+                return Labels.Contains(SelfLabelNames.Bot);
             }
 
             set
             {
                 if (value)
                 {
-                    Labels.AddLabel(BotLabelValue);
+                    Labels.AddLabel(SelfLabelNames.Bot);
                 }
                 else
                 {
-                    Labels.RemoveLabel(BotLabelValue);
+                    Labels.RemoveLabel(SelfLabelNames.Bot);
                 }
             }
         }

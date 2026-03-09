@@ -230,6 +230,7 @@ idunno.Bluesky.Actor.ProfileViewBasic.Labels.init -> void
 idunno.Bluesky.Actor.ProfileViewBasic.ProfileViewBasic(idunno.AtProto.Did! did, idunno.AtProto.Handle! handle, string? displayName, string? pronouns, System.Uri? website, System.Uri? avatar, idunno.Bluesky.Actor.ProfileAssociated? associated, idunno.Bluesky.Actor.ActorViewerState? viewer, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Labels.Label!>? labels, System.DateTimeOffset? createdAt, idunno.Bluesky.Actor.VerificationState? verification, idunno.Bluesky.Actor.StatusView? status) -> void
 idunno.Bluesky.Actor.ProfileViewBasic.Pronouns.get -> string?
 idunno.Bluesky.Actor.ProfileViewBasic.Pronouns.init -> void
+idunno.Bluesky.Actor.ProfileViewBasic.SelfLabels.get -> System.Collections.Generic.IReadOnlyList<string!>!
 idunno.Bluesky.Actor.ProfileViewBasic.Status.get -> idunno.Bluesky.Actor.StatusView?
 idunno.Bluesky.Actor.ProfileViewBasic.Status.init -> void
 idunno.Bluesky.Actor.ProfileViewBasic.Verification.get -> idunno.Bluesky.Actor.VerificationState?
@@ -954,6 +955,7 @@ idunno.Bluesky.Feed.GeneratorView.Labels.get -> System.Collections.Generic.IRead
 idunno.Bluesky.Feed.GeneratorView.Labels.init -> void
 idunno.Bluesky.Feed.GeneratorView.LikeCount.get -> int?
 idunno.Bluesky.Feed.GeneratorView.LikeCount.init -> void
+idunno.Bluesky.Feed.GeneratorView.SelfLabels.get -> System.Collections.Generic.IReadOnlyList<string!>!
 idunno.Bluesky.Feed.GeneratorView.StrongReference.get -> idunno.AtProto.Repo.StrongReference!
 idunno.Bluesky.Feed.GeneratorView.Uri.get -> idunno.AtProto.AtUri!
 idunno.Bluesky.Feed.GeneratorView.Uri.init -> void
@@ -1011,6 +1013,7 @@ idunno.Bluesky.Feed.PostView.ReplyCount.get -> int
 idunno.Bluesky.Feed.PostView.ReplyCount.init -> void
 idunno.Bluesky.Feed.PostView.RepostCount.get -> int
 idunno.Bluesky.Feed.PostView.RepostCount.init -> void
+idunno.Bluesky.Feed.PostView.SelfLabels.get -> System.Collections.Generic.IReadOnlyList<string!>!
 idunno.Bluesky.Feed.PostView.StrongReference.get -> idunno.AtProto.Repo.StrongReference!
 idunno.Bluesky.Feed.PostView.ThreadGate.get -> idunno.Bluesky.Feed.ThreadGateView?
 idunno.Bluesky.Feed.PostView.ThreadGate.init -> void
@@ -1683,6 +1686,13 @@ idunno.Bluesky.Unspecced.AgeAssuranceStatus.Assured = 2 -> idunno.Bluesky.Unspec
 idunno.Bluesky.Unspecced.AgeAssuranceStatus.Blocked = 3 -> idunno.Bluesky.Unspecced.AgeAssuranceStatus
 idunno.Bluesky.Unspecced.AgeAssuranceStatus.Pending = 1 -> idunno.Bluesky.Unspecced.AgeAssuranceStatus
 idunno.Bluesky.Unspecced.AgeAssuranceStatus.Unknown = 0 -> idunno.Bluesky.Unspecced.AgeAssuranceStatus
+idunno.Bluesky.SelfLabelNames
+const idunno.Bluesky.SelfLabelNames.Bot = "!bot" -> string!
+const idunno.Bluesky.SelfLabelNames.DiscourageShowingToLoggedOutUser = "!no-unauthenticated" -> string!
+const idunno.Bluesky.SelfLabelNames.GraphicMedia = "graphic-media" -> string!
+const idunno.Bluesky.SelfLabelNames.Nudity = "nudity" -> string!
+const idunno.Bluesky.SelfLabelNames.Porn = "porn" -> string!
+const idunno.Bluesky.SelfLabelNames.Sexual = "sexual" -> string!
 idunno.Bluesky.Unspecced.Suggestion
 idunno.Bluesky.Unspecced.Suggestion.Subject.get -> System.Uri!
 idunno.Bluesky.Unspecced.Suggestion.Subject.init -> void
@@ -1940,10 +1950,6 @@ static readonly idunno.Bluesky.Maximum.TrendingTopics -> int
 static readonly idunno.Bluesky.Maximum.Trends -> int
 static readonly idunno.Bluesky.Maximum.DraftTextLengthInCharacters -> int
 static readonly idunno.Bluesky.Maximum.DraftTextLengthInGraphemes -> int
-const idunno.Bluesky.SelfLabelNames.GraphicMedia = "graphic-media" -> string!
-const idunno.Bluesky.SelfLabelNames.Nudity = "nudity" -> string!
-const idunno.Bluesky.SelfLabelNames.Porn = "porn" -> string!
-const idunno.Bluesky.SelfLabelNames.Sexual = "sexual" -> string!
 idunno.Bluesky.BlueskyAgent.CreateDraft(idunno.Bluesky.Drafts.Draft! draft, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.TimestampIdentifier!>!>!
 idunno.Bluesky.BlueskyAgent.DeleteDraft(idunno.AtProto.TimestampIdentifier! draftId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 idunno.Bluesky.BlueskyAgent.GetDrafts(int? limit = null, string? cursor = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Drafts.DraftView!>!>!>!
@@ -2049,7 +2055,6 @@ idunno.Bluesky.Drafts.DraftEmbedLocalRef.Path.get -> string!
 idunno.Bluesky.Drafts.DraftWithId.Id.init -> void
 idunno.Bluesky.PostSelfLabels.PostSelfLabels() -> void
 idunno.Bluesky.PostSelfLabels.PostSelfLabels(idunno.AtProto.Labels.SelfLabels! labels) -> void
-idunno.Bluesky.SelfLabelNames
 static idunno.Bluesky.BlueskyServer.CreateDraft(idunno.Bluesky.Drafts.Draft! draft, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.TimestampIdentifier!>!>!
 static idunno.Bluesky.BlueskyServer.DeleteDraft(idunno.AtProto.TimestampIdentifier! draftId, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 static idunno.Bluesky.BlueskyServer.GetDrafts(int? limit, string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Drafts.DraftView!>!>!>!

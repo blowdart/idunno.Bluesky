@@ -23,8 +23,9 @@
 ### idunno.Bluesky
 
 * Added `Bot` property to `Profile` record to check, and set or unset the profile self label indicating a bot account, see [[APP-1928] add bot/automated account badge and self-labeling settings](https://github.com/bluesky-social/social-app/pull/10008/)
+* Added `SelfLabels` property to `ProfileViewBasic` which returns a list of self labels applied to a profile.
 * Added `JsonPolymorphic` attributes to individual records to remove the extraneous `ExtensionData` entries.
-* Added `GetStatus` and `UpdateStatus` to `BlueskyAgent`.
+* Added `CreateStatus`, `GetStatus` and `UpdateStatus` to `BlueskyAgent`.
 * Added a setter to `DurationMinutes on `Status` and setters to `ExternalProperties` to allow for updating of an existing profile status.
 
 ### Documentation
@@ -44,12 +45,29 @@
 
 * Updated `SuggestedActors` to include `RecIdStr`, see [Add recIdStr to suggested follows by actor](https://github.com/bluesky-social/atproto/pull/4644)
 * Added setter to `Notification.Declaration.AllowSubscriptions` for easy updating of the value.
+* Mark `SetStatus` as obsolete in favor of `CreateStatus` and `UpdateStatus`.
+  This allows for better handling of the case where a profile does not have an existing status,
+  and clearer intent when updating an existing status.
+* Added SelfLabels property to `ProfileViewBasic`, `PostView` and `GeneratorView`.
 
 ### Breaking Changes
 
 #### idunno.AtProto
 
 * Changed `JetStreamMetrics` from `public` to `internal` because it is not intended for public use.
+
+#### idunno.Bluesky
+
+* Added `Bot` and `DiscourageShowingToLoggedOutUser` to `SelfLabelNames`.
+  This allows for more clarity when used with the `SelfLabel` property on profiles, posts and generators. e.g.
+  ```c#
+  var profile = await agent.GetProfile("beans.monster");
+  if (profile.Result.SelfLabels.Contains(SelfLabelName.Bot))
+  {
+      // 🤖 - Do some action because the profile self identifies as a bot.
+  }
+  ```
+
 
 ## 1.6.0 - 2026-02-21
 
