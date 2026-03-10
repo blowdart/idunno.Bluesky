@@ -56,7 +56,7 @@ namespace idunno.AtProto.Jetstream
         /// <summary>
         /// Creates a new instance of <see cref="Jetstream"/>.
         /// </summary>
-        /// <param name="uri">The host uri to connection to. Defaults to wss://jetstream1.us-west.bsky.network/.</param>
+        /// <param name="uri">The host uri to connection to. Defaults to wss://jetstream1.us-west.bsky.network/. Do not connect to untrusted jet stream servers.</param>
         /// <param name="options">Any options to configure this instance of <see cref="AtProtoJetstream"/>.</param>
         /// <param name="webSocketOptions">Any <see cref="AtProto.WebSocketOptions"/> to set on the underlying client WebSocket.</param>
         /// <param name="collections">The <see cref="Nsid"/>s of any collection types to subscribe to. If <see langword="null"/> or empty all collection types will be subscribed to.</param>
@@ -584,7 +584,11 @@ namespace idunno.AtProto.Jetstream
                 try
                 {
                     (WebSocketReceiveResult webSocketReceiveResult, byte[] message) =
-                        await _client.ReceiveNextMessageAsync(Options.BufferSize, cancellationToken: cancellationToken).ConfigureAwait(false);
+                        await _client.ReceiveNextMessageAsync(
+                            bufferSize: Options.BufferSize,
+                            maxMessageSize: Options.MaxMessageSize,
+                            logger: _logger,
+                            cancellationToken: cancellationToken).ConfigureAwait(false);
 
                     if (webSocketReceiveResult.MessageType == WebSocketMessageType.Close)
                     {

@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
+
 using Microsoft.Extensions.Logging;
 
 namespace idunno.AtProto.Jetstream
@@ -53,5 +54,21 @@ namespace idunno.AtProto.Jetstream
                 field = value;
             }
         } = 8096;
+
+        /// <summary>
+        /// Gets the maximum total message size, in bytes. Messages exceeding this limit will be rejected. Defaults to 1 MB.
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is less than or equal to zero.</exception>
+        public int MaxMessageSize
+        {
+            get;
+
+            init
+            {
+                ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+
+                field = value;
+            }
+        } = WebSocketExtensions.DefaultMaxMessageSize;
 }
 }

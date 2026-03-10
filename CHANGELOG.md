@@ -19,6 +19,7 @@
 * Added new constructor overloads for `AtProtoHttpClient` to allow for use with `MetricsFactory`.
 * Added `Throttled` to `AccountStatus` in Jetstream account events.
 * Added extensions for `OpenTelemetry.Metrics`: `AddAtProtoHttpClientMetrics`, `AddAtProtoDirectoryMetrics`, and `AddAtProtoJetStreamMetrics`.
+* Added `MaxMessageSize` to `JetStreamOptions` to guard against a malicious jetstream server sending overly large messages.
 
 ### idunno.AtProto.Types
 
@@ -26,8 +27,18 @@
 
 ### idunno.Bluesky
 
-* Added `Bot` property to `Profile` record to check, and set or unset the profile self label indicating a bot account, see [[APP-1928] add bot/automated account badge and self-labeling settings](https://github.com/bluesky-social/social-app/pull/10008/)
-* Added `SelfLabels` property to `ProfileViewBasic` which returns a list of self labels applied to a profile.
+* Added `Bot` property to `Profile` record to check, and set or unset the profile self label
+ indicating a bot account, see [[APP-1928] add bot/automated account badge and self-labeling settings](https://github.com/bluesky-social/social-app/pull/10008/)
+* Added `SelfLabels` property to `ProfileViewBasic` which returns a list of self labels applied to a profile,
+  which can be used in conjunction with `SelfLabelValues` to check if a profile has applied any self labels to itself,
+  including the `Bot` self label and `DiscourageShowingToLoggedOutUser` self label. e.g.
+  ```c#
+  var profile = await agent.GetProfile("beans.monster");
+  if (profile.Result.SelfLabels.Contains(SelfLabelValues.Bot))
+  {
+      // 🤖 - Do some action because the profile self identifies as a bot.
+  }
+  ```
 * Added `JsonPolymorphic` attributes to individual records to remove the extraneous `ExtensionData` entries.
 * Added `CreateStatus`, `GetStatus` and `UpdateStatus` to `BlueskyAgent`.
 * Added a setter to `DurationMinutes on `Status` and setters to `ExternalProperties` to allow for updating of an existing profile status.
@@ -55,14 +66,6 @@
 * Added `SelfLabels` property to `ProfileViewBasic` and `PostView`.
 * Added `SelfLabelValues` class and marked `SelfLabelNames` as obsolete in favor of it, as the new name is more correct.
 * Added `Bot` and `DiscourageShowingToLoggedOutUser` to `SelfLabelValues`.
-  This allows for more clarity when used with the `SelfLabel` property on profiles, posts and generators. e.g.
-  ```c#
-  var profile = await agent.GetProfile("beans.monster");
-  if (profile.Result.SelfLabels.Contains(SelfLabelValues.Bot))
-  {
-      // 🤖 - Do some action because the profile self identifies as a bot.
-  }
-  ```
 
 ### Breaking Changes
 

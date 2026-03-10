@@ -326,5 +326,8 @@ namespace idunno.AtProto
 
         [LoggerMessage(900, LogLevel.Error, "Background task threw an exception")]
         internal static partial void BackgroundTaskThrew(ILogger logger, Exception ex);
+
+        [LoggerMessage(1000, LogLevel.Error, "Received a message size ({messageSize}) larger than the configured maximum message size ({maximumMessageSize}.")]
+        internal static partial void ReceivedMessageTooLarge(ILogger logger, int messageSize, int maximumMessageSize);
     }
 }

@@ -568,6 +568,8 @@ idunno.AtProto.Jetstream.JetstreamOptions.Dictionary.get -> byte[]?
 idunno.AtProto.Jetstream.JetstreamOptions.Dictionary.init -> void
 idunno.AtProto.Jetstream.JetstreamOptions.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory?
 idunno.AtProto.Jetstream.JetstreamOptions.LoggerFactory.set -> void
+idunno.AtProto.Jetstream.JetstreamOptions.MaxMessageSize.get -> int
+idunno.AtProto.Jetstream.JetstreamOptions.MaxMessageSize.init -> void
 idunno.AtProto.Jetstream.JetstreamOptions.MeterFactory.get -> System.Diagnostics.Metrics.IMeterFactory?
 idunno.AtProto.Jetstream.JetstreamOptions.MeterFactory.set -> void
 idunno.AtProto.Jetstream.JetstreamOptions.TaskFactory.get -> System.Threading.Tasks.TaskFactory!
