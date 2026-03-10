@@ -141,6 +141,8 @@ static idunno.AtProto.AtUri.operator ==(idunno.AtProto.AtUri? lhs, idunno.AtProt
 static idunno.AtProto.AtUri.TryParse(string! s, out idunno.AtProto.AtUri? result) -> bool
 static idunno.AtProto.Cid.FromString(string! s) -> idunno.AtProto.Cid!
 static idunno.AtProto.Cid.implicit operator idunno.AtProto.Cid!(string! s) -> idunno.AtProto.Cid!
+static idunno.AtProto.Cid.operator !=(idunno.AtProto.Cid? lhs, idunno.AtProto.Cid? rhs) -> bool
+static idunno.AtProto.Cid.operator ==(idunno.AtProto.Cid? lhs, idunno.AtProto.Cid? rhs) -> bool
 static idunno.AtProto.Did.FromString(string! s) -> idunno.AtProto.Did!
 static idunno.AtProto.Did.implicit operator idunno.AtProto.Did!(string! s) -> idunno.AtProto.Did!
 static idunno.AtProto.Did.implicit operator string!(idunno.AtProto.Did! d) -> string!

@@ -199,7 +199,7 @@ namespace idunno.AtProto
         }
 
         /// <summary>
-        /// Determines whether two specified <see cref="Did"/>s dot not have same value.
+        /// Determines whether two specified <see cref="Did"/>s do not have same value.
         /// </summary>
         /// <param name="lhs">The first <see cref="Did"/> to compare, or <see langword="null"/>.</param>
         /// <param name="rhs">The second <see cref="Did"/> to compare, or <see langword="null"/>.</param>

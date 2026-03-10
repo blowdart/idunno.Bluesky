@@ -238,6 +238,37 @@ namespace idunno.AtProto
                 Hash.SequenceEqual(other.Hash);
         }
 
+        /// <summary>
+        /// Determines whether two specified <see cref="Cid"/>s the same value."/>
+        /// </summary>
+        /// <param name="lhs">The first <see cref="Cid"/> to compare, or <see langword="null"/>.</param>
+        /// <param name="rhs">The second <see cref="Cid"/> to compare, or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, <see langword="false"/>.</returns>
+        public static bool operator ==(Cid? lhs, Cid? rhs)
+        {
+            if (lhs is null)
+            {
+                if (rhs is null)
+                {
+                    return true;
+                }
+
+                // Only the left side is null.
+                return false;
+            }
+            // Equals handles case of null on right side.
+            return lhs.Equals(rhs);
+        }
+
+        /// <summary>
+        /// Determines whether two specified <see cref="Cid"/>s do not have the same value.
+        /// </summary>
+        /// <param name="lhs">The first <see cref="Cid"/> to compare, or <see langword="null"/>.</param>
+        /// <param name="rhs">The second <see cref="Cid"/> to compare, or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="lhs"/> is different from the value of <paramref name="rhs" />; otherwise, <see langword="false"/>.</returns>
+        public static bool operator !=(Cid? lhs, Cid? rhs) => !(lhs == rhs);
+
+
         private static (byte Version, ulong Codec, IReadOnlyList<byte> Hash) ParseBytes(byte[] bytes)
         {
             Span<byte> span = new (bytes);
