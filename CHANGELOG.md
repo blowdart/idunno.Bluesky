@@ -21,6 +21,7 @@
 * Added extensions for `OpenTelemetry.Metrics`: `AddAtProtoHttpClientMetrics`, `AddAtProtoDirectoryMetrics`, and `AddAtProtoJetStreamMetrics`.
 
 ### idunno.AtProto.Types
+
 * Added == and != operations to `Cid`.
 
 ### idunno.Bluesky
@@ -51,18 +52,9 @@
 * Mark `SetStatus` as obsolete in favor of `CreateStatus` and `UpdateStatus`.
   This allows for better handling of the case where a profile does not have an existing status,
   and clearer intent when updating an existing status.
-* Added SelfLabels property to `ProfileViewBasic` and `PostView`.
+* Added `SelfLabels` property to `ProfileViewBasic` and `PostView`.
 * Added `SelfLabelValues` class and marked `SelfLabelNames` as obsolete in favor of it, as the new name is more correct.
-
-### Breaking Changes
-
-#### idunno.AtProto
-
-* Changed `JetStreamMetrics` from `public` to `internal` because it is not intended for public use.
-
-#### idunno.Bluesky
-
-* Added `Bot` and `DiscourageShowingToLoggedOutUser` to `SelfLabelNames`.
+* Added `Bot` and `DiscourageShowingToLoggedOutUser` to `SelfLabelValues`.
   This allows for more clarity when used with the `SelfLabel` property on profiles, posts and generators. e.g.
   ```c#
   var profile = await agent.GetProfile("beans.monster");
@@ -72,6 +64,11 @@
   }
   ```
 
+### Breaking Changes
+
+#### idunno.AtProto
+
+* Changed `JetStreamMetrics` from `public` to `internal` because it is not intended for public use.
 
 ## 1.6.0 - 2026-02-21
 
