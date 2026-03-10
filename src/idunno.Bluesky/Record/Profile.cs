@@ -223,18 +223,18 @@ namespace idunno.Bluesky.Record
         {
             get
             {
-                return Labels.Contains(SelfLabelNames.DiscourageShowingToLoggedOutUser);
+                return Labels.Contains(SelfLabelValues.DiscourageShowingToLoggedOutUser);
             }
 
             set
             {
                 if (value)
                 {
-                    Labels.AddLabel(SelfLabelNames.DiscourageShowingToLoggedOutUser);
+                    Labels.AddLabel(SelfLabelValues.DiscourageShowingToLoggedOutUser);
                 }
                 else
                 {
-                    Labels.RemoveLabel(SelfLabelNames.DiscourageShowingToLoggedOutUser);
+                    Labels.RemoveLabel(SelfLabelValues.DiscourageShowingToLoggedOutUser);
                 }
             }
         }
@@ -247,18 +247,18 @@ namespace idunno.Bluesky.Record
         {
             get
             {
-                return Labels.Contains(SelfLabelNames.Bot);
+                return Labels.Contains(SelfLabelValues.Bot);
             }
 
             set
             {
                 if (value)
                 {
-                    Labels.AddLabel(SelfLabelNames.Bot);
+                    Labels.AddLabel(SelfLabelValues.Bot);
                 }
                 else
                 {
-                    Labels.RemoveLabel(SelfLabelNames.Bot);
+                    Labels.RemoveLabel(SelfLabelValues.Bot);
                 }
             }
         }

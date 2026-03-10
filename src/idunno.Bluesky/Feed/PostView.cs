@@ -160,7 +160,7 @@ namespace idunno.Bluesky.Feed
         /// Returns a list of label values for labels that appear to have been applied by the actor to themselves, based on the label source and uri.
         /// </summary>
         /// <remarks>
-        /// <para>Known Bluesky label values can be found in <see cref="SelfLabelNames"/>.</para>
+        /// <para>Known Bluesky label values can be found in <see cref="SelfLabelValues"/>.</para>
         /// </remarks>
         [JsonIgnore]
         public IReadOnlyList<string> SelfLabels
@@ -168,9 +168,10 @@ namespace idunno.Bluesky.Feed
             get
             {
                 field ??= Labels
-                    .Where(l => (l.Source == Author.Did &&
-                                 l.Uri == $"at://{Author.Did}/app.bsky.actor.profile/self"))
-                    .Select(v => v.Value)
+                    .Where(label => Author.Did == label.Source &&
+                                    Uri.ToString() == label.Uri &&
+                                    Cid == label.Cid)
+                    .Select(label => label.Value)
                     .Distinct().ToList().AsReadOnly();
 
                 return field;

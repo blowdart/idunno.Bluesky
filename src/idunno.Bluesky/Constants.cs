@@ -548,7 +548,47 @@ namespace idunno.Bluesky
     /// <summary>
     /// Names for labels that can be self applied to posts.
     /// </summary>
+    [Obsolete("Use SelfLabelValues instead.")]
     public static class SelfLabelNames
+    {
+        /// <summary>
+        /// A self label indicating that the content of a post contains porn.
+        /// </summary>
+        public const string Porn = "porn";
+
+        /// <summary>
+        /// A self label indicating that the content of a post contains sexual content.
+        /// </summary>
+        public const string Sexual = "sexual";
+
+        /// <summary>
+        /// A self label indicating that the content of a post contains nudity.
+        /// </summary>
+        public const string Nudity = "nudity";
+
+        /// <summary>
+        /// A self label indicating that the content of a post contains graphic media content.
+        /// </summary>
+        public const string GraphicMedia = "graphic-media";
+
+        /// <summary>
+        /// A label that indicates that the content should not be shown to logged out users.
+        /// </summary>
+        /// <remarks>
+        /// <para>This setting only limits the visibility of your content on the Bluesky app and website, and other apps may not respect this setting.</para>
+        /// </remarks>
+        public const string DiscourageShowingToLoggedOutUser = "!no-unauthenticated";
+
+        /// <summary>
+        /// A label that indicates the profile self identifies as a bot account.
+        /// </summary>
+        public const string Bot = "!bot";
+    }
+
+    /// <summary>
+    /// Labels values that can be self applied to posts.
+    /// </summary>
+    public static class SelfLabelValues
     {
         /// <summary>
         /// A self label indicating that the content of a post contains porn.

@@ -528,7 +528,7 @@ namespace idunno.Bluesky
             {
                 if (Labels is not null)
                 {
-                    return Labels.Contains(SelfLabelNames.Porn);
+                    return Labels.Contains(SelfLabelValues.Porn);
                 }
                 else
                 {
@@ -541,11 +541,11 @@ namespace idunno.Bluesky
                 Labels ??= new SelfLabels();
                 if (value)
                 {
-                    Labels.AddLabel(SelfLabelNames.Porn);
+                    Labels.AddLabel(SelfLabelValues.Porn);
                 }
                 else
                 {
-                    Labels.RemoveLabel(SelfLabelNames.Porn);
+                    Labels.RemoveLabel(SelfLabelValues.Porn);
                 }
             }
         }
@@ -561,7 +561,7 @@ namespace idunno.Bluesky
             {
                 if (Labels is not null)
                 {
-                    return Labels.Contains(SelfLabelNames.Sexual);
+                    return Labels.Contains(SelfLabelValues.Sexual);
                 }
                 else
                 {
@@ -574,11 +574,11 @@ namespace idunno.Bluesky
                 Labels ??= new SelfLabels();
                 if (value)
                 {
-                    Labels.AddLabel(SelfLabelNames.Sexual);
+                    Labels.AddLabel(SelfLabelValues.Sexual);
                 }
                 else
                 {
-                    Labels.RemoveLabel(SelfLabelNames.Sexual);
+                    Labels.RemoveLabel(SelfLabelValues.Sexual);
                 }
             }
         }
@@ -597,7 +597,7 @@ namespace idunno.Bluesky
                     return false;
                 }
 
-                return Labels.Contains(SelfLabelNames.GraphicMedia);
+                return Labels.Contains(SelfLabelValues.GraphicMedia);
             }
 
             set
@@ -605,11 +605,11 @@ namespace idunno.Bluesky
                 Labels ??= new SelfLabels();
                 if (value)
                 {
-                    Labels.AddLabel(SelfLabelNames.GraphicMedia);
+                    Labels.AddLabel(SelfLabelValues.GraphicMedia);
                 }
                 else
                 {
-                    Labels.RemoveLabel(SelfLabelNames.GraphicMedia);
+                    Labels.RemoveLabel(SelfLabelValues.GraphicMedia);
                 }
             }
         }
@@ -628,7 +628,7 @@ namespace idunno.Bluesky
                     return false;
                 }
 
-                return Labels.Contains(SelfLabelNames.Nudity);
+                return Labels.Contains(SelfLabelValues.Nudity);
             }
 
             set
@@ -637,11 +637,11 @@ namespace idunno.Bluesky
 
                 if (value)
                 {
-                    Labels.AddLabel(SelfLabelNames.Nudity);
+                    Labels.AddLabel(SelfLabelValues.Nudity);
                 }
                 else
                 {
-                    Labels.RemoveLabel(SelfLabelNames.Nudity);
+                    Labels.RemoveLabel(SelfLabelValues.Nudity);
                 }
             }
         }

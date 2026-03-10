@@ -26,22 +26,22 @@ namespace idunno.Bluesky
         {
             if (labels is not null)
             {
-                if (labels.Contains(SelfLabelNames.GraphicMedia))
+                if (labels.Contains(SelfLabelValues.GraphicMedia))
                 {
                     GraphicMedia = true;
                 }
 
-                if (labels.Contains(SelfLabelNames.Nudity))
+                if (labels.Contains(SelfLabelValues.Nudity))
                 {
                     Nudity = true;
                 }
 
-                if (labels.Contains(SelfLabelNames.Porn))
+                if (labels.Contains(SelfLabelValues.Porn))
                 {
                     Porn = true;
                 }
 
-                if (labels.Contains(SelfLabelNames.Sexual))
+                if (labels.Contains(SelfLabelValues.Sexual))
                 {
                     SexualContent = true;
                 }
@@ -83,22 +83,22 @@ namespace idunno.Bluesky
 
             if (GraphicMedia)
             {
-                result.AddLabel(SelfLabelNames.GraphicMedia);
+                result.AddLabel(SelfLabelValues.GraphicMedia);
             }
 
             if (Nudity)
             {
-                result.AddLabel(SelfLabelNames.Nudity);
+                result.AddLabel(SelfLabelValues.Nudity);
             }
 
             if (Porn)
             {
-                result.AddLabel(SelfLabelNames.Porn);
+                result.AddLabel(SelfLabelValues.Porn);
             }
 
             if (SexualContent)
             {
-                result.AddLabel(SelfLabelNames.Porn);
+                result.AddLabel(SelfLabelValues.Porn);
             }
 
             return result;

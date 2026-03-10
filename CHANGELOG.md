@@ -20,6 +20,9 @@
 * Added `Throttled` to `AccountStatus` in Jetstream account events.
 * Added extensions for `OpenTelemetry.Metrics`: `AddAtProtoHttpClientMetrics`, `AddAtProtoDirectoryMetrics`, and `AddAtProtoJetStreamMetrics`.
 
+### idunno.AtProto.Types
+* Added == and != operations to `Cid`.
+
 ### idunno.Bluesky
 
 * Added `Bot` property to `Profile` record to check, and set or unset the profile self label indicating a bot account, see [[APP-1928] add bot/automated account badge and self-labeling settings](https://github.com/bluesky-social/social-app/pull/10008/)
@@ -48,7 +51,8 @@
 * Mark `SetStatus` as obsolete in favor of `CreateStatus` and `UpdateStatus`.
   This allows for better handling of the case where a profile does not have an existing status,
   and clearer intent when updating an existing status.
-* Added SelfLabels property to `ProfileViewBasic`, `PostView` and `GeneratorView`.
+* Added SelfLabels property to `ProfileViewBasic` and `PostView`.
+* Added `SelfLabelValues` class and marked `SelfLabelNames` as obsolete in favor of it, as the new name is more correct.
 
 ### Breaking Changes
 
@@ -62,7 +66,7 @@
   This allows for more clarity when used with the `SelfLabel` property on profiles, posts and generators. e.g.
   ```c#
   var profile = await agent.GetProfile("beans.monster");
-  if (profile.Result.SelfLabels.Contains(SelfLabelName.Bot))
+  if (profile.Result.SelfLabels.Contains(SelfLabelValues.Bot))
   {
       // 🤖 - Do some action because the profile self identifies as a bot.
   }

@@ -955,7 +955,6 @@ idunno.Bluesky.Feed.GeneratorView.Labels.get -> System.Collections.Generic.IRead
 idunno.Bluesky.Feed.GeneratorView.Labels.init -> void
 idunno.Bluesky.Feed.GeneratorView.LikeCount.get -> int?
 idunno.Bluesky.Feed.GeneratorView.LikeCount.init -> void
-idunno.Bluesky.Feed.GeneratorView.SelfLabels.get -> System.Collections.Generic.IReadOnlyList<string!>!
 idunno.Bluesky.Feed.GeneratorView.StrongReference.get -> idunno.AtProto.Repo.StrongReference!
 idunno.Bluesky.Feed.GeneratorView.Uri.get -> idunno.AtProto.AtUri!
 idunno.Bluesky.Feed.GeneratorView.Uri.init -> void
@@ -1693,6 +1692,13 @@ const idunno.Bluesky.SelfLabelNames.GraphicMedia = "graphic-media" -> string!
 const idunno.Bluesky.SelfLabelNames.Nudity = "nudity" -> string!
 const idunno.Bluesky.SelfLabelNames.Porn = "porn" -> string!
 const idunno.Bluesky.SelfLabelNames.Sexual = "sexual" -> string!
+idunno.Bluesky.SelfLabelValues
+const idunno.Bluesky.SelfLabelValues.Bot = "!bot" -> string!
+const idunno.Bluesky.SelfLabelValues.DiscourageShowingToLoggedOutUser = "!no-unauthenticated" -> string!
+const idunno.Bluesky.SelfLabelValues.GraphicMedia = "graphic-media" -> string!
+const idunno.Bluesky.SelfLabelValues.Nudity = "nudity" -> string!
+const idunno.Bluesky.SelfLabelValues.Porn = "porn" -> string!
+const idunno.Bluesky.SelfLabelValues.Sexual = "sexual" -> string!
 idunno.Bluesky.Unspecced.Suggestion
 idunno.Bluesky.Unspecced.Suggestion.Subject.get -> System.Uri!
 idunno.Bluesky.Unspecced.Suggestion.Subject.init -> void
