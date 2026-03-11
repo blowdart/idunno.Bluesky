@@ -72,6 +72,7 @@ namespace idunno.AtProto.Authentication
         /// <summary>
         /// Gets the credential that caused the exception.
         /// </summary>
+        [field: NonSerialized]
         public AtProtoCredential? Credential { get; init; }
     }
 }
