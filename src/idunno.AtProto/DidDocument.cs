@@ -64,7 +64,7 @@ namespace idunno.AtProto
         /// </remarks>
         [JsonInclude]
         [JsonPropertyName("@context")]
-        public IReadOnlyList<string> Context { get; internal set; } = new List<string>();
+        public IReadOnlyList<string> Context { get; internal set; } = [];
 
         /// <summary>
         /// Gets the <see cref="Did"/> for the subject of the <see cref="DidDocument"/>.

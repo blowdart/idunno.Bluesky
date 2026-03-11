@@ -20,6 +20,7 @@
 * Added `Throttled` to `AccountStatus` in Jetstream account events.
 * Added extensions for `OpenTelemetry.Metrics`: `AddAtProtoHttpClientMetrics`, `AddAtProtoDirectoryMetrics`, and `AddAtProtoJetStreamMetrics`.
 * Added `MaxMessageSize` to `JetStreamOptions` to guard against a malicious jetstream server sending overly large messages.
+* Added optional validation callbacks to `BuildOAuthLoginUri` to allow for validation of the discovered PDS and authorization server URIs.
 
 ### idunno.AtProto.Types
 

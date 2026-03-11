@@ -173,6 +173,8 @@ namespace idunno.AtProto
         /// <param name="returnUri">The URI the oauth server should post back to when it has authorized the application.</param>
         /// <param name="uriExtraParameters">Any extra parameters to attach to the URI.</param>
         /// <param name="stateExtraProperties">Any extra properties to save in state.</param>
+        /// <param name="validatePds">A callback to validate the PDS URI discovered for <paramref name="handle"/></param>
+        /// <param name="validateAuthorizationServer">A callback to validate the authorization server discovered for the PDS for <paramref name="handle"/></param>
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>The task object representing the asynchronous operation.</returns>
         /// <exception cref="ArgumentNullException">
@@ -192,6 +194,8 @@ namespace idunno.AtProto
             Uri? returnUri = null,
             IEnumerable<KeyValuePair<string, string>>? uriExtraParameters = null,
             Dictionary<string, string>? stateExtraProperties = null,
+            Func<Uri, bool>? validatePds = null,
+            Func<Uri, bool>? validateAuthorizationServer = null,
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(oAuthClient);
@@ -212,7 +216,18 @@ namespace idunno.AtProto
 
             Did? did = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException("Could not resolve DID");
             Uri? pds = await ResolvePds(did, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException($"Could not resolve PDS for {did}.");
+
+            if (validatePds is not null && !validatePds.Invoke(pds))
+            {
+                throw new OAuthException($"The discovered PDS {pds} did not pass validation.");
+            }
+
             Uri? authorizationServer = await ResolveAuthorizationServer(pds, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException($"Could not discover authorization server for {handle}.");
+
+            if (validateAuthorizationServer is not null && !validateAuthorizationServer.Invoke(authorizationServer))
+            {
+                throw new OAuthException($"The discovered authorization server {authorizationServer} did not pass validation.");
+            }
 
             return await oAuthClient.BuildOAuth2LoginUri(
                 service: pds,

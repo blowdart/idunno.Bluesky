@@ -1,4 +1,4 @@
-# <a name="connecting">Connecting to Bluesky</a>
+﻿# <a name="connecting">Connecting to Bluesky</a>
 
 ## <a name="usernamesAndPasswords">Authenticating with handles and passwords</a>
 
@@ -111,6 +111,22 @@ OAuthLoginState oAuthLoginState = uriBuilderOAuthClient.State;
 // Send the user to the startUri in a way suitable for your application,
 // a redirection for web application or spawning a browser for a desktop application.
 ```
+
+> [!WARNING]
+> `BuildOAuth2LoginUri` uses discovery mechanisms to resolve the PDS `Uri` and the Authorization Server `Uri`
+> for the specified handle. A malicious user could supply a handle which returns URIs that point to internal
+> host names or malicious authorization servers. A malicious PDS resolution would cause your application to issue
+> requests to the `.well-known/oauth-protected-resource` path against a host name they control.
+> A malicious authorization server would redirect the user to login on an authorization server under attacker control,
+> but at that point the malicious user is redirecting themselves. Neither of these feel particularly concerning,
+> but you should be aware of the possibility if you are writing an application that could be hosted with a
+> corporate environment.
+>
+> `BuildOAuth2LoginUri` accepts two optional parameters, `validatePds` and `validateAuthorizationServer` which
+> are both callback methods which you can use to validate the URIs discovered during the building of an OAuth2
+> login URI. You can use this methods to mitigate against
+> [SSRF](https://owasp.org/www-community/attacks/Server_Side_Request_Forgery) attacks and/or to validate
+> the authorization server is one you expect. 
 
 When the user returns to your application you take the callback data returned from the OAuth server and process it
 
