@@ -74,6 +74,8 @@
 #### idunno.AtProto
 
 * Changed `JetStreamMetrics` from `public` to `internal` because it is not intended for public use.
+* Remove `[Serializable]` from `AtProtoCredential`.
+* Exclude `Credential` in `CredentialException` from serialization because it may contain sensitive information.
 
 ## 1.6.0 - 2026-02-21
 

@@ -10,7 +10,6 @@ namespace idunno.AtProto.Authentication
     /// </summary>
     /// <param name="service">The service the credentials were issued from.</param>
     /// <param name="authenticationType">The type of authentication.</param>
-    [Serializable]
     public abstract class AtProtoCredential(Uri service, AuthenticationType authenticationType)
     {
         /// <summary>
