@@ -54,6 +54,7 @@
 #### idunno.AtProto
 
 * Changed `AtJetStreamIdentity` class to make `Handle` property nullable.
+* Add version to `JetstreamMetrics`
 * Made `JetStream.MeterName` and `JetStream.MeterVersion` properties public to allow for easy OTEL configuration.
 * Fixed OAuth logout.
 
