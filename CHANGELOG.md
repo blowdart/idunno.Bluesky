@@ -8,6 +8,21 @@
 
 * Add support for Bluesky authentication in ASP.NET Razor Pages.
 
+## 1.7.0 - 2026-03-12
+
+### ⚠️Security Advisory
+
+* A transitive dependency of `idunno.AtProto` and `idunno.AtProto.OAuthCallback`, `Microsoft.Bcl.Memory`
+  had a Denial of Service security vulnerability,
+  [CVE-2026-26127](https://github.com/dotnet/announcements/issues/384)
+
+  v1.7.0 updates the dependencies on `Duende.IdentityModel.OidcClient` and
+  `Duende.IdentityModel.OidcClient.Extensions` which have
+  updated their dependency on `Microsoft.Bcl.Memory` to 10.0.4, resolving the vulnerability.
+
+  All previous versions of the library are now marked as vulnerable to CVE-2026-26127.
+  Please update to v1.7.0 or later to resolve this vulnerability.
+
 ## 1.6.0 - 2026-02-21
 
 ### Added
