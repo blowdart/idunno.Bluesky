@@ -1,14 +1,6 @@
 ﻿# Version History
 
-## 3.0.0 - Unreleased, In Progress
-
-### Added
-
-#### idunno.Bluesky.AspNet.Authentication
-
-* Add support for Bluesky authentication in ASP.NET Razor Pages.
-
-## 1.7.0 - Unreleased
+## 1.8.0 - Unreleased
 
 ### Added
 
@@ -33,6 +25,7 @@
 * Added `SelfLabels` property to `ProfileViewBasic` which returns a list of self labels applied to a profile,
   which can be used in conjunction with `SelfLabelValues` to check if a profile has applied any self labels to itself,
   including the `Bot` self label and `DiscourageShowingToLoggedOutUser` self label. e.g.
+
   ```c#
   var profile = await agent.GetProfile("beans.monster");
   if (profile.Result.SelfLabels.Contains(SelfLabelValues.Bot))
@@ -40,6 +33,7 @@
       // 🤖 - Do some action because the profile self identifies as a bot.
   }
   ```
+
 * Added `JsonPolymorphic` attributes to individual records to remove the extraneous `ExtensionData` entries.
 * Added `CreateStatus`, `GetStatus` and `UpdateStatus` to `BlueskyAgent`.
 * Added a setter to `DurationMinutes on `Status` and setters to `ExternalProperties` to allow for updating of an existing profile status.
@@ -76,6 +70,20 @@
 * Changed `JetStreamMetrics` from `public` to `internal` because it is not intended for public use.
 * Remove `[Serializable]` from `AtProtoCredential`.
 * Exclude `Credential` in `CredentialException` from serialization because it may contain sensitive information.
+## 1.7.0 - 2026-03-12
+
+### ⚠️Security Advisory
+
+* A transitive dependency of `idunno.AtProto` and `idunno.AtProto.OAuthCallback`, `Microsoft.Bcl.Memory`
+  had a Denial of Service security vulnerability,
+  [CVE-2026-26127](https://github.com/dotnet/announcements/issues/384)
+
+  v1.7.0 updates the dependencies on `Duende.IdentityModel.OidcClient` and
+  `Duende.IdentityModel.OidcClient.Extensions` which have
+  updated their dependency on `Microsoft.Bcl.Memory` to 10.0.4, resolving the vulnerability.
+
+  All previous versions of the library are now marked as vulnerable to CVE-2026-26127.
+  Please update to v1.7.0 or later to resolve this vulnerability.
 
 ## 1.6.0 - 2026-02-21
 
