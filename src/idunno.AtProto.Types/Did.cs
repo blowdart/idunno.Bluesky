@@ -34,7 +34,7 @@ namespace idunno.AtProto
         /// <summary>
         /// A regular expression suitable for use when validating a handle.
         /// </summary>
-        public const string ValidationRegex = @"^did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]$";
+        public const string ValidationRegex = @"^did:[a-z0-9]+(?::(?:%[A-F0-9]{2}|[a-zA-Z0-9._-]+)*)+(?<!:)$";
 
         [GeneratedRegex(ValidationRegex, RegexOptions.CultureInvariant, 5000)]
         private static partial Regex s_validationRegex();
