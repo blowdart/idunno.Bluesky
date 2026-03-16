@@ -56,6 +56,10 @@
 * Remove `[Serializable]` from `AtProtoCredential`.
 * Exclude `Credential` in `CredentialException` from serialization because it may contain sensitive information.
 
+#### idunno.AtProto.Types
+
+* Updated DID validation regex to align with [specs: allow digits in DID method](https://github.com/bluesky-social/atproto-website/issues/292).
+
 #### idunno.Bluesky
 
 * Updated `SuggestedActors` to include `RecIdStr`, see [Add recIdStr to suggested follows by actor](https://github.com/bluesky-social/atproto/pull/4644)
