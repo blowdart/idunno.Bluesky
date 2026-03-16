@@ -889,97 +889,97 @@ namespace idunno.AtProto
 
                 AtProtoHttpClient<EmptyResponse> revokeRequest = new(LoggerFactory);
 
-                DPoPRevokeCredentials dPoPRevokeCredentials = new(
+                using (DPoPRevokeCredentials dPoPRevokeCredentials = new(
                     accessCredentials.Service,
                     accessCredentials.RefreshToken,
                     accessCredentials.DPoPProofKey,
-                    string.Empty);
-
-                // Revocation credential specific callback to update the DPoP nonce in credentials if the nonce needs updating ,
-                // so that automatic retry in AtProtoHttpClient will have the updated nonce for the retry attempt.
-                void logoutCredentialsUpdated(AtProtoCredential credentials)
+                    string.Empty))
                 {
-                    ArgumentNullException.ThrowIfNull(credentials);
-
-                    if (credentials is DPoPRevokeCredentials refreshedCredentials)
+                    // Revocation credential specific callback to update the DPoP nonce in credentials if the nonce needs updating ,
+                    // so that automatic retry in AtProtoHttpClient will have the updated nonce for the retry attempt.
+                    void logoutCredentialsUpdated(AtProtoCredential credentials)
                     {
-                        dPoPRevokeCredentials.DPoPNonce = refreshedCredentials.DPoPNonce;
+                        ArgumentNullException.ThrowIfNull(credentials);
 
-                        Logger.OnCredentialUpdatedCallbackCalled(_logger);
-                    }
-                    else
-                    {
-                        throw new CredentialException("Logout credentials updated callback was called with credentials of an unexpected type.");
-                    }
-                }
-
-                // First revoke the refresh token, then revoke the access token.
-                using (var formData = new FormUrlEncodedContent(
-                [
-                    new KeyValuePair<string, string>("token", accessCredentials.RefreshToken),
-                    new KeyValuePair<string, string>("token_type_hint", "refresh_token"),
-                    new KeyValuePair<string, string>("client_id", clientId),
-                ]))
-                {
-                    AtProtoHttpResult<EmptyResponse> revokeResponse = await revokeRequest.Post(
-                        service: authorizationService,
-                        endpoint: revocationEndpoint.AbsolutePath,
-                        record: formData,
-                        jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
-                        credentials: dPoPRevokeCredentials,
-                        onCredentialsUpdated: logoutCredentialsUpdated,
-                        httpClient: HttpClient,
-                        cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                    if (!revokeResponse.Succeeded)
-                    {
-                        Logger.RevokeFailed(_logger, Credentials.Did, Credentials.Service, revokeResponse.StatusCode, "refresh_token");
-                        throw new LogoutException()
+                        if (credentials is DPoPRevokeCredentials refreshedCredentials)
                         {
-                            StatusCode = revokeResponse.StatusCode,
-                            Error = revokeResponse.AtErrorDetail
-                        };
-                    }
-                }
+                            dPoPRevokeCredentials.DPoPNonce = refreshedCredentials.DPoPNonce;
 
-                dPoPRevokeCredentials = new(
-                    accessCredentials.Service,
-                    accessCredentials.AccessJwt,
-                    dPoPRevokeCredentials.DPoPProofKey,
-                    accessCredentials.DPoPNonce);
-
-                using (var formData = new FormUrlEncodedContent(
-                [
-                    new KeyValuePair<string, string>("token", accessCredentials.AccessJwt),
-                    new KeyValuePair<string, string>("token_type_hint", "access_token"),
-                    new KeyValuePair<string, string>("client_id", clientId),
-                ]))
-                {
-                    AtProtoHttpResult<EmptyResponse> revokeResponse = await revokeRequest.Post(
-                        service: authorizationService,
-                        endpoint: revocationEndpoint.AbsolutePath,
-                        record: formData,
-                        jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
-                        credentials: dPoPRevokeCredentials,
-                        onCredentialsUpdated: logoutCredentialsUpdated,
-                        httpClient: HttpClient,
-                        cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                    if (!revokeResponse.Succeeded)
-                    {
-                        Logger.RevokeFailed(_logger, Credentials.Did, Credentials.Service, revokeResponse.StatusCode, "access_token");
-                        throw new LogoutException()
+                            Logger.OnCredentialUpdatedCallbackCalled(_logger);
+                        }
+                        else
                         {
-                            StatusCode = revokeResponse.StatusCode,
-                            Error = revokeResponse.AtErrorDetail
-                        };
+                            throw new CredentialException("Logout credentials updated callback was called with credentials of an unexpected type.");
+                        }
                     }
+
+                    // First revoke the refresh token, then revoke the access token.
+                    using (var formData = new FormUrlEncodedContent(
+                    [
+                        new KeyValuePair<string, string>("token", accessCredentials.RefreshToken),
+                        new KeyValuePair<string, string>("token_type_hint", "refresh_token"),
+                        new KeyValuePair<string, string>("client_id", clientId),
+                    ]))
+                    {
+                        AtProtoHttpResult<EmptyResponse> revokeResponse = await revokeRequest.Post(
+                            service: authorizationService,
+                            endpoint: revocationEndpoint.AbsolutePath,
+                            record: formData,
+                            jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
+                            credentials: dPoPRevokeCredentials,
+                            onCredentialsUpdated: logoutCredentialsUpdated,
+                            httpClient: HttpClient,
+                            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                        if (!revokeResponse.Succeeded)
+                        {
+                            Logger.RevokeFailed(_logger, Credentials.Did, Credentials.Service, revokeResponse.StatusCode, "refresh_token");
+                            throw new LogoutException()
+                            {
+                                StatusCode = revokeResponse.StatusCode,
+                                Error = revokeResponse.AtErrorDetail
+                            };
+                        }
+                    }
+
+                    // Now revoke the access token.
+                    // Some authorization servers may not require this second call if revoking the refresh token also invalidates the access token,
+                    // but some may require both to be revoked to ensure the session is fully revoked, so calling both to be safe.
+                    dPoPRevokeCredentials.Token = accessCredentials.AccessJwt;
+
+                    using (var formData = new FormUrlEncodedContent(
+                    [
+                        new KeyValuePair<string, string>("token", accessCredentials.AccessJwt),
+                        new KeyValuePair<string, string>("token_type_hint", "access_token"),
+                        new KeyValuePair<string, string>("client_id", clientId),
+                    ]))
+                    {
+                        AtProtoHttpResult<EmptyResponse> revokeResponse = await revokeRequest.Post(
+                            service: authorizationService,
+                            endpoint: revocationEndpoint.AbsolutePath,
+                            record: formData,
+                            jsonSerializerOptions: AtProtoServer.AtProtoJsonSerializerOptions,
+                            credentials: dPoPRevokeCredentials,
+                            onCredentialsUpdated: logoutCredentialsUpdated,
+                            httpClient: HttpClient,
+                            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                        if (!revokeResponse.Succeeded)
+                        {
+                            Logger.RevokeFailed(_logger, Credentials.Did, Credentials.Service, revokeResponse.StatusCode, "access_token");
+                            throw new LogoutException()
+                            {
+                                StatusCode = revokeResponse.StatusCode,
+                                Error = revokeResponse.AtErrorDetail
+                            };
+                        }
+                    }
+
+                    var unauthenticatedEventArgs = new UnauthenticatedEventArgs(Credentials.Did, Credentials.Service);
+
+                    Credentials = null;
+                    OnUnauthenticated(unauthenticatedEventArgs);
                 }
-
-                var unauthenticatedEventArgs = new UnauthenticatedEventArgs(Credentials.Did, Credentials.Service);
-
-                Credentials = null;
-                OnUnauthenticated(unauthenticatedEventArgs);
             }
             else
             {

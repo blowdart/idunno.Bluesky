@@ -41,6 +41,9 @@ namespace idunno.AtProto.Authentication
         /// </summary>
         protected ReaderWriterLockSlim ReaderWriterLockSlim { get; } = new();
 
+        /// <inheritdoc/>
+        public override string ToString() => "[REDACTED]";
+
         /// <summary>
         /// Creates an appropriate AtProtoCredentials instance from the specified parameters.
         /// </summary>

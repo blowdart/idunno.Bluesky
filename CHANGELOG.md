@@ -13,6 +13,7 @@
 * Added extensions for `OpenTelemetry.Metrics`: `AddAtProtoHttpClientMetrics`, `AddAtProtoDirectoryMetrics`, and `AddAtProtoJetStreamMetrics`.
 * Added `MaxMessageSize` to `JetStreamOptions` to guard against a malicious jetstream server sending overly large messages.
 * Added optional validation callbacks to `BuildOAuthLoginUri` to allow for validation of the discovered PDS and authorization server URIs.
+* Override `ToString()` on `AtProtoCredential` to return a redacted string in case of accidental logging.
 
 ### idunno.AtProto.Types
 
@@ -36,7 +37,7 @@
 
 * Added `JsonPolymorphic` attributes to individual records to remove the extraneous `ExtensionData` entries.
 * Added `CreateStatus`, `GetStatus` and `UpdateStatus` to `BlueskyAgent`.
-* Added a setter to `DurationMinutes on `Status` and setters to `ExternalProperties` to allow for updating of an existing profile status.
+* Added a setter to `DurationMinutes` on `Status` and setters to `ExternalProperties` to allow for updating of an existing profile status.
 
 ### Documentation
 
@@ -51,6 +52,9 @@
 * Add version to `JetstreamMetrics`
 * Made `JetStream.MeterName` and `JetStream.MeterVersion` properties public to allow for easy OTEL configuration.
 * Fixed OAuth logout.
+* Changed `JetStreamMetrics` from `public` to `internal` because it is not intended for public use.
+* Remove `[Serializable]` from `AtProtoCredential`.
+* Exclude `Credential` in `CredentialException` from serialization because it may contain sensitive information.
 
 #### idunno.Bluesky
 
@@ -63,13 +67,8 @@
 * Added `SelfLabelValues` class and marked `SelfLabelNames` as obsolete in favor of it, as the new name is more correct.
 * Added `Bot` and `DiscourageShowingToLoggedOutUser` to `SelfLabelValues`.
 
-### Breaking Changes
-
 #### idunno.AtProto
 
-* Changed `JetStreamMetrics` from `public` to `internal` because it is not intended for public use.
-* Remove `[Serializable]` from `AtProtoCredential`.
-* Exclude `Credential` in `CredentialException` from serialization because it may contain sensitive information.
 ## 1.7.0 - 2026-03-12
 
 ### ⚠️Security Advisory

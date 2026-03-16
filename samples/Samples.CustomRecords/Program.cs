@@ -2,13 +2,13 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics;
+using System.Text.Json;
 
 using Microsoft.Extensions.Logging;
 
 using Samples.Common;
 
 using idunno.AtProto;
-using System.Text.Json;
 
 namespace Samples.CustomRecords
 {

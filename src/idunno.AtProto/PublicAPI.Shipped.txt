@@ -1,5 +1,6 @@
 ﻿#nullable enable
 abstract idunno.AtProto.Authentication.AtProtoCredential.SetAuthenticationHeaders(System.Net.Http.HttpRequestMessage! httpRequestMessage) -> void
+override idunno.AtProto.Authentication.AtProtoCredential.ToString() -> string!
 const idunno.AtProto.AtProtoAgentOptions.AtProtoAgent = "AtProtoAgent" -> string!
 const idunno.AtProto.Authentication.AtProtoClaims.AccessToken = "atproto:token:access" -> string!
 const idunno.AtProto.Authentication.AtProtoClaims.Did = "atproto:did" -> string!
