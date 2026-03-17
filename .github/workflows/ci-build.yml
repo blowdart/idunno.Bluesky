@@ -25,6 +25,7 @@ jobs:
   build:
     name: Build and Test
     runs-on: ubuntu-latest
+    environment: cibuild
     permissions:
       contents: read
       issues: read
