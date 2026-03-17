@@ -1,4 +1,4 @@
-name: CI Build
+﻿name: CI Build
 
 on:
   workflow_dispatch:
@@ -24,6 +24,7 @@ jobs:
   build:
     name: Build and Test
     runs-on: ubuntu-latest
+    environment: cibuild
     permissions:
       contents: read
       issues: read
