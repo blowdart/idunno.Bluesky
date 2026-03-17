@@ -3,32 +3,31 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Chat.Model
+namespace idunno.Bluesky.Chat.Model;
+
+internal record RemoveReactionRequest
 {
-    internal record RemoveReactionRequest
+    public RemoveReactionRequest(string conversationId, string messageId, string value)
     {
-        public RemoveReactionRequest(string conversationId, string messageId, string value)
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
-            ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
-            ArgumentException.ThrowIfNullOrWhiteSpace(value);
+        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            ConversationId = conversationId;
-            MessageId = messageId;
-            Value = value;
-        }
-
-        [JsonInclude]
-        [JsonRequired]
-        [JsonPropertyName("convoId")]
-        public string ConversationId { get; init; }
-
-        [JsonInclude]
-        [JsonRequired]
-        public string MessageId { get; init; }
-
-        [JsonInclude]
-        [JsonRequired]
-        public string Value { get; init; }
+        ConversationId = conversationId;
+        MessageId = messageId;
+        Value = value;
     }
+
+    [JsonInclude]
+    [JsonRequired]
+    [JsonPropertyName("convoId")]
+    public string ConversationId { get; init; }
+
+    [JsonInclude]
+    [JsonRequired]
+    public string MessageId { get; init; }
+
+    [JsonInclude]
+    [JsonRequired]
+    public string Value { get; init; }
 }

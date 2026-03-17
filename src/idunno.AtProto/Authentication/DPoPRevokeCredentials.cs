@@ -4,163 +4,162 @@
 using Duende.IdentityModel.Client;
 using Duende.IdentityModel.OidcClient.DPoP;
 
-namespace idunno.AtProto.Authentication
+namespace idunno.AtProto.Authentication;
+
+internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential, IDisposable
 {
-    internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential, IDisposable
+    private bool _isDisposed;
+
+    public DPoPRevokeCredentials(Uri service, string token, string dPoPProofKey, string dPoPNonce) : base(service, AuthenticationType.OAuth)
     {
-        private bool _isDisposed;
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentException.ThrowIfNullOrWhiteSpace(token);
+        ArgumentException.ThrowIfNullOrEmpty(dPoPProofKey);
 
-        public DPoPRevokeCredentials(Uri service, string token, string dPoPProofKey, string dPoPNonce) : base(service, AuthenticationType.OAuth)
+        DPoPProofKey = dPoPProofKey;
+        DPoPNonce = dPoPNonce;
+        Token = token;
+    }
+
+    public DPoPRevokeCredentials(DPoPAccessCredentials accessCredentials) : base(accessCredentials.Service, AuthenticationType.OAuth)
+    {
+        ArgumentNullException.ThrowIfNull(accessCredentials);
+
+        DPoPProofKey = accessCredentials.DPoPProofKey;
+        DPoPNonce = accessCredentials.DPoPNonce;
+        Token = accessCredentials.AccessJwt;
+    }
+
+    public string Token
+    {
+        get
         {
-            ArgumentNullException.ThrowIfNull(service);
-            ArgumentException.ThrowIfNullOrWhiteSpace(token);
-            ArgumentException.ThrowIfNullOrEmpty(dPoPProofKey);
-
-            DPoPProofKey = dPoPProofKey;
-            DPoPNonce = dPoPNonce;
-            Token = token;
-        }
-
-        public DPoPRevokeCredentials(DPoPAccessCredentials accessCredentials) : base(accessCredentials.Service, AuthenticationType.OAuth)
-        {
-            ArgumentNullException.ThrowIfNull(accessCredentials);
-
-            DPoPProofKey = accessCredentials.DPoPProofKey;
-            DPoPNonce = accessCredentials.DPoPNonce;
-            Token = accessCredentials.AccessJwt;
-        }
-
-        public string Token
-        {
-            get
+            ReaderWriterLockSlim.EnterReadLock();
+            try
             {
-                ReaderWriterLockSlim.EnterReadLock();
-                try
-                {
-                    return field;
-                }
-                finally
-                {
-                    ReaderWriterLockSlim.ExitReadLock();
-                }
+                return field;
             }
-
-            set
+            finally
             {
-                ArgumentException.ThrowIfNullOrWhiteSpace(value);
-
-                ReaderWriterLockSlim.EnterWriteLock();
-                try
-                {
-                    field = value;
-                }
-                finally
-                {
-                    ReaderWriterLockSlim.ExitWriteLock();
-                }
+                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
-        public string DPoPProofKey
+        set
         {
-            get
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
+
+            ReaderWriterLockSlim.EnterWriteLock();
+            try
             {
-                ReaderWriterLockSlim.EnterReadLock();
-                try
-                {
-                    return field;
-                }
-                finally
-                {
-                    ReaderWriterLockSlim.ExitReadLock();
-                }
+                field = value;
             }
-
-            set
+            finally
             {
-                ArgumentException.ThrowIfNullOrWhiteSpace(value);
-
-                ReaderWriterLockSlim.EnterWriteLock();
-                try
-                {
-                    field = value;
-                }
-                finally
-                {
-                    ReaderWriterLockSlim.ExitWriteLock();
-                }
+                ReaderWriterLockSlim.ExitWriteLock();
             }
         }
+    }
 
-        public string DPoPNonce
+    public string DPoPProofKey
+    {
+        get
         {
-            get
+            ReaderWriterLockSlim.EnterReadLock();
+            try
             {
-                ReaderWriterLockSlim.EnterReadLock();
-                try
-                {
-                    return field;
-                }
-                finally
-                {
-                    ReaderWriterLockSlim.ExitReadLock();
-                }
+                return field;
             }
-
-            set
+            finally
             {
-                ReaderWriterLockSlim.EnterWriteLock();
-                try
-                {
-                    field = value;
-                }
-                finally
-                {
-                    ReaderWriterLockSlim.ExitWriteLock();
-                }
+                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
-        public override void SetAuthenticationHeaders(HttpRequestMessage httpRequestMessage)
+        set
         {
-            ArgumentNullException.ThrowIfNull(httpRequestMessage);
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            DPoPProofRequest dPoPProofRequest = new()
+            ReaderWriterLockSlim.EnterWriteLock();
+            try
             {
-                DPoPNonce = DPoPNonce,
-                Method = httpRequestMessage.Method.ToString(),
-                Url = httpRequestMessage.GetDPoPUrl()
-            };
-
-            DefaultDPoPProofTokenFactory factory = new(DPoPProofKey);
-            DPoPProof proofToken = factory.CreateProofToken(dPoPProofRequest);
-
-            httpRequestMessage.SetDPoPToken(Token, proofToken.ProofToken);
+                field = value;
+            }
+            finally
+            {
+                ReaderWriterLockSlim.ExitWriteLock();
+            }
         }
+    }
 
-        protected virtual void Dispose(bool disposing)
+    public string DPoPNonce
+    {
+        get
         {
-            if (!_isDisposed)
+            ReaderWriterLockSlim.EnterReadLock();
+            try
             {
-                if (disposing)
-                {
-                    ReaderWriterLockSlim.Dispose();
-                }
-
-                _isDisposed = true;
+                return field;
+            }
+            finally
+            {
+                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
-         ~DPoPRevokeCredentials()
+        set
         {
-             Dispose(disposing: false);
+            ReaderWriterLockSlim.EnterWriteLock();
+            try
+            {
+                field = value;
+            }
+            finally
+            {
+                ReaderWriterLockSlim.ExitWriteLock();
+            }
         }
+    }
 
-        public void Dispose()
+    public override void SetAuthenticationHeaders(HttpRequestMessage httpRequestMessage)
+    {
+        ArgumentNullException.ThrowIfNull(httpRequestMessage);
+
+        DPoPProofRequest dPoPProofRequest = new()
         {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
+            DPoPNonce = DPoPNonce,
+            Method = httpRequestMessage.Method.ToString(),
+            Url = httpRequestMessage.GetDPoPUrl()
+        };
+
+        DefaultDPoPProofTokenFactory factory = new(DPoPProofKey);
+        DPoPProof proofToken = factory.CreateProofToken(dPoPProofRequest);
+
+        httpRequestMessage.SetDPoPToken(Token, proofToken.ProofToken);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_isDisposed)
+        {
+            if (disposing)
+            {
+                ReaderWriterLockSlim.Dispose();
+            }
+
+            _isDisposed = true;
         }
+    }
+
+     ~DPoPRevokeCredentials()
+    {
+         Dispose(disposing: false);
+    }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

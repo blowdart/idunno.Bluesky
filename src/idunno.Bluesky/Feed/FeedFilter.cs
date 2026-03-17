@@ -1,31 +1,30 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-namespace idunno.Bluesky.Feed
+namespace idunno.Bluesky.Feed;
+
+/// <summary>
+/// Combinations of post/repost types to include in feed responses.
+/// </summary>
+public enum FeedFilter
 {
     /// <summary>
-    /// Combinations of post/repost types to include in feed responses.
+    /// Include posts and replies.
     /// </summary>
-    public enum FeedFilter
-    {
-        /// <summary>
-        /// Include posts and replies.
-        /// </summary>
-        PostsWithReplies,
+    PostsWithReplies,
 
-        /// <summary>
-        /// Include only posts.
-        /// </summary>
-        PostsNoReplies,
+    /// <summary>
+    /// Include only posts.
+    /// </summary>
+    PostsNoReplies,
 
-        /// <summary>
-        /// Include posts with their media.
-        /// </summary>
-        PostsWithMedia,
+    /// <summary>
+    /// Include posts with their media.
+    /// </summary>
+    PostsWithMedia,
 
-        /// <summary>
-        /// Include posts and author threads.
-        /// </summary>
-        PostsAndAuthorThreads
-    }
+    /// <summary>
+    /// Include posts and author threads.
+    /// </summary>
+    PostsAndAuthorThreads
 }

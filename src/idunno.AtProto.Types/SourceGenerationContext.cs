@@ -3,29 +3,28 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.AtProto
-{
-    /// <exclude />
-    [JsonSourceGenerationOptions(
-        AllowOutOfOrderMetadataProperties = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        IgnoreReadOnlyProperties = false,
-        GenerationMode = JsonSourceGenerationMode.Default,
-        NumberHandling = JsonNumberHandling.AllowReadingFromString,
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
-        UseStringEnumConverter = true,
-        WriteIndented = false)]
+namespace idunno.AtProto;
 
-    [JsonSerializable(typeof(AtIdentifier))]
-    [JsonSerializable(typeof(AtUri))]
-    [JsonSerializable(typeof(Cid))]
-    [JsonSerializable(typeof(Did))]
-    [JsonSerializable(typeof(Handle))]
-    [JsonSerializable(typeof(Nsid))]
-    [JsonSerializable(typeof(RecordKey))]
-    [JsonSerializable(typeof(TimestampIdentifier))]
-    internal partial class SourceGenerationContext : JsonSerializerContext
-    {
-    }
+/// <exclude />
+[JsonSourceGenerationOptions(
+    AllowOutOfOrderMetadataProperties = true,
+    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    IgnoreReadOnlyProperties = false,
+    GenerationMode = JsonSourceGenerationMode.Default,
+    NumberHandling = JsonNumberHandling.AllowReadingFromString,
+    PropertyNameCaseInsensitive = true,
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    UseStringEnumConverter = true,
+    WriteIndented = false)]
+
+[JsonSerializable(typeof(AtIdentifier))]
+[JsonSerializable(typeof(AtUri))]
+[JsonSerializable(typeof(Cid))]
+[JsonSerializable(typeof(Did))]
+[JsonSerializable(typeof(Handle))]
+[JsonSerializable(typeof(Nsid))]
+[JsonSerializable(typeof(RecordKey))]
+[JsonSerializable(typeof(TimestampIdentifier))]
+internal partial class SourceGenerationContext : JsonSerializerContext
+{
 }

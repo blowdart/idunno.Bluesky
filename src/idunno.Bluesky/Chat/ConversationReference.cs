@@ -3,37 +3,36 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Chat
+namespace idunno.Bluesky.Chat;
+
+/// <summary>
+/// Encapsulates a reference to a conversation and its revision.
+/// </summary>
+public record ConversationReference
 {
-    /// <summary>
-    /// Encapsulates a reference to a conversation and its revision.
-    /// </summary>
-    public record ConversationReference
+    [JsonConstructor]
+    internal ConversationReference(string conversationId, string revision)
     {
-        [JsonConstructor]
-        internal ConversationReference(string conversationId, string revision)
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
-            ArgumentException.ThrowIfNullOrWhiteSpace(revision);
+        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(revision);
 
-            ConversationId = conversationId;
-            Revision = revision;
-        }
-
-        /// <summary>
-        /// Gets the conversation identifier.
-        /// </summary>
-        [JsonInclude]
-        [JsonRequired]
-        [JsonPropertyName("convoId")]
-        public string ConversationId { get; init; }
-
-        /// <summary>
-        /// Gets the conversation revision.
-        /// </summary>
-        [JsonInclude]
-        [JsonRequired]
-        [JsonPropertyName("rev")]
-        public string Revision { get; init; }
+        ConversationId = conversationId;
+        Revision = revision;
     }
+
+    /// <summary>
+    /// Gets the conversation identifier.
+    /// </summary>
+    [JsonInclude]
+    [JsonRequired]
+    [JsonPropertyName("convoId")]
+    public string ConversationId { get; init; }
+
+    /// <summary>
+    /// Gets the conversation revision.
+    /// </summary>
+    [JsonInclude]
+    [JsonRequired]
+    [JsonPropertyName("rev")]
+    public string Revision { get; init; }
 }

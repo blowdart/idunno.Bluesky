@@ -4,31 +4,30 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Feed.Model
-{
-    [SuppressMessage("Performance", "CA1812", Justification = "Used in GetTimeLine.")]
-    internal sealed record GetTimelineResponse
-    {
-        [JsonConstructor]
-        internal GetTimelineResponse(ICollection<FeedViewPost>? feed, string? cursor)
-        {
-            if (feed is null)
-            {
-                Feed = new List<FeedViewPost>();
-            }
-            else
-            {
-                Feed = feed;
-            }
+namespace idunno.Bluesky.Feed.Model;
 
-            Cursor = cursor;
+[SuppressMessage("Performance", "CA1812", Justification = "Used in GetTimeLine.")]
+internal sealed record GetTimelineResponse
+{
+    [JsonConstructor]
+    internal GetTimelineResponse(ICollection<FeedViewPost>? feed, string? cursor)
+    {
+        if (feed is null)
+        {
+            Feed = [.. new List<FeedViewPost>()];
+        }
+        else
+        {
+            Feed = [.. feed];
         }
 
-        [JsonInclude]
-        [NotNull]
-        public ICollection<FeedViewPost>? Feed { get; init; }
-
-        [JsonInclude]
-        public string? Cursor { get; init; }
+        Cursor = cursor;
     }
+
+    [JsonInclude]
+    [NotNull]
+    public ICollection<FeedViewPost>? Feed { get; init; }
+
+    [JsonInclude]
+    public string? Cursor { get; init; }
 }

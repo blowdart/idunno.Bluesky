@@ -3,25 +3,24 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Chat.Model
+namespace idunno.Bluesky.Chat.Model;
+
+internal sealed record SendMessageRequest
 {
-    internal sealed record SendMessageRequest
+    public SendMessageRequest(string convoId, MessageInput message)
     {
-        public SendMessageRequest(string convoId, MessageInput message)
-        {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(convoId);
-            ArgumentNullException.ThrowIfNull(message);
+        ArgumentException.ThrowIfNullOrWhiteSpace(convoId);
+        ArgumentNullException.ThrowIfNull(message);
 
-            ConvoId = convoId;
-            Message = message;
-        }
-
-        [JsonInclude]
-        [JsonRequired]
-        public string ConvoId { get; init; }
-
-        [JsonInclude]
-        [JsonRequired]
-        public MessageInput Message { get; init; }
+        ConvoId = convoId;
+        Message = message;
     }
+
+    [JsonInclude]
+    [JsonRequired]
+    public string ConvoId { get; init; }
+
+    [JsonInclude]
+    [JsonRequired]
+    public MessageInput Message { get; init; }
 }

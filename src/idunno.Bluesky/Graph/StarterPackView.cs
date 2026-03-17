@@ -7,84 +7,82 @@ using idunno.Bluesky.Actor;
 using idunno.Bluesky.Feed;
 using idunno.Bluesky.Record;
 
-namespace idunno.Bluesky.Graph
+namespace idunno.Bluesky.Graph;
+
+/// <summary>
+/// Represents a view over a Starter Pack.
+/// </summary>
+public sealed record StarterPackView : StarterPackViewBasic
 {
     /// <summary>
-    /// Represents a view over a Starter Pack.
+    /// Create a new instance of <see cref="StarterPackViewBasic"/>
     /// </summary>
-    public sealed record StarterPackView : StarterPackViewBasic
+    /// <param name="uri">The <see cref="AtUri"/> of the starter pack.</param>
+    /// <param name="cid">The <see cref="AtProto.Cid"/> of the starter pack.</param>
+    /// <param name="record">The record for the starter pack.</param>
+    /// <param name="creator">The <see cref="ProfileViewBasic"/> of the starter pack creator.</param>
+    /// <param name="listItemCount">The number of items in the list.</param>
+    /// <param name="joinedWeekCount">The number of users who joined using the list in the last week.</param>
+    /// <param name="joinedAllTimeCount">The overall number of users who joined using the list.</param>
+    /// <param name="labels">Labels applied to the list.</param>
+    /// <param name="indexedAt">The <see cref="DateTimeOffset"/> the list was indexed at.</param>
+    /// <param name="list">A <see cref="ListViewBasic"/> over the starter pack.</param>
+    /// <param name="listItemsSample">A collection of <see cref="ListItemView"/>s sampling the actors in the list.</param>
+    /// <param name="feeds">A collection of <see cref="GeneratorView"/>s over any feeds in the list.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="listItemsSample"/> contains more than 12 items.</exception>
+    public StarterPackView(
+        AtUri uri,
+        Cid cid,
+        StarterPack record,
+        ProfileViewBasic creator,
+        int listItemCount,
+        int joinedWeekCount,
+        int joinedAllTimeCount,
+        IReadOnlyCollection<Label>? labels,
+        DateTimeOffset indexedAt,
+        ListViewBasic list,
+        IReadOnlyCollection<ListItemView>? listItemsSample,
+        IReadOnlyCollection<GeneratorView>? feeds) : base(uri, cid, record, creator, listItemCount, joinedWeekCount, joinedAllTimeCount, labels, indexedAt)
     {
-        /// <summary>
-        /// Create a new instance of <see cref="StarterPackViewBasic"/>
-        /// </summary>
-        /// <param name="uri">The <see cref="AtUri"/> of the starter pack.</param>
-        /// <param name="cid">The <see cref="AtProto.Cid"/> of the starter pack.</param>
-        /// <param name="record">The record for the starter pack.</param>
-        /// <param name="creator">The <see cref="ProfileViewBasic"/> of the starter pack creator.</param>
-        /// <param name="listItemCount">The number of items in the list.</param>
-        /// <param name="joinedWeekCount">The number of users who joined using the list in the last week.</param>
-        /// <param name="joinedAllTimeCount">The overall number of users who joined using the list.</param>
-        /// <param name="labels">Labels applied to the list.</param>
-        /// <param name="indexedAt">The <see cref="DateTimeOffset"/> the list was indexed at.</param>
-        /// <param name="list">A <see cref="ListViewBasic"/> over the starter pack.</param>
-        /// <param name="listItemsSample">A collection of <see cref="ListItemView"/>s sampling the actors in the list.</param>
-        /// <param name="feeds">A collection of <see cref="GeneratorView"/>s over any feeds in the list.</param>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="listItemsSample"/> contains more than 12 items.</exception>
-        public StarterPackView(
-            AtUri uri,
-            Cid cid,
-            StarterPack record,
-            ProfileViewBasic creator,
-            int listItemCount,
-            int joinedWeekCount,
-            int joinedAllTimeCount,
-            IReadOnlyCollection<Label>? labels,
-            DateTimeOffset indexedAt,
-            ListViewBasic list,
-            IReadOnlyCollection<ListItemView>? listItemsSample,
-            IReadOnlyCollection<GeneratorView>? feeds) : base(uri, cid, record, creator, listItemCount, joinedWeekCount, joinedAllTimeCount, labels, indexedAt)
+        if (listItemsSample is not null)
         {
-            if (listItemsSample is not null)
-            {
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(listItemsSample.Count, 12);
-            }
-
-            List = list;
-
-            if (listItemsSample is not null)
-            {
-                ListItemsSample = new List<ListItemView>(listItemsSample).AsReadOnly();
-            }
-            else
-            {
-                ListItemsSample = [];
-            }
-
-            if (feeds is not null)
-            {
-                Feeds = new List<GeneratorView>(feeds).AsReadOnly();
-            }
-            else
-            {
-                Feeds = new List<GeneratorView>().AsReadOnly();
-            }
-
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(listItemsSample.Count, 12);
         }
 
-        /// <summary>
-        /// Gets a <see cref="ListViewBasic"/> over the starter pack.
-        /// </summary>
-        public ListViewBasic List { get; init; }
+        List = list;
 
-        /// <summary>
-        /// Gets a collection of <see cref="ListItemView"/>s sampling the actors in the list.
-        /// </summary>
-        public IReadOnlyCollection<ListItemView> ListItemsSample { get; init; }
+        if (listItemsSample is not null)
+        {
+            ListItemsSample = new List<ListItemView>(listItemsSample).AsReadOnly();
+        }
+        else
+        {
+            ListItemsSample = [];
+        }
 
-        /// <summary>
-        /// Gets a collection of <see cref="GeneratorView"/>s over any feeds in the list
-        /// </summary>
-        public IReadOnlyCollection<GeneratorView> Feeds { get; init; }
+        if (feeds is not null)
+        {
+            Feeds = new List<GeneratorView>(feeds).AsReadOnly();
+        }
+        else
+        {
+            Feeds = new List<GeneratorView>().AsReadOnly();
+        }
+
     }
 
+    /// <summary>
+    /// Gets a <see cref="ListViewBasic"/> over the starter pack.
+    /// </summary>
+    public ListViewBasic List { get; init; }
+
+    /// <summary>
+    /// Gets a collection of <see cref="ListItemView"/>s sampling the actors in the list.
+    /// </summary>
+    public IReadOnlyCollection<ListItemView> ListItemsSample { get; init; }
+
+    /// <summary>
+    /// Gets a collection of <see cref="GeneratorView"/>s over any feeds in the list
+    /// </summary>
+    public IReadOnlyCollection<GeneratorView> Feeds { get; init; }
 }

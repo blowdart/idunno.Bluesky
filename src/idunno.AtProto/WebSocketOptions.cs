@@ -3,21 +3,20 @@
 
 using System.Net;
 
-namespace idunno.AtProto
+namespace idunno.AtProto;
+
+/// <summary>
+/// WebSocket options for the Jetstream and Firehose.
+/// </summary>
+public sealed record WebSocketOptions
 {
     /// <summary>
-    /// WebSocket options for the Jetstream and Firehose.
+    /// Gets the proxy for WebSocket requests.
     /// </summary>
-    public sealed record WebSocketOptions
-    {
-        /// <summary>
-        /// Gets the proxy for WebSocket requests.
-        /// </summary>
-        public IWebProxy? Proxy { get; init; }
+    public IWebProxy? Proxy { get; init; }
 
-        /// <summary>
-        /// Gets the WebSocket protocol keep-alive interval.
-        /// </summary>
-        public TimeSpan? KeepAliveInterval { get; init; }
-    }
+    /// <summary>
+    /// Gets the WebSocket protocol keep-alive interval.
+    /// </summary>
+    public TimeSpan? KeepAliveInterval { get; init; }
 }

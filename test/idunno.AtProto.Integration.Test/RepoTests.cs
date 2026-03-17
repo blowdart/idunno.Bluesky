@@ -11,302 +11,388 @@ using idunno.AtProto.Authentication;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
 
-namespace idunno.AtProto.Integration.Test
+namespace idunno.AtProto.Integration.Test;
+
+[ExcludeFromCodeCoverage]
+public class RepoTests
 {
-    [ExcludeFromCodeCoverage]
-    public class RepoTests
+    private readonly JsonSerializerOptions _jsonSerializerOptions;
+
+    public RepoTests()
     {
-        private readonly JsonSerializerOptions _jsonSerializerOptions;
+        _jsonSerializerOptions = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(JsonSerializerOptions.Default);
+    }
 
-        public RepoTests()
-        {
-            _jsonSerializerOptions = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(JsonSerializerOptions.Default);
-        }
+    [Fact]
+    public async Task DescribeRepoReturnsDescription()
+    {
+        const string domainName = "test.invalid";
 
-        [Fact]
-        public async Task DescribeRepoReturnsDescription()
-        {
-            const string domainName = "test.invalid";
+        const string expectedHandle = "handle.test.invalid";
+        const string expectedDid = "did:web:test.invalid";
+        const bool expectedHandleIsCorrect = true;
 
-            const string expectedHandle = "handle.test.invalid";
-            const string expectedDid = "did:web:test.invalid";
-            const bool expectedHandleIsCorrect = true;
-
-            Nsid[] expectedCollections =
+        Nsid[] expectedCollections =
+        [
+            new Nsid("com.atproto.posts"),
+            new Nsid("invalid.handle.beans"),
+        ];
+        DidDocument expectedDidDoc = new(
+            id: $"{expectedDid}",
+            context: ["https://www.w3.org/ns/did/v1"],
+            alsoKnownAs: null,
+            verificationMethods: null,
+            services:
             [
-                new Nsid("com.atproto.posts"),
-                new Nsid("invalid.handle.beans"),
-            ];
-            DidDocument expectedDidDoc = new(
-                id: $"{expectedDid}",
-                context: ["https://www.w3.org/ns/did/v1"],
-                alsoKnownAs: null,
-                verificationMethods: null,
-                services:
-                [
-                    new(
-                        id : "#atproto_pds",
-                        type : "atprotopds",
-                        serviceEndpoint : new Uri($"https://{domainName}"))
-                ]);
+                new(
+                    id : "#atproto_pds",
+                    type : "atprotopds",
+                    serviceEndpoint : new Uri($"https://{domainName}"))
+            ]);
 
-            TestServer testServer = TestServerBuilder.CreateServer(domainName, async context =>
-            {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.DescribeRepoEndpoint &&
-                    request.QueryString.HasValue &&
-                    request.Query["repo"].FirstOrDefault() == expectedHandle)
-                {
-                    response.StatusCode = 200;
-                    response.ContentType = "text/plain";
-
-                    var responseBody = new RepoDescription(handle: expectedHandle, did: expectedDid, didDoc: expectedDidDoc, collections: expectedCollections, handleIsCorrect: expectedHandleIsCorrect);
-
-                    await response.WriteAsJsonAsync(value: responseBody, jsonTypeInfo: AtProto.SourceGenerationContext.Default.RepoDescription);
-                }
-            });
-
-            using (var agent = new AtProtoAgent(
-                new Uri($"https://{domainName}"),
-                new TestHttpClientFactory(testServer)))
-            {
-                AtProtoHttpResult<RepoDescription> describeRepoResult = await agent.DescribeRepo(AtIdentifier.Create(expectedHandle), cancellationToken: TestContext.Current.CancellationToken);
-
-                Assert.True(describeRepoResult.Succeeded);
-
-                Assert.Equal(expectedHandle, describeRepoResult.Result.Handle);
-                Assert.Equal(expectedDid, describeRepoResult.Result.Did);
-                Assert.Equal(expectedDidDoc.Id, describeRepoResult.Result.DidDoc.Id);
-                Assert.Equal(expectedDidDoc.Context, describeRepoResult.Result.DidDoc.Context);
-                Assert.Equal(expectedDidDoc.Services, describeRepoResult.Result.DidDoc.Services);
-                Assert.Empty(expectedDidDoc.AlsoKnownAs);
-                Assert.Empty(expectedDidDoc.VerificationMethods);
-                Assert.NotEmpty(describeRepoResult.Result.DidDoc.Services);
-                Assert.Equal(expectedCollections, describeRepoResult.Result.Collections);
-                Assert.Equal(expectedHandleIsCorrect, describeRepoResult.Result.HandleIsCorrect);
-            }
-        }
-
-        [Fact]
-        public async Task NotFoundRepoOnDescribeRepoReturnsCorrectError()
+        TestServer testServer = TestServerBuilder.CreateServer(domainName, async context =>
         {
-            const string domainName = "test.invalid";
-            const string expectedHandle = "handle.test.invalid";
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
 
-            TestServer testServer = TestServerBuilder.CreateServer(domainName, async context =>
+            if (request.Path == AtProtoServer.DescribeRepoEndpoint &&
+                request.QueryString.HasValue &&
+                request.Query["repo"].FirstOrDefault() == expectedHandle)
             {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
+                response.StatusCode = 200;
+                response.ContentType = "text/plain";
 
-                if (request.Path == AtProtoServer.DescribeRepoEndpoint &&
-                    request.QueryString.HasValue &&
-                    request.Query["repo"].FirstOrDefault() == expectedHandle)
-                {
-                    response.StatusCode = 404;
+                var responseBody = new RepoDescription(handle: expectedHandle, did: expectedDid, didDoc: expectedDidDoc, collections: expectedCollections, handleIsCorrect: expectedHandleIsCorrect);
 
-                    AtErrorDetail errorDetail = new() { Error = "NotFound", Message = "Repo not found" };
-
-                    await response.WriteAsJsonAsync(value: errorDetail, jsonTypeInfo: AtProto.SourceGenerationContext.Default.AtErrorDetail);
-                }
-            });
-
-            using (var agent = new AtProtoAgent(
-                new Uri($"https://{domainName}"),
-                new TestHttpClientFactory(testServer)))
-            {
-                AtProtoHttpResult<RepoDescription> describeRepoResult = await agent.DescribeRepo(AtIdentifier.Create(expectedHandle), cancellationToken: TestContext.Current.CancellationToken);
-
-                Assert.False(describeRepoResult.Succeeded);
-                Assert.Equal(HttpStatusCode.NotFound, describeRepoResult.StatusCode);
-                Assert.NotNull(describeRepoResult.AtErrorDetail);
-                Assert.Equal("NotFound", describeRepoResult.AtErrorDetail.Error);
-                Assert.Equal("Repo not found", describeRepoResult.AtErrorDetail.Message);
+                await response.WriteAsJsonAsync(value: responseBody, jsonTypeInfo: AtProto.SourceGenerationContext.Default.RepoDescription);
             }
-        }
+        });
 
-        [Fact]
-        public async Task ServerCallToCreateRecordSerializesTheRecordWithNoConfiguredTypeResolverCorrectly()
+        using (var agent = new AtProtoAgent(
+            new Uri($"https://{domainName}"),
+            new TestHttpClientFactory(testServer)))
         {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Next();
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+            AtProtoHttpResult<RepoDescription> describeRepoResult = await agent.DescribeRepo(AtIdentifier.Create(expectedHandle), cancellationToken: TestContext.Current.CancellationToken);
 
-            AccessCredentials expectedCredentials = new(
-                    service: TestServerBuilder.DefaultUri,
-                    authenticationType: AuthenticationType.UsernamePassword,
-                    accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
-                    refreshToken: "refreshToken");
+            Assert.True(describeRepoResult.Succeeded);
 
-            JsonElement capturedRecordValue = default ;
+            Assert.Equal(expectedHandle, describeRepoResult.Result.Handle);
+            Assert.Equal(expectedDid, describeRepoResult.Result.Did);
+            Assert.Equal(expectedDidDoc.Id, describeRepoResult.Result.DidDoc.Id);
+            Assert.Equal(expectedDidDoc.Context, describeRepoResult.Result.DidDoc.Context);
+            Assert.Equal(expectedDidDoc.Services, describeRepoResult.Result.DidDoc.Services);
+            Assert.Empty(expectedDidDoc.AlsoKnownAs);
+            Assert.Empty(expectedDidDoc.VerificationMethods);
+            Assert.NotEmpty(describeRepoResult.Result.DidDoc.Services);
+            Assert.Equal(expectedCollections, describeRepoResult.Result.Collections);
+            Assert.Equal(expectedHandleIsCorrect, describeRepoResult.Result.HandleIsCorrect);
+        }
+    }
 
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+    [Fact]
+    public async Task NotFoundRepoOnDescribeRepoReturnsCorrectError()
+    {
+        const string domainName = "test.invalid";
+        const string expectedHandle = "handle.test.invalid";
+
+        TestServer testServer = TestServerBuilder.CreateServer(domainName, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Path == AtProtoServer.DescribeRepoEndpoint &&
+                request.QueryString.HasValue &&
+                request.Query["repo"].FirstOrDefault() == expectedHandle)
             {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
+                response.StatusCode = 404;
 
-                if (request.Path == AtProtoServer.CreateRecordEndpoint)
-                {
-                    if (request.Headers.Authorization.Count != 1)
-                    {
-                        response.StatusCode = 401;
-                        return;
-                    }
+                AtErrorDetail errorDetail = new() { Error = "NotFound", Message = "Repo not found" };
 
-                    if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
-                    {
-                        response.StatusCode = 403;
-                        return;
-                    }
+                await response.WriteAsJsonAsync(value: errorDetail, jsonTypeInfo: AtProto.SourceGenerationContext.Default.AtErrorDetail);
+            }
+        });
 
-                    JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
+        using (var agent = new AtProtoAgent(
+            new Uri($"https://{domainName}"),
+            new TestHttpClientFactory(testServer)))
+        {
+            AtProtoHttpResult<RepoDescription> describeRepoResult = await agent.DescribeRepo(AtIdentifier.Create(expectedHandle), cancellationToken: TestContext.Current.CancellationToken);
 
-                    if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
+            Assert.False(describeRepoResult.Succeeded);
+            Assert.Equal(HttpStatusCode.NotFound, describeRepoResult.StatusCode);
+            Assert.NotNull(describeRepoResult.AtErrorDetail);
+            Assert.Equal("NotFound", describeRepoResult.AtErrorDetail.Error);
+            Assert.Equal("Repo not found", describeRepoResult.AtErrorDetail.Message);
+        }
+    }
 
-                    if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
+    [Fact]
+    public async Task ServerCallToCreateRecordSerializesTheRecordWithNoConfiguredTypeResolverCorrectly()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        RecordKey expectedRecordKey = TimestampIdentifier.Next();
+        AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
-                    if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid)
-                    {
-                        Commit = new (expectedCid, "revision"),
-                        ValidationStatus = "valid"
-                    };
-
-                    await response.WriteAsJsonAsync(serverDescription);
-                }
-            });
-
-
-            HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
-
-            TestRecord record = new() { TestValue = "test" };
-
-            AtProtoHttpResult<CreateRecordResult> response = await AtProtoServer.CreateRecord(
-                record: record,
-                collection: expectedCollection,
-                creator: expectedDid,
-                rKey: expectedRecordKey,
-                validate: true,
-                swapCommit : null,
+        AccessCredentials expectedCredentials = new(
                 service: TestServerBuilder.DefaultUri,
-                accessCredentials: expectedCredentials,
-                httpClient : httpClient,
-                cancellationToken: TestContext.Current.CancellationToken);
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
 
-            Assert.True(response.Succeeded);
+        JsonElement capturedRecordValue = default ;
 
-            Assert.Equal(expectedAtUri, response.Result.Uri);
-            Assert.Equal(expectedCid, response.Result.Cid);
-            Assert.NotNull(response.Result.Commit);
-            Assert.Equal(expectedCid, response.Result.Commit.Cid);
-            Assert.Equal("revision", response.Result.Commit.Rev);
-
-            Assert.Equal(ValidationStatus.Valid, response.Result.ValidationStatus);
-
-            Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
-        }
-
-        [Fact]
-        public async Task ServerCallToCreateRecordSerializesTheRecordWithConfiguredTypeResolverCorrectly()
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
         {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Next();
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
 
-            AccessCredentials expectedCredentials = new(
-                    service: TestServerBuilder.DefaultUri,
-                    authenticationType: AuthenticationType.UsernamePassword,
-                    accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
-                    refreshToken: "refreshToken");
-
-            JsonElement capturedRecordValue = default;
-
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+            if (request.Path == AtProtoServer.CreateRecordEndpoint)
             {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.CreateRecordEndpoint)
+                if (request.Headers.Authorization.Count != 1)
                 {
-                    if (request.Headers.Authorization.Count != 1)
-                    {
-                        response.StatusCode = 401;
-                        return;
-                    }
-
-                    if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
-                    {
-                        response.StatusCode = 403;
-                        return;
-                    }
-
-                    JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
-
-                    if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid)
-                    {
-                        Commit = new (expectedCid, "revision"),
-                        ValidationStatus = "valid"
-                    };
-                    await response.WriteAsJsonAsync(serverDescription);
+                    response.StatusCode = 401;
+                    return;
                 }
-            });
+
+                if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
+                {
+                    response.StatusCode = 403;
+                    return;
+                }
+
+                JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
+
+                if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                response.StatusCode = 200;
+                var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid)
+                {
+                    Commit = new (expectedCid, "revision"),
+                    ValidationStatus = "valid"
+                };
+
+                await response.WriteAsJsonAsync(serverDescription);
+            }
+        });
 
 
-            JsonSerializerOptions jsonSerializerOptions = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(SourceGenerationContext.Default);
+        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-            HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+        TestRecord record = new() { TestValue = "test" };
+
+        AtProtoHttpResult<CreateRecordResult> response = await AtProtoServer.CreateRecord(
+            record: record,
+            collection: expectedCollection,
+            creator: expectedDid,
+            rKey: expectedRecordKey,
+            validate: true,
+            swapCommit : null,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: expectedCredentials,
+            httpClient : httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(response.Succeeded);
+
+        Assert.Equal(expectedAtUri, response.Result.Uri);
+        Assert.Equal(expectedCid, response.Result.Cid);
+        Assert.NotNull(response.Result.Commit);
+        Assert.Equal(expectedCid, response.Result.Commit.Cid);
+        Assert.Equal("revision", response.Result.Commit.Rev);
+
+        Assert.Equal(ValidationStatus.Valid, response.Result.ValidationStatus);
+
+        Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
+    }
+
+    [Fact]
+    public async Task ServerCallToCreateRecordSerializesTheRecordWithConfiguredTypeResolverCorrectly()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        RecordKey expectedRecordKey = TimestampIdentifier.Next();
+        AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+        AccessCredentials expectedCredentials = new(
+                service: TestServerBuilder.DefaultUri,
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
+
+        JsonElement capturedRecordValue = default;
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Path == AtProtoServer.CreateRecordEndpoint)
+            {
+                if (request.Headers.Authorization.Count != 1)
+                {
+                    response.StatusCode = 401;
+                    return;
+                }
+
+                if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
+                {
+                    response.StatusCode = 403;
+                    return;
+                }
+
+                JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
+
+                if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                response.StatusCode = 200;
+                var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid)
+                {
+                    Commit = new (expectedCid, "revision"),
+                    ValidationStatus = "valid"
+                };
+                await response.WriteAsJsonAsync(serverDescription);
+            }
+        });
+
+
+        JsonSerializerOptions jsonSerializerOptions = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(SourceGenerationContext.Default);
+
+        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+        TestRecord record = new() { TestValue = "test" };
+
+        AtProtoHttpResult<CreateRecordResult> response = await AtProtoServer.CreateRecord(
+            record: record,
+            collection: expectedCollection,
+            creator: expectedDid,
+            rKey: expectedRecordKey,
+            validate: true,
+            swapCommit: null,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: expectedCredentials,
+            httpClient: httpClient,
+            jsonSerializerOptions: jsonSerializerOptions,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(response.Succeeded);
+
+        Assert.Equal(expectedAtUri, response.Result.Uri);
+        Assert.Equal(expectedCid, response.Result.Cid);
+        Assert.NotNull(response.Result.Commit);
+        Assert.Equal(expectedCid, response.Result.Commit.Cid);
+        Assert.Equal("revision", response.Result.Commit.Rev);
+
+        Assert.Equal(ValidationStatus.Valid, response.Result.ValidationStatus);
+
+        Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
+    }
+
+    [Fact]
+    public async Task AgentCallToCreateRecordSerializesTheRecordWithNoConfiguredTypeResolverCorrectly()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{TimestampIdentifier.Next()}");
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+        AccessCredentials expectedCredentials = new(
+                service: TestServerBuilder.DefaultUri,
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
+
+        JsonElement capturedRecordValue = default;
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Path == AtProtoServer.CreateRecordEndpoint)
+            {
+                if (request.Headers.Authorization.Count != 1)
+                {
+                    response.StatusCode = 401;
+                    return;
+                }
+
+                if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
+                {
+                    response.StatusCode = 403;
+                    return;
+                }
+
+                JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
+
+                if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                response.StatusCode = 200;
+                var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid)
+                {
+                    Commit = new(expectedCid, "revision"),
+                    ValidationStatus = "valid"
+                };
+
+                await response.WriteAsJsonAsync(serverDescription);
+            }
+        });
+
+        using (var agent = new AtProtoAgent(TestServerBuilder.DefaultUri, new TestHttpClientFactory(testServer)))
+        {
+            agent.Credentials = expectedCredentials;
 
             TestRecord record = new() { TestValue = "test" };
 
-            AtProtoHttpResult<CreateRecordResult> response = await AtProtoServer.CreateRecord(
+            AtProtoHttpResult<CreateRecordResult> response = await agent.CreateRecord(
                 record: record,
                 collection: expectedCollection,
-                creator: expectedDid,
-                rKey: expectedRecordKey,
                 validate: true,
                 swapCommit: null,
-                service: TestServerBuilder.DefaultUri,
-                accessCredentials: expectedCredentials,
-                httpClient: httpClient,
-                jsonSerializerOptions: jsonSerializerOptions,
                 cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(response.Succeeded);
@@ -321,311 +407,87 @@ namespace idunno.AtProto.Integration.Test
 
             Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
         }
+    }
 
-        [Fact]
-        public async Task AgentCallToCreateRecordSerializesTheRecordWithNoConfiguredTypeResolverCorrectly()
-        {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{TimestampIdentifier.Next()}");
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+    [Fact]
+    public async Task AgentCallToCreateRecordSerializesTheRecordWithConfiguredTypeResolverCorrectly()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{TimestampIdentifier.Next()}");
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
-            AccessCredentials expectedCredentials = new(
-                    service: TestServerBuilder.DefaultUri,
-                    authenticationType: AuthenticationType.UsernamePassword,
-                    accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
-                    refreshToken: "refreshToken");
-
-            JsonElement capturedRecordValue = default;
-
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
-            {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.CreateRecordEndpoint)
-                {
-                    if (request.Headers.Authorization.Count != 1)
-                    {
-                        response.StatusCode = 401;
-                        return;
-                    }
-
-                    if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
-                    {
-                        response.StatusCode = 403;
-                        return;
-                    }
-
-                    JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
-
-                    if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid)
-                    {
-                        Commit = new(expectedCid, "revision"),
-                        ValidationStatus = "valid"
-                    };
-
-                    await response.WriteAsJsonAsync(serverDescription);
-                }
-            });
-
-            using (var agent = new AtProtoAgent(TestServerBuilder.DefaultUri, new TestHttpClientFactory(testServer)))
-            {
-                agent.Credentials = expectedCredentials;
-
-                TestRecord record = new() { TestValue = "test" };
-
-                AtProtoHttpResult<CreateRecordResult> response = await agent.CreateRecord(
-                    record: record,
-                    collection: expectedCollection,
-                    validate: true,
-                    swapCommit: null,
-                    cancellationToken: TestContext.Current.CancellationToken);
-
-                Assert.True(response.Succeeded);
-
-                Assert.Equal(expectedAtUri, response.Result.Uri);
-                Assert.Equal(expectedCid, response.Result.Cid);
-                Assert.NotNull(response.Result.Commit);
-                Assert.Equal(expectedCid, response.Result.Commit.Cid);
-                Assert.Equal("revision", response.Result.Commit.Rev);
-
-                Assert.Equal(ValidationStatus.Valid, response.Result.ValidationStatus);
-
-                Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
-            }
-        }
-
-        [Fact]
-        public async Task AgentCallToCreateRecordSerializesTheRecordWithConfiguredTypeResolverCorrectly()
-        {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{TimestampIdentifier.Next()}");
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
-
-            AccessCredentials expectedCredentials = new(
-                    service: TestServerBuilder.DefaultUri,
-                    authenticationType: AuthenticationType.UsernamePassword,
-                    accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
-                    refreshToken: "refreshToken");
-
-            JsonElement capturedRecordValue = default;
-
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
-            {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.CreateRecordEndpoint)
-                {
-                    if (request.Headers.Authorization.Count != 1)
-                    {
-                        response.StatusCode = 401;
-                        return;
-                    }
-
-                    if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
-                    {
-                        response.StatusCode = 403;
-                        return;
-                    }
-
-                    JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
-
-                    if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid)
-                    {
-                        Commit = new (expectedCid, "revision"),
-                        ValidationStatus = "valid"
-                    };
-                    await response.WriteAsJsonAsync(serverDescription);
-                }
-            });
-
-            JsonOptions httpJsonOptions = new();
-            httpJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
-
-            using (var agent = new AtProtoAgent(
+        AccessCredentials expectedCredentials = new(
                 service: TestServerBuilder.DefaultUri,
-                httpClientFactory: new TestHttpClientFactory(testServer),
-                options: new()
-                {
-                    HttpJsonOptions = httpJsonOptions
-                }))
-            {
-                agent.Credentials = expectedCredentials;
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
 
-                TestRecord record = new() { TestValue = "test" };
+        JsonElement capturedRecordValue = default;
 
-                AtProtoHttpResult<CreateRecordResult> response = await agent.CreateRecord(
-                    record: record,
-                    collection: expectedCollection,
-                    validate: true,
-                    swapCommit: null,
-                    cancellationToken: TestContext.Current.CancellationToken);
-
-                Assert.True(response.Succeeded);
-
-                Assert.Equal(expectedAtUri, response.Result.Uri);
-                Assert.Equal(expectedCid, response.Result.Cid);
-                Assert.NotNull(response.Result.Commit);
-                Assert.Equal(expectedCid, response.Result.Commit.Cid);
-                Assert.Equal("revision", response.Result.Commit.Rev);
-
-                Assert.Equal(ValidationStatus.Valid, response.Result.ValidationStatus);
-
-                Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
-            }
-        }
-
-        [Fact]
-        public async Task UnauthenticatedAgentCallToCreateRecordThrowsAuthenticationRequiredException()
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
         {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{TimestampIdentifier.Next()}");
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
 
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+            if (request.Path == AtProtoServer.CreateRecordEndpoint)
             {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.CreateRecordEndpoint)
+                if (request.Headers.Authorization.Count != 1)
                 {
-                    response.StatusCode = 200;
-                    var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid)
-                    {
-                        Commit = new (expectedCid, "revision"),
-                        ValidationStatus = "valid"
-                    };
-
-                    await response.WriteAsJsonAsync(serverDescription);
+                    response.StatusCode = 401;
+                    return;
                 }
-            });
 
-            using (var agent = new AtProtoAgent(TestServerBuilder.DefaultUri, new TestHttpClientFactory(testServer)))
-            {
-                TestRecord record = new() { TestValue = "test" };
+                if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
+                {
+                    response.StatusCode = 403;
+                    return;
+                }
 
-                await Assert.ThrowsAsync<AuthenticationRequiredException>(() => agent.CreateRecord(
-                    record: record,
-                    collection: expectedCollection,
-                    validate: true,
-                    swapCommit: null,
-                    cancellationToken: TestContext.Current.CancellationToken));
+                JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
+
+                if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                response.StatusCode = 200;
+                var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid)
+                {
+                    Commit = new (expectedCid, "revision"),
+                    ValidationStatus = "valid"
+                };
+                await response.WriteAsJsonAsync(serverDescription);
             }
-        }
+        });
 
-        [Fact]
-        public async Task ServerCallToPutRecordValueWithNoConfiguredTypeResolverSerializesTheRecordValueCorrectly()
-        {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Next();
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+        JsonOptions httpJsonOptions = new();
+        httpJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
 
-            AccessCredentials expectedCredentials = new(
-                    service: TestServerBuilder.DefaultUri,
-                    authenticationType: AuthenticationType.UsernamePassword,
-                    accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
-                    refreshToken: "refreshToken");
-
-            JsonElement capturedRecordValue = default;
-
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        using (var agent = new AtProtoAgent(
+            service: TestServerBuilder.DefaultUri,
+            httpClientFactory: new TestHttpClientFactory(testServer),
+            options: new()
             {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.PutRecordEndpoint)
-                {
-                    if (request.Headers.Authorization.Count != 1)
-                    {
-                        response.StatusCode = 401;
-                        return;
-                    }
-
-                    if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
-                    {
-                        response.StatusCode = 403;
-                        return;
-                    }
-
-                    JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
-
-                    if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
-                    {
-                        Commit = new(expectedCid, "revision"),
-                        ValidationStatus = "valid"
-                    };
-
-                    await response.WriteAsJsonAsync(serverDescription);
-                }
-            });
-
-
-            HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+                HttpJsonOptions = httpJsonOptions
+            }))
+        {
+            agent.Credentials = expectedCredentials;
 
             TestRecord record = new() { TestValue = "test" };
 
-            AtProtoHttpResult<PutRecordResult> response = await AtProtoServer.PutRecord(
+            AtProtoHttpResult<CreateRecordResult> response = await agent.CreateRecord(
                 record: record,
                 collection: expectedCollection,
-                creator: expectedDid,
-                rKey: expectedRecordKey,
                 validate: true,
                 swapCommit: null,
-                swapRecord: null,
-                service: TestServerBuilder.DefaultUri,
-                accessCredentials: expectedCredentials,
-                httpClient: httpClient,
                 cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(response.Succeeded);
@@ -640,387 +502,323 @@ namespace idunno.AtProto.Integration.Test
 
             Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
         }
+    }
 
-        [Fact]
-        public async Task ServerCallToPutRecordValueWithConfiguredTypeResolverSerializesTheRecordValueCorrectly()
+    [Fact]
+    public async Task UnauthenticatedAgentCallToCreateRecordThrowsAuthenticationRequiredException()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{TimestampIdentifier.Next()}");
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
         {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Next();
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
 
-            AccessCredentials expectedCredentials = new(
-                    service: TestServerBuilder.DefaultUri,
-                    authenticationType: AuthenticationType.UsernamePassword,
-                    accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
-                    refreshToken: "refreshToken");
-
-            JsonElement capturedRecordValue = default;
-
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+            if (request.Path == AtProtoServer.CreateRecordEndpoint)
             {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.PutRecordEndpoint)
+                response.StatusCode = 200;
+                var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid)
                 {
-                    if (request.Headers.Authorization.Count != 1)
-                    {
-                        response.StatusCode = 401;
-                        return;
-                    }
+                    Commit = new (expectedCid, "revision"),
+                    ValidationStatus = "valid"
+                };
 
-                    if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
-                    {
-                        response.StatusCode = 403;
-                        return;
-                    }
-
-                    JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
-
-                    if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
-                    {
-                        Commit = new(expectedCid, "revision"),
-                        ValidationStatus = "valid"
-                    };
-
-                    await response.WriteAsJsonAsync(serverDescription);
-                }
-            });
-
-
-            HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
-
-            JsonSerializerOptions jsonSerializerOptions = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(SourceGenerationContext.Default);
-            TestRecord record = new() { TestValue = "test" };
-
-            AtProtoHttpResult<PutRecordResult> response = await AtProtoServer.PutRecord(
-                record: record,
-                collection: expectedCollection,
-                creator: expectedDid,
-                rKey: expectedRecordKey,
-                validate: true,
-                swapCommit: null,
-                swapRecord: null,
-                service: TestServerBuilder.DefaultUri,
-                accessCredentials: expectedCredentials,
-                httpClient: httpClient,
-                jsonSerializerOptions: jsonSerializerOptions,
-                cancellationToken: TestContext.Current.CancellationToken);
-
-            Assert.True(response.Succeeded);
-
-            Assert.Equal(expectedAtUri, response.Result.Uri);
-            Assert.Equal(expectedCid, response.Result.Cid);
-            Assert.NotNull(response.Result.Commit);
-            Assert.Equal(expectedCid, response.Result.Commit.Cid);
-            Assert.Equal("revision", response.Result.Commit.Rev);
-
-            Assert.Equal(ValidationStatus.Valid, response.Result.ValidationStatus);
-
-            Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
-        }
-
-        [Fact]
-        public async Task AgentCallToPutRecordValueSerializesTheRecordValueWithNoConfiguredTypeResolverCorrectly()
-        {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Next();
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
-
-            AccessCredentials expectedCredentials = new(
-                    service: TestServerBuilder.DefaultUri,
-                    authenticationType: AuthenticationType.UsernamePassword,
-                    accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
-                    refreshToken: "refreshToken");
-
-            JsonElement capturedRecordValue = default;
-
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
-            {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.PutRecordEndpoint)
-                {
-                    if (request.Headers.Authorization.Count != 1)
-                    {
-                        response.StatusCode = 401;
-                        return;
-                    }
-
-                    if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
-                    {
-                        response.StatusCode = 403;
-                        return;
-                    }
-
-                    JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
-
-                    if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
-                    {
-                        Commit = new(expectedCid, "revision"),
-                        ValidationStatus = "valid"
-                    };
-
-                    await response.WriteAsJsonAsync(serverDescription);
-                }
-            });
-
-            using (var agent = new AtProtoAgent(TestServerBuilder.DefaultUri, new TestHttpClientFactory(testServer)))
-            {
-                agent.Credentials = expectedCredentials;
-
-                TestRecord record = new() { TestValue = "test" };
-
-                AtProtoHttpResult<PutRecordResult> response = await agent.PutRecord(
-                    record: record,
-                    collection: expectedCollection,
-                    rKey: expectedRecordKey,
-                    validate: true,
-                    cancellationToken: TestContext.Current.CancellationToken);
-
-                Assert.True(response.Succeeded);
-
-                Assert.Equal(expectedAtUri, response.Result.Uri);
-                Assert.Equal(expectedCid, response.Result.Cid);
-                Assert.NotNull(response.Result.Commit);
-                Assert.Equal(expectedCid, response.Result.Commit.Cid);
-                Assert.Equal("revision", response.Result.Commit.Rev);
-
-                Assert.Equal(ValidationStatus.Valid, response.Result.ValidationStatus);
-
-                Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
+                await response.WriteAsJsonAsync(serverDescription);
             }
-        }
+        });
 
-        [Fact]
-        public async Task AgentCallToPutRecordValueSerializesTheRecordValueWithConfiguredTypeResolverCorrectly()
+        using (var agent = new AtProtoAgent(TestServerBuilder.DefaultUri, new TestHttpClientFactory(testServer)))
         {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Next();
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+            TestRecord record = new() { TestValue = "test" };
 
-            AccessCredentials expectedCredentials = new(
-                    service: TestServerBuilder.DefaultUri,
-                    authenticationType: AuthenticationType.UsernamePassword,
-                    accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
-                    refreshToken: "refreshToken");
+            await Assert.ThrowsAsync<AuthenticationRequiredException>(() => agent.CreateRecord(
+                record: record,
+                collection: expectedCollection,
+                validate: true,
+                swapCommit: null,
+                cancellationToken: TestContext.Current.CancellationToken));
+        }
+    }
 
-            JsonElement capturedRecordValue = default;
+    [Fact]
+    public async Task ServerCallToPutRecordValueWithNoConfiguredTypeResolverSerializesTheRecordValueCorrectly()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        RecordKey expectedRecordKey = TimestampIdentifier.Next();
+        AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
-            {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.PutRecordEndpoint)
-                {
-                    if (request.Headers.Authorization.Count != 1)
-                    {
-                        response.StatusCode = 401;
-                        return;
-                    }
-
-                    if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
-                    {
-                        response.StatusCode = 403;
-                        return;
-                    }
-
-                    JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
-
-                    if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
-                    {
-                        Commit = new(expectedCid, "revision"),
-                        ValidationStatus = "valid"
-                    };
-
-                    await response.WriteAsJsonAsync(serverDescription);
-                }
-            });
-
-            JsonOptions httpJsonOptions = new();
-            httpJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
-
-            using (var agent = new AtProtoAgent(
+        AccessCredentials expectedCredentials = new(
                 service: TestServerBuilder.DefaultUri,
-                httpClientFactory: new TestHttpClientFactory(testServer),
-                options: new()
-                {
-                    HttpJsonOptions = httpJsonOptions
-                }))
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
+
+        JsonElement capturedRecordValue = default;
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Path == AtProtoServer.PutRecordEndpoint)
             {
-                agent.Credentials = expectedCredentials;
+                if (request.Headers.Authorization.Count != 1)
+                {
+                    response.StatusCode = 401;
+                    return;
+                }
 
-                TestRecord record = new() { TestValue = "test" };
+                if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
+                {
+                    response.StatusCode = 403;
+                    return;
+                }
 
-                AtProtoHttpResult<PutRecordResult> response = await agent.PutRecord(
-                    record: record,
-                    collection: expectedCollection,
-                    rKey: expectedRecordKey,
-                    validate: true,
-                    cancellationToken: TestContext.Current.CancellationToken);
+                JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
 
-                Assert.True(response.Succeeded);
+                if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
 
-                Assert.Equal(expectedAtUri, response.Result.Uri);
-                Assert.Equal(expectedCid, response.Result.Cid);
-                Assert.NotNull(response.Result.Commit);
-                Assert.Equal(expectedCid, response.Result.Commit.Cid);
-                Assert.Equal("revision", response.Result.Commit.Rev);
+                if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
 
-                Assert.Equal(ValidationStatus.Valid, response.Result.ValidationStatus);
+                if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
 
-                Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
+                response.StatusCode = 200;
+                var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                {
+                    Commit = new(expectedCid, "revision"),
+                    ValidationStatus = "valid"
+                };
+
+                await response.WriteAsJsonAsync(serverDescription);
             }
-        }
+        });
 
-        [Fact]
-        public async Task ServerCallToPutTypedRecordSerializesTheRecordValueWithNoConfiguredTypeResolverCorrectly()
+
+        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+        TestRecord record = new() { TestValue = "test" };
+
+        AtProtoHttpResult<PutRecordResult> response = await AtProtoServer.PutRecord(
+            record: record,
+            collection: expectedCollection,
+            creator: expectedDid,
+            rKey: expectedRecordKey,
+            validate: true,
+            swapCommit: null,
+            swapRecord: null,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: expectedCredentials,
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(response.Succeeded);
+
+        Assert.Equal(expectedAtUri, response.Result.Uri);
+        Assert.Equal(expectedCid, response.Result.Cid);
+        Assert.NotNull(response.Result.Commit);
+        Assert.Equal(expectedCid, response.Result.Commit.Cid);
+        Assert.Equal("revision", response.Result.Commit.Rev);
+
+        Assert.Equal(ValidationStatus.Valid, response.Result.ValidationStatus);
+
+        Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
+    }
+
+    [Fact]
+    public async Task ServerCallToPutRecordValueWithConfiguredTypeResolverSerializesTheRecordValueCorrectly()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        RecordKey expectedRecordKey = TimestampIdentifier.Next();
+        AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+        AccessCredentials expectedCredentials = new(
+                service: TestServerBuilder.DefaultUri,
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
+
+        JsonElement capturedRecordValue = default;
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
         {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Next();
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
 
-            AccessCredentials expectedCredentials = new(
-                    service: TestServerBuilder.DefaultUri,
-                    authenticationType: AuthenticationType.UsernamePassword,
-                    accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
-                    refreshToken: "refreshToken");
-
-            JsonElement capturedRecordValue = default;
-
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+            if (request.Path == AtProtoServer.PutRecordEndpoint)
             {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.PutRecordEndpoint)
+                if (request.Headers.Authorization.Count != 1)
                 {
-                    if (request.Headers.Authorization.Count != 1)
-                    {
-                        response.StatusCode = 401;
-                        return;
-                    }
-
-                    if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
-                    {
-                        response.StatusCode = 403;
-                        return;
-                    }
-
-                    JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
-
-                    if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
-                    {
-                        Commit = new(expectedCid, "revision"),
-                        ValidationStatus = "valid"
-                    };
-
-                    await response.WriteAsJsonAsync(serverDescription);
+                    response.StatusCode = 401;
+                    return;
                 }
-            });
+
+                if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
+                {
+                    response.StatusCode = 403;
+                    return;
+                }
+
+                JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
+
+                if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                response.StatusCode = 200;
+                var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                {
+                    Commit = new(expectedCid, "revision"),
+                    ValidationStatus = "valid"
+                };
+
+                await response.WriteAsJsonAsync(serverDescription);
+            }
+        });
 
 
-            HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+        JsonSerializerOptions jsonSerializerOptions = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(SourceGenerationContext.Default);
+        TestRecord record = new() { TestValue = "test" };
+
+        AtProtoHttpResult<PutRecordResult> response = await AtProtoServer.PutRecord(
+            record: record,
+            collection: expectedCollection,
+            creator: expectedDid,
+            rKey: expectedRecordKey,
+            validate: true,
+            swapCommit: null,
+            swapRecord: null,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: expectedCredentials,
+            httpClient: httpClient,
+            jsonSerializerOptions: jsonSerializerOptions,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(response.Succeeded);
+
+        Assert.Equal(expectedAtUri, response.Result.Uri);
+        Assert.Equal(expectedCid, response.Result.Cid);
+        Assert.NotNull(response.Result.Commit);
+        Assert.Equal(expectedCid, response.Result.Commit.Cid);
+        Assert.Equal("revision", response.Result.Commit.Rev);
+
+        Assert.Equal(ValidationStatus.Valid, response.Result.ValidationStatus);
+
+        Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
+    }
+
+    [Fact]
+    public async Task AgentCallToPutRecordValueSerializesTheRecordValueWithNoConfiguredTypeResolverCorrectly()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        RecordKey expectedRecordKey = TimestampIdentifier.Next();
+        AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+        AccessCredentials expectedCredentials = new(
+                service: TestServerBuilder.DefaultUri,
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
+
+        JsonElement capturedRecordValue = default;
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Path == AtProtoServer.PutRecordEndpoint)
+            {
+                if (request.Headers.Authorization.Count != 1)
+                {
+                    response.StatusCode = 401;
+                    return;
+                }
+
+                if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
+                {
+                    response.StatusCode = 403;
+                    return;
+                }
+
+                JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
+
+                if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                response.StatusCode = 200;
+                var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                {
+                    Commit = new(expectedCid, "revision"),
+                    ValidationStatus = "valid"
+                };
+
+                await response.WriteAsJsonAsync(serverDescription);
+            }
+        });
+
+        using (var agent = new AtProtoAgent(TestServerBuilder.DefaultUri, new TestHttpClientFactory(testServer)))
+        {
+            agent.Credentials = expectedCredentials;
 
             TestRecord record = new() { TestValue = "test" };
 
-            AtProtoHttpResult<PutRecordResult> response = await AtProtoServer.PutRecord<TestRecord>(
+            AtProtoHttpResult<PutRecordResult> response = await agent.PutRecord(
                 record: record,
                 collection: expectedCollection,
-                creator: expectedDid,
                 rKey: expectedRecordKey,
                 validate: true,
-                swapCommit: null,
-                swapRecord: null,
-                service: TestServerBuilder.DefaultUri,
-                accessCredentials: expectedCredentials,
-                httpClient: httpClient,
                 cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(response.Succeeded);
@@ -1035,188 +833,95 @@ namespace idunno.AtProto.Integration.Test
 
             Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
         }
+    }
 
-        [Fact]
-        public async Task ServerCallToPutRepositoryRecordSerializesTheRecordValueWithNoConfiguredTypeResolverCorrectly()
-        {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Next();
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+    [Fact]
+    public async Task AgentCallToPutRecordValueSerializesTheRecordValueWithConfiguredTypeResolverCorrectly()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        RecordKey expectedRecordKey = TimestampIdentifier.Next();
+        AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
 
-            AccessCredentials expectedCredentials = new(
-                    service: TestServerBuilder.DefaultUri,
-                    authenticationType: AuthenticationType.UsernamePassword,
-                    accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
-                    refreshToken: "refreshToken");
-
-            JsonElement capturedRecordValue = default;
-
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
-            {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.PutRecordEndpoint)
-                {
-                    if (request.Headers.Authorization.Count != 1)
-                    {
-                        response.StatusCode = 401;
-                        return;
-                    }
-
-                    if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
-                    {
-                        response.StatusCode = 403;
-                        return;
-                    }
-
-                    JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
-
-                    if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
-                    {
-                        Commit = new(expectedCid, "revision"),
-                        ValidationStatus = "valid"
-                    };
-
-                    await response.WriteAsJsonAsync(serverDescription);
-                }
-            });
-
-
-            HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
-
-            TestRecord record = new() { TestValue = "test" };
-            AtProtoRepositoryRecord<TestRecord> repositoryRecord = new(expectedAtUri, expectedCid, record);
-
-
-            AtProtoHttpResult<PutRecordResult> response = await AtProtoServer.PutRecord(
-                repositoryRecord: repositoryRecord,
-                validate: true,
+        AccessCredentials expectedCredentials = new(
                 service: TestServerBuilder.DefaultUri,
-                accessCredentials: expectedCredentials,
-                httpClient: httpClient,
-                cancellationToken: TestContext.Current.CancellationToken);
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
 
-            Assert.True(response.Succeeded);
+        JsonElement capturedRecordValue = default;
 
-            Assert.Equal(expectedAtUri, response.Result.Uri);
-            Assert.Equal(expectedCid, response.Result.Cid);
-            Assert.NotNull(response.Result.Commit);
-            Assert.Equal(expectedCid, response.Result.Commit.Cid);
-            Assert.Equal("revision", response.Result.Commit.Rev);
-
-            Assert.Equal(ValidationStatus.Valid, response.Result.ValidationStatus);
-
-            Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
-        }
-
-        [Fact]
-        public async Task ServerCallToPutTypedRecordSerializesTheRecordValueWithConfiguredTypeResolverCorrectly()
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
         {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Next();
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
 
-            AccessCredentials expectedCredentials = new(
-                    service: TestServerBuilder.DefaultUri,
-                    authenticationType: AuthenticationType.UsernamePassword,
-                    accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
-                    refreshToken: "refreshToken");
-
-            JsonElement capturedRecordValue = default;
-
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+            if (request.Path == AtProtoServer.PutRecordEndpoint)
             {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.PutRecordEndpoint)
+                if (request.Headers.Authorization.Count != 1)
                 {
-                    if (request.Headers.Authorization.Count != 1)
-                    {
-                        response.StatusCode = 401;
-                        return;
-                    }
-
-                    if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
-                    {
-                        response.StatusCode = 403;
-                        return;
-                    }
-
-                    JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
-
-                    if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
-                    {
-                        Commit = new(expectedCid, "revision"),
-                        ValidationStatus = "valid"
-                    };
-
-                    await response.WriteAsJsonAsync(serverDescription);
+                    response.StatusCode = 401;
+                    return;
                 }
-            });
 
+                if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
+                {
+                    response.StatusCode = 403;
+                    return;
+                }
 
-            HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+                JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
 
-            JsonSerializerOptions jsonSerializerOptions = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(SourceGenerationContext.Default);
+                if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                response.StatusCode = 200;
+                var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                {
+                    Commit = new(expectedCid, "revision"),
+                    ValidationStatus = "valid"
+                };
+
+                await response.WriteAsJsonAsync(serverDescription);
+            }
+        });
+
+        JsonOptions httpJsonOptions = new();
+        httpJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
+
+        using (var agent = new AtProtoAgent(
+            service: TestServerBuilder.DefaultUri,
+            httpClientFactory: new TestHttpClientFactory(testServer),
+            options: new()
+            {
+                HttpJsonOptions = httpJsonOptions
+            }))
+        {
+            agent.Credentials = expectedCredentials;
 
             TestRecord record = new() { TestValue = "test" };
 
-            AtProtoHttpResult<PutRecordResult> response = await AtProtoServer.PutRecord(
+            AtProtoHttpResult<PutRecordResult> response = await agent.PutRecord(
                 record: record,
                 collection: expectedCollection,
-                creator: expectedDid,
                 rKey: expectedRecordKey,
                 validate: true,
-                swapCommit: null,
-                swapRecord: null,
-                service: TestServerBuilder.DefaultUri,
-                accessCredentials: expectedCredentials,
-                httpClient: httpClient,
-                jsonSerializerOptions: jsonSerializerOptions,
                 cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(response.Succeeded);
@@ -1231,275 +936,685 @@ namespace idunno.AtProto.Integration.Test
 
             Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
         }
+    }
 
-        [Fact]
-        public async Task ServerCallToPutRepositoryRecordSerializesTheRecordValueWithConfiguredTypeResolverCorrectly()
+    [Fact]
+    public async Task ServerCallToPutTypedRecordSerializesTheRecordValueWithNoConfiguredTypeResolverCorrectly()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        RecordKey expectedRecordKey = TimestampIdentifier.Next();
+        AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+        AccessCredentials expectedCredentials = new(
+                service: TestServerBuilder.DefaultUri,
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
+
+        JsonElement capturedRecordValue = default;
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
         {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Next();
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
 
-            AccessCredentials expectedCredentials = new(
-                    service: TestServerBuilder.DefaultUri,
-                    authenticationType: AuthenticationType.UsernamePassword,
-                    accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
-                    refreshToken: "refreshToken");
-
-            JsonElement capturedRecordValue = default;
-
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+            if (request.Path == AtProtoServer.PutRecordEndpoint)
             {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.PutRecordEndpoint)
+                if (request.Headers.Authorization.Count != 1)
                 {
-                    if (request.Headers.Authorization.Count != 1)
-                    {
-                        response.StatusCode = 401;
-                        return;
-                    }
-
-                    if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
-                    {
-                        response.StatusCode = 403;
-                        return;
-                    }
-
-                    JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
-
-                    if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
-                    {
-                        response.StatusCode = 500;
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
-                    {
-                        Commit = new(expectedCid, "revision"),
-                        ValidationStatus = "valid"
-                    };
-
-                    await response.WriteAsJsonAsync(serverDescription);
+                    response.StatusCode = 401;
+                    return;
                 }
-            });
+
+                if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
+                {
+                    response.StatusCode = 403;
+                    return;
+                }
+
+                JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
+
+                if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                response.StatusCode = 200;
+                var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                {
+                    Commit = new(expectedCid, "revision"),
+                    ValidationStatus = "valid"
+                };
+
+                await response.WriteAsJsonAsync(serverDescription);
+            }
+        });
 
 
-            HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
 
-            JsonSerializerOptions jsonSerializerOptions = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(SourceGenerationContext.Default);
+        TestRecord record = new() { TestValue = "test" };
 
+        AtProtoHttpResult<PutRecordResult> response = await AtProtoServer.PutRecord<TestRecord>(
+            record: record,
+            collection: expectedCollection,
+            creator: expectedDid,
+            rKey: expectedRecordKey,
+            validate: true,
+            swapCommit: null,
+            swapRecord: null,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: expectedCredentials,
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(response.Succeeded);
+
+        Assert.Equal(expectedAtUri, response.Result.Uri);
+        Assert.Equal(expectedCid, response.Result.Cid);
+        Assert.NotNull(response.Result.Commit);
+        Assert.Equal(expectedCid, response.Result.Commit.Cid);
+        Assert.Equal("revision", response.Result.Commit.Rev);
+
+        Assert.Equal(ValidationStatus.Valid, response.Result.ValidationStatus);
+
+        Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
+    }
+
+    [Fact]
+    public async Task ServerCallToPutRepositoryRecordSerializesTheRecordValueWithNoConfiguredTypeResolverCorrectly()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        RecordKey expectedRecordKey = TimestampIdentifier.Next();
+        AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+        AccessCredentials expectedCredentials = new(
+                service: TestServerBuilder.DefaultUri,
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
+
+        JsonElement capturedRecordValue = default;
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Path == AtProtoServer.PutRecordEndpoint)
+            {
+                if (request.Headers.Authorization.Count != 1)
+                {
+                    response.StatusCode = 401;
+                    return;
+                }
+
+                if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
+                {
+                    response.StatusCode = 403;
+                    return;
+                }
+
+                JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
+
+                if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                response.StatusCode = 200;
+                var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                {
+                    Commit = new(expectedCid, "revision"),
+                    ValidationStatus = "valid"
+                };
+
+                await response.WriteAsJsonAsync(serverDescription);
+            }
+        });
+
+
+        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+        TestRecord record = new() { TestValue = "test" };
+        AtProtoRepositoryRecord<TestRecord> repositoryRecord = new(expectedAtUri, expectedCid, record);
+
+
+        AtProtoHttpResult<PutRecordResult> response = await AtProtoServer.PutRecord(
+            repositoryRecord: repositoryRecord,
+            validate: true,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: expectedCredentials,
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(response.Succeeded);
+
+        Assert.Equal(expectedAtUri, response.Result.Uri);
+        Assert.Equal(expectedCid, response.Result.Cid);
+        Assert.NotNull(response.Result.Commit);
+        Assert.Equal(expectedCid, response.Result.Commit.Cid);
+        Assert.Equal("revision", response.Result.Commit.Rev);
+
+        Assert.Equal(ValidationStatus.Valid, response.Result.ValidationStatus);
+
+        Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
+    }
+
+    [Fact]
+    public async Task ServerCallToPutTypedRecordSerializesTheRecordValueWithConfiguredTypeResolverCorrectly()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        RecordKey expectedRecordKey = TimestampIdentifier.Next();
+        AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+        AccessCredentials expectedCredentials = new(
+                service: TestServerBuilder.DefaultUri,
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
+
+        JsonElement capturedRecordValue = default;
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Path == AtProtoServer.PutRecordEndpoint)
+            {
+                if (request.Headers.Authorization.Count != 1)
+                {
+                    response.StatusCode = 401;
+                    return;
+                }
+
+                if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
+                {
+                    response.StatusCode = 403;
+                    return;
+                }
+
+                JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
+
+                if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                response.StatusCode = 200;
+                var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                {
+                    Commit = new(expectedCid, "revision"),
+                    ValidationStatus = "valid"
+                };
+
+                await response.WriteAsJsonAsync(serverDescription);
+            }
+        });
+
+
+        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+        JsonSerializerOptions jsonSerializerOptions = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(SourceGenerationContext.Default);
+
+        TestRecord record = new() { TestValue = "test" };
+
+        AtProtoHttpResult<PutRecordResult> response = await AtProtoServer.PutRecord(
+            record: record,
+            collection: expectedCollection,
+            creator: expectedDid,
+            rKey: expectedRecordKey,
+            validate: true,
+            swapCommit: null,
+            swapRecord: null,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: expectedCredentials,
+            httpClient: httpClient,
+            jsonSerializerOptions: jsonSerializerOptions,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(response.Succeeded);
+
+        Assert.Equal(expectedAtUri, response.Result.Uri);
+        Assert.Equal(expectedCid, response.Result.Cid);
+        Assert.NotNull(response.Result.Commit);
+        Assert.Equal(expectedCid, response.Result.Commit.Cid);
+        Assert.Equal("revision", response.Result.Commit.Rev);
+
+        Assert.Equal(ValidationStatus.Valid, response.Result.ValidationStatus);
+
+        Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
+    }
+
+    [Fact]
+    public async Task ServerCallToPutRepositoryRecordSerializesTheRecordValueWithConfiguredTypeResolverCorrectly()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        RecordKey expectedRecordKey = TimestampIdentifier.Next();
+        AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+        AccessCredentials expectedCredentials = new(
+                service: TestServerBuilder.DefaultUri,
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
+
+        JsonElement capturedRecordValue = default;
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Path == AtProtoServer.PutRecordEndpoint)
+            {
+                if (request.Headers.Authorization.Count != 1)
+                {
+                    response.StatusCode = 401;
+                    return;
+                }
+
+                if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
+                {
+                    response.StatusCode = 403;
+                    return;
+                }
+
+                JsonDocument? bodyAsJson = await JsonSerializer.DeserializeAsync<JsonDocument>(request.Body);
+
+                if (bodyAsJson is null || !bodyAsJson.RootElement.TryGetProperty("record", out capturedRecordValue))
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("repo", out JsonElement repo) || repo.GetString() != expectedDid.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                if (!bodyAsJson.RootElement.TryGetProperty("rkey", out JsonElement rkey) || rkey.GetString() != expectedRecordKey.ToString())
+                {
+                    response.StatusCode = 500;
+                    return;
+                }
+
+                response.StatusCode = 200;
+                var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                {
+                    Commit = new(expectedCid, "revision"),
+                    ValidationStatus = "valid"
+                };
+
+                await response.WriteAsJsonAsync(serverDescription);
+            }
+        });
+
+
+        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+        JsonSerializerOptions jsonSerializerOptions = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(SourceGenerationContext.Default);
+
+        TestRecord record = new() { TestValue = "test" };
+        AtProtoRepositoryRecord<TestRecord> wrappedRecord = new(expectedAtUri, expectedCid, record);
+
+        AtProtoHttpResult<PutRecordResult> response = await AtProtoServer.PutRecord(
+            repositoryRecord: wrappedRecord,
+            validate: true,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: expectedCredentials,
+            httpClient: httpClient,
+            jsonSerializerOptions: jsonSerializerOptions,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(response.Succeeded);
+
+        Assert.Equal(expectedAtUri, response.Result.Uri);
+        Assert.Equal(expectedCid, response.Result.Cid);
+        Assert.NotNull(response.Result.Commit);
+        Assert.Equal(expectedCid, response.Result.Commit.Cid);
+        Assert.Equal("revision", response.Result.Commit.Rev);
+
+        Assert.Equal(ValidationStatus.Valid, response.Result.ValidationStatus);
+
+        Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
+    }
+
+    [Fact]
+    public async Task UnauthenticatedAgentCallToPutRecordThrowsAuthenticationRequiredException()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{TimestampIdentifier.Next()}");
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Path == AtProtoServer.CreateRecordEndpoint)
+            {
+                response.StatusCode = 200;
+                var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                {
+                    Commit = new(expectedCid, "revision"),
+                    ValidationStatus = "valid"
+                };
+
+                await response.WriteAsJsonAsync(serverDescription);
+            }
+        });
+
+        using (var agent = new AtProtoAgent(TestServerBuilder.DefaultUri, new TestHttpClientFactory(testServer)))
+        {
+            TestRecord record = new() { TestValue = "test" };
+
+            await Assert.ThrowsAsync<AuthenticationRequiredException>(() => agent.PutRecord(
+                record: record,
+                collection: expectedCollection,
+                rKey: expectedAtUri.RecordKey!,
+                validate: true,
+                swapCommit: null,
+                cancellationToken: TestContext.Current.CancellationToken));
+        }
+    }
+
+    [Fact]
+    public async Task UnauthenticatedAgentCallToPutRepositoryRecordThrowsAuthenticationRequiredException()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        RecordKey expectedRecordKey = TimestampIdentifier.Next();
+        AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Path == AtProtoServer.CreateRecordEndpoint)
+            {
+                response.StatusCode = 200;
+                var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
+                {
+                    Commit = new(expectedCid, "revision"),
+                    ValidationStatus = "valid"
+                };
+
+                await response.WriteAsJsonAsync(serverDescription);
+            }
+        });
+
+
+        using (var agent = new AtProtoAgent(TestServerBuilder.DefaultUri, new TestHttpClientFactory(testServer)))
+        {
             TestRecord record = new() { TestValue = "test" };
             AtProtoRepositoryRecord<TestRecord> wrappedRecord = new(expectedAtUri, expectedCid, record);
 
-            AtProtoHttpResult<PutRecordResult> response = await AtProtoServer.PutRecord(
+            await Assert.ThrowsAsync<AuthenticationRequiredException>(() => agent.PutRecord(
                 repositoryRecord: wrappedRecord,
                 validate: true,
+                cancellationToken: TestContext.Current.CancellationToken));
+        }
+    }
+
+    [Fact]
+    public async Task ServerCallToListRecordsWithResolverChainDeserializesCorrectly()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+        const string jsonReturnValue = """
+        {
+          "cursor": "cursor",
+          "records": [
+            {
+              "uri": "at://did:plc:test/blue.idunno.test/rkey1",
+              "cid": "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
+              "value": {
+                  "testValue": "1"
+              }
+            },
+            {
+              "uri": "at://did:plc:test/blue.idunno.test/rkey2",
+              "cid": "bafyreih3stxgsbceqcredadhol7tlhhpbpjcssqnbzwiukexkqh3mjmblu",
+              "value": {
+                  "testValue": "2"
+              }
+            }
+          ]
+        }
+        """;
+
+        AccessCredentials expectedCredentials = new(
                 service: TestServerBuilder.DefaultUri,
-                accessCredentials: expectedCredentials,
-                httpClient: httpClient,
-                jsonSerializerOptions: jsonSerializerOptions,
-                cancellationToken: TestContext.Current.CancellationToken);
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
 
-            Assert.True(response.Succeeded);
-
-            Assert.Equal(expectedAtUri, response.Result.Uri);
-            Assert.Equal(expectedCid, response.Result.Cid);
-            Assert.NotNull(response.Result.Commit);
-            Assert.Equal(expectedCid, response.Result.Commit.Cid);
-            Assert.Equal("revision", response.Result.Commit.Rev);
-
-            Assert.Equal(ValidationStatus.Valid, response.Result.ValidationStatus);
-
-            Assert.Equal("{\"testValue\":\"test\"}", capturedRecordValue.ToString());
-        }
-
-        [Fact]
-        public async Task UnauthenticatedAgentCallToPutRecordThrowsAuthenticationRequiredException()
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
         {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{TimestampIdentifier.Next()}");
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
 
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+            if (request.Path == AtProtoServer.ListRecordsEndpoint)
             {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.CreateRecordEndpoint)
+                if (request.Headers.Authorization.Count != 1)
                 {
-                    response.StatusCode = 200;
-                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
-                    {
-                        Commit = new(expectedCid, "revision"),
-                        ValidationStatus = "valid"
-                    };
-
-                    await response.WriteAsJsonAsync(serverDescription);
-                }
-            });
-
-            using (var agent = new AtProtoAgent(TestServerBuilder.DefaultUri, new TestHttpClientFactory(testServer)))
-            {
-                TestRecord record = new() { TestValue = "test" };
-
-                await Assert.ThrowsAsync<AuthenticationRequiredException>(() => agent.PutRecord(
-                    record: record,
-                    collection: expectedCollection,
-                    rKey: expectedAtUri.RecordKey!,
-                    validate: true,
-                    swapCommit: null,
-                    cancellationToken: TestContext.Current.CancellationToken));
-            }
-        }
-
-        [Fact]
-        public async Task UnauthenticatedAgentCallToPutRepositoryRecordThrowsAuthenticationRequiredException()
-        {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = TimestampIdentifier.Next();
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
-
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
-            {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.CreateRecordEndpoint)
-                {
-                    response.StatusCode = 200;
-                    var serverDescription = new PutRecordResponse(expectedAtUri, expectedCid)
-                    {
-                        Commit = new(expectedCid, "revision"),
-                        ValidationStatus = "valid"
-                    };
-
-                    await response.WriteAsJsonAsync(serverDescription);
-                }
-            });
-
-
-            using (var agent = new AtProtoAgent(TestServerBuilder.DefaultUri, new TestHttpClientFactory(testServer)))
-            {
-                TestRecord record = new() { TestValue = "test" };
-                AtProtoRepositoryRecord<TestRecord> wrappedRecord = new(expectedAtUri, expectedCid, record);
-
-                await Assert.ThrowsAsync<AuthenticationRequiredException>(() => agent.PutRecord(
-                    repositoryRecord: wrappedRecord,
-                    validate: true,
-                    cancellationToken: TestContext.Current.CancellationToken));
-            }
-        }
-
-        [Fact]
-        public async Task ServerCallToListRecordsWithResolverChainDeserializesCorrectly()
-        {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
-
-            const string jsonReturnValue = """
-            {
-              "cursor": "cursor",
-              "records": [
-                {
-                  "uri": "at://did:plc:test/blue.idunno.test/rkey1",
-                  "cid": "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
-                  "value": {
-                      "testValue": "1"
-                  }
-                },
-                {
-                  "uri": "at://did:plc:test/blue.idunno.test/rkey2",
-                  "cid": "bafyreih3stxgsbceqcredadhol7tlhhpbpjcssqnbzwiukexkqh3mjmblu",
-                  "value": {
-                      "testValue": "2"
-                  }
-                }
-              ]
-            }
-            """;
-
-            AccessCredentials expectedCredentials = new(
-                    service: TestServerBuilder.DefaultUri,
-                    authenticationType: AuthenticationType.UsernamePassword,
-                    accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
-                    refreshToken: "refreshToken");
-
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
-            {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.ListRecordsEndpoint)
-                {
-                    if (request.Headers.Authorization.Count != 1)
-                    {
-                        response.StatusCode = 401;
-                        return;
-                    }
-
-                    if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
-                    {
-                        response.StatusCode = 403;
-                        return;
-                    }
-
-                    if (!request.QueryString.HasValue)
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if (request.Query["repo"].ToString() != expectedDid)
-                    {
-                        response.StatusCode = 404;
-                        return;
-                    }
-
-                    if (request.Query["collection"].ToString() != expectedCollection)
-                    {
-                        response.StatusCode = 404;
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    response.Headers.ContentType = "application/json";
-                    await response.WriteAsync(jsonReturnValue);
+                    response.StatusCode = 401;
                     return;
                 }
-            });
 
-            HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+                if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
+                {
+                    response.StatusCode = 403;
+                    return;
+                }
 
-            AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TestRecord>>> response = await AtProtoServer.ListRecords<TestRecord>(
-                repo: expectedDid,
-                collection: expectedCollection,
-                limit: 10,
-                cursor: "cursor",
-                reverse: true,
+                if (!request.QueryString.HasValue)
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
+
+                if (request.Query["repo"].ToString() != expectedDid)
+                {
+                    response.StatusCode = 404;
+                    return;
+                }
+
+                if (request.Query["collection"].ToString() != expectedCollection)
+                {
+                    response.StatusCode = 404;
+                    return;
+                }
+
+                response.StatusCode = 200;
+                response.Headers.ContentType = "application/json";
+                await response.WriteAsync(jsonReturnValue);
+                return;
+            }
+        });
+
+        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+        AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TestRecord>>> response = await AtProtoServer.ListRecords<TestRecord>(
+            repo: expectedDid,
+            collection: expectedCollection,
+            limit: 10,
+            cursor: "cursor",
+            reverse: true,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: expectedCredentials,
+            httpClient: httpClient,
+            jsonSerializerOptions: _jsonSerializerOptions,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(response.Succeeded);
+
+        Assert.Equal(2, response.Result.Count);
+        Assert.Equal("cursor", response.Result.Cursor);
+
+        Assert.Equal("at://did:plc:test/blue.idunno.test/rkey1", response.Result[0].Uri);
+        Assert.Equal("bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4", response.Result[0].Cid);
+        Assert.NotNull(response.Result[0].Value);
+        Assert.Equal("1", response.Result[0].Value.TestValue);
+        Assert.Empty(response.Result[0].Value.ExtensionData);
+
+        Assert.Equal("at://did:plc:test/blue.idunno.test/rkey2", response.Result[1].Uri);
+        Assert.Equal("bafyreih3stxgsbceqcredadhol7tlhhpbpjcssqnbzwiukexkqh3mjmblu", response.Result[1].Cid);
+        Assert.NotNull(response.Result[1].Value);
+        Assert.Equal("2", response.Result[1].Value.TestValue);
+        Assert.Empty(response.Result[1].Value.ExtensionData);
+    }
+
+    [Fact]
+    public async Task AgentCallToListRecordsWithResolverChainConfiguredDeserializesCorrectly()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+        const string jsonReturnValue = """
+        {
+          "cursor": "cursor",
+          "records": [
+            {
+              "uri": "at://did:plc:test/blue.idunno.test/rkey1",
+              "cid": "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
+              "value": {
+                  "testValue": "1"
+              }
+            },
+            {
+              "uri": "at://did:plc:test/blue.idunno.test/rkey2",
+              "cid": "bafyreih3stxgsbceqcredadhol7tlhhpbpjcssqnbzwiukexkqh3mjmblu",
+              "value": {
+                  "testValue": "2"
+              }
+            }
+          ]
+        }
+        """;
+
+        AccessCredentials expectedCredentials = new(
                 service: TestServerBuilder.DefaultUri,
-                accessCredentials: expectedCredentials,
-                httpClient: httpClient,
-                jsonSerializerOptions: _jsonSerializerOptions,
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Path == AtProtoServer.ListRecordsEndpoint)
+            {
+                if (request.Headers.Authorization.Count != 1)
+                {
+                    response.StatusCode = 401;
+                    return;
+                }
+
+                if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
+                {
+                    response.StatusCode = 403;
+                    return;
+                }
+
+                if (!request.QueryString.HasValue)
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
+
+                if (request.Query["repo"].ToString() != expectedDid)
+                {
+                    response.StatusCode = 404;
+                    return;
+                }
+
+                if (request.Query["collection"].ToString() != expectedCollection)
+                {
+                    response.StatusCode = 404;
+                    return;
+                }
+
+                response.StatusCode = 200;
+                response.Headers.ContentType = "application/json";
+                await response.WriteAsync(jsonReturnValue);
+                return;
+            }
+        });
+
+        JsonOptions httpJsonOptions = new();
+        httpJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
+
+        using (var agent = new AtProtoAgent(
+            service: TestServerBuilder.DefaultUri,
+            httpClientFactory: new TestHttpClientFactory(testServer),
+            options: new ()
+            {
+                HttpJsonOptions = httpJsonOptions
+            }))
+        {
+            agent.Credentials = expectedCredentials;
+
+            AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TestRecord>>> response = await agent.ListRecords<TestRecord>(
+                collection: expectedCollection,
+                cursor: "cursor",
                 cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(response.Succeeded);
@@ -1519,322 +1634,96 @@ namespace idunno.AtProto.Integration.Test
             Assert.Equal("2", response.Result[1].Value.TestValue);
             Assert.Empty(response.Result[1].Value.ExtensionData);
         }
+    }
 
-        [Fact]
-        public async Task AgentCallToListRecordsWithResolverChainConfiguredDeserializesCorrectly()
+    [Fact]
+    public async Task AgentCallToListRecordsWithNoResolverChainConfiguredDeserializesCorrectly()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+        const string jsonReturnValue = """
         {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
-
-            const string jsonReturnValue = """
+          "cursor": "cursor",
+          "records": [
             {
-              "cursor": "cursor",
-              "records": [
-                {
-                  "uri": "at://did:plc:test/blue.idunno.test/rkey1",
-                  "cid": "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
-                  "value": {
-                      "testValue": "1"
-                  }
-                },
-                {
-                  "uri": "at://did:plc:test/blue.idunno.test/rkey2",
-                  "cid": "bafyreih3stxgsbceqcredadhol7tlhhpbpjcssqnbzwiukexkqh3mjmblu",
-                  "value": {
-                      "testValue": "2"
-                  }
-                }
-              ]
+              "uri": "at://did:plc:test/blue.idunno.test/rkey1",
+              "cid": "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
+              "value": {
+                  "testValue": "1"
+              }
+            },
+            {
+              "uri": "at://did:plc:test/blue.idunno.test/rkey2",
+              "cid": "bafyreih3stxgsbceqcredadhol7tlhhpbpjcssqnbzwiukexkqh3mjmblu",
+              "value": {
+                  "testValue": "2"
+              }
             }
-            """;
-
-            AccessCredentials expectedCredentials = new(
-                    service: TestServerBuilder.DefaultUri,
-                    authenticationType: AuthenticationType.UsernamePassword,
-                    accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
-                    refreshToken: "refreshToken");
-
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
-            {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.ListRecordsEndpoint)
-                {
-                    if (request.Headers.Authorization.Count != 1)
-                    {
-                        response.StatusCode = 401;
-                        return;
-                    }
-
-                    if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
-                    {
-                        response.StatusCode = 403;
-                        return;
-                    }
-
-                    if (!request.QueryString.HasValue)
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if (request.Query["repo"].ToString() != expectedDid)
-                    {
-                        response.StatusCode = 404;
-                        return;
-                    }
-
-                    if (request.Query["collection"].ToString() != expectedCollection)
-                    {
-                        response.StatusCode = 404;
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    response.Headers.ContentType = "application/json";
-                    await response.WriteAsync(jsonReturnValue);
-                    return;
-                }
-            });
-
-            JsonOptions httpJsonOptions = new();
-            httpJsonOptions.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
-
-            using (var agent = new AtProtoAgent(
-                service: TestServerBuilder.DefaultUri,
-                httpClientFactory: new TestHttpClientFactory(testServer),
-                options: new ()
-                {
-                    HttpJsonOptions = httpJsonOptions
-                }))
-            {
-                agent.Credentials = expectedCredentials;
-
-                AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TestRecord>>> response = await agent.ListRecords<TestRecord>(
-                    collection: expectedCollection,
-                    cursor: "cursor",
-                    cancellationToken: TestContext.Current.CancellationToken);
-
-                Assert.True(response.Succeeded);
-
-                Assert.Equal(2, response.Result.Count);
-                Assert.Equal("cursor", response.Result.Cursor);
-
-                Assert.Equal("at://did:plc:test/blue.idunno.test/rkey1", response.Result[0].Uri);
-                Assert.Equal("bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4", response.Result[0].Cid);
-                Assert.NotNull(response.Result[0].Value);
-                Assert.Equal("1", response.Result[0].Value.TestValue);
-                Assert.Empty(response.Result[0].Value.ExtensionData);
-
-                Assert.Equal("at://did:plc:test/blue.idunno.test/rkey2", response.Result[1].Uri);
-                Assert.Equal("bafyreih3stxgsbceqcredadhol7tlhhpbpjcssqnbzwiukexkqh3mjmblu", response.Result[1].Cid);
-                Assert.NotNull(response.Result[1].Value);
-                Assert.Equal("2", response.Result[1].Value.TestValue);
-                Assert.Empty(response.Result[1].Value.ExtensionData);
-            }
+          ]
         }
+        """;
 
-        [Fact]
-        public async Task AgentCallToListRecordsWithNoResolverChainConfiguredDeserializesCorrectly()
-        {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
-
-            const string jsonReturnValue = """
-            {
-              "cursor": "cursor",
-              "records": [
-                {
-                  "uri": "at://did:plc:test/blue.idunno.test/rkey1",
-                  "cid": "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
-                  "value": {
-                      "testValue": "1"
-                  }
-                },
-                {
-                  "uri": "at://did:plc:test/blue.idunno.test/rkey2",
-                  "cid": "bafyreih3stxgsbceqcredadhol7tlhhpbpjcssqnbzwiukexkqh3mjmblu",
-                  "value": {
-                      "testValue": "2"
-                  }
-                }
-              ]
-            }
-            """;
-
-            AccessCredentials expectedCredentials = new(
-                    service: TestServerBuilder.DefaultUri,
-                    authenticationType: AuthenticationType.UsernamePassword,
-                    accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
-                    refreshToken: "refreshToken");
-
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
-            {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.ListRecordsEndpoint)
-                {
-                    if (request.Headers.Authorization.Count != 1)
-                    {
-                        response.StatusCode = 401;
-                        return;
-                    }
-
-                    if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
-                    {
-                        response.StatusCode = 403;
-                        return;
-                    }
-
-                    if (!request.QueryString.HasValue)
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if (request.Query["repo"].ToString() != expectedDid)
-                    {
-                        response.StatusCode = 404;
-                        return;
-                    }
-
-                    if (request.Query["collection"].ToString() != expectedCollection)
-                    {
-                        response.StatusCode = 404;
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    response.Headers.ContentType = "application/json";
-                    await response.WriteAsync(jsonReturnValue);
-                    return;
-                }
-            });
-
-            using (var agent = new AtProtoAgent(
+        AccessCredentials expectedCredentials = new(
                 service: TestServerBuilder.DefaultUri,
-                httpClientFactory: new TestHttpClientFactory(testServer)))
-            {
-                agent.Credentials = expectedCredentials;
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
 
-                AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TestRecord>>> response = await agent.ListRecords<TestRecord>(
-                    collection: expectedCollection,
-                    cursor: "cursor",
-                    cancellationToken: TestContext.Current.CancellationToken);
-
-                Assert.True(response.Succeeded);
-
-                Assert.Equal(2, response.Result.Count);
-                Assert.Equal("cursor", response.Result.Cursor);
-
-                Assert.Equal("at://did:plc:test/blue.idunno.test/rkey1", response.Result[0].Uri);
-                Assert.Equal("bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4", response.Result[0].Cid);
-                Assert.NotNull(response.Result[0].Value);
-                Assert.Equal("1", response.Result[0].Value.TestValue);
-                Assert.Empty(response.Result[0].Value.ExtensionData);
-
-                Assert.Equal("at://did:plc:test/blue.idunno.test/rkey2", response.Result[1].Uri);
-                Assert.Equal("bafyreih3stxgsbceqcredadhol7tlhhpbpjcssqnbzwiukexkqh3mjmblu", response.Result[1].Cid);
-                Assert.NotNull(response.Result[1].Value);
-                Assert.Equal("2", response.Result[1].Value.TestValue);
-                Assert.Empty(response.Result[1].Value.ExtensionData);
-            }
-        }
-
-        [Fact]
-        public async Task ServerCallToListRecordsWithNoResolverChainDeserializesCorrectly()
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
         {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
 
-            const string jsonReturnValue = """
+            if (request.Path == AtProtoServer.ListRecordsEndpoint)
             {
-              "cursor": "cursor",
-              "records": [
+                if (request.Headers.Authorization.Count != 1)
                 {
-                  "uri": "at://did:plc:test/blue.idunno.test/rkey1",
-                  "cid": "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
-                  "value": {
-                      "testValue": "1"
-                  }
-                },
-                {
-                  "uri": "at://did:plc:test/blue.idunno.test/rkey2",
-                  "cid": "bafyreih3stxgsbceqcredadhol7tlhhpbpjcssqnbzwiukexkqh3mjmblu",
-                  "value": {
-                      "testValue": "2"
-                  }
-                }
-              ]
-            }
-            """;
-
-            AccessCredentials expectedCredentials = new(
-                    service: TestServerBuilder.DefaultUri,
-                    authenticationType: AuthenticationType.UsernamePassword,
-                    accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
-                    refreshToken: "refreshToken");
-
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
-            {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.ListRecordsEndpoint)
-                {
-                    if (request.Headers.Authorization.Count != 1)
-                    {
-                        response.StatusCode = 401;
-                        return;
-                    }
-
-                    if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
-                    {
-                        response.StatusCode = 403;
-                        return;
-                    }
-
-                    if (!request.QueryString.HasValue)
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if (request.Query["repo"].ToString() != expectedDid)
-                    {
-                        response.StatusCode = 404;
-                        return;
-                    }
-
-                    if (request.Query["collection"].ToString() != expectedCollection)
-                    {
-                        response.StatusCode = 404;
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    response.Headers.ContentType = "application/json";
-                    await response.WriteAsync(jsonReturnValue);
+                    response.StatusCode = 401;
                     return;
                 }
-            });
 
-            HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+                if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
+                {
+                    response.StatusCode = 403;
+                    return;
+                }
 
-            AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TestRecord>>> response = await AtProtoServer.ListRecords<TestRecord>(
-                repo: expectedDid,
+                if (!request.QueryString.HasValue)
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
+
+                if (request.Query["repo"].ToString() != expectedDid)
+                {
+                    response.StatusCode = 404;
+                    return;
+                }
+
+                if (request.Query["collection"].ToString() != expectedCollection)
+                {
+                    response.StatusCode = 404;
+                    return;
+                }
+
+                response.StatusCode = 200;
+                response.Headers.ContentType = "application/json";
+                await response.WriteAsync(jsonReturnValue);
+                return;
+            }
+        });
+
+        using (var agent = new AtProtoAgent(
+            service: TestServerBuilder.DefaultUri,
+            httpClientFactory: new TestHttpClientFactory(testServer)))
+        {
+            agent.Credentials = expectedCredentials;
+
+            AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TestRecord>>> response = await agent.ListRecords<TestRecord>(
                 collection: expectedCollection,
-                limit: 10,
                 cursor: "cursor",
-                reverse: true,
-                service: TestServerBuilder.DefaultUri,
-                accessCredentials: expectedCredentials,
-                httpClient: httpClient,
                 cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.True(response.Succeeded);
@@ -1854,220 +1743,330 @@ namespace idunno.AtProto.Integration.Test
             Assert.Equal("2", response.Result[1].Value.TestValue);
             Assert.Empty(response.Result[1].Value.ExtensionData);
         }
+    }
 
-        [Fact]
-        public async Task AnonymousServerCallToGetRecordSerializesTheRecordWithNoConfiguredTypeResolverCorrectly()
+    [Fact]
+    public async Task ServerCallToListRecordsWithNoResolverChainDeserializesCorrectly()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+        const string jsonReturnValue = """
         {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = "rkey1";
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
-
-            const string jsonReturnValue = """
+          "cursor": "cursor",
+          "records": [
             {
               "uri": "at://did:plc:test/blue.idunno.test/rkey1",
               "cid": "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
               "value": {
-                  "testValue": "test"
+                  "testValue": "1"
               }
-            }
-            """;
-
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+            },
             {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.GetRecordEndpoint)
-                {
-                    if (!request.QueryString.HasValue)
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if (request.Query["repo"].ToString() != expectedDid)
-                    {
-                        response.StatusCode = 404;
-                        return;
-                    }
-
-                    if (request.Query["collection"].ToString() != expectedCollection)
-                    {
-                        response.StatusCode = 404;
-                        return;
-                    }
-
-                    if (request.Query["rkey"].ToString() != expectedRecordKey)
-                    {
-                        response.StatusCode = 404;
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    response.Headers.ContentType = "application/json";
-                    await response.WriteAsync(jsonReturnValue);
-                }
-            });
-
-            HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
-
-            AtProtoHttpResult<AtProtoRepositoryRecord<TestRecord>> response = await AtProtoServer.GetRecord<TestRecord>(
-                repo: expectedDid,
-                collection: expectedCollection,
-                rKey: expectedRecordKey,
-                cid: null,
-                service: TestServerBuilder.DefaultUri,
-                httpClient: httpClient,
-                accessCredentials: null,
-                cancellationToken: TestContext.Current.CancellationToken);
-
-            Assert.True(response.Succeeded);
-
-            Assert.Equal(expectedAtUri, response.Result.Uri);
-            Assert.Equal(expectedCid, response.Result.Cid);
-
-            Assert.Equal("test", response.Result.Value.TestValue);
-        }
-
-        [Fact]
-        public async Task AnonymousServerCallToGetRecordSerializesTheRecordWithConfiguredTypeResolverCorrectly()
-        {
-            Did expectedDid = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
-            RecordKey expectedRecordKey = "rkey1";
-            AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
-            Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
-
-            const string jsonReturnValue = """
-            {
-              "uri": "at://did:plc:test/blue.idunno.test/rkey1",
-              "cid": "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
+              "uri": "at://did:plc:test/blue.idunno.test/rkey2",
+              "cid": "bafyreih3stxgsbceqcredadhol7tlhhpbpjcssqnbzwiukexkqh3mjmblu",
               "value": {
-                  "testValue": "test"
+                  "testValue": "2"
               }
             }
-            """;
-
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
-            {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.GetRecordEndpoint)
-                {
-                    if (!request.QueryString.HasValue)
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if (request.Query["repo"].ToString() != expectedDid)
-                    {
-                        response.StatusCode = 404;
-                        return;
-                    }
-
-                    if (request.Query["collection"].ToString() != expectedCollection)
-                    {
-                        response.StatusCode = 404;
-                        return;
-                    }
-
-                    if (request.Query["rkey"].ToString() != expectedRecordKey)
-                    {
-                        response.StatusCode = 404;
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    response.Headers.ContentType = "application/json";
-                    await response.WriteAsync(jsonReturnValue);
-                }
-            });
-
-            HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
-
-            AtProtoHttpResult<AtProtoRepositoryRecord<TestRecord>> response = await AtProtoServer.GetRecord<TestRecord>(
-                repo: expectedDid,
-                collection: expectedCollection,
-                rKey: expectedRecordKey,
-                cid: null,
-                service: TestServerBuilder.DefaultUri,
-                httpClient: httpClient,
-                accessCredentials: null,
-                jsonSerializerOptions: _jsonSerializerOptions,
-                cancellationToken: TestContext.Current.CancellationToken);
-
-            Assert.True(response.Succeeded);
-
-            Assert.Equal(expectedAtUri, response.Result.Uri);
-            Assert.Equal(expectedCid, response.Result.Cid);
-
-            Assert.Equal("test", response.Result.Value.TestValue);
+          ]
         }
+        """;
 
-        [Fact]
-        public async Task ServerCallToApplyWritesSerializesTheBatchWithConfiguredTypeResolverCorrectly()
+        AccessCredentials expectedCredentials = new(
+                service: TestServerBuilder.DefaultUri,
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
         {
-            Did expectedRepo = "did:plc:test";
-            Nsid expectedCollection = "blue.idunno.test";
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
 
-            const string jsonReturnValue = """
-                {
-                    "commit": {
-                        "cid": "bafyreicypmumcyemtsrblhm4r4cawkjax744amgpzmb2fcksfut4g7rvya",
-                        "rev": "3lly43ogrzj2t"
-                    },
-                    "results": [
-                        {
-                            "$type": "com.atproto.repo.applyWrites#createResult",
-                            "cid": "bafyreihkmnqyhbk3u6lsbfuiaqsyg3rkchhpcfuhughxpqijkc66qih7zy",
-                            "uri": "at://did:plc:test/blue.idunno.test/3lly43pdas22n",
-                            "validationStatus": "valid"
-                        }
-                    ]
-                }
-                """;
-
-
-            RecordKey expectedDeleteRKey = TimestampIdentifier.Next();
-            AccessCredentials expectedCredentials = new(
-                    service: TestServerBuilder.DefaultUri,
-                    authenticationType: AuthenticationType.UsernamePassword,
-                    accessJwt: JwtBuilder.CreateJwt(expectedRepo, TestServerBuilder.DefaultUri.ToString()),
-                    refreshToken: "refreshToken");
-
-            ICollection<WriteOperation> operations = [];
-            operations.Add(new CreateOperation(expectedCollection, new TestRecord() { TestValue = "testValue" }));
-
-            TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+            if (request.Path == AtProtoServer.ListRecordsEndpoint)
             {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == AtProtoServer.ApplyWritesEndpoint)
+                if (request.Headers.Authorization.Count != 1)
                 {
-                    response.StatusCode = 200;
-                    response.Headers.ContentType = "application/json";
-                    await response.WriteAsync(jsonReturnValue);
+                    response.StatusCode = 401;
                     return;
                 }
-            });
 
-            HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+                if (request.Headers.Authorization.ToString() != $"Bearer {expectedCredentials.AccessJwt}")
+                {
+                    response.StatusCode = 403;
+                    return;
+                }
 
-            await AtProtoServer.ApplyWrites(
-                operations: operations,
-                jsonSerializerOptions: _jsonSerializerOptions,
-                repo: expectedRepo,
-                validate: true,
-                cid: null,
-                service: TestServerBuilder.DefaultUri,
-                httpClient: httpClient,
-                accessCredentials:expectedCredentials,
-                cancellationToken: TestContext.Current.CancellationToken);
+                if (!request.QueryString.HasValue)
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
+
+                if (request.Query["repo"].ToString() != expectedDid)
+                {
+                    response.StatusCode = 404;
+                    return;
+                }
+
+                if (request.Query["collection"].ToString() != expectedCollection)
+                {
+                    response.StatusCode = 404;
+                    return;
+                }
+
+                response.StatusCode = 200;
+                response.Headers.ContentType = "application/json";
+                await response.WriteAsync(jsonReturnValue);
+                return;
+            }
+        });
+
+        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+        AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TestRecord>>> response = await AtProtoServer.ListRecords<TestRecord>(
+            repo: expectedDid,
+            collection: expectedCollection,
+            limit: 10,
+            cursor: "cursor",
+            reverse: true,
+            service: TestServerBuilder.DefaultUri,
+            accessCredentials: expectedCredentials,
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(response.Succeeded);
+
+        Assert.Equal(2, response.Result.Count);
+        Assert.Equal("cursor", response.Result.Cursor);
+
+        Assert.Equal("at://did:plc:test/blue.idunno.test/rkey1", response.Result[0].Uri);
+        Assert.Equal("bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4", response.Result[0].Cid);
+        Assert.NotNull(response.Result[0].Value);
+        Assert.Equal("1", response.Result[0].Value.TestValue);
+        Assert.Empty(response.Result[0].Value.ExtensionData);
+
+        Assert.Equal("at://did:plc:test/blue.idunno.test/rkey2", response.Result[1].Uri);
+        Assert.Equal("bafyreih3stxgsbceqcredadhol7tlhhpbpjcssqnbzwiukexkqh3mjmblu", response.Result[1].Cid);
+        Assert.NotNull(response.Result[1].Value);
+        Assert.Equal("2", response.Result[1].Value.TestValue);
+        Assert.Empty(response.Result[1].Value.ExtensionData);
+    }
+
+    [Fact]
+    public async Task AnonymousServerCallToGetRecordSerializesTheRecordWithNoConfiguredTypeResolverCorrectly()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        RecordKey expectedRecordKey = "rkey1";
+        AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+        const string jsonReturnValue = """
+        {
+          "uri": "at://did:plc:test/blue.idunno.test/rkey1",
+          "cid": "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
+          "value": {
+              "testValue": "test"
+          }
         }
+        """;
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Path == AtProtoServer.GetRecordEndpoint)
+            {
+                if (!request.QueryString.HasValue)
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
+
+                if (request.Query["repo"].ToString() != expectedDid)
+                {
+                    response.StatusCode = 404;
+                    return;
+                }
+
+                if (request.Query["collection"].ToString() != expectedCollection)
+                {
+                    response.StatusCode = 404;
+                    return;
+                }
+
+                if (request.Query["rkey"].ToString() != expectedRecordKey)
+                {
+                    response.StatusCode = 404;
+                    return;
+                }
+
+                response.StatusCode = 200;
+                response.Headers.ContentType = "application/json";
+                await response.WriteAsync(jsonReturnValue);
+            }
+        });
+
+        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+        AtProtoHttpResult<AtProtoRepositoryRecord<TestRecord>> response = await AtProtoServer.GetRecord<TestRecord>(
+            repo: expectedDid,
+            collection: expectedCollection,
+            rKey: expectedRecordKey,
+            cid: null,
+            service: TestServerBuilder.DefaultUri,
+            httpClient: httpClient,
+            accessCredentials: null,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(response.Succeeded);
+
+        Assert.Equal(expectedAtUri, response.Result.Uri);
+        Assert.Equal(expectedCid, response.Result.Cid);
+
+        Assert.Equal("test", response.Result.Value.TestValue);
+    }
+
+    [Fact]
+    public async Task AnonymousServerCallToGetRecordSerializesTheRecordWithConfiguredTypeResolverCorrectly()
+    {
+        Did expectedDid = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+        RecordKey expectedRecordKey = "rkey1";
+        AtUri expectedAtUri = new($"at://{expectedDid}/{expectedCollection}/{expectedRecordKey}");
+        Cid expectedCid = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
+
+        const string jsonReturnValue = """
+        {
+          "uri": "at://did:plc:test/blue.idunno.test/rkey1",
+          "cid": "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
+          "value": {
+              "testValue": "test"
+          }
+        }
+        """;
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Path == AtProtoServer.GetRecordEndpoint)
+            {
+                if (!request.QueryString.HasValue)
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
+
+                if (request.Query["repo"].ToString() != expectedDid)
+                {
+                    response.StatusCode = 404;
+                    return;
+                }
+
+                if (request.Query["collection"].ToString() != expectedCollection)
+                {
+                    response.StatusCode = 404;
+                    return;
+                }
+
+                if (request.Query["rkey"].ToString() != expectedRecordKey)
+                {
+                    response.StatusCode = 404;
+                    return;
+                }
+
+                response.StatusCode = 200;
+                response.Headers.ContentType = "application/json";
+                await response.WriteAsync(jsonReturnValue);
+            }
+        });
+
+        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+        AtProtoHttpResult<AtProtoRepositoryRecord<TestRecord>> response = await AtProtoServer.GetRecord<TestRecord>(
+            repo: expectedDid,
+            collection: expectedCollection,
+            rKey: expectedRecordKey,
+            cid: null,
+            service: TestServerBuilder.DefaultUri,
+            httpClient: httpClient,
+            accessCredentials: null,
+            jsonSerializerOptions: _jsonSerializerOptions,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(response.Succeeded);
+
+        Assert.Equal(expectedAtUri, response.Result.Uri);
+        Assert.Equal(expectedCid, response.Result.Cid);
+
+        Assert.Equal("test", response.Result.Value.TestValue);
+    }
+
+    [Fact]
+    public async Task ServerCallToApplyWritesSerializesTheBatchWithConfiguredTypeResolverCorrectly()
+    {
+        Did expectedRepo = "did:plc:test";
+        Nsid expectedCollection = "blue.idunno.test";
+
+        const string jsonReturnValue = """
+            {
+                "commit": {
+                    "cid": "bafyreicypmumcyemtsrblhm4r4cawkjax744amgpzmb2fcksfut4g7rvya",
+                    "rev": "3lly43ogrzj2t"
+                },
+                "results": [
+                    {
+                        "$type": "com.atproto.repo.applyWrites#createResult",
+                        "cid": "bafyreihkmnqyhbk3u6lsbfuiaqsyg3rkchhpcfuhughxpqijkc66qih7zy",
+                        "uri": "at://did:plc:test/blue.idunno.test/3lly43pdas22n",
+                        "validationStatus": "valid"
+                    }
+                ]
+            }
+            """;
+
+
+        RecordKey expectedDeleteRKey = TimestampIdentifier.Next();
+        AccessCredentials expectedCredentials = new(
+                service: TestServerBuilder.DefaultUri,
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(expectedRepo, TestServerBuilder.DefaultUri.ToString()),
+                refreshToken: "refreshToken");
+
+        ICollection<WriteOperation> operations = [];
+        operations.Add(new CreateOperation(expectedCollection, new TestRecord() { TestValue = "testValue" }));
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Path == AtProtoServer.ApplyWritesEndpoint)
+            {
+                response.StatusCode = 200;
+                response.Headers.ContentType = "application/json";
+                await response.WriteAsync(jsonReturnValue);
+                return;
+            }
+        });
+
+        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
+
+        await AtProtoServer.ApplyWrites(
+            operations: operations,
+            jsonSerializerOptions: _jsonSerializerOptions,
+            repo: expectedRepo,
+            validate: true,
+            cid: null,
+            service: TestServerBuilder.DefaultUri,
+            httpClient: httpClient,
+            accessCredentials:expectedCredentials,
+            cancellationToken: TestContext.Current.CancellationToken);
     }
 }

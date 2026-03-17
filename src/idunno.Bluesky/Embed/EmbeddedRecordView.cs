@@ -3,27 +3,26 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Embed
+namespace idunno.Bluesky.Embed;
+
+/// <summary>
+/// Encapsulates an embedded view over a record.
+/// </summary>
+public record EmbeddedRecordView : EmbeddedView
 {
     /// <summary>
-    /// Encapsulates an embedded view over a record.
+    /// Creates a new instance of <see cref="EmbeddedRecordView"/>
     /// </summary>
-    public record EmbeddedRecordView : EmbeddedView
+    /// <param name="record">The view over the record.</param>
+    [JsonConstructor]
+    public EmbeddedRecordView(View record) : base()
     {
-        /// <summary>
-        /// Creates a new instance of <see cref="EmbeddedRecordView"/>
-        /// </summary>
-        /// <param name="record">The view over the record.</param>
-        [JsonConstructor]
-        public EmbeddedRecordView(View record) : base()
-        {
-            Record = record;
-        }
-
-        /// <summary>
-        /// Gets a view over the record.
-        /// </summary>
-        [JsonInclude]
-        public View Record { get; init; }
+        Record = record;
     }
+
+    /// <summary>
+    /// Gets a view over the record.
+    /// </summary>
+    [JsonInclude]
+    public View Record { get; init; }
 }

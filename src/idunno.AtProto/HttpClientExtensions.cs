@@ -5,22 +5,21 @@ using System.Net.Http.Headers;
 
 using Microsoft.IdentityModel.JsonWebTokens;
 
-namespace idunno.AtProto
+namespace idunno.AtProto;
+
+internal static class HttpClientExtensions
 {
-    internal static class HttpClientExtensions
+    public static void AddBearerToken(this HttpRequestMessage httpRequestMessage, string token)
     {
-        public static void AddBearerToken(this HttpRequestMessage httpRequestMessage, string token)
-        {
-            ArgumentException.ThrowIfNullOrEmpty(token);
+        ArgumentException.ThrowIfNullOrEmpty(token);
 
-            httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
+        httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+    }
 
-        public static void AddBearerToken(this HttpRequestMessage httpRequestMessage, JsonWebToken token)
-        {
-            ArgumentNullException.ThrowIfNull(token);
+    public static void AddBearerToken(this HttpRequestMessage httpRequestMessage, JsonWebToken token)
+    {
+        ArgumentNullException.ThrowIfNull(token);
 
-            httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.ToString());
-        }
+        httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.ToString());
     }
 }

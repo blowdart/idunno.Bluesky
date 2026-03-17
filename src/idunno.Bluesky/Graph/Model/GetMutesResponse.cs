@@ -6,23 +6,22 @@ using System.Text.Json.Serialization;
 
 using idunno.Bluesky.Actor;
 
-namespace idunno.Bluesky.Graph.Model
+namespace idunno.Bluesky.Graph.Model;
+
+[SuppressMessage("Performance", "CA1812", Justification = "Used in GetMutes")]
+internal sealed record GetMutesResponse
 {
-    [SuppressMessage("Performance", "CA1812", Justification = "Used in GetMutes")]
-    internal sealed record GetMutesResponse
+    [JsonConstructor]
+    public GetMutesResponse(ICollection<ProfileView> mutes, string? cursor)
     {
-        [JsonConstructor]
-        public GetMutesResponse(ICollection<ProfileView> mutes, string? cursor)
-        {
-            Mutes = mutes;
-            Cursor = cursor;
-        }
-
-        [JsonInclude]
-        [JsonRequired]
-        public ICollection<ProfileView> Mutes { get; init; }
-
-        [JsonInclude]
-        public string? Cursor { get; init; }
+        Mutes = mutes;
+        Cursor = cursor;
     }
+
+    [JsonInclude]
+    [JsonRequired]
+    public ICollection<ProfileView> Mutes { get; init; }
+
+    [JsonInclude]
+    public string? Cursor { get; init; }
 }

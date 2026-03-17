@@ -1,119 +1,117 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.Metrics;
 using idunno.AtProto.Labels;
 
-namespace idunno.Bluesky
+namespace idunno.Bluesky;
+
+/// <summary>
+/// Properties for labels to apply to a post.
+/// </summary>
+public sealed record PostSelfLabels
 {
     /// <summary>
-    /// Properties for labels to apply to a post.
+    /// Creates a new instance of <see cref="PostSelfLabels"/>
     /// </summary>
-    public sealed record PostSelfLabels
+    public PostSelfLabels()
     {
-        /// <summary>
-        /// Creates a new instance of <see cref="PostSelfLabels"/>
-        /// </summary>
-        public PostSelfLabels()
-        {
-        }
+    }
 
-        /// <summary>
-        /// Creates a new instance of <see cref="PostSelfLabels"/>
-        /// </summary>
-        /// <param name="labels">The AtProto <see cref="SelfLabels"/> to extract specific Bluesky post self labels from.</param>
-        public PostSelfLabels(SelfLabels labels)
+    /// <summary>
+    /// Creates a new instance of <see cref="PostSelfLabels"/>
+    /// </summary>
+    /// <param name="labels">The AtProto <see cref="SelfLabels"/> to extract specific Bluesky post self labels from.</param>
+    public PostSelfLabels(SelfLabels labels)
+    {
+        if (labels is not null)
         {
-            if (labels is not null)
+            if (labels.Contains(SelfLabelValues.GraphicMedia))
             {
-                if (labels.Contains(SelfLabelValues.GraphicMedia))
-                {
-                    GraphicMedia = true;
-                }
+                GraphicMedia = true;
+            }
 
-                if (labels.Contains(SelfLabelValues.Nudity))
-                {
-                    Nudity = true;
-                }
+            if (labels.Contains(SelfLabelValues.Nudity))
+            {
+                Nudity = true;
+            }
 
-                if (labels.Contains(SelfLabelValues.Porn))
-                {
-                    Porn = true;
-                }
+            if (labels.Contains(SelfLabelValues.Porn))
+            {
+                Porn = true;
+            }
 
-                if (labels.Contains(SelfLabelValues.Sexual))
-                {
-                    SexualContent = true;
-                }
+            if (labels.Contains(SelfLabelValues.Sexual))
+            {
+                SexualContent = true;
             }
         }
+    }
 
-        /// <summary>
-        /// Gets or sets a flag indicating the post media contains graphic media.
-        /// This behaves like <see cref="Porn"/> but is for violence or gore.
-        /// </summary>
-        public bool GraphicMedia { get; set; }
+    /// <summary>
+    /// Gets or sets a flag indicating the post media contains graphic media.
+    /// This behaves like <see cref="Porn"/> but is for violence or gore.
+    /// </summary>
+    public bool GraphicMedia { get; set; }
 
-        /// <summary>
-        /// Gets or sets a flag indicating the post media contains nudity.
-        /// This puts a warning on images but isn't 18+ and defaults to ignore.
-        /// </summary>
-        public bool Nudity { get; set; }
+    /// <summary>
+    /// Gets or sets a flag indicating the post media contains nudity.
+    /// This puts a warning on images but isn't 18+ and defaults to ignore.
+    /// </summary>
+    public bool Nudity { get; set; }
 
-        /// <summary>
-        /// Gets or sets a flag indicating the post media contains porn.
-        /// This puts a warning on images and can only be clicked through if the user is 18+ and has enabled adult content.
-        /// </summary>
-        public bool Porn { get; set; }
+    /// <summary>
+    /// Gets or sets a flag indicating the post media contains porn.
+    /// This puts a warning on images and can only be clicked through if the user is 18+ and has enabled adult content.
+    /// </summary>
+    public bool Porn { get; set; }
 
-        /// <summary>
-        /// Gets or sets a flag indicating the post media contains sexual content.
-        /// This behaves like <see cref="Porn"/> but is meant to handle less intense sexual content.
-        /// </summary>
-        public bool SexualContent { get; set; }
+    /// <summary>
+    /// Gets or sets a flag indicating the post media contains sexual content.
+    /// This behaves like <see cref="Porn"/> but is meant to handle less intense sexual content.
+    /// </summary>
+    public bool SexualContent { get; set; }
 
 
-        /// <summary>
-        /// Converts this instance of <see cref="PostSelfLabels"/> to an instance of <see cref="SelfLabels"/>.
-        /// </summary>
-        /// <returns>A new instance of <see cref="SelfLabels"/> containing the post specific labels set in this instance.</returns>
-        public SelfLabels ToSelfLabels()
+    /// <summary>
+    /// Converts this instance of <see cref="PostSelfLabels"/> to an instance of <see cref="SelfLabels"/>.
+    /// </summary>
+    /// <returns>A new instance of <see cref="SelfLabels"/> containing the post specific labels set in this instance.</returns>
+    public SelfLabels ToSelfLabels()
+    {
+        var result = new SelfLabels();
+
+        if (GraphicMedia)
         {
-            var result = new SelfLabels();
-
-            if (GraphicMedia)
-            {
-                result.AddLabel(SelfLabelValues.GraphicMedia);
-            }
-
-            if (Nudity)
-            {
-                result.AddLabel(SelfLabelValues.Nudity);
-            }
-
-            if (Porn)
-            {
-                result.AddLabel(SelfLabelValues.Porn);
-            }
-
-            if (SexualContent)
-            {
-                result.AddLabel(SelfLabelValues.Porn);
-            }
-
-            return result;
+            result.AddLabel(SelfLabelValues.GraphicMedia);
         }
 
-        /// <summary>
-        /// Converts <paramref name="postSelfLabels"/> to an instance of <see cref="SelfLabels"/>.
-        /// </summary>
-        /// <param name="postSelfLabels">The instance of <see cref="PostSelfLabels"/> to convert.1</param>
-        /// <returns>A new instance of <see cref="SelfLabels"/> containing the post specific labels from <paramref name="postSelfLabels"/>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="postSelfLabels"/> is <see langword="null"/>.</exception>
-        public static explicit operator SelfLabels(PostSelfLabels postSelfLabels)
+        if (Nudity)
         {
-            ArgumentNullException.ThrowIfNull(postSelfLabels);
-            return postSelfLabels.ToSelfLabels();
+            result.AddLabel(SelfLabelValues.Nudity);
         }
+
+        if (Porn)
+        {
+            result.AddLabel(SelfLabelValues.Porn);
+        }
+
+        if (SexualContent)
+        {
+            result.AddLabel(SelfLabelValues.Porn);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Converts <paramref name="postSelfLabels"/> to an instance of <see cref="SelfLabels"/>.
+    /// </summary>
+    /// <param name="postSelfLabels">The instance of <see cref="PostSelfLabels"/> to convert.1</param>
+    /// <returns>A new instance of <see cref="SelfLabels"/> containing the post specific labels from <paramref name="postSelfLabels"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postSelfLabels"/> is <see langword="null"/>.</exception>
+    public static explicit operator SelfLabels(PostSelfLabels postSelfLabels)
+    {
+        ArgumentNullException.ThrowIfNull(postSelfLabels);
+        return postSelfLabels.ToSelfLabels();
     }
 }

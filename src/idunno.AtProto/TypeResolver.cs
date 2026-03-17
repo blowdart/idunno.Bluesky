@@ -3,16 +3,15 @@
 
 using System.Text.Json.Serialization.Metadata;
 
-namespace idunno.AtProto
+namespace idunno.AtProto;
+
+/// <summary>
+/// Exposes type resolution for AtProto JSON types.
+/// </summary>
+public static class TypeResolver
 {
     /// <summary>
-    /// Exposes type resolution for AtProto JSON types.
+    /// Gets the default source generation JSON type info resolver for AtProto JSON types.
     /// </summary>
-    public static class TypeResolver
-    {
-        /// <summary>
-        /// Gets the default source generation JSON type info resolver for AtProto JSON types.
-        /// </summary>
-        public static IJsonTypeInfoResolver JsonTypeInfoResolver => SourceGenerationContext.Default;
-    }
+    public static IJsonTypeInfoResolver JsonTypeInfoResolver => SourceGenerationContext.Default;
 }

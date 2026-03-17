@@ -3,9 +3,8 @@
 
 using idunno.AtProto;
 
-namespace idunno.Bluesky.Bookmarks.Model
+namespace idunno.Bluesky.Bookmarks.Model;
+
+internal sealed record CreateBookmarkRequest(AtUri Uri, Cid Cid)
 {
-    internal sealed record CreateBookmarkRequest(AtUri Uri, Cid Cid)
-    {
-    }
 }

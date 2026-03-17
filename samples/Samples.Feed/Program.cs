@@ -14,189 +14,188 @@ using idunno.Bluesky.Actor;
 
 using Samples.Common;
 
-namespace Samples.Feed
-{
-    public sealed class Program
-    {
-        static async Task<int> Main(string[] args)
-        {
-            // Necessary to render emojis.
-            Console.OutputEncoding = System.Text.Encoding.UTF8;
-            var parser = Helpers.ConfigureCommandLine(
-                args,
-                "BlueskyAgent Feed Sample",
-                PerformOperations);
+namespace Samples.Feed;
 
-            return await parser.InvokeAsync();
+public sealed class Program
+{
+    static async Task<int> Main(string[] args)
+    {
+        // Necessary to render emojis.
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
+        var parser = Helpers.ConfigureCommandLine(
+            args,
+            "BlueskyAgent Feed Sample",
+            PerformOperations);
+
+        return await parser.InvokeAsync();
+    }
+
+    static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(handle);
+        ArgumentException.ThrowIfNullOrEmpty(password);
+
+        // Uncomment the next line to route all requests through Fiddler Everywhere
+        // proxyUri = new Uri("http://localhost:8866");
+
+        // Uncomment the next line to route all requests  through Fiddler Classic
+        // proxyUri = new Uri("http://localhost:8888");
+
+        // If a proxy is being used turn off certificate revocation checks.
+        //
+        // WARNING: this setting can introduce security vulnerabilities.
+        // The assumption in these samples is that any proxy is a debugging proxy,
+        // which tend to not support CRLs in the proxy HTTPS certificates they generate.
+        bool checkCertificateRevocationList = true;
+        if (proxyUri is not null)
+        {
+            checkCertificateRevocationList = false;
         }
 
-        static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
+        // Change the log level in the ConfigureConsoleLogging() to enable logging
+        using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Error))
+
+        // Create a new BlueSkyAgent
+        using (var agent = new BlueskyAgent(
+            options: new BlueskyAgentOptions()
+            {
+                LoggerFactory = loggerFactory,
+
+                HttpClientOptions = new HttpClientOptions()
+                {
+                    CheckCertificateRevocationList = checkCertificateRevocationList,
+                    ProxyUri = proxyUri
+                },
+            }))
         {
-            ArgumentException.ThrowIfNullOrEmpty(handle);
-            ArgumentException.ThrowIfNullOrEmpty(password);
-
-            // Uncomment the next line to route all requests through Fiddler Everywhere
-            // proxyUri = new Uri("http://localhost:8866");
-
-            // Uncomment the next line to route all requests  through Fiddler Classic
-            // proxyUri = new Uri("http://localhost:8888");
-
-            // If a proxy is being used turn off certificate revocation checks.
-            //
-            // WARNING: this setting can introduce security vulnerabilities.
-            // The assumption in these samples is that any proxy is a debugging proxy,
-            // which tend to not support CRLs in the proxy HTTPS certificates they generate.
-            bool checkCertificateRevocationList = true;
-            if (proxyUri is not null)
+            var loginResult = await agent.Login(handle, password, authCode, cancellationToken: cancellationToken);
+            if (!loginResult.Succeeded)
             {
-                checkCertificateRevocationList = false;
-            }
-
-            // Change the log level in the ConfigureConsoleLogging() to enable logging
-            using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Error))
-
-            // Create a new BlueSkyAgent
-            using (var agent = new BlueskyAgent(
-                options: new BlueskyAgentOptions()
+                if (loginResult.AtErrorDetail is not null &&
+                    string.Equals(loginResult.AtErrorDetail.Error!, "AuthFactorTokenRequired", StringComparison.OrdinalIgnoreCase))
                 {
-                    LoggerFactory = loggerFactory,
+                    ConsoleColor oldColor = Console.ForegroundColor;
 
-                    HttpClientOptions = new HttpClientOptions()
-                    {
-                        CheckCertificateRevocationList = checkCertificateRevocationList,
-                        ProxyUri = proxyUri
-                    },
-                }))
-            {
-                var loginResult = await agent.Login(handle, password, authCode, cancellationToken: cancellationToken);
-                if (!loginResult.Succeeded)
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Login requires an authentication code.");
+                    Console.WriteLine("Check your email and use --authCode to specify the authentication code.");
+                    Console.ForegroundColor = oldColor;
+
+                    return;
+                }
+                else
                 {
-                    if (loginResult.AtErrorDetail is not null &&
-                        string.Equals(loginResult.AtErrorDetail.Error!, "AuthFactorTokenRequired", StringComparison.OrdinalIgnoreCase))
-                    {
-                        ConsoleColor oldColor = Console.ForegroundColor;
+                    ConsoleColor oldColor = Console.ForegroundColor;
 
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("Login failed.");
+                    Console.ForegroundColor = oldColor;
+
+                    if (loginResult.AtErrorDetail is not null)
+                    {
                         Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine("Login requires an authentication code.");
-                        Console.WriteLine("Check your email and use --authCode to specify the authentication code.");
+
+                        Console.WriteLine($"Server returned {loginResult.AtErrorDetail.Error} / {loginResult.AtErrorDetail.Message}");
                         Console.ForegroundColor = oldColor;
 
                         return;
                     }
-                    else
+                }
+            }
+
+            Preferences preferences = new();
+            var preferencesResult = await agent.GetPreferences(cancellationToken: cancellationToken);
+            if (preferencesResult.Succeeded)
+            {
+                preferences = preferencesResult.Result;
+            }
+
+            // This is the AT Uri for the Discover feed.
+            AtUri feedUri = new("at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot");
+
+            AtProtoHttpResult<FeedGenerator> feedGenerator = await agent.GetFeedGenerator(feedUri, cancellationToken : cancellationToken);
+
+            Console.WriteLine($"{feedGenerator.Result!.View.DisplayName} - {feedGenerator.Result.View.Description}");
+            Console.WriteLine($"By {feedGenerator.Result.View.Creator.DisplayName} @{feedGenerator.Result.View.Creator.Handle}");
+
+            const int pageSize = 25;
+            const int maxPagesToIterate = 10;
+            int page = 1;
+
+            var getFeedResult = await agent.GetFeed(
+                feedUri,
+                limit: pageSize,
+                subscribedLabelers: preferences.SubscribedLabelers,
+                cancellationToken: cancellationToken);
+
+            if (getFeedResult.Succeeded && getFeedResult.Result.Count != 0 && !cancellationToken.IsCancellationRequested)
+            {
+                do
+                {
+                    Console.WriteLine($"\n📄 Page {page++}\n");
+
+                    foreach (var feedViewPost in getFeedResult.Result)
                     {
-                        ConsoleColor oldColor = Console.ForegroundColor;
-
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine("Login failed.");
-                        Console.ForegroundColor = oldColor;
-
-                        if (loginResult.AtErrorDetail is not null)
+                        if (cancellationToken.IsCancellationRequested)
                         {
-                            Console.ForegroundColor = ConsoleColor.Red;
-
-                            Console.WriteLine($"Server returned {loginResult.AtErrorDetail.Error} / {loginResult.AtErrorDetail.Message}");
-                            Console.ForegroundColor = oldColor;
-
-                            return;
+                            break;
                         }
+
+                        Console.WriteLine($"{feedViewPost.Post.Record.Text ?? "\u001b[3mNo post text\u001b[23m"}");
+                        Console.WriteLine($"  From {feedViewPost.Post.Author}");
+                        PrintLabels(feedViewPost.Post.Author);
+
+                        Console.WriteLine($"  Posted at: {feedViewPost.Post.Record.CreatedAt.ToLocalTime():G}");
+                        Console.WriteLine($"  {feedViewPost.Post.LikeCount} like{(feedViewPost.Post.LikeCount != 1 ? "s" : "")} {feedViewPost.Post.RepostCount} repost{(feedViewPost.Post.RepostCount != 1 ? "s" : "")}.");
+                        Console.WriteLine($"  AtUri : {feedViewPost.Post.Uri}");
+                        Console.WriteLine($"  Cid   : {feedViewPost.Post.Cid}");
+                        Console.WriteLine();
                     }
-                }
 
-                Preferences preferences = new();
-                var preferencesResult = await agent.GetPreferences(cancellationToken: cancellationToken);
-                if (preferencesResult.Succeeded)
-                {
-                    preferences = preferencesResult.Result;
-                }
-
-                // This is the AT Uri for the Discover feed.
-                AtUri feedUri = new("at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot");
-
-                AtProtoHttpResult<FeedGenerator> feedGenerator = await agent.GetFeedGenerator(feedUri, cancellationToken : cancellationToken);
-
-                Console.WriteLine($"{feedGenerator.Result!.View.DisplayName} - {feedGenerator.Result.View.Description}");
-                Console.WriteLine($"By {feedGenerator.Result.View.Creator.DisplayName} @{feedGenerator.Result.View.Creator.Handle}");
-
-                const int pageSize = 25;
-                const int maxPagesToIterate = 10;
-                int page = 1;
-
-                var getFeedResult = await agent.GetFeed(
-                    feedUri,
-                    limit: pageSize,
-                    subscribedLabelers: preferences.SubscribedLabelers,
-                    cancellationToken: cancellationToken);
-
-                if (getFeedResult.Succeeded && getFeedResult.Result.Count != 0 && !cancellationToken.IsCancellationRequested)
-                {
-                    do
+                    if (!cancellationToken.IsCancellationRequested && !string.IsNullOrEmpty(getFeedResult.Result.Cursor))
                     {
-                        Console.WriteLine($"\n📄 Page {page++}\n");
+                        await agent.GetFeed(
+                        feedUri,
+                        limit: pageSize,
+                        cursor: getFeedResult.Result.Cursor,
+                        subscribedLabelers: preferences.SubscribedLabelers,
+                        cancellationToken: cancellationToken);
+                    }
 
-                        foreach (var feedViewPost in getFeedResult.Result)
-                        {
-                            if (cancellationToken.IsCancellationRequested)
-                            {
-                                break;
-                            }
-
-                            Console.WriteLine($"{feedViewPost.Post.Record.Text ?? "\u001b[3mNo post text\u001b[23m"}");
-                            Console.WriteLine($"  From {feedViewPost.Post.Author}");
-                            PrintLabels(feedViewPost.Post.Author);
-
-                            Console.WriteLine($"  Posted at: {feedViewPost.Post.Record.CreatedAt.ToLocalTime():G}");
-                            Console.WriteLine($"  {feedViewPost.Post.LikeCount} like{(feedViewPost.Post.LikeCount != 1 ? "s" : "")} {feedViewPost.Post.RepostCount} repost{(feedViewPost.Post.RepostCount != 1 ? "s" : "")}.");
-                            Console.WriteLine($"  AtUri : {feedViewPost.Post.Uri}");
-                            Console.WriteLine($"  Cid   : {feedViewPost.Post.Cid}");
-                            Console.WriteLine();
-                        }
-
-                        if (!cancellationToken.IsCancellationRequested && !string.IsNullOrEmpty(getFeedResult.Result.Cursor))
-                        {
-                            await agent.GetFeed(
-                            feedUri,
-                            limit: pageSize,
-                            cursor: getFeedResult.Result.Cursor,
-                            subscribedLabelers: preferences.SubscribedLabelers,
-                            cancellationToken: cancellationToken);
-                        }
-
-                    } while (!cancellationToken.IsCancellationRequested &&
-                             getFeedResult.Succeeded &&
-                             !string.IsNullOrEmpty(getFeedResult.Result.Cursor) &&
-                             page < maxPagesToIterate) ;
-                }
+                } while (!cancellationToken.IsCancellationRequested &&
+                         getFeedResult.Succeeded &&
+                         !string.IsNullOrEmpty(getFeedResult.Result.Cursor) &&
+                         page < maxPagesToIterate) ;
             }
         }
+    }
 
-        static void PrintLabels(ProfileViewBasic author)
+    static void PrintLabels(ProfileViewBasic author)
+    {
+        if (author is null)
         {
-            if (author is null)
-            {
-                return;
-            }
-
-            StringBuilder labelBuilder = new();
-
-            foreach (Label label in author.Labels)
-            {
-                labelBuilder.Append(CultureInfo.InvariantCulture, $"[{label.Value}] ");
-            }
-
-            if (labelBuilder.Length > 0)
-            {
-                labelBuilder.Length--;
-            }
-
-            string labelsAsString = labelBuilder.ToString();
-
-            if (!string.IsNullOrWhiteSpace(labelsAsString))
-            {
-                Console.WriteLine($"  {labelsAsString}");
-            }
-
             return;
         }
+
+        StringBuilder labelBuilder = new();
+
+        foreach (Label label in author.Labels)
+        {
+            labelBuilder.Append(CultureInfo.InvariantCulture, $"[{label.Value}] ");
+        }
+
+        if (labelBuilder.Length > 0)
+        {
+            labelBuilder.Length--;
+        }
+
+        string labelsAsString = labelBuilder.ToString();
+
+        if (!string.IsNullOrWhiteSpace(labelsAsString))
+        {
+            Console.WriteLine($"  {labelsAsString}");
+        }
+
+        return;
     }
 }

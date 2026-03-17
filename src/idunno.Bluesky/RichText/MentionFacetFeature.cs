@@ -5,30 +5,29 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 
-namespace idunno.Bluesky.RichText
+namespace idunno.Bluesky.RichText;
+
+/// <summary>
+/// Facet feature for mention of another account. The text is usually a handle, including a '@' prefix, but the facet reference is a DID.
+/// </summary>
+public sealed record MentionFacetFeature : FacetFeature
 {
     /// <summary>
-    /// Facet feature for mention of another account. The text is usually a handle, including a '@' prefix, but the facet reference is a DID.
+    /// Creates a new instance of <see cref="MentionFacetFeature"/>.
     /// </summary>
-    public sealed record MentionFacetFeature : FacetFeature
+    /// <param name="did">The <see cref="Did"/> of the account being mentioned.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
+    [JsonConstructor]
+    public MentionFacetFeature(Did did)
     {
-        /// <summary>
-        /// Creates a new instance of <see cref="MentionFacetFeature"/>.
-        /// </summary>
-        /// <param name="did">The <see cref="Did"/> of the account being mentioned.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
-        [JsonConstructor]
-        public MentionFacetFeature(Did did)
-        {
-            ArgumentNullException.ThrowIfNull(did);
-            Did = did;
-        }
-
-        /// <summary>
-        /// The <see cref="Did"/> of the account being mentioned.
-        /// </summary>
-        [JsonInclude]
-        [JsonRequired]
-        public Did Did { get; init; }
+        ArgumentNullException.ThrowIfNull(did);
+        Did = did;
     }
+
+    /// <summary>
+    /// The <see cref="Did"/> of the account being mentioned.
+    /// </summary>
+    [JsonInclude]
+    [JsonRequired]
+    public Did Did { get; init; }
 }

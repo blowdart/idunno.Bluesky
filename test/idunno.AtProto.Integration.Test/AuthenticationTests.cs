@@ -14,528 +14,527 @@ using idunno.AtProto.Authentication.Models;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
 
-namespace idunno.AtProto.Integration.Test
+namespace idunno.AtProto.Integration.Test;
+
+public class AuthenticationTests
 {
-    public class AuthenticationTests
+    private readonly JsonSerializerOptions _jsonSerializerOptions;
+
+    public AuthenticationTests()
     {
-        private readonly JsonSerializerOptions _jsonSerializerOptions;
+        _jsonSerializerOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        _jsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
+        _jsonSerializerOptions.TypeInfoResolverChain.Insert(0, AtProto.SourceGenerationContext.Default);
+    }
 
-        public AuthenticationTests()
+    [Fact]
+    public async Task CreateSessionSendsCorrectRequestParsesResponseAndSetsAgentCredentialsAndDid()
+    {
+        const string domainName = "test.invalid";
+        const string expectedDid = "did:plc:ec72yg6n2sydzjvtovvdlxrk";
+        const string expectedRefreshToken = "refreshToken";
+
+        string expectedJwt = JwtBuilder.CreateJwt(expectedDid, $"did:web:{domainName}");
+
+        string? sentIdentifier;
+        string? sentPassword;
+        string? authFactorToken;
+
+        TestServer testServer = TestServerBuilder.CreateServer(domainName, async context =>
         {
-            _jsonSerializerOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-            _jsonSerializerOptions.TypeInfoResolverChain.Insert(0, SourceGenerationContext.Default);
-            _jsonSerializerOptions.TypeInfoResolverChain.Insert(0, AtProto.SourceGenerationContext.Default);
-        }
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
 
-        [Fact]
-        public async Task CreateSessionSendsCorrectRequestParsesResponseAndSetsAgentCredentialsAndDid()
-        {
-            const string domainName = "test.invalid";
-            const string expectedDid = "did:plc:ec72yg6n2sydzjvtovvdlxrk";
-            const string expectedRefreshToken = "refreshToken";
-
-            string expectedJwt = JwtBuilder.CreateJwt(expectedDid, $"did:web:{domainName}");
-
-            string? sentIdentifier;
-            string? sentPassword;
-            string? authFactorToken;
-
-            TestServer testServer = TestServerBuilder.CreateServer(domainName, async context =>
+            if (request.Path == "/.well-known/atproto-did")
             {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Path == "/.well-known/atproto-did")
-                {
-                    response.StatusCode = 200;
-                    response.ContentType = "text/plain";
-                    await response.WriteAsync(expectedDid);
-                }
-                else if (request.Path == $"/{expectedDid}")
-                {
-                    response.StatusCode = 200;
-                    DidDocument didDocument = new(
-                        id: $"did:web:{domainName}",
-                        context: ["https://www.w3.org/ns/did/v1"],
-                        alsoKnownAs: null,
-                        verificationMethods: null,
-                        services:
-                        [
-                            new(
-                                id : "#atproto_pds",
-                                type : "atprotopds",
-                                serviceEndpoint : new Uri($"https://{domainName}")
-                                )
-                        ]);
-                    await response.WriteAsJsonAsync(didDocument, _jsonSerializerOptions);
-                }
-                else if (request.Path == "/xrpc/com.atproto.server.createSession" && request.Method == HttpMethod.Post.Method)
-                {
-                    string requestBody = await new StreamReader(request.Body).ReadToEndAsync();
-
-                    CreateSessionRequest? createSessionRequest = JsonSerializer.Deserialize<CreateSessionRequest>(requestBody, _jsonSerializerOptions);
-
-                    if (createSessionRequest is null)
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if (createSessionRequest.Identifier != expectedDid)
-                    {
-                        response.StatusCode = 400;
-                        var errorResponse = new AtErrorDetail()
-                        {
-                            Error = "InvalidIdentifier",
-                            Message = $"Invalid identifier {createSessionRequest.Identifier}."
-                        };
-                        await response.WriteAsJsonAsync(errorResponse);
-                    }
-
-                    response.StatusCode = 200;
-
-                    sentIdentifier = createSessionRequest.Identifier;
-                    sentPassword = createSessionRequest.Password;
-                    authFactorToken = createSessionRequest.AuthFactorToken;
-
-                    var createSessionResponse = new CreateSessionResponse(
-                        accessJwt: expectedJwt,
-                        refreshJwt: expectedRefreshToken,
-                        handle: "test.invalid",
-                        did: expectedDid);
-
-                    await response.WriteAsJsonAsync(createSessionResponse, _jsonSerializerOptions);
-                }
-            });
-
-            using (var agent = new AtProtoAgent(
-                new Uri($"https://{domainName}"),
-                new TestHttpClientFactory(testServer),
-                new AtProtoAgentOptions()
-                {
-                    PlcDirectoryServer = new Uri($"https://{domainName}")
-                }))
-            {
-                AtProtoHttpResult<bool> loginResult = await agent.Login(
-                    did: expectedDid,
-                    password: "password",
-                    authFactorToken: null,
-                    service: new Uri("http://test.invalid"),
-                    cancellationToken: TestContext.Current.CancellationToken);
-
-                Assert.True(loginResult.Succeeded);
-                Assert.True(loginResult.Result);
-                Assert.True(agent.IsAuthenticated);
-                Assert.Equal(expectedDid, agent.Did);
+                response.StatusCode = 200;
+                response.ContentType = "text/plain";
+                await response.WriteAsync(expectedDid);
             }
-        }
-
-        [Fact]
-        public async Task ApiEndpointRotatingDPoPNonceInA200ResponseUpdatesCredentialsAndRaisesEvent()
-        {
-            int callCount = 0;
-            bool cycleDPopNonce = true;
-
-            Uri server = new("https://test.invalid");
-            const string endpoint = "/xrpc/com.atproto.repo.createRecord";
-
-            const string repo = "did:plc:identifier";
-            const string collection = "test.idunno.lexiconType";
-
-            TestServer testServer = TestServerBuilder.CreateServer(server, async context =>
+            else if (request.Path == $"/{expectedDid}")
             {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
+                response.StatusCode = 200;
+                DidDocument didDocument = new(
+                    id: $"did:web:{domainName}",
+                    context: ["https://www.w3.org/ns/did/v1"],
+                    alsoKnownAs: null,
+                    verificationMethods: null,
+                    services:
+                    [
+                        new(
+                            id : "#atproto_pds",
+                            type : "atprotopds",
+                            serviceEndpoint : new Uri($"https://{domainName}")
+                            )
+                    ]);
+                await response.WriteAsJsonAsync(didDocument, _jsonSerializerOptions);
+            }
+            else if (request.Path == "/xrpc/com.atproto.server.createSession" && request.Method == HttpMethod.Post.Method)
+            {
+                string requestBody = await new StreamReader(request.Body).ReadToEndAsync();
 
-                if (request.Headers.Authorization.Count == 0)
+                CreateSessionRequest? createSessionRequest = JsonSerializer.Deserialize<CreateSessionRequest>(requestBody, _jsonSerializerOptions);
+
+                if (createSessionRequest is null)
                 {
-                    response.StatusCode = 401;
+                    response.StatusCode = 400;
                     return;
                 }
-                else if (request.Path == endpoint && request.Body is not null)
+
+                if (createSessionRequest.Identifier != expectedDid)
                 {
-                    JsonNode? requestJson = await JsonSerializer.DeserializeAsync<JsonNode>(request.Body);
-
-                    if (requestJson is null)
+                    response.StatusCode = 400;
+                    var errorResponse = new AtErrorDetail()
                     {
-                        response.StatusCode = 400;
-                        return;
-                    }
+                        Error = "InvalidIdentifier",
+                        Message = $"Invalid identifier {createSessionRequest.Identifier}."
+                    };
+                    await response.WriteAsJsonAsync(errorResponse);
+                }
 
-                    if ((string?)requestJson["repo"] != repo)
+                response.StatusCode = 200;
+
+                sentIdentifier = createSessionRequest.Identifier;
+                sentPassword = createSessionRequest.Password;
+                authFactorToken = createSessionRequest.AuthFactorToken;
+
+                var createSessionResponse = new CreateSessionResponse(
+                    accessJwt: expectedJwt,
+                    refreshJwt: expectedRefreshToken,
+                    handle: "test.invalid",
+                    did: expectedDid);
+
+                await response.WriteAsJsonAsync(createSessionResponse, _jsonSerializerOptions);
+            }
+        });
+
+        using (var agent = new AtProtoAgent(
+            new Uri($"https://{domainName}"),
+            new TestHttpClientFactory(testServer),
+            new AtProtoAgentOptions()
+            {
+                PlcDirectoryServer = new Uri($"https://{domainName}")
+            }))
+        {
+            AtProtoHttpResult<bool> loginResult = await agent.Login(
+                did: expectedDid,
+                password: "password",
+                authFactorToken: null,
+                service: new Uri("http://test.invalid"),
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            Assert.True(loginResult.Succeeded);
+            Assert.True(loginResult.Result);
+            Assert.True(agent.IsAuthenticated);
+            Assert.Equal(expectedDid, agent.Did);
+        }
+    }
+
+    [Fact]
+    public async Task ApiEndpointRotatingDPoPNonceInA200ResponseUpdatesCredentialsAndRaisesEvent()
+    {
+        int callCount = 0;
+        bool cycleDPopNonce = true;
+
+        Uri server = new("https://test.invalid");
+        const string endpoint = "/xrpc/com.atproto.repo.createRecord";
+
+        const string repo = "did:plc:identifier";
+        const string collection = "test.idunno.lexiconType";
+
+        TestServer testServer = TestServerBuilder.CreateServer(server, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Headers.Authorization.Count == 0)
+            {
+                response.StatusCode = 401;
+                return;
+            }
+            else if (request.Path == endpoint && request.Body is not null)
+            {
+                JsonNode? requestJson = await JsonSerializer.DeserializeAsync<JsonNode>(request.Body);
+
+                if (requestJson is null)
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
+
+                if ((string?)requestJson["repo"] != repo)
+                {
+                    response.StatusCode = 401;
+                    var errorResponse = new AtErrorDetail()
                     {
-                        response.StatusCode = 401;
-                        var errorResponse = new AtErrorDetail()
-                        {
-                            Error = "NotAuthorized"
-                        };
-                        await response.WriteAsJsonAsync(errorResponse);
-                        return;
-                    }
+                        Error = "NotAuthorized"
+                    };
+                    await response.WriteAsJsonAsync(errorResponse);
+                    return;
+                }
 
-                    if ((string?)requestJson["collection"] != collection)
+                if ((string?)requestJson["collection"] != collection)
+                {
+                    response.StatusCode = 400;
+                    var errorResponse = new AtErrorDetail()
                     {
-                        response.StatusCode = 400;
-                        var errorResponse = new AtErrorDetail()
-                        {
-                            Error = "InvalidCollection",
-                            Message = $"Invalid collection {(string?)requestJson["repo"]}."
-                        };
-                        await response.WriteAsJsonAsync(errorResponse);
-                        return;
-                    }
+                        Error = "InvalidCollection",
+                        Message = $"Invalid collection {(string?)requestJson["repo"]}."
+                    };
+                    await response.WriteAsJsonAsync(errorResponse);
+                    return;
+                }
 
-                    callCount++;
+                callCount++;
 
-                    if (cycleDPopNonce)
+                if (cycleDPopNonce)
+                {
+                    // Simulate a DPoP nonce rotation
+                    response.Headers.Append("DPoP-Nonce", "newNonce");
+                    cycleDPopNonce = false;
+                }
+
+                response.StatusCode = 200;
+                response.ContentType = "application/json";
+
+                var createRecordResponse = new CreateRecordResponse(
+                    new($"at://{(string?)requestJson["repo"]}/{(string?)requestJson["collection"]}/rkey"),
+                    new("bafyreihd3v4j"))
+                {
+                    Commit = null,
+                    ValidationStatus = "valid"
+                };
+
+                await response.WriteAsJsonAsync(createRecordResponse, _jsonSerializerOptions);
+                return;
+            }
+        });
+
+        using (AtProtoAgent agent = new(server, new TestHttpClientFactory(testServer)))
+        {
+            bool credentialsUpdatedEventRaised = false;
+            string? credentialEventNonce = null;
+
+            var credential = AtProtoCredential.Create(
+                server,
+                authenticationType: AuthenticationType.OAuth,
+                accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:identifier")),
+                refreshToken: "refreshToken",
+                dPoPProofKey: JsonWebKeys.CreateRsaJson(),
+                dPoPNonce: "nonce");
+
+            agent.CredentialsUpdated += (sender, args) =>
+            {
+                credentialsUpdatedEventRaised = true;
+
+                if (args.AccessCredentials is DPoPAccessCredentials dPopAccessCredentials)
+                {
+                    credentialEventNonce = dPopAccessCredentials.DPoPNonce;
+                }
+            };
+
+            agent.Credentials = (DPoPAccessCredentials)credential;
+
+            TestRecord recordValue = new() { TestValue = "test" };
+
+            _ = await agent.CreateRecord(
+                recordValue,
+                collection,
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            DPoPAccessCredentials credentials = (DPoPAccessCredentials)agent.Credentials;
+
+            Assert.Equal("newNonce", credentials.DPoPNonce);
+            Assert.Equal(1, callCount);
+
+            Assert.True(credentialsUpdatedEventRaised);
+
+            Assert.NotNull(credentialEventNonce);
+            Assert.Equal("newNonce", credentialEventNonce);
+        }
+    }
+
+    [Fact]
+    public async Task ApiEndpointRotatingDPoPNonceInA400ResponseUpdatesCredentialsAndRaisesEventAndRetries()
+    {
+        int callCount = 0;
+        bool returnBadRequest = true;
+
+        Uri server = new("https://test.invalid");
+        const string endpoint = "/xrpc/com.atproto.repo.createRecord";
+
+        const string repo = "did:plc:identifier";
+        const string collection = "test.idunno.lexiconType";
+
+        TestServer testServer = TestServerBuilder.CreateServer(server, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Headers.Authorization.Count == 0)
+            {
+                response.StatusCode = 401;
+                return;
+            }
+            else if (request.Path == endpoint && request.Body is not null)
+            {
+                JsonNode? requestJson = await JsonSerializer.DeserializeAsync<JsonNode>(request.Body);
+
+                if (requestJson is null)
+                {
+                    response.StatusCode = 400;
+                    return;
+                }
+
+                if ((string?)requestJson["repo"] != repo)
+                {
+                    response.StatusCode = 401;
+                    var errorResponse = new AtErrorDetail()
                     {
-                        // Simulate a DPoP nonce rotation
-                        response.Headers.Append("DPoP-Nonce", "newNonce");
-                        cycleDPopNonce = false;
-                    }
+                        Error = "NotAuthorized"
+                    };
+                    await response.WriteAsJsonAsync(errorResponse);
+                    return;
+                }
 
-                    response.StatusCode = 200;
+                if ((string?)requestJson["collection"] != collection)
+                {
+                    response.StatusCode = 400;
+                    var errorResponse = new AtErrorDetail()
+                    {
+                        Error = "InvalidCollection",
+                        Message = $"Invalid collection {(string?)requestJson["repo"]}."
+                    };
+                    await response.WriteAsJsonAsync(errorResponse);
+                    return;
+                }
+
+                callCount++;
+
+                if (returnBadRequest)
+                {
+                    // Simulate a DPoP nonce rotation response
+                    response.StatusCode = 401;
                     response.ContentType = "application/json";
+                    string responseBody = " {\r\n  \"error\": \"use_dpop_nonce\",\r\n  \"error_description\":\r\n    \"Authorization server requires nonce in DPoP proof\"\r\n }";
+                    response.Headers.Append("DPoP-Nonce", "newNonce");
+                    await response.WriteAsync(responseBody);
+                    return;
+                }
 
-                    var createRecordResponse = new CreateRecordResponse(
-                        new($"at://{(string?)requestJson["repo"]}/{(string?)requestJson["collection"]}/rkey"),
-                        new("bafyreihd3v4j"))
+                response.StatusCode = 200;
+                response.ContentType = "application/json";
+
+                var createRecordResponse = new CreateRecordResponse(
+                    new($"at://{(string?)requestJson["repo"]}/{(string?)requestJson["collection"]}/rkey"),
+                    new("bafyreihd3v4j"))
                     {
                         Commit = null,
                         ValidationStatus = "valid"
                     };
 
-                    await response.WriteAsJsonAsync(createRecordResponse, _jsonSerializerOptions);
+                await response.WriteAsJsonAsync(createRecordResponse, _jsonSerializerOptions);
+                return;
+            }
+        });
+
+        using (AtProtoAgent agent = new(server, new TestHttpClientFactory(testServer)))
+        {
+            bool credentialsUpdatedEventRaised = false;
+            string? credentialEventNonce = null;
+
+            agent.CredentialsUpdated += (sender, args) =>
+            {
+                credentialsUpdatedEventRaised = true;
+
+                if (args.AccessCredentials is DPoPAccessCredentials dPopAccessCredentials)
+                {
+                    credentialEventNonce = dPopAccessCredentials.DPoPNonce;
+                }
+            };
+
+            var credential = AtProtoCredential.Create(
+                server,
+                authenticationType: AuthenticationType.OAuth,
+                accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:identifier")),
+                refreshToken: "refreshToken",
+                dPoPProofKey: JsonWebKeys.CreateRsaJson(),
+                dPoPNonce: "nonce");
+
+            agent.Credentials = (DPoPAccessCredentials)credential;
+
+            TestRecord recordValue = new() { TestValue = "test" };
+
+            _ = await agent.CreateRecord(
+                recordValue,
+                collection,
+                cancellationToken: TestContext.Current.CancellationToken);
+
+            DPoPAccessCredentials credentials = (DPoPAccessCredentials)agent.Credentials;
+
+            Assert.Equal("newNonce", credentials.DPoPNonce);
+            Assert.Equal(2, callCount);
+
+            Assert.True(credentialsUpdatedEventRaised);
+
+            Assert.NotNull(credentialEventNonce);
+            Assert.Equal("newNonce", credentialEventNonce);
+        }
+    }
+
+    [Fact]
+    public async Task UsingCredentialsIssuedFromADifferentServiceThrowsAccessTokenException()
+    {
+        Uri server = TestServerBuilder.DefaultUri;
+        const string endpoint = "/xrpc/com.atproto.repo.createRecord";
+
+        const string repo = "did:plc:identifier";
+        const string collection = "test.idunno.lexiconType";
+
+        TestServer testServer = TestServerBuilder.CreateServer(server, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Headers.Authorization.Count == 0)
+            {
+                response.StatusCode = 401;
+                return;
+            }
+            else if (request.Path == endpoint && request.Body is not null)
+            {
+                JsonNode? requestJson = await JsonSerializer.DeserializeAsync<JsonNode>(request.Body);
+
+                if (requestJson is null)
+                {
+                    response.StatusCode = 400;
                     return;
                 }
-            });
 
-            using (AtProtoAgent agent = new(server, new TestHttpClientFactory(testServer)))
-            {
-                bool credentialsUpdatedEventRaised = false;
-                string? credentialEventNonce = null;
-
-                var credential = AtProtoCredential.Create(
-                    server,
-                    authenticationType: AuthenticationType.OAuth,
-                    accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:identifier")),
-                    refreshToken: "refreshToken",
-                    dPoPProofKey: JsonWebKeys.CreateRsaJson(),
-                    dPoPNonce: "nonce");
-
-                agent.CredentialsUpdated += (sender, args) =>
-                {
-                    credentialsUpdatedEventRaised = true;
-
-                    if (args.AccessCredentials is DPoPAccessCredentials dPopAccessCredentials)
-                    {
-                        credentialEventNonce = dPopAccessCredentials.DPoPNonce;
-                    }
-                };
-
-                agent.Credentials = (DPoPAccessCredentials)credential;
-
-                TestRecord recordValue = new() { TestValue = "test" };
-
-                _ = await agent.CreateRecord(
-                    recordValue,
-                    collection,
-                    cancellationToken: TestContext.Current.CancellationToken);
-
-                DPoPAccessCredentials credentials = (DPoPAccessCredentials)agent.Credentials;
-
-                Assert.Equal("newNonce", credentials.DPoPNonce);
-                Assert.Equal(1, callCount);
-
-                Assert.True(credentialsUpdatedEventRaised);
-
-                Assert.NotNull(credentialEventNonce);
-                Assert.Equal("newNonce", credentialEventNonce);
-            }
-        }
-
-        [Fact]
-        public async Task ApiEndpointRotatingDPoPNonceInA400ResponseUpdatesCredentialsAndRaisesEventAndRetries()
-        {
-            int callCount = 0;
-            bool returnBadRequest = true;
-
-            Uri server = new("https://test.invalid");
-            const string endpoint = "/xrpc/com.atproto.repo.createRecord";
-
-            const string repo = "did:plc:identifier";
-            const string collection = "test.idunno.lexiconType";
-
-            TestServer testServer = TestServerBuilder.CreateServer(server, async context =>
-            {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Headers.Authorization.Count == 0)
+                if ((string?)requestJson["repo"] != repo)
                 {
                     response.StatusCode = 401;
-                    return;
-                }
-                else if (request.Path == endpoint && request.Body is not null)
-                {
-                    JsonNode? requestJson = await JsonSerializer.DeserializeAsync<JsonNode>(request.Body);
-
-                    if (requestJson is null)
+                    var errorResponse = new AtErrorDetail()
                     {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if ((string?)requestJson["repo"] != repo)
-                    {
-                        response.StatusCode = 401;
-                        var errorResponse = new AtErrorDetail()
-                        {
-                            Error = "NotAuthorized"
-                        };
-                        await response.WriteAsJsonAsync(errorResponse);
-                        return;
-                    }
-
-                    if ((string?)requestJson["collection"] != collection)
-                    {
-                        response.StatusCode = 400;
-                        var errorResponse = new AtErrorDetail()
-                        {
-                            Error = "InvalidCollection",
-                            Message = $"Invalid collection {(string?)requestJson["repo"]}."
-                        };
-                        await response.WriteAsJsonAsync(errorResponse);
-                        return;
-                    }
-
-                    callCount++;
-
-                    if (returnBadRequest)
-                    {
-                        // Simulate a DPoP nonce rotation response
-                        response.StatusCode = 401;
-                        response.ContentType = "application/json";
-                        string responseBody = " {\r\n  \"error\": \"use_dpop_nonce\",\r\n  \"error_description\":\r\n    \"Authorization server requires nonce in DPoP proof\"\r\n }";
-                        response.Headers.Append("DPoP-Nonce", "newNonce");
-                        await response.WriteAsync(responseBody);
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    response.ContentType = "application/json";
-
-                    var createRecordResponse = new CreateRecordResponse(
-                        new($"at://{(string?)requestJson["repo"]}/{(string?)requestJson["collection"]}/rkey"),
-                        new("bafyreihd3v4j"))
-                        {
-                            Commit = null,
-                            ValidationStatus = "valid"
-                        };
-
-                    await response.WriteAsJsonAsync(createRecordResponse, _jsonSerializerOptions);
-                    return;
-                }
-            });
-
-            using (AtProtoAgent agent = new(server, new TestHttpClientFactory(testServer)))
-            {
-                bool credentialsUpdatedEventRaised = false;
-                string? credentialEventNonce = null;
-
-                agent.CredentialsUpdated += (sender, args) =>
-                {
-                    credentialsUpdatedEventRaised = true;
-
-                    if (args.AccessCredentials is DPoPAccessCredentials dPopAccessCredentials)
-                    {
-                        credentialEventNonce = dPopAccessCredentials.DPoPNonce;
-                    }
-                };
-
-                var credential = AtProtoCredential.Create(
-                    server,
-                    authenticationType: AuthenticationType.OAuth,
-                    accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:identifier")),
-                    refreshToken: "refreshToken",
-                    dPoPProofKey: JsonWebKeys.CreateRsaJson(),
-                    dPoPNonce: "nonce");
-
-                agent.Credentials = (DPoPAccessCredentials)credential;
-
-                TestRecord recordValue = new() { TestValue = "test" };
-
-                _ = await agent.CreateRecord(
-                    recordValue,
-                    collection,
-                    cancellationToken: TestContext.Current.CancellationToken);
-
-                DPoPAccessCredentials credentials = (DPoPAccessCredentials)agent.Credentials;
-
-                Assert.Equal("newNonce", credentials.DPoPNonce);
-                Assert.Equal(2, callCount);
-
-                Assert.True(credentialsUpdatedEventRaised);
-
-                Assert.NotNull(credentialEventNonce);
-                Assert.Equal("newNonce", credentialEventNonce);
-            }
-        }
-
-        [Fact]
-        public async Task UsingCredentialsIssuedFromADifferentServiceThrowsAccessTokenException()
-        {
-            Uri server = TestServerBuilder.DefaultUri;
-            const string endpoint = "/xrpc/com.atproto.repo.createRecord";
-
-            const string repo = "did:plc:identifier";
-            const string collection = "test.idunno.lexiconType";
-
-            TestServer testServer = TestServerBuilder.CreateServer(server, async context =>
-            {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Headers.Authorization.Count == 0)
-                {
-                    response.StatusCode = 401;
-                    return;
-                }
-                else if (request.Path == endpoint && request.Body is not null)
-                {
-                    JsonNode? requestJson = await JsonSerializer.DeserializeAsync<JsonNode>(request.Body);
-
-                    if (requestJson is null)
-                    {
-                        response.StatusCode = 400;
-                        return;
-                    }
-
-                    if ((string?)requestJson["repo"] != repo)
-                    {
-                        response.StatusCode = 401;
-                        var errorResponse = new AtErrorDetail()
-                        {
-                            Error = "NotAuthorized"
-                        };
-                        await response.WriteAsJsonAsync(errorResponse);
-                        return;
-                    }
-
-                    if ((string?)requestJson["collection"] != collection)
-                    {
-                        response.StatusCode = 400;
-                        var errorResponse = new AtErrorDetail()
-                        {
-                            Error = "InvalidCollection",
-                            Message = $"Invalid collection {(string?)requestJson["repo"]}."
-                        };
-                        await response.WriteAsJsonAsync(errorResponse);
-                        return;
-                    }
-
-                    response.StatusCode = 200;
-                    response.ContentType = "application/json";
-
-                    var createRecordResponse = new CreateRecordResponse(
-                        new($"at://{(string?)requestJson["repo"]}/{(string?)requestJson["collection"]}/rkey"),
-                        new("bafyreihd3v4j"))
-                    {
-                        Commit = null,
-                        ValidationStatus = "valid"
+                        Error = "NotAuthorized"
                     };
-
-                    await response.WriteAsJsonAsync(createRecordResponse, _jsonSerializerOptions);
+                    await response.WriteAsJsonAsync(errorResponse);
                     return;
                 }
-            });
 
-            using (AtProtoAgent agent = new(server, new TestHttpClientFactory(testServer)))
-            {
-                AtProtoCredential credential = AtProtoCredential.Create(
-                    new Uri("https://server.invalid"),
-                    authenticationType: AuthenticationType.UsernamePassword,
-                    accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:identifier")),
-                    refreshToken: "refreshToken");
-
-                agent.Credentials = credential as AccessCredentials;
-
-                agent.Service = TestServerBuilder.DefaultUri;
-
-                TestRecord recordValue = new() { TestValue = "test" };
-
-                await Assert.ThrowsAsync<AccessTokenException>(async() => await agent.CreateRecord(recordValue, collection, cancellationToken: TestContext.Current.CancellationToken));
-            }
-        }
-
-        [Fact]
-        public async Task GetRecordDoesNotUseCredentialsIfTheyDoNotMatchTheService()
-        {
-            Uri server = TestServerBuilder.DefaultUri;
-            const string endpoint = "/xrpc/com.atproto.repo.getRecord";
-
-            const string repo = "did:plc:identifier";
-            const string collection = "test.idunno.lexiconType";
-            const string rkey = "rkey";
-
-            string jsonReturnValue = """
+                if ((string?)requestJson["collection"] != collection)
                 {
-                    "uri" : "at://did:plc:identifier/test.idunno.lexiconType/rkey",
-                    "cid" : "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
-                    "value" :
+                    response.StatusCode = 400;
+                    var errorResponse = new AtErrorDetail()
                     {
-                        "testValue" : "test"
-                    }
-                }
-                """;
-
-            bool authenticationHeaderWasSent = false;
-
-            TestServer testServer = TestServerBuilder.CreateServer(server, async context =>
-            {
-                HttpRequest request = context.Request;
-                HttpResponse response = context.Response;
-
-                if (request.Headers.Authorization.Count != 0)
-                {
-                    authenticationHeaderWasSent = true;
-                }
-
-                if (request.Path == endpoint &&
-                    request.Query["repo"].FirstOrDefault() == repo &&
-                    request.Query["collection"].FirstOrDefault() == collection &&
-                    request.Query["rkey"].FirstOrDefault() == rkey)
-                {
-                    response.StatusCode = 200;
-                    response.ContentType = "application/json";
-                    await response.WriteAsync(jsonReturnValue);
+                        Error = "InvalidCollection",
+                        Message = $"Invalid collection {(string?)requestJson["repo"]}."
+                    };
+                    await response.WriteAsJsonAsync(errorResponse);
                     return;
                 }
-            });
 
-            using (AtProtoAgent agent = new(server, new TestHttpClientFactory(testServer)))
-            {
-                AtProtoCredential credential = AtProtoCredential.Create(
-                    new Uri("https://server.invalid"),
-                    authenticationType: AuthenticationType.UsernamePassword,
-                    accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:identifier")),
-                    refreshToken: "refreshToken");
+                response.StatusCode = 200;
+                response.ContentType = "application/json";
 
-                agent.Credentials = credential as AccessCredentials;
+                var createRecordResponse = new CreateRecordResponse(
+                    new($"at://{(string?)requestJson["repo"]}/{(string?)requestJson["collection"]}/rkey"),
+                    new("bafyreihd3v4j"))
+                {
+                    Commit = null,
+                    ValidationStatus = "valid"
+                };
 
-                agent.Service = TestServerBuilder.DefaultUri;
-
-                AtProtoHttpResult<AtProtoRepositoryRecord<TestRecord>> getRecordResult =
-                    await agent.GetRecord<TestRecord>(
-                        repo: repo,
-                        collection: collection,
-                        rKey: new RecordKey(rkey),
-                        service: TestServerBuilder.DefaultUri,
-                        cancellationToken: TestContext.Current.CancellationToken);
-                getRecordResult.EnsureSucceeded();
-
-                Assert.False(authenticationHeaderWasSent);
+                await response.WriteAsJsonAsync(createRecordResponse, _jsonSerializerOptions);
+                return;
             }
+        });
+
+        using (AtProtoAgent agent = new(server, new TestHttpClientFactory(testServer)))
+        {
+            AtProtoCredential credential = AtProtoCredential.Create(
+                new Uri("https://server.invalid"),
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:identifier")),
+                refreshToken: "refreshToken");
+
+            agent.Credentials = credential as AccessCredentials;
+
+            agent.Service = TestServerBuilder.DefaultUri;
+
+            TestRecord recordValue = new() { TestValue = "test" };
+
+            await Assert.ThrowsAsync<AccessTokenException>(async() => await agent.CreateRecord(recordValue, collection, cancellationToken: TestContext.Current.CancellationToken));
+        }
+    }
+
+    [Fact]
+    public async Task GetRecordDoesNotUseCredentialsIfTheyDoNotMatchTheService()
+    {
+        Uri server = TestServerBuilder.DefaultUri;
+        const string endpoint = "/xrpc/com.atproto.repo.getRecord";
+
+        const string repo = "did:plc:identifier";
+        const string collection = "test.idunno.lexiconType";
+        const string rkey = "rkey";
+
+        string jsonReturnValue = """
+            {
+                "uri" : "at://did:plc:identifier/test.idunno.lexiconType/rkey",
+                "cid" : "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4",
+                "value" :
+                {
+                    "testValue" : "test"
+                }
+            }
+            """;
+
+        bool authenticationHeaderWasSent = false;
+
+        TestServer testServer = TestServerBuilder.CreateServer(server, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Headers.Authorization.Count != 0)
+            {
+                authenticationHeaderWasSent = true;
+            }
+
+            if (request.Path == endpoint &&
+                request.Query["repo"].FirstOrDefault() == repo &&
+                request.Query["collection"].FirstOrDefault() == collection &&
+                request.Query["rkey"].FirstOrDefault() == rkey)
+            {
+                response.StatusCode = 200;
+                response.ContentType = "application/json";
+                await response.WriteAsync(jsonReturnValue);
+                return;
+            }
+        });
+
+        using (AtProtoAgent agent = new(server, new TestHttpClientFactory(testServer)))
+        {
+            AtProtoCredential credential = AtProtoCredential.Create(
+                new Uri("https://server.invalid"),
+                authenticationType: AuthenticationType.UsernamePassword,
+                accessJwt: JwtBuilder.CreateJwt(new Did("did:plc:identifier")),
+                refreshToken: "refreshToken");
+
+            agent.Credentials = credential as AccessCredentials;
+
+            agent.Service = TestServerBuilder.DefaultUri;
+
+            AtProtoHttpResult<AtProtoRepositoryRecord<TestRecord>> getRecordResult =
+                await agent.GetRecord<TestRecord>(
+                    repo: repo,
+                    collection: collection,
+                    rKey: new RecordKey(rkey),
+                    service: TestServerBuilder.DefaultUri,
+                    cancellationToken: TestContext.Current.CancellationToken);
+            getRecordResult.EnsureSucceeded();
+
+            Assert.False(authenticationHeaderWasSent);
         }
     }
 }

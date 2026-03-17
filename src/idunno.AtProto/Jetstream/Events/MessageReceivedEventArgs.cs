@@ -1,18 +1,17 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-namespace idunno.AtProto.Jetstream.Events
-{
-    /// <summary>
-    /// Encapsulates information given when a the message received from a jetstream instance.
-    /// </summary>
-    /// <param name="message">The message received from the jetstream.</param>
-    public sealed class MessageReceivedEventArgs(string message) : EventArgs
-    {
+namespace idunno.AtProto.Jetstream.Events;
 
-        /// <summary>
-        /// The message received from the jetstream.
-        /// </summary>
-        public string Message { get; } = message;
-    }
+/// <summary>
+/// Encapsulates information given when a the message received from a jetstream instance.
+/// </summary>
+/// <param name="message">The message received from the jetstream.</param>
+public sealed class MessageReceivedEventArgs(string message) : EventArgs
+{
+
+    /// <summary>
+    /// The message received from the jetstream.
+    /// </summary>
+    public string Message { get; } = message;
 }

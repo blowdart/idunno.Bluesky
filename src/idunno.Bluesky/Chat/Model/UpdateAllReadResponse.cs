@@ -3,14 +3,13 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Chat.Model
-{
-    internal record UpdateAllReadResponse
-    {
-        public UpdateAllReadResponse(ulong updatedCount) => UpdatedCount = updatedCount;
+namespace idunno.Bluesky.Chat.Model;
 
-        [JsonInclude]
-        [JsonRequired]
-        public ulong UpdatedCount { get; init; }
-    }
+internal record UpdateAllReadResponse
+{
+    public UpdateAllReadResponse(ulong updatedCount) => UpdatedCount = updatedCount;
+
+    [JsonInclude]
+    [JsonRequired]
+    public ulong UpdatedCount { get; init; }
 }

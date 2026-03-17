@@ -3,21 +3,20 @@
 
 using System.Text.Json.Serialization;
 
-namespace Samples.CustomRecords
-{
-    [JsonSourceGenerationOptions(
-        AllowOutOfOrderMetadataProperties = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        IgnoreReadOnlyProperties = false,
-        GenerationMode = JsonSourceGenerationMode.Default,
-        NumberHandling = JsonNumberHandling.AllowReadingFromString,
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
-        UseStringEnumConverter = true,
-        WriteIndented = false)]
+namespace Samples.CustomRecords;
 
-    [JsonSerializable(typeof(Track))]
-    internal sealed partial class SourceGenerationContext : JsonSerializerContext
-    {
-    }
+[JsonSourceGenerationOptions(
+    AllowOutOfOrderMetadataProperties = true,
+    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    IgnoreReadOnlyProperties = false,
+    GenerationMode = JsonSourceGenerationMode.Default,
+    NumberHandling = JsonNumberHandling.AllowReadingFromString,
+    PropertyNameCaseInsensitive = true,
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    UseStringEnumConverter = true,
+    WriteIndented = false)]
+
+[JsonSerializable(typeof(Track))]
+internal sealed partial class SourceGenerationContext : JsonSerializerContext
+{
 }

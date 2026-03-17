@@ -3,47 +3,46 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.RichText
+namespace idunno.Bluesky.RichText;
+
+/// <summary>
+/// The start and end value for a slice to apply a facet to.
+/// </summary>
+public sealed record ByteSlice
 {
     /// <summary>
-    /// The start and end value for a slice to apply a facet to.
+    /// Constructs a new instance of <see cref="ByteSlice"/>.
     /// </summary>
-    public sealed record ByteSlice
+    /// <param name="byteStart">The byte index at which the facet starts.</param>
+    /// <param name="byteEnd">The byte index at which the facet ends.</param>
+    /// <remarks>
+    /// <para><paramref name="byteStart"/> is zero-indexed and inclusive.</para>
+    /// <para><paramref name="byteEnd"/> is zero-indexed and exclusive.</para>
+    /// </remarks>
+    [JsonConstructor]
+    public ByteSlice(long byteStart, long byteEnd)
     {
-        /// <summary>
-        /// Constructs a new instance of <see cref="ByteSlice"/>.
-        /// </summary>
-        /// <param name="byteStart">The byte index at which the facet starts.</param>
-        /// <param name="byteEnd">The byte index at which the facet ends.</param>
-        /// <remarks>
-        /// <para><paramref name="byteStart"/> is zero-indexed and inclusive.</para>
-        /// <para><paramref name="byteEnd"/> is zero-indexed and exclusive.</para>
-        /// </remarks>
-        [JsonConstructor]
-        public ByteSlice(long byteStart, long byteEnd)
-        {
-            ByteStart = byteStart;
-            ByteEnd = byteEnd;
-        }
-
-        /// <summary>
-        /// Gets the byte index at which the facet starts.
-        /// </summary>
-        /// <remarks>
-        /// <para>This is is zero-indexed and inclusive.</para>
-        /// </remarks>
-        [JsonInclude]
-        [JsonRequired]
-        public long ByteStart { get; init; }
-
-        /// <summary>
-        /// Gets the byte index at which the facet ends.
-        /// </summary>
-        /// <remarks>
-        /// <para>This is is zero-indexed and exclusive.</para>
-        /// </remarks>
-        [JsonInclude]
-        [JsonRequired]
-        public long ByteEnd { get; init; }
+        ByteStart = byteStart;
+        ByteEnd = byteEnd;
     }
+
+    /// <summary>
+    /// Gets the byte index at which the facet starts.
+    /// </summary>
+    /// <remarks>
+    /// <para>This is is zero-indexed and inclusive.</para>
+    /// </remarks>
+    [JsonInclude]
+    [JsonRequired]
+    public long ByteStart { get; init; }
+
+    /// <summary>
+    /// Gets the byte index at which the facet ends.
+    /// </summary>
+    /// <remarks>
+    /// <para>This is is zero-indexed and exclusive.</para>
+    /// </remarks>
+    [JsonInclude]
+    [JsonRequired]
+    public long ByteEnd { get; init; }
 }

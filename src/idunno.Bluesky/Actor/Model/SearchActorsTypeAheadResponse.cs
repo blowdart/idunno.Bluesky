@@ -4,18 +4,17 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Actor.Model
-{
-    [SuppressMessage("Performance", "CA1812", Justification = "Used in SearchActorsTypeAhead.")]
-    internal sealed record SearchActorsTypeAheadResponse
-    {
-        [JsonConstructor]
-        public SearchActorsTypeAheadResponse(IReadOnlyCollection<ProfileViewBasic> actors)
-        {
-            Actors = actors;
-        }
+namespace idunno.Bluesky.Actor.Model;
 
-        [JsonInclude]
-        public IReadOnlyCollection<ProfileViewBasic> Actors { get; init; }
+[SuppressMessage("Performance", "CA1812", Justification = "Used in SearchActorsTypeAhead.")]
+internal sealed record SearchActorsTypeAheadResponse
+{
+    [JsonConstructor]
+    public SearchActorsTypeAheadResponse(IReadOnlyCollection<ProfileViewBasic> actors)
+    {
+        Actors = actors;
     }
+
+    [JsonInclude]
+    public IReadOnlyCollection<ProfileViewBasic> Actors { get; init; }
 }

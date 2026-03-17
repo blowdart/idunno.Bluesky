@@ -3,32 +3,31 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.AtProto.Authentication.Models
+namespace idunno.AtProto.Authentication.Models;
+
+/// <summary>
+/// The results of a RefreshSession API call.
+/// </summary>
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Skip)]
+internal sealed record RefreshSessionResponse : BaseSessionResponse
 {
-    /// <summary>
-    /// The results of a RefreshSession API call.
-    /// </summary>
-    [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Skip)]
-    internal sealed record RefreshSessionResponse : BaseSessionResponse
+    [JsonConstructor]
+    internal RefreshSessionResponse(string accessJwt, string refreshJwt, Handle handle, Did did, DidDocument? didDoc, bool? active, string? status)
+        : base(handle, did, didDoc, active, status)
     {
-        [JsonConstructor]
-        internal RefreshSessionResponse(string accessJwt, string refreshJwt, Handle handle, Did did, DidDocument? didDoc, bool? active, string? status)
-            : base(handle, did, didDoc, active, status)
-        {
-            AccessJwt = accessJwt;
-            RefreshJwt = refreshJwt;
-        }
-
-        /// <summary>
-        /// The Access JWT for the newly created session.
-        /// </summary>
-        [JsonRequired]
-        public string AccessJwt { get; init; }
-
-        /// <summary>
-        /// The Refresh JWT for the newly created session.
-        /// </summary>
-        [JsonRequired]
-        public string RefreshJwt { get; init; }
+        AccessJwt = accessJwt;
+        RefreshJwt = refreshJwt;
     }
+
+    /// <summary>
+    /// The Access JWT for the newly created session.
+    /// </summary>
+    [JsonRequired]
+    public string AccessJwt { get; init; }
+
+    /// <summary>
+    /// The Refresh JWT for the newly created session.
+    /// </summary>
+    [JsonRequired]
+    public string RefreshJwt { get; init; }
 }

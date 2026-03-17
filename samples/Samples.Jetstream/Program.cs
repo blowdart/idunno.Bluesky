@@ -10,207 +10,206 @@ using Microsoft.Extensions.Logging;
 using idunno.AtProto;
 using idunno.AtProto.Jetstream;
 
-namespace Samples.Jetstream
-{
-    public sealed class Program
-    {
-        static async Task<int> Main()
-        {
-            var loggerFactory = LoggerFactory.Create(configure =>
-            {
-                configure.AddSimpleConsole(options =>
-                {
-                    options.IncludeScopes = true;
-                    options.TimestampFormat = "G";
-                    options.UseUtcTimestamp = false;
-                });
-                configure.SetMinimumLevel(LogLevel.Debug);
-            });
+namespace Samples.Jetstream;
 
-            CancellationTokenSource cancellationTokenSource = new();
-            CancellationToken cancellationToken = cancellationTokenSource.Token;
-            Console.CancelKeyPress += (sender, e) =>
+public sealed class Program
+{
+    static async Task<int> Main()
+    {
+        var loggerFactory = LoggerFactory.Create(configure =>
+        {
+            configure.AddSimpleConsole(options =>
             {
-                cancellationTokenSource?.Cancel();
-                e.Cancel = true;
+                options.IncludeScopes = true;
+                options.TimestampFormat = "G";
+                options.UseUtcTimestamp = false;
+            });
+            configure.SetMinimumLevel(LogLevel.Debug);
+        });
+
+        CancellationTokenSource cancellationTokenSource = new();
+        CancellationToken cancellationToken = cancellationTokenSource.Token;
+        Console.CancelKeyPress += (sender, e) =>
+        {
+            cancellationTokenSource?.Cancel();
+            e.Cancel = true;
+        };
+
+        Console.OutputEncoding = Encoding.UTF8;
+
+        using (var didHandleCache = new MemoryCache(new MemoryCacheOptions() { SizeLimit = 1024 }))
+        using (var jetStream = new AtProtoJetstream(
+            options: new JetstreamOptions()
+            {
+                UseCompression = true,
+                LoggerFactory = loggerFactory
+            }))
+        {
+            jetStream.ConnectionStateChanged += (sender, e) =>
+            {
+                Console.WriteLine($"CONNECTION: status changed to {e.State}");
             };
 
-            Console.OutputEncoding = Encoding.UTF8;
-
-            using (var didHandleCache = new MemoryCache(new MemoryCacheOptions() { SizeLimit = 1024 }))
-            using (var jetStream = new AtProtoJetstream(
-                options: new JetstreamOptions()
-                {
-                    UseCompression = true,
-                    LoggerFactory = loggerFactory
-                }))
+            jetStream.MessageReceived += (sender, e) =>
             {
-                jetStream.ConnectionStateChanged += (sender, e) =>
+                Console.WriteLine($"MESSAGE   : Received message {e.Message}");
+            };
+
+            jetStream.RecordReceived += async (sender, e) =>
+            {
+                string timeStamp = e.ParsedEvent.DateTimeOffset.ToLocalTime().ToString("G", CultureInfo.DefaultThreadCurrentUICulture);
+
+                switch (e.ParsedEvent)
                 {
-                    Console.WriteLine($"CONNECTION: status changed to {e.State}");
-                };
-
-                jetStream.MessageReceived += (sender, e) =>
-                {
-                    Console.WriteLine($"MESSAGE   : Received message {e.Message}");
-                };
-
-                jetStream.RecordReceived += async (sender, e) =>
-                {
-                    string timeStamp = e.ParsedEvent.DateTimeOffset.ToLocalTime().ToString("G", CultureInfo.DefaultThreadCurrentUICulture);
-
-                    switch (e.ParsedEvent)
-                    {
-                        case AtJetstreamCommitEvent commitEvent:
-                            {
-                                string eventBelongsTo = commitEvent.Did;
-
-                                if (didHandleCache.TryGetValue(commitEvent.Did, out string? handle))
-                                {
-                                    eventBelongsTo += $"/({handle})";
-                                }
-
-                                Console.WriteLine($"COMMIT    : {eventBelongsTo} executed a {commitEvent.Commit.Operation} in {commitEvent.Commit.Collection} at {timeStamp}");
-                                break;
-                            }
-
-                        case AtJetstreamAccountEvent accountEvent:
-                            {
-                                string eventBelongsTo = accountEvent.Did;
-
-                                if (didHandleCache.TryGetValue(accountEvent.Did, out string? handle))
-                                {
-                                    eventBelongsTo += $"/({handle})";
-                                }
-                                else
-                                {
-                                    DidDocument? didDoc = await Resolution.ResolveDidDocument(
-                                        accountEvent.Did,
-                                        loggerFactory: loggerFactory).ConfigureAwait(false);
-
-                                    if (didDoc is not null)
-                                    {
-                                        foreach (string alsoKnownAs in didDoc.AlsoKnownAs)
-                                        {
-                                            if (alsoKnownAs.StartsWith("at://", StringComparison.InvariantCulture))
-                                            {
-                                                didHandleCache.Set(accountEvent.Did, alsoKnownAs[5..], new MemoryCacheEntryOptions()
-                                                {
-                                                    AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1),
-                                                    Size = 1
-                                                });
-                                                eventBelongsTo += "/";
-                                                eventBelongsTo += alsoKnownAs[5..];
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
-
-                                if (accountEvent.Account.Active)
-                                {
-                                    Console.WriteLine($"ACCOUNT   : {eventBelongsTo} activated at {timeStamp}");
-                                }
-                                else if (accountEvent.Account.Status == AccountStatus.Deactivated)
-                                {
-                                    Console.WriteLine($"ACCOUNT   : {eventBelongsTo} deactivated at {timeStamp}");
-                                }
-                                else if (accountEvent.Account.Status == AccountStatus.Deleted)
-                                {
-                                    Console.WriteLine($"ACCOUNT   : {eventBelongsTo} deleted at {timeStamp}");
-                                }
-                                else
-                                {
-                                    Console.WriteLine($"ACCOUNT   : {eventBelongsTo} was {accountEvent.Account.Status.ToString()!.ToLowerInvariant()} at {timeStamp}");
-                                }
-                                break;
-                            }
-
-                        case AtJetstreamIdentityEvent identityEvent:
-                            {
-                                if (identityEvent.Identity.Handle is not null)
-                                {
-                                    Console.WriteLine($"IDENTITY  : {identityEvent.Did} changed handle to {identityEvent.Identity.Handle} at {timeStamp}");
-
-                                    didHandleCache.Set(identityEvent.Did, identityEvent.Identity.Handle, new MemoryCacheEntryOptions()
-                                    {
-                                        AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1),
-                                        Size = 1
-                                    });
-
-                                }
-                                else
-                                {
-                                    didHandleCache.Remove(identityEvent.Did);
-                                    Console.WriteLine($"IDENTITY  : {identityEvent.Did} at {timeStamp}");
-                                }
-                                break;
-                            }
-
-                        default:
-                            break;
-                    }
-                };
-
-                const int maximumRetries = 5;
-                const int retryWaitPeriod = 10000;
-                TimeSpan resetRetryCountAfter = new(0, 5, 0);
-
-                int currentRetryCount = 0;
-                DateTimeOffset? lastConnectionAttemptedAt = null;
-
-                do
-                {
-                    if (currentRetryCount > maximumRetries)
-                    {
-                        Console.WriteLine("RECONNECT: Failed");
-                        break;
-                    }
-
-                    if (DateTimeOffset.UtcNow > lastConnectionAttemptedAt + resetRetryCountAfter)
-                    {
-                        currentRetryCount = 0;
-                    }
-
-                    lastConnectionAttemptedAt = DateTimeOffset.UtcNow;
-                    await jetStream.ConnectAsync(startFrom: jetStream.MessageLastReceived, cancellationToken: cancellationToken);
-                    while (jetStream.IsConnected && !cancellationToken.IsCancellationRequested)
-                    {
-                        // Let it run and process
-                    }
-
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        await jetStream.CloseAsync(statusDescription: "Cancellation requested at console.", cancellationToken: cancellationToken);
-                        break;
-                    }
-                    else
-                    {
-                        await jetStream.CloseAsync(statusDescription: "Force closed on error", cancellationToken: cancellationToken);
-
-                        // The jet stream is no longer connected, but a cancellation isn't the reason.
-                        Console.WriteLine($"FORCE DISCONNECTED: state == {jetStream.State}");
-
-                        // Try to reconnect
-                        currentRetryCount++;
-
-                        if (currentRetryCount > maximumRetries)
+                    case AtJetstreamCommitEvent commitEvent:
                         {
-                            Console.WriteLine("RECONNECT: Too many times, failed");
+                            string eventBelongsTo = commitEvent.Did;
+
+                            if (didHandleCache.TryGetValue(commitEvent.Did, out string? handle))
+                            {
+                                eventBelongsTo += $"/({handle})";
+                            }
+
+                            Console.WriteLine($"COMMIT    : {eventBelongsTo} executed a {commitEvent.Commit.Operation} in {commitEvent.Commit.Collection} at {timeStamp}");
                             break;
                         }
 
-                        Console.WriteLine("RECONNECT: Waiting ...");
-                        await Task.Delay(retryWaitPeriod);
-                        Console.WriteLine($"RECONNECT: Reconnecting {currentRetryCount}/{maximumRetries}");
+                    case AtJetstreamAccountEvent accountEvent:
+                        {
+                            string eventBelongsTo = accountEvent.Did;
+
+                            if (didHandleCache.TryGetValue(accountEvent.Did, out string? handle))
+                            {
+                                eventBelongsTo += $"/({handle})";
+                            }
+                            else
+                            {
+                                DidDocument? didDoc = await Resolution.ResolveDidDocument(
+                                    accountEvent.Did,
+                                    loggerFactory: loggerFactory).ConfigureAwait(false);
+
+                                if (didDoc is not null)
+                                {
+                                    foreach (string alsoKnownAs in didDoc.AlsoKnownAs)
+                                    {
+                                        if (alsoKnownAs.StartsWith("at://", StringComparison.InvariantCulture))
+                                        {
+                                            didHandleCache.Set(accountEvent.Did, alsoKnownAs[5..], new MemoryCacheEntryOptions()
+                                            {
+                                                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1),
+                                                Size = 1
+                                            });
+                                            eventBelongsTo += "/";
+                                            eventBelongsTo += alsoKnownAs[5..];
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (accountEvent.Account.Active)
+                            {
+                                Console.WriteLine($"ACCOUNT   : {eventBelongsTo} activated at {timeStamp}");
+                            }
+                            else if (accountEvent.Account.Status == AccountStatus.Deactivated)
+                            {
+                                Console.WriteLine($"ACCOUNT   : {eventBelongsTo} deactivated at {timeStamp}");
+                            }
+                            else if (accountEvent.Account.Status == AccountStatus.Deleted)
+                            {
+                                Console.WriteLine($"ACCOUNT   : {eventBelongsTo} deleted at {timeStamp}");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"ACCOUNT   : {eventBelongsTo} was {accountEvent.Account.Status.ToString()!.ToLowerInvariant()} at {timeStamp}");
+                            }
+                            break;
+                        }
+
+                    case AtJetstreamIdentityEvent identityEvent:
+                        {
+                            if (identityEvent.Identity.Handle is not null)
+                            {
+                                Console.WriteLine($"IDENTITY  : {identityEvent.Did} changed handle to {identityEvent.Identity.Handle} at {timeStamp}");
+
+                                didHandleCache.Set(identityEvent.Did, identityEvent.Identity.Handle, new MemoryCacheEntryOptions()
+                                {
+                                    AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1),
+                                    Size = 1
+                                });
+
+                            }
+                            else
+                            {
+                                didHandleCache.Remove(identityEvent.Did);
+                                Console.WriteLine($"IDENTITY  : {identityEvent.Did} at {timeStamp}");
+                            }
+                            break;
+                        }
+
+                    default:
+                        break;
+                }
+            };
+
+            const int maximumRetries = 5;
+            const int retryWaitPeriod = 10000;
+            TimeSpan resetRetryCountAfter = new(0, 5, 0);
+
+            int currentRetryCount = 0;
+            DateTimeOffset? lastConnectionAttemptedAt = null;
+
+            do
+            {
+                if (currentRetryCount > maximumRetries)
+                {
+                    Console.WriteLine("RECONNECT: Failed");
+                    break;
+                }
+
+                if (DateTimeOffset.UtcNow > lastConnectionAttemptedAt + resetRetryCountAfter)
+                {
+                    currentRetryCount = 0;
+                }
+
+                lastConnectionAttemptedAt = DateTimeOffset.UtcNow;
+                await jetStream.ConnectAsync(startFrom: jetStream.MessageLastReceived, cancellationToken: cancellationToken);
+                while (jetStream.IsConnected && !cancellationToken.IsCancellationRequested)
+                {
+                    // Let it run and process
+                }
+
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    await jetStream.CloseAsync(statusDescription: "Cancellation requested at console.", cancellationToken: cancellationToken);
+                    break;
+                }
+                else
+                {
+                    await jetStream.CloseAsync(statusDescription: "Force closed on error", cancellationToken: cancellationToken);
+
+                    // The jet stream is no longer connected, but a cancellation isn't the reason.
+                    Console.WriteLine($"FORCE DISCONNECTED: state == {jetStream.State}");
+
+                    // Try to reconnect
+                    currentRetryCount++;
+
+                    if (currentRetryCount > maximumRetries)
+                    {
+                        Console.WriteLine("RECONNECT: Too many times, failed");
+                        break;
                     }
 
-                } while (!cancellationToken.IsCancellationRequested);
+                    Console.WriteLine("RECONNECT: Waiting ...");
+                    await Task.Delay(retryWaitPeriod);
+                    Console.WriteLine($"RECONNECT: Reconnecting {currentRetryCount}/{maximumRetries}");
+                }
 
-                await jetStream.CloseAsync();
-            }
+            } while (!cancellationToken.IsCancellationRequested);
 
-            return 0;
+            await jetStream.CloseAsync();
         }
+
+        return 0;
     }
 }

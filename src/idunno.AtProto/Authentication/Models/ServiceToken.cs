@@ -3,17 +3,16 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.AtProto.Authentication.Models
-{
-    internal record ServiceToken
-    {
-        public ServiceToken(string token)
-        {
-            Token = token;
-        }
+namespace idunno.AtProto.Authentication.Models;
 
-        [JsonInclude]
-        [JsonRequired]
-        public string Token { get; init; }
+internal record ServiceToken
+{
+    public ServiceToken(string token)
+    {
+        Token = token;
     }
+
+    [JsonInclude]
+    [JsonRequired]
+    public string Token { get; init; }
 }

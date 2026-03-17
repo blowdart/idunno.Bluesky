@@ -3,61 +3,60 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Feed
+namespace idunno.Bluesky.Feed;
+
+/// <summary>
+/// Encapsulates a view over a post in a thread.
+/// </summary>
+public record ThreadViewPost : PostViewBase
 {
     /// <summary>
-    /// Encapsulates a view over a post in a thread.
+    /// Creates a new instance of <see cref="ThreadViewPost"/>.
     /// </summary>
-    public record ThreadViewPost : PostViewBase
+    /// <param name="post">The <see cref="PostView"/> of the post.</param>
+    /// <param name="parent">The <see cref="PostViewBase"/> of the parent of the <paramref name="post"/>, if any.</param>
+    /// <param name="replies">The collection of <see cref="PostViewBase"/> of replies to the <paramref name="post"/>, if any.</param>
+    /// <param name="threadGate">The <see cref="ThreadGateView"/> over the thread gate applied to the post, if any.</param>
+    /// <param name="threadContext">The <see cref="ThreadContext"/> for the post, if any.</param>
+    [JsonConstructor]
+    internal ThreadViewPost(PostView post, PostViewBase? parent, IReadOnlyList<PostViewBase>? replies, ThreadGateView? threadGate, ThreadContext? threadContext)
     {
-        /// <summary>
-        /// Creates a new instance of <see cref="ThreadViewPost"/>.
-        /// </summary>
-        /// <param name="post">The <see cref="PostView"/> of the post.</param>
-        /// <param name="parent">The <see cref="PostViewBase"/> of the parent of the <paramref name="post"/>, if any.</param>
-        /// <param name="replies">The collection of <see cref="PostViewBase"/> of replies to the <paramref name="post"/>, if any.</param>
-        /// <param name="threadGate">The <see cref="ThreadGateView"/> over the thread gate applied to the post, if any.</param>
-        /// <param name="threadContext">The <see cref="ThreadContext"/> for the post, if any.</param>
-        [JsonConstructor]
-        internal ThreadViewPost(PostView post, PostViewBase? parent, IReadOnlyList<PostViewBase>? replies, ThreadGateView? threadGate, ThreadContext? threadContext)
-        {
-            Post = post;
-            Parent = parent;
-            Replies = replies;
-            ThreadGate = threadGate;
-            ThreadContext = threadContext;
-        }
-
-        /// <summary>
-        /// Gets the <see cref="PostView"/> of the post.
-        /// </summary>
-        [JsonInclude]
-        [JsonRequired]
-        public PostView Post { get; init; }
-
-        /// <summary>
-        /// Gets the <see cref="PostViewBase"/> of the parent of the <see cref="Post"/>, if any.
-        /// </summary>
-        [JsonInclude]
-        public PostViewBase? Parent { get; init; }
-
-        /// <summary>
-        /// Gets a collection of <see cref="PostViewBase"/> of replies to the <see cref="Post"/>, if any.
-        /// </summary>
-        [JsonInclude]
-        public IReadOnlyList<PostViewBase>? Replies { get; init; }
-
-        /// <summary>
-        /// Gets a <see cref="ThreadGateView"/> over the thread gate applied to the post, if any.
-        /// </summary>
-        [JsonInclude]
-        [JsonPropertyName("threadgate")]
-        public ThreadGateView? ThreadGate { get; init; }
-
-        /// <summary>
-        /// Gets the <see cref="ThreadContext"/> for the post, if any.
-        /// </summary>
-        [JsonInclude]
-        public ThreadContext? ThreadContext { get; init; }
+        Post = post;
+        Parent = parent;
+        Replies = replies;
+        ThreadGate = threadGate;
+        ThreadContext = threadContext;
     }
+
+    /// <summary>
+    /// Gets the <see cref="PostView"/> of the post.
+    /// </summary>
+    [JsonInclude]
+    [JsonRequired]
+    public PostView Post { get; init; }
+
+    /// <summary>
+    /// Gets the <see cref="PostViewBase"/> of the parent of the <see cref="Post"/>, if any.
+    /// </summary>
+    [JsonInclude]
+    public PostViewBase? Parent { get; init; }
+
+    /// <summary>
+    /// Gets a collection of <see cref="PostViewBase"/> of replies to the <see cref="Post"/>, if any.
+    /// </summary>
+    [JsonInclude]
+    public IReadOnlyList<PostViewBase>? Replies { get; init; }
+
+    /// <summary>
+    /// Gets a <see cref="ThreadGateView"/> over the thread gate applied to the post, if any.
+    /// </summary>
+    [JsonInclude]
+    [JsonPropertyName("threadgate")]
+    public ThreadGateView? ThreadGate { get; init; }
+
+    /// <summary>
+    /// Gets the <see cref="ThreadContext"/> for the post, if any.
+    /// </summary>
+    [JsonInclude]
+    public ThreadContext? ThreadContext { get; init; }
 }

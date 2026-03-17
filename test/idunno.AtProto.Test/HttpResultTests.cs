@@ -3,79 +3,78 @@
 
 using System.Net;
 
-namespace idunno.AtProto.Test
+namespace idunno.AtProto.Test;
+
+public class HttpResultTests
 {
-    public class HttpResultTests
+    [Fact]
+    public void SucceededReturnsTrueWhenStatusCodeIsOKAndResultIsPresent()
     {
-        [Fact]
-        public void SucceededReturnsTrueWhenStatusCodeIsOKAndResultIsPresent()
+        var httpResult = new AtProtoHttpResult<string>
         {
-            var httpResult = new AtProtoHttpResult<string>
-            {
-                StatusCode = HttpStatusCode.OK,
-                Result = "test"
-            };
+            StatusCode = HttpStatusCode.OK,
+            Result = "test"
+        };
 
-            bool result = httpResult.Succeeded;
+        bool result = httpResult.Succeeded;
 
-            Assert.True(result);
-        }
+        Assert.True(result);
+    }
 
-        [Fact]
-        public void SucceededReturnsFalseWhenStatusCodeIsOKAndResultIsNull()
+    [Fact]
+    public void SucceededReturnsFalseWhenStatusCodeIsOKAndResultIsNull()
+    {
+        var httpResult = new AtProtoHttpResult<string>
         {
-            var httpResult = new AtProtoHttpResult<string>
-            {
-                StatusCode = HttpStatusCode.OK,
-                Result = null
-            };
+            StatusCode = HttpStatusCode.OK,
+            Result = null
+        };
 
-            bool result = httpResult.Succeeded;
+        bool result = httpResult.Succeeded;
 
-            Assert.False(result);
-        }
+        Assert.False(result);
+    }
 
 
-        [Fact]
-        public void SucceededReturnsFalseWhenStatusCodeIsNotOK()
+    [Fact]
+    public void SucceededReturnsFalseWhenStatusCodeIsNotOK()
+    {
+        var httpResult = new AtProtoHttpResult<string>
         {
-            var httpResult = new AtProtoHttpResult<string>
-            {
-                StatusCode = HttpStatusCode.Forbidden,
-                Result = "test"
-            };
+            StatusCode = HttpStatusCode.Forbidden,
+            Result = "test"
+        };
 
-            bool result = httpResult.Succeeded;
+        bool result = httpResult.Succeeded;
 
-            Assert.False(result);
-        }
+        Assert.False(result);
+    }
 
-        [Fact]
-        public void SucceededWithResultReturnsTrueWhenStatusCodeIsOKAndAResultIsPresent()
+    [Fact]
+    public void SucceededWithResultReturnsTrueWhenStatusCodeIsOKAndAResultIsPresent()
+    {
+        var httpResult = new AtProtoHttpResult<string>
         {
-            var httpResult = new AtProtoHttpResult<string>
-            {
-                StatusCode = HttpStatusCode.OK,
-                Result = "test"
-            };
+            StatusCode = HttpStatusCode.OK,
+            Result = "test"
+        };
 
-            bool result = httpResult.Succeeded;
+        bool result = httpResult.Succeeded;
 
-            Assert.True(result);
-        }
+        Assert.True(result);
+    }
 
-        [Fact]
-        public void SucceededWithResultReturnsFalseWhenStatusCodeIsOKAndButResultIsNull()
+    [Fact]
+    public void SucceededWithResultReturnsFalseWhenStatusCodeIsOKAndButResultIsNull()
+    {
+        var httpResult = new AtProtoHttpResult<string>
         {
-            var httpResult = new AtProtoHttpResult<string>
-            {
-                StatusCode = HttpStatusCode.OK,
-                Result = null
-            };
+            StatusCode = HttpStatusCode.OK,
+            Result = null
+        };
 
-            bool result = httpResult.Succeeded;
+        bool result = httpResult.Succeeded;
 
-            Assert.False(result);
-        }
+        Assert.False(result);
     }
 }

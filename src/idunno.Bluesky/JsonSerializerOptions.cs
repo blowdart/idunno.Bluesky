@@ -5,13 +5,12 @@ using System.Text.Json;
 
 using idunno.AtProto;
 
-namespace idunno.Bluesky
+namespace idunno.Bluesky;
+
+public partial class BlueskyServer
 {
-    public partial class BlueskyServer
-    {
-        /// <summary>
-        /// Gets a <see cref="JsonSerializerOptions"/> which includes the Bluesky record types.
-        /// </summary>
-        public static JsonSerializerOptions BlueskyJsonSerializerOptions { get; } = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(SourceGenerationContext.Default);
-    }
+    /// <summary>
+    /// Gets a <see cref="JsonSerializerOptions"/> which includes the Bluesky record types.
+    /// </summary>
+    public static JsonSerializerOptions BlueskyJsonSerializerOptions { get; } = AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(SourceGenerationContext.Default);
 }

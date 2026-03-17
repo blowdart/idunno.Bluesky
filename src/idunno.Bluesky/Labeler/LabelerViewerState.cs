@@ -3,16 +3,15 @@
 
 using idunno.AtProto;
 
-namespace idunno.Bluesky.Labeler
+namespace idunno.Bluesky.Labeler;
+
+/// <summary>
+/// Gets a view of the relationship between the requesting actor of a labeler view, and the labeler.
+/// </summary>
+public sealed record LabelerViewerState
 {
     /// <summary>
-    /// Gets a view of the relationship between the requesting actor of a labeler view, and the labeler.
+    /// Gets the <see cref="AtUri"/> of the actor's like record for the labeler, if any.
     /// </summary>
-    public sealed record LabelerViewerState
-    {
-        /// <summary>
-        /// Gets the <see cref="AtUri"/> of the actor's like record for the labeler, if any.
-        /// </summary>
-        public AtUri? Like { get; init; }
-    }
+    public AtUri? Like { get; init; }
 }

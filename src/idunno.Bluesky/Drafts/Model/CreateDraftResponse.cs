@@ -3,19 +3,18 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Drafts.Model
+namespace idunno.Bluesky.Drafts.Model;
+
+internal sealed record CreateDraftResponse
 {
-    internal sealed record CreateDraftResponse
+    [JsonConstructor]
+    public CreateDraftResponse(string id)
     {
-        [JsonConstructor]
-        public CreateDraftResponse(string id)
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
 
-            Id = id;
-        }
-
-        [JsonRequired]
-        public string Id { get; init; }
+        Id = id;
     }
+
+    [JsonRequired]
+    public string Id { get; init; }
 }

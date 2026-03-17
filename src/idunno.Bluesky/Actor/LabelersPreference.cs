@@ -5,51 +5,50 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 
-namespace idunno.Bluesky.Actor
+namespace idunno.Bluesky.Actor;
+
+/// <summary>
+/// A user's labelers preferences
+/// </summary>
+public sealed record LabelersPreference : Preference
 {
     /// <summary>
-    /// A user's labelers preferences
+    /// Creates a new instance of <see cref="LabelersPreference"/> from the specified <paramref name="labelers"/>.
     /// </summary>
-    public sealed record LabelersPreference : Preference
+    /// <param name="labelers">A list of <see cref="LabelerPreference"/>s.</param>
+    [JsonConstructor]
+    public LabelersPreference(IReadOnlyList<LabelerPreference> labelers)
     {
-        /// <summary>
-        /// Creates a new instance of <see cref="LabelersPreference"/> from the specified <paramref name="labelers"/>.
-        /// </summary>
-        /// <param name="labelers">A list of <see cref="LabelerPreference"/>s.</param>
-        [JsonConstructor]
-        public LabelersPreference(IReadOnlyList<LabelerPreference> labelers)
-        {
-            Labelers = labelers;
-        }
-
-        /// <summary>
-        /// Gets the list of <see cref="LabelersPreference"/>.
-        /// </summary>
-        [JsonInclude]
-        public IReadOnlyList<LabelerPreference> Labelers { get; init; }
+        Labelers = labelers;
     }
 
     /// <summary>
-    /// A preference for an individual labeler.
+    /// Gets the list of <see cref="LabelersPreference"/>.
     /// </summary>
-    public record LabelerPreference
-    {
-        /// <summary>
-        /// Creates a new instance of <see cref="LabelerPreference"/>.
-        /// </summary>
-        /// <param name="did">The <paramref name="did"/> of the labeler this preference applies to.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
-        [JsonConstructor]
-        public LabelerPreference(Did did)
-        {
-            ArgumentNullException.ThrowIfNull(did);
-            Did = did;
-        }
+    [JsonInclude]
+    public IReadOnlyList<LabelerPreference> Labelers { get; init; }
+}
 
-        /// <summary>
-        /// The <see cref="Did"/> of the labeler.
-        /// </summary>
-        [JsonRequired]
-        public Did Did { get; init; }
+/// <summary>
+/// A preference for an individual labeler.
+/// </summary>
+public record LabelerPreference
+{
+    /// <summary>
+    /// Creates a new instance of <see cref="LabelerPreference"/>.
+    /// </summary>
+    /// <param name="did">The <paramref name="did"/> of the labeler this preference applies to.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
+    [JsonConstructor]
+    public LabelerPreference(Did did)
+    {
+        ArgumentNullException.ThrowIfNull(did);
+        Did = did;
     }
+
+    /// <summary>
+    /// The <see cref="Did"/> of the labeler.
+    /// </summary>
+    [JsonRequired]
+    public Did Did { get; init; }
 }
