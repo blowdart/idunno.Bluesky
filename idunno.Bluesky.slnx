@@ -29,6 +29,7 @@
     <File Path=".github/workflows/release-build.yml" />
   </Folder>
   <Folder Name="/docs/">
+    <File Path="docs/.editorconfig" />
     <File Path="docs/docfx.json" />
     <File Path="docs/docicon.png" />
     <File Path="docs/favicon.ico" />
