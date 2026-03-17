@@ -8,12 +8,12 @@
 
 * Added metrics in `AtProtoHttpClientMetrics` including request duration, request count and failure count.
 * Added metrics in `DidPlcDirectory` including request duration, request count and failure count.
+* Added extensions for `OpenTelemetry.Metrics`: `AddAtProtoHttpClientMetrics`, `AddAtProtoDirectoryMetrics`, and `AddAtProtoJetStreamMetrics`.
 * Added new constructor overloads for `AtProtoHttpClient` to allow for use with `MetricsFactory`.
 * Added `Throttled` to `AccountStatus` in Jetstream account events.
-* Added extensions for `OpenTelemetry.Metrics`: `AddAtProtoHttpClientMetrics`, `AddAtProtoDirectoryMetrics`, and `AddAtProtoJetStreamMetrics`.
 * Added `MaxMessageSize` to `JetStreamOptions` to guard against a malicious jetstream server sending overly large messages.
 * Added optional validation callbacks to `BuildOAuthLoginUri` to allow for validation of the discovered PDS and authorization server URIs.
-* Override `ToString()` on `AtProtoCredential` to return a redacted string in case of accidental logging.
+* Added override on `ToString()` on `AtProtoCredential` to return a redacted string in case of accidental logging.
 
 ### idunno.AtProto.Types
 
@@ -34,7 +34,9 @@
       // 🤖 - Do some action because the profile self identifies as a bot.
   }
   ```
-
+* Added `SelfLabels` property to `PostView`.
+* Added `SelfLabelValues` class.
+* Added `Bot` and `DiscourageShowingToLoggedOutUser` to `SelfLabelValues`.
 * Added `JsonPolymorphic` attributes to individual records to remove the extraneous `ExtensionData` entries.
 * Added `CreateStatus`, `GetStatus` and `UpdateStatus` to `BlueskyAgent`.
 * Added a setter to `DurationMinutes` on `Status` and setters to `ExternalProperties` to allow for updating of an existing profile status.
@@ -67,15 +69,13 @@
 * Mark `SetStatus` as obsolete in favor of `CreateStatus` and `UpdateStatus`.
   This allows for better handling of the case where a profile does not have an existing status,
   and clearer intent when updating an existing status.
-* Added `SelfLabels` property to `ProfileViewBasic` and `PostView`.
-* Added `SelfLabelValues` class and marked `SelfLabelNames` as obsolete in favor of it, as the new name is more correct.
-* Added `Bot` and `DiscourageShowingToLoggedOutUser` to `SelfLabelValues`.
+* Marked `SelfLabelNames` as obsolete in favor of `SelfLabelValues`, as the new name is more correct.
 
 #### idunno.AtProto
 
 ## 1.7.0 - 2026-03-12
 
-### ⚠️Security Advisory
+### ⚠️Security Advisory - [CVE-2026-26127 - .NET Denial of Service](https://github.com/dotnet/announcements/issues/384)
 
 * A transitive dependency of `idunno.AtProto` and `idunno.AtProto.OAuthCallback`, `Microsoft.Bcl.Memory`
   had a Denial of Service security vulnerability,
