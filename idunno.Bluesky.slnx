@@ -9,6 +9,7 @@
   </Folder>
   <Folder Name="/.github/">
     <File Path=".github/CODEOWNERS" />
+    <File Path=".github/copilot-instructions.md" />
     <File Path=".github/dependabot.yml" />
     <File Path=".github/pull_request_template.md" />
   </Folder>
@@ -16,6 +17,9 @@
     <File Path=".github/ISSUE_TEMPLATE/bug_report.md" />
     <File Path=".github/ISSUE_TEMPLATE/docs-issue.md" />
     <File Path=".github/ISSUE_TEMPLATE/feature_request.md" />
+  </Folder>
+  <Folder Name="/.github/prompts/">
+    <File Path=".github/prompts/docs.prompt.md" />
   </Folder>
   <Folder Name="/.github/workflows/">
     <File Path=".github/workflows/actions-security-analysis.yml" />
