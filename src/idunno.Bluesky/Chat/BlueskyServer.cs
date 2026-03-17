@@ -14,9 +14,6 @@ using idunno.AtProto.Authentication;
 
 namespace idunno.Bluesky;
 
-/// <summary>
-/// Wraps the /xrpc/chat.bsky.convo.* APIs
-/// </summary>
 public static partial class BlueskyServer
 {
     // https://docs.bsky.app/docs/api/chat-bsky-convo-accept-convo

@@ -104,9 +104,9 @@ public static partial class AtProtoServer
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <remarks><para>Delete session requires the refresh token, not the access token.</para></remarks>
     /// <exception cref="ArgumentException">Thrown when <paramref name="refreshCredential"/>'s refresh token is <see langword="null"/> or whitespace.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="refreshCredential"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    /// <remarks><para>Delete session requires the refresh token, not the access token.</para></remarks>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",

@@ -41,7 +41,10 @@ public abstract class AtProtoCredential(Uri service, AuthenticationType authenti
     /// </summary>
     protected ReaderWriterLockSlim ReaderWriterLockSlim { get; } = new();
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Returns a static string to prevent sensitive information from being included in logs or error messages.
+    /// </summary>
+    /// <returns>A static string to prevent sensitive information from being included in logs or error messages.</returns>
     public override string ToString() => "[REDACTED]";
 
     /// <summary>

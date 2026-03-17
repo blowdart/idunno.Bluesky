@@ -8,9 +8,6 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace idunno.AtProto;
 
-/// <summary>
-/// Represents an atproto server and provides methods to send messages and receive responses from the server.
-/// </summary>
 public static partial class AtProtoServer
 {
     // https://docs.bsky.app/docs/api/com-atproto-server-describe-server

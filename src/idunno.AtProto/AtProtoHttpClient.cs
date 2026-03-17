@@ -24,12 +24,12 @@ namespace idunno.AtProto;
 /// <summary>
 /// A helper class to perform HTTP requests against an AT Proto service.
 /// </summary>
-/// <remarks>
-/// <para>Creates a new instance of <see cref="AtProtoHttpClient"/></para>
-/// </remarks>
 /// <param name="serviceProxy">Any service a PDS should proxy the request to.</param>
 /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
 /// <param name="meterFactory">An optional meter factory to create meters from.</param>
+/// <remarks>
+/// <para>Creates a new instance of <see cref="AtProtoHttpClient"/></para>
+/// </remarks>
 public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? loggerFactory = null, IMeterFactory? meterFactory = null)
 {
     static readonly HttpClientHandler s_defaultClientHandler = new()

@@ -21,16 +21,13 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">
+    /// <exception cref="ArgumentException">
     ///   Thrown when <paramref name="post"/>has a <see langword="null"/> repo, does not point to a post record or the current user does not own the record pointed to.
     /// </exception>
     /// <exception cref="ArgumentOutOfRangeException">
     ///   Thrown when <paramref name="rules"/> or <paramref name="hiddenReplies"/> have more than the maximum number of entries.
     /// </exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is unauthenticated.</exception>
-    /// <exception cref="ArgumentException">
-    /// Thrown when <paramref name="post"/> is not owned by the current user, or the <paramref name="post"/> does not point to a valid post record.
-    /// </exception>
     public async Task<AtProtoHttpResult<CreateRecordResult>> AddThreadGate(
         AtUri post,
         ICollection<ThreadGateRule>? rules = null,

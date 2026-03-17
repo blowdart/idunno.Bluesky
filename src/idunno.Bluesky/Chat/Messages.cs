@@ -6,11 +6,11 @@ namespace idunno.Bluesky.Chat;
 /// <summary>
 /// Implements a paged collection of messages from a direct message conversation.
 /// </summary>
+/// <param name="list">The list of <see cref="MessageViewBase"/> to create this instance of <see cref="Messages"/> from.</param>
+/// <param name="cursor">An optional cursor for pagination.</param>
 /// <remarks>
 /// <para>Creates a new instance of <see cref="Messages"/>.</para>
 /// </remarks>
-/// <param name="list">The list of <see cref="MessageViewBase"/> to create this instance of <see cref="Messages"/> from.</param>
-/// <param name="cursor">An optional cursor for pagination.</param>
 public class Messages(IList<MessageViewBase> list, string? cursor = null) : PagedViewReadOnlyCollection<MessageViewBase>(list, cursor)
 {
     /// <summary>

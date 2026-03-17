@@ -175,18 +175,18 @@ public record Draft
     /// <summary>
     /// Gets the collection of language strings, if any, that the post is written in.
     /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the number of languages is less than one or greater than three.</exception>"
     /// <remarks>
     ///<para>A maximum of three languages can be specified. Languages should be specified in RFC5646 format.</para>
     /// </remarks>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when the number of languages is less than one or greater than three.</exception>"
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IList<string>? Langs { get; init; }
 
     /// <summary>
     /// Gets the rules for the post gate to be created when this draft is published.
     /// </summary>
-    /// <remarks><para>A maximum of five post gates can be specified.</para></remarks>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the number of post gate rules is less than one or greater than five.</exception>
+    /// <remarks><para>A maximum of five post gates can be specified.</para></remarks>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [JsonPropertyName("postgateEmbeddingRules")]
     public IList<PostGateRule>? PostGateEmbeddingRules { get; init; } = null;
@@ -194,8 +194,8 @@ public record Draft
     /// <summary>
     /// Gets the rules for the thread gates to be created when this draft is published.
     /// </summary>
-    /// <remarks><para>A maximum of five thread gates can be specified.</para></remarks>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the number of thread gate rules is less than one or greater than five.</exception>
+    /// <remarks><para>A maximum of five thread gates can be specified.</para></remarks>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [JsonPropertyName("threadgateAllow")]
     public IList<ThreadGateRule>? ThreadGateAllowRules { get; init; } = null;

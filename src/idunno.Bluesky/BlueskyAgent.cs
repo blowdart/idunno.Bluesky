@@ -321,12 +321,12 @@ public partial class BlueskyAgent : AtProtoAgent
     /// <param name="uri">A URI from the Bluesky web client.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>An <see cref="AtUri"/> corresponding to the resource the Bluesky web client <paramref name="uri"/>.</returns>
-    /// <remarks>
-    /// <para>This method makes outgoing web requests to resolve the handle in a Bluesky <paramref name="uri"/> to a <see cref="AtProto.Did"/>.</para>
-    /// </remarks>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an unexpected format.</exception>
     /// <exception cref="HandleResolutionException">Thrown when the handle in <paramref name="uri"/> could not be resolved to a <see cref="AtProto.Did"/>.</exception>
+    /// <remarks>
+    /// <para>This method makes outgoing web requests to resolve the handle in a Bluesky <paramref name="uri"/> to a <see cref="AtProto.Did"/>.</para>
+    /// </remarks>
     public async Task<AtUri> BuildAtUriFromBlueskyWebUri(Uri uri, CancellationToken cancellationToken = default)
     {
         // Bluesky web client URIs should be in the format

@@ -29,7 +29,7 @@ public static class AtProtoMetricsExtensions
     }
 
     /// <summary>
-    /// Enables the instrumentation data collection for <see cref="DirectoryServer"/>.
+    /// Enables the instrumentation data collection for Directory operations.
     /// </summary>
     /// <param name="builder"><see cref="MeterProviderBuilder"/> being configured.</param>
     /// <returns>The instance of <see cref="MeterProviderBuilder"/> to chain the calls.</returns>

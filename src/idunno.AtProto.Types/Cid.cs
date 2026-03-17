@@ -142,7 +142,10 @@ public sealed class Cid : IEquatable<Cid>
     [JsonPropertyName("cid")]
     public string Value => ToString();
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Returns a string that represents the current <see cref="Cid"/> object.
+    /// </summary>
+    /// <returns>A string representation of the current <see cref="Cid"/>.</returns>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "AT Proto normalizes to lower case")]
     public override string ToString()
     {
@@ -197,7 +200,10 @@ public sealed class Cid : IEquatable<Cid>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Cid FromString(string s) => new(s);
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Gets a hash code for the current object.
+    /// </summary>
+    /// <returns>A hash code for the current object.</returns>
     public override int GetHashCode()
     {
         HashCode hashAlgorithm = default;
@@ -209,10 +215,18 @@ public sealed class Cid : IEquatable<Cid>
         return hashAlgorithm.ToHashCode();
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Indicates whether the current object is equal to another object of the same type.
+    /// </summary>
+    /// <param name="obj">An object to compare with this object.</param>
+    /// <returns><see langword="true"/> if the current object is equal to the <paramref name="obj"/>; otherwise, <see langword="false" />.</returns>
     public override bool Equals(object? obj) => Equals(obj as Cid);
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Indicates whether the current object is equal to another object of the same type.
+    /// </summary>
+    /// <param name="other">An object to compare with this object.</param>
+    /// <returns><see langword="true"/> if the current object is equal to the <paramref name="other"/>; otherwise, <see langword="false" />.</returns>
     public bool Equals(Cid? other)
     {
         if (other is null)
@@ -267,7 +281,6 @@ public sealed class Cid : IEquatable<Cid>
     /// <param name="rhs">The second <see cref="Cid"/> to compare, or <see langword="null"/>.</param>
     /// <returns><see langword="true"/> if the value of <paramref name="lhs"/> is different from the value of <paramref name="rhs" />; otherwise, <see langword="false"/>.</returns>
     public static bool operator !=(Cid? lhs, Cid? rhs) => !(lhs == rhs);
-
 
     private static (byte Version, ulong Codec, IReadOnlyList<byte> Hash) ParseBytes(byte[] bytes)
     {

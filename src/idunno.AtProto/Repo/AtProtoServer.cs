@@ -14,9 +14,6 @@ using idunno.AtProto.Authentication;
 
 namespace idunno.AtProto;
 
-/// <summary>
-/// Represents an atproto server and provides methods to send messages and receive responses from the server.
-/// </summary>
 public static partial class AtProtoServer
 {
     // https://docs.bsky.app/docs/api/com-atproto-repo-apply-writes
@@ -1493,12 +1490,6 @@ public static partial class AtProtoServer
     /// <summary>
     /// Upload a new blob, to be referenced from a repository record.Requires authentication.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    ///   The blob will be deleted if it is not referenced within a time window (eg, minutes).
-    ///   Restrictions (mime type, size, etc) are enforced when the reference is created.
-    /// </para>
-    /// </remarks>
     /// <param name="blob">The blob to upload.</param>
     /// <param name="mimeType">The mime type of the blob to upload.</param>
     /// <param name="service">The service to upload the blob to.</param>
@@ -1513,6 +1504,12 @@ public static partial class AtProtoServer
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="blob"/> is a zero length array.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="mimeType"/> is empty or not in the type/subtype format.</exception>
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The blob will be deleted if it is not referenced within a time window (eg, minutes).
+    ///   Restrictions (mime type, size, etc) are enforced when the reference is created.
+    /// </para>
+    /// </remarks>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",

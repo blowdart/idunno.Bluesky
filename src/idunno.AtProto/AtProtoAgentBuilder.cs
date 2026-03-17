@@ -183,11 +183,13 @@ public class AtProtoAgentBuilder
     /// </summary>
     /// <param name="configure">The <see cref="HttpClientOptions"/> the agent will use when making HTTP requests.</param>
     /// <returns>The same instance of <see cref="AtProtoAgentBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="configure"/> is <see langword="null"/>.</exception>
+    /// <remarks>
     /// <para>
     /// Setting <see cref="HttpClientOptions.CheckCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
     /// <see langword="false"/> if you are using a debugging proxy which does not support CRLs.
     /// </para>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="configure"/> is <see langword="null"/>.</exception>
+    /// </remarks>
     public AtProtoAgentBuilder ConfigureHttpClientOptions(Action<HttpClientOptions> configure)
     {
         ArgumentNullException.ThrowIfNull(configure);
@@ -225,10 +227,10 @@ public class AtProtoAgentBuilder
     /// </summary>
     /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use</param>
     /// <returns>The same instance of <see cref="AtProtoAgentBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClientFactory"/> is <see langword="null"/>.</exception>
     /// <remarks>
     ///<para>If an <see cref="IHttpClientFactory"/> is set then <see cref="HttpClientOptions"/> will be ignored.</para>
     /// </remarks>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClientFactory"/> is <see langword="null"/>.</exception>
     public AtProtoAgentBuilder WithHttpClientFactory(IHttpClientFactory httpClientFactory)
     {
         ArgumentNullException.ThrowIfNull(httpClientFactory);

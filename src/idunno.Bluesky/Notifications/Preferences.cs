@@ -25,6 +25,7 @@ namespace idunno.Bluesky.Notifications;
 /// <param name="SubscribedPost">Notifications for when a user whose posts you subscribed to posts or replies.</param>
 /// <param name="Unverified">Undocumented</param>
 /// <param name="Verified">Undocumented</param>
+[SuppressMessage("Documentation", "CSENSE020:Potential ghost parameter reference in documentation", Justification = "Repost reference in RepostViaRepost is not a ghost parameter reference.")]
 public sealed record Preferences(
     ChatPreference Chat,
     FilterablePreference Follow,

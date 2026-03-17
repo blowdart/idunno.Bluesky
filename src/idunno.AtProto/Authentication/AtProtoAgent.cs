@@ -170,7 +170,7 @@ public partial class AtProtoAgent
     /// <param name="oAuthClient">An instance of <paramref name="oAuthClient"/> to build the URI in.</param>
     /// <param name="handle">The handle to authorize for.</param>
     /// <param name="scopes">A collection of scopes to request. Defaults to "atproto".</param>
-    /// <param name="returnUri">The URI the oauth server should post back to when it has authorized the application.</param>
+    /// <param name="returnUri">The URI the OAuth server should post back to when it has authorized the application.</param>
     /// <param name="uriExtraParameters">Any extra parameters to attach to the URI.</param>
     /// <param name="stateExtraProperties">Any extra properties to save in state.</param>
     /// <param name="validatePds">A callback to validate the PDS URI discovered for <paramref name="handle"/></param>
@@ -179,7 +179,7 @@ public partial class AtProtoAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="oAuthClient"/> or <paramref name="handle"/> is <see langword="null"/>, or
-    /// <paramref name="scopes"/> or <paramref name="returnUri"/>is not specified and is not configured on the agent <see cref="Options"/>.
+    /// <paramref name="scopes"/> or <paramref name="returnUri"/>is not specified and is not configured on the agent options.
     /// </exception>
     /// <exception cref="OAuthException">
     /// Thrown when the OAuth options on the agent have not been configured, or
@@ -835,7 +835,7 @@ public partial class AtProtoAgent
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <exception cref="CredentialException">Thrown when the current agent authentication state does not have enough information to call the DeleteSession API.</exception>
     /// <exception cref="LogoutException">Thrown when the DeleteSession API call fails.</exception>
-    /// <exception cref="OAuthException">Thrown if the OAuth configuration on the agent is not specified or is not configured on the agent.<see cref="Options"/>.</exception>
+    /// <exception cref="OAuthException">Thrown if the OAuth configuration on the agent is not specified or is not configured on the agent options.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",

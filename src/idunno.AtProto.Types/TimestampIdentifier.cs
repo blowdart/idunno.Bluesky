@@ -122,7 +122,10 @@ public sealed partial class TimestampIdentifier
         return new RecordKey(FromTime(timeStamp, (long)s_clockId.Value));
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Returns a string that represents the current <see cref="TimestampIdentifier"/> object.
+    /// </summary>
+    /// <returns>A string representation of the current <see cref="TimestampIdentifier"/>.</returns>
     public override string ToString() => $"{_value}";
 
     /// <summary>

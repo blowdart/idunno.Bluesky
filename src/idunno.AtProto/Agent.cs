@@ -67,10 +67,10 @@ public abstract class Agent : IDisposable
     /// </summary>
     /// <param name="httpClientFactory">An <see cref="IHttpClientFactory"/> to use to create HTTP clients.</param>
     /// <param name="jsonOptions">Any <see cref="JsonOptions"/> to use during serialization and deserialization.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClientFactory"/> is <see langword="null"/>.</exception>
     /// <remarks>
     /// <para>The agent will request a named HttpClient with a name of "idunno.AtProto".</para>
     /// </remarks>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClientFactory"/> is <see langword="null"/>.</exception>
     protected Agent(IHttpClientFactory httpClientFactory, JsonOptions? jsonOptions)
     {
         ArgumentNullException.ThrowIfNull(httpClientFactory);

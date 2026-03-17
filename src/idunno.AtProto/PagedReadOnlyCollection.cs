@@ -11,11 +11,11 @@ namespace idunno.AtProto;
 /// A list of <typeparamref name="T"/> <see cref="AtProtoObject"/>s, with an optional cursor for pagination.
 /// </summary>
 /// <typeparam name="T">The type of <see cref="AtProtoObject"/>s the list contains.</typeparam>
+/// <param name="list">The list to create this instance of <see cref="PagedReadOnlyCollection{T}"/> from.</param>
+/// <param name="cursor">An optional cursor for pagination.</param>
 /// <remarks>
 /// <para>Creates a new instance of <see cref="PagedReadOnlyCollection{T}"/>.</para>
 /// </remarks>
-/// <param name="list">The list to create this instance of <see cref="PagedReadOnlyCollection{T}"/> from.</param>
-/// <param name="cursor">An optional cursor for pagination.</param>
 public class PagedReadOnlyCollection<T>(IList<T> list, string? cursor = null) : ReadOnlyCollection<T>(list) where T : AtProtoObject
 {
 

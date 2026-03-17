@@ -803,7 +803,6 @@ public partial class BlueskyAgent
     /// <summary>
     /// Creates a Bluesky post record containing just a external Open Graph embedded card.
     /// </summary>
-    /// <remarks><para>Posts containing an embedded card do not require post text.</para></remarks>
     /// <param name="externalCard">An Open Graph embedded card.</param>
     /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
     /// <param name="langs">The languages the post was written in.</param>
@@ -816,6 +815,7 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="externalCard"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    /// <remarks><para>Posts containing an embedded card do not require post text.</para></remarks>
     public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
         EmbeddedExternal externalCard,
         DateTimeOffset? createdAt = null,

@@ -469,13 +469,13 @@ public sealed class PostBuilder
     /// <summary>
     /// Gets or sets the <see cref="StrongReference"/> of the post being replied to.
     /// </summary>
+    /// <exception cref="ArgumentException">Thrown when setting a value and <see cref="ThreadGateRules"/> is not <see langword="null"/>.</exception>
     /// <remarks>
     /// <para>
     ///   Replying to a post and quoting a post are mutually exclusive operations.
     ///   Setting <see cref="InReplyTo"/> will remove the <see cref="QuotePost"/> if one has been set.
     ///</para>
     /// </remarks>
-    /// <exception cref="ArgumentException">Thrown when setting a value and <see cref="ThreadGateRules"/> is not <see langword="null"/>.</exception>
     public ReplyReferences? InReplyTo
     {
         get

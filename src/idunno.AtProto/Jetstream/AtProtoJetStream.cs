@@ -167,7 +167,7 @@ public class AtProtoJetstream : IDisposable
     public bool IsConnected => _client.State == WebSocketState.Open;
 
     /// <summary>
-    /// Gets the <see cref="WebSocketState"/> of the underlying <see cref="ClientWebSocket"/>.
+    /// Gets the <see cref="WebSocketState"/> of the underlying web socket.
     /// </summary>
     public WebSocketState State => _client.State;
 
@@ -543,7 +543,9 @@ public class AtProtoJetstream : IDisposable
         }
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Frees resources.
+    /// </summary>
     public void Dispose()
     {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
