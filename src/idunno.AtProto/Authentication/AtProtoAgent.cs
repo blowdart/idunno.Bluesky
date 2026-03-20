@@ -275,7 +275,7 @@ public partial class AtProtoAgent
 
         if (uri.HostNameType == UriHostNameType.IPv4 || uri.HostNameType == UriHostNameType.IPv6)
         {
-            return !IsPrivateIPAddress(IPAddress.Parse(uri.Host));
+            return !IsUnsafeIpAddress(IPAddress.Parse(uri.Host));
         }
 
         IPHostEntry? hostEntry = await Dns.GetHostEntryAsync(uri.Host, cancellationToken).ConfigureAwait(false);
@@ -284,7 +284,7 @@ public partial class AtProtoAgent
             return false;
         }
 
-        return !hostEntry.AddressList.Any(IsPrivateIPAddress);
+        return !hostEntry.AddressList.Any(IsUnsafeIpAddress);
     }
 
     // IPv4 private address ranges https://datatracker.ietf.org/doc/html/rfc1918
@@ -292,9 +292,15 @@ public partial class AtProtoAgent
     private static readonly IPAddressRange s_ipRange172_16_12 = IPAddressRange.Parse("172.16.0.0/12");
     private static readonly IPAddressRange s_ipRange192_168_16 = IPAddressRange.Parse("192.168.0.0/16");
     private static readonly IPAddressRange s_ipV6PrivateLocal = IPAddressRange.Parse("fd00::/8");
+    private static readonly IPAddress s_cloudMetaDataEndpoint = IPAddress.Parse("169.254.169.254"); // Metadata endpoint used by AWS, Azure, and Google Cloud.
 
-    private static bool IsPrivateIPAddress(IPAddress ipAddress)
+    private static bool IsUnsafeIpAddress(IPAddress ipAddress)
     {
+        if (ipAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork && ipAddress.Equals(s_cloudMetaDataEndpoint))
+        {
+            return true;
+        }
+
         if (ipAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
         {
             return s_ipRange10_8.Contains(ipAddress) ||
@@ -308,6 +314,7 @@ public partial class AtProtoAgent
                 ipAddress.IsIPv6SiteLocal ||
                 s_ipV6PrivateLocal.Contains(ipAddress);
         }
+
         return false;
     }
 

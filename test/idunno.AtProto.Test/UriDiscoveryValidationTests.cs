@@ -22,6 +22,14 @@ public class UriDiscoveryValidationTests
         Assert.False(await AtProtoAgent.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    public async Task CloudMetadataEndpointShouldFailValidation()
+    {
+        var metadataUri = new Uri("https://169.254.169.254");
+
+        Assert.False(await AtProtoAgent.DefaultDiscoveryUriValidator(metadataUri, TestContext.Current.CancellationToken));
+    }
+
     [Theory]
     [InlineData("fe80::1")]
     [InlineData("fe80::1ff:fe23:4567:890a")]
