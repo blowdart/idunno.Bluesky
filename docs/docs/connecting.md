@@ -113,7 +113,7 @@ OAuthLoginState oAuthLoginState = uriBuilderOAuthClient.State;
 ```
 
 > [!WARNING]
-> `BuildOAuth2LoginUri` uses discovery mechanisms to resolve the PDS `Uri` and the Authorization Server `Uri`
+> `AtProtoAgent.BuildOAuth2LoginUri` uses discovery mechanisms to resolve the PDS `Uri` and the Authorization Server `Uri`
 > for the specified handle. A malicious user could supply a handle which returns URIs that point to internal
 > host names or malicious authorization servers. A malicious PDS resolution would cause your application to issue
 > requests to the `.well-known/oauth-protected-resource` path against a host name they control.
@@ -122,11 +122,14 @@ OAuthLoginState oAuthLoginState = uriBuilderOAuthClient.State;
 > but you should be aware of the possibility if you are writing an application that could be hosted with a
 > corporate environment.
 >
-> `BuildOAuth2LoginUri` accepts two optional parameters, `validatePds` and `validateAuthorizationServer` which
+> `AtProtoAgent.BuildOAuth2LoginUri` accepts two optional parameters, `validatePds` and `validateAuthorizationServer` which
 > are both callback methods which you can use to validate the URIs discovered during the building of an OAuth2
 > login URI. You can use this methods to mitigate against
 > [SSRF](https://owasp.org/www-community/attacks/Server_Side_Request_Forgery) attacks and/or to validate
-> the authorization server is one you expect. 
+> the authorization server is one you expect.
+>
+> A default implementation of discovery validation is called by default which will reject any PDS or authorization server
+> that doesn't resolve to a public IP address.
 
 When the user returns to your application you take the callback data returned from the OAuth server and process it
 

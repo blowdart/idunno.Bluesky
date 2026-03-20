@@ -14,6 +14,7 @@ using Microsoft.IdentityModel.Tokens;
 
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Events;
+using NetTools;
 
 namespace idunno.AtProto;
 
@@ -173,8 +174,9 @@ public partial class AtProtoAgent
     /// <param name="returnUri">The URI the OAuth server should post back to when it has authorized the application.</param>
     /// <param name="uriExtraParameters">Any extra parameters to attach to the URI.</param>
     /// <param name="stateExtraProperties">Any extra properties to save in state.</param>
-    /// <param name="validatePds">A callback to validate the PDS URI discovered for <paramref name="handle"/></param>
-    /// <param name="validateAuthorizationServer">A callback to validate the authorization server discovered for the PDS for <paramref name="handle"/></param>
+    /// <param name="validateDiscoveredEndpoints">Flag indicating whether to validate discovered endpoints.</param>
+    /// <param name="validatePds">A callback to validate the PDS URI discovered for <paramref name="handle"/>. If <paramref name="validateDiscoveredEndpoints" /> is <see langword="true"/> and this parameter is not specified, a default validation callback will be used that implements simple SSRF protections.</param>
+    /// <param name="validateAuthorizationServer">A callback to validate the authorization server discovered for the PDS for <paramref name="handle"/>. If <paramref name="validateDiscoveredEndpoints" /> is <see langword="true"/> and this parameter is not specified, a default validation callback will be used that implements simple SSRF protections.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -194,8 +196,9 @@ public partial class AtProtoAgent
         Uri? returnUri = null,
         IEnumerable<KeyValuePair<string, string>>? uriExtraParameters = null,
         Dictionary<string, string>? stateExtraProperties = null,
-        Func<Uri, bool>? validatePds = null,
-        Func<Uri, bool>? validateAuthorizationServer = null,
+        bool validateDiscoveredEndpoints = true,
+        Func<Uri, CancellationToken, Task<bool>>? validatePds = null,
+        Func<Uri, CancellationToken, Task<bool>>? validateAuthorizationServer = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(oAuthClient);
@@ -214,17 +217,23 @@ public partial class AtProtoAgent
         scopes ??= Options.OAuthOptions.Scopes;
         ArgumentNullException.ThrowIfNull(scopes);
 
+        if (validateDiscoveredEndpoints)
+        {
+            validatePds ??= DefaultDiscoveryUriValidator;
+            validateAuthorizationServer ??= DefaultDiscoveryUriValidator;
+        }
+
         Did? did = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException("Could not resolve DID");
         Uri? pds = await ResolvePds(did, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException($"Could not resolve PDS for {did}.");
 
-        if (validatePds is not null && !validatePds.Invoke(pds))
+        if (validatePds is not null && !await validatePds.Invoke(pds, cancellationToken).ConfigureAwait(false))
         {
             throw new OAuthException($"The discovered PDS {pds} did not pass validation.");
         }
 
         Uri? authorizationServer = await ResolveAuthorizationServer(pds, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException($"Could not discover authorization server for {handle}.");
 
-        if (validateAuthorizationServer is not null && !validateAuthorizationServer.Invoke(authorizationServer))
+        if (validateAuthorizationServer is not null && !await validateAuthorizationServer.Invoke(authorizationServer, cancellationToken).ConfigureAwait(false))
         {
             throw new OAuthException($"The discovered authorization server {authorizationServer} did not pass validation.");
         }
@@ -238,6 +247,68 @@ public partial class AtProtoAgent
             uriExtraParameters: uriExtraParameters,
             stateExtraProperties: stateExtraProperties,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Implements simple SSRF validation on the specified <paramref name="uri"/> by checking if the host resolves to a public IP address.
+    /// </summary>
+    /// <param name="uri">The <see cref="Uri"/> to validate.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns><see langword="true" /> if the <paramref name="uri" /> is considered safe, otherwise <see langword="false"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
+    public static async Task<bool> DefaultDiscoveryUriValidator(Uri uri, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(uri);
+
+        if (!uri.IsAbsoluteUri ||
+            uri.IsLoopback ||
+            uri.IsUnc)
+        {
+            return false;
+        }
+
+        if (uri.HostNameType == UriHostNameType.Unknown ||
+            uri.HostNameType == UriHostNameType.Basic)
+        {
+            return false;
+        }
+
+        if (uri.HostNameType == UriHostNameType.IPv4 || uri.HostNameType == UriHostNameType.IPv6)
+        {
+            return !IsPrivateIPAddress(IPAddress.Parse(uri.Host));
+        }
+
+        IPHostEntry? hostEntry = await Dns.GetHostEntryAsync(uri.Host, cancellationToken).ConfigureAwait(false);
+        if (hostEntry is null || hostEntry.AddressList is null)
+        {
+            return false;
+        }
+
+        return !hostEntry.AddressList.Any(IsPrivateIPAddress);
+    }
+
+    // IPv4 private address ranges https://datatracker.ietf.org/doc/html/rfc1918
+    private static readonly IPAddressRange s_ipRange10_8 = IPAddressRange.Parse("10.0.0.0/8");
+    private static readonly IPAddressRange s_ipRange172_16_12 = IPAddressRange.Parse("172.16.0.0/12");
+    private static readonly IPAddressRange s_ipRange192_168_16 = IPAddressRange.Parse("192.168.0.0/16");
+    private static readonly IPAddressRange s_ipV6PrivateLocal = IPAddressRange.Parse("fd00::/8");
+
+    private static bool IsPrivateIPAddress(IPAddress ipAddress)
+    {
+        if (ipAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+        {
+            return s_ipRange10_8.Contains(ipAddress) ||
+                s_ipRange172_16_12.Contains(ipAddress) ||
+                s_ipRange192_168_16.Contains(ipAddress);
+        }
+        else if (ipAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+        {
+            return ipAddress.IsIPv6UniqueLocal ||
+                ipAddress.IsIPv6LinkLocal ||
+                ipAddress.IsIPv6SiteLocal ||
+                s_ipV6PrivateLocal.Contains(ipAddress);
+        }
+        return false;
     }
 
     /// <summary>
