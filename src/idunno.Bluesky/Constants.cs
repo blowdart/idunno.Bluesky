@@ -581,7 +581,7 @@ public static class SelfLabelNames
     /// <summary>
     /// A label that indicates the profile self identifies as a bot account.
     /// </summary>
-    public const string Bot = "!bot";
+    public const string Bot = "bot";
 }
 
 /// <summary>
@@ -620,5 +620,5 @@ public static class SelfLabelValues
     /// <summary>
     /// A label that indicates the profile self identifies as a bot account.
     /// </summary>
-    public const string Bot = "!bot";
+    public const string Bot = "bot";
 }

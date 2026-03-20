@@ -1686,14 +1686,14 @@ idunno.Bluesky.Unspecced.AgeAssuranceStatus.Blocked = 3 -> idunno.Bluesky.Unspec
 idunno.Bluesky.Unspecced.AgeAssuranceStatus.Pending = 1 -> idunno.Bluesky.Unspecced.AgeAssuranceStatus
 idunno.Bluesky.Unspecced.AgeAssuranceStatus.Unknown = 0 -> idunno.Bluesky.Unspecced.AgeAssuranceStatus
 idunno.Bluesky.SelfLabelNames
-const idunno.Bluesky.SelfLabelNames.Bot = "!bot" -> string!
+const idunno.Bluesky.SelfLabelNames.Bot = "bot" -> string!
 const idunno.Bluesky.SelfLabelNames.DiscourageShowingToLoggedOutUser = "!no-unauthenticated" -> string!
 const idunno.Bluesky.SelfLabelNames.GraphicMedia = "graphic-media" -> string!
 const idunno.Bluesky.SelfLabelNames.Nudity = "nudity" -> string!
 const idunno.Bluesky.SelfLabelNames.Porn = "porn" -> string!
 const idunno.Bluesky.SelfLabelNames.Sexual = "sexual" -> string!
 idunno.Bluesky.SelfLabelValues
-const idunno.Bluesky.SelfLabelValues.Bot = "!bot" -> string!
+const idunno.Bluesky.SelfLabelValues.Bot = "bot" -> string!
 const idunno.Bluesky.SelfLabelValues.DiscourageShowingToLoggedOutUser = "!no-unauthenticated" -> string!
 const idunno.Bluesky.SelfLabelValues.GraphicMedia = "graphic-media" -> string!
 const idunno.Bluesky.SelfLabelValues.Nudity = "nudity" -> string!
