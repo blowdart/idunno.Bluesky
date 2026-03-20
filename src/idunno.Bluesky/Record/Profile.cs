@@ -204,7 +204,7 @@ public record Profile : BlueskyRecord
     public StrongReference? PinnedPost { get; set; }
 
     /// <summary>
-    /// Gets any <see cref="SelfLabels"/> applied to the profile/
+    /// Gets any <see cref="SelfLabels"/> applied to the profile.
     /// </summary>
     /// <remarks>
     /// <para>Profile self labels can only be one or more of the known <see href="https://docs.bsky.app/docs/advanced-guides/moderation#global-label-values">global values</see>.</para>

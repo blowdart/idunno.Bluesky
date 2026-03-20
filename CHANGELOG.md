@@ -22,7 +22,7 @@
 
 ### idunno.Bluesky
 
-* Added `Bot` property to `Profile` record to check, and set or unset the profile self label
+* Added `Bot` property to `Profile` record to set or unset the profile self label
  indicating a bot account, see [[APP-1928] add bot/automated account badge and self-labeling settings](https://github.com/bluesky-social/social-app/pull/10008/)
 * Added `SelfLabels` property to `ProfileViewBasic` which returns a list of self labels applied to a profile,
   which can be used in conjunction with `SelfLabelValues` to check if a profile has applied any self labels to itself,
