@@ -5,12 +5,14 @@ on:
   push:
     branches:
       - 'main'
+      - 'version/*'
     paths-ignore:
       - 'docs/**'
       - '.github/**'
   pull_request:
     branches:
       - 'main'
+      - 'version/*'
 
 permissions:
   contents: read
