@@ -68,7 +68,6 @@ public class UriDiscoveryValidationTests
     [InlineData("172.32.0.0")]
     [InlineData("192.167.255.255")]
     [InlineData("192.169.0.0")]
-    [InlineData("[2001:db8::1]")]
     [InlineData("[2601:600:9c00:4b:b53b:b141:2378:66a]")]
     public async Task ValidIPUriShouldPassValidation(string host)
     {
@@ -84,6 +83,55 @@ public class UriDiscoveryValidationTests
     public async Task ValidDnsEntriesShouldPassValidation(string host)
     {
         var uri = new Uri($"https://{host}");
+        Assert.True(await AtProtoAgent.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("file:///etc/passwd")]
+    [InlineData("ftp://example.org")]
+    [InlineData("gopher://example.org")]
+    [InlineData("ws://example.org")]
+    [InlineData("wss://example.org")]
+    [InlineData("javascript:alert(1)")]
+    public async Task NonHttpSchemesShouldFailValidation(string uriString)
+    {
+        var uri = new Uri(uriString);
+        Assert.False(await AtProtoAgent.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("100.64.0.0")]     // CGNAT start
+    [InlineData("100.127.255.255")] // CGNAT end
+    [InlineData("0.0.0.1")]        // "this network"
+    [InlineData("198.18.0.0")]     // benchmarking start
+    [InlineData("198.19.255.255")] // benchmarking end
+    [InlineData("192.0.2.1")]      // TEST-NET-1
+    [InlineData("198.51.100.1")]   // TEST-NET-2
+    [InlineData("203.0.113.1")]    // TEST-NET-3
+    [InlineData("192.0.0.1")]      // IETF protocol assignments
+    [InlineData("224.0.0.1")]      // multicast
+    [InlineData("240.0.0.1")]      // reserved
+    [InlineData("255.255.255.255")] // broadcast
+    public async Task AdditionalBlockedIpv4RangesShouldFailValidation(string host)
+    {
+        var uri = new Uri($"https://{host}");
+        Assert.False(await AtProtoAgent.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("[2001:db8::1]")]     // documentation prefix
+    [InlineData("[2001:db8:ffff::1]")] // documentation prefix end
+    public async Task Ipv6DocumentationRangeShouldFailValidation(string host)
+    {
+        var uri = new Uri($"https://{host}");
+        Assert.False(await AtProtoAgent.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task KnownPublicIpShouldPassValidation()
+    {
+        // 1.1.1.1 is Cloudflare's public DNS resolver - a well-known public IP.
+        var uri = new Uri("https://1.1.1.1");
         Assert.True(await AtProtoAgent.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
     }
 }
