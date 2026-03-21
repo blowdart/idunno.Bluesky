@@ -10,5 +10,4 @@
 
 * IParsable support
 * Union result types
-* SSRF HttpClient handler protection (potentially)
 
