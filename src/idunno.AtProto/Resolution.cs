@@ -21,6 +21,7 @@ public sealed class Resolution
     private static readonly HttpClientHandler s_httpClientHandler = new()
     {
         AutomaticDecompression = DecompressionMethods.All,
+        AllowAutoRedirect = false,
         UseCookies = false
     };
 

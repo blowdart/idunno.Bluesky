@@ -128,8 +128,10 @@ OAuthLoginState oAuthLoginState = uriBuilderOAuthClient.State;
 > [SSRF](https://owasp.org/www-community/attacks/Server_Side_Request_Forgery) attacks and/or to validate
 > the authorization server is one you expect.
 >
-> A default implementation of discovery validation is called by default which will reject any PDS or authorization server
-> that doesn't resolve to a public IP address.
+> A default implementation of discovery validation (`SecurityHelpers.DefaultDiscoveryUriValidator`)
+> which rejects any PDS or authorization server that doesn't resolve to a public and safe IP address when
+> `BuildOAuth2LoginUri` is called without a `validatePds` or `validateAuthorizationServer` callback,
+> or with either of those parameters set to null and the `validateDiscoveredEndpoints` option set to `true`.
 
 When the user returns to your application you take the callback data returned from the OAuth server and process it
 

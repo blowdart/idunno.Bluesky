@@ -254,6 +254,7 @@
     <File Path="SECURITY.md" />
     <File Path="sleet.json" />
     <File Path="THIRD-PARTY-NOTICES.txt" />
+    <File Path="ToDo.md" />
     <File Path="trimTest.ps1" />
     <File Path="version.json" />
   </Folder>

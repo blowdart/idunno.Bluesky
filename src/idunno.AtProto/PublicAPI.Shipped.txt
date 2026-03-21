@@ -24,7 +24,6 @@ idunno.AtProto.AccountStatus.Throttled = 4 -> idunno.AtProto.AccountStatus
 idunno.AtProto.Admin.RepoReference
 idunno.AtProto.Admin.RepoReference.Did.get -> idunno.AtProto.Did!
 idunno.AtProto.Admin.RepoReference.Did.init -> void
-static idunno.AtProto.AtProtoAgent.DefaultDiscoveryUriValidator(System.Uri! uri, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
 idunno.AtProto.Agent
 idunno.AtProto.Agent.Agent(idunno.AtProto.HttpClientOptions? httpClientOptions, idunno.AtProto.JsonOptions? jsonOptions) -> void
 idunno.AtProto.Agent.Agent(System.Net.Http.IHttpClientFactory! httpClientFactory, idunno.AtProto.JsonOptions? jsonOptions) -> void
@@ -795,6 +794,8 @@ idunno.AtProto.ResponseParseException.ResponseParseException() -> void
 idunno.AtProto.ResponseParseException.ResponseParseException(string! message) -> void
 idunno.AtProto.ResponseParseException.ResponseParseException(string! message, System.Exception! inner) -> void
 idunno.AtProto.ResponseParseException.ResponseParseException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
+idunno.AtProto.SecurityHelpers
+static idunno.AtProto.SecurityHelpers.DefaultDiscoveryUriValidator(System.Uri! uri, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
 idunno.AtProto.SecurityTokenValidationException
 idunno.AtProto.SecurityTokenValidationException.SecurityTokenValidationException() -> void
 idunno.AtProto.SecurityTokenValidationException.SecurityTokenValidationException(string! message) -> void

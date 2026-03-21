@@ -4,7 +4,7 @@
 namespace idunno.AtProto.Test;
 
 [ExcludeFromCodeCoverage]
-public class UriDiscoveryValidationTests
+public class SecurityHelpersTests
 {
     [Theory]
     [InlineData("127.0.0.1")]
@@ -19,7 +19,7 @@ public class UriDiscoveryValidationTests
     {
         var uri = new Uri($"https://{host}");
 
-        Assert.False(await AtProtoAgent.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
+        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -27,7 +27,7 @@ public class UriDiscoveryValidationTests
     {
         var metadataUri = new Uri("https://169.254.169.254");
 
-        Assert.False(await AtProtoAgent.DefaultDiscoveryUriValidator(metadataUri, TestContext.Current.CancellationToken));
+        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(metadataUri, TestContext.Current.CancellationToken));
     }
 
     [Theory]
@@ -37,28 +37,28 @@ public class UriDiscoveryValidationTests
     public async Task IpV6LinkLocalAddressesShouldFailValidation(string host)
     {
         var uri = new Uri($"https://[{host}]");
-        Assert.False(await AtProtoAgent.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
+        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task LocalhostShouldFailValidation()
     {
         var uri = new Uri("https://localhost");
-        Assert.False(await AtProtoAgent.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
+        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task Ipv4LoopbackShouldFailValidation()
     {
         var uri = new Uri("https://127.0.0.1");
-        Assert.False(await AtProtoAgent.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
+        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task IpV6LoopbackShouldFailValidation()
     {
         var uri = new Uri("https://[::1]");
-        Assert.False(await AtProtoAgent.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
+        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
     }
 
 
@@ -72,7 +72,7 @@ public class UriDiscoveryValidationTests
     public async Task ValidIPUriShouldPassValidation(string host)
     {
         var uri = new Uri($"https://{host}");
-        Assert.True(await AtProtoAgent.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
+        Assert.True(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
     }
 
     [Theory]
@@ -83,7 +83,7 @@ public class UriDiscoveryValidationTests
     public async Task ValidDnsEntriesShouldPassValidation(string host)
     {
         var uri = new Uri($"https://{host}");
-        Assert.True(await AtProtoAgent.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
+        Assert.True(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
     }
 
     [Theory]
@@ -96,7 +96,7 @@ public class UriDiscoveryValidationTests
     public async Task NonHttpSchemesShouldFailValidation(string uriString)
     {
         var uri = new Uri(uriString);
-        Assert.False(await AtProtoAgent.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
+        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
     }
 
     [Theory]
@@ -115,7 +115,7 @@ public class UriDiscoveryValidationTests
     public async Task AdditionalBlockedIpv4RangesShouldFailValidation(string host)
     {
         var uri = new Uri($"https://{host}");
-        Assert.False(await AtProtoAgent.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
+        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
     }
 
     [Theory]
@@ -124,7 +124,7 @@ public class UriDiscoveryValidationTests
     public async Task Ipv6DocumentationRangeShouldFailValidation(string host)
     {
         var uri = new Uri($"https://{host}");
-        Assert.False(await AtProtoAgent.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
+        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -132,6 +132,14 @@ public class UriDiscoveryValidationTests
     {
         // 1.1.1.1 is Cloudflare's public DNS resolver - a well-known public IP.
         var uri = new Uri("https://1.1.1.1");
-        Assert.True(await AtProtoAgent.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
+        Assert.True(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task KnownPublicIpShouldOnHttpPassValidation()
+    {
+        // 1.1.1.1 is Cloudflare's public DNS resolver - a well-known public IP.
+        var uri = new Uri("http://1.1.1.1");
+        Assert.True(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, TestContext.Current.CancellationToken));
     }
 }
