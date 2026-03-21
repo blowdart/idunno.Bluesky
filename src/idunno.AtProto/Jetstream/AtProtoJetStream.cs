@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.Net.WebSockets;
 using System.Text;
