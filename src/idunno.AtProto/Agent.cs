@@ -56,7 +56,7 @@ public abstract class Agent : IDisposable
 
         services
             .AddHttpClient(HttpClientName, client => InternalConfigureHttpClient(client, _httpClientOptions?.HttpUserAgent, _httpClientOptions?.Timeout))
-            .ConfigurePrimaryHttpMessageHandler(() => BuildPrimaryHttpClientHandler(_httpClientOptions?.ProxyUri, checkCrl));
+            .ConfigurePrimaryHttpMessageHandler(() => SecurityHelpers.BuildSSRFHttpHandler(_httpClientOptions?.Timeout, _httpClientOptions?.ProxyUri, checkCrl));
 
         _serviceProvider = services.BuildServiceProvider();
         HttpClientFactory = _serviceProvider.GetService<IHttpClientFactory>()!;
@@ -89,9 +89,9 @@ public abstract class Agent : IDisposable
     protected IHttpClientFactory HttpClientFactory { get; init; }
 
     /// <summary>
-    /// Gets a new HttpClientHandler configured with any proxy settings passed during the agent configuration.
+    /// Gets a new SocketsHttpHandler configured with any proxy settings passed during the agent configuration.
     /// </summary>
-    protected HttpClientHandler HttpClientHandler
+    protected SocketsHttpHandler HttpClientHandler
     {
         get
         {
@@ -106,7 +106,7 @@ public abstract class Agent : IDisposable
                 checkCrl = _httpClientOptions.CheckCertificateRevocationList;
             }
 
-            return BuildPrimaryHttpClientHandler(_httpClientOptions?.ProxyUri, checkCrl);
+            return SecurityHelpers.BuildSSRFHttpHandler(_httpClientOptions?.Timeout, _httpClientOptions?.ProxyUri, checkCrl);
         }
     }
 
@@ -165,8 +165,8 @@ public abstract class Agent : IDisposable
     /// <summary>
     /// Creates a client handler to configure proxy setup with the initialization parameters specified when creating the agent.
     /// </summary>
-    /// <returns>An <see cref="HttpClientHandler"/> configured to any proxy specified when the agent was created.</returns>
-    protected HttpClientHandler CreateProxyHttpClientHandler()
+    /// <returns>An <see cref="SocketsHttpHandler"/> configured to any proxy specified when the agent was created.</returns>
+    protected SocketsHttpHandler BuildProxyHttpClientHandler()
     {
         bool checkCrl;
 
@@ -179,7 +179,7 @@ public abstract class Agent : IDisposable
             checkCrl = _httpClientOptions.CheckCertificateRevocationList;
         }
 
-        return BuildPrimaryHttpClientHandler(_httpClientOptions?.ProxyUri, checkCrl);
+        return SecurityHelpers.BuildSSRFHttpHandler(_httpClientOptions?.Timeout, _httpClientOptions?.ProxyUri, checkCrl);
     }
 
     private static void InternalConfigureHttpClient(HttpClient client, string? httpUserAgent = null, TimeSpan? timeout = null)
@@ -218,36 +218,6 @@ public abstract class Agent : IDisposable
         else
         {
             client.Timeout = (TimeSpan)timeout;
-        }
-    }
-
-    private static HttpClientHandler BuildPrimaryHttpClientHandler(Uri? proxyUri, bool checkCertificateRevocationList)
-    { 
-        if (proxyUri is not null)
-        {
-            return new HttpClientHandler
-            {
-                Proxy = new WebProxy
-                {
-                    Address = proxyUri,
-                    BypassProxyOnLocal = true,
-                    UseDefaultCredentials = true
-                },
-                UseProxy = true,
-
-                CheckCertificateRevocationList = checkCertificateRevocationList,
-                AutomaticDecompression = DecompressionMethods.All,
-                UseCookies = false
-            };
-        }
-        else
-        {
-            return new HttpClientHandler
-            {
-                CheckCertificateRevocationList = checkCertificateRevocationList,
-                AutomaticDecompression = DecompressionMethods.All,
-                UseCookies = false
-            };
         }
     }
 }

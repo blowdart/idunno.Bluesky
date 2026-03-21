@@ -32,11 +32,7 @@ namespace idunno.AtProto;
 /// </remarks>
 public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? loggerFactory = null, IMeterFactory? meterFactory = null)
 {
-    static readonly HttpClientHandler s_defaultClientHandler = new()
-    {
-        AutomaticDecompression = DecompressionMethods.All,
-        UseCookies = false
-    };
+    static readonly SocketsHttpHandler s_defaultClientHandler = SecurityHelpers.BuildSSRFHttpHandler();
 
     private readonly AtProtoHttpClient<string> _internalClient = new(
             serviceProxy: serviceProxy,

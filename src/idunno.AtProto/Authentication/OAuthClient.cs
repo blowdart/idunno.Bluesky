@@ -30,7 +30,7 @@ public class OAuthClient
     private OidcClient? _oidcClient;
 
     private readonly Func<HttpClient, HttpClient> _clientConfigurationHandler = (httpClient) => { return httpClient; };
-    private readonly Func<HttpClientHandler> _innerFactoryHandler = () => { throw new OAuthException("Handler factory not configured"); };
+    private readonly Func<SocketsHttpHandler> _innerFactoryHandler = () => { throw new OAuthException("Handler factory not configured"); };
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<OAuthClient> _logger;
 
@@ -53,7 +53,7 @@ public class OAuthClient
 
     internal OAuthClient(
         Func<HttpClient, HttpClient> httpClientConfigurator,
-        Func<HttpClientHandler> innerHandlerFactory,
+        Func<SocketsHttpHandler> innerHandlerFactory,
         ILoggerFactory? loggerFactory = null,
         OAuthOptions? options = null) : this(loggerFactory, options)
     {
@@ -329,7 +329,7 @@ public class OAuthClient
 
         AtProtoHttpResult<ServerDescription> serverDescriptionResult;
 
-        using (HttpClientHandler handler = _innerFactoryHandler())
+        using (SocketsHttpHandler handler = _innerFactoryHandler())
         using (var httpClient = new HttpClient(handler))
         {
             _clientConfigurationHandler(httpClient);
@@ -529,7 +529,7 @@ public class OAuthClient
                 }
 
                 AtProtoHttpResult<ServerDescription> serverDescriptionResult;
-                using (HttpClientHandler handler = _innerFactoryHandler())
+                using (SocketsHttpHandler handler = _innerFactoryHandler())
                 using (var httpClient = new HttpClient(handler))
                 {
                     _clientConfigurationHandler(httpClient);

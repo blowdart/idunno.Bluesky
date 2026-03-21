@@ -144,7 +144,7 @@ public partial class AtProtoAgent
     /// <returns>The new <see cref="OAuthClient"/> instance.</returns>
     public OAuthClient CreateOAuthClient()
     {
-        return new OAuthClient(ConfigureHttpClient, CreateProxyHttpClientHandler, LoggerFactory, Options?.OAuthOptions);
+        return new OAuthClient(ConfigureHttpClient, BuildProxyHttpClientHandler, LoggerFactory, Options?.OAuthOptions);
     }
 
     /// <summary>
@@ -157,7 +157,7 @@ public partial class AtProtoAgent
     {
         ArgumentNullException.ThrowIfNull(state);
 
-        var oAuthClient = new OAuthClient(ConfigureHttpClient, CreateProxyHttpClientHandler, LoggerFactory, Options?.OAuthOptions)
+        var oAuthClient = new OAuthClient(ConfigureHttpClient, BuildProxyHttpClientHandler, LoggerFactory, Options?.OAuthOptions)
         {
             State = state
         };
