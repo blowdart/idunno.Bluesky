@@ -2,7 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Net;
-
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NetTools;
 
 namespace idunno.AtProto;
@@ -10,47 +11,76 @@ namespace idunno.AtProto;
 /// <summary>
 /// Contains helper methods for validating URIs and IP addresses to mitigate SSRF (Server-Side Request Forgery) vulnerabilities.
 /// </summary>
-public static class SecurityHelpers
+public sealed class SecurityHelpers
 {
+    private SecurityHelpers()
+    {
+    }
+
     /// <summary>
     /// Implements simple SSRF validation on the specified <paramref name="uri"/> by checking if the host resolves to a public IP address.
     /// </summary>
     /// <param name="uri">The <see cref="Uri"/> to validate.</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> to use for logging any validation issues.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns><see langword="true" /> if the <paramref name="uri" /> is considered safe, otherwise <see langword="false"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
-    public static async Task<bool> DefaultDiscoveryUriValidator(Uri uri, CancellationToken cancellationToken)
+    public static async Task<bool> DefaultDiscoveryUriValidator(Uri uri, ILoggerFactory? loggerFactory, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
 
-        if (IsUnsafeUri(uri))
+        loggerFactory ??= NullLoggerFactory.Instance;
+
+        ILogger<SecurityHelpers> logger = loggerFactory.CreateLogger<SecurityHelpers>();
+
+        if (IsUnsafeUri(uri, logger))
         {
             return false;
         }
 
         if (uri.HostNameType == UriHostNameType.IPv4 || uri.HostNameType == UriHostNameType.IPv6)
         {
-            return !IsUnsafeIpAddress(IPAddress.Parse(uri.Host));
+            var ipAddress = IPAddress.Parse(uri.Host);
+
+            if (IsUnsafeIpAddress(ipAddress))
+            {
+                Logger.UnsafeUriHostIpAddress(logger, uri, ipAddress);
+                return false;
+            }
+            else
+            {
+                return true;
+            }
         }
         else
         {
             IPHostEntry? hostEntry = await Dns.GetHostEntryAsync(uri.Host, cancellationToken).ConfigureAwait(false);
             if (hostEntry is null || hostEntry.AddressList is null)
             {
+                Logger.UriDoesNotResolve(logger, uri);
                 return false;
             }
 
-            return !hostEntry.AddressList.Any(IsUnsafeIpAddress);
+            bool discoveredUnsafeIPAddress = false;
+
+            foreach (IPAddress entry in hostEntry.AddressList.Where(IsUnsafeIpAddress))
+            {
+                Logger.UnsafeUriHostIpAddress(logger, uri, entry);
+                discoveredUnsafeIPAddress = true;
+            }
+
+            return !discoveredUnsafeIPAddress;
         }
     }
 
-    internal static bool IsUnsafeUri(Uri uri)
+    internal static bool IsUnsafeUri(Uri uri, ILogger logger)
     {
         if (uri.HostNameType != UriHostNameType.Dns &&
             uri.HostNameType != UriHostNameType.IPv4 &&
             uri.HostNameType != UriHostNameType.IPv6)
 
         {
+            Logger.UnknownHostType(logger, uri);
             return true;
         }
 
@@ -58,12 +88,20 @@ public static class SecurityHelpers
             uri.IsLoopback ||
             uri.IsUnc)
         {
+            Logger.UriNotAbsoluteOrLoopback(logger, uri);
             return true;
         }
 
-        return
-            !Uri.UriSchemeHttps.Equals(uri.Scheme, StringComparison.OrdinalIgnoreCase) &&
-            !Uri.UriSchemeHttp.Equals(uri.Scheme, StringComparison.OrdinalIgnoreCase);
+        if (!Uri.UriSchemeHttps.Equals(uri.Scheme, StringComparison.OrdinalIgnoreCase) &&
+            !Uri.UriSchemeHttp.Equals(uri.Scheme, StringComparison.OrdinalIgnoreCase))
+        {
+            Logger.UnsafeUriScheme(logger, uri);
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     // IPv4 private address ranges https://datatracker.ietf.org/doc/html/rfc1918

@@ -9,12 +9,12 @@ using System.Text.Json;
 using System.Timers;
 
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Events;
-using NetTools;
 
 namespace idunno.AtProto;
 
@@ -197,8 +197,8 @@ public partial class AtProtoAgent
         IEnumerable<KeyValuePair<string, string>>? uriExtraParameters = null,
         Dictionary<string, string>? stateExtraProperties = null,
         bool validateDiscoveredEndpoints = true,
-        Func<Uri, CancellationToken, Task<bool>>? validatePds = null,
-        Func<Uri, CancellationToken, Task<bool>>? validateAuthorizationServer = null,
+        Func<Uri, ILoggerFactory?, CancellationToken, Task<bool>>? validatePds = null,
+        Func<Uri, ILoggerFactory?, CancellationToken, Task<bool>>? validateAuthorizationServer = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(oAuthClient);
@@ -226,14 +226,14 @@ public partial class AtProtoAgent
         Did? did = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException("Could not resolve DID");
         Uri? pds = await ResolvePds(did, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException($"Could not resolve PDS for {did}.");
 
-        if (validatePds is not null && !await validatePds.Invoke(pds, cancellationToken).ConfigureAwait(false))
+        if (validatePds is not null && !await validatePds.Invoke(pds, LoggerFactory, cancellationToken).ConfigureAwait(false))
         {
             throw new OAuthException($"The discovered PDS {pds} did not pass validation.");
         }
 
         Uri? authorizationServer = await ResolveAuthorizationServer(pds, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException($"Could not discover authorization server for {handle}.");
 
-        if (validateAuthorizationServer is not null && !await validateAuthorizationServer.Invoke(authorizationServer, cancellationToken).ConfigureAwait(false))
+        if (validateAuthorizationServer is not null && !await validateAuthorizationServer.Invoke(authorizationServer, LoggerFactory, cancellationToken).ConfigureAwait(false))
         {
             throw new OAuthException($"The discovered authorization server {authorizationServer} did not pass validation.");
         }

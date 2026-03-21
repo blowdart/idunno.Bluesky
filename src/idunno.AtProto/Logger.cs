@@ -329,4 +329,19 @@ internal static partial class Logger
 
     [LoggerMessage(1000, LogLevel.Error, "Received a message size ({messageSize}) larger than the configured maximum message size ({maximumMessageSize}.")]
     internal static partial void ReceivedMessageTooLarge(ILogger logger, int messageSize, int maximumMessageSize);
+
+    [LoggerMessage(1100, LogLevel.Error, "{uri} has an unknown host type")]
+    internal static partial void UnknownHostType(ILogger logger, Uri uri);
+
+    [LoggerMessage(1101, LogLevel.Error, "{uri} was not absolute or is a loopback")]
+    internal static partial void UriNotAbsoluteOrLoopback(ILogger logger, Uri uri);
+
+    [LoggerMessage(1002, LogLevel.Error, "{uri} has an unsafe scheme")]
+    internal static partial void UnsafeUriScheme(ILogger logger, Uri uri);
+
+    [LoggerMessage(1003, LogLevel.Error, "{uri} has an unsafe host IP address, {ipAddress}")]
+    internal static partial void UnsafeUriHostIpAddress(ILogger logger, Uri uri, IPAddress ipAddress);
+
+    [LoggerMessage(1004, LogLevel.Error, "{uri} does not resolve.")]
+    internal static partial void UriDoesNotResolve(ILogger logger, Uri uri);
 }
