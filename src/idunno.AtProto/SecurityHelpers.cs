@@ -7,7 +7,6 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NetTools;
-using System.Linq;
 
 namespace idunno.AtProto;
 
