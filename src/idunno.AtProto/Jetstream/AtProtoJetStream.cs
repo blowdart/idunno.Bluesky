@@ -3,11 +3,16 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Mime;
 using System.Net.WebSockets;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Web;
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -50,6 +55,11 @@ public class AtProtoJetstream : IDisposable
 
     private ClientWebSocket _client;
 
+    private const string HttpClientName = "idunno.atproto.jetstream";
+    internal HttpClientOptions? _httpClientOptions;
+    private readonly ServiceProvider? _serviceProvider;
+    private readonly HttpClient _httpClient;
+
     private Uri? _server;
 
     /// <summary>
@@ -58,12 +68,14 @@ public class AtProtoJetstream : IDisposable
     /// <param name="uri">The host uri to connection to. Defaults to wss://jetstream1.us-west.bsky.network/. Do not connect to untrusted jet stream servers.</param>
     /// <param name="options">Any options to configure this instance of <see cref="AtProtoJetstream"/>.</param>
     /// <param name="webSocketOptions">Any <see cref="AtProto.WebSocketOptions"/> to set on the underlying client WebSocket.</param>
+    /// <param name="httpClientOptions">Any <see cref="HttpClientOptions"/> for the internal http client used to make HTTP requests.</param>
     /// <param name="collections">The <see cref="Nsid"/>s of any collection types to subscribe to. If <see langword="null"/> or empty all collection types will be subscribed to.</param>
     /// <param name="dids">Any <see cref="Did"/>s to subscribe to. If <see langword="null"/> or empty all dids will be subscribed to.</param>
     public AtProtoJetstream(
         Uri? uri = null,
         JetstreamOptions? options = null,
         WebSocketOptions? webSocketOptions = null,
+        HttpClientOptions? httpClientOptions = null,
         ICollection<Nsid>? collections = null,
         ICollection<Did>? dids = null)
     {
@@ -112,7 +124,35 @@ public class AtProtoJetstream : IDisposable
         _logger = LoggerFactory.CreateLogger<AtProtoJetstream>();
 
         _client = CreateWebSocketClient();
+
+        bool checkCrl;
+        if (httpClientOptions is null)
+        {
+            checkCrl = true;
+        }
+        else
+        {
+            checkCrl = httpClientOptions.CheckCertificateRevocationList;
+        }
+
+        IServiceCollection services = new ServiceCollection();
+        _httpClientOptions = httpClientOptions;
+
+        services
+            .AddHttpClient(HttpClientName, client => InternalConfigureHttpClient(client, _httpClientOptions?.HttpUserAgent, _httpClientOptions?.Timeout))
+            .ConfigurePrimaryHttpMessageHandler(() => SecurityHelpers.BuildSSRFHttpHandler(_httpClientOptions?.Timeout, _httpClientOptions?.ProxyUri, checkCrl));
+
+        _serviceProvider = services.BuildServiceProvider();
+        HttpClientFactory = _serviceProvider.GetService<IHttpClientFactory>()!;
+
+        _httpClient = HttpClientFactory.CreateClient(HttpClientName);
     }
+
+
+    /// <summary>
+    /// Gets the <see cref="IHttpClientFactory"/> used when creating <see cref="HttpClient"/>s.
+    /// </summary>
+    protected IHttpClientFactory HttpClientFactory { get; init; }
 
     /// <summary>
     /// Gets a configured logger factory from which to create loggers.
@@ -171,9 +211,7 @@ public class AtProtoJetstream : IDisposable
     public WebSocketState State => _client.State;
 
     /// <summary>
-    /// Gets a flag indicating whether the underlying WebSocket was disconnected gracefully,
-    /// by requesting a cancellation on the <see cref="CancellationToken"/> passed passed to <see cref="ConnectAsync(Uri?, long?, CancellationToken)"/> or
-    /// by calling <see cref="CloseAsync(WebSocketCloseStatus, string, CancellationToken)"/>.
+    /// Gets a flag indicating whether the underlying WebSocket was disconnected gracefully.
     /// </summary>
     public bool DisconnectedGracefully { get => _client.State == WebSocketState.Closed && field; private set; }
 
@@ -283,15 +321,101 @@ public class AtProtoJetstream : IDisposable
     /// <summary>
     /// Connect to the JetStream instance via a WebSocket connection.
     /// </summary>
-    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     [MemberNotNull(nameof(_client))]
-    public async Task ConnectAsync(
-        CancellationToken cancellationToken = default)
+    public async Task ConnectAsync()
     {
         await ConnectAsync(
             uri: null,
             cursor: null,
+            httpClient: null,
+            cancellationToken: CancellationToken.None).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Connect to the JetStream instance via a WebSocket connection.
+    /// </summary>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    [MemberNotNull(nameof(_client))]
+    public async Task ConnectAsync(
+        CancellationToken cancellationToken)
+    {
+        await ConnectAsync(
+            uri: null,
+            cursor: null,
+            httpClient: null,
             cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Connect to the JetStream instance via a WebSocket connection.
+    /// </summary>
+    /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for any HTTP requests. If <see langword="null"/> a default configured HttpClient from the internal <see cref="IHttpClientFactory"/> will be used.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    [MemberNotNull(nameof(_client))]
+    public async Task ConnectAsync(
+        HttpClient httpClient)
+    {
+        ArgumentNullException.ThrowIfNull(httpClient);
+
+        await ConnectAsync(
+            uri: null,
+            cursor: null,
+            httpClient: httpClient,
+            cancellationToken: default).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Connect to the JetStream instance via a WebSocket connection.
+    /// </summary>
+    /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for any HTTP requests. If <see langword="null"/> a default configured HttpClient from the internal <see cref="IHttpClientFactory"/> will be used.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    [MemberNotNull(nameof(_client))]
+    public async Task ConnectAsync(
+        HttpClient httpClient,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(httpClient);
+
+        await ConnectAsync(
+            uri: null,
+            cursor: null,
+            httpClient: httpClient,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Connect to the JetStream instance via a WebSocket connection.
+    /// </summary>
+    /// <param name="startFrom">A Unix microseconds timestamp cursor to begin playback from. A value of <see langword="null"/> results in live-tail operation.</param>
+    [MemberNotNull(nameof(_client))]
+    public async Task ConnectAsync(
+        DateTimeOffset startFrom)
+    {
+        await ConnectAsync(
+            uri: null,
+            cursor: startFrom.ToUnixTimeMilliseconds() * 1000,
+            httpClient: null,
+            cancellationToken: default).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Connect to the JetStream instance via a WebSocket connection.
+    /// </summary>
+    /// <param name="startFrom">A Unix microseconds timestamp cursor to begin playback from. A value of <see langword="null"/> results in live-tail operation.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    [MemberNotNull(nameof(_client))]
+    public async Task ConnectAsync(
+        DateTimeOffset? startFrom,
+        CancellationToken cancellationToken)
+    {
+        long? cursor = startFrom.HasValue ? startFrom.Value.ToUnixTimeMilliseconds() * 1000 : null;
+
+        await ConnectAsync(
+            uri: null,
+            cursor: cursor,
+            httpClient: null,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -302,18 +426,17 @@ public class AtProtoJetstream : IDisposable
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     [MemberNotNull(nameof(_client))]
     public async Task ConnectAsync(
-        Uri? uri = null,
-        DateTimeOffset? startFrom = null,
-        CancellationToken cancellationToken = default)
+        Uri uri,
+        DateTimeOffset? startFrom,
+        CancellationToken cancellationToken)
     {
-        long? cursor = null;
+        long? cursor = startFrom.HasValue ? startFrom.Value.ToUnixTimeMilliseconds() * 1000 : null;
 
-        if (startFrom is not null)
-        {
-            cursor = startFrom.Value.ToUnixTimeMilliseconds() * 1000;
-        }
-
-        await ConnectAsync(uri, cursor, cancellationToken).ConfigureAwait(false);
+        await ConnectAsync(
+            uri: uri,
+            cursor: cursor,
+            httpClient: null,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -321,14 +444,16 @@ public class AtProtoJetstream : IDisposable
     /// </summary>
     /// <param name="uri">The URI of the jetstream server to connection to. Defaults to the URI passed during construction</param>
     /// <param name="cursor">A Unix microseconds timestamp cursor to begin playback from. A value of <see langword="null"/> results in live-tail operation.</param>
+    /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for any HTTP requests. If <see langword="null"/> a default configured HttpClient from the internal <see cref="IHttpClientFactory"/> will be used.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <exception cref="Exception">Thrown when the underlying web socket throw an exception when connecting.</exception>
     [MemberNotNull(nameof(_client))]
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Suppressing dispose exceptions on purpose.")]
     [SuppressMessage("Minor Code Smell", "S2486:Generic exceptions should not be ignored", Justification = "Suppressing dispose exceptions on purpose.")]
     public async Task ConnectAsync(
-        Uri? uri = null,
-        long? cursor = null,
+        Uri? uri,
+        long? cursor,
+        HttpClient? httpClient,
         CancellationToken cancellationToken = default)
     {
         if (_client is not null && _client.State == WebSocketState.Open)
@@ -415,9 +540,15 @@ public class AtProtoJetstream : IDisposable
 
         JetStreamLogger.ConnectingTo(_logger, jetStreamUri);
 
+        httpClient ??= _httpClient;
+
         try
         {
-            await _client.ConnectAsync(jetStreamUri, cancellationToken).ConfigureAwait(false);
+            await _client.ConnectAsync(
+                uri: jetStreamUri,
+                invoker: httpClient,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
             _metrics.ConnectionsOpened.Add(1, new KeyValuePair<string, object?>("server", jetStreamUri.ToString()));
         }
         catch (WebSocketException ex)
@@ -535,7 +666,9 @@ public class AtProtoJetstream : IDisposable
             if (disposing)
             {
                 _client.Dispose();
+                _httpClient.Dispose();
                 _decompressor?.Dispose();
+                _serviceProvider?.Dispose();
             }
 
             _disposed = true;
@@ -848,5 +981,44 @@ public class AtProtoJetstream : IDisposable
         }
 
         return derivedEvent;
+    }
+
+    private static void InternalConfigureHttpClient(HttpClient client, string? httpUserAgent = null, TimeSpan? timeout = null)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+
+        client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
+        client.DefaultRequestVersion = HttpVersion.Version20;
+
+        Assembly assembly = typeof(Agent).Assembly;
+        string? version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+
+        if (httpUserAgent is null)
+        {
+            if (string.IsNullOrEmpty(version))
+            {
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("idunno.AtProto");
+            }
+            else
+            {
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("idunno.AtProto/" + version);
+            }
+        }
+        else
+        {
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(httpUserAgent);
+        }
+
+        client.DefaultRequestHeaders.Accept.Clear();
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(MediaTypeNames.Application.Json));
+
+        if (timeout is null)
+        {
+            client.Timeout = new(0, 5, 0);
+        }
+        else
+        {
+            client.Timeout = (TimeSpan)timeout;
+        }
     }
 }

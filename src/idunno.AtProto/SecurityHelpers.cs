@@ -98,7 +98,7 @@ public sealed class SecurityHelpers
                         return new NetworkStream(socket, ownsSocket: true);
                     }
 
-                    throw new SocketException((int)SocketError.HostUnreachable);    
+                    throw new SocketException((int)SocketError.HostUnreachable);
                 }
 
                 throw new HttpRequestException($"Connection to {context.DnsEndPoint.Host} was blocked by SSRF protection. All resolved addresses are unsafe.");
@@ -268,7 +268,7 @@ public sealed class SecurityHelpers
             return true;
         }
 
-        if (ipAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+        if (ipAddress.AddressFamily == AddressFamily.InterNetwork)
         {
             // Explicit cloud metadata SSRF target.
             if (ipAddress.Equals(s_cloudMetaDataEndpoint))
@@ -299,7 +299,7 @@ public sealed class SecurityHelpers
                 s_ipv4Reserved240_4.Contains(ipAddress);
         }
 
-        if (ipAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+        if (ipAddress.AddressFamily == AddressFamily.InterNetworkV6)
         {
             return
                 ipAddress.IsIPv6Multicast ||

@@ -492,20 +492,27 @@ idunno.AtProto.Jetstream.AtJetstreamIdentityEvent
 idunno.AtProto.Jetstream.AtJetstreamIdentityEvent.Identity.get -> idunno.AtProto.Jetstream.AtJetStreamIdentity!
 idunno.AtProto.Jetstream.AtJetstreamIdentityEvent.Identity.init -> void
 idunno.AtProto.Jetstream.AtProtoJetstream
-idunno.AtProto.Jetstream.AtProtoJetstream.AtProtoJetstream(System.Uri? uri = null, idunno.AtProto.Jetstream.JetstreamOptions? options = null, idunno.AtProto.WebSocketOptions? webSocketOptions = null, System.Collections.Generic.ICollection<idunno.AtProto.Nsid!>? collections = null, System.Collections.Generic.ICollection<idunno.AtProto.Did!>? dids = null) -> void
+idunno.AtProto.Jetstream.AtProtoJetstream.AtProtoJetstream(System.Uri? uri = null, idunno.AtProto.Jetstream.JetstreamOptions? options = null, idunno.AtProto.WebSocketOptions? webSocketOptions = null, idunno.AtProto.HttpClientOptions? httpClientOptions = null, System.Collections.Generic.ICollection<idunno.AtProto.Nsid!>? collections = null, System.Collections.Generic.ICollection<idunno.AtProto.Did!>? dids = null) -> void
 idunno.AtProto.Jetstream.AtProtoJetstream.ClientWebSocket.get -> System.Net.WebSockets.ClientWebSocket!
 idunno.AtProto.Jetstream.AtProtoJetstream.CloseAsync(System.Net.WebSockets.WebSocketCloseStatus status = System.Net.WebSockets.WebSocketCloseStatus.NormalClosure, string! statusDescription = "Client disconnect", System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.AtProto.Jetstream.AtProtoJetstream.CollectionFilter.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Nsid!>!
 idunno.AtProto.Jetstream.AtProtoJetstream.CollectionFilter.set -> void
-idunno.AtProto.Jetstream.AtProtoJetstream.ConnectAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-idunno.AtProto.Jetstream.AtProtoJetstream.ConnectAsync(System.Uri? uri = null, long? cursor = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-idunno.AtProto.Jetstream.AtProtoJetstream.ConnectAsync(System.Uri? uri = null, System.DateTimeOffset? startFrom = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+idunno.AtProto.Jetstream.AtProtoJetstream.ConnectAsync() -> System.Threading.Tasks.Task!
+idunno.AtProto.Jetstream.AtProtoJetstream.ConnectAsync(System.DateTimeOffset startFrom) -> System.Threading.Tasks.Task!
+idunno.AtProto.Jetstream.AtProtoJetstream.ConnectAsync(System.DateTimeOffset? startFrom, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+idunno.AtProto.Jetstream.AtProtoJetstream.ConnectAsync(System.Net.Http.HttpClient! httpClient) -> System.Threading.Tasks.Task!
+idunno.AtProto.Jetstream.AtProtoJetstream.ConnectAsync(System.Net.Http.HttpClient! httpClient, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+idunno.AtProto.Jetstream.AtProtoJetstream.ConnectAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+idunno.AtProto.Jetstream.AtProtoJetstream.ConnectAsync(System.Uri! uri, System.DateTimeOffset? startFrom, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+idunno.AtProto.Jetstream.AtProtoJetstream.ConnectAsync(System.Uri? uri, long? cursor, System.Net.Http.HttpClient? httpClient, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.AtProto.Jetstream.AtProtoJetstream.ConnectionStateChanged -> System.EventHandler<idunno.AtProto.Jetstream.Events.ConnectionStateChangedEventArgs!>?
 idunno.AtProto.Jetstream.AtProtoJetstream.DidFilter.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Did!>!
 idunno.AtProto.Jetstream.AtProtoJetstream.DidFilter.set -> void
 idunno.AtProto.Jetstream.AtProtoJetstream.DisconnectedGracefully.get -> bool
 idunno.AtProto.Jetstream.AtProtoJetstream.Dispose() -> void
 idunno.AtProto.Jetstream.AtProtoJetstream.FaultRaised -> System.EventHandler<idunno.AtProto.Jetstream.Events.FaultRaisedEventArgs!>?
+idunno.AtProto.Jetstream.AtProtoJetstream.HttpClientFactory.get -> System.Net.Http.IHttpClientFactory!
+idunno.AtProto.Jetstream.AtProtoJetstream.HttpClientFactory.init -> void
 idunno.AtProto.Jetstream.AtProtoJetstream.IsConnected.get -> bool
 idunno.AtProto.Jetstream.AtProtoJetstream.LogFault(string! fault = "Unspecified fault") -> void
 idunno.AtProto.Jetstream.AtProtoJetstream.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory!
