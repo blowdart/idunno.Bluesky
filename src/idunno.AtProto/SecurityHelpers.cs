@@ -7,8 +7,6 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-using NetTools;
-
 namespace idunno.AtProto;
 
 /// <summary>
@@ -201,38 +199,38 @@ public sealed class SecurityHelpers
     }
 
     // IPv4 private address ranges https://datatracker.ietf.org/doc/html/rfc1918
-    private static readonly IPAddressRange s_ipv4Private10_8 = IPAddressRange.Parse("10.0.0.0/8");
-    private static readonly IPAddressRange s_ipv4Private172_16_12 = IPAddressRange.Parse("172.16.0.0/12");
-    private static readonly IPAddressRange s_ipv4Private192_168_16 = IPAddressRange.Parse("192.168.0.0/16");
+    private static readonly IPNetwork s_ipv4Private10_8 = new IPNetwork(IPAddress.Parse("10.0.0.0"), 8);
+    private static readonly IPNetwork s_ipv4Private172_16_12 = new IPNetwork(IPAddress.Parse("172.16.0.0"), 12);
+    private static readonly IPNetwork s_ipv4Private192_168_16 = new IPNetwork(IPAddress.Parse("192.168.0.0"), 16);
 
     // IPv4 loopback https://datatracker.ietf.org/doc/html/rfc1122
-    private static readonly IPAddressRange s_ipv4Loopback127_8 = IPAddressRange.Parse("127.0.0.0/8");
+    private static readonly IPNetwork s_ipv4Loopback127_8 = new IPNetwork(IPAddress.Parse("127.0.0.0"), 8);
 
     // IPv4 link-local https://datatracker.ietf.org/doc/html/rfc3927
-    private static readonly IPAddressRange s_ipv4LinkLocal169_254_16 = IPAddressRange.Parse("169.254.0.0/16");
+    private static readonly IPNetwork s_ipv4LinkLocal169_254_16 = new IPNetwork(IPAddress.Parse("169.254.0.0"), 16);
 
     // IPv4 carrier-grade NAT https://datatracker.ietf.org/doc/html/rfc6598
-    private static readonly IPAddressRange s_ipv4Cgnat100_64_10 = IPAddressRange.Parse("100.64.0.0/10");
+    private static readonly IPNetwork s_ipv4Cgnat100_64_10 = new IPNetwork(IPAddress.Parse("100.64.0.0"), 10);
 
     // IPv4 "this network" https://datatracker.ietf.org/doc/html/rfc1122
-    private static readonly IPAddressRange s_ipv4ThisNetwork0_8 = IPAddressRange.Parse("0.0.0.0/8");
+    private static readonly IPNetwork s_ipv4ThisNetwork0_8 = new IPNetwork(IPAddress.Parse("0.0.0.0"), 8);
 
     // IPv4 benchmarking https://datatracker.ietf.org/doc/html/rfc2544
-    private static readonly IPAddressRange s_ipv4Benchmark198_18_15 = IPAddressRange.Parse("198.18.0.0/15");
+    private static readonly IPNetwork s_ipv4Benchmark198_18_15 = new IPNetwork(IPAddress.Parse("198.18.0.0"), 15);
 
     // IPv4 documentation/test ranges https://datatracker.ietf.org/doc/html/rfc5737
-    private static readonly IPAddressRange s_ipv4TestNet192_0_2_24 = IPAddressRange.Parse("192.0.2.0/24");
-    private static readonly IPAddressRange s_ipv4TestNet198_51_100_24 = IPAddressRange.Parse("198.51.100.0/24");
-    private static readonly IPAddressRange s_ipv4TestNet203_0_113_24 = IPAddressRange.Parse("203.0.113.0/24");
+    private static readonly IPNetwork s_ipv4TestNet192_0_2_24 = new IPNetwork(IPAddress.Parse("192.0.2.0"), 24);
+    private static readonly IPNetwork s_ipv4TestNet198_51_100_24 = new IPNetwork(IPAddress.Parse("198.51.100.0"), 24);
+    private static readonly IPNetwork s_ipv4TestNet203_0_113_24 = new IPNetwork(IPAddress.Parse("203.0.113.0"), 24);
 
     // IPv4 IETF protocol assignments https://datatracker.ietf.org/doc/html/rfc6890
-    private static readonly IPAddressRange s_ipv4IetfProtocolAssignments192_0_0_24 = IPAddressRange.Parse("192.0.0.0/24");
+    private static readonly IPNetwork s_ipv4IetfProtocolAssignments192_0_0_24 = new IPNetwork(IPAddress.Parse("192.0.0.0"), 24);
 
     // IPv4 multicast https://datatracker.ietf.org/doc/html/rfc1112
-    private static readonly IPAddressRange s_ipv4Multicast224_4 = IPAddressRange.Parse("224.0.0.0/4");
+    private static readonly IPNetwork s_ipv4Multicast224_4 = new IPNetwork(IPAddress.Parse("224.0.0.0"), 4);
 
     // IPv4 reserved https://datatracker.ietf.org/doc/html/rfc1112
-    private static readonly IPAddressRange s_ipv4Reserved240_4 = IPAddressRange.Parse("240.0.0.0/4");
+    private static readonly IPNetwork s_ipv4Reserved240_4 = new IPNetwork(IPAddress.Parse("240.0.0.0"), 4);
 
     // IPv4 limited broadcast
     private static readonly IPAddress s_ipv4Broadcast = IPAddress.Parse("255.255.255.255");
@@ -241,10 +239,10 @@ public sealed class SecurityHelpers
     private static readonly IPAddress s_cloudMetaDataEndpoint = IPAddress.Parse("169.254.169.254");
 
     // IPv6 unique local https://datatracker.ietf.org/doc/html/rfc4193
-    private static readonly IPAddressRange s_ipv6UniqueLocalFd00_8 = IPAddressRange.Parse("fd00::/8");
+    private static readonly IPNetwork s_ipv6UniqueLocalFd00_8 = new IPNetwork(IPAddress.Parse("fd00::"), 8);
 
     // IPv6 documentation range https://datatracker.ietf.org/doc/html/rfc3849
-    private static readonly IPAddressRange s_ipv6Documentation2001Db8_32 = IPAddressRange.Parse("2001:db8::/32");
+    private static readonly IPNetwork s_ipv6Documentation2001Db8_32 = new IPNetwork(IPAddress.Parse("2001:db8::"), 32);
 
     internal static bool IsUnsafeIpAddress(IPAddress ipAddress)
     {

@@ -57,7 +57,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="IPAddressRange" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" />
     <PackageReference Include="Microsoft.AspNetCore.WebUtilities" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
