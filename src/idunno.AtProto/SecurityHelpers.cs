@@ -24,12 +24,15 @@ public sealed class SecurityHelpers
     /// <see cref="SocketsHttpHandler.ConnectCallback"/>. The handler will attempt to resolve the target host to an IP address and validate that each resolved address
     /// is not considered unsafe before allowing a connection to be established.
     /// </summary>
-    /// <param name="connectTimeout">The connect timeout, in seconds.</param>
+    /// <param name="connectionStrategy">The strategy to use when attempting to connect to multiple resolved IP addresses for a given host. Defaults to <see cref="ConnectionStrategy.None"/> if not specified.</param>
+    /// <param name="connectTimeout">The connect timeout, in seconds. Defaults to 30 seconds if not specified.</param>
     /// <param name="proxyUri">An optional proxy <see cref="Uri"/>.</param>
     /// <param name="checkCertificateRevocationList">Flag indicating whether to check the certificate revocation list. Setting this to <see langword="true"/> can introduce security vulnerabilities and should only be enabled if necessary.</param>
     /// <param name="allowAutoRedirect">Flag indicating whether to allow auto-redirects. Setting this to <see langword="true"/> can introduce security vulnerabilities and should only be enabled if necessary.</param>
     /// <returns>A <see cref="SocketsHttpHandler"/> with SSRF protections.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA5394:Do not use insecure randomness", Justification = "Not a cryptographically secure function.")]
     public static SocketsHttpHandler BuildSSRFHttpHandler(
+        ConnectionStrategy connectionStrategy = ConnectionStrategy.None,
         TimeSpan? connectTimeout = null,
         Uri? proxyUri = null,
         bool checkCertificateRevocationList = true,
@@ -53,7 +56,7 @@ public sealed class SecurityHelpers
             },
             UseCookies = false,
 
-            ConnectCallback = static async (context, cancellationToken) =>
+            ConnectCallback = async (context, cancellationToken) =>
             {
                 ArgumentNullException.ThrowIfNull(context);
 
@@ -76,6 +79,40 @@ public sealed class SecurityHelpers
                 safeIPAddresses.AddRange(from IPAddress address in addresses
                                          where !IsUnsafeIpAddress(address)
                                          select address);
+
+                if (connectionStrategy != ConnectionStrategy.None)
+                {
+                    // Reorder the list of safe IP addresses based on the specified connection strategy.
+                    if (connectionStrategy == ConnectionStrategy.Ipv4Preferred)
+                    {
+                        if (!connectionStrategy.HasFlag(ConnectionStrategy.Random))
+                        {
+                            safeIPAddresses = [.. safeIPAddresses.OrderByDescending(a => a.AddressFamily == AddressFamily.InterNetwork)];
+                        }
+                        else
+                        {
+                            Random rng = new();
+                            safeIPAddresses = [.. safeIPAddresses.OrderBy(_ => rng.Next()).ThenByDescending(a => a.AddressFamily == AddressFamily.InterNetwork)];
+                        }
+                    }
+                    else if (connectionStrategy == ConnectionStrategy.Ipv6Preferred)
+                    {
+                        if (!connectionStrategy.HasFlag(ConnectionStrategy.Random))
+                        {
+                            safeIPAddresses = [.. safeIPAddresses.OrderByDescending(a => a.AddressFamily == AddressFamily.InterNetworkV6)];
+                        }
+                        else
+                        {
+                            Random rng = new();
+                            safeIPAddresses = [.. safeIPAddresses.OrderBy(_ => rng.Next()).ThenByDescending(a => a.AddressFamily == AddressFamily.InterNetworkV6)];
+                        }
+                    }
+                    else if (connectionStrategy == ConnectionStrategy.Random)
+                    {
+                        Random rng = new();
+                        safeIPAddresses = [.. safeIPAddresses.OrderBy(_ => rng.Next())];
+                    }
+                }
 
                 if (safeIPAddresses.Count > 0)
                 {
@@ -311,5 +348,34 @@ public sealed class SecurityHelpers
         // Unknown address family: fail closed.
         return true;
     }
+}
 
+/// <summary>
+/// Specifies the strategy used to select and attempt connections to resolved IP addresses for a given host.
+/// </summary>
+/// <remarks><para>Use this enumeration to control how connection attempts are prioritized among available IP addresses,
+/// such as preferring IPv4 or IPv6, and randomizing the order to distribute load. The selected
+/// strategy can affect connection performance, reliability, and distribution across multiple endpoints.</para></remarks>
+[Flags]
+public enum ConnectionStrategy
+{
+    /// <summary>
+    /// The default connection strategy which attempts to connect to all resolved IP addresses for a given host and allows the system to determine the best connection.
+    /// </summary>
+    None = 0,
+
+    /// <summary>
+    /// A connection strategy that attempts to connect to IPv4 addresses first, and only falls back to IPv6 if no IPv4 addresses are available or all connection attempts to IPv4 addresses fail.
+    /// </summary>
+    Ipv4Preferred = 1,
+
+    /// <summary>
+    /// A connection strategy that attempts to connect to IPv6 addresses first, and only falls back to IPv4 if no IPv6 addresses are available or all connection attempts to IPv6 addresses fail.
+    /// </summary>
+    Ipv6Preferred = 2,
+
+    /// <summary>
+    /// Randomly shuffle the order of resolved IP addresses, and attempt to connect in that random order. This can be used as a simple strategy to distribute connections across multiple resolved addresses for a given host.
+    /// </summary>
+    Random = 4
 }
