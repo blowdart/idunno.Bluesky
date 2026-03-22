@@ -15,6 +15,7 @@
 * Added optional validation callbacks to `AtProtoAgent.BuildOAuthLoginUri` to allow for validation of the discovered PDS and authorization server URIs.
 * Added default validation function to disallow loopback and private IP ranges in discovered URIs, to mitigate SSRF attacks.
 * Added override on `ToString()` on `AtProtoCredential` to return a redacted string in case of accidental logging.
+* Added default SSRF protections to `AtProtoAgent`, `AtProtoHttpClient` and `AtProtoJetStream`. This can be disabled by passing your own `HttpClient`.
 
 ### idunno.AtProto.Types
 
