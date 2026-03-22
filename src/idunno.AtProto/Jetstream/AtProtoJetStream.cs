@@ -140,7 +140,12 @@ public class AtProtoJetstream : IDisposable
 
         services
             .AddHttpClient(HttpClientName, client => InternalConfigureHttpClient(client, _httpClientOptions?.HttpUserAgent, _httpClientOptions?.Timeout))
-            .ConfigurePrimaryHttpMessageHandler(() => SecurityHelpers.BuildSSRFHttpHandler(_httpClientOptions?.Timeout, _httpClientOptions?.ProxyUri, checkCrl));
+            .ConfigurePrimaryHttpMessageHandler(() => SecurityHelpers.BuildSSRFHttpHandler(
+                connectionStrategy: ConnectionStrategy.None,
+                connectTimeout: _httpClientOptions?.Timeout,
+                proxyUri: _httpClientOptions?.ProxyUri,
+                checkCertificateRevocationList: checkCrl,
+                allowAutoRedirect: false));
 
         _serviceProvider = services.BuildServiceProvider();
         HttpClientFactory = _serviceProvider.GetService<IHttpClientFactory>()!;

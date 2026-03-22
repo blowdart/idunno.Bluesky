@@ -56,7 +56,12 @@ public abstract class Agent : IDisposable
 
         services
             .AddHttpClient(HttpClientName, client => InternalConfigureHttpClient(client, _httpClientOptions?.HttpUserAgent, _httpClientOptions?.Timeout))
-            .ConfigurePrimaryHttpMessageHandler(() => SecurityHelpers.BuildSSRFHttpHandler(_httpClientOptions?.Timeout, _httpClientOptions?.ProxyUri, checkCrl));
+            .ConfigurePrimaryHttpMessageHandler(() => SecurityHelpers.BuildSSRFHttpHandler(
+                connectionStrategy: ConnectionStrategy.None,
+                connectTimeout: _httpClientOptions?.Timeout,
+                proxyUri: _httpClientOptions?.ProxyUri,
+                checkCertificateRevocationList: checkCrl,
+                allowAutoRedirect: false));
 
         _serviceProvider = services.BuildServiceProvider();
         HttpClientFactory = _serviceProvider.GetService<IHttpClientFactory>()!;
@@ -106,7 +111,12 @@ public abstract class Agent : IDisposable
                 checkCrl = _httpClientOptions.CheckCertificateRevocationList;
             }
 
-            return SecurityHelpers.BuildSSRFHttpHandler(_httpClientOptions?.Timeout, _httpClientOptions?.ProxyUri, checkCrl);
+            return SecurityHelpers.BuildSSRFHttpHandler(
+                connectionStrategy: ConnectionStrategy.None,
+                connectTimeout: _httpClientOptions?.Timeout,
+                proxyUri: _httpClientOptions?.ProxyUri,
+                checkCertificateRevocationList: checkCrl,
+                allowAutoRedirect: false);
         }
     }
 
@@ -179,7 +189,12 @@ public abstract class Agent : IDisposable
             checkCrl = _httpClientOptions.CheckCertificateRevocationList;
         }
 
-        return SecurityHelpers.BuildSSRFHttpHandler(_httpClientOptions?.Timeout, _httpClientOptions?.ProxyUri, checkCrl);
+        return SecurityHelpers.BuildSSRFHttpHandler(
+            connectionStrategy: ConnectionStrategy.None,
+            connectTimeout: _httpClientOptions?.Timeout,
+            proxyUri: _httpClientOptions?.ProxyUri,
+            checkCertificateRevocationList: checkCrl,
+            allowAutoRedirect: false);
     }
 
     private static void InternalConfigureHttpClient(HttpClient client, string? httpUserAgent = null, TimeSpan? timeout = null)

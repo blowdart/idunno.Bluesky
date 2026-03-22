@@ -807,7 +807,7 @@ idunno.AtProto.ResponseParseException.ResponseParseException(string! message) ->
 idunno.AtProto.ResponseParseException.ResponseParseException(string! message, System.Exception! inner) -> void
 idunno.AtProto.ResponseParseException.ResponseParseException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
 idunno.AtProto.SecurityHelpers
-static idunno.AtProto.SecurityHelpers.BuildSSRFHttpHandler(System.TimeSpan? connectTimeout = null, System.Uri? proxyUri = null, bool checkCertificateRevocationList = true, bool allowAutoRedirect = false) -> System.Net.Http.SocketsHttpHandler!
+static idunno.AtProto.SecurityHelpers.BuildSSRFHttpHandler(idunno.AtProto.ConnectionStrategy connectionStrategy = idunno.AtProto.ConnectionStrategy.None, System.TimeSpan? connectTimeout = null, System.Uri? proxyUri = null, bool checkCertificateRevocationList = true, bool allowAutoRedirect = false) -> System.Net.Http.SocketsHttpHandler!
 static idunno.AtProto.SecurityHelpers.DefaultDiscoveryUriValidator(System.Uri! uri, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 idunno.AtProto.SecurityTokenValidationException
 idunno.AtProto.SecurityTokenValidationException.SecurityTokenValidationException() -> void
