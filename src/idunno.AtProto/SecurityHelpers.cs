@@ -80,38 +80,20 @@ public sealed class SecurityHelpers
                                          where !IsUnsafeIpAddress(address)
                                          select address);
 
-                if (connectionStrategy != ConnectionStrategy.None)
+                if (connectionStrategy.HasFlag(ConnectionStrategy.Random))
                 {
-                    // Reorder the list of safe IP addresses based on the specified connection strategy.
-                    if (connectionStrategy == ConnectionStrategy.Ipv4Preferred)
-                    {
-                        if (!connectionStrategy.HasFlag(ConnectionStrategy.Random))
-                        {
-                            safeIPAddresses = [.. safeIPAddresses.OrderByDescending(a => a.AddressFamily == AddressFamily.InterNetwork)];
-                        }
-                        else
-                        {
-                            Random rng = new();
-                            safeIPAddresses = [.. safeIPAddresses.OrderBy(_ => rng.Next()).ThenByDescending(a => a.AddressFamily == AddressFamily.InterNetwork)];
-                        }
-                    }
-                    else if (connectionStrategy == ConnectionStrategy.Ipv6Preferred)
-                    {
-                        if (!connectionStrategy.HasFlag(ConnectionStrategy.Random))
-                        {
-                            safeIPAddresses = [.. safeIPAddresses.OrderByDescending(a => a.AddressFamily == AddressFamily.InterNetworkV6)];
-                        }
-                        else
-                        {
-                            Random rng = new();
-                            safeIPAddresses = [.. safeIPAddresses.OrderBy(_ => rng.Next()).ThenByDescending(a => a.AddressFamily == AddressFamily.InterNetworkV6)];
-                        }
-                    }
-                    else if (connectionStrategy == ConnectionStrategy.Random)
-                    {
-                        Random rng = new();
-                        safeIPAddresses = [.. safeIPAddresses.OrderBy(_ => rng.Next())];
-                    }
+                    Random rng = new();
+                    safeIPAddresses = [.. safeIPAddresses.OrderBy(_ => rng.Next())];
+                }
+
+                // Reorder the list of safe IP addresses based on the specified connection strategy.
+                if (connectionStrategy.HasFlag(ConnectionStrategy.Ipv4Preferred))
+                {
+                    safeIPAddresses = [.. safeIPAddresses.OrderByDescending(a => a.AddressFamily == AddressFamily.InterNetwork)];
+                }
+                else if (connectionStrategy.HasFlag(ConnectionStrategy.Ipv6Preferred))
+                {
+                    safeIPAddresses = [.. safeIPAddresses.OrderByDescending(a => a.AddressFamily == AddressFamily.InterNetworkV6)];
                 }
 
                 if (safeIPAddresses.Count > 0)
