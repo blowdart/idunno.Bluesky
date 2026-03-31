@@ -80,12 +80,24 @@ public abstract class Agent : IDisposable
         IServiceCollection services = new ServiceCollection();
         _httpClientOptions = httpClientOptions;
 
+        bool allowLoopback = false;
+        bool allowInsecureProtocols = false;
+
         IWebProxy? proxy = null;
         SslClientAuthenticationOptions? sslOptions = null;
 
         if (_httpClientOptions?.ProxyUri is not null)
         {
             proxy = new WebProxy(_httpClientOptions.ProxyUri);
+            if (_httpClientOptions.ProxyUri.IsLoopback)
+            {
+                allowLoopback = true;
+            }
+
+            if (_httpClientOptions.ProxyUri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase))
+            {
+                allowInsecureProtocols = true;
+            }
         }
 
         if (!checkCrl)
@@ -103,7 +115,8 @@ public abstract class Agent : IDisposable
                 additionalUnsafeNetworks: null,
                 additionalUnsafeIpAddresses: null,
                 connectTimeout: _httpClientOptions?.Timeout,
-                allowInsecureProtocols: false,
+                allowInsecureProtocols: allowInsecureProtocols,
+                allowLoopback: allowLoopback,
                 failMixedResults: true,
                 allowAutoRedirect: false,
                 automaticDecompression: DecompressionMethods.All,
@@ -204,9 +217,22 @@ public abstract class Agent : IDisposable
         IWebProxy? proxy = null;
         SslClientAuthenticationOptions? sslOptions = null;
 
+        bool allowLoopback = false;
+        bool allowInsecureProtocols = false;
+
         if (_httpClientOptions?.ProxyUri is not null)
         {
             proxy = new WebProxy(_httpClientOptions.ProxyUri);
+
+            if (_httpClientOptions.ProxyUri.IsLoopback)
+            {
+                allowLoopback = true;
+            }
+
+            if (_httpClientOptions.ProxyUri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase))
+            {
+                allowInsecureProtocols = true;
+            }
         }
 
         if (_httpClientOptions?.CheckCertificateRevocationList == false)
@@ -222,7 +248,8 @@ public abstract class Agent : IDisposable
                         additionalUnsafeNetworks: null,
                         additionalUnsafeIpAddresses: null,
                         connectTimeout: _httpClientOptions?.Timeout,
-                        allowInsecureProtocols: false,
+                        allowInsecureProtocols: allowInsecureProtocols,
+                        allowLoopback: allowLoopback,
                         failMixedResults: true,
                         allowAutoRedirect: false,
                         automaticDecompression: DecompressionMethods.All,

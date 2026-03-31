@@ -177,6 +177,8 @@ public partial class AtProtoAgent
     /// <param name="validateDiscoveredEndpoints">Flag indicating whether to validate discovered endpoints.</param>
     /// <param name="validatePds">A callback to validate the PDS URI discovered for <paramref name="handle"/>. If <paramref name="validateDiscoveredEndpoints" /> is <see langword="true"/> and this parameter is not specified, a default validation callback will be used that implements simple SSRF protections.</param>
     /// <param name="validateAuthorizationServer">A callback to validate the authorization server discovered for the PDS for <paramref name="handle"/>. If <paramref name="validateDiscoveredEndpoints" /> is <see langword="true"/> and this parameter is not specified, a default validation callback will be used that implements simple SSRF protections.</param>
+    /// <param name="allowInsecureProtocols">Flag indicating whether HTTP is allowed for authorization servers and personal data servers.</param>
+    /// <param name="allowLoopback">Flag indicating whether loopback addresses are allowed for authorization servers and personal data servers.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -197,8 +199,10 @@ public partial class AtProtoAgent
         IEnumerable<KeyValuePair<string, string>>? uriExtraParameters = null,
         Dictionary<string, string>? stateExtraProperties = null,
         bool validateDiscoveredEndpoints = true,
-        Func<Uri, ILoggerFactory?, CancellationToken, Task<bool>>? validatePds = null,
-        Func<Uri, ILoggerFactory?, CancellationToken, Task<bool>>? validateAuthorizationServer = null,
+        Func<Uri, bool, bool, ILoggerFactory?, CancellationToken, Task<bool>>? validatePds = null,
+        Func<Uri, bool, bool, ILoggerFactory?, CancellationToken, Task<bool>>? validateAuthorizationServer = null,
+        bool allowInsecureProtocols = false,
+        bool allowLoopback = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(oAuthClient);
@@ -226,14 +230,14 @@ public partial class AtProtoAgent
         Did? did = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException("Could not resolve DID");
         Uri? pds = await ResolvePds(did, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException($"Could not resolve PDS for {did}.");
 
-        if (validatePds is not null && !await validatePds.Invoke(pds, LoggerFactory, cancellationToken).ConfigureAwait(false))
+        if (validatePds is not null && !await validatePds.Invoke(pds,allowInsecureProtocols, allowLoopback, LoggerFactory, cancellationToken).ConfigureAwait(false))
         {
             throw new OAuthException($"The discovered PDS {pds} did not pass validation.");
         }
 
         Uri? authorizationServer = await ResolveAuthorizationServer(pds, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException($"Could not discover authorization server for {handle}.");
 
-        if (validateAuthorizationServer is not null && !await validateAuthorizationServer.Invoke(authorizationServer, LoggerFactory, cancellationToken).ConfigureAwait(false))
+        if (validateAuthorizationServer is not null && !await validateAuthorizationServer.Invoke(authorizationServer, allowInsecureProtocols, allowLoopback, LoggerFactory, cancellationToken).ConfigureAwait(false))
         {
             throw new OAuthException($"The discovered authorization server {authorizationServer} did not pass validation.");
         }
@@ -248,7 +252,6 @@ public partial class AtProtoAgent
             stateExtraProperties: stateExtraProperties,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
-
 
     /// <summary>
     /// Builds an OAuth logout URI.

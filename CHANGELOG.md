@@ -17,6 +17,9 @@
 * Added override on `ToString()` on `AtProtoCredential` to return a redacted string in case of accidental logging.
 * Added default SSRF protections to `AtProtoAgent`, `AtProtoHttpClient` and `AtProtoJetStream` with [idunno.Security.Ssrf](https://github.com/blowdart/idunno.Security.Ssrf/blob/main/src/idunno.Security.Ssrf/).
   This can be disabled by passing your own `HttpClient`.
+  * Note: If you set a proxyUri that uses https://localhost or http://localhost then the SSRF protections will be disabled
+    for localhost access automatically.
+* Added `AllowLoopback` parameter to `BuildOAuth2LoginUri` to allow loopback addresses in discovered URIs for testing and development purposes. This is disabled by default.
 
 ### idunno.AtProto.Types
 

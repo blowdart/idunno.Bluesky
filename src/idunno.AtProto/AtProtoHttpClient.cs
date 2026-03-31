@@ -39,6 +39,7 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
                         additionalUnsafeIpAddresses: null,
                         connectTimeout: null,
                         allowInsecureProtocols: false,
+                        allowLoopback: false,
                         failMixedResults: true,
                         allowAutoRedirect: false,
                         automaticDecompression: DecompressionMethods.All,

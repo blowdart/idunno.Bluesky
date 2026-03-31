@@ -35,7 +35,7 @@ public sealed class Program
         ArgumentException.ThrowIfNullOrEmpty(handle);
 
         // Uncomment the next line to route all requests through Fiddler Everywhere
-        proxyUri = new Uri("http://localhost:8866");
+        // proxyUri = new Uri("http://localhost:8866");
 
         // Uncomment the next line to route all requests  through Fiddler Classic
         // proxyUri = new Uri("http://localhost:8888");
@@ -109,7 +109,12 @@ public sealed class Program
             {
                 OAuthClient uriBuilderOAuthClient = agent.CreateOAuthClient();
 
-                Uri startUri = await agent.BuildOAuth2LoginUri(uriBuilderOAuthClient, handle, returnUri: callbackServer.Uri, cancellationToken: cancellationToken);
+                Uri startUri = await agent.BuildOAuth2LoginUri(
+                    oAuthClient: uriBuilderOAuthClient,
+                    handle: handle,
+                    returnUri: callbackServer.Uri,
+                    allowLoopback: true,
+                    cancellationToken: cancellationToken);
 
                 // Save state to use when processing the response, mimicking what we'd do in a web application.
 

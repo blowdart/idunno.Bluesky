@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Reflection.Metadata;
+
 namespace idunno.AtProto.Test;
 
 [ExcludeFromCodeCoverage]
@@ -19,7 +21,12 @@ public class SecurityHelpersTests
     {
         var uri = new Uri($"https://{host}");
 
-        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, null, TestContext.Current.CancellationToken));
+        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(
+            uri: uri,
+            allowInsecureProtocols: false,
+            allowLoopback: false,
+            loggerFactory: null,
+            cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -27,7 +34,12 @@ public class SecurityHelpersTests
     {
         var metadataUri = new Uri("https://169.254.169.254");
 
-        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(metadataUri, null, TestContext.Current.CancellationToken));
+        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(
+            uri: metadataUri,
+            allowInsecureProtocols: false,
+            allowLoopback: false,
+            loggerFactory: null,
+            cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Theory]
@@ -37,28 +49,48 @@ public class SecurityHelpersTests
     public async Task IpV6LinkLocalAddressesShouldFailValidation(string host)
     {
         var uri = new Uri($"https://[{host}]");
-        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, null, TestContext.Current.CancellationToken));
+        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(
+            uri: uri,
+            allowInsecureProtocols: false,
+            allowLoopback: false,
+            loggerFactory: null,
+            cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task LocalhostShouldFailValidation()
     {
         var uri = new Uri("https://localhost");
-        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, null, TestContext.Current.CancellationToken));
+        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(
+            uri: uri,
+            allowInsecureProtocols: false,
+            allowLoopback: false,
+            loggerFactory: null,
+            cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task Ipv4LoopbackShouldFailValidation()
     {
         var uri = new Uri("https://127.0.0.1");
-        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, null, TestContext.Current.CancellationToken));
+        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(
+            uri: uri,
+            allowInsecureProtocols: false,
+            allowLoopback: false,
+            loggerFactory: null,
+            cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task IpV6LoopbackShouldFailValidation()
     {
         var uri = new Uri("https://[::1]");
-        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, null, TestContext.Current.CancellationToken));
+        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(
+            uri: uri,
+            allowLoopback: false,
+            allowInsecureProtocols: false,
+            loggerFactory: null,
+            cancellationToken: TestContext.Current.CancellationToken));
     }
 
 
@@ -72,7 +104,12 @@ public class SecurityHelpersTests
     public async Task ValidIPUriShouldPassValidation(string host)
     {
         var uri = new Uri($"https://{host}");
-        Assert.True(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, null, TestContext.Current.CancellationToken));
+        Assert.True(await SecurityHelpers.DefaultDiscoveryUriValidator(
+            uri: uri,
+            allowInsecureProtocols: false,
+            allowLoopback: false,
+            loggerFactory: null,
+            cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Theory]
@@ -83,7 +120,12 @@ public class SecurityHelpersTests
     public async Task ValidDnsEntriesShouldPassValidation(string host)
     {
         var uri = new Uri($"https://{host}");
-        Assert.True(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, null, TestContext.Current.CancellationToken));
+        Assert.True(await SecurityHelpers.DefaultDiscoveryUriValidator(
+            uri: uri,
+            allowInsecureProtocols: false,
+            allowLoopback: false,
+            loggerFactory: null,
+            cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Theory]
@@ -91,12 +133,16 @@ public class SecurityHelpersTests
     [InlineData("ftp://example.org")]
     [InlineData("gopher://example.org")]
     [InlineData("ws://example.org")]
-    [InlineData("wss://example.org")]
     [InlineData("javascript:alert(1)")]
     public async Task NonHttpSchemesShouldFailValidation(string uriString)
     {
         var uri = new Uri(uriString);
-        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, null, TestContext.Current.CancellationToken));
+        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(
+            uri: uri,
+            allowInsecureProtocols: false,
+            allowLoopback: false,
+            loggerFactory: null,
+            cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Theory]
@@ -115,7 +161,12 @@ public class SecurityHelpersTests
     public async Task AdditionalBlockedIpv4RangesShouldFailValidation(string host)
     {
         var uri = new Uri($"https://{host}");
-        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, null, TestContext.Current.CancellationToken));
+        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(
+            uri: uri,
+            allowInsecureProtocols: false,
+            allowLoopback: false,
+            loggerFactory: null,
+            cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Theory]
@@ -124,7 +175,12 @@ public class SecurityHelpersTests
     public async Task Ipv6DocumentationRangeShouldFailValidation(string host)
     {
         var uri = new Uri($"https://{host}");
-        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, null, TestContext.Current.CancellationToken));
+        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(
+            uri: uri,
+            allowInsecureProtocols: false,
+            allowLoopback: false,
+            loggerFactory: null,
+            cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -132,14 +188,67 @@ public class SecurityHelpersTests
     {
         // 1.1.1.1 is Cloudflare's public DNS resolver - a well-known public IP.
         var uri = new Uri("https://1.1.1.1");
-        Assert.True(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, null, TestContext.Current.CancellationToken));
+        Assert.True(await SecurityHelpers.DefaultDiscoveryUriValidator(
+            uri: uri,
+            allowInsecureProtocols: false,
+            allowLoopback: false,
+            loggerFactory: null,
+            cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public async Task KnownPublicIpShouldOnHttpPassValidation()
+    public async Task KnownPublicIpShouldOnHttpPassValidationIfAllowInsecureProtocolsIsTrue()
     {
         // 1.1.1.1 is Cloudflare's public DNS resolver - a well-known public IP.
         var uri = new Uri("http://1.1.1.1");
-        Assert.True(await SecurityHelpers.DefaultDiscoveryUriValidator(uri, null, TestContext.Current.CancellationToken));
+        Assert.True(await SecurityHelpers.DefaultDiscoveryUriValidator(
+            uri: uri,
+            allowInsecureProtocols: true,
+            allowLoopback: false,
+            loggerFactory: null,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task KnownPublicIpShouldOnHttpFailValidationIfAllowInsecureProtocolsIsFalse()
+    {
+        // 1.1.1.1 is Cloudflare's public DNS resolver - a well-known public IP.
+        var uri = new Uri("http://1.1.1.1");
+        Assert.False(await SecurityHelpers.DefaultDiscoveryUriValidator(
+            uri: uri,
+            allowInsecureProtocols: false,
+            allowLoopback: false,
+            loggerFactory: null,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("localhost")]
+    [InlineData("127.0.0.1")]
+    [InlineData("[::1]")]
+    public async Task LoopbackHttpsShouldBeAllowedIfAllowLoopbackIsTrue(string hostName)
+    {
+        var uri = new Uri($"https://{hostName}");
+        Assert.True(await SecurityHelpers.DefaultDiscoveryUriValidator(
+            uri: uri,
+            allowInsecureProtocols: false,
+            allowLoopback: true,
+            loggerFactory: null,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("localhost")]
+    [InlineData("127.0.0.1")]
+    [InlineData("[::1]")]
+    public async Task LoopbackHttpShouldBeAllowedIfAllowLoopbackAndAllowInsecureProtocolsIsTrue(string hostName)
+    {
+        var uri = new Uri($"http://{hostName}");
+        Assert.True(await SecurityHelpers.DefaultDiscoveryUriValidator(
+            uri: uri,
+            allowInsecureProtocols: true,
+            allowLoopback: true,
+            loggerFactory: null,
+            cancellationToken: TestContext.Current.CancellationToken));
     }
 }

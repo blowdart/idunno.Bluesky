@@ -162,6 +162,7 @@ public class AtProtoJetstream : IDisposable
                 additionalUnsafeIpAddresses: null,
                 connectTimeout: _httpClientOptions?.Timeout,
                 allowInsecureProtocols: false,
+                allowLoopback: false,
                 failMixedResults: true,
                 allowAutoRedirect: false,
                 automaticDecompression: DecompressionMethods.All,

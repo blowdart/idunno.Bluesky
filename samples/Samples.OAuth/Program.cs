@@ -109,7 +109,12 @@ public sealed class Program
             {
                 OAuthClient uriBuilderOAuthClient = agent.CreateOAuthClient();
 
-                Uri startUri = await agent.BuildOAuth2LoginUri(uriBuilderOAuthClient, handle, returnUri: callbackServer.Uri, cancellationToken: cancellationToken);
+                Uri startUri = await agent.BuildOAuth2LoginUri(
+                    oAuthClient: uriBuilderOAuthClient,
+                    handle: handle,
+                    returnUri: callbackServer.Uri,
+                    allowLoopback: true,
+                    cancellationToken: cancellationToken);
 
                 // Save state to use when processing the response, mimicking what we'd do in a web application.
 
