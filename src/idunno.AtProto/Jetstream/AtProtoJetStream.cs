@@ -6,19 +6,19 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Mime;
+using System.Net.Security;
 using System.Net.WebSockets;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Web;
-
+using idunno.AtProto.Jetstream.Events;
+using idunno.AtProto.Jetstream.Models;
+using idunno.Security;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-
-using idunno.AtProto.Jetstream.Events;
-using idunno.AtProto.Jetstream.Models;
-
 using ZstdSharp;
 
 namespace idunno.AtProto.Jetstream;
@@ -125,6 +125,14 @@ public class AtProtoJetstream : IDisposable
 
         _client = CreateWebSocketClient();
 
+        IWebProxy? proxy = null;
+        SslClientAuthenticationOptions? sslOptions = null;
+
+        if (_httpClientOptions?.ProxyUri is not null)
+        {
+            proxy = new WebProxy(_httpClientOptions.ProxyUri);
+        }
+
         bool checkCrl;
         if (httpClientOptions is null)
         {
@@ -135,17 +143,32 @@ public class AtProtoJetstream : IDisposable
             checkCrl = httpClientOptions.CheckCertificateRevocationList;
         }
 
+        if (!checkCrl)
+        {
+            sslOptions = new SslClientAuthenticationOptions
+            {
+                CertificateRevocationCheckMode = X509RevocationMode.NoCheck
+            };
+        }
+
         IServiceCollection services = new ServiceCollection();
         _httpClientOptions = httpClientOptions;
 
         services
             .AddHttpClient(HttpClientName, client => InternalConfigureHttpClient(client, _httpClientOptions?.HttpUserAgent, _httpClientOptions?.Timeout))
-            .ConfigurePrimaryHttpMessageHandler(() => SecurityHelpers.BuildSSRFHttpHandler(
+            .ConfigurePrimaryHttpMessageHandler(() => SsrfSocketsHttpHandlerFactory.Create(
                 connectionStrategy: ConnectionStrategy.None,
+                additionalUnsafeNetworks: null,
+                additionalUnsafeIpAddresses: null,
                 connectTimeout: _httpClientOptions?.Timeout,
-                proxyUri: _httpClientOptions?.ProxyUri,
-                checkCertificateRevocationList: checkCrl,
-                allowAutoRedirect: false));
+                allowInsecureProtocols: false,
+                failMixedResults: true,
+                allowAutoRedirect: false,
+                automaticDecompression: DecompressionMethods.All,
+                proxy: proxy,
+                sslOptions: sslOptions,
+                loggerFactory: LoggerFactory
+                ));
 
         _serviceProvider = services.BuildServiceProvider();
         HttpClientFactory = _serviceProvider.GetService<IHttpClientFactory>()!;

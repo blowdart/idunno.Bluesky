@@ -18,6 +18,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Duende.IdentityModel.OidcClient.DPoP;
 
 using idunno.AtProto.Authentication;
+using idunno.Security;
 
 namespace idunno.AtProto;
 
@@ -32,7 +33,18 @@ namespace idunno.AtProto;
 /// </remarks>
 public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? loggerFactory = null, IMeterFactory? meterFactory = null)
 {
-    static readonly SocketsHttpHandler s_defaultClientHandler = SecurityHelpers.BuildSSRFHttpHandler();
+    readonly SocketsHttpHandler _defaultClientHandler = SsrfSocketsHttpHandlerFactory.Create(
+                        connectionStrategy: ConnectionStrategy.None,
+                        additionalUnsafeNetworks: null,
+                        additionalUnsafeIpAddresses: null,
+                        connectTimeout: null,
+                        allowInsecureProtocols: false,
+                        failMixedResults: true,
+                        allowAutoRedirect: false,
+                        automaticDecompression: DecompressionMethods.All,
+                        proxy: null,
+                        sslOptions: null,
+                        loggerFactory: loggerFactory);
 
     private readonly AtProtoHttpClient<string> _internalClient = new(
             serviceProxy: serviceProxy,
@@ -85,8 +97,8 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
         ArgumentException.ThrowIfNullOrEmpty(endpoint);
 
         using (HttpClient internalClient = new(
-            handler : s_defaultClientHandler,
-            disposeHandler: false)
+            handler : _defaultClientHandler,
+            disposeHandler: true)
         {
             DefaultRequestVersion = HttpVersion.Version20,
             DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
@@ -186,8 +198,8 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
         ArgumentException.ThrowIfNullOrEmpty(endpoint);
 
         using (HttpClient internalClient = new(
-            handler: s_defaultClientHandler,
-            disposeHandler: false)
+            handler: _defaultClientHandler,
+            disposeHandler: true)
         {
             DefaultRequestVersion = HttpVersion.Version20,
             DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower

@@ -66,6 +66,7 @@
     <PackageReference Include="DnsClient" />
     <PackageReference Include="Duende.IdentityModel.OidcClient" />
     <PackageReference Include="Duende.IdentityModel.OidcClient.Extensions" />
+    <PackageReference Include="idunno.Security.Ssrf" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="PeterO.Cbor" />
     <PackageReference Include="SimpleBase" />

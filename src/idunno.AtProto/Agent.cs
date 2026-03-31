@@ -4,9 +4,15 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Mime;
+using System.Net.Security;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+using idunno.Security;
+
 
 namespace idunno.AtProto;
 
@@ -21,6 +27,8 @@ public abstract class Agent : IDisposable
 
     private readonly ServiceProvider? _serviceProvider;
 
+    private readonly ILoggerFactory? _loggerFactory;
+
     internal HttpClientOptions? _httpClientOptions;
 
     /// <summary>
@@ -34,7 +42,23 @@ public abstract class Agent : IDisposable
     /// <see langword="false"/> if you are using a debugging proxy which does not support CRLs.
     /// </para>
     /// </remarks>
-    protected Agent(HttpClientOptions? httpClientOptions, JsonOptions? jsonOptions)
+    protected Agent(HttpClientOptions? httpClientOptions, JsonOptions? jsonOptions): this(httpClientOptions, jsonOptions, null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Agent"/> class.
+    /// </summary>
+    /// <param name="httpClientOptions">Any <see cref="HttpClientOptions"/> for the internal http client used to make HTTP requests.</param>
+    /// <param name="jsonOptions">Any <see cref="JsonOptions"/> to use during serialization and deserialization.</param>
+    /// <param name="loggerFactory">An optional <see cref="ILoggerFactory"/> to use to create loggers from.</param>
+    /// <remarks>
+    /// <para>
+    /// Setting <see cref="HttpClientOptions.CheckCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
+    /// <see langword="false"/> if you are using a debugging proxy which does not support CRLs.
+    /// </para>
+    /// </remarks>
+    protected Agent(HttpClientOptions? httpClientOptions, JsonOptions? jsonOptions, ILoggerFactory? loggerFactory)
     {
         if (jsonOptions is not null)
         {
@@ -51,19 +75,45 @@ public abstract class Agent : IDisposable
             checkCrl = httpClientOptions.CheckCertificateRevocationList;
         }
 
+        _loggerFactory = loggerFactory;
+
         IServiceCollection services = new ServiceCollection();
         _httpClientOptions = httpClientOptions;
 
+        IWebProxy? proxy = null;
+        SslClientAuthenticationOptions? sslOptions = null;
+
+        if (_httpClientOptions?.ProxyUri is not null)
+        {
+            proxy = new WebProxy(_httpClientOptions.ProxyUri);
+        }
+
+        if (!checkCrl)
+        {
+            sslOptions = new SslClientAuthenticationOptions
+            {
+                CertificateRevocationCheckMode = X509RevocationMode.NoCheck
+            };
+        }
+
         services
             .AddHttpClient(HttpClientName, client => InternalConfigureHttpClient(client, _httpClientOptions?.HttpUserAgent, _httpClientOptions?.Timeout))
-            .ConfigurePrimaryHttpMessageHandler(() => SecurityHelpers.BuildSSRFHttpHandler(
+            .ConfigurePrimaryHttpMessageHandler(() => SsrfSocketsHttpHandlerFactory.Create(
                 connectionStrategy: ConnectionStrategy.None,
+                additionalUnsafeNetworks: null,
+                additionalUnsafeIpAddresses: null,
                 connectTimeout: _httpClientOptions?.Timeout,
-                proxyUri: _httpClientOptions?.ProxyUri,
-                checkCertificateRevocationList: checkCrl,
-                allowAutoRedirect: false));
+                allowInsecureProtocols: false,
+                failMixedResults: true,
+                allowAutoRedirect: false,
+                automaticDecompression: DecompressionMethods.All,
+                proxy: proxy,
+                sslOptions: sslOptions,
+                loggerFactory: loggerFactory
+                ));
 
         _serviceProvider = services.BuildServiceProvider();
+      
         HttpClientFactory = _serviceProvider.GetService<IHttpClientFactory>()!;
     }
 
@@ -92,33 +142,6 @@ public abstract class Agent : IDisposable
     /// Gets the <see cref="IHttpClientFactory"/> used when creating <see cref="HttpClient"/>s.
     /// </summary>
     protected IHttpClientFactory HttpClientFactory { get; init; }
-
-    /// <summary>
-    /// Gets a new SocketsHttpHandler configured with any proxy settings passed during the agent configuration.
-    /// </summary>
-    protected SocketsHttpHandler HttpClientHandler
-    {
-        get
-        {
-            bool checkCrl;
-
-            if (_httpClientOptions is null)
-            {
-                checkCrl = true;
-            }
-            else
-            {
-                checkCrl = _httpClientOptions.CheckCertificateRevocationList;
-            }
-
-            return SecurityHelpers.BuildSSRFHttpHandler(
-                connectionStrategy: ConnectionStrategy.None,
-                connectTimeout: _httpClientOptions?.Timeout,
-                proxyUri: _httpClientOptions?.ProxyUri,
-                checkCertificateRevocationList: checkCrl,
-                allowAutoRedirect: false);
-        }
-    }
 
     /// <summary>
     /// Gets the <see cref="JsonOptions"/> for the agent.
@@ -178,23 +201,34 @@ public abstract class Agent : IDisposable
     /// <returns>An <see cref="SocketsHttpHandler"/> configured to any proxy specified when the agent was created.</returns>
     protected SocketsHttpHandler BuildProxyHttpClientHandler()
     {
-        bool checkCrl;
+        IWebProxy? proxy = null;
+        SslClientAuthenticationOptions? sslOptions = null;
 
-        if (_httpClientOptions is null)
+        if (_httpClientOptions?.ProxyUri is not null)
         {
-            checkCrl = true;
-        }
-        else
-        {
-            checkCrl = _httpClientOptions.CheckCertificateRevocationList;
+            proxy = new WebProxy(_httpClientOptions.ProxyUri);
         }
 
-        return SecurityHelpers.BuildSSRFHttpHandler(
-            connectionStrategy: ConnectionStrategy.None,
-            connectTimeout: _httpClientOptions?.Timeout,
-            proxyUri: _httpClientOptions?.ProxyUri,
-            checkCertificateRevocationList: checkCrl,
-            allowAutoRedirect: false);
+        if (_httpClientOptions?.CheckCertificateRevocationList == false)
+        {
+            sslOptions = new SslClientAuthenticationOptions
+            {
+                CertificateRevocationCheckMode = X509RevocationMode.NoCheck
+            };
+        }
+
+        return SsrfSocketsHttpHandlerFactory.Create(
+                        connectionStrategy: ConnectionStrategy.None,
+                        additionalUnsafeNetworks: null,
+                        additionalUnsafeIpAddresses: null,
+                        connectTimeout: _httpClientOptions?.Timeout,
+                        allowInsecureProtocols: false,
+                        failMixedResults: true,
+                        allowAutoRedirect: false,
+                        automaticDecompression: DecompressionMethods.All,
+                        proxy: proxy,
+                        sslOptions: sslOptions,
+                        loggerFactory: _loggerFactory);
     }
 
     private static void InternalConfigureHttpClient(HttpClient client, string? httpUserAgent = null, TimeSpan? timeout = null)

@@ -37,7 +37,7 @@ public partial class AtProtoAgent : Agent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>.</exception>
     public AtProtoAgent(
         Uri service,
-        AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions)
+        AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions, options?.LoggerFactory)
     {
         ArgumentNullException.ThrowIfNull(service);
 
@@ -118,7 +118,7 @@ public partial class AtProtoAgent : Agent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="principal"/> is <see langword="null"/>.</exception>
     public AtProtoAgent(
         ClaimsPrincipal principal,
-        AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions)
+        AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions, options?.LoggerFactory)
     {
         ArgumentNullException.ThrowIfNull(principal);
 
@@ -204,7 +204,7 @@ public partial class AtProtoAgent : Agent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> is <see langword="null"/>.</exception>
     public AtProtoAgent(
         ClaimsIdentity identity,
-        AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions)
+        AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions, options?.LoggerFactory)
     {
         ArgumentNullException.ThrowIfNull(identity);
 
