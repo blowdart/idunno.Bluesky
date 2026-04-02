@@ -667,7 +667,6 @@ for custom `AtProtoRecord` classes.
   ```c#
   using (var agent = new BlueskyAgent(
     proxyUri: proxyUri,
-    checkCertificateRevocationList: checkCertificateRevocationList,
     loggerFactory: loggerFactory))
   ```
 
@@ -681,7 +680,6 @@ for custom `AtProtoRecord` classes.
 
       HttpClientOptions = new HttpClientOptions()
       {
-        CheckCertificateRevocationList = checkCertificateRevocationList,
         ProxyUri = proxyUri
       }
     }))

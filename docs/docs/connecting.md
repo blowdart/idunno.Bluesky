@@ -240,13 +240,11 @@ You should set the `HttpClientOptions` `HttpUserAgent` property to be a value in
 
 The `HttpClientOptions` `ProxyUri` property allows you to set an proxy to be used by the agent when making outgoing HTTP requests.
 If you are using a debugging proxy such as [Fiddler](https://www.telerik.com/fiddler) or [Burp Suite](https://portswigger.net/burp) it is
-likely that you will also need to set the `CheckCertificateRevocationList` property to `false`, 
+likely may also need to set the `CheckCertificateRevocationList` property to `false`, 
 
 > [!CAUTION]
-> Setting `CheckCertificateRevocationList` property on `HttpClientOptions` to `false` is dangerous, as the client will no longer check if the
-HTTPS certificate on any server it connects to has been revoked.
-> 
-> Only use set this to `false` when you are using a debugging proxy which does not support CRLs.
+> Setting `CheckCertificateRevocationList` property on `HttpClientOptions` to `false` is dangerous,
+> as the client will no longer check if the HTTPS certificate on any server it connects to has been revoked.
 
 ```c#
 // Disabling certification revocation list checks can introduce security vulnerabilities.

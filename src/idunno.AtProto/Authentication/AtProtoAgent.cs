@@ -230,14 +230,16 @@ public partial class AtProtoAgent
         Did? did = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException("Could not resolve DID");
         Uri? pds = await ResolvePds(did, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException($"Could not resolve PDS for {did}.");
 
-        if (validatePds is not null && !await validatePds.Invoke(pds,allowInsecureProtocols, allowLoopback, LoggerFactory, cancellationToken).ConfigureAwait(false))
+        if (validatePds is not null &&
+            !await validatePds.Invoke(pds,allowInsecureProtocols, allowLoopback, LoggerFactory, cancellationToken).ConfigureAwait(false))
         {
             throw new OAuthException($"The discovered PDS {pds} did not pass validation.");
         }
 
         Uri? authorizationServer = await ResolveAuthorizationServer(pds, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException($"Could not discover authorization server for {handle}.");
 
-        if (validateAuthorizationServer is not null && !await validateAuthorizationServer.Invoke(authorizationServer, allowInsecureProtocols, allowLoopback, LoggerFactory, cancellationToken).ConfigureAwait(false))
+        if (validateAuthorizationServer is not null &&
+            !await validateAuthorizationServer.Invoke(authorizationServer, allowInsecureProtocols, allowLoopback, LoggerFactory, cancellationToken).ConfigureAwait(false))
         {
             throw new OAuthException($"The discovered authorization server {authorizationServer} did not pass validation.");
         }

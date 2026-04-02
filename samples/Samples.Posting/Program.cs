@@ -45,16 +45,6 @@ public sealed class Program
         // Uncomment the next line to route all requests  through Fiddler Classic
         // proxyUri = new Uri("http://localhost:8888");
 
-        // If a proxy is being used turn off certificate revocation checks.
-        //
-        // WARNING: this setting can introduce security vulnerabilities.
-        // The assumption in these samples is that any proxy is a debugging proxy,
-        // which tend to not support CRLs in the proxy HTTPS certificates they generate.
-        bool checkCertificateRevocationList = true;
-        if (proxyUri is not null)
-        {
-            checkCertificateRevocationList = false;
-        }
 
         if (addMetricsDelay)
         {
@@ -75,7 +65,6 @@ public sealed class Program
 
                 HttpClientOptions = new HttpClientOptions()
                 {
-                    CheckCertificateRevocationList = checkCertificateRevocationList,
                     ProxyUri = proxyUri
                 },
             }))
