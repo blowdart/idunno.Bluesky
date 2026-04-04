@@ -6,18 +6,17 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 
-namespace idunno.Bluesky.Drafts.Model
-{
-    internal sealed record DeleteDraftRequest
-    {
-        [SetsRequiredMembers]
-        public DeleteDraftRequest(TimestampIdentifier id)
-        {
-            ArgumentNullException.ThrowIfNull(id);
-            Id = id;
-        }
+namespace idunno.Bluesky.Drafts.Model;
 
-        [JsonRequired]
-        public required TimestampIdentifier Id { get; init; }
+internal sealed record DeleteDraftRequest
+{
+    [SetsRequiredMembers]
+    public DeleteDraftRequest(TimestampIdentifier id)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        Id = id;
     }
+
+    [JsonRequired]
+    public required TimestampIdentifier Id { get; init; }
 }

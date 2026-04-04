@@ -5,33 +5,32 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 
-namespace idunno.Bluesky.Embed
+namespace idunno.Bluesky.Embed;
+
+/// <summary>
+/// An indicator that the view for the specified AT URI is detached.
+/// </summary>
+public record ViewDetached : View
 {
     /// <summary>
-    /// An indicator that the view for the specified AT URI is detached.
+    /// Creates a new instance of <see cref="ViewDetached"/>
     /// </summary>
-    public record ViewDetached : View
+    /// <param name="uri">The <see cref="AtUri"/> of the view that is detached.</param>
+    internal ViewDetached(AtUri uri)
     {
-        /// <summary>
-        /// Creates a new instance of <see cref="ViewDetached"/>
-        /// </summary>
-        /// <param name="uri">The <see cref="AtUri"/> of the view that is detached.</param>
-        internal ViewDetached(AtUri uri)
-        {
-            Uri = uri;
-        }
-
-        /// <summary>
-        /// The <see cref="AtUri"/> of the view that is detached.
-        /// </summary>
-        [JsonInclude]
-        [JsonRequired]
-        public AtUri Uri { get; init; }
-
-        /// <summary>
-        /// Flag indicating the view is detached.
-        /// </summary>
-        [JsonIgnore]
-        public static bool Detached => true;
+        Uri = uri;
     }
+
+    /// <summary>
+    /// The <see cref="AtUri"/> of the view that is detached.
+    /// </summary>
+    [JsonInclude]
+    [JsonRequired]
+    public AtUri Uri { get; init; }
+
+    /// <summary>
+    /// Flag indicating the view is detached.
+    /// </summary>
+    [JsonIgnore]
+    public static bool Detached => true;
 }

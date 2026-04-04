@@ -3,23 +3,22 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Chat
+namespace idunno.Bluesky.Chat;
+
+/// <summary>
+/// Indicates the status of a conversation.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<ConversationStatus>))]
+public enum ConversationStatus
 {
     /// <summary>
-    /// Indicates the status of a conversation.
+    /// The conversation has been requested.
     /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter<ConversationStatus>))]
-    public enum ConversationStatus
-    {
-        /// <summary>
-        /// The conversation has been requested.
-        /// </summary>
-        [JsonStringEnumMemberName("request")]
-        Requested,
+    [JsonStringEnumMemberName("request")]
+    Requested,
 
-        /// <summary>
-        /// The conversation is accepted.
-        /// </summary>
-        Accepted
-    }
+    /// <summary>
+    /// The conversation is accepted.
+    /// </summary>
+    Accepted
 }

@@ -1,21 +1,20 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-namespace idunno.Bluesky.Feed
+namespace idunno.Bluesky.Feed;
+
+/// <summary>
+/// Specifies the order of ranking of search results
+/// </summary>
+public enum SearchOrder
 {
     /// <summary>
-    /// Specifies the order of ranking of search results
+    /// Ranks order by top posts.
     /// </summary>
-    public enum SearchOrder
-    {
-        /// <summary>
-        /// Ranks order by top posts.
-        /// </summary>
-        Top,
+    Top,
 
-        /// <summary>
-        /// Ranks order by latest posts.
-        /// </summary>
-        Latest
-    }
+    /// <summary>
+    /// Ranks order by latest posts.
+    /// </summary>
+    Latest
 }

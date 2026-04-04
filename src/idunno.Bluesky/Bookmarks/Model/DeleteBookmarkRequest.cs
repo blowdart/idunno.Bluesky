@@ -3,9 +3,8 @@
 
 using idunno.AtProto;
 
-namespace idunno.Bluesky.Bookmarks.Model
+namespace idunno.Bluesky.Bookmarks.Model;
+
+internal sealed record DeleteBookmarkRequest(AtUri uri)
 {
-    internal sealed record DeleteBookmarkRequest(AtUri uri)
-    {
-    }
 }

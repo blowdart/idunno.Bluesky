@@ -1,13 +1,12 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-namespace idunno.Bluesky.Feed.Gates
+namespace idunno.Bluesky.Feed.Gates;
+
+/// <summary>
+/// Thread gate rule specifying that replies are allowed from actors the post creator follows.
+/// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S2094:Classes should not be empty", Justification = "Needed to discriminate on json type discriminator")]
+public sealed record FollowingRule : ThreadGateRule
 {
-    /// <summary>
-    /// Thread gate rule specifying that replies are allowed from actors the post creator follows.
-    /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S2094:Classes should not be empty", Justification = "Needed to discriminate on json type discriminator")]
-    public sealed record FollowingRule : ThreadGateRule
-    {
-    }
 }

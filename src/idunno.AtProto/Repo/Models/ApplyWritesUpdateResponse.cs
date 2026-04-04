@@ -1,12 +1,11 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-namespace idunno.AtProto.Repo.Models
+namespace idunno.AtProto.Repo.Models;
+
+/// <summary>
+/// Encapsulates the result from a update operation to the applyWrites API.
+/// </summary>
+internal sealed record ApplyWritesUpdateResponse(AtUri Uri, Cid Cid) : ApplyWritesResponseBase
 {
-    /// <summary>
-    /// Encapsulates the result from a update operation to the applyWrites API.
-    /// </summary>
-    internal sealed record ApplyWritesUpdateResponse(AtUri Uri, Cid Cid) : ApplyWritesResponseBase
-    {
-    }
 }

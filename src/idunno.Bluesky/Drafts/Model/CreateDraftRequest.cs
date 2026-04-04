@@ -4,18 +4,17 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Drafts.Model
-{
-    internal sealed record CreateDraftRequest
-    {
-        [SetsRequiredMembers]
-        public CreateDraftRequest(Draft draft)
-        {
-            ArgumentNullException.ThrowIfNull(draft);
-            Draft = draft;
-        }
+namespace idunno.Bluesky.Drafts.Model;
 
-        [JsonRequired]
-        public required Draft Draft { get; init; }
+internal sealed record CreateDraftRequest
+{
+    [SetsRequiredMembers]
+    public CreateDraftRequest(Draft draft)
+    {
+        ArgumentNullException.ThrowIfNull(draft);
+        Draft = draft;
     }
+
+    [JsonRequired]
+    public required Draft Draft { get; init; }
 }

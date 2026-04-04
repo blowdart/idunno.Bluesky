@@ -5,17 +5,16 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 
-namespace idunno.Bluesky.Graph.Model
-{
-    internal sealed record MuteActorRequest
-    {
-        public MuteActorRequest(AtIdentifier actor)
-        {
-            Actor = actor;
-        }
+namespace idunno.Bluesky.Graph.Model;
 
-        [JsonInclude]
-        [JsonRequired]
-        public AtIdentifier Actor { get; init; }
+internal sealed record MuteActorRequest
+{
+    public MuteActorRequest(AtIdentifier actor)
+    {
+        Actor = actor;
     }
+
+    [JsonInclude]
+    [JsonRequired]
+    public AtIdentifier Actor { get; init; }
 }

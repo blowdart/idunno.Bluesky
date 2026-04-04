@@ -1,17 +1,16 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-namespace idunno.AtProto.Jetstream.Events
+namespace idunno.AtProto.Jetstream.Events;
+
+/// <summary>
+/// Contains the results of parsing a message from the Jetstream.
+/// </summary>
+/// <param name="parsedEvent">The parsed event.</param>
+public sealed class RecordReceivedEventArgs(AtJetstreamEvent parsedEvent) : EventArgs
 {
     /// <summary>
-    /// Contains the results of parsing a message from the Jetstream.
+    /// Gets the message that trigged the event, parsed as its json object.
     /// </summary>
-    /// <param name="parsedEvent">The parsed event.</param>
-    public sealed class RecordReceivedEventArgs(AtJetstreamEvent parsedEvent) : EventArgs
-    {
-        /// <summary>
-        /// Gets the message that trigged the event, parsed as its json object.
-        /// </summary>
-        public AtJetstreamEvent ParsedEvent { get; } = parsedEvent;
-    }
+    public AtJetstreamEvent ParsedEvent { get; } = parsedEvent;
 }

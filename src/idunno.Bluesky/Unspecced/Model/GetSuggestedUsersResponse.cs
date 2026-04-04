@@ -4,19 +4,18 @@
 using System.Text.Json.Serialization;
 using idunno.Bluesky.Actor;
 
-namespace idunno.Bluesky.Unspecced.Model
+namespace idunno.Bluesky.Unspecced.Model;
+
+internal sealed record GetSuggestedUsersResponse
 {
-    internal sealed record GetSuggestedUsersResponse
+    public GetSuggestedUsersResponse(ICollection<ProfileView> actors, string recId)
     {
-        public GetSuggestedUsersResponse(ICollection<ProfileView> actors, string recId)
-        {
-            Actors = actors;
-            RecId = recId;
-        }
-
-        [JsonRequired]
-        public ICollection<ProfileView> Actors { get; init; }
-
-        public string RecId { get; init; }
+        Actors = actors;
+        RecId = recId;
     }
+
+    [JsonRequired]
+    public ICollection<ProfileView> Actors { get; init; }
+
+    public string RecId { get; init; }
 }

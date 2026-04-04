@@ -4,296 +4,339 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
-namespace idunno.AtProto
+namespace idunno.AtProto;
+
+/// <summary>
+/// Provides an object representation of the AT Proto implementation of a Content Identifier (CID).
+/// </summary>
+/// <remarks>
+/// <para>See https://github.com/multiformats/cid for specification.</para>
+/// </remarks>
+[JsonConverter(typeof(Json.CidConverter))]
+public sealed class Cid : IEquatable<Cid>
 {
     /// <summary>
-    /// Provides an object representation of the AT Proto implementation of a Content Identifier (CID).
+    /// Creates a new instance of a <see cref="Cid"/> class using the specified parameters.
     /// </summary>
-    /// <remarks>
-    /// <para>See https://github.com/multiformats/cid for specification.</para>
-    /// </remarks>
-    [JsonConverter(typeof(Json.CidConverter))]
-    public sealed class Cid : IEquatable<Cid>
+    /// <param name="value">The value of the content identifier.</param>
+    /// <exception cref="ArgumentNullException">Thrown when the provided value is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when the provided value is empty.</exception>
+    [JsonConstructor]
+    public Cid(string value)
     {
-        /// <summary>
-        /// Creates a new instance of a <see cref="Cid"/> class using the specified parameters.
-        /// </summary>
-        /// <param name="value">The value of the content identifier.</param>
-        /// <exception cref="ArgumentNullException">Thrown when the provided value is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentException">Thrown when the provided value is empty.</exception>
-        [JsonConstructor]
-        public Cid(string value)
+        ArgumentNullException.ThrowIfNull(value);
+        ArgumentException.ThrowIfNullOrEmpty(value);
+
+        try
         {
-            ArgumentNullException.ThrowIfNull(value);
-            ArgumentException.ThrowIfNullOrEmpty(value);
-
-            try
+            if (value.StartsWith("Qm", StringComparison.Ordinal) && value.Length == 46)
             {
-                if (value.StartsWith("Qm", StringComparison.Ordinal) && value.Length == 46)
-                {
-                    // CIDv0 - base58btc encoded SHA-256 hash
+                // CIDv0 - base58btc encoded SHA-256 hash
 
-                    byte[] bytes = SimpleBase.Base58.Bitcoin.Decode(value);
+                byte[] bytes = SimpleBase.Base58.Bitcoin.Decode(value);
 
-                    Version = 0;
-                    Codec = 0x70;
-                    Hash = bytes;
-                }
-                else
-                {
-                    // CIDv1 - multibase encoded
-
-                    byte[] bytes = SimpleBase.Multibase.Decode(value);
-
-                    (byte Version, ulong Codec, IReadOnlyList<byte> Hash) result = ParseBytes(bytes);
-
-                    Version = result.Version;
-                    Codec = result.Codec;
-                    Hash = result.Hash;
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new ArgumentOutOfRangeException("Conversion failed", ex);
-            }
-        }
-
-        /// <summary>
-        /// Creates a new instance of a <see cref="Cid"/> class using the specified parameters.
-        /// </summary>
-        /// <param name="bytes">A byte array containing a Cid.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="bytes"/> is <see langword="null"/> or empty.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="bytes"/> does not represent a Cid.</exception>
-        public Cid(byte[] bytes)
-        {
-            ArgumentNullException.ThrowIfNull(bytes);
-            ArgumentOutOfRangeException.ThrowIfEqual(bytes.Length, 0);
-
-            try
-            {
-                (byte Version, ulong Codec, IReadOnlyList<byte> Hash) result = ParseBytes(bytes);
-                Version = result.Version;
-                Codec = result.Codec;
-                Hash = result.Hash;
-            }
-            catch (Exception ex)
-            {
-                throw new ArgumentOutOfRangeException("Conversion failed", ex);
-            }
-        }
-
-        /// <summary>
-        /// Creates a new instance of a <see cref="Cid"/> class using the specified parameters.
-        /// </summary>
-        /// <param name="bytes">A byte array containing a Cid.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="bytes"/> is <see langword="null"/> or empty.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="bytes"/> does not represent a Cid.</exception>
-        public Cid(Span<byte> bytes)
-        {
-            ArgumentOutOfRangeException.ThrowIfEqual(bytes.Length, 0);
-
-            try
-            {
-                (byte Version, ulong Codec, IReadOnlyList<byte> Hash) result = ParseBytes(bytes.ToArray());
-                Version = result.Version;
-                Codec = result.Codec;
-                Hash = result.Hash;
-            }
-            catch (Exception ex)
-            {
-                throw new ArgumentOutOfRangeException("Conversion failed", ex);
-            }
-        }
-
-        /// <summary>
-        /// Creates a new instance of a <see cref="Cid"/> class using the specified parameters.
-        /// </summary>
-        /// <param name="version">The Cid version.</param>
-        /// <param name="codec">The codec used to encode the hash.</param>
-        /// <param name="hash">The hash value(s).</param>
-        public Cid(byte version, ulong codec, byte[] hash)
-        {
-            Version = version;
-            Codec = codec;
-            Hash = hash;
-        }
-
-        /// <summary>
-        /// Gets the Cid version.
-        /// </summary>
-        [JsonIgnore]
-        public byte Version { get; }
-
-        /// <summary>
-        /// Gets the codec used to encode the hash(es).
-        /// </summary>
-        [JsonIgnore]
-        public ulong Codec { get; }
-
-        /// <summary>
-        /// Gets the hash(es).
-        /// </summary>
-        [JsonIgnore]
-        public IReadOnlyList<byte> Hash { get; }
-
-        /// <summary>
-        /// Gets the value of the Content Identifier.
-        /// </summary>
-        [JsonPropertyName("cid")]
-        public string Value => ToString();
-
-        /// <inheritdoc/>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "AT Proto normalizes to lower case")]
-        public override string ToString()
-        {
-            if (Version == 0)
-            {
-                return SimpleBase.Base58.Bitcoin.Encode(Hash.ToArray()).ToLowerInvariant();
-            }
-            else if (Version == 1)
-            {
-                byte[] cidBytes = ToBytes();
-
-                return $"b{SimpleBase.Base32.Rfc4648.Encode(cidBytes).ToLowerInvariant()}";
+                Version = 0;
+                Codec = 0x70;
+                Hash = bytes;
             }
             else
             {
-                return string.Empty;
+                // CIDv1 - multibase encoded
+
+                byte[] bytes = SimpleBase.Multibase.Decode(value);
+
+                (byte Version, ulong Codec, IReadOnlyList<byte> Hash) result = ParseBytes(bytes);
+
+                Version = result.Version;
+                Codec = result.Codec;
+                Hash = result.Hash;
             }
         }
-
-        /// <summary>
-        /// Converts the CID to byte array.
-        /// </summary>
-        /// <returns>The CID as bytes.</returns>
-        public byte[] ToBytes()
+        catch (Exception ex)
         {
-            var result = new List<byte>();
+            throw new ArgumentOutOfRangeException("Conversion failed", ex);
+        }
+    }
 
-            if (Version != 1)
-            {
-                return [];
-            }
+    /// <summary>
+    /// Creates a new instance of a <see cref="Cid"/> class using the specified parameters.
+    /// </summary>
+    /// <param name="bytes">A byte array containing a Cid.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="bytes"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="bytes"/> does not represent a Cid.</exception>
+    public Cid(byte[] bytes)
+    {
+        ArgumentNullException.ThrowIfNull(bytes);
+        ArgumentOutOfRangeException.ThrowIfEqual(bytes.Length, 0);
 
-            result.Add(Version);
-            result.AddRange(EncodeVarInt(Codec));
-            result.AddRange(Hash);
-            return [.. result];
+        try
+        {
+            (byte Version, ulong Codec, IReadOnlyList<byte> Hash) result = ParseBytes(bytes);
+            Version = result.Version;
+            Codec = result.Codec;
+            Hash = result.Hash;
+        }
+        catch (Exception ex)
+        {
+            throw new ArgumentOutOfRangeException("Conversion failed", ex);
+        }
+    }
+
+    /// <summary>
+    /// Creates a new instance of a <see cref="Cid"/> class using the specified parameters.
+    /// </summary>
+    /// <param name="bytes">A byte array containing a Cid.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="bytes"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="bytes"/> does not represent a Cid.</exception>
+    public Cid(Span<byte> bytes)
+    {
+        ArgumentOutOfRangeException.ThrowIfEqual(bytes.Length, 0);
+
+        try
+        {
+            (byte Version, ulong Codec, IReadOnlyList<byte> Hash) result = ParseBytes(bytes.ToArray());
+            Version = result.Version;
+            Codec = result.Codec;
+            Hash = result.Hash;
+        }
+        catch (Exception ex)
+        {
+            throw new ArgumentOutOfRangeException("Conversion failed", ex);
+        }
+    }
+
+    /// <summary>
+    /// Creates a new instance of a <see cref="Cid"/> class using the specified parameters.
+    /// </summary>
+    /// <param name="version">The Cid version.</param>
+    /// <param name="codec">The codec used to encode the hash.</param>
+    /// <param name="hash">The hash value(s).</param>
+    public Cid(byte version, ulong codec, byte[] hash)
+    {
+        Version = version;
+        Codec = codec;
+        Hash = hash;
+    }
+
+    /// <summary>
+    /// Gets the Cid version.
+    /// </summary>
+    [JsonIgnore]
+    public byte Version { get; }
+
+    /// <summary>
+    /// Gets the codec used to encode the hash(es).
+    /// </summary>
+    [JsonIgnore]
+    public ulong Codec { get; }
+
+    /// <summary>
+    /// Gets the hash(es).
+    /// </summary>
+    [JsonIgnore]
+    public IReadOnlyList<byte> Hash { get; }
+
+    /// <summary>
+    /// Gets the value of the Content Identifier.
+    /// </summary>
+    [JsonPropertyName("cid")]
+    public string Value => ToString();
+
+    /// <summary>
+    /// Returns a string that represents the current <see cref="Cid"/> object.
+    /// </summary>
+    /// <returns>A string representation of the current <see cref="Cid"/>.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "AT Proto normalizes to lower case")]
+    public override string ToString()
+    {
+        if (Version == 0)
+        {
+            return SimpleBase.Base58.Bitcoin.Encode(Hash.ToArray()).ToLowerInvariant();
+        }
+        else if (Version == 1)
+        {
+            byte[] cidBytes = ToBytes();
+
+            return $"b{SimpleBase.Base32.Rfc4648.Encode(cidBytes).ToLowerInvariant()}";
+        }
+        else
+        {
+            return string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// Converts the CID to byte array.
+    /// </summary>
+    /// <returns>The CID as bytes.</returns>
+    public byte[] ToBytes()
+    {
+        var result = new List<byte>();
+
+        if (Version != 1)
+        {
+            return [];
         }
 
-        /// <summary>
-        /// Creates a <see cref="Cid"/> from the specified string.
-        /// </summary>
-        /// <param name="s">The string to convert.</param>
-        /// <returns>An instance of <see cref="Cid"/>. from <paramref name="s"/>.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static implicit operator Cid(string s) => new(s);
+        result.Add(Version);
+        result.AddRange(EncodeVarInt(Codec));
+        result.AddRange(Hash);
+        return [.. result];
+    }
 
-        /// <summary>
-        /// Creates a <see cref="Cid"/> from the specified string.
-        /// </summary>
-        /// <param name="s">The string to convert.</param>
-        /// <returns>An instance of <see cref="Cid"/>. from <paramref name="s"/>.</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Cid FromString(string s) => new(s);
+    /// <summary>
+    /// Creates a <see cref="Cid"/> from the specified string.
+    /// </summary>
+    /// <param name="s">The string to convert.</param>
+    /// <returns>An instance of <see cref="Cid"/>. from <paramref name="s"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator Cid(string s) => new(s);
 
-        /// <inheritdoc/>
-        public override int GetHashCode()
+    /// <summary>
+    /// Creates a <see cref="Cid"/> from the specified string.
+    /// </summary>
+    /// <param name="s">The string to convert.</param>
+    /// <returns>An instance of <see cref="Cid"/>. from <paramref name="s"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Cid FromString(string s) => new(s);
+
+    /// <summary>
+    /// Gets a hash code for the current object.
+    /// </summary>
+    /// <returns>A hash code for the current object.</returns>
+    public override int GetHashCode()
+    {
+        HashCode hashAlgorithm = default;
+
+        hashAlgorithm.Add(Version);
+        hashAlgorithm.Add(Codec);
+        hashAlgorithm.AddBytes(Hash.ToArray());
+
+        return hashAlgorithm.ToHashCode();
+    }
+
+    /// <summary>
+    /// Indicates whether the current object is equal to another object of the same type.
+    /// </summary>
+    /// <param name="obj">An object to compare with this object.</param>
+    /// <returns><see langword="true"/> if the current object is equal to the <paramref name="obj"/>; otherwise, <see langword="false" />.</returns>
+    public override bool Equals(object? obj) => Equals(obj as Cid);
+
+    /// <summary>
+    /// Indicates whether the current object is equal to another object of the same type.
+    /// </summary>
+    /// <param name="other">An object to compare with this object.</param>
+    /// <returns><see langword="true"/> if the current object is equal to the <paramref name="other"/>; otherwise, <see langword="false" />.</returns>
+    public bool Equals(Cid? other)
+    {
+        if (other is null)
         {
-            HashCode hashAlgorithm = default;
-
-            hashAlgorithm.Add(Version);
-            hashAlgorithm.Add(Codec);
-            hashAlgorithm.AddBytes(Hash.ToArray());
-
-            return hashAlgorithm.ToHashCode();
+            return false;
         }
 
-        /// <inheritdoc/>
-        public override bool Equals(object? obj) => Equals(obj as Cid);
-
-        /// <inheritdoc/>
-        public bool Equals(Cid? other)
+        // Optimization for a common success case.
+        if (ReferenceEquals(this, other))
         {
-            if (other is null)
-            {
-                return false;
-            }
+            return true;
+        }
 
-            // Optimization for a common success case.
-            if (ReferenceEquals(this, other))
+        // If run-time types are not exactly the same, return false.
+        if (GetType() != other.GetType())
+        {
+            return false;
+        }
+
+        // Return true if the fields match.
+        return  Version == other.Version &&
+            Codec == other.Codec &&
+            Hash.SequenceEqual(other.Hash);
+    }
+
+    /// <summary>
+    /// Determines whether two specified <see cref="Cid"/>s the same value.
+    /// </summary>
+    /// <param name="lhs">The first <see cref="Cid"/> to compare, or <see langword="null"/>.</param>
+    /// <param name="rhs">The second <see cref="Cid"/> to compare, or <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, <see langword="false"/>.</returns>
+    public static bool operator ==(Cid? lhs, Cid? rhs)
+    {
+        if (lhs is null)
+        {
+            if (rhs is null)
             {
                 return true;
             }
 
-            // If run-time types are not exactly the same, return false.
-            if (GetType() != other.GetType())
-            {
-                return false;
-            }
-
-            // Return true if the fields match.
-            return  Version == other.Version &&
-                Codec == other.Codec &&
-                Hash.SequenceEqual(other.Hash);
+            // Only the left side is null.
+            return false;
         }
+        // Equals handles case of null on right side.
+        return lhs.Equals(rhs);
+    }
 
-        private static (byte Version, ulong Codec, IReadOnlyList<byte> Hash) ParseBytes(byte[] bytes)
+    /// <summary>
+    /// Determines whether two specified <see cref="Cid"/>s do not have the same value.
+    /// </summary>
+    /// <param name="lhs">The first <see cref="Cid"/> to compare, or <see langword="null"/>.</param>
+    /// <param name="rhs">The second <see cref="Cid"/> to compare, or <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if the value of <paramref name="lhs"/> is different from the value of <paramref name="rhs" />; otherwise, <see langword="false"/>.</returns>
+    public static bool operator !=(Cid? lhs, Cid? rhs) => !(lhs == rhs);
+
+    private static (byte Version, ulong Codec, IReadOnlyList<byte> Hash) ParseBytes(byte[] bytes)
+    {
+        Span<byte> span = new (bytes);
+
+        byte version = span[0];
+
+        if (version == 0)
         {
-            Span<byte> span = new (bytes);
-
-            byte version = span[0];
-
-            if (version == 0)
-            {
-                return (version, 0x70, span[1..].ToArray());
-            }
-            else if (version == 1)
-            {
-                (ulong codec, int codecLength) = DecodeVarInt(span[1..]);
-
-                return new(version, codec, span[(1 + codecLength)..].ToArray());
-            }
-            else
-            {
-                throw new ArgumentException($"Version {BitConverter.ToString(new byte[version])} is unsupported");
-            }
+            return (version, 0x70, span[1..].ToArray());
         }
-
-        private static byte[] EncodeVarInt(ulong value)
+        else if (version == 1)
         {
-            var bytes = new List<byte>();
+            (ulong codec, int codecLength) = DecodeVarInt(span[1..]);
 
-            while (value >= 0x80)
-            {
-                bytes.Add((byte)(value | 0x80));
-                value >>= 7;
-            }
-
-            bytes.Add((byte)value);
-            return [.. bytes];
+            return new(version, codec, span[(1 + codecLength)..].ToArray());
         }
-
-        private static (ulong Value, int Length) DecodeVarInt(ReadOnlySpan<byte> bytes)
+        else
         {
-            ulong value = 0;
-            int shift = 0;
-            int length = 0;
+            throw new ArgumentException($"Version {BitConverter.ToString(new byte[version])} is unsupported");
+        }
+    }
 
-            foreach (byte b in bytes)
+    private static byte[] EncodeVarInt(ulong value)
+    {
+        var bytes = new List<byte>();
+
+        while (value >= 0x80)
+        {
+            bytes.Add((byte)(value | 0x80));
+            value >>= 7;
+        }
+
+        bytes.Add((byte)value);
+        return [.. bytes];
+    }
+
+    private static (ulong Value, int Length) DecodeVarInt(ReadOnlySpan<byte> bytes)
+    {
+        ulong value = 0;
+        int shift = 0;
+        int length = 0;
+
+        foreach (byte b in bytes)
+        {
+            length++;
+            value |= (ulong)(b & 0x7F) << shift;
+
+            if ((b & 0x80) == 0)
             {
-                length++;
-                value |= (ulong)(b & 0x7F) << shift;
-
-                if ((b & 0x80) == 0)
-                {
-                    break;
-                }
-
-                shift += 7;
+                break;
             }
 
-            return (value, length);
+            shift += 7;
         }
+
+        return (value, length);
     }
 }

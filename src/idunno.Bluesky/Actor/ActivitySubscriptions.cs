@@ -3,13 +3,12 @@
 
 using idunno.Bluesky.Notifications;
 
-namespace idunno.Bluesky.Actor
+namespace idunno.Bluesky.Actor;
+
+/// <summary>
+/// A user's subscription preferences for other actors.
+/// </summary>
+/// <param name="allowSubscriptions">A <see cref="NotificationAllowedFrom"/> setting for the actor.</param>
+public sealed record ActivitySubscriptions(NotificationAllowedFrom allowSubscriptions)
 {
-    /// <summary>
-    /// A user's subscription preferences for other actors.
-    /// </summary>
-    /// <param name="allowSubscriptions">A <see cref="NotificationAllowedFrom"/> setting for the actor.</param>
-    public sealed record ActivitySubscriptions(NotificationAllowedFrom allowSubscriptions)
-    {
-    }
 }

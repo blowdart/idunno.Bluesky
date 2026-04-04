@@ -4,23 +4,16 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Chat.Model
+namespace idunno.Bluesky.Chat.Model;
+
+[SuppressMessage("Performance", "CA1812", Justification = "Used in GetMessages.")]
+[method: JsonConstructor]
+internal sealed class GetMessagesResponse(string? cursor, ICollection<MessageViewBase> messages)
 {
-    [SuppressMessage("Performance", "CA1812", Justification = "Used in GetMessages.")]
-    internal sealed class GetMessagesResponse
-    {
-        [JsonConstructor]
-        public GetMessagesResponse(string? cursor, ICollection<MessageViewBase> messages)
-        {
-            Cursor = cursor;
-            Messages = messages;
-        }
+    [JsonInclude]
+    public string? Cursor { get; init; } = cursor;
 
-        [JsonInclude]
-        public string? Cursor { get; init; }
-
-        [JsonInclude]
-        [JsonRequired]
-        public ICollection<MessageViewBase> Messages { get; init; }
-    }
+    [JsonInclude]
+    [JsonRequired]
+    public ICollection<MessageViewBase> Messages { get; init; } = [.. messages];
 }

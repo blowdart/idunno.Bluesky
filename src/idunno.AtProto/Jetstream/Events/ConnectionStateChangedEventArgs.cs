@@ -3,17 +3,16 @@
 
 using System.Net.WebSockets;
 
-namespace idunno.AtProto.Jetstream.Events
+namespace idunno.AtProto.Jetstream.Events;
+
+/// <summary>
+/// Holds information for a connection state changed event.
+/// </summary>
+/// <param name="state">The <see cref="WebSocketState"/> of the underlying WebSocket.</param>
+public sealed class ConnectionStateChangedEventArgs(WebSocketState state) : EventArgs
 {
     /// <summary>
-    /// Holds information for a connection state changed event.
+    /// Gets the new state of the underlying WebSocket.
     /// </summary>
-    /// <param name="state">The <see cref="WebSocketState"/> of the underlying WebSocket.</param>
-    public sealed class ConnectionStateChangedEventArgs(WebSocketState state) : EventArgs
-    {
-        /// <summary>
-        /// Gets the new state of the underlying WebSocket.
-        /// </summary>
-        public WebSocketState State { get; } = state;
-    }
+    public WebSocketState State { get; } = state;
 }

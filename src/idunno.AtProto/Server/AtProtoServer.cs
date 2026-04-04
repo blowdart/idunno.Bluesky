@@ -6,58 +6,54 @@ using Microsoft.Extensions.Logging;
 using idunno.AtProto.Server.Models;
 using System.Diagnostics.CodeAnalysis;
 
-namespace idunno.AtProto
+namespace idunno.AtProto;
+
+public static partial class AtProtoServer
 {
+    // https://docs.bsky.app/docs/api/com-atproto-server-describe-server
+    internal const string DescribeServerEndpoint = "/xrpc/com.atproto.server.describeServer";
+
     /// <summary>
-    /// Represents an atproto server and provides methods to send messages and receive responses from the server.
+    /// Describes the server's account creation requirements and capabilities.
     /// </summary>
-    public static partial class AtProtoServer
+    /// <param name="service">The service whose account description is to be retrieved.</param>
+    /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+    /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
+    /// <exception cref="ResponseParseException">Thrown when the response from the service cannot be parsed or does not pass validation.</exception>
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    [UnconditionalSuppressMessage("AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+    public static async Task<AtProtoHttpResult<ServerDescription>> DescribeServer(
+        Uri service,
+        HttpClient httpClient,
+        ILoggerFactory? loggerFactory = default,
+        CancellationToken cancellationToken = default)
     {
-        // https://docs.bsky.app/docs/api/com-atproto-server-describe-server
-        internal const string DescribeServerEndpoint = "/xrpc/com.atproto.server.describeServer";
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(httpClient);
 
-        /// <summary>
-        /// Describes the server's account creation requirements and capabilities.
-        /// </summary>
-        /// <param name="service">The service whose account description is to be retrieved.</param>
-        /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-        /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
-        /// <exception cref="ResponseParseException">Thrown when the response from the service cannot be parsed or does not pass validation.</exception>
-        [UnconditionalSuppressMessage(
-            "Trimming",
-            "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
-            Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-        [UnconditionalSuppressMessage("AOT",
-            "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
-            Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
-        public static async Task<AtProtoHttpResult<ServerDescription>> DescribeServer(
-            Uri service,
-            HttpClient httpClient,
-            ILoggerFactory? loggerFactory = default,
-            CancellationToken cancellationToken = default)
+        AtProtoHttpClient<ServerDescription> request = new(loggerFactory);
+
+        AtProtoHttpResult<ServerDescription> result = await request.Get(
+            service: service,
+            endpoint: DescribeServerEndpoint,
+            httpClient: httpClient,
+            jsonSerializerOptions: AtProtoJsonSerializerOptions,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (result.Succeeded &&
+            (result.Result.AvailableUserDomains is null || result.Result.AvailableUserDomains.Count == 0))
         {
-            ArgumentNullException.ThrowIfNull(service);
-            ArgumentNullException.ThrowIfNull(httpClient);
-
-            AtProtoHttpClient<ServerDescription> request = new(loggerFactory);
-
-            AtProtoHttpResult<ServerDescription> result = await request.Get(
-                service: service,
-                endpoint: DescribeServerEndpoint,
-                httpClient: httpClient,
-                jsonSerializerOptions: AtProtoJsonSerializerOptions,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            if (result.Succeeded &&
-                (result.Result.AvailableUserDomains is null || result.Result.AvailableUserDomains.Count == 0))
-            {
-                throw new ResponseParseException("Response missing required availableUserDomains array.");
-            }
-
-            return result;
+            throw new ResponseParseException("Response missing required availableUserDomains array.");
         }
+
+        return result;
     }
 }

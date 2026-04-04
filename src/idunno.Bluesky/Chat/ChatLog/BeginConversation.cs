@@ -2,21 +2,20 @@
 // Licensed under the MIT License.
 
 #pragma warning disable IDE0130
-namespace idunno.Bluesky.Chat
+namespace idunno.Bluesky.Chat;
 #pragma warning restore IDE0130
+
+/// <summary>
+/// A log entry indicating the start of a conversation.
+/// </summary>
+public sealed record BeginConversation : LogBase
 {
     /// <summary>
-    /// A log entry indicating the start of a conversation.
+    /// Constructs a new instance of <see cref="BeginConversation"/>.
     /// </summary>
-    public sealed record BeginConversation : LogBase
+    /// <param name="id">The conversation identifier.</param>
+    /// <param name="revision">The conversation revision.</param>
+    internal BeginConversation(string id, string revision) : base(id, revision)
     {
-        /// <summary>
-        /// Constructs a new instance of <see cref="BeginConversation"/>.
-        /// </summary>
-        /// <param name="id">The conversation identifier.</param>
-        /// <param name="revision">The conversation revision.</param>
-        internal BeginConversation(string id, string revision) : base(id, revision)
-        {
-        }
     }
 }

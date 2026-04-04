@@ -9,6 +9,7 @@
   </Folder>
   <Folder Name="/.github/">
     <File Path=".github/CODEOWNERS" />
+    <File Path=".github/copilot-instructions.md" />
     <File Path=".github/dependabot.yml" />
     <File Path=".github/pull_request_template.md" />
   </Folder>
@@ -16,6 +17,9 @@
     <File Path=".github/ISSUE_TEMPLATE/bug_report.md" />
     <File Path=".github/ISSUE_TEMPLATE/docs-issue.md" />
     <File Path=".github/ISSUE_TEMPLATE/feature_request.md" />
+  </Folder>
+  <Folder Name="/.github/prompts/">
+    <File Path=".github/prompts/docs.prompt.md" />
   </Folder>
   <Folder Name="/.github/workflows/">
     <File Path=".github/workflows/actions-security-analysis.yml" />
@@ -29,6 +33,7 @@
     <File Path=".github/workflows/release-build.yml" />
   </Folder>
   <Folder Name="/docs/">
+    <File Path="docs/.editorconfig" />
     <File Path="docs/docfx.json" />
     <File Path="docs/docicon.png" />
     <File Path="docs/favicon.ico" />
@@ -51,6 +56,7 @@
     <File Path="docs/docs/jetstream.md" />
     <File Path="docs/docs/labels.md" />
     <File Path="docs/docs/logging.md" />
+    <File Path="docs/docs/metrics.md" />
     <File Path="docs/docs/notifications.md" />
     <File Path="docs/docs/posting.md" />
     <File Path="docs/docs/profileEditing.md" />
@@ -204,6 +210,10 @@
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
+    <Project Path="samples/Samples.OAuthNonceRollover/Samples.OAuthNonceRollover.csproj" Id="9496d983-ce61-4835-abbd-0833d9357d03">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
     <Project Path="samples/Samples.Posting/Samples.Posting.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
@@ -244,6 +254,7 @@
     <File Path="SECURITY.md" />
     <File Path="sleet.json" />
     <File Path="THIRD-PARTY-NOTICES.txt" />
+    <File Path="ToDo.md" />
     <File Path="trimTest.ps1" />
     <File Path="version.json" />
   </Folder>

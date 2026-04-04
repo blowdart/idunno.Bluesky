@@ -4,19 +4,18 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Graph.Model
-{
-    [SuppressMessage("Performance", "CA1812", Justification = "Used in GetStarterPacks.")]
-    internal sealed record GetStarterPacksResponse
-    {
-        [JsonConstructor]
-        public GetStarterPacksResponse(IReadOnlyList<StarterPackViewBasic> starterPacks)
-        {
-            StarterPacks = starterPacks;
-        }
+namespace idunno.Bluesky.Graph.Model;
 
-        [JsonInclude]
-        [JsonRequired]
-        public IReadOnlyList<StarterPackViewBasic> StarterPacks { get; init; }
+[SuppressMessage("Performance", "CA1812", Justification = "Used in GetStarterPacks.")]
+internal sealed record GetStarterPacksResponse
+{
+    [JsonConstructor]
+    public GetStarterPacksResponse(IReadOnlyList<StarterPackViewBasic> starterPacks)
+    {
+        StarterPacks = starterPacks;
     }
+
+    [JsonInclude]
+    [JsonRequired]
+    public IReadOnlyList<StarterPackViewBasic> StarterPacks { get; init; }
 }

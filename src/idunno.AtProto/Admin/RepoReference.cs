@@ -3,16 +3,15 @@
 
 using idunno.AtProto.Moderation;
 
-namespace idunno.AtProto.Admin
+namespace idunno.AtProto.Admin;
+
+/// <summary>
+/// Defines a reference to a repository.
+/// </summary>
+public sealed record RepoReference : SubjectType
 {
     /// <summary>
-    /// Defines a reference to a repository.
+    /// The <see cref="AtProto.Did"/> of the repository.
     /// </summary>
-    public sealed record RepoReference : SubjectType
-    {
-        /// <summary>
-        /// The <see cref="AtProto.Did"/> of the repository.
-        /// </summary>
-        public required Did Did { get; init; }
-    }
+    public required Did Did { get; init; }
 }

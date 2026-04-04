@@ -4,139 +4,162 @@
 using Duende.IdentityModel.Client;
 using Duende.IdentityModel.OidcClient.DPoP;
 
-namespace idunno.AtProto.Authentication
+namespace idunno.AtProto.Authentication;
+
+internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential, IDisposable
 {
-    internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential
+    private bool _isDisposed;
+
+    public DPoPRevokeCredentials(Uri service, string token, string dPoPProofKey, string dPoPNonce) : base(service, AuthenticationType.OAuth)
     {
-        private string _dPoPProofKey;
-        private string _dPoPNonce;
-        private readonly string _token;
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentException.ThrowIfNullOrWhiteSpace(token);
+        ArgumentException.ThrowIfNullOrEmpty(dPoPProofKey);
 
-        /// <summary>
-        /// Creates a new instance of <see cref="DPoPRevokeCredentials"/> with the specified <paramref name="token"/>,
-        /// <paramref name="dPoPProofKey"/> and <paramref name="dPoPNonce"/>.
-        /// </summary>
-        /// <param name="service">The <see cref="Uri"/> of the service the credentials were issued from.</param>
-        /// <param name="token">A string representation of the JWT to be revoked.</param>
-        /// <param name="dPoPProofKey">An optional string representation of the DPoP proof key to use when signing requests.</param>
-        /// <param name="dPoPNonce">An optional string representation of the DPoP nonce to use when signing requests.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is null.</exception>
-        /// <exception cref="ArgumentException">
-        /// Thrown when <paramref name="token"/>,  <paramref name="dPoPProofKey"/> or <paramref name="dPoPNonce"/> is null or whitespace.
-        /// </exception>
-        public DPoPRevokeCredentials(Uri service, string token, string dPoPProofKey, string dPoPNonce) : base(service, AuthenticationType.OAuth)
+        DPoPProofKey = dPoPProofKey;
+        DPoPNonce = dPoPNonce;
+        Token = token;
+    }
+
+    public DPoPRevokeCredentials(DPoPAccessCredentials accessCredentials) : base(accessCredentials.Service, AuthenticationType.OAuth)
+    {
+        ArgumentNullException.ThrowIfNull(accessCredentials);
+
+        DPoPProofKey = accessCredentials.DPoPProofKey;
+        DPoPNonce = accessCredentials.DPoPNonce;
+        Token = accessCredentials.AccessJwt;
+    }
+
+    public string Token
+    {
+        get
         {
-            ArgumentNullException.ThrowIfNull(service);
-            ArgumentException.ThrowIfNullOrWhiteSpace(token);
-            ArgumentException.ThrowIfNullOrEmpty(dPoPProofKey);
-            ArgumentException.ThrowIfNullOrEmpty(dPoPNonce);
-
-            _dPoPProofKey = dPoPProofKey;
-            _dPoPNonce = dPoPNonce;
-            _token = token;
-        }
-
-        /// <summary>
-        /// Creates a new instance of <see cref="DPoPRevokeCredentials"/> from the supplied <paramref name="accessCredentials"/>.
-        /// </summary>
-        /// <param name="accessCredentials">The <see cref="DPoPAccessCredentials"/> to create the revoke credentials from.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/> is null.</exception>
-        public DPoPRevokeCredentials(DPoPAccessCredentials accessCredentials) : base(accessCredentials.Service, AuthenticationType.OAuth)
-        {
-            ArgumentNullException.ThrowIfNull(accessCredentials);
-
-            _dPoPProofKey = accessCredentials.DPoPProofKey;
-            _dPoPNonce = accessCredentials.DPoPNonce;
-            _token = accessCredentials.AccessJwt;
-        }
-
-        /// <summary>
-        /// Gets or sets a string representation of the DPoP proof key to use when signing requests.
-        /// </summary>
-        /// <exception cref="ArgumentException">Thrown when setting the value and the value is null or whitespace.</exception>
-        public string DPoPProofKey
-        {
-            get
+            ReaderWriterLockSlim.EnterReadLock();
+            try
             {
-                ReaderWriterLockSlim.EnterReadLock();
-                try
-                {
-                    return _dPoPProofKey;
-                }
-                finally
-                {
-                    ReaderWriterLockSlim.ExitReadLock();
-                }
+                return field;
             }
-
-            set
+            finally
             {
-                ArgumentException.ThrowIfNullOrWhiteSpace(value);
-
-                ReaderWriterLockSlim.EnterWriteLock();
-                try
-                {
-                    _dPoPProofKey = value;
-                }
-                finally
-                {
-                    ReaderWriterLockSlim.ExitWriteLock();
-                }
+                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
-        /// <summary>
-        /// Gets a string representation of the DPoP nonce to use when signing requests.
-        /// </summary>
-        public string DPoPNonce
+        set
         {
-            get
-            {
-                ReaderWriterLockSlim.EnterReadLock();
-                try
-                {
-                    return _dPoPNonce;
-                }
-                finally
-                {
-                    ReaderWriterLockSlim.ExitReadLock();
-                }
-            }
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            set
+            ReaderWriterLockSlim.EnterWriteLock();
+            try
             {
-                ReaderWriterLockSlim.EnterWriteLock();
-                try
-                {
-                    _dPoPNonce = value;
-                }
-                finally
-                {
-                    ReaderWriterLockSlim.ExitWriteLock();
-                }
+                field = value;
+            }
+            finally
+            {
+                ReaderWriterLockSlim.ExitWriteLock();
+            }
+        }
+    }
+
+    public string DPoPProofKey
+    {
+        get
+        {
+            ReaderWriterLockSlim.EnterReadLock();
+            try
+            {
+                return field;
+            }
+            finally
+            {
+                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
-        /// <summary>
-        /// Add authentication headers to the specified <paramref name="httpRequestMessage"/>.
-        /// </summary>
-        /// <param name="httpRequestMessage">The <see cref="HttpRequestMessage"/> to add authentication headers to.</param>
-        public override void SetAuthenticationHeaders(HttpRequestMessage httpRequestMessage)
+        set
         {
-            ArgumentNullException.ThrowIfNull(httpRequestMessage);
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            DPoPProofRequest dPoPProofRequest = new()
+            ReaderWriterLockSlim.EnterWriteLock();
+            try
             {
-                DPoPNonce = _dPoPNonce,
-                Method = httpRequestMessage.Method.ToString(),
-                Url = httpRequestMessage.GetDPoPUrl()
-            };
+                field = value;
+            }
+            finally
+            {
+                ReaderWriterLockSlim.ExitWriteLock();
+            }
+        }
+    }
 
-            DefaultDPoPProofTokenFactory factory = new(_dPoPProofKey);
-            DPoPProof proofToken = factory.CreateProofToken(dPoPProofRequest);
-
-            httpRequestMessage.SetDPoPToken(_token, proofToken.ProofToken);
+    public string DPoPNonce
+    {
+        get
+        {
+            ReaderWriterLockSlim.EnterReadLock();
+            try
+            {
+                return field;
+            }
+            finally
+            {
+                ReaderWriterLockSlim.ExitReadLock();
+            }
         }
 
+        set
+        {
+            ReaderWriterLockSlim.EnterWriteLock();
+            try
+            {
+                field = value;
+            }
+            finally
+            {
+                ReaderWriterLockSlim.ExitWriteLock();
+            }
+        }
+    }
+
+    public override void SetAuthenticationHeaders(HttpRequestMessage httpRequestMessage)
+    {
+        ArgumentNullException.ThrowIfNull(httpRequestMessage);
+
+        DPoPProofRequest dPoPProofRequest = new()
+        {
+            DPoPNonce = DPoPNonce,
+            Method = httpRequestMessage.Method.ToString(),
+            Url = httpRequestMessage.GetDPoPUrl()
+        };
+
+        DefaultDPoPProofTokenFactory factory = new(DPoPProofKey);
+        DPoPProof proofToken = factory.CreateProofToken(dPoPProofRequest);
+
+        httpRequestMessage.SetDPoPToken(Token, proofToken.ProofToken);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_isDisposed)
+        {
+            if (disposing)
+            {
+                ReaderWriterLockSlim.Dispose();
+            }
+
+            _isDisposed = true;
+        }
+    }
+
+     ~DPoPRevokeCredentials()
+    {
+         Dispose(disposing: false);
+    }
+
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
     }
 }

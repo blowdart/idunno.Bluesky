@@ -3,17 +3,16 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Video.Model
-{
-    internal sealed record JobStatusResponse
-    {
-        [JsonConstructor]
-        public JobStatusResponse(JobStatusWireFormat jobStatus)
-        {
-            JobStatus = jobStatus;
-        }
+namespace idunno.Bluesky.Video.Model;
 
-        [JsonInclude]
-        public JobStatusWireFormat JobStatus { get; init; }
+internal sealed record JobStatusResponse
+{
+    [JsonConstructor]
+    public JobStatusResponse(JobStatusWireFormat jobStatus)
+    {
+        JobStatus = jobStatus;
     }
+
+    [JsonInclude]
+    public JobStatusWireFormat JobStatus { get; init; }
 }

@@ -3,11 +3,10 @@
 
 using idunno.AtProto.Repo;
 
-namespace idunno.AtProto.Integration.Test
+namespace idunno.AtProto.Integration.Test;
+
+[ExcludeFromCodeCoverage]
+public record TestRecord : AtProtoRecord
 {
-    [ExcludeFromCodeCoverage]
-    public record TestRecord : AtProtoRecord
-    {
-        public required string TestValue { get; set; }
-    }
+    public required string TestValue { get; set; }
 }

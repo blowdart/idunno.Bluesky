@@ -3,16 +3,15 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Embed
+namespace idunno.Bluesky.Embed;
+
+/// <summary>
+/// Base record for various embedded media records in a Bluesky post.
+/// </summary>
+[JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
+[JsonDerivedType(typeof(EmbeddedImages), typeDiscriminator: EmbeddedRecordTypeDiscriminators.Images)]
+[JsonDerivedType(typeof(EmbeddedVideo), typeDiscriminator: EmbeddedRecordTypeDiscriminators.Video)]
+[JsonDerivedType(typeof(EmbeddedRecordWithMedia), typeDiscriminator: EmbeddedRecordTypeDiscriminators.RecordWithMedia)]
+public record EmbeddedMediaBase : EmbeddedBase
 {
-    /// <summary>
-    /// Base record for various embedded media records in a Bluesky post.
-    /// </summary>
-    [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
-    [JsonDerivedType(typeof(EmbeddedImages), typeDiscriminator: EmbeddedRecordTypeDiscriminators.Images)]
-    [JsonDerivedType(typeof(EmbeddedVideo), typeDiscriminator: EmbeddedRecordTypeDiscriminators.Video)]
-    [JsonDerivedType(typeof(EmbeddedRecordWithMedia), typeDiscriminator: EmbeddedRecordTypeDiscriminators.RecordWithMedia)]
-    public record EmbeddedMediaBase : EmbeddedBase
-    {
-    }
 }

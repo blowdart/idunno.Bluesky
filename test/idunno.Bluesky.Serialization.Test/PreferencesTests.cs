@@ -1,38 +1,37 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Actor.Model;
 
-namespace idunno.Bluesky.Serialization.Test
+namespace idunno.Bluesky.Serialization.Test;
+
+[ExcludeFromCodeCoverage]
+public class PreferencesTests
 {
-    [ExcludeFromCodeCoverage]
-    public class PreferencesTests
+    private readonly JsonSerializerOptions _jsonSerializerOptions = new(JsonSerializerDefaults.Web);
+
+    [Fact]
+    public void ThreadViewPreferenceSerializesToJson()
     {
-        private readonly JsonSerializerOptions _jsonSerializerOptions = new(JsonSerializerDefaults.Web);
+        var threadViewPreference = new ThreadViewPreference(prioritizeFollowedUsers: true);
 
-        [Fact]
-        public void ThreadViewPreferenceSerializesToJson()
-        {
-            var threadViewPreference = new ThreadViewPreference(prioritizeFollowedUsers: true);
+        string threadViewPreferenceAsJson = JsonSerializer.Serialize(threadViewPreference, _jsonSerializerOptions);
 
-            string threadViewPreferenceAsJson = JsonSerializer.Serialize(threadViewPreference, _jsonSerializerOptions);
+        Assert.NotNull(threadViewPreferenceAsJson);
+    }
 
-            Assert.NotNull(threadViewPreferenceAsJson);
-        }
+    [Fact]
+    public void PutPreferencesRequestSerializesToJson()
+    {
+        var threadViewPreference = new ThreadViewPreference(prioritizeFollowedUsers: true);
 
-        [Fact]
-        public void PutPreferencesRequestSerializesToJson()
-        {
-            var threadViewPreference = new ThreadViewPreference(prioritizeFollowedUsers: true);
+        var putPreferencesRequest = new PutPreferencesRequest(new Preferences([threadViewPreference]));
 
-            var putPreferencesRequest = new PutPreferencesRequest(new Preferences([threadViewPreference]));
+        string putPreferencesRequestAsJson = JsonSerializer.Serialize(putPreferencesRequest, _jsonSerializerOptions);
 
-            var putPreferencesRequestAsJson = JsonSerializer.Serialize(putPreferencesRequest, _jsonSerializerOptions);
-
-            Assert.NotNull(putPreferencesRequestAsJson);
-        }
+        Assert.NotNull(putPreferencesRequestAsJson);
     }
 }

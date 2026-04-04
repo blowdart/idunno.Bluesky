@@ -3,17 +3,16 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Chat.Model
-{
-    internal sealed record ConversationIdPostRequest
-    {
-        public ConversationIdPostRequest(string convoId)
-        {
-            ConvoId = convoId;
-        }
+namespace idunno.Bluesky.Chat.Model;
 
-        [JsonInclude]
-        [JsonRequired]
-        public string ConvoId { get; init; }
+internal sealed record ConversationIdPostRequest
+{
+    public ConversationIdPostRequest(string convoId)
+    {
+        ConvoId = convoId;
     }
+
+    [JsonInclude]
+    [JsonRequired]
+    public string ConvoId { get; init; }
 }

@@ -5,30 +5,29 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 
-namespace idunno.Bluesky.Chat
+namespace idunno.Bluesky.Chat;
+
+/// <summary>
+/// Encapsulates a view over the sender of a message.
+/// </summary>
+public sealed record MessageViewSender
 {
     /// <summary>
-    /// Encapsulates a view over the sender of a message.
+    /// Creates a new instance of <see cref="MessageViewSender"/>.
     /// </summary>
-    public sealed record MessageViewSender
+    /// <param name="did">The <see cref="AtProto.Did"/> of the message author.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
+    [JsonConstructor]
+    public MessageViewSender(Did did)
     {
-        /// <summary>
-        /// Creates a new instance of <see cref="MessageViewSender"/>.
-        /// </summary>
-        /// <param name="did">The <see cref="AtProto.Did"/> of the message author.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
-        [JsonConstructor]
-        public MessageViewSender(Did did)
-        {
-            ArgumentNullException.ThrowIfNull(did);
-            Did = did;
-        }
-
-        /// <summary>
-        /// Gets the <see cref="AtProto.Did"/> of the message author.
-        /// </summary>
-        [JsonInclude]
-        [JsonRequired]
-        public Did Did { get; init; }
+        ArgumentNullException.ThrowIfNull(did);
+        Did = did;
     }
+
+    /// <summary>
+    /// Gets the <see cref="AtProto.Did"/> of the message author.
+    /// </summary>
+    [JsonInclude]
+    [JsonRequired]
+    public Did Did { get; init; }
 }

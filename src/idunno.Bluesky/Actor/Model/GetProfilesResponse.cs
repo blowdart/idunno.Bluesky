@@ -4,18 +4,17 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Actor.Model
-{
-    [SuppressMessage("Performance", "CA1812", Justification = "Used in GetProfiles.")]
-    internal sealed record GetProfilesResponse
-    {
-        [JsonConstructor]
-        public GetProfilesResponse(ProfileViewDetailed[] profiles)
-        {
-            Profiles = profiles;
-        }
+namespace idunno.Bluesky.Actor.Model;
 
-        [JsonInclude]
-        public ProfileViewDetailed[] Profiles { get; init; }
+[SuppressMessage("Performance", "CA1812", Justification = "Used in GetProfiles.")]
+internal sealed record GetProfilesResponse
+{
+    [JsonConstructor]
+    public GetProfilesResponse(ProfileViewDetailed[] profiles)
+    {
+        Profiles = profiles;
     }
+
+    [JsonInclude]
+    public ProfileViewDetailed[] Profiles { get; init; }
 }

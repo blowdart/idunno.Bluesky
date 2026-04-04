@@ -1,573 +1,624 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Collections.ObjectModel;
 using idunno.AtProto;
 
-namespace idunno.Bluesky
+namespace idunno.Bluesky;
+
+/// <summary>
+/// Default URIs for Bluesky Services.
+/// </summary>
+public static class DefaultServiceUris
 {
     /// <summary>
-    /// Default URIs for Bluesky Services.
-    /// </summary>
-    public static class DefaultServiceUris
-    {
-        /// <summary>
-        /// The default read/write Bluesky API URI.
-        /// </summary>
-        /// <remarks>
-        /// <para>See <see href="https://docs.bsky.app/docs/advanced-guides/api-directory#bluesky-services">Bluesky Services</see>.</para>
-        /// </remarks>
-        public static readonly Uri BlueskyApiUri = new("https://api.bsky.app");
-
-        /// <summary>
-        /// The default read only Bluesky API URI.
-        /// </summary>
-        /// <para>See <see href="https://docs.bsky.app/docs/advanced-guides/api-directory#bluesky-services">Bluesky Services</see>.</para>
-        public static readonly Uri PublicAppViewUri = new("https://public.api.bsky.app");
-    }
-
-    /// <summary>
-    /// Various maximum constants
-    /// </summary>
-    public static class Maximum
-    {
-        /// <summary>
-        /// The maximum length for a post, in characters.
-        /// </summary>
-        public static readonly int PostLengthInCharacters = 3000;
-
-        /// <summary>
-        /// The maximum length for a post, in graphemes.
-        /// </summary>
-        public static readonly int PostLengthInGraphemes = 300;
-
-        /// <summary>
-        /// The maximum number of images a post can contain.
-        /// </summary>
-        public static readonly int ImagesInPost = 4;
-
-        /// <summary>
-        /// The number of external tags that a post can contain.
-        /// </summary>
-        public static readonly int ExternalTagsInPost = 8;
-
-        /// <summary>
-        /// The maximum length of an tag, in characters.
-        /// </summary>
-        public static readonly int TagLengthInCharacters = 640;
-
-        /// <summary>
-        /// The maximum length of an tag, in graphemes.
-        /// </summary>
-        public static readonly int TagLengthInGraphemes = 64;
-
-        /// <summary>
-        /// The maximum number of rules a thread gate can contain.
-        /// </summary>
-        public static readonly int ThreadGateRules = 5;
-
-        /// <summary>
-        /// The maximum number of replies that can be hidden in a thread gate.
-        /// </summary>
-        public static readonly int ThreadGateHiddenReplies = 300;
-
-        /// <summary>
-        /// The maximum number of rules a post gate can contain.
-        /// </summary>
-        public static readonly int PostGateRules = 5;
-
-        /// <summary>
-        /// The maximum number of embedding posts that can be detached in a post gate.
-        /// </summary>
-        public static readonly int PostGateDetachedEmbeddingPosts = 50;
-
-        /// <summary>
-        /// The maximum number of actors that can suggested 
-        /// </summary>
-        public static readonly int SuggestedActors = 100;
-
-        /// <summary>
-        /// The maximum number of conversations to list.
-        /// </summary>
-        public static readonly int ConversationsToList = 100;
-
-        /// <summary>
-        /// The maximum number of members in a conversation.
-        /// </summary>
-        public static readonly int ConversationMembers = 10;
-
-        /// <summary>
-        /// The maximum number of messages to list.
-        /// </summary>
-        public static readonly int MessagesToList = 100;
-
-        /// <summary>
-        /// The maximum number of characters in a direct message.
-        /// </summary>
-        public static readonly int MessageLengthInCharacters = 10000;
-
-        /// <summary>
-        /// The maximum number of messages in a message batch.
-        /// </summary>
-        public static readonly int BatchedMessages = 100;
-
-        /// <summary>
-        /// The maximum number of bookmarks that can be returned from GetBookmarks.
-        /// </summary>
-        public static readonly int Bookmarks = 100;
-
-        /// <summary>
-        /// The maximum number of tags that a post can contain.
-        /// </summary>
-        public static readonly int TagsInPost = 8;
-
-        /// <summary>
-        /// The maximum number of trending topics that can be requested.
-        /// </summary>
-        public static readonly int TrendingTopics = 25;
-
-        /// <summary>
-        /// The maximum number of suggested feeds that can be requested.
-        /// </summary>
-        public static readonly int SuggestedFeeds = 25;
-
-        /// <summary>
-        /// The maximum number of popular feed generators that can be requested.
-        /// </summary>
-        public static readonly int PopularFeedGenerators = 100;
-
-        /// <summary>
-        /// The maximum number of suggested users that can be requested.
-        /// </summary>
-        public static readonly int SuggestedUsers = 50;
-
-        /// <summary>
-        /// The maximum number of suggested start packs that can be requested.
-        /// </summary>
-        public static readonly int SuggestedStarterPacks = 25;
-
-        /// <summary>
-        /// The maximum number of trends that can be requested.
-        /// </summary>
-        public static readonly int Trends = 25;
-
-        /// <summary>
-        /// The maximum length of a profile pronoun.
-        /// </summary>
-        public static readonly int PronounLength = 2560;
-
-        /// <summary>
-        /// The maximum length of a profile pronoun, in graphemes.
-        /// </summary>
-        public static readonly int PronounLengthInGraphemes = 256;
-
-        /// <summary>
-        /// The maximum length of a profile display name.
-        /// </summary>
-        public static readonly int DisplayNameLength = 640;
-
-        /// <summary>
-        /// The maximum length of a profile display name, in graphemes.
-        /// </summary>
-        public static readonly int DisplayNameLengthInGraphemes = 64;
-
-        /// <summary>
-        /// The maximum length of a profile description.
-        /// </summary>
-        public static readonly int DescriptionLength = 2560;
-
-        /// <summary>
-        /// The maximum length of a profile description, in graphemes.
-        /// </summary>
-        public static readonly int DescriptionLengthInGraphemes = 256;
-
-        /// <summary>
-        /// The maximum number of drafts that can be requested from GetDrafts().
-        /// </summary>
-        public static readonly int ListedDrafts = 100;
-
-        /// <summary>
-        /// The maximum length of text in an individual draft.
-        /// </summary>
-        public static readonly int DraftTextLengthInCharacters = 10000;
-
-        /// <summary>
-        /// The maximum length of text in an individual draft, in graphemes.
-        /// </summary>
-        public static readonly int DraftTextLengthInGraphemes = 1000;
-    }
-
-    /// <summary>
-    /// Well known <see cref="Did"/>s for various actors.
-    /// </summary>
-    public static class WellKnownDistributedIdentifiers
-    {
-        /// <summary>
-        /// The <see cref="Did"/> for at://moderation.bsky.app.
-        /// </summary>
-        public static Did BlueskyModerationLabeler => new(@"did:plc:ar7c4by46qjdydhdevvrndac");
-
-        /// <summary>
-        /// The <see cref="Did"/> for the video processing system.
-        /// </summary>
-        public static Did Video => new("did:web:video.bsky.app");
-    }
-
-    /// <summary>
-    /// Well-known NSIDs of Bluesky record collection used in record creation, deletion and updating.
+    /// The default read/write Bluesky API URI.
     /// </summary>
     /// <remarks>
-    /// <para>See https://atproto.com/specs/nsid for a description of NSIDs.</para>
+    /// <para>See <see href="https://docs.bsky.app/docs/advanced-guides/api-directory#bluesky-services">Bluesky Services</see>.</para>
     /// </remarks>
-    public static class CollectionNsid
-    {
-        /// <summary>
-        /// The NSID for a user's post collection.
-        /// </summary>
-        public static Nsid Post => new("app.bsky.feed.post");
-
-        /// <summary>
-        /// The NSID for a user's likes collection.
-        /// </summary>
-        public static Nsid Like => new("app.bsky.feed.like");
-
-        /// <summary>
-        /// The NSID for a user's reposts collection.
-        /// </summary>
-        public static Nsid Repost => new("app.bsky.feed.repost");
-
-        /// <summary>
-        /// The NSID for a user's follows collection.
-        /// </summary>
-        public static Nsid Follow => new("app.bsky.graph.follow");
-
-        /// <summary>
-        /// The NSID for a user's block collection.
-        /// </summary>
-        public static Nsid Block => new("app.bsky.graph.block");
-
-        /// <summary>
-        /// The NSID for a user's thread gates collection.
-        /// </summary>
-        public static Nsid ThreadGate => new("app.bsky.feed.threadgate");
-
-        /// <summary>
-        /// The NSID for a user's post gates collection.
-        /// </summary>
-        public static Nsid PostGate => new("app.bsky.feed.postgate");
-
-        /// <summary>
-        /// The NSID for an actor's profile.
-        /// </summary>
-        public static Nsid Profile => new("app.bsky.actor.profile");
-
-        /// <summary>
-        /// The NSID for a user's verification collection.
-        /// </summary>
-        public static Nsid Verification => new("app.bsky.graph.verification");
-
-        /// <summary>
-        /// The NSID for a user's list collection.
-        /// </summary>
-        public static Nsid List => new("app.bsky.graph.list");
-
-        /// <summary>
-        /// The NSID for the user's collection of users added to their own lists.
-        /// </summary>
-        public static Nsid ListItem => new("app.bsky.graph.listitem");
-
-        /// <summary>
-        /// The NSID for an actor's status record.
-        /// </summary>
-        public static Nsid Status => new("app.bsky.actor.status");
-
-        /// <summary>
-        /// The NSID for an actor's notification declaration record.
-        /// </summary>
-        public static Nsid NotificationDeclaration => new("app.bsky.notification.declaration");
-    }
+    public static readonly Uri BlueskyApiUri = new("https://api.bsky.app");
 
     /// <summary>
-    /// The type discriminators used for various records in a feed or thread.
+    /// The default read only Bluesky API URI.
     /// </summary>
-    public static class RecordType
-    {
-        /// <summary>
-        /// Indicates a post in a thread view.
-        /// </summary>
-        public const string ThreadViewPost = "app.bsky.feed.defs#threadViewPost";
+    /// <para>See <see href="https://docs.bsky.app/docs/advanced-guides/api-directory#bluesky-services">Bluesky Services</see>.</para>
+    public static readonly Uri PublicAppViewUri = new("https://public.api.bsky.app");
+}
 
-        /// <summary>
-        /// Indicates an post in a feed view.
-        /// </summary>
-        public const string PostView = "app.bsky.feed.defs#postView";
-
-        /// <summary>
-        /// Indicates a not found post in a feed view.
-        /// </summary>
-        public const string NotFoundPost = "app.bsky.feed.defs#notFoundPost";
-
-        /// <summary>
-        /// Indicates a post in a feed view that is blocked to or by the current user.
-        /// </summary>
-        public const string BlockedPost = "app.bsky.feed.defs#blockedPost";
-
-        /// <summary>
-        /// Indicates a post record.
-        /// </summary>
-        public const string Post = "app.bsky.feed.post";
-
-        /// <summary>
-        /// Indicates a like record.
-        /// </summary>
-        public const string Like = "app.bsky.feed.like";
-
-        /// <summary>
-        /// Indicates a repost record.
-        /// </summary>
-        public const string Repost = "app.bsky.feed.repost";
-
-        /// <summary>
-        /// Indicates a thread gate record
-        /// </summary>
-        public const string ThreadGate = "app.bsky.feed.threadgate";
-
-        /// <summary>
-        /// Indicates a post gate record
-        /// </summary>
-        public const string PostGate = "app.bsky.feed.postgate";
-
-        /// <summary>
-        /// Indicates a follow record.
-        /// </summary>
-        public const string Follow = "app.bsky.graph.follow";
-
-        /// <summary>
-        /// Indicates a block record.
-        /// </summary>
-        public const string Block = "app.bsky.graph.block";
-
-        /// <summary>
-        /// Indicates a profile record.
-        /// </summary>
-        public const string Profile = "app.bsky.actor.profile";
-
-        /// <summary>
-        /// Indicates a starter pack record.
-        /// </summary>
-        public const string StarterPack = "app.bsky.graph.starterpack";
-
-        /// <summary>
-        /// Indicates the declaration report for a labeler.
-        /// </summary>
-        public const string LabelerDeclaration = "app.bsky.labeler.service";
-
-        /// <summary>
-        /// Indicates a verification record.
-        /// </summary>
-        public const string Verification = "app.bsky.graph.verification";
-
-        /// <summary>
-        /// Indicates a list record.
-        /// </summary>
-        public const string List = "app.bsky.graph.list";
-
-        /// <summary>
-        /// Indicates a record of an item in a list.
-        /// </summary>
-        public const string ListItem = "app.bsky.graph.listitem";
-
-        /// <summary>
-        /// Indicates a declaration of notification preferences.
-        /// </summary>
-        public const string NotificationDeclaration = "app.bsky.notification.declaration";
-
-        /// <summary>
-        /// Indicates a status record
-        /// </summary>
-        public const string Status = "app.bsky.actor.status";
-    }
+/// <summary>
+/// Various maximum constants
+/// </summary>
+public static class Maximum
+{
+    /// <summary>
+    /// The maximum length for a post, in characters.
+    /// </summary>
+    public static readonly int PostLengthInCharacters = 3000;
 
     /// <summary>
-    /// The type discriminators used for rich text facets.
+    /// The maximum length for a post, in graphemes.
     /// </summary>
-    public static class FacetTypeDiscriminators
-    {
-        /// <summary>
-        /// Indicates the facet feature for a poll
-        /// </summary>
-        public const string Poll = "blue.poll.post.facet#option";
-    }
+    public static readonly int PostLengthInGraphemes = 300;
 
     /// <summary>
-    /// The type discriminators used for embedded records in posts.
+    /// The maximum number of images a post can contain.
     /// </summary>
-    public static class EmbeddedRecordTypeDiscriminators
-    {
-        /// <summary>
-        /// The json type discriminator for an embedded record.
-        /// </summary>
-        public const string Record = "app.bsky.embed.record";
-
-        /// <summary>
-        /// The json type discriminator for an embedded record with media attachments
-        /// </summary>
-        public const string RecordWithMedia = "app.bsky.embed.recordWithMedia";
-
-        /// <summary>
-        /// The json type discriminator for embedded images.
-        /// </summary>
-        public const string Images = "app.bsky.embed.images";
-
-        /// <summary>
-        /// The json type discriminator for embedded external references.
-        /// </summary>
-        public const string External = "app.bsky.embed.external";
-
-        /// <summary>
-        /// The json type discriminator for embedded video.
-        /// </summary>
-        public const string Video = "app.bsky.embed.video";
-    }
+    public static readonly int ImagesInPost = 4;
 
     /// <summary>
-    /// Type discriminators for views over embedded records.
+    /// The number of external tags that a post can contain.
     /// </summary>
-    public static class EmbeddedViewTypeDiscriminators
-    {
-        /// <summary>
-        /// The json type discriminator for a view record.
-        /// </summary>
-        public const string ViewRecord = "app.bsky.embed.record#viewRecord";
-
-        /// <summary>
-        /// The json type discriminator for an view of an embedded record.
-        /// </summary>
-        public const string EmbedView = "app.bsky.embed.record#view";
-
-        /// <summary>
-        /// The json type discriminator for an view of an embedded record that cannot be found.
-        /// </summary>
-        public const string EmbedViewNotFound = "app.bsky.embed.record#viewNotFound";
-
-        /// <summary>
-        /// The json type discriminator for a view over a record that is blocked
-        /// </summary>
-        public const string EmbedViewBlocked = "app.bsky.embed.record#Blocked";
-
-        /// <summary>
-        /// The json type discriminator for a view over a record that is detached
-        /// </summary>
-        public const string EmbedViewDetached = "app.bsky.embed.record#Detached";
-
-        /// <summary>
-        /// The json type discriminator for a view over a feed generator
-        /// </summary>
-        public const string GeneratorView = "app.bsky.feed.defs#generatorView";
-
-        /// <summary>
-        /// The json type discriminator for a view over a list
-        /// </summary>
-        public const string ListView = "app.bsky.graph.defs#listView";
-
-        /// <summary>
-        /// The json type discriminator for a view over a list
-        /// </summary>
-        public const string LabelerView = "app.bsky.labeler.defs#labelerView";
-
-        /// <summary>
-        /// The json type discriminator for a basic view over a starter pack
-        /// </summary>
-        public const string StarterPackViewBasic = "app.bsky.graph.defs#starterPackViewBasic";
-
-    }
+    public static readonly int ExternalTagsInPost = 8;
 
     /// <summary>
-    /// Type discriminators for thread gate rules.
+    /// The maximum length of an tag, in characters.
     /// </summary>
-    public static class ThreadGateTypeDiscriminators
-    {
-        /// <summary>
-        /// Allow mentioned users to reply.
-        /// </summary>
-        public const string MentionedUsers = "app.bsky.feed.threadgate#mentionRule";
-
-        /// <summary>
-        /// Allow followed users to reply.
-        /// </summary>
-        public const string FollowedUsers = "app.bsky.feed.threadgate#followingRule";
-
-        /// <summary>
-        /// Allow list members to reply.
-        /// </summary>
-        public const string ListMembers = "app.bsky.feed.threadgate#listRule";
-    }
+    public static readonly int TagLengthInCharacters = 640;
 
     /// <summary>
-    /// Type discriminators for message objects
+    /// The maximum length of an tag, in graphemes.
     /// </summary>
-    public static class MessageTypeDiscriminators
-    {
-        /// <summary>
-        /// A view over a message.
-        /// </summary>
-        public const string MessageView = "chat.bsky.convo.defs#messageView";
-
-        /// <summary>
-        /// A view over a deleted message.
-        /// </summary>
-        public const string DeletedMessageView = "chat.bsky.convo.defs#deletedMessageView";
-    }
+    public static readonly int TagLengthInGraphemes = 64;
 
     /// <summary>
-    /// Type discriminators for conversation logging.
+    /// The maximum number of rules a thread gate can contain.
     /// </summary>
-    public static class ConversationLogTypeDiscriminators
-    {
-        /// <summary>
-        /// A log entry indicating the beginning of a conversation.
-        /// </summary>
-        public const string BeginConversation = "chat.bsky.convo.defs#logBeginConvo";
-
-        /// <summary>
-        /// A log entry indicating leaving a conversation.
-        /// </summary>
-        public const string LeaveConversation = "chat.bsky.convo.defs#logLeaveConvo";
-
-        /// <summary>
-        /// A log entry indicating a message was created in a conversation.
-        /// </summary>
-        public const string CreateMessage = "chat.bsky.convo.defs#logCreateMessage";
-
-        /// <summary>
-        /// A log entry indicating a message was deleted in a conversation.
-        /// </summary>
-        public const string DeleteMessage = "chat.bsky.convo.defs#logDeleteMessage";
-    }
+    public static readonly int ThreadGateRules = 5;
 
     /// <summary>
-    /// Names for labels that can be self applied to posts.
+    /// The maximum number of replies that can be hidden in a thread gate.
     /// </summary>
-    public static class SelfLabelNames
-    {
-        /// <summary>
-        /// A self label indicating that the content of a post contains porn.
-        /// </summary>
-        public const string Porn = "porn";
+    public static readonly int ThreadGateHiddenReplies = 300;
 
-        /// <summary>
-        /// A self label indicating that the content of a post contains sexual content.
-        /// </summary>
-        public const string Sexual = "sexual";
+    /// <summary>
+    /// The maximum number of rules a post gate can contain.
+    /// </summary>
+    public static readonly int PostGateRules = 5;
 
-        /// <summary>
-        /// A self label indicating that the content of a post contains nudity.
-        /// </summary>
-        public const string Nudity = "nudity";
+    /// <summary>
+    /// The maximum number of embedding posts that can be detached in a post gate.
+    /// </summary>
+    public static readonly int PostGateDetachedEmbeddingPosts = 50;
 
-        /// <summary>
-        /// A self label indicating that the content of a post contains graphic media content.
-        /// </summary>
-        public const string GraphicMedia = "graphic-media";
-    }
+    /// <summary>
+    /// The maximum number of actors that can suggested 
+    /// </summary>
+    public static readonly int SuggestedActors = 100;
+
+    /// <summary>
+    /// The maximum number of conversations to list.
+    /// </summary>
+    public static readonly int ConversationsToList = 100;
+
+    /// <summary>
+    /// The maximum number of members in a conversation.
+    /// </summary>
+    public static readonly int ConversationMembers = 10;
+
+    /// <summary>
+    /// The maximum number of messages to list.
+    /// </summary>
+    public static readonly int MessagesToList = 100;
+
+    /// <summary>
+    /// The maximum number of characters in a direct message.
+    /// </summary>
+    public static readonly int MessageLengthInCharacters = 10000;
+
+    /// <summary>
+    /// The maximum number of messages in a message batch.
+    /// </summary>
+    public static readonly int BatchedMessages = 100;
+
+    /// <summary>
+    /// The maximum number of bookmarks that can be returned from GetBookmarks.
+    /// </summary>
+    public static readonly int Bookmarks = 100;
+
+    /// <summary>
+    /// The maximum number of tags that a post can contain.
+    /// </summary>
+    public static readonly int TagsInPost = 8;
+
+    /// <summary>
+    /// The maximum number of trending topics that can be requested.
+    /// </summary>
+    public static readonly int TrendingTopics = 25;
+
+    /// <summary>
+    /// The maximum number of suggested feeds that can be requested.
+    /// </summary>
+    public static readonly int SuggestedFeeds = 25;
+
+    /// <summary>
+    /// The maximum number of popular feed generators that can be requested.
+    /// </summary>
+    public static readonly int PopularFeedGenerators = 100;
+
+    /// <summary>
+    /// The maximum number of suggested users that can be requested.
+    /// </summary>
+    public static readonly int SuggestedUsers = 50;
+
+    /// <summary>
+    /// The maximum number of suggested start packs that can be requested.
+    /// </summary>
+    public static readonly int SuggestedStarterPacks = 25;
+
+    /// <summary>
+    /// The maximum number of trends that can be requested.
+    /// </summary>
+    public static readonly int Trends = 25;
+
+    /// <summary>
+    /// The maximum length of a profile pronoun.
+    /// </summary>
+    public static readonly int PronounLength = 2560;
+
+    /// <summary>
+    /// The maximum length of a profile pronoun, in graphemes.
+    /// </summary>
+    public static readonly int PronounLengthInGraphemes = 256;
+
+    /// <summary>
+    /// The maximum length of a profile display name.
+    /// </summary>
+    public static readonly int DisplayNameLength = 640;
+
+    /// <summary>
+    /// The maximum length of a profile display name, in graphemes.
+    /// </summary>
+    public static readonly int DisplayNameLengthInGraphemes = 64;
+
+    /// <summary>
+    /// The maximum length of a profile description.
+    /// </summary>
+    public static readonly int DescriptionLength = 2560;
+
+    /// <summary>
+    /// The maximum length of a profile description, in graphemes.
+    /// </summary>
+    public static readonly int DescriptionLengthInGraphemes = 256;
+
+    /// <summary>
+    /// The maximum number of drafts that can be requested from GetDrafts().
+    /// </summary>
+    public static readonly int ListedDrafts = 100;
+
+    /// <summary>
+    /// The maximum length of text in an individual draft.
+    /// </summary>
+    public static readonly int DraftTextLengthInCharacters = 10000;
+
+    /// <summary>
+    /// The maximum length of text in an individual draft, in graphemes.
+    /// </summary>
+    public static readonly int DraftTextLengthInGraphemes = 1000;
+}
+
+/// <summary>
+/// Well known <see cref="Did"/>s for various actors.
+/// </summary>
+public static class WellKnownDistributedIdentifiers
+{
+    /// <summary>
+    /// The <see cref="Did"/> for at://moderation.bsky.app.
+    /// </summary>
+    public static Did BlueskyModerationLabeler => new(@"did:plc:ar7c4by46qjdydhdevvrndac");
+
+    /// <summary>
+    /// The <see cref="Did"/> for the video processing system.
+    /// </summary>
+    public static Did Video => new("did:web:video.bsky.app");
+}
+
+/// <summary>
+/// Well-known NSIDs of Bluesky record collection used in record creation, deletion and updating.
+/// </summary>
+/// <remarks>
+/// <para>See https://atproto.com/specs/nsid for a description of NSIDs.</para>
+/// </remarks>
+public static class CollectionNsid
+{
+    /// <summary>
+    /// The NSID for a user's post collection.
+    /// </summary>
+    public static Nsid Post => new("app.bsky.feed.post");
+
+    /// <summary>
+    /// The NSID for a user's likes collection.
+    /// </summary>
+    public static Nsid Like => new("app.bsky.feed.like");
+
+    /// <summary>
+    /// The NSID for a user's reposts collection.
+    /// </summary>
+    public static Nsid Repost => new("app.bsky.feed.repost");
+
+    /// <summary>
+    /// The NSID for a user's follows collection.
+    /// </summary>
+    public static Nsid Follow => new("app.bsky.graph.follow");
+
+    /// <summary>
+    /// The NSID for a user's block collection.
+    /// </summary>
+    public static Nsid Block => new("app.bsky.graph.block");
+
+    /// <summary>
+    /// The NSID for a user's thread gates collection.
+    /// </summary>
+    public static Nsid ThreadGate => new("app.bsky.feed.threadgate");
+
+    /// <summary>
+    /// The NSID for a user's post gates collection.
+    /// </summary>
+    public static Nsid PostGate => new("app.bsky.feed.postgate");
+
+    /// <summary>
+    /// The NSID for an actor's profile.
+    /// </summary>
+    public static Nsid Profile => new("app.bsky.actor.profile");
+
+    /// <summary>
+    /// The NSID for a user's verification collection.
+    /// </summary>
+    public static Nsid Verification => new("app.bsky.graph.verification");
+
+    /// <summary>
+    /// The NSID for a user's list collection.
+    /// </summary>
+    public static Nsid List => new("app.bsky.graph.list");
+
+    /// <summary>
+    /// The NSID for the user's collection of users added to their own lists.
+    /// </summary>
+    public static Nsid ListItem => new("app.bsky.graph.listitem");
+
+    /// <summary>
+    /// The NSID for an actor's status record.
+    /// </summary>
+    public static Nsid Status => new("app.bsky.actor.status");
+
+    /// <summary>
+    /// The NSID for an actor's notification declaration record.
+    /// </summary>
+    public static Nsid NotificationDeclaration => new("app.bsky.notification.declaration");
+}
+
+/// <summary>
+/// The type discriminators used for various records in a feed or thread.
+/// </summary>
+public static class RecordType
+{
+    /// <summary>
+    /// Indicates a post in a thread view.
+    /// </summary>
+    public const string ThreadViewPost = "app.bsky.feed.defs#threadViewPost";
+
+    /// <summary>
+    /// Indicates an post in a feed view.
+    /// </summary>
+    public const string PostView = "app.bsky.feed.defs#postView";
+
+    /// <summary>
+    /// Indicates a not found post in a feed view.
+    /// </summary>
+    public const string NotFoundPost = "app.bsky.feed.defs#notFoundPost";
+
+    /// <summary>
+    /// Indicates a post in a feed view that is blocked to or by the current user.
+    /// </summary>
+    public const string BlockedPost = "app.bsky.feed.defs#blockedPost";
+
+    /// <summary>
+    /// Indicates a post record.
+    /// </summary>
+    public const string Post = "app.bsky.feed.post";
+
+    /// <summary>
+    /// Indicates a like record.
+    /// </summary>
+    public const string Like = "app.bsky.feed.like";
+
+    /// <summary>
+    /// Indicates a repost record.
+    /// </summary>
+    public const string Repost = "app.bsky.feed.repost";
+
+    /// <summary>
+    /// Indicates a thread gate record
+    /// </summary>
+    public const string ThreadGate = "app.bsky.feed.threadgate";
+
+    /// <summary>
+    /// Indicates a post gate record
+    /// </summary>
+    public const string PostGate = "app.bsky.feed.postgate";
+
+    /// <summary>
+    /// Indicates a follow record.
+    /// </summary>
+    public const string Follow = "app.bsky.graph.follow";
+
+    /// <summary>
+    /// Indicates a block record.
+    /// </summary>
+    public const string Block = "app.bsky.graph.block";
+
+    /// <summary>
+    /// Indicates a profile record.
+    /// </summary>
+    public const string Profile = "app.bsky.actor.profile";
+
+    /// <summary>
+    /// Indicates a starter pack record.
+    /// </summary>
+    public const string StarterPack = "app.bsky.graph.starterpack";
+
+    /// <summary>
+    /// Indicates the declaration report for a labeler.
+    /// </summary>
+    public const string LabelerDeclaration = "app.bsky.labeler.service";
+
+    /// <summary>
+    /// Indicates a verification record.
+    /// </summary>
+    public const string Verification = "app.bsky.graph.verification";
+
+    /// <summary>
+    /// Indicates a list record.
+    /// </summary>
+    public const string List = "app.bsky.graph.list";
+
+    /// <summary>
+    /// Indicates a record of an item in a list.
+    /// </summary>
+    public const string ListItem = "app.bsky.graph.listitem";
+
+    /// <summary>
+    /// Indicates a declaration of notification preferences.
+    /// </summary>
+    public const string NotificationDeclaration = "app.bsky.notification.declaration";
+
+    /// <summary>
+    /// Indicates a status record
+    /// </summary>
+    public const string Status = "app.bsky.actor.status";
+}
+
+/// <summary>
+/// The type discriminators used for rich text facets.
+/// </summary>
+public static class FacetTypeDiscriminators
+{
+    /// <summary>
+    /// Indicates the facet feature for a poll
+    /// </summary>
+    public const string Poll = "blue.poll.post.facet#option";
+}
+
+/// <summary>
+/// The type discriminators used for embedded records in posts.
+/// </summary>
+public static class EmbeddedRecordTypeDiscriminators
+{
+    /// <summary>
+    /// The json type discriminator for an embedded record.
+    /// </summary>
+    public const string Record = "app.bsky.embed.record";
+
+    /// <summary>
+    /// The json type discriminator for an embedded record with media attachments
+    /// </summary>
+    public const string RecordWithMedia = "app.bsky.embed.recordWithMedia";
+
+    /// <summary>
+    /// The json type discriminator for embedded images.
+    /// </summary>
+    public const string Images = "app.bsky.embed.images";
+
+    /// <summary>
+    /// The json type discriminator for embedded external references.
+    /// </summary>
+    public const string External = "app.bsky.embed.external";
+
+    /// <summary>
+    /// The json type discriminator for embedded video.
+    /// </summary>
+    public const string Video = "app.bsky.embed.video";
+}
+
+/// <summary>
+/// Type discriminators for views over embedded records.
+/// </summary>
+public static class EmbeddedViewTypeDiscriminators
+{
+    /// <summary>
+    /// The json type discriminator for a view record.
+    /// </summary>
+    public const string ViewRecord = "app.bsky.embed.record#viewRecord";
+
+    /// <summary>
+    /// The json type discriminator for an view of an embedded record.
+    /// </summary>
+    public const string EmbedView = "app.bsky.embed.record#view";
+
+    /// <summary>
+    /// The json type discriminator for an view of an embedded record that cannot be found.
+    /// </summary>
+    public const string EmbedViewNotFound = "app.bsky.embed.record#viewNotFound";
+
+    /// <summary>
+    /// The json type discriminator for a view over a record that is blocked
+    /// </summary>
+    public const string EmbedViewBlocked = "app.bsky.embed.record#Blocked";
+
+    /// <summary>
+    /// The json type discriminator for a view over a record that is detached
+    /// </summary>
+    public const string EmbedViewDetached = "app.bsky.embed.record#Detached";
+
+    /// <summary>
+    /// The json type discriminator for a view over a feed generator
+    /// </summary>
+    public const string GeneratorView = "app.bsky.feed.defs#generatorView";
+
+    /// <summary>
+    /// The json type discriminator for a view over a list
+    /// </summary>
+    public const string ListView = "app.bsky.graph.defs#listView";
+
+    /// <summary>
+    /// The json type discriminator for a view over a list
+    /// </summary>
+    public const string LabelerView = "app.bsky.labeler.defs#labelerView";
+
+    /// <summary>
+    /// The json type discriminator for a basic view over a starter pack
+    /// </summary>
+    public const string StarterPackViewBasic = "app.bsky.graph.defs#starterPackViewBasic";
+
+}
+
+/// <summary>
+/// Type discriminators for thread gate rules.
+/// </summary>
+public static class ThreadGateTypeDiscriminators
+{
+    /// <summary>
+    /// Allow mentioned users to reply.
+    /// </summary>
+    public const string MentionedUsers = "app.bsky.feed.threadgate#mentionRule";
+
+    /// <summary>
+    /// Allow followed users to reply.
+    /// </summary>
+    public const string FollowedUsers = "app.bsky.feed.threadgate#followingRule";
+
+    /// <summary>
+    /// Allow list members to reply.
+    /// </summary>
+    public const string ListMembers = "app.bsky.feed.threadgate#listRule";
+}
+
+/// <summary>
+/// Type discriminators for message objects
+/// </summary>
+public static class MessageTypeDiscriminators
+{
+    /// <summary>
+    /// A view over a message.
+    /// </summary>
+    public const string MessageView = "chat.bsky.convo.defs#messageView";
+
+    /// <summary>
+    /// A view over a deleted message.
+    /// </summary>
+    public const string DeletedMessageView = "chat.bsky.convo.defs#deletedMessageView";
+}
+
+/// <summary>
+/// Type discriminators for conversation logging.
+/// </summary>
+public static class ConversationLogTypeDiscriminators
+{
+    /// <summary>
+    /// A log entry indicating the beginning of a conversation.
+    /// </summary>
+    public const string BeginConversation = "chat.bsky.convo.defs#logBeginConvo";
+
+    /// <summary>
+    /// A log entry indicating leaving a conversation.
+    /// </summary>
+    public const string LeaveConversation = "chat.bsky.convo.defs#logLeaveConvo";
+
+    /// <summary>
+    /// A log entry indicating a message was created in a conversation.
+    /// </summary>
+    public const string CreateMessage = "chat.bsky.convo.defs#logCreateMessage";
+
+    /// <summary>
+    /// A log entry indicating a message was deleted in a conversation.
+    /// </summary>
+    public const string DeleteMessage = "chat.bsky.convo.defs#logDeleteMessage";
+}
+
+/// <summary>
+/// Names for labels that can be self applied to posts.
+/// </summary>
+[Obsolete("Use SelfLabelValues instead.")]
+public static class SelfLabelNames
+{
+    /// <summary>
+    /// A self label indicating that the content of a post contains porn.
+    /// </summary>
+    public const string Porn = "porn";
+
+    /// <summary>
+    /// A self label indicating that the content of a post contains sexual content.
+    /// </summary>
+    public const string Sexual = "sexual";
+
+    /// <summary>
+    /// A self label indicating that the content of a post contains nudity.
+    /// </summary>
+    public const string Nudity = "nudity";
+
+    /// <summary>
+    /// A self label indicating that the content of a post contains graphic media content.
+    /// </summary>
+    public const string GraphicMedia = "graphic-media";
+
+    /// <summary>
+    /// A label that indicates that the content should not be shown to logged out users.
+    /// </summary>
+    /// <remarks>
+    /// <para>This setting only limits the visibility of your content on the Bluesky app and website, and other apps may not respect this setting.</para>
+    /// </remarks>
+    public const string DiscourageShowingToLoggedOutUser = "!no-unauthenticated";
+
+    /// <summary>
+    /// A label that indicates the profile self identifies as a bot account.
+    /// </summary>
+    public const string Bot = "bot";
+}
+
+/// <summary>
+/// Labels values that can be self applied to posts.
+/// </summary>
+public static class SelfLabelValues
+{
+    /// <summary>
+    /// A self label indicating that the content of a post contains porn.
+    /// </summary>
+    public const string Porn = "porn";
+
+    /// <summary>
+    /// A self label indicating that the content of a post contains sexual content.
+    /// </summary>
+    public const string Sexual = "sexual";
+
+    /// <summary>
+    /// A self label indicating that the content of a post contains nudity.
+    /// </summary>
+    public const string Nudity = "nudity";
+
+    /// <summary>
+    /// A self label indicating that the content of a post contains graphic media content.
+    /// </summary>
+    public const string GraphicMedia = "graphic-media";
+
+    /// <summary>
+    /// A label that indicates that the content should not be shown to logged out users.
+    /// </summary>
+    /// <remarks>
+    /// <para>This setting only limits the visibility of your content on the Bluesky app and website, and other apps may not respect this setting.</para>
+    /// </remarks>
+    public const string DiscourageShowingToLoggedOutUser = "!no-unauthenticated";
+
+    /// <summary>
+    /// A label that indicates the profile self identifies as a bot account.
+    /// </summary>
+    public const string Bot = "bot";
 }

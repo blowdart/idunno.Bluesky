@@ -3,38 +3,39 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.AtProto.Jetstream
+namespace idunno.AtProto.Jetstream;
+
+/// <summary>
+/// Encapsulates the properties of an account operation in a Jetstream event.
+/// </summary>
+[JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+[JsonDerivedType(typeof(AtJetstreamAccount), "com.atproto.sync.subscribeRepos#account")]
+public record AtJetstreamAccount
 {
     /// <summary>
-    /// Encapsulates the properties of an account operation in a Jetstream event.
+    /// Flag indicating the active status of the account.
     /// </summary>
-    public sealed record AtJetstreamAccount
-    {
-        /// <summary>
-        /// Flag indicating the active status of the account.
-        /// </summary>
-        public required bool Active { get; set; }
+    public required bool Active { get; set; }
 
-        /// <summary>
-        /// Gets the <see cref="AtProto.Did"/> of the account that triggered the event.
-        /// </summary>
-        public required Did Did { get; init; }
+    /// <summary>
+    /// Gets the <see cref="AtProto.Did"/> of the account that triggered the event.
+    /// </summary>
+    public required Did Did { get; init; }
 
-        /// <summary>
-        /// Gets the sequence number for the change.
-        /// </summary>
-        [JsonPropertyName("seq")]
-        public ulong Sequence { get; init; }
+    /// <summary>
+    /// Gets the sequence number for the change.
+    /// </summary>
+    [JsonPropertyName("seq")]
+    public required ulong Sequence { get; init; }
 
-        /// <summary>
-        /// Gets the status for the account, if any.
-        /// </summary>
-        public AccountStatus? Status { get; init; }
+    /// <summary>
+    /// Gets the status for the account, if any.
+    /// </summary>
+    public AccountStatus? Status { get; init; }
 
-        /// <summary>
-        /// Gets the timestamp for the change.
-        /// </summary>
-        [JsonPropertyName("time")]
-        public DateTimeOffset TimeStamp { get; init; }
-    }
+    /// <summary>
+    /// Gets the timestamp for the change.
+    /// </summary>
+    [JsonPropertyName("time")]
+    public DateTimeOffset TimeStamp { get; init; }
 }

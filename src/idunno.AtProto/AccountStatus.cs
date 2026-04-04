@@ -3,32 +3,36 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.AtProto
+namespace idunno.AtProto;
+
+/// <summary>
+/// The hosting status of a user account.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<AccountStatus>))]
+public enum AccountStatus
 {
     /// <summary>
-    /// The hosting status of a user account.
+    /// The account has been taken down.
     /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter<AccountStatus>))]
-    public enum AccountStatus
-    {
-        /// <summary>
-        /// The account has been taken down.
-        /// </summary>
-        Takendown,
+    Takendown,
 
-        /// <summary>
-        /// The account is suspended.
-        /// </summary>
-        Suspended,
+    /// <summary>
+    /// The account is suspended.
+    /// </summary>
+    Suspended,
 
-        /// <summary>
-        /// The account is deactivated.
-        /// </summary>
-        Deactivated,
+    /// <summary>
+    /// The account is deactivated.
+    /// </summary>
+    Deactivated,
 
-        /// <summary>
-        /// The account is deleted.
-        /// </summary>
-        Deleted
-    }
+    /// <summary>
+    /// The account is deleted.
+    /// </summary>
+    Deleted,
+
+    /// <summary>
+    /// The account has been throttled
+    /// </summary>
+    Throttled
 }

@@ -3,44 +3,43 @@
 
 using idunno.AtProto;
 
-namespace idunno.Bluesky.RichText
+namespace idunno.Bluesky.RichText;
+
+/// <summary>
+/// Provides an object representation of a mention in a Bluesky post.
+/// </summary>
+public sealed record Mention : PostBuilderFacetFeature
 {
     /// <summary>
-    /// Provides an object representation of a mention in a Bluesky post.
+    /// Creates a new instance of <see cref="Mention"/>.
     /// </summary>
-    public sealed record Mention : PostBuilderFacetFeature
+    /// <param name="did">The <see cref="Did"/> of the actor being mentioned.</param>
+    /// <param name="text">The text to "wrap" the mention around.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
+    public Mention(Did did, string text) : base(text)
     {
-        /// <summary>
-        /// Creates a new instance of <see cref="Mention"/>.
-        /// </summary>
-        /// <param name="did">The <see cref="Did"/> of the actor being mentioned.</param>
-        /// <param name="text">The text to "wrap" the mention around.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
-        public Mention(Did did, string text) : base(text)
-        {
-            ArgumentNullException.ThrowIfNull(did);
-            Did = did;
-        }
-
-        /// <summary>
-        /// Creates a new instance of <see cref="Mention"/>.
-        /// </summary>
-        /// <param name="did">The <see cref="Did"/> of the actor being mentioned.</param>
-        /// <param name="handle">The <see cref="Handle"/> of the actor being mentioned, which will generate the text for the facet.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> or <paramref name="handle"/> is <see langword="null"/>.</exception>
-        public Mention(Did did, Handle handle) : base()
-
-        {
-            ArgumentNullException.ThrowIfNull(did);
-            ArgumentNullException.ThrowIfNull(handle);
-
-            Did = did;
-            Text = handle.ToString();
-        }
-
-        /// <summary>
-        /// Gets the <see cref="Did"/> of the actor being mentioned in the facet feature..
-        /// </summary>
-        public Did Did { get; init; }
+        ArgumentNullException.ThrowIfNull(did);
+        Did = did;
     }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="Mention"/>.
+    /// </summary>
+    /// <param name="did">The <see cref="Did"/> of the actor being mentioned.</param>
+    /// <param name="handle">The <see cref="Handle"/> of the actor being mentioned, which will generate the text for the facet.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> or <paramref name="handle"/> is <see langword="null"/>.</exception>
+    public Mention(Did did, Handle handle) : base()
+
+    {
+        ArgumentNullException.ThrowIfNull(did);
+        ArgumentNullException.ThrowIfNull(handle);
+
+        Did = did;
+        Text = handle.ToString();
+    }
+
+    /// <summary>
+    /// Gets the <see cref="Did"/> of the actor being mentioned in the facet feature..
+    /// </summary>
+    public Did Did { get; init; }
 }

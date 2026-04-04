@@ -3,34 +3,33 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.AtProto.Labels
+namespace idunno.AtProto.Labels;
+
+/// <summary>
+/// Metadata tag on an atproto record, published by the author within the record.
+/// </summary>
+public record SelfLabel
 {
     /// <summary>
-    /// Metadata tag on an atproto record, published by the author within the record.
+    /// Creates a new instance of <see cref="SelfLabel"/>
     /// </summary>
-    public record SelfLabel
+    /// <param name="value">The short string name of the value or type of this label.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> is whitespace.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> is longer than 128 characters.</exception>
+    public SelfLabel(string value)
     {
-        /// <summary>
-        /// Creates a new instance of <see cref="SelfLabel"/>
-        /// </summary>
-        /// <param name="value">The short string name of the value or type of this label.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is <see langword="null"/>.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="value"/> is whitespace.</exception>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> is longer than 128 characters.</exception>
-        public SelfLabel(string value)
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(value);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, 128);
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, 128);
 
-            Value = value;
-        }
-
-        /// <summary>
-        /// The short string name of the value or type of this label.
-        /// </summary>
-        [JsonInclude]
-        [JsonRequired]
-        [JsonPropertyName("val")]
-        public string Value { get; init; }
+        Value = value;
     }
+
+    /// <summary>
+    /// The short string name of the value or type of this label.
+    /// </summary>
+    [JsonInclude]
+    [JsonRequired]
+    [JsonPropertyName("val")]
+    public string Value { get; init; }
 }

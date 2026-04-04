@@ -1,6 +1,6 @@
 ﻿#nullable enable
 abstract idunno.AtProto.AtIdentifier.Value.get -> string!
-const idunno.AtProto.Did.ValidationRegex = "^did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]$" -> string!
+const idunno.AtProto.Did.ValidationRegex = "^did:[a-z0-9]+(?::(?:%[A-F0-9]{2}|[a-zA-Z0-9._-]+)*)+(?<!:)$" -> string!
 const idunno.AtProto.Handle.ValidationRegex = "^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$" -> string!
 idunno.AtProto.AtIdentifier
 idunno.AtProto.AtIdentifier.AtIdentifier() -> void
@@ -141,6 +141,8 @@ static idunno.AtProto.AtUri.operator ==(idunno.AtProto.AtUri? lhs, idunno.AtProt
 static idunno.AtProto.AtUri.TryParse(string! s, out idunno.AtProto.AtUri? result) -> bool
 static idunno.AtProto.Cid.FromString(string! s) -> idunno.AtProto.Cid!
 static idunno.AtProto.Cid.implicit operator idunno.AtProto.Cid!(string! s) -> idunno.AtProto.Cid!
+static idunno.AtProto.Cid.operator !=(idunno.AtProto.Cid? lhs, idunno.AtProto.Cid? rhs) -> bool
+static idunno.AtProto.Cid.operator ==(idunno.AtProto.Cid? lhs, idunno.AtProto.Cid? rhs) -> bool
 static idunno.AtProto.Did.FromString(string! s) -> idunno.AtProto.Did!
 static idunno.AtProto.Did.implicit operator idunno.AtProto.Did!(string! s) -> idunno.AtProto.Did!
 static idunno.AtProto.Did.implicit operator string!(idunno.AtProto.Did! d) -> string!
