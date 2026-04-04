@@ -253,7 +253,7 @@ public sealed class Cid : IEquatable<Cid>
     }
 
     /// <summary>
-    /// Determines whether two specified <see cref="Cid"/>s the same value."/>
+    /// Determines whether two specified <see cref="Cid"/>s the same value.
     /// </summary>
     /// <param name="lhs">The first <see cref="Cid"/> to compare, or <see langword="null"/>.</param>
     /// <param name="rhs">The second <see cref="Cid"/> to compare, or <see langword="null"/>.</param>

@@ -18,13 +18,13 @@ internal static class WebSocketExtensions
     /// or the web socket is no longer open, and returns the final <see cref="WebSocketReceiveResult"/>
     /// and a byte array containing the read message.
     /// </summary>
-    /// <param name="webSocket">The <see cref="ClientWebSocketOptions"/> to read the message from.</param>
+    /// <param name="webSocket">The <see cref="ClientWebSocket"/> to read the message from.</param>
     /// <param name="bufferSize">The maximum block size, in bytes, to read from <paramref name="webSocket"/>.</param>
     /// <param name="maxMessageSize">The maximum total message size, in bytes. Defaults to 1 MB.</param>
     /// <param name="logger">The <see cref="ILogger"/> to use for logging, if any.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    /// <exception cref="WebSocketException">Thrown when the <paramref name="webSocket"/>> is not open, or the message exceeds <paramref name="maxMessageSize"/>.</exception>
+    /// <exception cref="WebSocketException">Thrown when the <paramref name="webSocket"/> is not open, or the message exceeds <paramref name="maxMessageSize"/>.</exception>
     public static async Task<(WebSocketReceiveResult Result, byte[] Message)> ReceiveNextMessageAsync(
         this ClientWebSocket webSocket,
         int bufferSize,

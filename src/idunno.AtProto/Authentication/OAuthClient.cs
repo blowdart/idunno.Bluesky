@@ -329,8 +329,7 @@ public class OAuthClient
 
         AtProtoHttpResult<ServerDescription> serverDescriptionResult;
 
-        using (HttpMessageHandler handler = _innerFactoryHandler())
-        using (var httpClient = new HttpClient(handler))
+        using (var httpClient = new HttpClient(_innerFactoryHandler()))
         {
             _clientConfigurationHandler(httpClient);
             serverDescriptionResult = await AtProtoServer.DescribeServer(_expectedService, httpClient, _loggerFactory, cancellationToken).ConfigureAwait(false);

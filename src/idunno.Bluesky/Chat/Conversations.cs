@@ -11,7 +11,7 @@ public class Conversations : PagedViewReadOnlyCollection<ConversationView>
     /// <summary>
     /// Creates a new instance of <see cref="Conversations"/>.
     /// </summary>
-    public Conversations() : base([.. new List<ConversationView>()], null)
+    public Conversations() : base([], null)
     {
     }
 

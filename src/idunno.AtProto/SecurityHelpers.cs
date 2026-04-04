@@ -29,6 +29,7 @@ internal sealed class SecurityHelpers
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns><see langword="true" /> if the <paramref name="uri" /> is considered safe, otherwise <see langword="false"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S3267:Loops should be simplified with \"LINQ\" expressions", Justification = "Avoid linq in hot path.")]
     public static async Task<bool> DefaultDiscoveryUriValidator(
         Uri uri,
         bool allowInsecureProtocols,
@@ -76,10 +77,13 @@ internal sealed class SecurityHelpers
 
             bool discoveredUnsafeIPAddress = false;
 
-            foreach (IPAddress ipAddress in hostEntry.AddressList.Where(ip => Ssrf.IsUnsafeIpAddress(ip, allowLoopback)))
+            foreach (IPAddress ipAddress in hostEntry.AddressList)
             {
-                Logger.UnsafeIpAddress(logger, uri, ipAddress);
-                discoveredUnsafeIPAddress = true;
+                if (Ssrf.IsUnsafeIpAddress(ipAddress, allowLoopback))
+                {
+                    Logger.UnsafeIpAddress(logger, uri, ipAddress);
+                    discoveredUnsafeIPAddress = true;
+                }
             }
 
             return !discoveredUnsafeIPAddress;

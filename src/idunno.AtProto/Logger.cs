@@ -327,17 +327,15 @@ internal static partial class Logger
     [LoggerMessage(900, LogLevel.Error, "Background task threw an exception")]
     internal static partial void BackgroundTaskThrew(ILogger logger, Exception ex);
 
-    [LoggerMessage(1000, LogLevel.Error, "Received a message size ({messageSize}) larger than the configured maximum message size ({maximumMessageSize}.")]
+    [LoggerMessage(1000, LogLevel.Error, "Received a message size ({messageSize}) larger than the configured maximum message size ({maximumMessageSize}).")]
     internal static partial void ReceivedMessageTooLarge(ILogger logger, int messageSize, int maximumMessageSize);
 
     [LoggerMessage(1100, LogLevel.Error, "{uri} is unsafe")]
     internal static partial void UnsafeUri(ILogger logger, Uri uri);
 
-    [LoggerMessage(1101, LogLevel.Error, "{ipAddress} for{uri} is unsafe")]
+    [LoggerMessage(1101, LogLevel.Error, "{ipAddress} for {uri} is unsafe")]
     internal static partial void UnsafeIpAddress(ILogger logger, Uri uri, IPAddress ipAddress);
 
     [LoggerMessage(1102, LogLevel.Error, "{uri} does not resolve to any IP addresses")]
     internal static partial void UriDoesNotResolve(ILogger logger, Uri uri);
-
-
 }
