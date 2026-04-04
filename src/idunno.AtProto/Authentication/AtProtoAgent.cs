@@ -3,7 +3,9 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Net.Security;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Timers;
@@ -15,6 +17,7 @@ using Microsoft.IdentityModel.Tokens;
 
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Events;
+using idunno.Security;
 
 namespace idunno.AtProto;
 
@@ -144,7 +147,7 @@ public partial class AtProtoAgent
     /// <returns>The new <see cref="OAuthClient"/> instance.</returns>
     public OAuthClient CreateOAuthClient()
     {
-        return new OAuthClient(ConfigureHttpClient, BuildProxyHttpClientHandler, LoggerFactory, Options?.OAuthOptions);
+        return new OAuthClient(ConfigureHttpClient, OAuthProxyHttpMessageHandlerBuilder, LoggerFactory, Options?.OAuthOptions);
     }
 
     /// <summary>
@@ -157,12 +160,65 @@ public partial class AtProtoAgent
     {
         ArgumentNullException.ThrowIfNull(state);
 
-        var oAuthClient = new OAuthClient(ConfigureHttpClient, BuildProxyHttpClientHandler, LoggerFactory, Options?.OAuthOptions)
+        var oAuthClient = new OAuthClient(ConfigureHttpClient, OAuthProxyHttpMessageHandlerBuilder, LoggerFactory, Options?.OAuthOptions)
         {
             State = state
         };
 
         return oAuthClient;
+    }
+
+    /// <summary>
+    /// Builds a preconfigured <see cref="HttpMessageHandler"/> to use for making requests during the OAuth flow, with SSRF protections in place.
+    /// If a proxy is configured in <see cref="Options"/>, the handler will be configured to route requests through the proxy while still applying SSRF protections
+    /// to the ultimate endpoints being called.
+    /// If the OAuth return URI configured in <see cref="Options"/> is using HTTP or is a loopback address, the handler will be configured to allow insecure protocols or
+    /// loopback addresses respectively, but will still apply SSRF protections to all other endpoints.
+    /// </summary>
+    /// <returns>A preconfigured <see cref="HttpMessageHandler"/> instance.</returns>
+    private HttpMessageHandler OAuthProxyHttpMessageHandlerBuilder()
+    {
+        SslClientAuthenticationOptions? sslOptions = null;
+
+        if (_httpClientOptions?.CheckCertificateRevocationList == false)
+        {
+            sslOptions = new SslClientAuthenticationOptions
+            {
+                CertificateRevocationCheckMode = X509RevocationMode.NoCheck
+            };
+        }
+
+        bool allowInsecureProtocols = Options?.OAuthOptions?.ReturnUri != null && Options.OAuthOptions.ReturnUri.Scheme == Uri.UriSchemeHttp;
+        bool allowLoopback = Options?.OAuthOptions?.ReturnUri != null && Options.OAuthOptions.ReturnUri.IsLoopback;
+
+        SsrfOptions options = new()
+        {
+            ConnectionStrategy = ConnectionStrategy.None,
+            AdditionalUnsafeNetworks = [],
+            AdditionalUnsafeIpAddresses = [],
+            ConnectTimeout = _httpClientOptions?.Timeout,
+            AllowInsecureProtocols = allowInsecureProtocols,
+            AllowLoopback = allowLoopback,
+            FailMixedResults = true,
+            AllowAutoRedirect = false,
+            AutomaticDecompression = DecompressionMethods.All,
+            SslOptions = sslOptions
+        };
+
+
+        if (_httpClientOptions?.ProxyUri is not null)
+        {
+            options.Proxy = new WebProxy(_httpClientOptions.ProxyUri);
+            return new ProxiedSsrfDelegatingHandler(
+                options: options,
+                loggerFactory: LoggerFactory);
+        }
+        else
+        {
+            return SsrfSocketsHttpHandlerFactory.Create(
+                options: options,
+                loggerFactory: LoggerFactory);
+        }
     }
 
     /// <summary>

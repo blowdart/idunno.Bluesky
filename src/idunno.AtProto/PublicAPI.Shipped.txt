@@ -29,12 +29,12 @@ idunno.AtProto.Agent.Agent(idunno.AtProto.HttpClientOptions? httpClientOptions, 
 idunno.AtProto.Agent.Agent(idunno.AtProto.HttpClientOptions? httpClientOptions, idunno.AtProto.JsonOptions? jsonOptions, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory) -> void
 idunno.AtProto.Agent.Agent(System.Net.Http.IHttpClientFactory! httpClientFactory, idunno.AtProto.JsonOptions? jsonOptions) -> void
 idunno.AtProto.Agent.ConfigureHttpClient(System.Net.Http.HttpClient! client) -> System.Net.Http.HttpClient!
-idunno.AtProto.Agent.BuildProxyHttpClientHandler() -> System.Net.Http.SocketsHttpHandler!
 idunno.AtProto.Agent.Dispose() -> void
 idunno.AtProto.Agent.HttpClient.get -> System.Net.Http.HttpClient!
 idunno.AtProto.Agent.HttpClientFactory.get -> System.Net.Http.IHttpClientFactory!
 idunno.AtProto.Agent.HttpClientFactory.init -> void
 idunno.AtProto.Agent.JsonOptions.get -> idunno.AtProto.JsonOptions!
+idunno.AtProto.Agent.ProxyHttpMessageHandlerBuilder() -> System.Net.Http.HttpMessageHandler!
 idunno.AtProto.AtErrorDetail
 idunno.AtProto.AtErrorDetail.AtErrorDetail(string? error, string? message) -> void
 idunno.AtProto.AtErrorDetail.Error.get -> string?

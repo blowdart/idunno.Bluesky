@@ -125,58 +125,18 @@ public class AtProtoJetstream : IDisposable
 
         _client = CreateWebSocketClient();
 
-        IWebProxy? proxy = null;
-        SslClientAuthenticationOptions? sslOptions = null;
-
-        if (_httpClientOptions?.ProxyUri is not null)
-        {
-            proxy = new WebProxy(_httpClientOptions.ProxyUri);
-        }
-
-        bool checkCrl;
-        if (httpClientOptions is null)
-        {
-            checkCrl = true;
-        }
-        else
-        {
-            checkCrl = httpClientOptions.CheckCertificateRevocationList;
-        }
-
-        if (!checkCrl)
-        {
-            sslOptions = new SslClientAuthenticationOptions
-            {
-                CertificateRevocationCheckMode = X509RevocationMode.NoCheck
-            };
-        }
-
         IServiceCollection services = new ServiceCollection();
         _httpClientOptions = httpClientOptions;
 
         services
             .AddHttpClient(HttpClientName, client => InternalConfigureHttpClient(client, _httpClientOptions?.HttpUserAgent, _httpClientOptions?.Timeout))
-            .ConfigurePrimaryHttpMessageHandler(() => SsrfSocketsHttpHandlerFactory.Create(
-                connectionStrategy: ConnectionStrategy.None,
-                additionalUnsafeNetworks: null,
-                additionalUnsafeIpAddresses: null,
-                connectTimeout: _httpClientOptions?.Timeout,
-                allowInsecureProtocols: false,
-                allowLoopback: false,
-                failMixedResults: true,
-                allowAutoRedirect: false,
-                automaticDecompression: DecompressionMethods.All,
-                proxy: proxy,
-                sslOptions: sslOptions,
-                loggerFactory: LoggerFactory
-                ));
+            .ConfigurePrimaryHttpMessageHandler(() => CreateHttpMessageHandler(_httpClientOptions));
 
         _serviceProvider = services.BuildServiceProvider();
         HttpClientFactory = _serviceProvider.GetService<IHttpClientFactory>()!;
 
         _httpClient = HttpClientFactory.CreateClient(HttpClientName);
     }
-
 
     /// <summary>
     /// Gets the <see cref="IHttpClientFactory"/> used when creating <see cref="HttpClient"/>s.
@@ -712,6 +672,52 @@ public class AtProtoJetstream : IDisposable
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
+    }
+
+    private HttpMessageHandler CreateHttpMessageHandler(HttpClientOptions? httpClientOptions)
+    {
+        SslClientAuthenticationOptions? sslOptions = null;
+        bool checkCrl = true;
+
+        if (httpClientOptions is not null)
+        {
+            checkCrl = httpClientOptions.CheckCertificateRevocationList;
+        }
+
+        if (!checkCrl)
+        {
+            sslOptions = new SslClientAuthenticationOptions
+            {
+                CertificateRevocationCheckMode = X509RevocationMode.NoCheck
+            };
+        }
+
+        return httpClientOptions?.ProxyUri is not null
+            ? new ProxiedSsrfDelegatingHandler(
+                proxy: new WebProxy(httpClientOptions.ProxyUri),
+                connectionStrategy: ConnectionStrategy.None,
+                additionalUnsafeNetworks: null,
+                additionalUnsafeIpAddresses: null,
+                connectTimeout: httpClientOptions?.Timeout,
+                allowInsecureProtocols: false,
+                allowLoopback: false,
+                failMixedResults: true,
+                allowAutoRedirect: false,
+                automaticDecompression: DecompressionMethods.All,
+                sslOptions: sslOptions,
+                loggerFactory: LoggerFactory)
+            : SsrfSocketsHttpHandlerFactory.Create(
+                connectionStrategy: ConnectionStrategy.None,
+                additionalUnsafeNetworks: null,
+                additionalUnsafeIpAddresses: null,
+                connectTimeout: httpClientOptions?.Timeout,
+                allowInsecureProtocols: false,
+                allowLoopback: false,
+                failMixedResults: true,
+                allowAutoRedirect: false,
+                automaticDecompression: DecompressionMethods.All,
+                sslOptions: sslOptions,
+                loggerFactory: LoggerFactory);
     }
 
     private ClientWebSocket CreateWebSocketClient()

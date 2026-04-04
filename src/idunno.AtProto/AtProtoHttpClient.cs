@@ -43,7 +43,6 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
                         failMixedResults: true,
                         allowAutoRedirect: false,
                         automaticDecompression: DecompressionMethods.All,
-                        proxy: null,
                         sslOptions: null,
                         loggerFactory: loggerFactory);
 

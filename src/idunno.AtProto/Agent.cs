@@ -65,66 +65,13 @@ public abstract class Agent : IDisposable
             JsonOptions = jsonOptions;
         }
 
-        bool checkCrl;
-        if (httpClientOptions is null)
-        {
-            checkCrl = true;
-        }
-        else
-        {
-            checkCrl = httpClientOptions.CheckCertificateRevocationList;
-        }
-
         _loggerFactory = loggerFactory;
-
-        IServiceCollection services = new ServiceCollection();
         _httpClientOptions = httpClientOptions;
 
-        bool allowLoopback = false;
-        bool allowInsecureProtocols = false;
-
-        IWebProxy? proxy = null;
-        SslClientAuthenticationOptions? sslOptions = null;
-
-        if (_httpClientOptions?.ProxyUri is not null)
-        {
-            proxy = new WebProxy(_httpClientOptions.ProxyUri);
-            if (_httpClientOptions.ProxyUri.IsLoopback)
-            {
-                allowLoopback = true;
-            }
-
-            if (_httpClientOptions.ProxyUri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase))
-            {
-                allowInsecureProtocols = true;
-            }
-        }
-
-        if (!checkCrl)
-        {
-            sslOptions = new SslClientAuthenticationOptions
-            {
-                CertificateRevocationCheckMode = X509RevocationMode.NoCheck
-            };
-        }
-
+        IServiceCollection services = new ServiceCollection();
         services
             .AddHttpClient(HttpClientName, client => InternalConfigureHttpClient(client, _httpClientOptions?.HttpUserAgent, _httpClientOptions?.Timeout))
-            .ConfigurePrimaryHttpMessageHandler(() => SsrfSocketsHttpHandlerFactory.Create(
-                connectionStrategy: ConnectionStrategy.None,
-                additionalUnsafeNetworks: null,
-                additionalUnsafeIpAddresses: null,
-                connectTimeout: _httpClientOptions?.Timeout,
-                allowInsecureProtocols: allowInsecureProtocols,
-                allowLoopback: allowLoopback,
-                failMixedResults: true,
-                allowAutoRedirect: false,
-                automaticDecompression: DecompressionMethods.All,
-                proxy: proxy,
-                sslOptions: sslOptions,
-                loggerFactory: loggerFactory
-                ));
-
+            .ConfigurePrimaryHttpMessageHandler(ProxyHttpMessageHandlerBuilder);
         _serviceProvider = services.BuildServiceProvider();
       
         HttpClientFactory = _serviceProvider.GetService<IHttpClientFactory>()!;
@@ -211,29 +158,10 @@ public abstract class Agent : IDisposable
     /// <summary>
     /// Creates a client handler to configure proxy setup with the initialization parameters specified when creating the agent.
     /// </summary>
-    /// <returns>An <see cref="SocketsHttpHandler"/> configured to any proxy specified when the agent was created.</returns>
-    protected SocketsHttpHandler BuildProxyHttpClientHandler()
+    /// <returns>An <see cref="HttpMessageHandler"/> configured to any proxy specified when the agent was created.</returns>
+    protected HttpMessageHandler ProxyHttpMessageHandlerBuilder()
     {
-        IWebProxy? proxy = null;
         SslClientAuthenticationOptions? sslOptions = null;
-
-        bool allowLoopback = false;
-        bool allowInsecureProtocols = false;
-
-        if (_httpClientOptions?.ProxyUri is not null)
-        {
-            proxy = new WebProxy(_httpClientOptions.ProxyUri);
-
-            if (_httpClientOptions.ProxyUri.IsLoopback)
-            {
-                allowLoopback = true;
-            }
-
-            if (_httpClientOptions.ProxyUri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase))
-            {
-                allowInsecureProtocols = true;
-            }
-        }
 
         if (_httpClientOptions?.CheckCertificateRevocationList == false)
         {
@@ -243,19 +171,34 @@ public abstract class Agent : IDisposable
             };
         }
 
-        return SsrfSocketsHttpHandlerFactory.Create(
-                        connectionStrategy: ConnectionStrategy.None,
-                        additionalUnsafeNetworks: null,
-                        additionalUnsafeIpAddresses: null,
-                        connectTimeout: _httpClientOptions?.Timeout,
-                        allowInsecureProtocols: allowInsecureProtocols,
-                        allowLoopback: allowLoopback,
-                        failMixedResults: true,
-                        allowAutoRedirect: false,
-                        automaticDecompression: DecompressionMethods.All,
-                        proxy: proxy,
-                        sslOptions: sslOptions,
-                        loggerFactory: _loggerFactory);
+        SsrfOptions options = new()
+        {
+            ConnectionStrategy = ConnectionStrategy.None,
+            AdditionalUnsafeNetworks = [],
+            AdditionalUnsafeIpAddresses = [],
+            ConnectTimeout = _httpClientOptions?.Timeout,
+            AllowInsecureProtocols = false,
+            AllowLoopback = false,
+            FailMixedResults = true,
+            AllowAutoRedirect = false,
+            AutomaticDecompression = DecompressionMethods.All,
+            SslOptions = sslOptions
+        };
+
+
+        if (_httpClientOptions?.ProxyUri is not null)
+        {
+            options.Proxy = new WebProxy(_httpClientOptions.ProxyUri);
+            return new ProxiedSsrfDelegatingHandler(
+                options: options,
+                loggerFactory: _loggerFactory);
+        }
+        else
+        {
+            return SsrfSocketsHttpHandlerFactory.Create(
+                options: options,
+                loggerFactory: _loggerFactory);
+        }
     }
 
     private static void InternalConfigureHttpClient(HttpClient client, string? httpUserAgent = null, TimeSpan? timeout = null)
