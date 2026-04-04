@@ -16,7 +16,7 @@
 * Added default validation function to disallow loopback and private IP ranges in discovered URIs, to mitigate SSRF attacks.
 * Added override on `ToString()` on `AtProtoCredential` to return a redacted string in case of accidental logging.
 * Added default SSRF protections to `AtProtoAgent`, `AtProtoHttpClient` and `AtProtoJetStream` with [idunno.Security.Ssrf](https://github.com/blowdart/idunno.Security.Ssrf/blob/main/src/idunno.Security.Ssrf/).
-  This can be disabled by passing your own `HttpClient`.
+  This can be disabled by passing your own `HttpClient` when creating an agent, or into `AtProtoHttpClient`.
 * Added `AllowLoopback` parameter to `BuildOAuth2LoginUri` to allow loopback addresses in discovered URIs for testing and development purposes. This is disabled by default.
 
 ### idunno.AtProto.Types
