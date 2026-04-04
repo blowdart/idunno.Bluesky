@@ -6,28 +6,27 @@ using System.Text.Json.Serialization;
 
 using idunno.Bluesky.Actor;
 
-namespace idunno.Bluesky.Graph.Model
+namespace idunno.Bluesky.Graph.Model;
+
+[SuppressMessage("Performance", "CA1812", Justification = "Used in GetFollows.")]
+internal sealed record GetFollowsResponse
 {
-    [SuppressMessage("Performance", "CA1812", Justification = "Used in GetFollows.")]
-    internal sealed record GetFollowsResponse
+    [JsonConstructor]
+    public GetFollowsResponse(ProfileView subject, ICollection<ProfileView> follows, string? cursor)
     {
-        [JsonConstructor]
-        public GetFollowsResponse(ProfileView subject, ICollection<ProfileView> follows, string? cursor)
-        {
-            Subject = subject;
-            Follows = follows;
-            Cursor = cursor;
-        }
-
-        [JsonInclude]
-        [JsonRequired]
-        public ProfileView Subject { get; init; }
-
-        [JsonInclude]
-        [JsonRequired]
-        public ICollection<ProfileView> Follows { get; init; }
-
-        [JsonInclude]
-        public string? Cursor { get; init; }
+        Subject = subject;
+        Follows = follows;
+        Cursor = cursor;
     }
+
+    [JsonInclude]
+    [JsonRequired]
+    public ProfileView Subject { get; init; }
+
+    [JsonInclude]
+    [JsonRequired]
+    public ICollection<ProfileView> Follows { get; init; }
+
+    [JsonInclude]
+    public string? Cursor { get; init; }
 }

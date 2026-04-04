@@ -2,40 +2,69 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
+
 using idunno.Bluesky.Record;
 
-namespace idunno.Bluesky.Notifications
+namespace idunno.Bluesky.Notifications;
+
+/// <summary>
+/// A declaration of the user's choices for notification subscriptions from other actors.
+/// </summary>
+[JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
+                 UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+[JsonDerivedType(typeof(Declaration), typeDiscriminator: RecordType.NotificationDeclaration)]
+public record Declaration : BlueskyRecord
 {
     /// <summary>
-    /// A declaration of the user's choices related to notifications that can be produced by them
+    /// Creates a new instance of <see cref="Declaration"/> with <see cref="AllowSubscriptions"/> set to <see cref="NotificationAllowedFrom.Followers"/>.
     /// </summary>
-    /// <param name="AllowSubscriptions">A declaration of the user's preference for allowing activity subscriptions from other users.A <see langword="null"/> value implies 'followers'.</param>
-    public sealed record Declaration(NotificationAllowedFrom? AllowSubscriptions = NotificationAllowedFrom.Followers) : BlueskyRecord
+    public Declaration() : this(declaration: NotificationAllowedFrom.Followers)
     {
     }
 
     /// <summary>
-    /// Who is allowed to subscribe to notifications about account posts and reposts.
+    /// Creates a new instance of <see cref="Declaration"/> with the specified <paramref name="declaration"/>.
     /// </summary>
-    [JsonConverter(typeof(JsonStringEnumConverter<NotificationAllowedFrom>))]
-    public enum NotificationAllowedFrom
+    /// <param name="declaration">The declaration of the user's choices for notification subscriptions from other actors.</param>
+    /// <remarks>
+    /// <para>Specifying a <see langword="null"/> value for <paramref name="declaration"/> will result in the default value of <see cref="NotificationAllowedFrom.Followers"/> being used.</para>
+    /// </remarks>
+    public Declaration(NotificationAllowedFrom? declaration)
     {
-        /// <summary>
-        /// No-one.
-        /// </summary>
-        [JsonStringEnumMemberName("none")]
-        None,
-
-        /// <summary>
-        /// Users who follow the account.
-        /// </summary>
-        [JsonStringEnumMemberName("followers")]
-        Followers,
-
-        /// <summary>
-        /// Users who follow the account and the account follows.
-        /// </summary>
-        [JsonStringEnumMemberName("mutuals")]
-        Mutuals
+        AllowSubscriptions = declaration;
     }
+
+    /// <summary>
+    /// Gets or sets the declaration of the user's choices for notification subscriptions from other actors.
+    /// </summary>
+    /// <remarks>
+    /// <para>Specifying a <see langword="null"/> value will result in the default value of <see cref="NotificationAllowedFrom.Followers"/> being used.</para>
+    /// </remarks>
+    public NotificationAllowedFrom? AllowSubscriptions { get; set; }
+
+}
+
+/// <summary>
+/// Who is allowed to subscribe to notifications about account posts and reposts.
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<NotificationAllowedFrom>))]
+public enum NotificationAllowedFrom
+{
+    /// <summary>
+    /// No-one.
+    /// </summary>
+    [JsonStringEnumMemberName("none")]
+    None,
+
+    /// <summary>
+    /// Users who follow the account.
+    /// </summary>
+    [JsonStringEnumMemberName("followers")]
+    Followers,
+
+    /// <summary>
+    /// Users who follow the account and the account follows.
+    /// </summary>
+    [JsonStringEnumMemberName("mutuals")]
+    Mutuals
 }

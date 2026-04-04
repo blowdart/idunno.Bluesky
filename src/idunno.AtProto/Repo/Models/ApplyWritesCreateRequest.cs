@@ -4,29 +4,28 @@
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
-namespace idunno.AtProto.Repo.Models
+namespace idunno.AtProto.Repo.Models;
+
+/// <summary>
+/// Encapsulates a create operation for the repo.applyWrites api
+/// </summary>
+internal sealed record ApplyWritesCreateRequest : ApplyWritesRequestValueBase
 {
     /// <summary>
-    /// Encapsulates a create operation for the repo.applyWrites api
+    /// Creates a new instance of <see cref="ApplyWritesCreateRequest"/>.
     /// </summary>
-    internal sealed record ApplyWritesCreateRequest : ApplyWritesRequestValueBase
+    /// <param name="collection"></param>
+    /// <param name="rkey"></param>
+    /// <param name="value"></param>
+    public ApplyWritesCreateRequest(Nsid collection, RecordKey? rkey, JsonNode value) : base(collection, rkey)
     {
-        /// <summary>
-        /// Creates a new instance of <see cref="ApplyWritesCreateRequest"/>.
-        /// </summary>
-        /// <param name="collection"></param>
-        /// <param name="rkey"></param>
-        /// <param name="value"></param>
-        public ApplyWritesCreateRequest(Nsid collection, RecordKey? rkey, JsonNode value) : base(collection, rkey)
-        {
-            Value = value;
-        }
-
-        /// <summary>
-        /// Gets the value of the record for the create operation.
-        /// </summary>
-        [JsonInclude]
-        [JsonRequired]
-        public JsonNode Value { get; init; }
+        Value = value;
     }
+
+    /// <summary>
+    /// Gets the value of the record for the create operation.
+    /// </summary>
+    [JsonInclude]
+    [JsonRequired]
+    public JsonNode Value { get; init; }
 }

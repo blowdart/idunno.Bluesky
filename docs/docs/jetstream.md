@@ -1,4 +1,4 @@
-# Using the JetStream
+﻿# Using the JetStream
 
 The [Jetstream](https://github.com/bluesky-social/jetstream) is a streaming service that provides information on activity on the ATProto network.
 You can consume the Jetstream using the `AtProtoJetstream` class.

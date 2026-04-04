@@ -3,31 +3,30 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.RichText
+namespace idunno.Bluesky.RichText;
+
+/// <summary>
+/// Facet feature for a URL. The text URL may have been simplified or truncated, but the facet reference should be a complete URL.
+/// </summary>
+public sealed record LinkFacetFeature : FacetFeature
 {
     /// <summary>
-    /// Facet feature for a URL. The text URL may have been simplified or truncated, but the facet reference should be a complete URL.
+    /// Constructs a new instance of <see cref="LinkFacetFeature"/>.
     /// </summary>
-    public sealed record LinkFacetFeature : FacetFeature
+    /// <param name="uri">The <see cref="Uri"/> for the facet.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
+    [JsonConstructor]
+    public LinkFacetFeature(Uri uri)
     {
-        /// <summary>
-        /// Constructs a new instance of <see cref="LinkFacetFeature"/>.
-        /// </summary>
-        /// <param name="uri">The <see cref="Uri"/> for the facet.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
-        [JsonConstructor]
-        public LinkFacetFeature(Uri uri)
-        {
-            ArgumentNullException.ThrowIfNull(uri);
+        ArgumentNullException.ThrowIfNull(uri);
 
-            Uri = uri;
-        }
-
-        /// <summary>
-        /// The <see cref="Uri"/> for the facet.
-        /// </summary>
-        [JsonInclude]
-        [JsonRequired]
-        public Uri Uri { get; init; }
+        Uri = uri;
     }
+
+    /// <summary>
+    /// The <see cref="Uri"/> for the facet.
+    /// </summary>
+    [JsonInclude]
+    [JsonRequired]
+    public Uri Uri { get; init; }
 }

@@ -1,16 +1,85 @@
 ﻿# Version History
 
-## 2.0.0 - Unreleased, In Progress
+## 1.8.0 - 2026-04-04
 
 ### Added
 
-#### idunno.Bluesky.AspNet.Authentication
+#### idunno.AtProto
 
-* Add support for Bluesky authentication in ASP.NET Razor Pages.
+* Added metrics in `AtProtoHttpClientMetrics` including request duration, request count and failure count.
+* Added metrics in `DidPlcDirectory` including request duration, request count and failure count.
+* Added extensions for `OpenTelemetry.Metrics`: `AddAtProtoHttpClientMetrics`, `AddAtProtoDirectoryMetrics`, and `AddAtProtoJetStreamMetrics`.
+* Added new constructor overloads for `AtProtoHttpClient` to allow for use with `MetricsFactory`.
+* Added `Throttled` to `AccountStatus` in Jetstream account events.
+* Added `MaxMessageSize` to `JetStreamOptions` to guard against a malicious jetstream server sending overly large messages.
+* Added optional validation callbacks to `AtProtoAgent.BuildOAuthLoginUri` to allow for validation of the discovered PDS and authorization server URIs.
+* Added default validation function to disallow loopback and private IP ranges in discovered URIs, to mitigate SSRF attacks.
+* Added override on `ToString()` on `AtProtoCredential` to return a redacted string in case of accidental logging.
+* Added default SSRF protections to `AtProtoAgent`, `AtProtoHttpClient` and `AtProtoJetStream` with [idunno.Security.Ssrf](https://github.com/blowdart/idunno.Security.Ssrf/blob/main/src/idunno.Security.Ssrf/).
+  This can be disabled by passing your own `HttpClient` when creating an agent, or into `AtProtoHttpClient`.
+* Added `AllowLoopback` parameter to `BuildOAuth2LoginUri` to allow loopback addresses in discovered URIs for testing and development purposes. This is disabled by default.
+
+### idunno.AtProto.Types
+
+* Added == and != operations to `Cid`.
+
+### idunno.Bluesky
+
+* Added `Bot` property to `Profile` record to set or unset the profile self label
+ indicating a bot account, see [[APP-1928] add bot/automated account badge and self-labeling settings](https://github.com/bluesky-social/social-app/pull/10008/)
+* Added `SelfLabels` property to `ProfileViewBasic` which returns a list of self labels applied to a profile,
+  which can be used in conjunction with `SelfLabelValues` to check if a profile has applied any self labels to itself,
+  including the `Bot` self label and `DiscourageShowingToLoggedOutUser` self label. e.g.
+
+  ```c#
+  var profile = await agent.GetProfile("beans.monster");
+  if (profile.Result.SelfLabels.Contains(SelfLabelValues.Bot))
+  {
+      // 🤖 - Do some action because the profile self identifies as a bot.
+  }
+  ```
+* Added `SelfLabels` property to `PostView`.
+* Added `SelfLabelValues` class.
+* Added `Bot` and `DiscourageShowingToLoggedOutUser` to `SelfLabelValues`.
+* Added `JsonPolymorphic` attributes to individual records to remove the extraneous `ExtensionData` entries.
+* Added `CreateStatus`, `GetStatus` and `UpdateStatus` to `BlueskyAgent`.
+* Added a setter to `DurationMinutes` on `Status` and setters to `ExternalProperties` to allow for updating of an existing profile status.
+
+### Documentation
+
+* Added documentation for metrics.
+* Added documentation for setting a status on a profile.
+
+### Changed
+
+#### idunno.AtProto
+
+* Changed `AtJetStreamIdentity` class to make `Handle` property nullable.
+* Add version to `JetstreamMetrics`
+* Made `JetStream.MeterName` and `JetStream.MeterVersion` properties public to allow for easy OTEL configuration.
+* Fixed OAuth logout.
+* Changed `JetStreamMetrics` from `public` to `internal` because it is not intended for public use.
+* Remove `[Serializable]` from `AtProtoCredential`.
+* Exclude `Credential` in `CredentialException` from serialization because it may contain sensitive information.
+
+#### idunno.AtProto.Types
+
+* Updated DID validation regex to align with [specs: allow digits in DID method](https://github.com/bluesky-social/atproto-website/issues/292).
+
+#### idunno.Bluesky
+
+* Updated `SuggestedActors` to include `RecIdStr`, see [Add recIdStr to suggested follows by actor](https://github.com/bluesky-social/atproto/pull/4644)
+* Added setter to `Notification.Declaration.AllowSubscriptions` for easy updating of the value.
+* Mark `SetStatus` as obsolete in favor of `CreateStatus` and `UpdateStatus`.
+  This allows for better handling of the case where a profile does not have an existing status,
+  and clearer intent when updating an existing status.
+* Marked `SelfLabelNames` as obsolete in favor of `SelfLabelValues`, as the new name is more correct.
+
+#### idunno.AtProto
 
 ## 1.7.0 - 2026-03-12
 
-### ⚠️Security Advisory
+### ⚠️Security Advisory - [CVE-2026-26127 - .NET Denial of Service](https://github.com/dotnet/announcements/issues/384)
 
 * A transitive dependency of `idunno.AtProto` and `idunno.AtProto.OAuthCallback`, `Microsoft.Bcl.Memory`
   had a Denial of Service security vulnerability,
@@ -596,7 +665,6 @@ for custom `AtProtoRecord` classes.
   ```c#
   using (var agent = new BlueskyAgent(
     proxyUri: proxyUri,
-    checkCertificateRevocationList: checkCertificateRevocationList,
     loggerFactory: loggerFactory))
   ```
 
@@ -610,7 +678,6 @@ for custom `AtProtoRecord` classes.
 
       HttpClientOptions = new HttpClientOptions()
       {
-        CheckCertificateRevocationList = checkCertificateRevocationList,
         ProxyUri = proxyUri
       }
     }))

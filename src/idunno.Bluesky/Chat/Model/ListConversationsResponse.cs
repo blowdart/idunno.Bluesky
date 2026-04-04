@@ -4,24 +4,23 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Chat.Model
+namespace idunno.Bluesky.Chat.Model;
+
+[SuppressMessage("Performance", "CA1812", Justification = "Used in ListConversations.")]
+internal sealed record ListConversationsResponse
 {
-    [SuppressMessage("Performance", "CA1812", Justification = "Used in ListConversations.")]
-    internal sealed record ListConversationsResponse
+    [JsonConstructor]
+    public ListConversationsResponse(ICollection<ConversationView> conversations, string? cursor)
     {
-        [JsonConstructor]
-        public ListConversationsResponse(ICollection<ConversationView> conversations, string? cursor)
-        {
-            Conversations = conversations;
-            Cursor = cursor;
-        }
-
-        [JsonInclude]
-        [JsonRequired]
-        [JsonPropertyName("convos")]
-        public ICollection<ConversationView> Conversations { get; init; }
-
-        [JsonInclude]
-        public string? Cursor { get; init; }
+        Conversations = conversations;
+        Cursor = cursor;
     }
+
+    [JsonInclude]
+    [JsonRequired]
+    [JsonPropertyName("convos")]
+    public ICollection<ConversationView> Conversations { get; init; }
+
+    [JsonInclude]
+    public string? Cursor { get; init; }
 }

@@ -4,19 +4,18 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Chat.Model
-{
-    [SuppressMessage("Performance", "CA1812", Justification = "Used in SendMessageBatch.")]
-    internal sealed record SendMessageBatchResponse
-    {
-        [JsonConstructor]
-        public SendMessageBatchResponse(ICollection<MessageView> items)
-        {
-            Items = items;
-        }
+namespace idunno.Bluesky.Chat.Model;
 
-        [JsonInclude]
-        [JsonRequired]
-        public ICollection<MessageView> Items { get; set; }
+[SuppressMessage("Performance", "CA1812", Justification = "Used in SendMessageBatch.")]
+internal sealed record SendMessageBatchResponse
+{
+    [JsonConstructor]
+    public SendMessageBatchResponse(ICollection<MessageView> items)
+    {
+        Items = items;
     }
+
+    [JsonInclude]
+    [JsonRequired]
+    public ICollection<MessageView> Items { get; set; }
 }

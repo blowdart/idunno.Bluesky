@@ -1,16 +1,18 @@
-name: CodeQL Scan
+﻿name: CodeQL Scan
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
+      -  version/*
     paths-ignore:
-      - 'docs/**'
       - '.github/**'
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: [ main ]
+    branches:
+      - main
+      -  version/*
   schedule:
     - cron: '25 4 * * 2'
 
@@ -40,7 +42,7 @@ jobs:
 
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
+      uses: step-security/harden-runner@fa2e9d605c4eeb9fcad4c99c224cee0c6c7f3594 # v2.16.0
       with:
         egress-policy: audit
 
@@ -58,7 +60,7 @@ jobs:
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@0d579ffd059c29b07949a3cce3983f0780820c98 # v4.32.6
+      uses: github/codeql-action/init@c10b8064de6f491fea524254123dbe5e09572f13 # v4.35.1
       with:
         languages: ${{ matrix.language }}
 
@@ -69,4 +71,4 @@ jobs:
       run: dotnet build --configuration CodeQL /p:UseSharedCompilation=false /t:rebuild
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@0d579ffd059c29b07949a3cce3983f0780820c98 # v4.32.6
+      uses: github/codeql-action/analyze@c10b8064de6f491fea524254123dbe5e09572f13 # v4.35.1

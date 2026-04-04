@@ -5,19 +5,12 @@ using System.Diagnostics.CodeAnalysis;
 
 using idunno.AtProto;
 
-namespace idunno.Bluesky.Graph.Model
+namespace idunno.Bluesky.Graph.Model;
+
+[SuppressMessage("Performance", "CA1812", Justification = "Used in GetRelationships.")]
+internal sealed class GetRelationshipsResponse(Did actor, ICollection<RelationshipType> relationships)
 {
-    [SuppressMessage("Performance", "CA1812", Justification = "Used in GetRelationships.")]
-    internal sealed class GetRelationshipsResponse
-    {
-        public GetRelationshipsResponse(Did actor, ICollection<RelationshipType> relationships)
-        {
-            Actor = actor;
-            Relationships = relationships;
-        }
+    public Did Actor { get; init; } = actor;
 
-        public Did Actor { get; init; }
-
-        public ICollection<RelationshipType> Relationships { get; init; }
-    }
+    public ICollection<RelationshipType> Relationships { get; init; } = relationships;
 }

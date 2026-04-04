@@ -3,168 +3,167 @@
 
 using idunno.AtProto.Authentication.Models;
 
-namespace idunno.AtProto.Authentication
+namespace idunno.AtProto.Authentication;
+
+/// <summary>
+/// Encapsulates a session on a PDS created by a handle/password login.
+/// </summary>
+public record Session
 {
-    /// <summary>
-    /// Encapsulates a session on a PDS created by a handle/password login.
-    /// </summary>
-    public record Session
+    internal Session(CreateSessionResponse createSessionResponse)
     {
-        internal Session(CreateSessionResponse createSessionResponse)
+        ArgumentNullException.ThrowIfNull(createSessionResponse);
+
+        Handle = createSessionResponse.Handle;
+        Did = createSessionResponse.Did;
+        DidDoc = createSessionResponse.DidDoc;
+        Active = createSessionResponse.Active;
+
+        // Attempting to avoid the trimming errors with enum use
+        // See https://github.com/dotnet/runtime/issues/114307
+        if (createSessionResponse.Status is not null)
         {
-            ArgumentNullException.ThrowIfNull(createSessionResponse);
-
-            Handle = createSessionResponse.Handle;
-            Did = createSessionResponse.Did;
-            DidDoc = createSessionResponse.DidDoc;
-            Active = createSessionResponse.Active;
-
-            // Attempting to avoid the trimming errors with enum use
-            // See https://github.com/dotnet/runtime/issues/114307
-            if (createSessionResponse.Status is not null)
+            switch (createSessionResponse.Status.ToUpperInvariant())
             {
-                switch (createSessionResponse.Status.ToUpperInvariant())
-                {
-                    case "TAKENDOWN":
-                        Status = AccountStatus.Takendown;
-                        break;
+                case "TAKENDOWN":
+                    Status = AccountStatus.Takendown;
+                    break;
 
-                    case "SUSPENDED":
-                        Status = AccountStatus.Suspended;
-                        break;
+                case "SUSPENDED":
+                    Status = AccountStatus.Suspended;
+                    break;
 
-                    case "DEACTIVATED":
-                        Status = AccountStatus.Deactivated;
-                        break;
+                case "DEACTIVATED":
+                    Status = AccountStatus.Deactivated;
+                    break;
 
-                    default:
-                        break;
-                }
+                default:
+                    break;
             }
-
-            AccessJwt = createSessionResponse.AccessJwt;
-            RefreshJwt = createSessionResponse.RefreshJwt;
-            Email = createSessionResponse.Email;
-            EmailConfirmed = createSessionResponse.EmailConfirmed;
-            EmailAuthFactor = createSessionResponse.EmailAuthFactor;
         }
 
-        internal Session(GetSessionResponse getSessionResponse, AccessCredentials accessCredentials) 
+        AccessJwt = createSessionResponse.AccessJwt;
+        RefreshJwt = createSessionResponse.RefreshJwt;
+        Email = createSessionResponse.Email;
+        EmailConfirmed = createSessionResponse.EmailConfirmed;
+        EmailAuthFactor = createSessionResponse.EmailAuthFactor;
+    }
+
+    internal Session(GetSessionResponse getSessionResponse, AccessCredentials accessCredentials) 
+    {
+        ArgumentNullException.ThrowIfNull(getSessionResponse);
+
+        Handle = getSessionResponse.Handle;
+        Did = getSessionResponse.Did;
+        DidDoc = getSessionResponse.DidDoc;
+        Active = getSessionResponse.Active;
+
+        if (getSessionResponse.Status is not null)
         {
-            ArgumentNullException.ThrowIfNull(getSessionResponse);
-
-            Handle = getSessionResponse.Handle;
-            Did = getSessionResponse.Did;
-            DidDoc = getSessionResponse.DidDoc;
-            Active = getSessionResponse.Active;
-
-            if (getSessionResponse.Status is not null)
+            switch (getSessionResponse.Status.ToUpperInvariant())
             {
-                switch (getSessionResponse.Status.ToUpperInvariant())
-                {
-                    case "TAKENDOWN":
-                        Status = AccountStatus.Takendown;
-                        break;
+                case "TAKENDOWN":
+                    Status = AccountStatus.Takendown;
+                    break;
 
-                    case "SUSPENDED":
-                        Status = AccountStatus.Suspended;
-                        break;
+                case "SUSPENDED":
+                    Status = AccountStatus.Suspended;
+                    break;
 
-                    case "DEACTIVATED":
-                        Status = AccountStatus.Deactivated;
-                        break;
+                case "DEACTIVATED":
+                    Status = AccountStatus.Deactivated;
+                    break;
 
-                    default:
-                        break;
-                }
+                default:
+                    break;
             }
-
-            AccessJwt = accessCredentials.AccessJwt;
-            RefreshJwt = accessCredentials.RefreshToken;
-            Email = getSessionResponse.Email;
-            EmailConfirmed = getSessionResponse.EmailConfirmed;
-            EmailAuthFactor = getSessionResponse.EmailAuthFactor;
         }
 
-        /// <summary>
-        /// The <see cref="AtProto.Handle">Handle</see> the session belongs to.
-        /// </summary>
-        public Handle Handle { get; init; }
+        AccessJwt = accessCredentials.AccessJwt;
+        RefreshJwt = accessCredentials.RefreshToken;
+        Email = getSessionResponse.Email;
+        EmailConfirmed = getSessionResponse.EmailConfirmed;
+        EmailAuthFactor = getSessionResponse.EmailAuthFactor;
+    }
 
-        /// <summary>
-        /// The <see cref="AtProto.Did">Did</see> the newly created session belongs to.
-        /// </summary>
-        public Did Did { get; init; }
+    /// <summary>
+    /// The <see cref="AtProto.Handle">Handle</see> the session belongs to.
+    /// </summary>
+    public Handle Handle { get; init; }
 
-        /// <summary>
-        /// The <see cref="DidDocument">DidDocument</see> for the <see cref="Did"/> that the session belongs to.
-        /// </summary>
-        public DidDocument? DidDoc { get; init; }
+    /// <summary>
+    /// The <see cref="AtProto.Did">Did</see> the newly created session belongs to.
+    /// </summary>
+    public Did Did { get; init; }
 
-        /// <summary>
-        /// A flag indicating whether the account associated with the session is active.
-        /// </summary>
-        public bool? Active { get; init; }
+    /// <summary>
+    /// The <see cref="DidDocument">DidDocument</see> for the <see cref="Did"/> that the session belongs to.
+    /// </summary>
+    public DidDocument? DidDoc { get; init; }
 
-        /// <summary>
-        /// If <see cref="Active"/> is <see langword="false"/>, a possible reason the account is inactive.
-        /// </summary>
-        /// <remarks>
-        /// <para>If <see cref="Active"/> and no status is supplied, then the host makes no claim for why the repository is no longer being hosted.</para>
-        /// </remarks>
-        public AccountStatus? Status { get; init; }
+    /// <summary>
+    /// A flag indicating whether the account associated with the session is active.
+    /// </summary>
+    public bool? Active { get; init; }
 
-        /// <summary>
-        /// The Access JWT for the session.
-        /// </summary>
-        public string AccessJwt { get; init; }
+    /// <summary>
+    /// If <see cref="Active"/> is <see langword="false"/>, a possible reason the account is inactive.
+    /// </summary>
+    /// <remarks>
+    /// <para>If <see cref="Active"/> and no status is supplied, then the host makes no claim for why the repository is no longer being hosted.</para>
+    /// </remarks>
+    public AccountStatus? Status { get; init; }
 
-        /// <summary>
-        /// The Refresh JWT for the session.
-        /// </summary>
-        public string RefreshJwt { get; init; }
+    /// <summary>
+    /// The Access JWT for the session.
+    /// </summary>
+    public string AccessJwt { get; init; }
 
-        /// <summary>
-        /// The email associated with <see cref="Handle">Handle</see> the session belongs to.
-        /// </summary>
-        public string? Email { get; init; }
+    /// <summary>
+    /// The Refresh JWT for the session.
+    /// </summary>
+    public string RefreshJwt { get; init; }
 
-        /// <summary>
-        /// A flag indicating whether the <see cref="Email"/> is confirmed or not.
-        /// </summary>
-        public bool? EmailConfirmed { get; init; }
+    /// <summary>
+    /// The email associated with <see cref="Handle">Handle</see> the session belongs to.
+    /// </summary>
+    public string? Email { get; init; }
 
-        /// <summary>
-        /// A flag indicating whether the session required an email based authentication token.
-        /// </summary>
-        public bool? EmailAuthFactor { get; init; }
+    /// <summary>
+    /// A flag indicating whether the <see cref="Email"/> is confirmed or not.
+    /// </summary>
+    public bool? EmailConfirmed { get; init; }
 
-        /// <summary>
-        /// Creates an <see cref="AccessTokenCredential"/> from the session's Access JWT and Refresh JWT.
-        /// </summary>
-        /// <param name="service">The service <see cref="Uri"/> the credential was issued from.</param>
-        /// <param name="authenticationType">The type of authentication that was used to acquire the credentials.</param>
-        /// <returns>An <see cref="AccessCredentials"/> instance.</returns>
-        public AccessCredentials ToAccessCredentials(Uri service, AuthenticationType authenticationType = AuthenticationType.Unknown)
+    /// <summary>
+    /// A flag indicating whether the session required an email based authentication token.
+    /// </summary>
+    public bool? EmailAuthFactor { get; init; }
+
+    /// <summary>
+    /// Creates an <see cref="AccessTokenCredential"/> from the session's Access JWT and Refresh JWT.
+    /// </summary>
+    /// <param name="service">The service <see cref="Uri"/> the credential was issued from.</param>
+    /// <param name="authenticationType">The type of authentication that was used to acquire the credentials.</param>
+    /// <returns>An <see cref="AccessCredentials"/> instance.</returns>
+    public AccessCredentials ToAccessCredentials(Uri service, AuthenticationType authenticationType = AuthenticationType.Unknown)
+    {
+        return new AccessCredentials(service, authenticationType, AccessJwt, RefreshJwt);
+    }
+
+    /// <summary>
+    /// Creates an <see cref="AccessTokenCredential"/> from the session's Access JWT and Refresh JWT.
+    /// </summary>
+    /// <param name="service">The service <see cref="Uri"/> the credential was issued from.</param>
+    /// <returns>An <see cref="AccessTokenCredential"/> instance.</returns>
+    public AccessTokenCredential ToAccessTokenCredential(Uri? service = null)
+    {
+        if (service is null)
         {
-            return new AccessCredentials(service, authenticationType, AccessJwt, RefreshJwt);
+            return new AccessTokenCredential(AccessJwt);
         }
-
-        /// <summary>
-        /// Creates an <see cref="AccessTokenCredential"/> from the session's Access JWT and Refresh JWT.
-        /// </summary>
-        /// <param name="service">The service <see cref="Uri"/> the credential was issued from.</param>
-        /// <returns>An <see cref="AccessTokenCredential"/> instance.</returns>
-        public AccessTokenCredential ToAccessTokenCredential(Uri? service = null)
+        else
         {
-            if (service is null)
-            {
-                return new AccessTokenCredential(AccessJwt);
-            }
-            else
-            {
-                return new AccessTokenCredential(service, AccessJwt);
-            }
+            return new AccessTokenCredential(service, AccessJwt);
         }
     }
 }

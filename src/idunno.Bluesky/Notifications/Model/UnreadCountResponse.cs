@@ -4,13 +4,12 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Notifications.Model
+namespace idunno.Bluesky.Notifications.Model;
+
+[SuppressMessage("Performance", "CA1812", Justification = "Used in GetUnreadCount.")]
+internal sealed record UnreadCountResponse
 {
-    [SuppressMessage("Performance", "CA1812", Justification = "Used in GetUnreadCount.")]
-    internal sealed record UnreadCountResponse
-    {
-        [JsonInclude]
-        [JsonRequired]
-        internal int Count { get; set; } = -1;
-    }
+    [JsonInclude]
+    [JsonRequired]
+    internal int Count { get; set; } = -1;
 }

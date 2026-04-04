@@ -7,48 +7,47 @@ using System.Text.Json.Serialization;
 using idunno.AtProto;
 using idunno.Bluesky.Actor;
 
-namespace idunno.Bluesky.Graph
+namespace idunno.Bluesky.Graph;
+
+/// <summary>
+/// Encapsulates a view over an individual item in a list.
+/// </summary>
+[DebuggerDisplay("{DebuggerDisplay,nq}")]
+public sealed record ListItemView : View
 {
     /// <summary>
-    /// Encapsulates a view over an individual item in a list.
+    /// Creates a new instance of <see cref="ListItemView"/>.
     /// </summary>
-    [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public sealed record ListItemView : View
+    /// <param name="uri">The <see cref="AtUri"/> of list item.</param>
+    /// <param name="subject">A <see cref="ProfileView"/> of the actor the list item refers to.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="subject"/> are <see langword="null"/>.</exception>
+    public ListItemView(AtUri uri, ProfileView subject)
     {
-        /// <summary>
-        /// Creates a new instance of <see cref="ListItemView"/>.
-        /// </summary>
-        /// <param name="uri">The <see cref="AtUri"/> of list item.</param>
-        /// <param name="subject">A <see cref="ProfileView"/> of the actor the list item refers to.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="subject"/> are <see langword="null"/>.</exception>
-        public ListItemView(AtUri uri, ProfileView subject)
+        ArgumentNullException.ThrowIfNull(uri);
+        ArgumentNullException.ThrowIfNull(subject);
+
+        Uri = uri;
+        Subject = subject;
+    }
+
+    /// <summary>
+    /// Gets the <see cref="AtUri"/> of the list item.
+    /// </summary>
+    [JsonRequired]
+    public AtUri Uri { get; init; }
+
+    /// <summary>
+    /// Gets a <see cref="ProfileView"/> of the actor the list item refers to.
+    /// </summary>
+    [JsonRequired]
+    public ProfileView Subject { get; init; }
+
+    [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+    private string DebuggerDisplay
+    {
+        get
         {
-            ArgumentNullException.ThrowIfNull(uri);
-            ArgumentNullException.ThrowIfNull(subject);
-
-            Uri = uri;
-            Subject = subject;
-        }
-
-        /// <summary>
-        /// Gets the <see cref="AtUri"/> of the list item.
-        /// </summary>
-        [JsonRequired]
-        public AtUri Uri { get; init; }
-
-        /// <summary>
-        /// Gets a <see cref="ProfileView"/> of the actor the list item refers to.
-        /// </summary>
-        [JsonRequired]
-        public ProfileView Subject { get; init; }
-
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private string DebuggerDisplay
-        {
-            get
-            {
-                return $"{{{Subject.Handle} => {Uri}}}";
-            }
+            return $"{{{Subject.Handle} => {Uri}}}";
         }
     }
 }

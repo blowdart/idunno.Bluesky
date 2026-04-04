@@ -1,108 +1,113 @@
 ﻿// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.Metrics;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using idunno.AtProto;
 
-namespace idunno.DidPlcDirectory
+namespace idunno.DidPlcDirectory;
+
+/// <summary>
+/// An agent proving operations for DID directory services.
+/// </summary>
+public sealed class DirectoryAgent : Agent
 {
+    internal static readonly Uri s_defaultDirectoryServer = new("https://plc.directory");
+
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly ILogger<DirectoryAgent> _logger;
+    private readonly IMeterFactory? _meterFactory;
+
+
     /// <summary>
-    /// An agent proving operations for DID directory services.
+    /// Creates a new instance of <see cref="DirectoryAgent"/>.
     /// </summary>
-    public sealed class DirectoryAgent : Agent
+    /// <param name="options">Any <see cref="DirectoryAgentOptions"/> to configure this instance with.</param>
+    public DirectoryAgent(
+        DirectoryAgentOptions? options = null) : base(options?.HttpClientOptions, null)
     {
-        internal static readonly Uri s_defaultDirectoryServer = new("https://plc.directory");
-
-        private readonly ILoggerFactory _loggerFactory;
-        private readonly ILogger<DirectoryAgent> _logger;
-
-        /// <summary>
-        /// Creates a new instance of <see cref="DirectoryAgent"/>.
-        /// </summary>
-        /// <param name="options">Any <see cref="DirectoryAgentOptions"/> to configure this instance with.</param>
-        public DirectoryAgent(
-            DirectoryAgentOptions? options = null) : base(options?.HttpClientOptions, null)
+        if (options is not null)
         {
-            if (options is not null)
-            {
-                PlcDirectory = options.PlcDirectoryUri;
-                _loggerFactory = options.LoggerFactory ?? NullLoggerFactory.Instance;
-            }
-            else
-            {
-                _loggerFactory = NullLoggerFactory.Instance;
-            }
-
-            _logger = _loggerFactory.CreateLogger<DirectoryAgent>();
+            PlcDirectory = options.PlcDirectoryUri;
+            _loggerFactory = options.LoggerFactory ?? NullLoggerFactory.Instance;
+        }
+        else
+        {
+            _loggerFactory = NullLoggerFactory.Instance;
         }
 
-        /// <summary>
-        /// Creates a new instance of <see cref="DirectoryAgent"/>.
-        /// </summary>
-        /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
-        /// <param name="options">Any <see cref="DirectoryAgentOptions"/> to configure this instance with.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClientFactory"/> is <see langword="null"/>.</exception>
-        public DirectoryAgent(
-            IHttpClientFactory httpClientFactory,
-            DirectoryAgentOptions? options = null) : base(httpClientFactory, null)
+        _logger = _loggerFactory.CreateLogger<DirectoryAgent>();
+
+        if (options?.MeterFactory is not null)
         {
-            ArgumentNullException.ThrowIfNull(HttpClientFactory);
+            _meterFactory = options.MeterFactory;
+        }
+    }
 
-            if (options is not null)
-            {
-                PlcDirectory = options.PlcDirectoryUri;
-                _loggerFactory = options.LoggerFactory ?? NullLoggerFactory.Instance;
-            }
-            else
-            {
-                _loggerFactory = NullLoggerFactory.Instance;
-            }
+    /// <summary>
+    /// Creates a new instance of <see cref="DirectoryAgent"/>.
+    /// </summary>
+    /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
+    /// <param name="options">Any <see cref="DirectoryAgentOptions"/> to configure this instance with.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClientFactory"/> is <see langword="null"/>.</exception>
+    public DirectoryAgent(
+        IHttpClientFactory httpClientFactory,
+        DirectoryAgentOptions? options = null) : base(httpClientFactory, null)
+    {
+        ArgumentNullException.ThrowIfNull(HttpClientFactory);
 
-            _logger = _loggerFactory.CreateLogger<DirectoryAgent>();
+        if (options is not null)
+        {
+            PlcDirectory = options.PlcDirectoryUri;
+            _loggerFactory = options.LoggerFactory ?? NullLoggerFactory.Instance;
+        }
+        else
+        {
+            _loggerFactory = NullLoggerFactory.Instance;
         }
 
-        /// <summary>
-        /// Gets the default directory server used to issue commands against.
-        /// </summary>
-        /// <value>
-        /// The default directory server used to issue commands against.
-        /// </value>
-        /// <remarks>
-        /// <para>This directory is ignored if the DID is a web DID.</para>
-        /// </remarks>
-        internal Uri PlcDirectory { get; } = s_defaultDirectoryServer;
+        _logger = _loggerFactory.CreateLogger<DirectoryAgent>();
 
-        /// <summary>
-        /// Gets the <see cref="DidDocument" /> for a <paramref name="did"/>.
-        /// </summary>
-        /// <param name="did">The DID to retrieve the DID Document for.</param>
-        /// <param name="directory">The directory server used to retrieve the <see cref="DidDocument" /> from. This is ignored if the <paramref name="did"/> is a web <see cref="Did"/>.</param>
-        /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>The task object representing the asynchronous operation.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
-        public async Task<AtProtoHttpResult<DidDocument>> ResolveDidDocument(Did did, Uri? directory = null, CancellationToken cancellationToken = default)
+        if (options?.MeterFactory is not null)
         {
-            ArgumentNullException.ThrowIfNull(did);
-
-            directory ??= PlcDirectory;
-
-            Logger.ResolveDidDocumentCalled(_logger, did, directory);
-
-            AtProtoHttpResult<DidDocument> result = await DirectoryServer.ResolveDidDocument(
-                did: did,
-                directory: directory,
-                httpClient: HttpClient,
-                loggerFactory: _loggerFactory,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            if (!result.Succeeded)
-            {
-                Logger.ResolveDidDocumentFailed(_logger, did, directory, result.StatusCode);
-            }
-
-            return result;
+            _meterFactory = options.MeterFactory;
         }
+    }
+
+    internal Uri PlcDirectory { get; } = s_defaultDirectoryServer;
+
+    /// <summary>
+    /// Gets the <see cref="DidDocument" /> for a <paramref name="did"/>.
+    /// </summary>
+    /// <param name="did">The DID to retrieve the DID Document for.</param>
+    /// <param name="directory">The directory server used to retrieve the <see cref="DidDocument" /> from. This is ignored if the <paramref name="did"/> is a web <see cref="Did"/>.</param>
+    /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
+    public async Task<AtProtoHttpResult<DidDocument>> ResolveDidDocument(Did did, Uri? directory = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(did);
+
+        directory ??= PlcDirectory;
+
+        Logger.ResolveDidDocumentCalled(_logger, did, directory);
+
+        AtProtoHttpResult<DidDocument> result = await DirectoryServer.ResolveDidDocument(
+            did: did,
+            directory: directory,
+            httpClient: HttpClient,
+            loggerFactory: _loggerFactory,
+            meterFactory: _meterFactory,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (!result.Succeeded)
+        {
+            Logger.ResolveDidDocumentFailed(_logger, did, directory, result.StatusCode);
+        }
+
+        return result;
     }
 }

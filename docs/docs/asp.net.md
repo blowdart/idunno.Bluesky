@@ -1,4 +1,4 @@
-# Using idunno.Bluesky with ASP.NET
+﻿# Using idunno.Bluesky with ASP.NET
 
 ## Enabling Logging
 
@@ -141,13 +141,13 @@ app configuration, for example
 
         "HttpClientOptions": {
             "ProxyUri": "http://localhost:8866/",
-            "CheckCertificateRevocationList" : false
+            "CheckCertificateRevocationList" : true
         }
     }
 }
 ```
 
 > [!WARNING]
-> It is likely that you will need to set `CheckCertificateRevocationList` to `false`, depending on how
+> You may need to set `CheckCertificateRevocationList` to `false`, depending on how
 > your proxy generates proxy HTTP certificates. This does introduce a security vulnerability and should not be
 > used on production systems, only during development.

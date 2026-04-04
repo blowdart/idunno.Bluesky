@@ -5,29 +5,28 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 
-namespace idunno.Bluesky.Feed.Gates
+namespace idunno.Bluesky.Feed.Gates;
+
+/// <summary>
+/// Thread gate rule specifying that replies are allowed from actors on a list.
+/// </summary>
+public record ListRule : ThreadGateRule
 {
     /// <summary>
-    /// Thread gate rule specifying that replies are allowed from actors on a list.
+    /// Creates a new instance of <see cref="ListRule"/>
     /// </summary>
-    public record ListRule : ThreadGateRule
+    /// <param name="list">The <see cref="AtUri"/> of the list of actors that will be able to reply.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> is <see langword="null"/>.</exception>
+    public ListRule(AtUri list)
     {
-        /// <summary>
-        /// Creates a new instance of <see cref="ListRule"/>
-        /// </summary>
-        /// <param name="list">The <see cref="AtUri"/> of the list of actors that will be able to reply.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="list"/> is <see langword="null"/>.</exception>
-        public ListRule(AtUri list)
-        {
-            ArgumentNullException.ThrowIfNull(list);
-            List = list;
-        }
-
-        /// <summary>
-        /// Gets the <see cref="AtUri"/> of the list of actors that will be able to reply.
-        /// </summary>
-        [JsonInclude]
-        [JsonRequired]
-        public AtUri List { get; init; }
+        ArgumentNullException.ThrowIfNull(list);
+        List = list;
     }
+
+    /// <summary>
+    /// Gets the <see cref="AtUri"/> of the list of actors that will be able to reply.
+    /// </summary>
+    [JsonInclude]
+    [JsonRequired]
+    public AtUri List { get; init; }
 }

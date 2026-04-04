@@ -4,18 +4,17 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Actor.Model
-{
-    [SuppressMessage("Performance", "CA1812", Justification = "Used in GetPreferences")]
-    internal sealed record GetPreferencesResponse
-    {
-        [JsonConstructor]
-        public GetPreferencesResponse(Preference[] preferences)
-        {
-            Preferences = preferences;
-        }
+namespace idunno.Bluesky.Actor.Model;
 
-        [JsonInclude]
-        public Preference[] Preferences { get; init; }
+[SuppressMessage("Performance", "CA1812", Justification = "Used in GetPreferences")]
+internal sealed record GetPreferencesResponse
+{
+    [JsonConstructor]
+    public GetPreferencesResponse(Preference[] preferences)
+    {
+        Preferences = preferences;
     }
+
+    [JsonInclude]
+    public Preference[] Preferences { get; init; }
 }

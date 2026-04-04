@@ -1,4 +1,4 @@
-# <a name="connecting">Connecting to Bluesky</a>
+﻿# <a name="connecting">Connecting to Bluesky</a>
 
 ## <a name="usernamesAndPasswords">Authenticating with handles and passwords</a>
 
@@ -112,6 +112,27 @@ OAuthLoginState oAuthLoginState = uriBuilderOAuthClient.State;
 // a redirection for web application or spawning a browser for a desktop application.
 ```
 
+> [!WARNING]
+> `AtProtoAgent.BuildOAuth2LoginUri` uses discovery mechanisms to resolve the PDS `Uri` and the Authorization Server `Uri`
+> for the specified handle. A malicious user could supply a handle which returns URIs that point to internal
+> host names or malicious authorization servers. A malicious PDS resolution would cause your application to issue
+> requests to the `.well-known/oauth-protected-resource` path against a host name they control.
+> A malicious authorization server would redirect the user to login on an authorization server under attacker control,
+> but at that point the malicious user is redirecting themselves. Neither of these feel particularly concerning,
+> but you should be aware of the possibility if you are writing an application that could be hosted with a
+> corporate environment.
+>
+> `AtProtoAgent.BuildOAuth2LoginUri` accepts two optional parameters, `validatePds` and `validateAuthorizationServer` which
+> are both callback methods which you can use to validate the URIs discovered during the building of an OAuth2
+> login URI. You can use this methods to mitigate against
+> [SSRF](https://owasp.org/www-community/attacks/Server_Side_Request_Forgery) attacks and/or to validate
+> the authorization server is one you expect.
+>
+> A default implementation of discovery validation (`SecurityHelpers.DefaultDiscoveryUriValidator`)
+> which rejects any PDS or authorization server that doesn't resolve to a public and safe IP address when
+> `BuildOAuth2LoginUri` is called without a `validatePds` or `validateAuthorizationServer` callback,
+> or with either of those parameters set to null and the `validateDiscoveredEndpoints` option set to `true`.
+
 When the user returns to your application you take the callback data returned from the OAuth server and process it
 
 ```
@@ -219,13 +240,11 @@ You should set the `HttpClientOptions` `HttpUserAgent` property to be a value in
 
 The `HttpClientOptions` `ProxyUri` property allows you to set an proxy to be used by the agent when making outgoing HTTP requests.
 If you are using a debugging proxy such as [Fiddler](https://www.telerik.com/fiddler) or [Burp Suite](https://portswigger.net/burp) it is
-likely that you will also need to set the `CheckCertificateRevocationList` property to `false`, 
+likely may also need to set the `CheckCertificateRevocationList` property to `false`, 
 
 > [!CAUTION]
-> Setting `CheckCertificateRevocationList` property on `HttpClientOptions` to `false` is dangerous, as the client will no longer check if the
-HTTPS certificate on any server it connects to has been revoked.
-> 
-> Only use set this to `false` when you are using a debugging proxy which does not support CRLs.
+> Setting `CheckCertificateRevocationList` property on `HttpClientOptions` to `false` is dangerous,
+> as the client will no longer check if the HTTPS certificate on any server it connects to has been revoked.
 
 ```c#
 // Disabling certification revocation list checks can introduce security vulnerabilities.

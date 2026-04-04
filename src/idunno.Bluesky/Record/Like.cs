@@ -6,46 +6,48 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto.Repo;
 
-namespace idunno.Bluesky.Record
+namespace idunno.Bluesky.Record;
+
+/// <summary>
+/// Encapsulates the information needed to create a like record.
+/// </summary>
+[SuppressMessage("Naming", "CA1716:Identifiers should not match keywords", Justification = "It's like in the Bluesky lexicon.")]
+[JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
+                 UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+[JsonDerivedType(typeof(Like), typeDiscriminator: RecordType.Like)]
+public record Like : BlueskyTimestampedRecord
 {
     /// <summary>
-    /// Encapsulates the information needed to create a like record.
+    /// Creates a new instance of <see cref="Like"/> with <see cref="BlueskyTimestampedRecord.CreatedAt"/> set to the current date and time.
     /// </summary>
-    [SuppressMessage("Naming", "CA1716:Identifiers should not match keywords", Justification = "It's like in the Bluesky lexicon.")]
-    public sealed record Like : BlueskyTimestampedRecord
+    /// <param name="subject">The <see cref="StrongReference"/> to the post to be liked.</param>
+    /// <param name="via">An optional <see cref="StrongReference"/> to a repost record, if the like is of a repost.</param>
+    public Like(StrongReference subject, StrongReference? via = null) : this(subject, DateTimeOffset.UtcNow, via)
     {
-        /// <summary>
-        /// Creates a new instance of <see cref="Like"/> with <see cref="BlueskyTimestampedRecord.CreatedAt"/> set to the current date and time.
-        /// </summary>
-        /// <param name="subject">The <see cref="StrongReference"/> to the post to be liked.</param>
-        /// <param name="via">An optional <see cref="StrongReference"/> to a repost record, if the like is of a repost.</param>
-        public Like(StrongReference subject, StrongReference? via = null) : this(subject, DateTimeOffset.UtcNow, via)
-        {
-        }
-
-        /// <summary>
-        /// Creates a new instance of <see cref="Like"/>.
-        /// </summary>
-        /// <param name="subject">The <see cref="StrongReference"/> to the post to be liked.</param>
-        /// <param name="createdAt">The <see cref="DateTimeOffset"/> for the repost creation date.</param>
-        /// <param name="via">An optional <see cref="StrongReference"/> to a repost record, if the like is of a repost.</param>
-        [JsonConstructor]
-        public Like(StrongReference subject, DateTimeOffset createdAt, StrongReference? via = null) : base(createdAt)
-        {
-            Subject = subject;
-            Via = via;
-        }
-
-        /// <summary>
-        /// Gets the <see cref="StrongReference"/> to the record to be reposted.
-        /// </summary>
-        [JsonInclude]
-        public StrongReference Subject { get; init; }
-
-        /// <summary>
-        /// Gets the <see cref="StrongReference"/> to the repost record, if the like is of a repost.
-        /// </summary>
-        [JsonInclude]
-        public StrongReference? Via { get; init; }
     }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="Like"/>.
+    /// </summary>
+    /// <param name="subject">The <see cref="StrongReference"/> to the post to be liked.</param>
+    /// <param name="createdAt">The <see cref="DateTimeOffset"/> for the repost creation date.</param>
+    /// <param name="via">An optional <see cref="StrongReference"/> to a repost record, if the like is of a repost.</param>
+    [JsonConstructor]
+    public Like(StrongReference subject, DateTimeOffset createdAt, StrongReference? via = null) : base(createdAt)
+    {
+        Subject = subject;
+        Via = via;
+    }
+
+    /// <summary>
+    /// Gets the <see cref="StrongReference"/> to the record to be reposted.
+    /// </summary>
+    [JsonInclude]
+    public StrongReference Subject { get; init; }
+
+    /// <summary>
+    /// Gets the <see cref="StrongReference"/> to the repost record, if the like is of a repost.
+    /// </summary>
+    [JsonInclude]
+    public StrongReference? Via { get; init; }
 }

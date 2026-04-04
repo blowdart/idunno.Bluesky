@@ -3,19 +3,18 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Chat.Model
+namespace idunno.Bluesky.Chat.Model;
+
+internal sealed record SendMessageBatchRequest
 {
-    internal sealed record SendMessageBatchRequest
+    public SendMessageBatchRequest(ICollection<BatchedMessage> batchedMessages)
     {
-        public SendMessageBatchRequest(ICollection<BatchedMessage> batchedMessages)
-        {
-            ArgumentNullException.ThrowIfNull(batchedMessages);
+        ArgumentNullException.ThrowIfNull(batchedMessages);
 
-            Items = batchedMessages;
-        }
-
-        [JsonInclude]
-        [JsonRequired]
-        public ICollection<BatchedMessage> Items { get; init; }
+        Items = batchedMessages;
     }
+
+    [JsonInclude]
+    [JsonRequired]
+    public ICollection<BatchedMessage> Items { get; init; }
 }

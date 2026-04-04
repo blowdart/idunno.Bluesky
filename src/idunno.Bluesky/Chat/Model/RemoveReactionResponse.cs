@@ -3,17 +3,16 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Chat.Model
-{
-    internal record AddReactionResponse
-    {
-        public AddReactionResponse(MessageView message)
-        {
-            Message = message;
-        }
+namespace idunno.Bluesky.Chat.Model;
 
-        [JsonInclude]
-        [JsonRequired]
-        public MessageView Message { get; init; }
+internal record AddReactionResponse
+{
+    public AddReactionResponse(MessageView message)
+    {
+        Message = message;
     }
+
+    [JsonInclude]
+    [JsonRequired]
+    public MessageView Message { get; init; }
 }

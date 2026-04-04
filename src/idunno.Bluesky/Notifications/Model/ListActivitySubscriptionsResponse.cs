@@ -3,9 +3,8 @@
 
 using idunno.Bluesky.Actor;
 
-namespace idunno.Bluesky.Notifications.Model
+namespace idunno.Bluesky.Notifications.Model;
+
+internal sealed record ListActivitySubscriptionsResponse(IList<ProfileView> Subscriptions, string? Cursor)
 {
-    internal sealed record ListActivitySubscriptionsResponse(IList<ProfileView> Subscriptions, string? Cursor)
-    {
-    }
 }

@@ -3,21 +3,20 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Drafts.Model
+namespace idunno.Bluesky.Drafts.Model;
+
+internal sealed record GetDraftsResponse
 {
-    internal sealed record GetDraftsResponse
+    [JsonConstructor]
+    public GetDraftsResponse(IList<DraftView> drafts, string? cursor)
     {
-        [JsonConstructor]
-        public GetDraftsResponse(IList<DraftView> drafts, string? cursor)
-        {
-            ArgumentNullException.ThrowIfNull(drafts);
-            Drafts = drafts;
-            Cursor = cursor;
-        }
-
-        [JsonRequired]
-        public IList<DraftView> Drafts { get; init; }
-
-        public string? Cursor { get; init; }
+        ArgumentNullException.ThrowIfNull(drafts);
+        Drafts = drafts;
+        Cursor = cursor;
     }
+
+    [JsonRequired]
+    public IList<DraftView> Drafts { get; init; }
+
+    public string? Cursor { get; init; }
 }

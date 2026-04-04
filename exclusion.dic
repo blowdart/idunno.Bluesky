@@ -75,3 +75,6 @@ webp
 avif
 heic
 heif
+xrpc
+atprotohttpclient
+Ssrf

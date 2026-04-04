@@ -6,19 +6,18 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 
-namespace idunno.Bluesky.Graph.Model
-{
-    [SuppressMessage("Performance", "CA1812", Justification = "Used in MuteActor.")]
-    internal sealed record MuteActorListRequest
-    {
-        public MuteActorListRequest(AtUri listUri)
-        {
-            ListUri = listUri;
-        }
+namespace idunno.Bluesky.Graph.Model;
 
-        [JsonInclude]
-        [JsonRequired]
-        [JsonPropertyName("list")]
-        public AtUri ListUri { get; init; }
+[SuppressMessage("Performance", "CA1812", Justification = "Used in MuteActor.")]
+internal sealed record MuteActorListRequest
+{
+    public MuteActorListRequest(AtUri listUri)
+    {
+        ListUri = listUri;
     }
+
+    [JsonInclude]
+    [JsonRequired]
+    [JsonPropertyName("list")]
+    public AtUri ListUri { get; init; }
 }

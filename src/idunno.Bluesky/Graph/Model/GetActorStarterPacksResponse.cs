@@ -3,18 +3,17 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Graph.Model
+namespace idunno.Bluesky.Graph.Model;
+
+internal sealed record GetActorStarterPacksResponse
 {
-    internal sealed record GetActorStarterPacksResponse
+    public GetActorStarterPacksResponse(IReadOnlyList<StarterPackViewBasic> starterPacks)
     {
-        public GetActorStarterPacksResponse(IReadOnlyList<StarterPackViewBasic> starterPacks)
-        {
-            StarterPacks = starterPacks;
-        }
-
-        [JsonRequired]
-        public IReadOnlyList<StarterPackViewBasic> StarterPacks { get; init; }
-
-        public string? Cursor { get; init; }
+        StarterPacks = starterPacks;
     }
+
+    [JsonRequired]
+    public IReadOnlyList<StarterPackViewBasic> StarterPacks { get; init; }
+
+    public string? Cursor { get; init; }
 }
