@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics;
@@ -34,16 +34,7 @@ namespace idunno.AtProto;
 public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? loggerFactory = null, IMeterFactory? meterFactory = null)
 {
     readonly SocketsHttpHandler _defaultClientHandler = SsrfSocketsHttpHandlerFactory.Create(
-                        connectionStrategy: ConnectionStrategy.None,
-                        additionalUnsafeNetworks: null,
-                        additionalUnsafeIpAddresses: null,
-                        connectTimeout: null,
-                        allowInsecureProtocols: false,
-                        allowLoopback: false,
-                        failMixedResults: true,
-                        allowAutoRedirect: false,
                         automaticDecompression: DecompressionMethods.All,
-                        sslOptions: null,
                         loggerFactory: loggerFactory);
 
     private readonly AtProtoHttpClient<string> _internalClient = new(

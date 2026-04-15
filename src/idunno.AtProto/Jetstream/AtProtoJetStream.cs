@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -695,26 +695,12 @@ public class AtProtoJetstream : IDisposable
         return httpClientOptions?.ProxyUri is not null
             ? new ProxiedSsrfDelegatingHandler(
                 proxy: new WebProxy(httpClientOptions.ProxyUri),
-                connectionStrategy: ConnectionStrategy.None,
-                additionalUnsafeNetworks: null,
-                additionalUnsafeIpAddresses: null,
                 connectTimeout: httpClientOptions?.Timeout,
-                allowInsecureProtocols: false,
-                allowLoopback: false,
-                failMixedResults: true,
-                allowAutoRedirect: false,
                 automaticDecompression: DecompressionMethods.All,
                 sslOptions: sslOptions,
                 loggerFactory: LoggerFactory)
             : SsrfSocketsHttpHandlerFactory.Create(
-                connectionStrategy: ConnectionStrategy.None,
-                additionalUnsafeNetworks: null,
-                additionalUnsafeIpAddresses: null,
                 connectTimeout: httpClientOptions?.Timeout,
-                allowInsecureProtocols: false,
-                allowLoopback: false,
-                failMixedResults: true,
-                allowAutoRedirect: false,
                 automaticDecompression: DecompressionMethods.All,
                 sslOptions: sslOptions,
                 loggerFactory: LoggerFactory);

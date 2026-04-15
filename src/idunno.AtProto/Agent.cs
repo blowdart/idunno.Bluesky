@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Net;
@@ -173,18 +173,10 @@ public abstract class Agent : IDisposable
 
         SsrfOptions options = new()
         {
-            ConnectionStrategy = ConnectionStrategy.None,
-            AdditionalUnsafeNetworks = [],
-            AdditionalUnsafeIpAddresses = [],
             ConnectTimeout = _httpClientOptions?.Timeout,
-            AllowInsecureProtocols = false,
-            AllowLoopback = false,
-            FailMixedResults = true,
-            AllowAutoRedirect = false,
             AutomaticDecompression = DecompressionMethods.All,
             SslOptions = sslOptions
         };
-
 
         if (_httpClientOptions?.ProxyUri is not null)
         {

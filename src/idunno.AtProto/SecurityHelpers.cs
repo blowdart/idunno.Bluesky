@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Net;
@@ -56,7 +56,7 @@ internal sealed class SecurityHelpers
         {
             var ipAddress = IPAddress.Parse(uri.Host);
 
-            if (Ssrf.IsUnsafeIpAddress(ipAddress, allowLoopback))
+            if (Ssrf.IsUnsafeIpAddress(ipAddress, allowLoopback: allowLoopback))
             {
                 Logger.UnsafeIpAddress(logger, uri, ipAddress);
                 return false;
@@ -79,7 +79,7 @@ internal sealed class SecurityHelpers
 
             foreach (IPAddress ipAddress in hostEntry.AddressList)
             {
-                if (Ssrf.IsUnsafeIpAddress(ipAddress, allowLoopback))
+                if (Ssrf.IsUnsafeIpAddress(ipAddress, allowLoopback: allowLoopback))
                 {
                     Logger.UnsafeIpAddress(logger, uri, ipAddress);
                     discoveredUnsafeIPAddress = true;
