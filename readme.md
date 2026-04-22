@@ -1,4 +1,4 @@
-﻿# ![The Bluesky butterfly logo, except in purple](docs/docicon.png)idunno.Bluesky - .NET SDK for Bluesky.
+# ![The Bluesky butterfly logo, except in purple](docs/docicon.png)idunno.Bluesky - .NET SDK for Bluesky.
 
 A .NET 8, 9 and 10 library and SDK for [Bluesky](https://bsky.social/) and the [AT Protocol](https://docs.bsky.app/docs/api/at-protocol-xrpc-api)
 
@@ -89,37 +89,16 @@ If you want to give me the warm fuzzies, you can tag me on Bluesky at [@blowdart
 The [releases page](https://github.com/blowdart/idunno.Bluesky/releases) provides details of each release and what was added, changed or removed.
 The [changelog](CHANGELOG.md) also contains this information, as well as information on upcoming releases.
 
-## Release Verification
+## Code Signing and Verification
 
-The project uses an Authenticode certificate to sign assemblies and to author sign the nupkg packages.
-nuget validates the signatures during its publication process.
+The project uses an Authenticode certificate to sign assemblies contained in the NuGet packages and to
+also author sign the nupkg package itself.
+NuGet verifies the signatures during the publication process and during
+[package installation on Windows and Linux](https://learn.microsoft.com/en-us/dotnet/core/tools/nuget-signed-package-verification).
 
-To validate these signatures use
-
-```
-dotnet nuget verify [<package-path(s)>]
-```
-
-The subject name of the signing certificate should be
-
-```
-Subject Name: CN=Barry Dorrans, O=Barry Dorrans, L=Bothell, S=Washington, C=US
-```
-
-In addition, GitHub artifacts are attested during build,
-and are also signed with [minisign](https://github.com/jedisct1/minisign) with the following public key.
-
-```
-RWTsT4BHHChe/Rj/GBAuZHg3RaZFnfBDqaZ7KzLvr44a7mO6fLCxSAFc
-```
-
-To validate a file using an artifact signature from a [release](https://github.com/blowdart/idunno.Bluesky/releases)
-download the `.nupkg` from nuget and the appropriate `.minisig` from the release page, then use the following command,
-replacing `<package-path>` with the file name you wish to verify.
-
-```
-minisign -Vm <package-path> -P RWTsT4BHHChe/Rj/GBAuZHg3RaZFnfBDqaZ7KzLvr44a7mO6fLCxSAFc
-```
+Instructions for validating signatures of my .NET assemblies, NuGet packages and Windows executables can be found in the
+[Code Signing Information](https://github.com/blowdart/#%EF%B8%8F-code-signing-information) page on my
+[GitHub profile](https://github.com/blowdart).
 
 ## Pre-releases
 

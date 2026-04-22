@@ -2,7 +2,7 @@ Write-Host 'Always wise to purge the rabble'
 
 $folderNames = 'obj', 'bin', 'CoverageResults', 'TestResult', 'TestResult*'
 foreach ($folderName in $folderNames) {
-    $folders = Get-ChildItem -Path $foldername -recurse
+    $folders = Get-ChildItem -Path . -Directory -Recurse -Filter $folderName
     foreach ($folder in $folders) {
         if (Test-Path $folder.FullName)
         {
@@ -14,12 +14,12 @@ foreach ($folderName in $folderNames) {
 
 $fileNames = 'coverage*.json', 'coverage*.xml', 'coverage*.info', '*.nupkg', '*.snupkg'
 foreach ($fileName in $fileNames) {
-    $files = Get-ChildItem $fileName -recurse
+    $files = Get-ChildItem -Path . -File -Recurse -Filter $fileName -ErrorAction SilentlyContinue
     foreach ($file in $files)
     {
-        if (Test-Path file.FullName)
+        if (Test-Path $file.FullName)
         {
-          Write-Host 'Deleting ' file.FullName;
+          Write-Host 'Deleting ' $file.FullName;
           Remove-Item -Path $file.FullName -recurse -Force
         }
     }
