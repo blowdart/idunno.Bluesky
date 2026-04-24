@@ -1,4 +1,10 @@
-﻿# Version History
+# Version History
+
+## 1.8.1 - 2026-04-23
+
+### Changed
+
+* Updated OpenTelemetry dependencies to address [CVE-2026-40894 - OpenTelemetry dotnet: Excessive memory allocation when parsing OpenTelemetry propagation headers](https://nvd.nist.gov/vuln/detail/CVE-2026-40894)
 
 ## 1.8.0 - 2026-04-04
 
