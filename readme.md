@@ -97,7 +97,7 @@ NuGet verifies the signatures during the publication process and during
 [package installation on Windows and Linux](https://learn.microsoft.com/en-us/dotnet/core/tools/nuget-signed-package-verification).
 
 Instructions for validating signatures of my .NET assemblies, NuGet packages and Windows executables can be found in the
-[Code Signing Information](https://github.com/blowdart/#%EF%B8%8F-code-signing-information) page on my
+[Code Signing Information](https://github.com/blowdart/code-signing-information) page on my
 [GitHub profile](https://github.com/blowdart).
 
 ## Pre-releases
