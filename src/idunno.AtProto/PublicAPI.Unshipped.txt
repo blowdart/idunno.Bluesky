@@ -1,1 +1,186 @@
-﻿#nullable enable
+#nullable enable
+idunno.AtProto.FireHose.AccountPayload
+idunno.AtProto.FireHose.AccountPayload.AccountPayload(long Seq, idunno.AtProto.Did! Did, System.DateTimeOffset Time, bool Active, string? Status) -> void
+idunno.AtProto.FireHose.AccountPayload.Active.get -> bool
+idunno.AtProto.FireHose.AccountPayload.Active.init -> void
+idunno.AtProto.FireHose.AccountPayload.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.FireHose.AccountPayload.Did.init -> void
+idunno.AtProto.FireHose.AccountPayload.Seq.get -> long
+idunno.AtProto.FireHose.AccountPayload.Seq.init -> void
+idunno.AtProto.FireHose.AccountPayload.Status.get -> string?
+idunno.AtProto.FireHose.AccountPayload.Status.init -> void
+idunno.AtProto.FireHose.AccountPayload.Time.get -> System.DateTimeOffset
+idunno.AtProto.FireHose.AccountPayload.Time.init -> void
+idunno.AtProto.FireHose.AtContentAddressableArchive
+idunno.AtProto.FireHose.AtContentAddressableArchive.RawData.get -> System.ReadOnlyMemory<byte>
+idunno.AtProto.FireHose.AtContentAddressableArchive.Roots.get -> System.Collections.Generic.IEnumerable<idunno.AtProto.Cid!>!
+idunno.AtProto.FireHose.AtContentAddressableArchive.Version.get -> long
+idunno.AtProto.FireHose.AtProtoFireHose
+idunno.AtProto.FireHose.AtProtoFireHose.AtProtoFireHose(System.Uri? uri = null, idunno.AtProto.FireHose.FireHoseOptions? options = null, idunno.AtProto.WebSocketOptions? webSocketOptions = null) -> void
+idunno.AtProto.FireHose.AtProtoFireHose.ClientWebSocket.get -> System.Net.WebSockets.ClientWebSocket!
+idunno.AtProto.FireHose.AtProtoFireHose.CloseAsync(System.Net.WebSockets.WebSocketCloseStatus status = System.Net.WebSockets.WebSocketCloseStatus.NormalClosure, string! statusDescription = "Client disconnect", System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+idunno.AtProto.FireHose.AtProtoFireHose.ConnectionStateChanged -> System.EventHandler<idunno.AtProto.FireHose.Events.ConnectionStateChangedEventArgs!>?
+idunno.AtProto.FireHose.AtProtoFireHose.ConnectToRepoMessagesAsync(System.DateTimeOffset startFrom) -> System.Threading.Tasks.Task!
+idunno.AtProto.FireHose.AtProtoFireHose.ConnectToRepoMessagesAsync(System.DateTimeOffset startFrom, System.Collections.Generic.ICollection<idunno.AtProto.Nsid!>? collections, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+idunno.AtProto.FireHose.AtProtoFireHose.ConnectToRepoMessagesAsync(System.DateTimeOffset startFrom, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+idunno.AtProto.FireHose.AtProtoFireHose.ConnectToRepoMessagesAsync(System.Uri? uri = null, long? cursor = null, System.Collections.Generic.ICollection<idunno.AtProto.Nsid!>? collections = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+idunno.AtProto.FireHose.AtProtoFireHose.ConnectToRepoMessagesAsync(System.Uri? uri, System.DateTimeOffset startFrom, System.Collections.Generic.ICollection<idunno.AtProto.Nsid!>? collections, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+idunno.AtProto.FireHose.AtProtoFireHose.DisconnectedGracefully.get -> bool
+idunno.AtProto.FireHose.AtProtoFireHose.Dispose() -> void
+idunno.AtProto.FireHose.AtProtoFireHose.FaultRaised -> System.EventHandler<idunno.AtProto.FireHose.Events.FaultRaisedEventArgs!>?
+idunno.AtProto.FireHose.AtProtoFireHose.IsConnected.get -> bool
+idunno.AtProto.FireHose.AtProtoFireHose.LogFault(string! fault = "Unspecified fault") -> void
+idunno.AtProto.FireHose.AtProtoFireHose.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory!
+idunno.AtProto.FireHose.AtProtoFireHose.LoggerFactory.init -> void
+idunno.AtProto.FireHose.AtProtoFireHose.MessageLastReceived.get -> System.DateTimeOffset?
+idunno.AtProto.FireHose.AtProtoFireHose.MessageReceived -> System.EventHandler<idunno.AtProto.FireHose.Events.MessageReceivedEventArgs!>?
+idunno.AtProto.FireHose.AtProtoFireHose.Options.get -> idunno.AtProto.FireHose.FireHoseOptions!
+idunno.AtProto.FireHose.AtProtoFireHose.Options.init -> void
+idunno.AtProto.FireHose.AtProtoFireHose.RepoMessageReceived -> System.EventHandler<idunno.AtProto.FireHose.Events.RepoMessageReceivedEventArgs!>?
+idunno.AtProto.FireHose.AtProtoFireHose.State.get -> System.Net.WebSockets.WebSocketState
+idunno.AtProto.FireHose.CborObjectExtensions
+idunno.AtProto.FireHose.CommitPayload
+idunno.AtProto.FireHose.CommitPayload.Blobs.get -> System.Collections.Generic.IEnumerable<idunno.AtProto.Cid!>!
+idunno.AtProto.FireHose.CommitPayload.Blocks.get -> idunno.AtProto.FireHose.AtContentAddressableArchive?
+idunno.AtProto.FireHose.CommitPayload.Commit.get -> idunno.AtProto.Cid!
+idunno.AtProto.FireHose.CommitPayload.CommitPayload(long seq, bool rebase, bool tooBig, idunno.AtProto.Did! repo, idunno.AtProto.Cid! commit, idunno.AtProto.RecordKey? rev, idunno.AtProto.RecordKey? since, System.ReadOnlyMemory<byte>? rawBlocks, System.Collections.Generic.IEnumerable<idunno.AtProto.FireHose.RepoOp!>! ops, System.Collections.Generic.IEnumerable<idunno.AtProto.Cid!>! blobs, idunno.AtProto.Cid? prevData, System.DateTimeOffset time) -> void
+idunno.AtProto.FireHose.CommitPayload.Ops.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.FireHose.RepoOp!>!
+idunno.AtProto.FireHose.CommitPayload.PrevData.get -> idunno.AtProto.Cid?
+idunno.AtProto.FireHose.CommitPayload.RawBlocks.get -> System.ReadOnlyMemory<byte>?
+idunno.AtProto.FireHose.CommitPayload.Rebase.get -> bool
+idunno.AtProto.FireHose.CommitPayload.Repo.get -> idunno.AtProto.Did!
+idunno.AtProto.FireHose.CommitPayload.Rev.get -> idunno.AtProto.RecordKey?
+idunno.AtProto.FireHose.CommitPayload.Seq.get -> long
+idunno.AtProto.FireHose.CommitPayload.Since.get -> idunno.AtProto.RecordKey?
+idunno.AtProto.FireHose.CommitPayload.Time.get -> System.DateTimeOffset
+idunno.AtProto.FireHose.CommitPayload.TooBig.get -> bool
+idunno.AtProto.FireHose.ContentAddressableArchiveException
+idunno.AtProto.FireHose.ContentAddressableArchiveException.ContentAddressableArchiveException() -> void
+idunno.AtProto.FireHose.ContentAddressableArchiveException.ContentAddressableArchiveException(string! message) -> void
+idunno.AtProto.FireHose.ContentAddressableArchiveException.ContentAddressableArchiveException(string! message, System.Exception! inner) -> void
+idunno.AtProto.FireHose.Events.ConnectionStateChangedEventArgs
+idunno.AtProto.FireHose.Events.ConnectionStateChangedEventArgs.ConnectionStateChangedEventArgs(System.Net.WebSockets.WebSocketState state) -> void
+idunno.AtProto.FireHose.Events.ConnectionStateChangedEventArgs.State.get -> System.Net.WebSockets.WebSocketState
+idunno.AtProto.FireHose.Events.FaultRaisedEventArgs
+idunno.AtProto.FireHose.Events.FaultRaisedEventArgs.Fault.get -> string!
+idunno.AtProto.FireHose.Events.FaultRaisedEventArgs.FaultRaisedEventArgs(string! fault) -> void
+idunno.AtProto.FireHose.Events.MessageReceivedEventArgs
+idunno.AtProto.FireHose.Events.MessageReceivedEventArgs.Message.get -> System.ReadOnlyMemory<byte>
+idunno.AtProto.FireHose.Events.MessageReceivedEventArgs.MessageReceivedEventArgs(byte[]! message) -> void
+idunno.AtProto.FireHose.Events.RepoMessageReceivedEventArgs
+idunno.AtProto.FireHose.Events.RepoMessageReceivedEventArgs.Header.get -> idunno.AtProto.FireHose.FrameHeader!
+idunno.AtProto.FireHose.Events.RepoMessageReceivedEventArgs.Payload.get -> idunno.AtProto.FireHose.IFramePayload?
+idunno.AtProto.FireHose.Events.RepoMessageReceivedEventArgs.RepoMessageReceivedEventArgs(idunno.AtProto.FireHose.FrameHeader! header, idunno.AtProto.FireHose.IFramePayload? framePayload) -> void
+idunno.AtProto.FireHose.FireHoseOptions
+idunno.AtProto.FireHose.FireHoseOptions.BufferSize.get -> int
+idunno.AtProto.FireHose.FireHoseOptions.BufferSize.init -> void
+idunno.AtProto.FireHose.FireHoseOptions.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory?
+idunno.AtProto.FireHose.FireHoseOptions.LoggerFactory.set -> void
+idunno.AtProto.FireHose.FireHoseOptions.MaxMessageSize.get -> int
+idunno.AtProto.FireHose.FireHoseOptions.MaxMessageSize.init -> void
+idunno.AtProto.FireHose.FireHoseOptions.MeterFactory.get -> System.Diagnostics.Metrics.IMeterFactory?
+idunno.AtProto.FireHose.FireHoseOptions.MeterFactory.set -> void
+idunno.AtProto.FireHose.FireHoseOptions.TaskFactory.get -> System.Threading.Tasks.TaskFactory!
+idunno.AtProto.FireHose.FireHoseOptions.TaskFactory.init -> void
+idunno.AtProto.FireHose.FrameBody<T>
+idunno.AtProto.FireHose.FrameBody<T>.FrameBody(T Value) -> void
+idunno.AtProto.FireHose.FrameBody<T>.Value.get -> T
+idunno.AtProto.FireHose.FrameBody<T>.Value.init -> void
+idunno.AtProto.FireHose.FrameError
+idunno.AtProto.FireHose.FrameError.Error.get -> string?
+idunno.AtProto.FireHose.FrameError.Error.init -> void
+idunno.AtProto.FireHose.FrameError.FrameError(string? Error, string? Message) -> void
+idunno.AtProto.FireHose.FrameError.Message.get -> string?
+idunno.AtProto.FireHose.FrameError.Message.init -> void
+idunno.AtProto.FireHose.FrameHeader
+idunno.AtProto.FireHose.FrameHeader.FrameHeader(PeterO.Cbor.CBORObject! cborObject) -> void
+idunno.AtProto.FireHose.FrameHeader.Operation.get -> idunno.AtProto.FireHose.HeaderOperation
+idunno.AtProto.FireHose.FrameHeader.Operation.init -> void
+idunno.AtProto.FireHose.FrameHeader.Type.get -> string?
+idunno.AtProto.FireHose.FrameHeader.Type.init -> void
+idunno.AtProto.FireHose.HandlePayload
+idunno.AtProto.FireHose.HandlePayload.Did.get -> idunno.AtProto.Did?
+idunno.AtProto.FireHose.HandlePayload.Did.init -> void
+idunno.AtProto.FireHose.HandlePayload.Handle.get -> idunno.AtProto.Handle?
+idunno.AtProto.FireHose.HandlePayload.Handle.init -> void
+idunno.AtProto.FireHose.HandlePayload.HandlePayload(idunno.AtProto.Did? Did, long Seq, idunno.AtProto.Handle? Handle, System.DateTimeOffset Time) -> void
+idunno.AtProto.FireHose.HandlePayload.Seq.get -> long
+idunno.AtProto.FireHose.HandlePayload.Seq.init -> void
+idunno.AtProto.FireHose.HandlePayload.Time.get -> System.DateTimeOffset
+idunno.AtProto.FireHose.HandlePayload.Time.init -> void
+idunno.AtProto.FireHose.HeaderOperation
+idunno.AtProto.FireHose.HeaderOperation.Error = -1 -> idunno.AtProto.FireHose.HeaderOperation
+idunno.AtProto.FireHose.HeaderOperation.Frame = 1 -> idunno.AtProto.FireHose.HeaderOperation
+idunno.AtProto.FireHose.HeaderOperation.Unknown = 0 -> idunno.AtProto.FireHose.HeaderOperation
+idunno.AtProto.FireHose.ICborConvertor<T>
+idunno.AtProto.FireHose.ICborConvertor<T>.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> T!
+idunno.AtProto.FireHose.IdentityPayload
+idunno.AtProto.FireHose.IdentityPayload.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.FireHose.IdentityPayload.Did.init -> void
+idunno.AtProto.FireHose.IdentityPayload.Handle.get -> idunno.AtProto.Handle?
+idunno.AtProto.FireHose.IdentityPayload.Handle.init -> void
+idunno.AtProto.FireHose.IdentityPayload.IdentityPayload(long Seq, idunno.AtProto.Did! Did, System.DateTimeOffset Time, idunno.AtProto.Handle? Handle) -> void
+idunno.AtProto.FireHose.IdentityPayload.Seq.get -> long
+idunno.AtProto.FireHose.IdentityPayload.Seq.init -> void
+idunno.AtProto.FireHose.IdentityPayload.Time.get -> System.DateTimeOffset
+idunno.AtProto.FireHose.IdentityPayload.Time.init -> void
+idunno.AtProto.FireHose.IFramePayload
+idunno.AtProto.FireHose.InfoPayload
+idunno.AtProto.FireHose.InfoPayload.InfoPayload(string! Name, string? Message) -> void
+idunno.AtProto.FireHose.InfoPayload.Message.get -> string?
+idunno.AtProto.FireHose.InfoPayload.Message.init -> void
+idunno.AtProto.FireHose.InfoPayload.Name.get -> string!
+idunno.AtProto.FireHose.InfoPayload.Name.init -> void
+idunno.AtProto.FireHose.MigratePayload
+idunno.AtProto.FireHose.MigratePayload.Did.get -> idunno.AtProto.Did?
+idunno.AtProto.FireHose.MigratePayload.Did.init -> void
+idunno.AtProto.FireHose.MigratePayload.MigratePayload(idunno.AtProto.Did? Did, long Seq, string? MigrateTo, System.DateTimeOffset Time) -> void
+idunno.AtProto.FireHose.MigratePayload.MigrateTo.get -> string?
+idunno.AtProto.FireHose.MigratePayload.MigrateTo.init -> void
+idunno.AtProto.FireHose.MigratePayload.Seq.get -> long
+idunno.AtProto.FireHose.MigratePayload.Seq.init -> void
+idunno.AtProto.FireHose.MigratePayload.Time.get -> System.DateTimeOffset
+idunno.AtProto.FireHose.MigratePayload.Time.init -> void
+idunno.AtProto.FireHose.RepoOp
+idunno.AtProto.FireHose.RepoOp.Action.get -> string?
+idunno.AtProto.FireHose.RepoOp.Cid.get -> idunno.AtProto.Cid?
+idunno.AtProto.FireHose.RepoOp.Path.get -> string?
+idunno.AtProto.FireHose.RepoOp.Prev.get -> idunno.AtProto.Cid?
+idunno.AtProto.FireHose.RepoOp.RepoOp(idunno.AtProto.Cid? cid, string! path, string! action, idunno.AtProto.Cid? prev) -> void
+idunno.AtProto.FireHose.SyncPayload
+idunno.AtProto.FireHose.SyncPayload.Blocks.get -> System.Collections.Generic.IReadOnlyList<byte>!
+idunno.AtProto.FireHose.SyncPayload.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.FireHose.SyncPayload.Rev.get -> string!
+idunno.AtProto.FireHose.SyncPayload.Seq.get -> long
+idunno.AtProto.FireHose.SyncPayload.SyncPayload(long seq, idunno.AtProto.Did! did, byte[]! blocks, string! rev, System.DateTimeOffset time) -> void
+idunno.AtProto.FireHose.SyncPayload.Time.get -> System.DateTimeOffset
+idunno.AtProto.FireHose.TombstonePayload
+idunno.AtProto.FireHose.TombstonePayload.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.FireHose.TombstonePayload.Did.init -> void
+idunno.AtProto.FireHose.TombstonePayload.Seq.get -> long
+idunno.AtProto.FireHose.TombstonePayload.Seq.init -> void
+idunno.AtProto.FireHose.TombstonePayload.Time.get -> System.DateTimeOffset
+idunno.AtProto.FireHose.TombstonePayload.Time.init -> void
+idunno.AtProto.FireHose.TombstonePayload.TombstonePayload(idunno.AtProto.Did! Did, long Seq, System.DateTimeOffset Time) -> void
+idunno.AtProto.FireHose.UnknownPayload
+idunno.AtProto.FireHose.UnknownPayload.RawMessage.get -> System.Collections.Generic.IReadOnlyList<byte>!
+idunno.AtProto.FireHose.UnknownPayload.UnknownPayload(byte[]! rawMessage) -> void
+static idunno.AtProto.FireHose.AccountPayload.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.AccountPayload!
+static idunno.AtProto.FireHose.AtContentAddressableArchive.DecodeAsync(System.ReadOnlyMemory<byte> rawData, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.FireHose.AtContentAddressableArchive?>!
+static idunno.AtProto.FireHose.CborObjectExtensions.ToCid(this PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.Cid?
+static idunno.AtProto.FireHose.CborObjectExtensions.ToDateTimeOffset(this PeterO.Cbor.CBORObject! cborObject) -> System.DateTimeOffset
+static idunno.AtProto.FireHose.CborObjectExtensions.ToRecordKey(this PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.RecordKey?
+static idunno.AtProto.FireHose.CommitPayload.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.CommitPayload!
+static idunno.AtProto.FireHose.FrameError.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.FrameError!
+static idunno.AtProto.FireHose.HandlePayload.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.HandlePayload!
+static idunno.AtProto.FireHose.IdentityPayload.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.IdentityPayload!
+static idunno.AtProto.FireHose.InfoPayload.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.InfoPayload!
+static idunno.AtProto.FireHose.MigratePayload.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.MigratePayload!
+static idunno.AtProto.FireHose.RepoOp.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.RepoOp!
+static idunno.AtProto.FireHose.SyncPayload.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.SyncPayload!
+static idunno.AtProto.FireHose.TombstonePayload.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.TombstonePayload!
+virtual idunno.AtProto.FireHose.AtProtoFireHose.Dispose(bool disposing) -> void
+virtual idunno.AtProto.FireHose.AtProtoFireHose.OnConnectionStateChanged(idunno.AtProto.FireHose.Events.ConnectionStateChangedEventArgs! e) -> void
+virtual idunno.AtProto.FireHose.AtProtoFireHose.OnFaultRaised(idunno.AtProto.FireHose.Events.FaultRaisedEventArgs! e) -> void
+virtual idunno.AtProto.FireHose.AtProtoFireHose.OnMessageReceived(idunno.AtProto.FireHose.Events.MessageReceivedEventArgs! e) -> void
+virtual idunno.AtProto.FireHose.AtProtoFireHose.OnRepoMessageReceived(idunno.AtProto.FireHose.Events.RepoMessageReceivedEventArgs! e) -> void
