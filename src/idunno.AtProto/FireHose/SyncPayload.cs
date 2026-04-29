@@ -18,11 +18,11 @@ public sealed record SyncPayload : IFramePayload, ICborConvertor<SyncPayload>
     /// <param name="blocks">CAR file containing the commit, as a block. The CAR header must include the commit block CID as the first 'root'.</param>
     /// <param name="rev">The rev of the commit. This value must match that in the commit object.</param>
     /// <param name="time">The <see cref="DateTimeOffset"/> when this message was originally broadcast.</param>
-    public SyncPayload(long seq, Did did, byte[] blocks, string rev, DateTimeOffset time)
+    public SyncPayload(long seq, Did did, ReadOnlyMemory<byte>? blocks, string rev, DateTimeOffset time)
     {
         Seq = seq;
         Did = did;
-        Blocks = blocks.AsReadOnly();
+        Blocks = blocks;
         Rev = rev;
         Time = time;
     }
@@ -54,7 +54,7 @@ public sealed record SyncPayload : IFramePayload, ICborConvertor<SyncPayload>
     /// <summary>
     /// Gets the CAR file containing the commit, as a block. The CAR header must include the commit block CID as the first 'root'.
     /// </summary>
-    public IReadOnlyList<byte> Blocks { get; }
+    public ReadOnlyMemory<byte>? Blocks { get; }
 
     /// <summary>
     /// Gets the rev of the commit. This value must match that in the commit object.

@@ -41,12 +41,12 @@ idunno.AtProto.FireHose.AtProtoFireHose.State.get -> System.Net.WebSockets.WebSo
 idunno.AtProto.FireHose.CborObjectExtensions
 idunno.AtProto.FireHose.CommitPayload
 idunno.AtProto.FireHose.CommitPayload.Blobs.get -> System.Collections.Generic.IEnumerable<idunno.AtProto.Cid!>!
-idunno.AtProto.FireHose.CommitPayload.Blocks.get -> idunno.AtProto.FireHose.AtContentAddressableArchive?
+idunno.AtProto.FireHose.CommitPayload.Blocks.get -> System.ReadOnlyMemory<byte>?
+idunno.AtProto.FireHose.CommitPayload.CarFile.get -> idunno.AtProto.FireHose.AtContentAddressableArchive?
 idunno.AtProto.FireHose.CommitPayload.Commit.get -> idunno.AtProto.Cid!
-idunno.AtProto.FireHose.CommitPayload.CommitPayload(long seq, bool rebase, bool tooBig, idunno.AtProto.Did! repo, idunno.AtProto.Cid! commit, idunno.AtProto.RecordKey? rev, idunno.AtProto.RecordKey? since, System.ReadOnlyMemory<byte>? rawBlocks, System.Collections.Generic.IEnumerable<idunno.AtProto.FireHose.RepoOp!>! ops, System.Collections.Generic.IEnumerable<idunno.AtProto.Cid!>! blobs, idunno.AtProto.Cid? prevData, System.DateTimeOffset time) -> void
+idunno.AtProto.FireHose.CommitPayload.CommitPayload(long seq, bool rebase, bool tooBig, idunno.AtProto.Did! repo, idunno.AtProto.Cid! commit, idunno.AtProto.RecordKey? rev, idunno.AtProto.RecordKey? since, System.ReadOnlyMemory<byte>? blocks, System.Collections.Generic.IEnumerable<idunno.AtProto.FireHose.RepoOp!>! ops, System.Collections.Generic.IEnumerable<idunno.AtProto.Cid!>! blobs, idunno.AtProto.Cid? prevData, System.DateTimeOffset time) -> void
 idunno.AtProto.FireHose.CommitPayload.Ops.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.FireHose.RepoOp!>!
 idunno.AtProto.FireHose.CommitPayload.PrevData.get -> idunno.AtProto.Cid?
-idunno.AtProto.FireHose.CommitPayload.RawBlocks.get -> System.ReadOnlyMemory<byte>?
 idunno.AtProto.FireHose.CommitPayload.Rebase.get -> bool
 idunno.AtProto.FireHose.CommitPayload.Repo.get -> idunno.AtProto.Did!
 idunno.AtProto.FireHose.CommitPayload.Rev.get -> idunno.AtProto.RecordKey?
@@ -148,11 +148,11 @@ idunno.AtProto.FireHose.RepoOp.Path.get -> string?
 idunno.AtProto.FireHose.RepoOp.Prev.get -> idunno.AtProto.Cid?
 idunno.AtProto.FireHose.RepoOp.RepoOp(idunno.AtProto.Cid? cid, string! path, string! action, idunno.AtProto.Cid? prev) -> void
 idunno.AtProto.FireHose.SyncPayload
-idunno.AtProto.FireHose.SyncPayload.Blocks.get -> System.Collections.Generic.IReadOnlyList<byte>!
+idunno.AtProto.FireHose.SyncPayload.Blocks.get -> System.ReadOnlyMemory<byte>?
 idunno.AtProto.FireHose.SyncPayload.Did.get -> idunno.AtProto.Did!
 idunno.AtProto.FireHose.SyncPayload.Rev.get -> string!
 idunno.AtProto.FireHose.SyncPayload.Seq.get -> long
-idunno.AtProto.FireHose.SyncPayload.SyncPayload(long seq, idunno.AtProto.Did! did, byte[]! blocks, string! rev, System.DateTimeOffset time) -> void
+idunno.AtProto.FireHose.SyncPayload.SyncPayload(long seq, idunno.AtProto.Did! did, System.ReadOnlyMemory<byte>? blocks, string! rev, System.DateTimeOffset time) -> void
 idunno.AtProto.FireHose.SyncPayload.Time.get -> System.DateTimeOffset
 idunno.AtProto.FireHose.TombstonePayload
 idunno.AtProto.FireHose.TombstonePayload.Did.get -> idunno.AtProto.Did!

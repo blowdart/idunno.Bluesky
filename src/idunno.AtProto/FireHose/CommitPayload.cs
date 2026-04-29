@@ -25,7 +25,7 @@ public record CommitPayload : IFramePayload, ICborConvertor<CommitPayload>
     /// <param name="commit">The <paramref name="repo"/> commit object <see cref="Cid"/>.</param>
     /// <param name="rev">The <see cref="RecordKey">rev</see> of the emitted commit (if any).</param>
     /// <param name="since">The <see cref="RecordKey">rev</see> of the last emitted commit from this repo (if any).</param>
-    /// <param name="rawBlocks">CAR file containing relevant blocks, as a diff since the previous repo state. </param>
+    /// <param name="blocks">CAR file containing relevant blocks, as a diff since the previous repo state. </param>
     /// <param name="ops">List of repo mutation <see cref="RepoOp">operations</see> in this commit (eg, records created, updated, or deleted).</param>
     /// <param name="blobs">Obsolete, will soon be always empty. List of new blobs (by CID) referenced by records in this commit.</param>
     /// <param name="prevData">The root CID of the MST tree for the previous commit from this repo (indicated by the 'since' revision field in this message)</param>
@@ -38,7 +38,7 @@ public record CommitPayload : IFramePayload, ICborConvertor<CommitPayload>
         Cid commit,
         RecordKey? rev,
         RecordKey? since,
-        ReadOnlyMemory<byte>? rawBlocks,
+        ReadOnlyMemory<byte>? blocks,
         IEnumerable<RepoOp> ops,
         IEnumerable<Cid> blobs,
         Cid? prevData,
@@ -53,7 +53,7 @@ public record CommitPayload : IFramePayload, ICborConvertor<CommitPayload>
         Commit = commit;
         Rev = rev;
         Since = since;
-        RawBlocks = rawBlocks;
+        Blocks = blocks;
 #pragma warning disable CS0618 // Type or member is obsolete
         Blobs = blobs;
 #pragma warning restore CS0618 // Type or member is obsolete
@@ -119,7 +119,7 @@ public record CommitPayload : IFramePayload, ICborConvertor<CommitPayload>
     /// Gets the CAR file containing relevant blocks, as a diff since the previous repo state.
     /// The commit must be included as a block, and the commit block CID must be the first entry in the CAR header 'roots' list.
     /// </summary>
-    public ReadOnlyMemory<byte>? RawBlocks { get; }
+    public ReadOnlyMemory<byte>? Blocks { get; }
 
     /// <summary>
     /// Gets a list of repo mutation <see cref="RepoOp">operations</see> in this commit (eg, records created, updated, or deleted).
@@ -156,7 +156,7 @@ public record CommitPayload : IFramePayload, ICborConvertor<CommitPayload>
     /// Gets the CAR file containing relevant blocks, as a diff since the previous repo state.
     /// The commit must be included as a block, and the commit block CID must be the first entry in the CAR header 'roots' list.
     /// </summary>
-    public AtContentAddressableArchive? Blocks { get; }
+    public AtContentAddressableArchive? CarFile { get; }
 
     /// <inheritdoc/>
     /// <exception cref="System.ArgumentNullException">Thrown when <paramref name="cborObject"/> is <see langword="null" />.</exception>
@@ -206,12 +206,10 @@ public record CommitPayload : IFramePayload, ICborConvertor<CommitPayload>
               commit: commit,
               rev: rev,
               since: since,
-              rawBlocks: rawBlocks,
+              blocks: rawBlocks,
               ops: ops,
               blobs: blobs,
               prevData: prevData,
               time: time);
     }
 }
-
-

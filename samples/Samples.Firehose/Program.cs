@@ -48,7 +48,7 @@ public sealed class Program
                 //Console.WriteLine($"MESSAGE: Received message {Convert.ToHexString(e.Message.ToArray())}");
             };
 
-            fireHose.RepoMessageReceived += (sender, e) =>
+            fireHose.RepoMessageReceived += async (sender, e) =>
             {
                 switch (e.Payload)
                 {
@@ -103,6 +103,10 @@ public sealed class Program
                         {
                             string timeStamp = syncPayload.Time.ToLocalTime().ToString("G", CultureInfo.DefaultThreadCurrentUICulture);
                             Console.WriteLine($"REPO MESSAGE: {e.Header.Operation} / {e.Header.Type}\n  SYNC OPERATION: {syncPayload.Did} => Rev: {syncPayload.Rev} @ {timeStamp} seq: {syncPayload.Seq}");
+                            if (syncPayload.Blocks is not null)
+                            {
+                                var payload = await AtContentAddressableArchive.DecodeAsync(syncPayload.Blocks.Value, cancellationToken: cancellationToken);
+                            }
                             break;
                         }
 
