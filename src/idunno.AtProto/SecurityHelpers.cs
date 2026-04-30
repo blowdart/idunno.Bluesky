@@ -45,7 +45,7 @@ internal sealed class SecurityHelpers
 
         if (Ssrf.IsUnsafeUri(
             uri: uri,
-            allowInsecureProtocols: allowInsecureProtocols,
+            allowedSchemes: allowInsecureProtocols ? ["https", "http"] : ["https"],
             allowLoopback: allowLoopback))
         {
             Logger.UnsafeUri(logger, uri);
