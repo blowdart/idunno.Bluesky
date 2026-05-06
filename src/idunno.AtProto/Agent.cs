@@ -171,22 +171,28 @@ public abstract class Agent : IDisposable
             };
         }
 
-        SsrfOptions options = new()
+        if (_httpClientOptions is not null && _httpClientOptions.ProxyUri is not null)
         {
-            ConnectTimeout = _httpClientOptions?.Timeout,
-            AutomaticDecompression = DecompressionMethods.All,
-            SslOptions = sslOptions
-        };
-
-        if (_httpClientOptions?.ProxyUri is not null)
-        {
-            options.Proxy = new WebProxy(_httpClientOptions.ProxyUri);
+            ProxiedSsrfOptions options = new()
+            {
+                ConnectTimeout = _httpClientOptions.Timeout,
+                AutomaticDecompression = DecompressionMethods.All,
+                SslOptions = sslOptions,
+                Proxy = new WebProxy(_httpClientOptions.ProxyUri)
+            };
             return new ProxiedSsrfDelegatingHandler(
                 options: options,
                 loggerFactory: _loggerFactory);
         }
         else
         {
+            SsrfOptions options = new()
+            {
+                ConnectTimeout = _httpClientOptions?.Timeout,
+                AutomaticDecompression = DecompressionMethods.All,
+                SslOptions = sslOptions
+            };
+
             return SsrfSocketsHttpHandlerFactory.Create(
                 options: options,
                 loggerFactory: _loggerFactory);
