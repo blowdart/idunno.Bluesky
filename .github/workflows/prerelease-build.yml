@@ -1,4 +1,4 @@
-name: Pre-release Build, Test, Sign, Publish
+name: Pre-release
 on:
   workflow_dispatch:
     inputs:
@@ -18,7 +18,8 @@ env:
   DOTNET_GENERATE_ASPNET_CERTIFICATE: false
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
-  NUPKG_DIRECTORY: ${{ github.workspace}}/nupkgs
+  BUILD_OUTPUT: ${{ github.workspace }}/nupkgs
+  ATTESTATION_INPUT: ${{ github.workspace }}/attestation
 
 permissions:
   contents: read
@@ -59,36 +60,29 @@ jobs:
       run: dotnet test --configuration Release --no-restore --no-build --property:PublicRelease=false
 
     - name: 'Pack release'
-      run: dotnet pack --configuration Release --no-restore  --no-build --output ${NUPKG_DIRECTORY} --property:PublicRelease=false
+      run: dotnet pack --configuration Release --no-restore  --no-build --output ${BUILD_OUTPUT} --property:PublicRelease=false
 
     - name: 'Extract SBOMs'
       shell: pwsh
       run: > 
         Get-ChildItem -Path ${env:NUPKG_DIRECTORY} -Filter *.nupkg -Force | ForEach-Object { 
           Expand-Archive $_.FullName "$($_.DirectoryName)/$($_.Basename)" -Force 
-          Copy-Item "$($_.DirectoryName)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json" -Destination "${env:NUPKG_DIRECTORY}/$($_.Basename).spdx.json"
-          Copy-Item "$($_.DirectoryName)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json.sha256" -Destination "${env:NUPKG_DIRECTORY}/$($_.Basename).spdx.json.sha256"
+          Copy-Item "$($_.DirectoryName)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json" -Destination "${env:BUILD_OUTPUT}/$($_.Basename).spdx.json"
+          Copy-Item "$($_.DirectoryName)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json.sha256" -Destination "${env:BUILD_OUTPUT}/$($_.Basename).spdx.json.sha256"
           Remove-Item "$($_.DirectoryName)/$($_.Basename)" -Force -Recurse }
 
     - name: 'List artifact directory'
       shell: pwsh
       run: >
-        Get-ChildItem -Path ${env:NUPKG_DIRECTORY} -Recurse -Force
+        Get-ChildItem -Path ${env:BUILD_OUTPUT} -Recurse -Force
 
     - name: Upload unsigned nupkgs to artifacts
       id: upload
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: build-artifacts
-        path: ${{ env.NUPKG_DIRECTORY }}/*
+        path: ${{ env.BUILD_OUTPUT }}/*
         retention-days: 7
-
-    - name: Attest build artifacts
-      uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
-      with:
-        subject-name: build-artifacts
-        subject-digest: sha256:${{ steps.upload.outputs.artifact-digest }}
-
 
   sign:
     name: Sign
@@ -112,7 +106,7 @@ jobs:
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
         name: build-artifacts
-        path : ${{ env.NUPKG_DIRECTORY }}
+        path : ${{ env.BUILD_OUTPUT }}
 
     - name: Authenticate to Azure
       uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
@@ -125,21 +119,53 @@ jobs:
     - name: Sign
       shell: pwsh
       run: >
-        ./sign/sign code trusted-signing *.nupkg --base-directory ${env:NUPKG_DIRECTORY} -tse "${{ secrets.AZURE_TRUSTEDSIGNING_ENDPOINT }}" -tsa "${{ secrets.AZURE_TRUSTEDSIGNING_ACCOUNT }}" -tscp "${{ secrets.AZURE_TRUSTEDSIGNING_CERTIFICATEPROFILE }}"
+        ./sign/sign code trusted-signing *.nupkg --base-directory ${env:BUILD_OUTPUT} -tse "${{ secrets.AZURE_TRUSTEDSIGNING_ENDPOINT }}" -tsa "${{ secrets.AZURE_TRUSTEDSIGNING_ACCOUNT }}" -tscp "${{ secrets.AZURE_TRUSTEDSIGNING_CERTIFICATEPROFILE }}"
+
+    - name: Expand signed nupkg for attestation
+      shell: pwsh
+      run: | 
+        # Create the attestation directory, if it doesn't exist, then delete whatever is in it, just in case.
+        New-Item -ItemType Directory -Force -Path ($env:ATTESTATION_INPUT) | Out-Null
+        $attestationItems = Get-ChildItem -Path $env:ATTESTATION_INPUT -Force -ErrorAction SilentlyContinue
+        if ($attestationItems)
+        {
+          Remove-Item -Path $attestationItems.FullName -Recurse -Force
+        }
+
+        # Build the bits to attest
+        Get-ChildItem -Path $env:BUILD_OUTPUT -Filter *.nupkg -Force | ForEach-Object { 
+          Copy-Item $_.FullName $($env:ATTESTATION_INPUT)
+          Expand-Archive $_.FullName "$($env:ATTESTATION_INPUT)/$($_.Basename)" -Force
+
+          # Place SBOM from the nupkg alongside the nupkg for attestation
+          Copy-Item "$($env:ATTESTATION_INPUT)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json" -Destination "$($env:ATTESTATION_INPUT)/$($_.Basename).spdx.json"
+          Copy-Item "$($env:ATTESTATION_INPUT)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json.sha256" -Destination "$($env:ATTESTATION_INPUT)/$($_.Basename).spdx.json.sha256"
+
+          # Remove the extraneous files from the nupkg extraction
+          Remove-Item "$($env:ATTESTATION_INPUT)/$($_.Basename)/_rels" -Recurse -Force
+          Remove-Item "$($env:ATTESTATION_INPUT)/$($_.Basename)/package" -Recurse -Force
+          # Need to special case [Content_Types].xml because of those pesky [] characters
+          $contentTypes=Join-Path "$($env:ATTESTATION_INPUT)/$($_.Basename)" -ChildPath "[Content_Types].xml"
+          Remove-Item -LiteralPath $contentTypes -Force
+        }
+
+    - name: 'List attestation artifacts'
+      shell: pwsh
+      run: >
+        Get-ChildItem -Path ${env:ATTESTATION_INPUT} -Recurse -Force
+
+    - name: 'Attest artifacts'
+      uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+      with:
+        subject-path: ${{env.ATTESTATION_INPUT}}
 
     - name: Upload signed nupkgs to artifacts
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       id: upload
       with:
         name: signed-artifacts
-        path: ${{env.NUPKG_DIRECTORY}}/*
+        path: ${{env.BUILD_OUTPUT}}/*
         retention-days: 7
-
-    - name: Attest signed artifacts
-      uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
-      with:
-        subject-name: signed-artifacts
-        subject-digest: sha256:${{ steps.upload.outputs.artifact-digest }}
 
   publish:
     name: Publish
@@ -172,7 +198,7 @@ jobs:
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
         name: signed-artifacts
-        path : ${{ env.NUPKG_DIRECTORY }}
+        path : ${{ env.BUILD_OUTPUT }}
 
     - name: Authenticate to Azure
       uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
@@ -186,7 +212,7 @@ jobs:
       shell : pwsh
       run: |
          dotnet tool install --tool-path ./sleet sleet
-         ./sleet/sleet push "${env:NUPKG_DIRECTORY}" --config ./sleet.json --source feed
+         ./sleet/sleet push "${env:BUILD_OUTPUT}" --config ./sleet.json --source feed
 
     - name: Setup MyGet and GitHub Packages as NuGet Sources
       shell: pwsh
@@ -199,13 +225,13 @@ jobs:
     - name: Publish NuGet packages to GitHub packages
       shell: pwsh
       run: >
-        foreach($file in (Get-ChildItem "${env:NUPKG_DIRECTORY}" -Recurse -Filter *.nupkg)) {
+        foreach($file in (Get-ChildItem "${env:BUILD_OUTPUT}" -Recurse -Filter *.nupkg)) {
           dotnet nuget push $file --api-key "${{ secrets.PUBLISH_PACKAGES_PAT }}" --source "github" --skip-duplicate
         }
 
     - name: Publish NuGet packages to myget
       shell: pwsh
       run: >
-        foreach($file in (Get-ChildItem "${env:NUPKG_DIRECTORY}" -Recurse -Filter *.nupkg)) {
+        foreach($file in (Get-ChildItem "${env:BUILD_OUTPUT}" -Recurse -Filter *.nupkg)) {
           dotnet nuget push $file --api-key "${{ secrets.MYGET_APIKEY }}" --source "https://www.myget.org/F/blowdart/api/v2/package" --skip-duplicate
         }
