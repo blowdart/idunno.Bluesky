@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
@@ -220,6 +220,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(GetListBlocksResponse))]
 [JsonSerializable(typeof(GetListResponse))]
 [JsonSerializable(typeof(GetListsResponse))]
+[JsonSerializable(typeof(GetListsWithMembershipResponse))]
 [JsonSerializable(typeof(GetMutesResponse))]
 [JsonSerializable(typeof(GetRelationshipsResponse))]
 [JsonSerializable(typeof(GetStarterPackResponse))]
@@ -236,6 +237,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(ListViewBasic))]
 [JsonSerializable(typeof(ListViewerState))]
 [JsonSerializable(typeof(ListViewWithItems))]
+[JsonSerializable(typeof(ListWithMembership))]
 [JsonSerializable(typeof(NotFoundActor))]
 [JsonSerializable(typeof(Relationship))]
 [JsonSerializable(typeof(RelationshipType))]

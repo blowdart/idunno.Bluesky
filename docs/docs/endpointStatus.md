@@ -1,4 +1,4 @@
-﻿# API Endpoint Implementation Status
+# API Endpoint Implementation Status
 
 ## Bluesky Endpoints
 
@@ -60,6 +60,7 @@
 | | [app.bsky.graph.getListMutes](https://docs.bsky.app/docs/api/app-bsky-graph-get-list-mutes) | `BlueskyAgent.GetListMutes()` | ✔ |
 | | [app.bsky.graph.getList](https://docs.bsky.app/docs/api/app-bsky-graph-get-list) | `BlueskyAgent.GetList()` | ✔ |
 | | [app.bsky.graph.getLists](https://docs.bsky.app/docs/api/app-bsky-graph-get-lists) | `BlueskyAgent.GetLists()` | ✔ |
+| | [app.bsky.graph.getListsWithMembership](https://docs.bsky.app/docs/api/app-bsky-graph-get-lists-with-membership) | `BlueskyAgent.GetListsWithMembership()` | ✔ |
 | | [app.bsky.graph.getMutes](https://docs.bsky.app/docs/api/app-bsky-graph-get-mutes) | `BlueskyAgent.GetMutes()` | ✔ |
 | | [app.bsky.graph.getRelationships](https://docs.bsky.app/docs/api/app-bsky-graph-get-relationships) | ~~`BlueskyAgent.GetRelationships()`~~ [*](https://github.com/bluesky-social/atproto/issues/2919) | ❌ |
 | | [app.bsky.graph.getStarterPack](https://docs.bsky.app/docs/api/app-bsky-graph-get-starter-pack) | `BlueskyAgent.GetStarterPack()` [*](https://github.com/bluesky-social/atproto/issues/2920) | ✔ |

@@ -66,7 +66,6 @@ Trimming is supported for applications targeting .NET 9.0 or later.
 [![CodeQL Scan](https://github.com/blowdart/idunno.Bluesky/actions/workflows/codeql-analysis.yml/badge.svg?branch=main)](https://github.com/blowdart/idunno.Bluesky/actions/workflows/codeql-analysis.yml)
 [![Dependency Review](https://github.com/blowdart/idunno.Bluesky/actions/workflows/dependency-review.yml/badge.svg)](https://github.com/blowdart/idunno.Bluesky/actions/workflows/dependency-review.yml)
 
-
 ## License
 
 `idunno.Bluesky`, `idunno.AtProto`, `idunno.AtProto.OAuthCallBack` and `idunno.AtProto.Types` are available under the MIT license,

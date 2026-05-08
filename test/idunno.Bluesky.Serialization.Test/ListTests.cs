@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json;
@@ -123,6 +123,102 @@ public class ListTests
             """;
 
         GetListResponse? actual = JsonSerializer.Deserialize<GetListResponse>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+        Assert.NotNull(actual);
+    }
+
+    [Fact]
+    public void GetListsWithMembershipResponseDeserializesCorrectlyWithSourceGeneratedJsonContext()
+    {
+        string json = """
+            {
+                "listsWithMembership": [
+                    {
+                        "list": {
+                            "uri": "at://did:plc:ec72yg6n2sydzjvtovvdlxrk/app.bsky.graph.list/3lnxvrbetf32n",
+                            "cid": "bafyreidjq6nxblwalpk7ua57777y4jgpu5lusoobhwv4g7v4n4rf3tepp4",
+                            "name": "Test moderation list",
+                            "purpose": "app.bsky.graph.defs#modlist",
+                            "listItemCount": 3,
+                            "indexedAt": "2025-04-29T18:25:56.288Z",
+                            "labels": [],
+                            "viewer": {
+                                "muted": false
+                            },
+                            "creator": {
+                                "did": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
+                                "handle": "bot.idunno.blue",
+                                "displayName": "Test Bot",
+                                "pronouns": "it/its",
+                                "avatar": "https://cdn.bsky.app/img/avatar/plain/did:plc:ec72yg6n2sydzjvtovvdlxrk/bafkreig5ujmxrechgakn4ukf37oj6mlpivukqfbgpuhb3pqjmdkxxtjpnq",
+                                "associated": {
+                                    "activitySubscription": {
+                                        "allowSubscriptions": "followers"
+                                    }
+                                },
+                                "viewer": {
+                                    "muted": false,
+                                    "blockedBy": false
+                                },
+                                "labels": [
+                                    {
+                                        "src": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
+                                        "uri": "at://did:plc:ec72yg6n2sydzjvtovvdlxrk/app.bsky.actor.profile/self",
+                                        "cid": "bafyreig52l5b45222ijf3sf5jggvcxcvmpmetlswqyoqzh2dlfyoge74oq",
+                                        "val": "bot",
+                                        "cts": "1970-01-01T00:00:00.000Z"
+                                    },
+                                    {
+                                        "src": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
+                                        "uri": "at://did:plc:ec72yg6n2sydzjvtovvdlxrk/app.bsky.actor.profile/self",
+                                        "cid": "bafyreig52l5b45222ijf3sf5jggvcxcvmpmetlswqyoqzh2dlfyoge74oq",
+                                        "val": "!no-unauthenticated",
+                                        "cts": "1970-01-01T00:00:00.000Z"
+                                    }
+                                ],
+                                "createdAt": "2024-03-19T13:00:19.046Z",
+                                "description": "idunno.Bluesky Test Bot!",
+                                "indexedAt": "2026-03-20T00:56:57.255Z"
+                            },
+                            "description": "Test moderation list description"
+                        },
+                        "listItem": {
+                            "uri": "at://did:plc:ec72yg6n2sydzjvtovvdlxrk/app.bsky.graph.listitem/3lnymbiftjm2r",
+                            "subject": {
+                                "did": "did:plc:hfgp6pj3akhqxntgqwramlbg",
+                                "handle": "blowdart.me",
+                                "displayName": "Barry Dorrans",
+                                "pronouns": "He/Him",
+                                "avatar": "https://cdn.bsky.app/img/avatar/plain/did:plc:hfgp6pj3akhqxntgqwramlbg/bafkreicwjaromkjs4jrd5uqznacfgzvhnob2il5fwywxqopbnhfb74n27m",
+                                "associated": {
+                                    "chat": {
+                                        "allowIncoming": "all"
+                                    },
+                                    "activitySubscription": {
+                                        "allowSubscriptions": "followers"
+                                    },
+                                    "germ": {
+                                        "showButtonTo": "usersIFollow",
+                                        "messageMeUrl": "https://landing.ger.mx/newUser"
+                                    }
+                                },
+                                "viewer": {
+                                    "muted": false,
+                                    "blockedBy": false,
+                                    "following": "at://did:plc:ec72yg6n2sydzjvtovvdlxrk/app.bsky.graph.follow/3kqxzemnnc425",
+                                    "followedBy": "at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.graph.follow/3ko2gwpx37l2m"
+                                },
+                                "labels": [],
+                                "createdAt": "2023-04-22T22:44:04.316Z",
+                                "description": "Security Curmudgeon for Microsoft .NET\n\nDo you really think work wants my social media opinions?\n\nNot nice, but kind - @medus4.com\n\n🇮🇪 🇬🇧 🇺🇸 ",
+                                "indexedAt": "2026-03-09T16:31:29.647Z"
+                            }
+                        }
+                    }
+                ]
+            }
+            """;
+
+        GetListsWithMembershipResponse? actual = JsonSerializer.Deserialize<GetListsWithMembershipResponse>(json, BlueskyServer.BlueskyJsonSerializerOptions);
         Assert.NotNull(actual);
     }
 }
