@@ -30,7 +30,7 @@
     <File Path=".github/workflows/generate-publish-docs.yml" />
     <File Path=".github/workflows/openssf-scorecard.yml" />
     <File Path=".github/workflows/prerelease.yml" />
-    <File Path=".github/workflows/release-build.yml" />
+    <File Path=".github/workflows/release.yml" />
   </Folder>
   <Folder Name="/docs/">
     <File Path="docs/.editorconfig" />
