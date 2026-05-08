@@ -29,7 +29,7 @@
     <File Path=".github/workflows/dependency-review.yml" />
     <File Path=".github/workflows/generate-publish-docs.yml" />
     <File Path=".github/workflows/openssf-scorecard.yml" />
-    <File Path=".github/workflows/prerelease-build.yml" />
+    <File Path=".github/workflows/prerelease.yml" />
     <File Path=".github/workflows/release-build.yml" />
   </Folder>
   <Folder Name="/docs/">
@@ -235,6 +235,8 @@
     <File Path=".editorconfig" />
     <File Path=".gitignore" />
     <File Path=".runsettings" />
+    <File Path=".ssh-allowed-signers" />
+    <File Path=".ssh-allowed-signers.md" />
     <File Path=".vsconfig" />
     <File Path="architectureNotes.md" />
     <File Path="buildDocs.ps1" />
