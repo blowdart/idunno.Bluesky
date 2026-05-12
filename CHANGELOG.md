@@ -1,6 +1,6 @@
 # Version History
 
-## 1.8.2 - Unreleased
+## 1.8.2 - 2026-05-11
 
 ## Added
 
