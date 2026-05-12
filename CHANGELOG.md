@@ -10,6 +10,8 @@
 
 ## Changed
 
+### idunno.Bluesky
+
 * Updated `EmbeddedExternal` to include option `AssociatedRecord` property. See [Add associatedRecord to external embed record](https://github.com/bluesky-social/atproto/pull/4915)
 
 ## 1.8.1 - 2026-04-23
