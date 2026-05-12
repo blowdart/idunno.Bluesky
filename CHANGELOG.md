@@ -1,5 +1,19 @@
 # Version History
 
+## 1.8.2 - 2026-05-11
+
+## Added
+
+### idunno.Bluesky
+
+* Added support for `GetListsWithMembership()`, which enumerates the lists created by the authenticated user, and includes membership information about the specified actor in those lists.
+
+## Changed
+
+### idunno.Bluesky
+
+* Updated `EmbeddedExternal` to include option `AssociatedRecord` property. See [Add associatedRecord to external embed record](https://github.com/bluesky-social/atproto/pull/4915)
+
 ## 1.8.1 - 2026-04-23
 
 ### Changed
@@ -32,7 +46,7 @@
 ### idunno.Bluesky
 
 * Added `Bot` property to `Profile` record to set or unset the profile self label
- indicating a bot account, see [[APP-1928] add bot/automated account badge and self-labeling settings](https://github.com/bluesky-social/social-app/pull/10008/)
+  indicating a bot account, see [[APP-1928] add bot/automated account badge and self-labeling settings](https://github.com/bluesky-social/social-app/pull/10008/)
 * Added `SelfLabels` property to `ProfileViewBasic` which returns a list of self labels applied to a profile,
   which can be used in conjunction with `SelfLabelValues` to check if a profile has applied any self labels to itself,
   including the `Bot` self label and `DiscourageShowingToLoggedOutUser` self label. e.g.

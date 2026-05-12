@@ -1,9 +1,9 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
-
+using idunno.AtProto;
 using idunno.AtProto.Repo;
 
 namespace idunno.Bluesky.Embed;
@@ -78,9 +78,10 @@ public record ExternalProperties
     /// <param name="title">The title for the external link.</param>
     /// <param name="description">The description of the external link, if any.</param>
     /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
+    /// <param name="associatedRecord">The <see cref="AtUri"/> of the Atmosphere record representing this external content, if it exists.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
     [JsonConstructor]
-    public ExternalProperties(Uri uri, string title, string? description = null, Blob? thumbnail = null) : base()
+    public ExternalProperties(Uri uri, string title, string? description = null, Blob? thumbnail = null, AtUri? associatedRecord = null) : base()
     {
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(title);
@@ -89,6 +90,7 @@ public record ExternalProperties
         Title = title;
         Description = description ?? string.Empty;
         Thumbnail = thumbnail;
+        AssociatedRecord = associatedRecord;
     }
 
     /// <summary>
@@ -98,9 +100,10 @@ public record ExternalProperties
     /// <param name="title">The title for the external link.</param>
     /// <param name="description">The description of the external link.</param>
     /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
+    /// <param name="associatedRecord">The <see cref="AtUri"/> of the Atmosphere record representing this external content, if it exists.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
-    public ExternalProperties(string uri, string title, string? description = null, Blob? thumbnail = null) :
-        this(new Uri(uri), title, description, thumbnail)
+    public ExternalProperties(string uri, string title, string? description = null, Blob? thumbnail = null, AtUri? associatedRecord = null) :
+        this(new Uri(uri), title, description, thumbnail, associatedRecord)
     {
     }
 
@@ -134,4 +137,12 @@ public record ExternalProperties
     [JsonPropertyName("thumb")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Blob? Thumbnail { get; set; }
+
+    /// <summary>
+    /// Gets or sets the <see cref="AtUri"/> of the Atmosphere record representing this external content, if it exists.
+    /// </summary>
+    [JsonInclude]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AtUri? AssociatedRecord { get; set; }
+        
 }

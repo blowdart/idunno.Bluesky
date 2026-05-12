@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 namespace idunno.Bluesky.Graph;
@@ -14,7 +14,6 @@ namespace idunno.Bluesky.Graph;
 /// </remarks>
 public class ListViewWithItems(ListView list, ICollection<ListItemView> items, string? cursor) : PagedViewReadOnlyCollection<ListItemView>([.. items], cursor)
 {
-
     /// <summary>
     /// A <see cref="ListView" /> of the list whose items are in the collection.
     /// </summary>
