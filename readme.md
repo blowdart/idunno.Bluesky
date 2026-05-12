@@ -66,7 +66,6 @@ Trimming is supported for applications targeting .NET 9.0 or later.
 [![CodeQL Scan](https://github.com/blowdart/idunno.Bluesky/actions/workflows/codeql-analysis.yml/badge.svg?branch=main)](https://github.com/blowdart/idunno.Bluesky/actions/workflows/codeql-analysis.yml)
 [![Dependency Review](https://github.com/blowdart/idunno.Bluesky/actions/workflows/dependency-review.yml/badge.svg)](https://github.com/blowdart/idunno.Bluesky/actions/workflows/dependency-review.yml)
 
-
 ## License
 
 `idunno.Bluesky`, `idunno.AtProto`, `idunno.AtProto.OAuthCallBack` and `idunno.AtProto.Types` are available under the MIT license,
@@ -97,7 +96,7 @@ NuGet verifies the signatures during the publication process and during
 [package installation on Windows and Linux](https://learn.microsoft.com/en-us/dotnet/core/tools/nuget-signed-package-verification).
 
 Instructions for validating signatures of my .NET assemblies, NuGet packages and Windows executables can be found in the
-[Code Signing Information](https://github.com/blowdart/code-signing-information) page on my
+[Code Signing Information](https://github.com/blowdart/#code-signing-information) page on my
 [GitHub profile](https://github.com/blowdart).
 
 ## Pre-releases
