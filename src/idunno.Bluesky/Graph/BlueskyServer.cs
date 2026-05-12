@@ -926,22 +926,23 @@ public static partial class BlueskyServer
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
     [UnconditionalSuppressMessage(
-"Trimming",
-"IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
-Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-    [UnconditionalSuppressMessage("AOT",
-"IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
-Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+        "Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    [UnconditionalSuppressMessage(
+        "AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
     public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>> GetMutes(
-int? limit,
-string? cursor,
-Uri service,
-AccessCredentials accessCredentials,
-HttpClient httpClient,
-Action<AtProtoCredential>? onCredentialsUpdated = null,
-ILoggerFactory? loggerFactory = default,
-IEnumerable<Did>? subscribedLabelers = null,
-CancellationToken cancellationToken = default)
+        int? limit,
+        string? cursor,
+        Uri service,
+        AccessCredentials accessCredentials,
+        HttpClient httpClient,
+        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        ILoggerFactory? loggerFactory = default,
+        IEnumerable<Did>? subscribedLabelers = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(service);

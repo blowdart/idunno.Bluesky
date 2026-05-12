@@ -331,6 +331,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
     public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ListView>>> GetLists(
         AtIdentifier actor,
         int? limit = null,
@@ -366,6 +367,7 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="actor"/> is <see langword="null"/>, empty or whitespace.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is unauthenticated.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
     public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ListWithMembership>>> GetListsWithMembership(
         AtIdentifier actor,
         int? limit = null,
