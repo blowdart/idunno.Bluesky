@@ -82,14 +82,13 @@ jobs:
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: build-artifacts
-        path: ${{ env.NUPKG_DIRECTORY }}/*
+        path: ${{ env.BUILD_OUTPUT }}/*
         retention-days: 7
 
   sign:
     name: Sign
     needs: build
     runs-on: windows-latest
-    if:  ${{ inputs.perform_sign }} 
     environment: release
     permissions:
       attestations: write
@@ -172,7 +171,6 @@ jobs:
     name: Publish
     needs: sign
     runs-on: ubuntu-latest
-    if:  ${{ inputs.perform_publish }}
     environment: release
     permissions:
       id-token: write
