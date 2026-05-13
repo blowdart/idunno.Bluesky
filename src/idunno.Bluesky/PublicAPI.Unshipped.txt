@@ -1,1 +1,2 @@
 #nullable enable
+idunno.Bluesky.PostBuilder.Validate(System.ComponentModel.DataAnnotations.ValidationContext! validationContext) -> System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult!>!

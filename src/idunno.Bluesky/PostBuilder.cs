@@ -1,10 +1,14 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 
+#if NET10_0_OR_GREATER
+using Microsoft.Extensions.Validation;
+#endif
+
 using idunno.AtProto;
-using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 
 using idunno.Bluesky.Actor;
@@ -17,7 +21,7 @@ namespace idunno.Bluesky;
 /// <summary>
 /// A builder to allow building of a Post record in a more friendly manner.
 /// </summary>
-public sealed class PostBuilder
+public sealed class PostBuilder : IValidatableObject
 {
 #if NET9_0_OR_GREATER
     private readonly Lock _syncLock = new ();
@@ -187,6 +191,7 @@ public sealed class PostBuilder
     /// Gets a flag indicating whether this instance has any record text.
     /// </summary>
     [MemberNotNullWhen(true, nameof(Length))]
+    [MemberNotNullWhen(true, nameof(Text))]
     public bool HasText => _post.Text is not null && !string.IsNullOrEmpty(_post.Text);
 
     /// <summary>
@@ -729,6 +734,8 @@ public sealed class PostBuilder
                     {
                         _embeddedImages.Clear();
                     }
+
+                    _post.EmbeddedRecord = value;
                 }
             }
         }
@@ -1337,6 +1344,35 @@ public sealed class PostBuilder
         _post.SetSelfLabels(labels);
     }
 
+    /// <inheritdoc/>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (!HasText && !HasImages && !HasEmbed && !HasVideo)
+        {
+            yield return new ValidationResult("Post text cannot be null or empty unless there are images, video or another type of embedded record.");
+        }
+
+        if (HasVideo && HasImages)
+        {
+            yield return new ValidationResult("Post cannot have both images and video");
+        }
+
+        if (HasText && Length > MaxCapacity)
+        {
+            yield return new ValidationResult($"Post text cannot be longer than {MaxCapacity} characters.");
+        }
+
+        if (HasText && Text.GetGraphemeLength() > MaxCapacityGraphemes)
+        {
+            yield return new ValidationResult($"Post text cannot be longer than {MaxCapacityGraphemes} graphemes.");
+        }
+
+        if (HasEmbed && (HasVideo || HasImages))
+        {
+            yield return new ValidationResult("Post cannot have both embedded records and media (images or video).");
+        }
+    }
+
     /// <summary>
     /// Converts the value of this instance to a <see cref="Post"/>.
     /// </summary>
@@ -1354,14 +1390,14 @@ public sealed class PostBuilder
                 throw new PostBuilderException("Post text cannot be null or empty unless there are images, video or another type of embedded record.");
             }
 
-            if (InReplyTo is not null && QuotePost is not null)
-            {
-                throw new PostBuilderException("Post cannot be both a reply and a quote");
-            }
-
             if (HasVideo && HasImages)
             {
                 throw new PostBuilderException("Post cannot have both images and video");
+            }
+
+            if (HasEmbed && (HasVideo || HasImages))
+            {
+                throw new PostBuilderException("Post cannot have both embedded records and media (images or video).");
             }
 
             if (HasImages)
