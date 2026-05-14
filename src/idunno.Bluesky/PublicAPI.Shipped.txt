@@ -1901,7 +1901,7 @@ static idunno.Bluesky.Feed.Gates.ThreadGate.NoReplies(idunno.AtProto.AtUri! post
 static idunno.Bluesky.Moderation.WellKnown.ReportOptions.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.List<idunno.Bluesky.Moderation.ReportOption!>!>!
 static idunno.Bluesky.Moderation.WellKnown.ReportTargets.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 static idunno.Bluesky.Moderation.WellKnown.ReportType.get -> System.Collections.Generic.IReadOnlyDictionary<idunno.Bluesky.Moderation.ReportType, string!>!
-static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, char c, int repeatCount = 1) -> idunno.Bluesky.PostBuilder!
+static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, char c, int repeatCount) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, idunno.Bluesky.Embed.EmbeddedImage! image) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, idunno.Bluesky.Embed.EmbeddedVideo! video) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, idunno.Bluesky.RichText.HashTag! hashTag) -> idunno.Bluesky.PostBuilder!

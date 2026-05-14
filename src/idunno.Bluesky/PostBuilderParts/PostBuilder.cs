@@ -1,12 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
-
-#if NET10_0_OR_GREATER
-using Microsoft.Extensions.Validation;
-#endif
+using System.Text;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
@@ -16,12 +12,14 @@ using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.RichText;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// A builder to allow building of a Post record in a more friendly manner.
 /// </summary>
-public sealed class PostBuilder : IValidatableObject
+public sealed partial class PostBuilder : IEquatable<PostBuilder>
 {
 #if NET9_0_OR_GREATER
     private readonly Lock _syncLock = new ();
@@ -34,6 +32,10 @@ public sealed class PostBuilder : IValidatableObject
     private List<ThreadGateRule>? _threadGateRules;
     private List<PostGateRule>? _postGateRules;
     private bool _disableReplies;
+
+    private static readonly CompositeFormat s_postTextExceedsMaxLengthValidationError = CompositeFormat.Parse(Properties.Resources.PostTextExceedsMaxLengthValidationError);
+    private static readonly CompositeFormat s_postTextExceedsMaxLengthInGraphemesValidationError = CompositeFormat.Parse(Properties.Resources.PostTextExceedsMaxLengthInGraphemesValidationError);
+    private static readonly CompositeFormat s_postTextExceedsMaxLength = CompositeFormat.Parse(Properties.Resources.PostTextExceedsMaxLengths);
 
     /// <summary>
     /// Creates a new instance of a <see cref="PostBuilder"/>.
@@ -823,160 +825,63 @@ public sealed class PostBuilder : IValidatableObject
     }
 
     /// <summary>
-    /// Appends a copy of the specified string to the record text of this instance.
+    /// Sets the post <paramref name="text"/> for this instance
     /// </summary>
-    /// <param name="value">The string to append</param>
-    /// <returns>A reference to this instance after the append operation has completed.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when enlarging the the record text of this instance would exceed <see cref="MaxCapacity"/> or <see cref="MaxCapacityGraphemes"/>.</exception>
-    public PostBuilder Append(string? value)
+    /// <param name="text">The text to set for the post.</param>
+    /// <returns>A reference to this instance after the operation has completed.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the text exceeds the maximum allowed length.</exception>
+    public PostBuilder WithText(string text)
     {
-        if (string.IsNullOrEmpty(value))
+        ArgumentException.ThrowIfNullOrEmpty(text);
+
+        if (text.Length > MaxCapacity || text.GetGraphemeLength() > MaxCapacityGraphemes)
         {
-            return this;
+            throw new ArgumentOutOfRangeException(nameof(text),string.Format(null, s_postTextExceedsMaxLength, MaxCapacity, MaxCapacityGraphemes));
         }
 
-        lock (_syncLock)
-        {
-            if (value.Length > MaxCapacity || value.GetGraphemeLength() > MaxCapacityGraphemes)
-            {
-                throw new ArgumentOutOfRangeException(nameof(value), $"string cannot have a length greater than {MaxCapacity} characters, or {MaxCapacityGraphemes} graphemes.");
-            }
-
-            if (_post.Text is null)
-            {
-                _post.Text = value;
-                return this;
-            }
-
-            int newLength = value.Length + _post.Text.Length;
-            int newGraphemeLength = value.GetGraphemeLength() + _post.Text.GetGraphemeLength();
-
-            if (newLength > MaxCapacity || newGraphemeLength > MaxCapacityGraphemes)
-            {
-                throw new ArgumentOutOfRangeException(nameof(value), $"Appending would cause the post record to have a text property of length greater than {MaxCapacity} characters, or {MaxCapacityGraphemes} graphemes.");
-            }
-            else
-            {
-                _post.Text += value;
-                return this;
-            }
-        }
+        _post.Text = text;
+        return this;
     }
 
     /// <summary>
-    /// Appends a <see cref="Mention"/> to the text and and facet features of this instance.
+    /// Sets the post to be a reply to the post specified by the <paramref name="replyReferences"/>.
     /// </summary>
-    /// <param name="mention">The <see cref="Mention"/> to append.</param>
-    /// <returns>A reference to this instance after the append operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="mention"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="mention"/>'s text is <see langword="null"/> or white space.</exception>
-    public PostBuilder Append(Mention mention)
+    /// <param name="replyReferences">The <see cref="ReplyReferences"/> to set as the reply target.</param>
+    /// <returns>A reference to this instance after the operation has completed.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="replyReferences"/> is <see langword="null"/>.</exception>
+    public PostBuilder ReplyTo(ReplyReferences replyReferences)
     {
-        ArgumentNullException.ThrowIfNull(mention);
-        ArgumentException.ThrowIfNullOrWhiteSpace(mention.Text);
+        ArgumentNullException.ThrowIfNull(replyReferences);
+        InReplyTo = replyReferences;
+        return this;
+    }
 
-        lock (_syncLock)
+    /// <summary>
+    /// Sets the post to be a reply to the post specified by the <paramref name="postReference"/>.
+    /// </summary>
+    /// <param name="postReference">The <see cref="StrongReference"/> to set as the reply target.</param>
+    /// <param name="agent">The <see cref="BlueskyAgent"/> to use for retrieving reply references.</param>
+    /// <returns>A reference to this instance after the operation has completed.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postReference"/> or <paramref name="agent"/> is <see langword="null"/>.</exception>
+    /// <exception cref="BlueskyException">Thrown when the reply references for <paramref name="postReference"/> could not be retrieved.</exception>
+    public async Task<PostBuilder> ReplyTo(StrongReference postReference, BlueskyAgent agent)
+    {
+        ArgumentNullException.ThrowIfNull(postReference);
+        ArgumentNullException.ThrowIfNull(agent);
+
+        AtProtoHttpResult<ReplyReferences> replyReferences = await agent.GetReplyReferences(postReference, CancellationToken.None).ConfigureAwait(false);
+
+        if (replyReferences.Succeeded)
         {
-            ByteSlice byteSlice = GetFacetPosition(_post.Text, mention.Text);
-            _post.Text += mention.Text;
-
-            MentionFacetFeature mentionFacetFeature = new(mention.Did);
-            List<FacetFeature> features =
-                [
-                    mentionFacetFeature
-                ];
-
-            _post.Facets ??= [];
-            _post.Facets.Add(new Facet(byteSlice, features));
-
-            return this;
+            InReplyTo = replyReferences.Result;
         }
-    }
-
-    /// <summary>
-    /// Appends a copy of the specified character to the record text of this instance.
-    /// </summary>
-    /// <param name="value">The string to append</param>
-    /// <returns>A reference to this instance after the append operation has completed.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when enlarging the the record text of this instance would exceed <see cref="MaxCapacity"/> or <see cref="MaxCapacityGraphemes"/>.</exception>
-    public PostBuilder Append(char value)
-    {
-        return Append(value.ToString());
-    }
-
-    /// <summary>
-    /// Appends a specified number of copies of the string representation of a Unicode character to this instance.
-    /// </summary>
-    /// <param name="value">The character to append.</param>
-    /// <param name="repeatCount">The number of times to append <paramref name="value"/>.</param>
-    /// <returns>A reference to this instance after the append operation has completed.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="repeatCount"/> is &lt;=0.</exception>
-    public PostBuilder Append(char value, int repeatCount)
-    {
-        ArgumentOutOfRangeException.ThrowIfNegative(repeatCount);
-        ArgumentOutOfRangeException.ThrowIfZero(repeatCount);
-
-        return Append(new string(value, repeatCount));
-    }
-
-    /// <summary>
-    /// Appends a <see cref="HashTag"/> to the text and facet features of this instance.
-    /// </summary>
-    /// <param name="hashTag">The <see cref="HashTag"/> to append.</param>
-    /// <returns>A reference to this instance after the append operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="hashTag"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="hashTag"/>'s text is <see langword="null"/> or whitespace.</exception>
-    public PostBuilder Append(HashTag hashTag)
-    {
-        ArgumentNullException.ThrowIfNull(hashTag);
-        ArgumentException.ThrowIfNullOrWhiteSpace(hashTag.Text);
-
-        lock (_syncLock)
+        else
         {
-            ByteSlice byteSlice = GetFacetPosition(_post.Text, hashTag.Text);
-            _post.Text += hashTag.Text;
-
-            TagFacetFeature tagFacetFeature = new(hashTag.Tag);
-            List<FacetFeature> features =
-                [
-                    tagFacetFeature
-                ];
-
-            _post.Facets ??= [];
-            _post.Facets.Add(new Facet(byteSlice, features));
-
-            return this;
+            throw new BlueskyException("Failed to get reply references for the provided post reference.");
         }
-    }
 
-    /// <summary>
-    /// Appends a <see cref="Link"/> to the text and facet features of this instance.
-    /// </summary>
-    /// <param name="link">The <see cref="Link"/> to append.</param>
-    /// <returns>A reference to this instance after the append operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when  <paramref name="link"/> is <see langword="null"/> or its text is <see langword="null"/> or whitespace.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="link"/>'s is <see langword="null"/> or whitespace.</exception>
-    public PostBuilder Append(Link link)
-    {
-        ArgumentNullException.ThrowIfNull(link);
-        ArgumentException.ThrowIfNullOrWhiteSpace(link.Text);
-
-        lock (_syncLock)
-        {
-            ByteSlice byteSlice = GetFacetPosition(_post.Text, link.Text);
-            _post.Text += link.Text;
-
-            LinkFacetFeature linkFacetFeature = new(link.Uri);
-            List<FacetFeature> features =
-                [
-                    linkFacetFeature
-                ];
-
-            _post.Facets ??= [];
-            _post.Facets.Add(new Facet(byteSlice, features));
-
-            return this;
-        }
+        return this;
     }
 
     /// <summary>
@@ -1002,334 +907,45 @@ public sealed class PostBuilder : IValidatableObject
     }
 
     /// <summary>
-    /// Adds a copy of the specified string to the record text to the specified <paramref name="postBuilder"/>.
+    /// Quotes a record specified by <paramref name="strongReference"/> and adds it to this instance.
     /// </summary>
-    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the string to.</param>
-    /// <param name="s">The string to append</param>
-    /// <returns>A reference to this instance after the append operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is <see langword="null"/>.</exception>
-    public static PostBuilder Add(PostBuilder postBuilder, string s)
+    /// <param name="strongReference">The <see cref="StrongReference"/> to quote.</param>
+    /// <returns>This instance of <see cref="PostBuilder"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="strongReference"/> does not point to a valid Bluesky Post record.</exception>
+    public PostBuilder Quote(StrongReference strongReference)
     {
-        ArgumentNullException.ThrowIfNull(postBuilder);
+        ArgumentNullException.ThrowIfNull(strongReference);
 
-        return postBuilder + s;
-    }
-
-    /// <summary>
-    /// Adds a copy of the specified character to the record text to the specified <paramref name="postBuilder"/>.
-    /// </summary>
-    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the string to.</param>
-    /// <param name="c">The character to append</param>
-    /// <param name="repeatCount">The number of times to repeat the <paramref name="c" />.</param>
-    /// <returns>A reference to this instance after the append operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is <see langword="null"/>.</exception>
-    public static PostBuilder Add(PostBuilder postBuilder, char c, int repeatCount = 1)
-    {
-        ArgumentNullException.ThrowIfNull(postBuilder);
-
-        return postBuilder.Append(c, repeatCount);
-    }
-
-    /// <summary>
-    /// Adds a <see cref="Link"/> to the text and facet features of the specified <paramref name="postBuilder"/>.
-    /// </summary>
-    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the link to.</param>
-    /// <param name="link">The <see cref="Link"/> to add.</param>
-    /// <returns>A reference to this instance after the add operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="link"/> is <see langword="null"/>.</exception>
-    public static PostBuilder Add(PostBuilder postBuilder, Link link)
-    {
-        ArgumentNullException.ThrowIfNull(postBuilder);
-        ArgumentNullException.ThrowIfNull(link);
-
-        return postBuilder.Append(link);
-    }
-
-    /// <summary>
-    /// Adds a <see cref="Mention"/> to the text and and facet features to the specified <paramref name="postBuilder"/>.
-    /// </summary>
-    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the mention to.</param>
-    /// <param name="mention">The <see cref="Mention"/> to add.</param>
-    /// <returns>A reference to this instance after the add operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="mention"/> is <see langword="null"/>.</exception>
-    public static PostBuilder Add(PostBuilder postBuilder, Mention mention)
-    {
-        ArgumentNullException.ThrowIfNull(postBuilder);
-        ArgumentNullException.ThrowIfNull(mention);
-
-        return postBuilder.Append(mention);
-    }
-
-    /// <summary>
-    /// Adds a <see cref="HashTag"/> to the text and facet features to the specified <paramref name="postBuilder"/>.
-    /// </summary>
-    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the hash tag to.</param>
-    /// <param name="hashTag">The <see cref="HashTag"/> to add.</param>
-    /// <returns>A reference to this instance after the add operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="hashTag"/> is <see langword="null"/>.</exception>
-    public static PostBuilder Add(PostBuilder postBuilder, HashTag hashTag)
-    {
-        ArgumentNullException.ThrowIfNull(postBuilder);
-        ArgumentNullException.ThrowIfNull(hashTag);
-
-        return postBuilder.Append(hashTag);
-    }
-
-    /// <summary>
-    /// Adds a <see cref="EmbeddedImage"/> to this instance.
-    /// </summary>
-    /// <param name="image">The <see cref="EmbeddedImage"/> to embed.</param>
-    /// <returns>A reference to this instance after the append operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when the number of images in this instance is already equal to <see cref="MaxImages"/>.</exception>
-    public PostBuilder Add(EmbeddedImage image)
-    {
-        ArgumentNullException.ThrowIfNull(image);
-
-        lock (_syncLock)
+        if (strongReference.Uri.Collection != CollectionNsid.Post)
         {
-            if (_embeddedImages.Count == MaxImages)
-            {
-                throw new ArgumentOutOfRangeException(nameof(image), $"cannot have more than {MaxImages} in a post.");
-            }
-
-            _embeddedImages.Add(image);
-            _embeddedVideo = null;
-            return this;
+            throw new ArgumentException(Properties.Resources.PostBuilderAddQuoteToNonPostError, nameof(strongReference));
         }
+
+        Add(strongReference);
+        return this;
     }
 
     /// <summary>
-    /// Adds a <see cref="EmbeddedImage"/> to the specified <paramref name="postBuilder"/>.
+    /// Quotes a record specified by <paramref name="strongReference"/> and adds it to the specified <paramref name="postBuilder" />.
     /// </summary>
-    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the image to.</param>
-    /// <param name="image">The <see cref="EmbeddedImage"/> to add.</param>
-    /// <returns>A reference to this instance after the add operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when the number of images in this instance is already equal to <see cref="MaxImages"/>.</exception>
-    public static PostBuilder Add(PostBuilder postBuilder, EmbeddedImage image)
+    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the quote to.</param>
+    /// <param name="strongReference">The <see cref="StrongReference"/> to quote.</param>
+    /// <returns>The <paramref name="postBuilder"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="strongReference"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="strongReference"/> does not point to a valid Bluesky Post record.</exception>
+    public static PostBuilder Quote(PostBuilder postBuilder, StrongReference strongReference)
     {
         ArgumentNullException.ThrowIfNull(postBuilder);
-        ArgumentNullException.ThrowIfNull(image);
+        ArgumentNullException.ThrowIfNull(strongReference);
 
-        lock (postBuilder._syncLock)
+        if (strongReference.Uri.Collection != CollectionNsid.Post)
         {
-            if (postBuilder._embeddedImages.Count == postBuilder.MaxImages)
-            {
-                throw new ArgumentOutOfRangeException(nameof(image), $"cannot have more than {postBuilder.MaxImages} in a post.");
-            }
-
-            postBuilder._embeddedImages.Add(image);
-            postBuilder._embeddedVideo = null;
-
-            return postBuilder;
+            throw new ArgumentException(Properties.Resources.PostBuilderAddQuoteToNonPostError, nameof(strongReference));
         }
-    }
 
-    /// <summary>
-    /// Adds a collection <see cref="EmbeddedImage"/>s to this instance.
-    /// </summary>
-    /// <param name="images">The collection of <see cref="EmbeddedImage"/> to embed.</param>
-    /// <returns>A reference to this instance after the append operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">if <paramref name="images"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when adding the images in this instance is will result in an image count &gt;<see cref="MaxImages"/>.</exception>
-    public PostBuilder Add(ICollection<EmbeddedImage> images)
-    {
-        ArgumentNullException.ThrowIfNull(images);
-
-        lock (_syncLock)
-        {
-            if ((_embeddedImages.Count + images.Count) > MaxImages)
-            {
-                throw new ArgumentOutOfRangeException(nameof(images), $"cannot have more than {MaxImages} in a post.");
-            }
-
-            _embeddedImages.AddRange(images);
-            _embeddedVideo = null;
-            return this;
-        }
-    }
-
-    /// <summary>
-    /// Adds a collection of <see cref="EmbeddedImage"/>s to the specified <paramref name="postBuilder" />.
-    /// </summary>
-    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the images to.</param>
-    /// <param name="images">The collection of <see cref="EmbeddedImages"/> to add.</param>
-    /// <returns>A reference to this instance after the add operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="images"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when adding the images in this instance is will result in an image count &gt;<see cref="MaxImages"/>.</exception>
-    public static PostBuilder Add(PostBuilder postBuilder, ICollection<EmbeddedImage> images)
-    {
-        ArgumentNullException.ThrowIfNull(postBuilder);
-        ArgumentNullException.ThrowIfNull(images);
-
-        lock (postBuilder._syncLock)
-        {
-            if ((postBuilder._embeddedImages.Count + images.Count) > postBuilder.MaxImages)
-            {
-                throw new ArgumentOutOfRangeException(nameof(images), $"cannot have more than {postBuilder.MaxImages} in a post.");
-            }
-
-            postBuilder._embeddedImages.AddRange(images);
-            postBuilder._embeddedVideo = null;
-            return postBuilder;
-        }
-    }
-
-    /// <summary>
-    /// Adds a <see cref="EmbeddedVideo"/> to this instance.
-    /// </summary>
-    /// <param name="video">The <see cref="EmbeddedVideo"/> to embed.</param>
-    /// <returns>A reference to this instance after the append operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is <see langword="null"/>.</exception>
-    public PostBuilder Add(EmbeddedVideo video)
-    {
-        ArgumentNullException.ThrowIfNull(video);
-
-        lock (_syncLock)
-        {
-            Video = video;
-            _embeddedImages.Clear();
-            return this;
-        }
-    }
-
-    /// <summary>
-    /// Adds a <see cref="EmbeddedVideo"/> to the specified <paramref name="postBuilder" />.
-    /// </summary>
-    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the video to.</param>
-    /// <param name="video">The <see cref="EmbeddedVideo"/> to embed.</param>
-    /// <returns>A reference to this instance after the append operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is <see langword="null"/>.</exception>
-    public static PostBuilder Add(PostBuilder postBuilder, EmbeddedVideo video)
-    {
-        ArgumentNullException.ThrowIfNull(postBuilder);
-        ArgumentNullException.ThrowIfNull(video);
-
-        lock (postBuilder._syncLock)
-        {
-            postBuilder.Video = video;
-            postBuilder._embeddedImages.Clear();
-            return postBuilder;
-        }
-    }
-
-    /// <summary>
-    /// Adds a copy of the specified string to the record text of the specified <paramref name="postBuilder" />.
-    /// </summary>
-    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the images to.</param>
-    /// <param name="s">The string to append</param>
-    /// <returns>A reference to this instance after the append operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is <see langword="null"/>.</exception>
-    public static PostBuilder operator +(PostBuilder postBuilder, string s)
-    {
-        ArgumentNullException.ThrowIfNull(postBuilder);
-
-        return postBuilder.Append(s);
-    }
-
-    /// <summary>
-    /// Adds the specified character to the record text of the specified <paramref name="postBuilder" />.
-    /// </summary>
-    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the images to.</param>
-    /// <param name="c">The character to append</param>
-    /// <returns>A reference to this instance after the append operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is <see langword="null"/>.</exception>
-    public static PostBuilder operator +(PostBuilder postBuilder, char c)
-    {
-        ArgumentNullException.ThrowIfNull(postBuilder);
-
-        return postBuilder.Append(c);
-    }
-
-    /// <summary>
-    /// Adds a <see cref="Mention"/> to the text and facet features to the specified <paramref name="postBuilder" />.
-    /// </summary>
-    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the mention to.</param>
-    /// <param name="mention">The <see cref="Mention"/> to add.</param>
-    /// <returns>A reference to this instance after the add operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="mention"/> is <see langword="null"/>.</exception>
-    public static PostBuilder operator +(PostBuilder postBuilder, Mention mention)
-    {
-        ArgumentNullException.ThrowIfNull(postBuilder);
-        ArgumentNullException.ThrowIfNull(mention);
-
-        return postBuilder.Append(mention);
-    }
-
-    /// <summary>
-    /// Adds a <see cref="HashTag"/> to the text and facet features to the specified <paramref name="postBuilder" />.
-    /// </summary>
-    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the hash tag to.</param>
-    /// <param name="hashTag">The <see cref="HashTag"/> to add.</param>
-    /// <returns>A reference to this instance after the add operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="hashTag"/> is <see langword="null"/>.</exception>
-    public static PostBuilder operator +(PostBuilder postBuilder, HashTag hashTag)
-    {
-        ArgumentNullException.ThrowIfNull(postBuilder);
-        ArgumentNullException.ThrowIfNull(hashTag);
-
-        return postBuilder.Append(hashTag);
-    }
-
-    /// <summary>
-    /// Adds a <see cref="Link"/> to the text and facet features to the specified <paramref name="postBuilder" />.
-    /// </summary>
-    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the link tag to.</param>
-    /// <param name="link">The <see cref="Link"/> to add.</param>
-    /// <returns>A reference to this instance after the add operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="link"/> is <see langword="null"/>.</exception>
-    public static PostBuilder operator +(PostBuilder postBuilder, Link link)
-    {
-        ArgumentNullException.ThrowIfNull(postBuilder);
-        ArgumentNullException.ThrowIfNull(link);
-
-        return postBuilder.Append(link);
-    }
-
-    /// <summary>
-    /// Adds an <see cref="EmbeddedImage"/> to the specified <paramref name="postBuilder" />.
-    /// </summary>
-    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the image to.</param>
-    /// <param name="image">The <see cref="EmbeddedImage"/> to add.</param>
-    /// <returns>A reference to this instance after the add operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
-    public static PostBuilder operator +(PostBuilder postBuilder, EmbeddedImage image)
-    {
-        ArgumentNullException.ThrowIfNull(postBuilder);
-        ArgumentNullException.ThrowIfNull(image);
-
-        return Add(postBuilder, image);
-    }
-
-    /// <summary>
-    /// Adds a collection of <see cref="EmbeddedImage"/>s to the specified <paramref name="postBuilder" />.
-    /// </summary>
-    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the images to.</param>
-    /// <param name="images">The collection of <see cref="EmbeddedImage"/>s to add.</param>
-    /// <returns>A reference to this instance after the add operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="images"/> is <see langword="null"/>.</exception>
-    public static PostBuilder operator +(PostBuilder postBuilder, ICollection<EmbeddedImage> images)
-    {
-        ArgumentNullException.ThrowIfNull(postBuilder);
-        ArgumentNullException.ThrowIfNull(images);
-
-        return Add(postBuilder, images);
-    }
-
-    /// <summary>
-    /// Adds an <see cref="EmbeddedVideo"/> to the specified <paramref name="postBuilder" />.
-    /// </summary>
-    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the image to.</param>
-    /// <param name="video">The <see cref="EmbeddedVideo"/> to add.</param>
-    /// <returns>A reference to this instance after the add operation has completed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="video"/> is <see langword="null"/>.</exception>
-    public static PostBuilder operator +(PostBuilder postBuilder, EmbeddedVideo video)
-    {
-        ArgumentNullException.ThrowIfNull(postBuilder);
-        ArgumentNullException.ThrowIfNull(video);
-
-        return Add(postBuilder, video);
+        postBuilder.Quote(strongReference);
+        return postBuilder;
     }
 
     /// <summary>
@@ -1344,33 +960,15 @@ public sealed class PostBuilder : IValidatableObject
         _post.SetSelfLabels(labels);
     }
 
-    /// <inheritdoc/>
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    /// <summary>
+    /// Sets the self labels for the post to the values specified in <paramref name="labels"/>.
+    /// </summary>
+    /// <param name="labels">The self label values to set.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="labels"/> is <see langword="null"/>.</exception>
+    public void Label(PostSelfLabels labels)
     {
-        if (!HasText && !HasImages && !HasEmbed && !HasVideo)
-        {
-            yield return new ValidationResult("Post text cannot be null or empty unless there are images, video or another type of embedded record.");
-        }
-
-        if (HasVideo && HasImages)
-        {
-            yield return new ValidationResult("Post cannot have both images and video");
-        }
-
-        if (HasText && Length > MaxCapacity)
-        {
-            yield return new ValidationResult($"Post text cannot be longer than {MaxCapacity} characters.");
-        }
-
-        if (HasText && Text.GetGraphemeLength() > MaxCapacityGraphemes)
-        {
-            yield return new ValidationResult($"Post text cannot be longer than {MaxCapacityGraphemes} graphemes.");
-        }
-
-        if (HasEmbed && (HasVideo || HasImages))
-        {
-            yield return new ValidationResult("Post cannot have both embedded records and media (images or video).");
-        }
+        ArgumentNullException.ThrowIfNull(labels);
+        SetSelfLabels(labels);
     }
 
     /// <summary>
@@ -1387,17 +985,12 @@ public sealed class PostBuilder : IValidatableObject
         {
             if (!HasText && !HasImages && !HasEmbed && !HasVideo)
             {
-                throw new PostBuilderException("Post text cannot be null or empty unless there are images, video or another type of embedded record.");
+                throw new PostBuilderException(Properties.Resources.EmptyPostTextValidationError);
             }
 
             if (HasVideo && HasImages)
             {
-                throw new PostBuilderException("Post cannot have both images and video");
-            }
-
-            if (HasEmbed && (HasVideo || HasImages))
-            {
-                throw new PostBuilderException("Post cannot have both embedded records and media (images or video).");
+                throw new PostBuilderException(Properties.Resources.PostCannotHaveImagesAndVideoValidationError);
             }
 
             if (HasImages)
@@ -1496,14 +1089,26 @@ public sealed class PostBuilder : IValidatableObject
     }
 
     /// <summary>
+    /// Determines whether two <see cref="PostBuilder"/> instances are equal.
+    /// </summary>
+    /// <param name="other">The <see cref="PostBuilder"/> to compare with the current instance.</param>
+    /// <returns><see langword="true"/> if the specified <see cref="PostBuilder"/> is equal to the current instance; otherwise, <see langword="false"/>.</returns>
+    public bool Equals(PostBuilder? other) => other is not null && 
+        EqualityComparer<Post>.Default.Equals(_post, other._post) &&
+        EqualityComparer<List<EmbeddedImage>>.Default.Equals(_embeddedImages, other._embeddedImages) &&
+        EqualityComparer<List<ThreadGateRule>?>.Default.Equals(_threadGateRules, other._threadGateRules) &&
+        EqualityComparer<List<PostGateRule>?>.Default.Equals(_postGateRules, other._postGateRules) &&
+        DisableEmbedding == other.DisableEmbedding;
+
+    /// <summary>
     /// Determines whether two object instances are equal.
     /// </summary>
     /// <param name="obj">The object to compare with the current object.</param>
     /// <returns><see langword="true"/> if the specified object is equal to the current object; otherwise, <see langword="false"/>.</returns>
-    public override bool Equals(object? obj) => obj is PostBuilder builder && EqualityComparer<Post>.Default.Equals(_post, builder._post) && EqualityComparer<List<EmbeddedImage>>.Default.Equals(_embeddedImages, builder._embeddedImages) && EqualityComparer<List<ThreadGateRule>?>.Default.Equals(_threadGateRules, builder._threadGateRules) && EqualityComparer<List<PostGateRule>?>.Default.Equals(_postGateRules, builder._postGateRules) && DisableEmbedding == builder.DisableEmbedding;
+    public override bool Equals(object? obj) => obj is PostBuilder other && Equals(other);
 
     /// <summary>
-    /// Determines whether two specified <see cref="PostBuilder"/>s the same value."/>
+    /// Determines whether two specified <see cref="PostBuilder"/>s the same value.
     /// </summary>
     /// <param name="lhs">The first <see cref="PostBuilder"/> to compare, or <see langword="null"/>.</param>
     /// <param name="rhs">The second <see cref="PostBuilder"/> to compare, or <see langword="null"/>.</param>
@@ -1520,7 +1125,7 @@ public sealed class PostBuilder : IValidatableObject
             return false;
         }
 
-        return lhs.Equals(rhs);
+        return lhs == rhs;
     }
 
     /// <summary>
