@@ -43,5 +43,10 @@ public sealed partial class PostBuilder
         {
             yield return string.Format(null, s_postTextExceedsMaxLengthInGraphemesValidationError, MaxCapacityGraphemes);
         }
+
+        if (!HasImages && ! HasVideo && _post.Labels is not null)
+        {
+            yield return Properties.Resources.PostHasLabelsButNoMediaValidationError;
+        }
     }
 }

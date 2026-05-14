@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 using idunno.AtProto;
+using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 
 using idunno.Bluesky.Actor;
@@ -952,23 +953,62 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// Sets the self labels for the post to the values specified in <paramref name="labels"/>.
     /// </summary>
     /// <param name="labels">The self label values to set.</param>
+    /// <returns>This instance of <see cref="PostBuilder"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="labels"/> is <see langword="null"/>.</exception>
-    public void SetSelfLabels(PostSelfLabels labels)
+    public PostBuilder SetSelfLabels(PostSelfLabels labels)
     {
         ArgumentNullException.ThrowIfNull(labels);
 
         _post.SetSelfLabels(labels);
+        return this;
     }
 
     /// <summary>
     /// Sets the self labels for the post to the values specified in <paramref name="labels"/>.
     /// </summary>
     /// <param name="labels">The self label values to set.</param>
+    /// <returns>This instance of <see cref="PostBuilder"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="labels"/> is <see langword="null"/>.</exception>
-    public void Label(PostSelfLabels labels)
+    public PostBuilder Label(PostSelfLabels labels)
     {
         ArgumentNullException.ThrowIfNull(labels);
-        SetSelfLabels(labels);
+        return SetSelfLabels(labels);
+    }
+
+    /// <summary>
+    /// Marks a media containing post, as containing graphic content.
+    /// </summary>
+    /// <returns>This instance of <see cref="PostBuilder"/>.</returns>
+    public PostBuilder ContainsGraphicMedia()
+    {
+        return Add(new SelfLabel(SelfLabelValues.GraphicMedia));
+    }
+
+    /// <summary>
+    /// Marks a media containing post as containing nudity.
+    /// </summary>
+    /// <returns>This instance of <see cref="PostBuilder"/>.</returns>
+    public PostBuilder ContainsNudity()
+    {
+        return Add(new SelfLabel(SelfLabelValues.Nudity));
+    }
+
+    /// <summary>
+    /// Marks a media containing post as containing porn.
+    /// </summary>
+    /// <returns>This instance of <see cref="PostBuilder"/>.</returns>
+    public PostBuilder ContainsPorn()
+    {
+        return Add(new SelfLabel(SelfLabelValues.Porn));
+    }
+
+    /// <summary>
+    /// Marks a media containing post as containing sexual content.
+    /// </summary>
+    /// <returns>This instance of <see cref="PostBuilder"/>.</returns>
+    public PostBuilder ContainsSexualContent()
+    {
+        return Add(new SelfLabel(SelfLabelValues.Sexual));
     }
 
     /// <summary>
@@ -1029,6 +1069,11 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                     // Reply post
                     _post.EmbeddedRecord = _embeddedVideo;
                 }
+            }
+
+            if (!HasImages && !HasVideo && _post.Labels is not null)
+            {
+                throw new PostBuilderException(Properties.Resources.PostHasLabelsButNoMediaValidationError);
             }
 
             return new Post(_post);

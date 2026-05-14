@@ -97,6 +97,15 @@ namespace idunno.Bluesky.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Post contains self labels but no media.
+        /// </summary>
+        internal static string PostHasLabelsButNoMediaValidationError {
+            get {
+                return ResourceManager.GetString("PostHasLabelsButNoMediaValidationError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Post text cannot be longer than {0} graphemes..
         /// </summary>
         internal static string PostTextExceedsMaxLengthInGraphemesValidationError {

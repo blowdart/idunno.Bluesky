@@ -129,6 +129,9 @@
   <data name="PostCannotHaveImagesAndVideoValidationError" xml:space="preserve">
     <value>Post cannot have both images and video.</value>
   </data>
+  <data name="PostHasLabelsButNoMediaValidationError" xml:space="preserve">
+    <value>Post contains self labels but no media</value>
+  </data>
   <data name="PostTextExceedsMaxLengthInGraphemesValidationError" xml:space="preserve">
     <value>Post text cannot be longer than {0} graphemes.</value>
   </data>
