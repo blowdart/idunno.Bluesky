@@ -1,5 +1,25 @@
 # Version History
 
+## 1.8.3
+
+## Added
+
+### idunno.Bluesky
+
+* Added validation to `PostBuilder` to check its internal state before converting to a post.
+  You can call `IsValid()` to check if the `PostBuilder` is coherant and enumerate through `ValidationErrors()` to
+  see the errors that are present.
+* Added some more helpers to `PostBuilder`, including `Add` overloads for self labels,
+  `ContainsGraphicMedia`, `ContainsNudity`, `ContainsPorn` and `ContainsSexualContent` for setting individual self labels.
+* Added `.ReplyTo()` to `PostBuilder` for replying to a post or a thread.
+* Added `.Quote()` to `PostBuilder` for adding a quote of another post to the post content.
+
+## Changed
+
+### idunno.Bluesky
+
+* Updated `PostBuilder` to allow for replies to quote other posts. Fixes [#343](https://github.com/blowdart/idunno.Bluesky/issues/343), thank you [OatmealDome](https://github.com/OatmealDome).
+
 ## 1.8.2 - 2026-05-11
 
 ## Added
