@@ -452,5 +452,16 @@ public class PostBuilderTests
         Assert.Equivalent(
             selfLabels,
             post.Labels);
+
+        postBuilder = new PostBuilder(
+            "text",
+            images: [new(new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text")],
+            createdAt: DateTimeOffset.UtcNow)
+            .Add(new SelfLabel(SelfLabelValues.Nudity));
+
+        post = postBuilder.ToPost();
+        Assert.Equivalent(
+            selfLabels,
+            post.Labels);
     }
 }
