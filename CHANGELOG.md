@@ -13,6 +13,7 @@
   `ContainsGraphicMedia`, `ContainsNudity`, `ContainsPorn` and `ContainsSexualContent` for setting individual self labels.
 * Added `.ReplyTo()` to `PostBuilder` for replying to a post or a thread.
 * Added `.Quote()` to `PostBuilder` for adding a quote of another post to the post content.
+* Added various `Add` overloads to `PostBuilder` for adding content to the post body, including hash tags, links and mentions.
 
 ## Changed
 

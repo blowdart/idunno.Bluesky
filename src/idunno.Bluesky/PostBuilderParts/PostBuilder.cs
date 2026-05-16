@@ -112,14 +112,14 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(text),
-                    $"Cannot be longer than {Maximum.PostLengthInGraphemes} graphemes.");
+                    string.Format(null, s_postTextExceedsMaxLengthInGraphemesValidationError, Maximum.PostLengthInGraphemes));
             }
 
             if (text.Length > Maximum.PostLengthInCharacters)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(text),
-                    $"Cannot be longer than {Maximum.PostLengthInCharacters} characters.");
+                    string.Format(null, s_postTextExceedsMaxLengthValidationError, Maximum.PostLengthInCharacters));
             }
         }
 
@@ -504,12 +504,6 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                 }
 
                 _post.Reply = value;
-
-                if (value is not null && (_post.EmbeddedRecord is EmbeddedRecord || _post.EmbeddedRecord is EmbeddedRecordWithMedia))
-                {
-                    // Being a reply post excludes being a quote post.
-                    QuotePost = null;
-                }
             }
         }
     }
@@ -530,7 +524,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
         {
             lock (_syncLock)
             {
-                if (_post.EmbeddedRecord is EmbeddedRecord embeddedRecord)
+                if (_post.EmbeddedRecord is EmbeddedRecord embeddedRecord && embeddedRecord.Record.Uri.Collection == CollectionNsid.Post)
                 {
                     return embeddedRecord.Record;
                 }
@@ -558,11 +552,16 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                     }
                     else
                     {
-                        throw new ArgumentException("postRecord has embed value other than an EmbeddedRecord or EmbeddedRecordWithMedia");
+                        throw new ArgumentException("Cannot add quote as postRecord has already has an embed other than an EmbeddedRecord or EmbeddedRecordWithMedia");
                     }
                 }
                 else
                 {
+                    if (value.Uri.Collection != CollectionNsid.Post)
+                    {
+                        throw new ArgumentException("Can only quote records from a Post collection. To embed other types of records, use the appropriate embedding method, or set the Embed property directly.");
+                    }
+
                     _post.EmbeddedRecord = new EmbeddedRecord(value);
                 }
             }
