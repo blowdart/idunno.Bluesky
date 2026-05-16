@@ -33,6 +33,17 @@ public class SelfLabels
     /// <summary>
     /// Creates a new instance of <see cref="SelfLabels"/>.
     /// </summary>
+    /// <param name="value">The label to be applied to the record.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is <see langword="null"/>.</exception>
+    public SelfLabels(SelfLabel value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        _values = [value];
+    }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="SelfLabels"/>.
+    /// </summary>
     /// <param name="values">The collection of labels applied to the record.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="values"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="values"/> contains more than 10 items.</exception>

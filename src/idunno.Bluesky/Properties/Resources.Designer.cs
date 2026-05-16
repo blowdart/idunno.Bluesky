@@ -131,5 +131,14 @@ namespace idunno.Bluesky.Properties {
                 return ResourceManager.GetString("PostTextExceedsMaxLengthValidationError", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The Parent and/or Root references do not point to an &apos;app.bsky.feed.post&apos; record(s).
+        /// </summary>
+        internal static string ReplyReferencesDoNotPointToPostRecord {
+            get {
+                return ResourceManager.GetString("ReplyReferencesDoNotPointToPostRecord", resourceCulture);
+            }
+        }
     }
 }

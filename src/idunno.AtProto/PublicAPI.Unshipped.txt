@@ -1,3 +1,1 @@
 #nullable enable
-idunno.AtProto.Labels.SelfLabels.AddLabel(idunno.AtProto.Labels.SelfLabel! label) -> void
-idunno.AtProto.Labels.SelfLabels.Contains(idunno.AtProto.Labels.SelfLabel! label) -> bool

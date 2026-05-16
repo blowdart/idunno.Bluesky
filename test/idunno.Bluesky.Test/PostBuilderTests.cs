@@ -1,8 +1,11 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.Contracts;
 using idunno.AtProto;
+using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
+using idunno.Bluesky.Embed;
 
 namespace idunno.Bluesky.Test;
 
@@ -83,8 +86,8 @@ public class PostBuilderTests
     [Fact]
     public void ConstructorShouldNotAllowPostsOverMaximumLength()
     {
-        string exact = new ('a', Maximum.PostLengthInGraphemes);
-        string tooLong = new ('a', Maximum.PostLengthInGraphemes + 1);
+        string exact = new('a', Maximum.PostLengthInGraphemes);
+        string tooLong = new('a', Maximum.PostLengthInGraphemes + 1);
 
         _ = new PostBuilder(exact);
 
@@ -165,7 +168,7 @@ public class PostBuilderTests
                             new AtUri("at://did:plc:ec72yg6n2sydzjvtovvdlxrk/app.bsky.feed.post/3ksayja4oof2z"),
                             new Cid("bafyreih5pxnryqrmcfefnxcpqezzosgozd4n4nw37o6cu52h4m7wefjmmq"))
 
-    };
+        };
 
         _ = builder.ToPost();
     }
@@ -275,5 +278,179 @@ public class PostBuilderTests
         var actual = new PostBuilder("text", createdAt: DateTimeOffset.UtcNow, tags: tags);
 
         Assert.Equal(tags, actual.Tags);
+    }
+
+    [Fact]
+    public void InReplyToIsSetInResultantPost()
+    {
+        var replyReferences = new ReplyReferences(
+            new StrongReference("at://did:plc:identifier/app.bsky.feed.post/rkey", "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"),
+            new StrongReference("at://did:plc:identifier/app.bsky.feed.post/rkey", "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"));
+
+        var postBuilder = new PostBuilder("test")
+        {
+            InReplyTo = replyReferences
+        };
+
+        var post = postBuilder.ToPost();
+
+        Assert.NotNull(post.Reply);
+        Assert.Equal(replyReferences.Parent, post.Reply.Parent);
+        Assert.Equal(replyReferences.Root, post.Reply.Root);
+
+        postBuilder = new PostBuilder("test")
+            .ReplyTo(replyReferences);
+
+        post = postBuilder.ToPost();
+
+        Assert.NotNull(post.Reply);
+        Assert.Equal(replyReferences.Parent, post.Reply.Parent);
+        Assert.Equal(replyReferences.Root, post.Reply.Root);
+    }
+
+    [Fact]
+    public void QuoteIsSetInResultantPost()
+    {
+        var quotedPost = new StrongReference("at://did:plc:identifier/app.bsky.feed.post/rkey", "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4");
+
+        var postBuilder = new PostBuilder("test")
+        {
+            QuotePost = quotedPost
+        };
+
+        var post = postBuilder.ToPost();
+
+        Assert.NotNull(post.EmbeddedRecord);
+        Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
+        var embeddedRecord = post.EmbeddedRecord as EmbeddedRecord;
+        Assert.NotNull(embeddedRecord);
+        Assert.Equal(quotedPost.Uri, embeddedRecord.Record.Uri);
+        Assert.Equal(quotedPost.Cid, embeddedRecord.Record.Cid);
+
+        postBuilder = new PostBuilder("test").Quote(quotedPost);
+
+        post = postBuilder.ToPost();
+        Assert.NotNull(post.EmbeddedRecord);
+        Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
+        embeddedRecord = post.EmbeddedRecord as EmbeddedRecord;
+        Assert.NotNull(embeddedRecord);
+        Assert.Equal(quotedPost.Uri, embeddedRecord.Record.Uri);
+        Assert.Equal(quotedPost.Cid, embeddedRecord.Record.Cid);
+    }
+
+    [Fact]
+    public void CanSetBothQuoteAndReplyToInResultantPost()
+    {
+        var quotedPost = new StrongReference("at://did:plc:identifier/app.bsky.feed.post/rkey", "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4");
+        var replyReferences = new ReplyReferences(
+            new StrongReference("at://did:plc:identifier/app.bsky.feed.post/rkey", "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"),
+            new StrongReference("at://did:plc:identifier/app.bsky.feed.post/rkey", "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"));
+
+        var postBuilder = new PostBuilder("test")
+        {
+            QuotePost = quotedPost,
+            InReplyTo = replyReferences
+        };
+
+        var post = postBuilder.ToPost();
+        Assert.NotNull(post.EmbeddedRecord);
+        Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
+        var embeddedRecord = post.EmbeddedRecord as EmbeddedRecord;
+        Assert.NotNull(embeddedRecord);
+        Assert.Equal(quotedPost.Uri, embeddedRecord.Record.Uri);
+        Assert.Equal(quotedPost.Cid, embeddedRecord.Record.Cid);
+        Assert.NotNull(post.Reply);
+        Assert.Equal(replyReferences.Parent, post.Reply.Parent);
+        Assert.Equal(replyReferences.Root, post.Reply.Root);
+
+        postBuilder = new PostBuilder("test")
+            .Quote(quotedPost)
+            .ReplyTo(replyReferences);
+        post = postBuilder.ToPost();
+
+        Assert.NotNull(post.EmbeddedRecord);
+        Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
+        embeddedRecord = post.EmbeddedRecord as EmbeddedRecord;
+        Assert.NotNull(embeddedRecord);
+        Assert.Equal(quotedPost.Uri, embeddedRecord.Record.Uri);
+        Assert.Equal(quotedPost.Cid, embeddedRecord.Record.Cid);
+        Assert.NotNull(post.Reply);
+        Assert.Equal(replyReferences.Parent, post.Reply.Parent);
+        Assert.Equal(replyReferences.Root, post.Reply.Root);
+
+        postBuilder = new PostBuilder("test")
+            .ReplyTo(replyReferences)
+            .Quote(quotedPost);
+        post = postBuilder.ToPost();
+
+        Assert.NotNull(post.EmbeddedRecord);
+        Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
+        embeddedRecord = post.EmbeddedRecord as EmbeddedRecord;
+        Assert.NotNull(embeddedRecord);
+        Assert.Equal(quotedPost.Uri, embeddedRecord.Record.Uri);
+        Assert.Equal(quotedPost.Cid, embeddedRecord.Record.Cid);
+        Assert.NotNull(post.Reply);
+        Assert.Equal(replyReferences.Parent, post.Reply.Parent);
+        Assert.Equal(replyReferences.Root, post.Reply.Root);
+
+        postBuilder = new PostBuilder("test")
+        {
+            QuotePost = quotedPost,
+        }.ReplyTo(replyReferences);
+        post = postBuilder.ToPost();
+
+        Assert.NotNull(post.EmbeddedRecord);
+        Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
+        embeddedRecord = post.EmbeddedRecord as EmbeddedRecord;
+        Assert.NotNull(embeddedRecord);
+        Assert.Equal(quotedPost.Uri, embeddedRecord.Record.Uri);
+        Assert.Equal(quotedPost.Cid, embeddedRecord.Record.Cid);
+        Assert.NotNull(post.Reply);
+        Assert.Equal(replyReferences.Parent, post.Reply.Parent);
+        Assert.Equal(replyReferences.Root, post.Reply.Root);
+
+        postBuilder = new PostBuilder("test")
+        {
+            InReplyTo = replyReferences,
+        }.Quote(quotedPost);
+        post = postBuilder.ToPost();
+
+        Assert.NotNull(post.EmbeddedRecord);
+        Assert.IsType<EmbeddedRecord>(post.EmbeddedRecord);
+        embeddedRecord = post.EmbeddedRecord as EmbeddedRecord;
+        Assert.NotNull(embeddedRecord);
+        Assert.Equal(quotedPost.Uri, embeddedRecord.Record.Uri);
+        Assert.Equal(quotedPost.Cid, embeddedRecord.Record.Cid);
+        Assert.NotNull(post.Reply);
+        Assert.Equal(replyReferences.Parent, post.Reply.Parent);
+        Assert.Equal(replyReferences.Root, post.Reply.Root);
+    }
+
+    [Fact]
+    public void SelfLabelsAreSetInResultantPost()
+    {
+        var selfLabels = new SelfLabels(new SelfLabel(SelfLabelValues.Nudity));
+        var postSelfLabels = new PostSelfLabels(selfLabels);
+        var postBuilder = new PostBuilder(
+            "text",
+            images: [new(new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text")],
+            createdAt: DateTimeOffset.UtcNow)
+            .Label(postSelfLabels);
+
+        var post = postBuilder.ToPost();
+        Assert.Equivalent(
+            selfLabels,
+            post.Labels);
+
+        postBuilder = new PostBuilder(
+            "text",
+            images: [new(new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text")],
+            createdAt: DateTimeOffset.UtcNow)
+            .ContainsNudity();
+
+        post = postBuilder.ToPost();
+        Assert.Equivalent(
+            selfLabels,
+            post.Labels);
     }
 }

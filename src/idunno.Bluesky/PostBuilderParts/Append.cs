@@ -144,7 +144,9 @@ public sealed partial class PostBuilder
         {
             if (value.Length > MaxCapacity || value.GetGraphemeLength() > MaxCapacityGraphemes)
             {
-                throw new ArgumentOutOfRangeException(nameof(value), $"string cannot have a length greater than {MaxCapacity} characters, or {MaxCapacityGraphemes} graphemes.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(value),
+                    string.Format(null, s_postTextExceedsMaxLength, MaxCapacity, MaxCapacityGraphemes));
             }
 
             if (_post.Text is null)
@@ -158,7 +160,9 @@ public sealed partial class PostBuilder
 
             if (newLength > MaxCapacity || newGraphemeLength > MaxCapacityGraphemes)
             {
-                throw new ArgumentOutOfRangeException(nameof(value), $"Appending would cause the post record to have a text property of length greater than {MaxCapacity} characters, or {MaxCapacityGraphemes} graphemes.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(value),
+                    string.Format(null, s_postTextExceedsMaxLength, MaxCapacity, MaxCapacityGraphemes));
             }
             else
             {

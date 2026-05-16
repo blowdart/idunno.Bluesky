@@ -141,4 +141,7 @@
   <data name="PostTextExceedsMaxLengthValidationError" xml:space="preserve">
     <value>Post text cannot be longer than {0} characters.</value>
   </data>
+  <data name="ReplyReferencesDoNotPointToPostRecord" xml:space="preserve">
+    <value>The Parent and/or Root references do not point to an 'app.bsky.feed.post' record(s)</value>
+  </data>
 </root>

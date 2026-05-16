@@ -478,6 +478,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// Gets or sets the <see cref="StrongReference"/> of the post being replied to.
     /// </summary>
     /// <exception cref="ArgumentException">Thrown when setting a value and <see cref="ThreadGateRules"/> is not <see langword="null"/>.</exception>
+    /// <exception cref="PostBuilderException">Thrown when the value does not point to Bluesky post records.</exception>
     /// <remarks>
     /// <para>
     ///   Replying to a post and quoting a post are mutually exclusive operations.
@@ -496,11 +497,23 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
 
         set
         {
+            if (value is not null && 
+                (value.Parent.Uri.Collection != CollectionNsid.Post ||
+                 value.Root.Uri.Collection != CollectionNsid.Post))
+            {
+                throw new PostBuilderException(Properties.Resources.ReplyReferencesDoNotPointToPostRecord);
+            }
+
             lock (_syncLock)
             {
-                if (_threadGateRules is not null || DisableReplies)
+                if (_threadGateRules is not null)
                 {
                     throw new ArgumentException("Cannot set InReplyTo if ThreadGateRules is not null.");
+                }
+
+                if (DisableReplies)
+                {
+                    throw new ArgumentException("Cannot set InReplyTo if DisableReplies is true.");
                 }
 
                 _post.Reply = value;
