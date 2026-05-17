@@ -57,7 +57,7 @@ public sealed partial class PostBuilder
     /// <param name="c">The character to append</param>
     /// <returns>A reference to this instance after the append operation has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is <see langword="null"/>.</exception>
-    public static PostBuilder Add(PostBuilder postBuilder,char c)
+    public static PostBuilder Add(PostBuilder postBuilder, char c)
     {
         ArgumentNullException.ThrowIfNull(postBuilder);
         return postBuilder.Append(c, 1);

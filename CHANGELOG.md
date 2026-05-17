@@ -1,13 +1,13 @@
 # Version History
 
-## 1.8.3
+## 1.8.3 - 2026-16-05
 
 ## Added
 
 ### idunno.Bluesky
 
 * Added validation to `PostBuilder` to check its internal state before converting to a post.
-  You can call `IsValid()` to check if the `PostBuilder` is coherant and enumerate through `ValidationErrors()` to
+  You can call `IsValid()` to check if the `PostBuilder` is coherent and enumerate through `ValidationErrors()` to
   see the errors that are present.
 * Added some more helpers to `PostBuilder`, including `Add` overloads for self labels,
   `ContainsGraphicMedia`, `ContainsNudity`, `ContainsPorn` and `ContainsSexualContent` for setting individual self labels.
