@@ -77,6 +77,5 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Telemetry.Abstractions" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Validation" Version="10.0.0" />
   </ItemGroup>
 </Project>
