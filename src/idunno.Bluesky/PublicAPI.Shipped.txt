@@ -1486,7 +1486,7 @@ idunno.Bluesky.PostBuilder.PostGateRules.set -> void
 idunno.Bluesky.PostBuilder.Quote(idunno.AtProto.Repo.StrongReference! strongReference) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.QuotePost.get -> idunno.AtProto.Repo.StrongReference?
 idunno.Bluesky.PostBuilder.QuotePost.set -> void
-idunno.Bluesky.PostBuilder.ReplyTo(idunno.AtProto.Repo.StrongReference! postReference, idunno.Bluesky.BlueskyAgent! agent) -> System.Threading.Tasks.Task<idunno.Bluesky.PostBuilder!>!
+idunno.Bluesky.PostBuilder.ReplyTo(idunno.AtProto.Repo.StrongReference! postReference, idunno.Bluesky.BlueskyAgent! agent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.PostBuilder!>!
 idunno.Bluesky.PostBuilder.ReplyTo(idunno.Bluesky.ReplyReferences! replyReferences) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.SetSelfLabels(idunno.Bluesky.PostSelfLabels! labels) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.Tags.get -> System.Collections.Generic.IEnumerable<string!>?

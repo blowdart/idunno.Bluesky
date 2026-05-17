@@ -850,7 +850,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
 
         if (text.Length > MaxCapacity || text.GetGraphemeLength() > MaxCapacityGraphemes)
         {
-            throw new ArgumentOutOfRangeException(nameof(text),string.Format(null, s_postTextExceedsMaxLength, MaxCapacity, MaxCapacityGraphemes));
+            throw new ArgumentOutOfRangeException(nameof(text), string.Format(null, s_postTextExceedsMaxLength, MaxCapacity, MaxCapacityGraphemes));
         }
 
         _post.Text = text;
@@ -875,15 +875,16 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// </summary>
     /// <param name="postReference">The <see cref="StrongReference"/> to set as the reply target.</param>
     /// <param name="agent">The <see cref="BlueskyAgent"/> to use for retrieving reply references.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>A reference to this instance after the operation has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postReference"/> or <paramref name="agent"/> is <see langword="null"/>.</exception>
     /// <exception cref="BlueskyException">Thrown when the reply references for <paramref name="postReference"/> could not be retrieved.</exception>
-    public async Task<PostBuilder> ReplyTo(StrongReference postReference, BlueskyAgent agent)
+    public async Task<PostBuilder> ReplyTo(StrongReference postReference, BlueskyAgent agent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(postReference);
         ArgumentNullException.ThrowIfNull(agent);
 
-        AtProtoHttpResult<ReplyReferences> replyReferences = await agent.GetReplyReferences(postReference, CancellationToken.None).ConfigureAwait(false);
+        AtProtoHttpResult<ReplyReferences> replyReferences = await agent.GetReplyReferences(postReference, cancellationToken).ConfigureAwait(false);
 
         if (replyReferences.Succeeded)
         {
@@ -1172,17 +1173,22 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// <returns><see langword="true"/> if the value of <paramref name="lhs"/> is the same as the value of <paramref name="rhs" />; otherwise, <see langword="false"/>.</returns>
     public static bool operator ==(PostBuilder? lhs, PostBuilder? rhs)
     {
+        if (ReferenceEquals(lhs, rhs))
+        {
+            return true;
+        }
+
         if (lhs is null)
         {
-            if (rhs is null)
-            {
-                return true;
-            }
-
             return false;
         }
 
-        return lhs == rhs;
+        if (rhs is null)
+        {
+            return false;
+        }
+
+        return lhs.Equals(rhs);
     }
 
     /// <summary>
