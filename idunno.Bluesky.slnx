@@ -142,6 +142,10 @@
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
+    <Project Path="samples/Samples.AspNetAuthentication/Samples.AspNetAuthentication.csproj" Id="554b3183-d9b9-4d0b-a144-b69aa5b84d83">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
     <Project Path="samples/Samples.AtProto/Samples.AtProto.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
@@ -266,6 +270,7 @@
     <Project Path="src/idunno.AtProto.OAuthCallback/idunno.AtProto.OAuthCallback.csproj" />
     <Project Path="src/idunno.AtProto.Types/idunno.AtProto.Types.csproj" />
     <Project Path="src/idunno.AtProto/idunno.AtProto.csproj" />
+    <Project Path="src/idunno.Bluesky.AspNet.Authentication/idunno.Bluesky.AspNet.Authentication.csproj" />
     <Project Path="src/idunno.Bluesky/idunno.Bluesky.csproj" />
   </Folder>
   <Folder Name="/test/">

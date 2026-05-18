@@ -1,0 +1,56 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>ASP.NET Core authentication from the Bluesky social network.</Description>
+    <PackageTags>atproto;bluesky;aspnetcore;authentication;security</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+  </PropertyGroup>
+
+  <!-- Nuget package properties -->
+  <PropertyGroup>
+    <PackageReadmeFile>readme.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
+    <NeutralLanguage>en-US</NeutralLanguage>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0|AnyCPU'">
+    <WarningLevel>8</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0|AnyCPU'">
+    <WarningLevel>8</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='CodeQL|net9.0|AnyCPU'">
+    <WarningLevel>8</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0|AnyCPU'">
+    <WarningLevel>8</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net10.0|AnyCPU'">
+    <WarningLevel>8</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='CodeQL|net10.0|AnyCPU'">
+    <WarningLevel>8</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="readme.md" Pack="true" PackagePath="\" />
+    <None Include="icon.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\exclusion.dic" Link="exclusion.dic" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\idunno.Bluesky\idunno.Bluesky.csproj" />
+  </ItemGroup>
+
+</Project>
