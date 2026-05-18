@@ -104,7 +104,7 @@ public static class BlueskyExtensions
 
         builder.Services.AddBlueskyAgentOptions();
         builder.Services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
-        builder.Services.TryAddSingleton<IBlueskyAuthenticationCorrelationCache, BlueskyAuthenticationCorrelationCache>();
+        builder.Services.TryAddSingleton<ICorrelationStateCache, DistributedCacheCorrelationStateCache>();
         builder.Services.TryAddScoped<BlueskySignInManager, BlueskySignInManager>();
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<BlueskyAuthenticationOptions>, PostConfigureBlueskyAuthenticationOptions>());
         builder.Services.AddOptions<BlueskyAuthenticationOptions>(authenticationScheme).Validate(

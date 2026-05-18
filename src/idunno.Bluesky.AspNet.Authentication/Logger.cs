@@ -84,4 +84,7 @@ internal static partial class Logger
 
     [LoggerMessage(500, LogLevel.Warning, "Using an in-memory cache which is not suitable for production environments. A maximum of 1024 identities will be cached. Identities will not be persisted to storage.")]
     public static partial void UsingInMemoryCacheWarning(this ILogger logger);
+
+    [LoggerMessage(501, LogLevel.Warning, "Using an in-memory cache which is not suitable for production environments. A maximum of 1024 correlation states will be cached. States will not be persisted to storage.")]
+    public static partial void UsingInMemoryCorrelationCacheWarning(this ILogger logger);
 }

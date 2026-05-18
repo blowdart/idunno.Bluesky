@@ -41,6 +41,11 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     public IIdentityStore? IdentityStore { get; set; } = default!;
 
     /// <summary>
+    /// The correlation cache to use to store OAuth2 correlation state. If not provided a default in-memory store will be used.
+    /// </summary>
+    public ICorrelationStateCache? CorrelationCache { get; set; } = default!;
+
+    /// <summary>
     /// Gets or sets a value for how long entries are kept in the identity store.
     /// </summary>
     public TimeSpan? IdentityStoreEntryTimeToLive { get; set; } = TimeSpan.FromDays(7);

@@ -12,16 +12,16 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// <summary>
 /// Implements an authenticate state cache using an <see cref="IDistributedCache"/>.
 /// </summary>
-public class BlueskyAuthenticationCorrelationCache : IBlueskyAuthenticationCorrelationCache
+public class DistributedCacheCorrelationStateCache : ICorrelationStateCache
 {
     const string CorrelationPrefix = "_blueskyLoginCorrelation";
 
     /// <summary>
-    /// Creates a new instance of <see cref="IBlueskyAuthenticationCorrelationCache"/> using the specified <paramref name="cache"/>.
+    /// Creates a new instance of <see cref="ICorrelationStateCache"/> using the specified <paramref name="cache"/>.
     /// </summary>
     /// <param name="cache">The <see cref="IDistributedCache"/> backing this instance.</param>
     /// <param name="entryTimeToLive">The TTL that entries in the cache should last for.</param>
-    public BlueskyAuthenticationCorrelationCache(IDistributedCache cache, TimeSpan? entryTimeToLive = null)
+    public DistributedCacheCorrelationStateCache(IDistributedCache cache, TimeSpan? entryTimeToLive = null)
     {
         Cache = cache;
 

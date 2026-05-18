@@ -49,15 +49,19 @@ public class PostConfigureBlueskyAuthenticationOptions(
         {
             options.LoginPath = CookieAuthenticationDefaults.LoginPath;
         }
+
         if (!options.LogoutPath.HasValue)
         {
             options.LogoutPath = CookieAuthenticationDefaults.LogoutPath;
         }
+
         if (!options.AccessDeniedPath.HasValue)
         {
             options.AccessDeniedPath = CookieAuthenticationDefaults.AccessDeniedPath;
         }
 
         options.IdentityStore ??= new EphemeralIdentityStore(loggerFactory);
+
+        options.CorrelationCache ??= new EphemeralCorrelationStateCache(loggerFactory);
     }
 }

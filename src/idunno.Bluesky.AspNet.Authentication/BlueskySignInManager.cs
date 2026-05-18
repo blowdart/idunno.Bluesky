@@ -25,12 +25,11 @@ public class BlueskySignInManager
 
     private readonly IHttpContextAccessor _contextAccessor;
     private readonly IHostEnvironment _env;
-    private readonly IBlueskyAuthenticationCorrelationCache _correlationCache;
+    private readonly ICorrelationStateCache _correlationCache;
 
     /// <summary>
     /// Creates a new instance of <see cref="BlueskySignInManager"/>.
     /// </summary>
-    /// <param name="correlationCache">The correlation cache used to save state between requests and responses.</param>
     /// <param name="contextAccessor">The accessor used to access the <see cref="HttpContext"/>.</param>
     /// <param name="agentOptionsAccessor">The accessor used to access the <see cref="BlueskyAgentOptions"/>.</param>
     /// <param name="authenticationOptionsAccessor">The accessor used to access the <see cref="BlueskyAuthenticationOptions"/>.</param>
@@ -38,25 +37,24 @@ public class BlueskySignInManager
     /// <param name="logger">The <see cref="ILogger"/> used to log messages, warnings and errors</param>
     /// <exception cref="ArgumentNullException">Thrown when any of the parameters are <see langword="null" />.</exception>
     public BlueskySignInManager(
-        IBlueskyAuthenticationCorrelationCache correlationCache,
         IHttpContextAccessor contextAccessor,
         IOptions<BlueskyAgentOptions> agentOptionsAccessor,
         IOptions<BlueskyAuthenticationOptions> authenticationOptionsAccessor,
         IHostEnvironment env,
         ILogger<BlueskySignInManager> logger)
     {
-        ArgumentNullException.ThrowIfNull(correlationCache);
         ArgumentNullException.ThrowIfNull(contextAccessor);
         ArgumentNullException.ThrowIfNull(agentOptionsAccessor);
         ArgumentNullException.ThrowIfNull(agentOptionsAccessor.Value);
         ArgumentNullException.ThrowIfNull(agentOptionsAccessor.Value.OAuthOptions);
         ArgumentNullException.ThrowIfNull(authenticationOptionsAccessor);
         ArgumentNullException.ThrowIfNull(authenticationOptionsAccessor.Value);
+        ArgumentNullException.ThrowIfNull(authenticationOptionsAccessor.Value.CorrelationCache);
 
         _contextAccessor = contextAccessor;
+        _correlationCache = authenticationOptionsAccessor.Value.CorrelationCache;
         _env = env;
 
-        _correlationCache = correlationCache;
         Logger = logger;
         BlueskyAgentOptions = agentOptionsAccessor.Value;
         OAuthOptions = agentOptionsAccessor.Value.OAuthOptions;

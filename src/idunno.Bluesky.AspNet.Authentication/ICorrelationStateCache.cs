@@ -8,7 +8,7 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// <summary>
 /// Defines the operations necessary for an authentication state cache.
 /// </summary>
-public interface IBlueskyAuthenticationCorrelationCache
+public interface ICorrelationStateCache
 {
     /// <summary>
     /// Adds the specified <paramref name="state"/> to the authentication state cache 
