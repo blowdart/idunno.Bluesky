@@ -78,7 +78,7 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
         ArgumentNullException.ThrowIfNull(principal);
 
         if (principal.Identity is null ||
-            principal.HasClaim(claim => claim.Type == ClaimTypes.Name))
+            principal.HasClaim(claim => claim.Type == Bluesky.ClaimTypes.DisplayName))
         {
             return principal;
         }
@@ -89,7 +89,6 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
             return principal;
         }
 
-        //ClaimsIdentity identity = new(principal.Claims, principal.Identity.AuthenticationType);
         using (BlueskyAgent agent = new(principal, BlueskyAgentOptions?.CurrentValue))
         {
             if (agent.IsAuthenticated)
@@ -167,16 +166,22 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
         if (handle is not null)
         {
             identity.AddClaim(new Claim(
-                        ClaimTypes.Name,
-                        handle!,
-                        ClaimValueTypes.String,
-                        issuer));
+                Bluesky.ClaimTypes.Handle,
+                handle!,
+                ClaimValueTypes.String,
+                issuer));
+
+            identity.AddClaim(new Claim(
+                System.Security.Claims.ClaimTypes.Name,
+                handle!.Value,
+                ClaimValueTypes.String,
+                issuer));
         }
 
         if (!string.IsNullOrEmpty(displayName))
         {
             identity.AddClaim(new Claim(
-                ClaimTypes.GivenName,
+                Bluesky.ClaimTypes.DisplayName,
                 displayName,
                 ClaimValueTypes.String,
                 issuer));

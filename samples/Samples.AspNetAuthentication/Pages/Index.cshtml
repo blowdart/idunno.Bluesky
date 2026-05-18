@@ -1,5 +1,5 @@
 @page
-@using System.Security.Claims
+@using idunno.Bluesky.AspNet.Authentication;
 @model IndexModel
 @{
     ViewData["Title"] = "Home page";
@@ -10,15 +10,17 @@
         Welcome 
         @if (User is not null && User.Identity is not null && User.Identity.IsAuthenticated)
         {
-            string? givenName = User.FindFirst(ClaimTypes.GivenName)?.Value;
-
-            if (givenName is not null)
+            if (User.DisplayName is not null)
             {
-                @givenName
+                @User.DisplayName
+            }          
+            else if (User.Handle is not null)
+            {
+                @User.Handle!.Value
             }
-            else
+            else if (User.Did is not null)
             {
-                @User.Identity.Name
+                @User.Did!.Value
             }
         }
     </h1>

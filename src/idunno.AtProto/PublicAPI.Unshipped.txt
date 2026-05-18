@@ -1,1 +1,6 @@
 #nullable enable
+const idunno.AtProto.Authentication.AtProtoClaims.AccessToken = "urn:atproto:token:access" -> string!
+const idunno.AtProto.Authentication.AtProtoClaims.Did = "urn:atproto:did" -> string!
+const idunno.AtProto.Authentication.AtProtoClaims.DPoPNonce = "urn:atproto:dpop:nonce" -> string!
+const idunno.AtProto.Authentication.AtProtoClaims.DPoPProof = "urn:atproto:dpop:proof" -> string!
+const idunno.AtProto.Authentication.AtProtoClaims.RefreshToken = "urn:atproto:token:refresh" -> string!

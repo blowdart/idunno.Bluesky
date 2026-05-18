@@ -66,6 +66,7 @@ idunno.Bluesky.AspNet.Authentication.ClaimsExtensions
 idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!)
 idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!).Did.get -> idunno.AtProto.Did?
 idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!).DisplayName.get -> string?
+idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!).Handle.get -> idunno.AtProto.Handle?
 idunno.Bluesky.AspNet.Authentication.Constants
 idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore
 idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.Add(System.Security.Claims.ClaimsIdentity! claimsIdentity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!

@@ -1,1 +1,4 @@
 #nullable enable
+const idunno.Bluesky.ClaimTypes.DisplayName = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname" -> string!
+const idunno.Bluesky.ClaimTypes.Handle = "urn:bluesky:handle" -> string!
+idunno.Bluesky.ClaimTypes
