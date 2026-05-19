@@ -21,8 +21,10 @@ namespace Microsoft.Extensions.DependencyInjection;
 public static class BlueskyExtensions
 {
     /// <summary>
+    ///<para>
     /// Adds Bluesky authentication to <see cref="AuthenticationBuilder"/> using the default scheme.
     /// The default scheme is specified by <see cref="BlueskyAuthenticationDefaults.AuthenticationScheme"/>.
+    /// </para>
     /// <para>
     /// Bluesky authentication uses a combination of OAuth and a HTTP cookie persisted in the client to perform authentication.
     /// </para>
@@ -33,7 +35,9 @@ public static class BlueskyExtensions
         => builder.AddBluesky(BlueskyAuthenticationDefaults.AuthenticationScheme);
 
     /// <summary>
+    /// <para>
     /// Adds Bluesky authentication to <see cref="AuthenticationBuilder"/> using the specified scheme.
+    /// </para>
     /// <para>
     /// Bluesky authentication uses a combination of OAuth and a HTTP cookie persisted in the client to perform authentication.
     /// </para>
@@ -45,8 +49,10 @@ public static class BlueskyExtensions
         => builder.AddBluesky(authenticationScheme, configureOptions: null!);
 
     /// <summary>
+    /// <para>
     /// Adds Bluesky authentication to <see cref="AuthenticationBuilder"/> using the default scheme.
     /// The default scheme is specified by <see cref="BlueskyAuthenticationDefaults.AuthenticationScheme"/>.
+    /// </para>
     /// <para>
     /// Bluesky authentication uses a combination of OAuth and a HTTP cookie persisted in the client to perform authentication.
     /// </para>
@@ -58,7 +64,9 @@ public static class BlueskyExtensions
         => builder.AddBluesky(BlueskyAuthenticationDefaults.AuthenticationScheme, configureOptions);
 
     /// <summary>
+    /// <para>
     /// Adds Bluesky authentication to <see cref="AuthenticationBuilder"/> using the specified scheme.
+    /// </para>
     /// <para>
     /// Bluesky authentication uses a combination of OAuth and a HTTP cookie persisted in the client to perform authentication.
     /// </para>
@@ -74,7 +82,9 @@ public static class BlueskyExtensions
             => builder.AddBluesky(authenticationScheme, displayName: null, configureOptions: configureOptions);
 
     /// <summary>
+    /// <para>
     /// Adds Bluesky authentication to <see cref="AuthenticationBuilder"/> using the specified scheme.
+    /// </para>
     /// <para>
     /// Bluesky authentication uses a combination of OAuth and a HTTP cookie persisted in the client to perform authentication.
     /// </para>
@@ -104,14 +114,13 @@ public static class BlueskyExtensions
 
         builder.Services.AddBlueskyAgentOptions();
         builder.Services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
-        builder.Services.TryAddSingleton<ICorrelationStateCache, DistributedCacheCorrelationStateCache>();
         builder.Services.TryAddScoped<BlueskySignInManager, BlueskySignInManager>();
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<BlueskyAuthenticationOptions>, PostConfigureBlueskyAuthenticationOptions>());
         builder.Services.AddOptions<BlueskyAuthenticationOptions>(authenticationScheme).Validate(
             o => o.Cookie.Expiration == null, "BlueskyAuthenticationOptions.Expiration is ignored, use ExpireTimeSpan instead.");
 
         builder.Services.AddScoped<BlueskyAgentFactory>();
-        builder.Services.AddScoped(s => s.GetRequiredService<BlueskyAgentFactory>().CreateBlueskyAgent());
+        builder.Services.AddScoped(async s => await s.GetRequiredService<BlueskyAgentFactory>().CreateBlueskyAgent().ConfigureAwait(false));
 
         return builder.AddScheme<BlueskyAuthenticationOptions, BlueskyAuthenticationHandler>(authenticationScheme, displayName, configureOptions);
     }
@@ -120,14 +129,12 @@ public static class BlueskyExtensions
     /// Adds the <see cref="ProfileClaimsTransformer"/>.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/>/</param>
-    /// <param name="configureOptions">A delegate to configure <see cref="ProfileClaimsTransformerOptions"/>.</param>
     /// <returns>The service collection</returns>
-    public static IServiceCollection AddProfileClaimsTransformer(
-        this IServiceCollection services,
-        Action<ProfileClaimsTransformerOptions> configureOptions)
+    public static IServiceCollection AddProfileClaimsTransformer(this IServiceCollection services)
     {
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<ProfileClaimsTransformerOptions>, PostConfigureProfileClaimsTransformerOptions>());
+        services.AddOptions<ProfileClaimsTransformerOptions>();
         services.AddTransient<IClaimsTransformation, ProfileClaimsTransformer>();
-        services.Configure(configureOptions);
 
         return services;
     }

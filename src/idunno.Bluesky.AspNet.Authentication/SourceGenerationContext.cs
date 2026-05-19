@@ -17,7 +17,8 @@ namespace idunno.Bluesky.AspNet.Authentication;
     UseStringEnumConverter = true,
     WriteIndented = false)]
 
-[JsonSerializable(typeof(HandleDisplayNameCacheEntry))]
+[JsonSerializable(typeof(ProfileCacheEntry))]
+[JsonSerializable(typeof(BlueskyAuthenticationOptions))]
 internal sealed partial class SourceGenerationContext : JsonSerializerContext
 {
 }

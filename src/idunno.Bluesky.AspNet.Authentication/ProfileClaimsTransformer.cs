@@ -3,10 +3,8 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
-using System.Text.Json;
 
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -26,38 +24,50 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// </remarks>
 public sealed class ProfileClaimsTransformer: IClaimsTransformation
 {
-    private const string CacheKeyPrefix = "bluesky:profileclaims:";
-
-    private const string ErrorIndicator = "**error**";
-
     /// <summary>
     /// Create a new instance of <see cref="ProfileClaimsTransformer"/>
     /// </summary>
-    /// <param name="cache">The <see cref="IDistributedCache"/> to use as a claims source.</param>
     /// <param name="loggerFactory">The <see cref="LoggerFactory"/> to create loggers from.</param>
-    /// <param name="options">The <see cref="ProfileClaimsTransformerOptions"/> options to use.</param>
-    /// <param name="blueskyAgentOptions">The <see cref="Bluesky.BlueskyAgentOptions"/> to use.</param>
+    /// <param name="options">The <see cref="ProfileClaimsTransformerOptions"/> to configure the transformer.</param>
+    /// <param name="blueskyAgentOptions">The <see cref="Bluesky.BlueskyAgentOptions"/> to use for the agent retrieving the profile.</param>
+    /// <exception cref="ArgumentNullException">
+    ///   Thrown if <paramref name="options"/> is <see langword="null"/>.
+    /// </exception>
     public ProfileClaimsTransformer(
-        IDistributedCache cache,
         ILoggerFactory loggerFactory,
         IOptionsMonitor<ProfileClaimsTransformerOptions> options,
         IOptionsMonitor<BlueskyAgentOptions> blueskyAgentOptions)
     {
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(blueskyAgentOptions);
+
+        Options = options;
+
         loggerFactory ??= NullLoggerFactory.Instance;
 
         BlueskyAgentOptions = blueskyAgentOptions;
-        Cache = cache;
         Logger = loggerFactory.CreateLogger(GetType().FullName!);
-        Options = options;
     }
 
-    IOptionsMonitor<BlueskyAgentOptions> BlueskyAgentOptions { get; }
+    private IOptionsMonitor<BlueskyAgentOptions> BlueskyAgentOptions { get; }
 
-    private IDistributedCache Cache { get; }
+    [NotNull]
+    private IOptionsMonitor<ProfileClaimsTransformerOptions> Options { get; }
+
+    private IProfileCache Cache
+    {
+        get
+        {
+            if (Options.CurrentValue.Cache is null)
+            {
+                throw new InvalidOperationException("Profile cache is not configured.");
+            }
+
+            return Options.CurrentValue.Cache;
+        }
+    }
 
     private ILogger Logger { get; }
-
-    IOptionsMonitor<ProfileClaimsTransformerOptions> Options { get; }
 
     /// <summary>
     /// Provides a central transformation point to change the specified principal.
@@ -93,31 +103,12 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
         {
             if (agent.IsAuthenticated)
             {
-                string cacheKey = $"{CacheKeyPrefix}{agent.Did}";
-                string? cacheRecord = await Cache.GetStringAsync(cacheKey).ConfigureAwait(false);
-
-                if (cacheRecord is not null && string.Equals(cacheRecord, ErrorIndicator, StringComparison.Ordinal))
-                {
-                    return principal;
-                }
+                ProfileCacheEntry? cachedProfile = await Cache.GetCachedValue(agent.Did).ConfigureAwait(false);
                 
-                if (cacheRecord is not null)
+                if (cachedProfile is not null)
                 {
-                    try
-                    {
-                        HandleDisplayNameCacheEntry? cacheEntry =
-                            JsonSerializer.Deserialize(cacheRecord, SourceGenerationContext.Default.HandleDisplayNameCacheEntry);
-
-                        if (cacheEntry is not null)
-                        {
-                            Logger.TransformerCachedClaimsFound(agent.Did);
-                            return SupplementClaimsPrinciple(principal, cacheEntry.Handle, cacheEntry.DisplayName, cacheEntry.Issuer);
-                        }
-                    }
-                    catch (JsonException)
-                    {
-                        // Swallow
-                    }
+                    Logger.TransformerCachedClaimsFound(agent.Did);
+                    return SupplementClaimsPrinciple(principal, cachedProfile);
                 }
 
                 AtProtoHttpResult<ProfileViewDetailed> getProfileResult = await agent.GetProfile(agent.Did).ConfigureAwait(false);
@@ -125,33 +116,15 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
                 if (getProfileResult.Succeeded)
                 {
                     Logger.TransformerGetProfileSucceeded(agent.Did);
-                    HandleDisplayNameCacheEntry cacheEntry = new (getProfileResult.Result.Handle, getProfileResult.Result.DisplayName, agent.Service.ToString());
-
-                    try
-                    {
-                        string? cacheEntryJson = JsonSerializer.Serialize(cacheEntry, SourceGenerationContext.Default.HandleDisplayNameCacheEntry);
-
-                        if (cacheEntryJson is not null)
-                        {
-                            await Cache.SetStringAsync(cacheKey, 
-                                cacheEntryJson, new DistributedCacheEntryOptions
-                                {
-                                    AbsoluteExpirationRelativeToNow = Options.CurrentValue.CacheTimeout
-                                }).ConfigureAwait(false);
-                            Logger.TransformerCachedClaimsForDid(agent.Did);
-                        }
-                    }
-                    catch (JsonException)
-                    {
-                        // Swallow
-                    }
-
-                    return SupplementClaimsPrinciple(principal, getProfileResult.Result.Handle, getProfileResult.Result.DisplayName, agent.Service.ToString());
+                    cachedProfile = new (getProfileResult.Result, agent.Service.ToString());
+                    await Cache.Add(agent.Did, cachedProfile).ConfigureAwait(false);
+                    Logger.TransformerCachedClaimsForDid(agent.Did);
+                    return SupplementClaimsPrinciple(principal, cachedProfile);
                 }
                 else
                 {
                     Logger.TransformerGetProfileFailed(agent.Did, getProfileResult.StatusCode, getProfileResult.AtErrorDetail?.Error, getProfileResult.AtErrorDetail?.Message);
-                    await Cache.SetStringAsync(cacheKey, ErrorIndicator).ConfigureAwait(false);
+                    return principal;
                 }
             }
         }
@@ -159,42 +132,82 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
         return principal;
     }
 
-    private static ClaimsPrincipal SupplementClaimsPrinciple(ClaimsPrincipal principal, Handle? handle, string? displayName, string issuer)
+    private static ClaimsPrincipal SupplementClaimsPrinciple(ClaimsPrincipal principal, ProfileCacheEntry cachedProfile)
     {
         ClaimsIdentity identity = new(principal.Claims, principal.Identity!.AuthenticationType);
 
-        if (handle is not null)
+        if (cachedProfile is not null)
         {
-            identity.AddClaim(new Claim(
-                Bluesky.ClaimTypes.Handle,
-                handle!,
-                ClaimValueTypes.String,
-                issuer));
+            if (cachedProfile.Handle is not null)
+            {
+                identity.AddClaim(new Claim(
+                    Bluesky.ClaimTypes.Handle,
+                    cachedProfile.Handle!,
+                    ClaimValueTypes.String,
+                    cachedProfile.Issuer));
 
-            identity.AddClaim(new Claim(
-                System.Security.Claims.ClaimTypes.Name,
-                handle!.Value,
-                ClaimValueTypes.String,
-                issuer));
-        }
+                identity.AddClaim(new Claim(
+                    System.Security.Claims.ClaimTypes.Name,
+                    cachedProfile.Handle!,
+                    ClaimValueTypes.String,
+                    cachedProfile.Issuer));
+            }
 
-        if (!string.IsNullOrEmpty(displayName))
-        {
-            identity.AddClaim(new Claim(
-                Bluesky.ClaimTypes.DisplayName,
-                displayName,
-                ClaimValueTypes.String,
-                issuer));
+            if (!string.IsNullOrEmpty(cachedProfile.DisplayName))
+            {
+                identity.AddClaim(new Claim(
+                    Bluesky.ClaimTypes.DisplayName,
+                    cachedProfile.DisplayName,
+                    ClaimValueTypes.String,
+                    cachedProfile.Issuer));
+            }
+
+            if (!string.IsNullOrEmpty(cachedProfile.Description))
+            {
+                identity.AddClaim(new Claim(
+                    Bluesky.ClaimTypes.Description,
+                    cachedProfile.Description!,
+                    ClaimValueTypes.String,
+                    cachedProfile.Issuer));
+            }
+
+            if (!string.IsNullOrEmpty(cachedProfile.Pronouns))
+            {
+                identity.AddClaim(new Claim(
+                    Bluesky.ClaimTypes.Pronouns,
+                    cachedProfile.Pronouns!,
+                    ClaimValueTypes.String,
+                    cachedProfile.Issuer));
+            }
+
+            if (cachedProfile.Website is not null)
+            {
+                identity.AddClaim(new Claim(
+                    Bluesky.ClaimTypes.Website,
+                    cachedProfile.Website.ToString(),
+                    ClaimValueTypes.String,
+                    cachedProfile.Issuer));
+            }
+
+            if (cachedProfile.Avatar is not null)
+            {
+                identity.AddClaim(new Claim(
+                    Bluesky.ClaimTypes.Avatar,
+                    cachedProfile.Avatar.ToString(),
+                    ClaimValueTypes.String,
+                    cachedProfile.Issuer));
+            }
+
+            if (cachedProfile.Banner is not null)
+            {
+                identity.AddClaim(new Claim(
+                    Bluesky.ClaimTypes.Banner,
+                    cachedProfile.Banner.ToString(),
+                    ClaimValueTypes.String,
+                    cachedProfile.Issuer));
+            }
         }
 
         return new ClaimsPrincipal(identity);
     }
 }
-
-/// <summary>
-/// Defines an entry in the display name cache.
-/// </summary>
-/// <param name="Handle">The <see cref="AtProto.Handle"/> to cache.</param>
-/// <param name="DisplayName">The display name to cache.</param>
-/// <param name="Issuer">The issuer of the display name.</param>
-public sealed record HandleDisplayNameCacheEntry(Handle Handle, string? DisplayName, string Issuer);

@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 namespace idunno.Bluesky.AspNet.Authentication;
 
 /// <summary>
-/// Initializes a new instance of <see cref="PostConfigureBlueskyAuthenticationOptions"/>.
+/// Initializes a new instance of <see cref="PostConfigureBlueskyAuthenticationOptions"/> used to set default options..
 /// </summary>
 /// <param name="dataProtection">The <see cref="IDataProtectionProvider"/>.</param>
 /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers.</param>
@@ -60,8 +60,7 @@ public class PostConfigureBlueskyAuthenticationOptions(
             options.AccessDeniedPath = CookieAuthenticationDefaults.AccessDeniedPath;
         }
 
-        options.IdentityStore ??= new EphemeralIdentityStore(loggerFactory);
-
+        options.IdentityStore ??= new EphemeralIdentityStore(loggerFactory, options.IdentityStoreEntryTimeToLive);
         options.CorrelationCache ??= new EphemeralCorrelationStateCache(loggerFactory);
     }
 }

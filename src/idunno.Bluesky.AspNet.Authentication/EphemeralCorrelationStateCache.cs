@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -14,8 +14,6 @@ namespace idunno.Bluesky.AspNet.Authentication;
 
 internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
 {
-    const string CorrelationPrefix = "_blueskyLoginCorrelation";
-
     private static volatile bool s_warned;
 
 #if NET9_0_OR_GREATER
@@ -40,7 +38,6 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
     public EphemeralCorrelationStateCache(
         ILoggerFactory loggerFactory,
         TimeSpan? entryTimeToLive = null)
-
     {
         Logger = loggerFactory.CreateLogger<EphemeralCorrelationStateCache>();
         EntryTTL = entryTimeToLive ?? s_defaultSlidingExpiration;
@@ -71,13 +68,13 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
             .SetAbsoluteExpiration(DateTime.UtcNow.Add(EntryTTL))
             .SetSize(1);
 
-        Cache.Set($"{CorrelationPrefix}{correlationId}", state.ToJson(), cacheOptions);
+        Cache.Set($"{correlationId}", state.ToJson(), cacheOptions);
     }
 
     /// <inheritdoc/>
     public async Task<OAuthLoginState?> GetOAuthLoginState(Guid correlationId)
     {
-        string? encodedState = Cache.Get($"{CorrelationPrefix}{correlationId}") as string;
+        string? encodedState = Cache.Get($"{correlationId}") as string;
 
         if (string.IsNullOrEmpty(encodedState))
         {

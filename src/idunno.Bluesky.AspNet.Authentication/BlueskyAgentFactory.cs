@@ -42,7 +42,7 @@ internal sealed class BlueskyAgentFactory
 
     internal IIdentityStore IdentityStore { get; }
 
-    public BlueskyAgent CreateBlueskyAgent()
+    public async Task<BlueskyAgent> CreateBlueskyAgent()
     {
         BlueskyAgent agent;
         
@@ -73,10 +73,10 @@ internal sealed class BlueskyAgentFactory
             await IdentityStore.Renew(IIdentityStore.BuildClaimsIdentity(accessCredentials)).ConfigureAwait(false);
         };
 
-        //if (agent.Credentials is not null &&  DateTime.UtcNow >= agent.Credentials.ExpiresOn)
-        //{
-        //    await agent.RefreshCredentials();
-        //}
+        if (agent.Credentials is not null && DateTime.UtcNow >= agent.Credentials.ExpiresOn)
+        {
+            await agent.RefreshCredentials().ConfigureAwait(false);
+        }
 
         return agent;
     }

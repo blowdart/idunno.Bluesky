@@ -4,3 +4,7 @@ const idunno.AtProto.Authentication.AtProtoClaims.Did = "urn:atproto:did" -> str
 const idunno.AtProto.Authentication.AtProtoClaims.DPoPNonce = "urn:atproto:dpop:nonce" -> string!
 const idunno.AtProto.Authentication.AtProtoClaims.DPoPProof = "urn:atproto:dpop:proof" -> string!
 const idunno.AtProto.Authentication.AtProtoClaims.RefreshToken = "urn:atproto:token:refresh" -> string!
+idunno.AtProto.Authentication.ClaimsExtensions
+idunno.AtProto.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!)
+idunno.AtProto.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!).Did.get -> idunno.AtProto.Did?
+static idunno.AtProto.AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(params System.Text.Json.JsonSerializerOptions![]! jsonSerializerOptions) -> System.Text.Json.JsonSerializerOptions!

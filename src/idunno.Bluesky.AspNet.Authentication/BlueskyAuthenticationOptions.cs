@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 
 using idunno.Bluesky.AspNet.Authentication.Events;
+using System.Text.Json.Serialization;
 
 namespace idunno.Bluesky.AspNet.Authentication;
 
@@ -67,6 +68,7 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     /// <item><description><see cref="CookieBuilder.SecurePolicy"/> defaults to <see cref="CookieSecurePolicy.SameAsRequest"/>.</description></item>
     /// </list>
     /// </remarks>
+    [JsonIgnore]
     public CookieBuilder Cookie
     {
         get;
@@ -106,6 +108,7 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     /// <item><description><see cref="CookieBuilder.SecurePolicy"/> defaults to <see cref="CookieSecurePolicy.None"/>.</description></item>
     /// </list>
     /// </remarks>
+    [JsonIgnore]
     public CookieBuilder CorrelationCookie
     {
         get;
@@ -122,6 +125,7 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     /// <summary>
     /// If set this will be used by the BlueskyAuthenticationHandler for data protection.
     /// </summary>
+    [JsonIgnore]
     public IDataProtectionProvider? DataProtectionProvider { get; set; }
 
     /// <summary>
@@ -129,6 +133,7 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     /// calls methods on the provider which give the application control at certain points where processing is occurring.
     /// If it is not provided a default instance is supplied which does nothing when the methods are called.
     /// </summary>
+    [JsonIgnore]
     public new BlueskyAuthenticationEvents Events
     {
         get => (BlueskyAuthenticationEvents)base.Events!;
@@ -179,5 +184,6 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     /// The TicketDataFormat is used to protect and unprotect the identity and other properties which are stored in the
     /// cookie value. If not provided one will be created using <see cref="DataProtectionProvider"/>.
     /// </summary>
+    [JsonIgnore]
     public ISecureDataFormat<AuthenticationTicket> TicketDataFormat { get; set; } = default!;
 }

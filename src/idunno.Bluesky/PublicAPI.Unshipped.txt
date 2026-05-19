@@ -1,4 +1,9 @@
 #nullable enable
+const idunno.Bluesky.ClaimTypes.Avatar = "urn:bluesky:avatar" -> string!
+const idunno.Bluesky.ClaimTypes.Banner = "urn:bluesky:banner" -> string!
+const idunno.Bluesky.ClaimTypes.Description = "urn:bluesky:description" -> string!
 const idunno.Bluesky.ClaimTypes.DisplayName = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname" -> string!
 const idunno.Bluesky.ClaimTypes.Handle = "urn:bluesky:handle" -> string!
+const idunno.Bluesky.ClaimTypes.Pronouns = "urn:bluesky:pronouns" -> string!
+const idunno.Bluesky.ClaimTypes.Website = "urn:bluesky:website" -> string!
 idunno.Bluesky.ClaimTypes

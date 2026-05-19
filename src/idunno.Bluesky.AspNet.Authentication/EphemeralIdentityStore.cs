@@ -7,7 +7,6 @@ using System.Security.Claims;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
@@ -27,10 +26,6 @@ public class EphemeralIdentityStore : IIdentityStore
     private static readonly object s_warnedLock = new();
 #endif
 
-    private static readonly TimeSpan s_defaultSlidingExpiration = new(7, 0, 0, 0);
-    
-    private readonly IOptions<BlueskyAuthenticationOptions>? _options;
-
     static EphemeralIdentityStore()
     {
         MemoryCacheOptions cacheOptions = new()
@@ -45,15 +40,14 @@ public class EphemeralIdentityStore : IIdentityStore
     /// Creates a new instance of <see cref="EphemeralIdentityStore"/>.
     /// </summary>
     /// <param name="loggerFactory">The logger to create loggers from.</param>
-    /// <param name="options">The <see cref="BlueskyAuthenticationOptions"/>.</param>
+    /// <param name="entryTimeToLive">The time to live for cache entries.</param>
     [SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Used to ensure the emphermal warning is only logged once")]
     public EphemeralIdentityStore(
         ILoggerFactory loggerFactory,
-        IOptions<BlueskyAuthenticationOptions>? options = null)
+        TimeSpan? entryTimeToLive = null)
     {
         Logger = loggerFactory.CreateLogger<EphemeralIdentityStore>();
-
-        _options = options;
+        SlidingExpiration = entryTimeToLive ?? new(7, 0, 0, 0);
 
         if (!s_warned)
         {
@@ -67,20 +61,7 @@ public class EphemeralIdentityStore : IIdentityStore
 
     private static MemoryCache Cache { get; set; }
 
-    private TimeSpan SlidingExpiration
-    {
-        get
-        {
-            if (_options is not null && _options.Value.IdentityStoreEntryTimeToLive is not null)
-            {
-                return _options.Value.IdentityStoreEntryTimeToLive.Value;
-            }
-            else
-            {
-                return s_defaultSlidingExpiration;
-            }
-        }
-    }
+    private TimeSpan SlidingExpiration { get; set; }
 
     private ILogger<EphemeralIdentityStore> Logger { get; set; }
 

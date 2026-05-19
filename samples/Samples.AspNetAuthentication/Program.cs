@@ -12,7 +12,7 @@ builder.Services.AddAuthentication(BlueskyAuthenticationDefaults.AuthenticationS
     {
     });
 
-builder.Services.AddProfileClaimsTransformer(options => options.CacheTimeout = new TimeSpan(0, 5, 0));
+builder.Services.AddProfileClaimsTransformer();
 
 // Adding the profile claims transformer requires an IDistributedCache.
 builder.Services.AddTransient<IClaimsTransformation, ProfileClaimsTransformer>();
