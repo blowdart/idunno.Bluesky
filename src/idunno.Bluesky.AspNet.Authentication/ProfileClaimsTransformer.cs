@@ -132,79 +132,79 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
         return principal;
     }
 
-    private static ClaimsPrincipal SupplementClaimsPrinciple(ClaimsPrincipal principal, ProfileCacheEntry cachedProfile)
+    private static ClaimsPrincipal SupplementClaimsPrinciple(ClaimsPrincipal principal, ProfileCacheEntry profile)
     {
         ClaimsIdentity identity = new(principal.Claims, principal.Identity!.AuthenticationType);
 
-        if (cachedProfile is not null)
+        if (profile is not null)
         {
-            if (cachedProfile.Handle is not null)
+            if (profile.Handle is not null)
             {
                 identity.AddClaim(new Claim(
                     Bluesky.ClaimTypes.Handle,
-                    cachedProfile.Handle!,
+                    profile.Handle!,
                     ClaimValueTypes.String,
-                    cachedProfile.Issuer));
+                    profile.Issuer));
 
                 identity.AddClaim(new Claim(
                     System.Security.Claims.ClaimTypes.Name,
-                    cachedProfile.Handle!,
+                    profile.Handle!,
                     ClaimValueTypes.String,
-                    cachedProfile.Issuer));
+                    profile.Issuer));
             }
 
-            if (!string.IsNullOrEmpty(cachedProfile.DisplayName))
+            if (!string.IsNullOrEmpty(profile.DisplayName))
             {
                 identity.AddClaim(new Claim(
                     Bluesky.ClaimTypes.DisplayName,
-                    cachedProfile.DisplayName,
+                    profile.DisplayName,
                     ClaimValueTypes.String,
-                    cachedProfile.Issuer));
+                    profile.Issuer));
             }
 
-            if (!string.IsNullOrEmpty(cachedProfile.Description))
+            if (!string.IsNullOrEmpty(profile.Description))
             {
                 identity.AddClaim(new Claim(
                     Bluesky.ClaimTypes.Description,
-                    cachedProfile.Description!,
+                    profile.Description!,
                     ClaimValueTypes.String,
-                    cachedProfile.Issuer));
+                    profile.Issuer));
             }
 
-            if (!string.IsNullOrEmpty(cachedProfile.Pronouns))
+            if (!string.IsNullOrEmpty(profile.Pronouns))
             {
                 identity.AddClaim(new Claim(
                     Bluesky.ClaimTypes.Pronouns,
-                    cachedProfile.Pronouns!,
+                    profile.Pronouns!,
                     ClaimValueTypes.String,
-                    cachedProfile.Issuer));
+                    profile.Issuer));
             }
 
-            if (cachedProfile.Website is not null)
+            if (profile.Website is not null)
             {
                 identity.AddClaim(new Claim(
                     Bluesky.ClaimTypes.Website,
-                    cachedProfile.Website.ToString(),
+                    profile.Website.ToString(),
                     ClaimValueTypes.String,
-                    cachedProfile.Issuer));
+                    profile.Issuer));
             }
 
-            if (cachedProfile.Avatar is not null)
+            if (profile.Avatar is not null)
             {
                 identity.AddClaim(new Claim(
                     Bluesky.ClaimTypes.Avatar,
-                    cachedProfile.Avatar.ToString(),
+                    profile.Avatar.ToString(),
                     ClaimValueTypes.String,
-                    cachedProfile.Issuer));
+                    profile.Issuer));
             }
 
-            if (cachedProfile.Banner is not null)
+            if (profile.Banner is not null)
             {
                 identity.AddClaim(new Claim(
                     Bluesky.ClaimTypes.Banner,
-                    cachedProfile.Banner.ToString(),
+                    profile.Banner.ToString(),
                     ClaimValueTypes.String,
-                    cachedProfile.Issuer));
+                    profile.Issuer));
             }
         }
 

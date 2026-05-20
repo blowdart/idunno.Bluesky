@@ -1,6 +1,9 @@
 #nullable enable
 const idunno.Bluesky.AspNet.Authentication.Constants.CorrelationCookieName = "_idunno_bluesky_Correlation" -> string!
 const idunno.Bluesky.AspNet.Authentication.Constants.ReturnUrlKey = "_returnUrl" -> string!
+idunno.Bluesky.AspNet.Authentication.BlueskyAgentFactory
+idunno.Bluesky.AspNet.Authentication.BlueskyAgentFactory.BlueskyAgentFactory(Microsoft.AspNetCore.Http.IHttpContextAccessor! contextAccessor, Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions!>! authenticationOptionsMonitor, Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.BlueskyAgentOptions!>! agentOptionsMonitor, Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory) -> void
+idunno.Bluesky.AspNet.Authentication.BlueskyAgentFactory.CreateAgent() -> idunno.Bluesky.BlueskyAgent!
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationDefaults
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.BlueskyAgentOptions.get -> idunno.Bluesky.BlueskyAgentOptions!
@@ -62,8 +65,13 @@ idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.SignIn() -> System.Thr
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.SignOut(string? scheme = null) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.ClaimsExtensions
 idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!)
+idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!).Avatar.get -> System.Uri?
+idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!).Banner.get -> System.Uri?
+idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!).Description.get -> string?
 idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!).DisplayName.get -> string?
 idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!).Handle.get -> idunno.AtProto.Handle?
+idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!).Pronouns.get -> string?
+idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!).Website.get -> System.Uri?
 idunno.Bluesky.AspNet.Authentication.Constants
 idunno.Bluesky.AspNet.Authentication.DistributedCacheCorrelationStateCache
 idunno.Bluesky.AspNet.Authentication.DistributedCacheCorrelationStateCache.AddOAuthLoginState(System.Guid correlationId, idunno.AtProto.Authentication.OAuthLoginState! state) -> System.Threading.Tasks.Task!
@@ -200,6 +208,7 @@ static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddBluesky(thi
 static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddBluesky(this Microsoft.AspNetCore.Authentication.AuthenticationBuilder! builder, string! authenticationScheme, string? displayName, System.Action<idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions!>! configureOptions) -> Microsoft.AspNetCore.Authentication.AuthenticationBuilder!
 static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddBluesky(this Microsoft.AspNetCore.Authentication.AuthenticationBuilder! builder, string! authenticationScheme, System.Action<idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions!>! configureOptions) -> Microsoft.AspNetCore.Authentication.AuthenticationBuilder!
 static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddBluesky(this Microsoft.AspNetCore.Authentication.AuthenticationBuilder! builder, System.Action<idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions!>! configureOptions) -> Microsoft.AspNetCore.Authentication.AuthenticationBuilder!
+static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddBlueskyAgentFactory(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddProfileClaimsTransformer(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 static readonly idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationDefaults.AccessDeniedPath -> Microsoft.AspNetCore.Http.PathString
 static readonly idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationDefaults.AuthenticationScheme -> string!

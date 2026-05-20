@@ -20,6 +20,9 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// </summary>
 public static class BlueskyExtensions
 {
+    internal const string RequiresDynamicCodeMessage = "Binding strongly typed objects to configuration values may require generating dynamic code at runtime.";
+    internal const string TrimmingRequiredUnreferencedCodeMessage = "BlueskyAgentOptions instances may their members trimmed. Ensure all required members are preserved.";
+
     /// <summary>
     ///<para>
     /// Adds Bluesky authentication to <see cref="AuthenticationBuilder"/> using the default scheme.
@@ -31,6 +34,8 @@ public static class BlueskyExtensions
     /// </summary>
     /// <param name="builder">The <see cref="AuthenticationBuilder"/>.</param>
     /// <returns>A reference to <paramref name="builder"/> after the operation has completed.</returns>
+    [RequiresDynamicCode(RequiresDynamicCodeMessage)]
+    [RequiresUnreferencedCode(TrimmingRequiredUnreferencedCodeMessage)]
     public static AuthenticationBuilder AddBluesky(this AuthenticationBuilder builder)
         => builder.AddBluesky(BlueskyAuthenticationDefaults.AuthenticationScheme);
 
@@ -45,6 +50,8 @@ public static class BlueskyExtensions
     /// <param name="builder">The <see cref="AuthenticationBuilder"/>.</param>
     /// <param name="authenticationScheme">The authentication scheme.</param>
     /// <returns>A reference to <paramref name="builder"/> after the operation has completed.</returns>
+    [RequiresDynamicCode(RequiresDynamicCodeMessage)]
+    [RequiresUnreferencedCode(TrimmingRequiredUnreferencedCodeMessage)]
     public static AuthenticationBuilder AddBluesky(this AuthenticationBuilder builder, string authenticationScheme)
         => builder.AddBluesky(authenticationScheme, configureOptions: null!);
 
@@ -60,6 +67,8 @@ public static class BlueskyExtensions
     /// <param name="builder">The <see cref="AuthenticationBuilder"/>.</param>
     /// <param name="configureOptions">A delegate to configure <see cref="BlueskyAuthenticationOptions"/>.</param>
     /// <returns>A reference to <paramref name="builder"/> after the operation has completed.</returns>
+    [RequiresDynamicCode(RequiresDynamicCodeMessage)]
+    [RequiresUnreferencedCode(TrimmingRequiredUnreferencedCodeMessage)]
     public static AuthenticationBuilder AddBluesky(this AuthenticationBuilder builder, Action<BlueskyAuthenticationOptions> configureOptions)
         => builder.AddBluesky(BlueskyAuthenticationDefaults.AuthenticationScheme, configureOptions);
 
@@ -75,6 +84,8 @@ public static class BlueskyExtensions
     /// <param name="authenticationScheme">The authentication scheme.</param>
     /// <param name="configureOptions">A delegate to configure <see cref="BlueskyAuthenticationOptions"/>.</param>
     /// <returns>A reference to <paramref name="builder"/> after the operation has completed.</returns>
+    [RequiresDynamicCode(RequiresDynamicCodeMessage)]
+    [RequiresUnreferencedCode(TrimmingRequiredUnreferencedCodeMessage)]
     public static AuthenticationBuilder AddBluesky(
         this AuthenticationBuilder builder,
         string authenticationScheme,
@@ -95,14 +106,8 @@ public static class BlueskyExtensions
     /// <param name="configureOptions">A delegate to configure <see cref="BlueskyAuthenticationOptions"/>.</param>
     /// <returns>A reference to <paramref name="builder"/> after the operation has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="builder"/> is <see langword="null"/>.</exception>
-    [UnconditionalSuppressMessage(
-        "Trimming",
-        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
-        Justification = "Options class is capture in JSON source generation.")]
-    [UnconditionalSuppressMessage(
-        "AOT",
-        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
-        Justification = "Options class is capture in JSON source generation.")]
+    [RequiresDynamicCode(RequiresDynamicCodeMessage)]
+    [RequiresUnreferencedCode(TrimmingRequiredUnreferencedCodeMessage)]
     public static AuthenticationBuilder AddBluesky(
         this AuthenticationBuilder builder,
         string authenticationScheme,
@@ -119,9 +124,6 @@ public static class BlueskyExtensions
         builder.Services.AddOptions<BlueskyAuthenticationOptions>(authenticationScheme).Validate(
             o => o.Cookie.Expiration == null, "BlueskyAuthenticationOptions.Expiration is ignored, use ExpireTimeSpan instead.");
 
-        builder.Services.AddScoped<BlueskyAgentFactory>();
-        builder.Services.AddScoped(async s => await s.GetRequiredService<BlueskyAgentFactory>().CreateBlueskyAgent().ConfigureAwait(false));
-
         return builder.AddScheme<BlueskyAuthenticationOptions, BlueskyAuthenticationHandler>(authenticationScheme, displayName, configureOptions);
     }
 
@@ -135,6 +137,21 @@ public static class BlueskyExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<ProfileClaimsTransformerOptions>, PostConfigureProfileClaimsTransformerOptions>());
         services.AddOptions<ProfileClaimsTransformerOptions>();
         services.AddTransient<IClaimsTransformation, ProfileClaimsTransformer>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds a <see cref="BlueskyAgentFactory"/> and to the service collection.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add to.</param>
+    /// <returns>The service collection</returns>
+    public static IServiceCollection AddBlueskyAgentFactory(this IServiceCollection services)
+    {
+        services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.AddOptions<BlueskyAgentOptions>();
+        services.AddSingleton<BlueskyAgentFactory>();
+        services.AddScoped<BlueskyAgent>(provider => provider.GetRequiredService<BlueskyAgentFactory>().CreateAgent());
 
         return services;
     }

@@ -64,5 +64,108 @@ public static class ClaimsExtensions
                 return handle;
             }
         }
+
+        /// <summary>
+        /// Gets the user's self description from the claims principal, if any.
+        /// </summary>
+        /// <value>The description if present; otherwise, <see langword="null"/>.</value>
+        public string? Description
+        {
+            get
+            {
+                if (principal == null)
+                {
+                    return null;
+                }
+                Claim? claim = principal.Claims.FirstOrDefault(c => c.Type == Bluesky.ClaimTypes.Description);
+                return claim?.Value;
+            }
+        }
+
+        /// <summary>
+        /// Gets the user's specified pronouns from the claims principal, if any.
+        /// </summary>
+        /// <value>The pronouns if present; otherwise, <see langword="null"/>.</value>
+        public string? Pronouns
+        {
+            get
+            {
+                if (principal == null)
+                {
+                    return null;
+                }
+                Claim? claim = principal.Claims.FirstOrDefault(c => c.Type == Bluesky.ClaimTypes.Pronouns);
+                return claim?.Value;
+            }
+        }
+
+        /// <summary>
+        /// Gets the user's specified website from the claims principal, if any and it converts to a valid <see cref="Uri"/>.
+        /// </summary>
+        /// <value>The website if present; otherwise, <see langword="null"/>.</value>
+        public Uri? Website
+        {
+            get
+            {
+                if (principal == null)
+                {
+                    return null;
+                }
+                Claim? claim = principal.Claims.FirstOrDefault(c => c.Type == Bluesky.ClaimTypes.Website);
+
+                if (claim is not null && claim.Value is not null && Uri.TryCreate(claim.Value, UriKind.Absolute, out Uri? uri))
+                {
+                    return uri;
+                }
+
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets the URI for the user's specified avatar from the claims principal, if any and it converts to a valid <see cref="Uri"/>.
+        /// </summary>
+        /// <value>The avatar if present; otherwise, <see langword="null"/>.</value>
+        public Uri? Avatar
+        {
+            get
+            {
+                if (principal == null)
+                {
+                    return null;
+                }
+                Claim? claim = principal.Claims.FirstOrDefault(c => c.Type == Bluesky.ClaimTypes.Avatar);
+
+                if (claim is not null && claim.Value is not null && Uri.TryCreate(claim.Value, UriKind.Absolute, out Uri? uri))
+                {
+                    return uri;
+                }
+
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets the URI for the user's specified profile banner from the claims principal, if any and it converts to a valid <see cref="Uri"/>.
+        /// </summary>
+        /// <value>The banner if present; otherwise, <see langword="null"/>.</value>
+        public Uri? Banner
+        {
+            get
+            {
+                if (principal == null)
+                {
+                    return null;
+                }
+                Claim? claim = principal.Claims.FirstOrDefault(c => c.Type == Bluesky.ClaimTypes.Banner);
+
+                if (claim is not null && claim.Value is not null && Uri.TryCreate(claim.Value, UriKind.Absolute, out Uri? uri))
+                {
+                    return uri;
+                }
+
+                return null;
+            }
+        }
     }
 }

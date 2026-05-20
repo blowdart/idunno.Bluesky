@@ -37,6 +37,11 @@ public partial class AtProtoAgent
     {
         get
         {
+            if (_disposed)
+            {
+                return null;
+            }
+
             _credentialReaderWriterLockSlim.EnterReadLock();
             try
             {
@@ -50,22 +55,25 @@ public partial class AtProtoAgent
 
         set
         {
-            _credentialReaderWriterLockSlim.EnterWriteLock();
-            try
+            if (!_disposed)
             {
-                _credentials = value;
-                if (_credentials is not null)
+                _credentialReaderWriterLockSlim.EnterWriteLock();
+                try
                 {
-                    Service = _credentials.Service;
+                    _credentials = value;
+                    if (_credentials is not null)
+                    {
+                        Service = _credentials.Service;
+                    }
+                    else
+                    {
+                        Service = OriginalService;
+                    }
                 }
-                else
+                finally
                 {
-                    Service = OriginalService;
+                    _credentialReaderWriterLockSlim.ExitWriteLock();
                 }
-            }
-            finally
-            {
-                _credentialReaderWriterLockSlim.ExitWriteLock();
             }
         }
     }
@@ -77,6 +85,11 @@ public partial class AtProtoAgent
     {
         get
         {
+            if (_disposed)
+            {
+                return null;
+            }
+
             Did? did = null;
             _credentialReaderWriterLockSlim.EnterReadLock();
 
@@ -119,6 +132,11 @@ public partial class AtProtoAgent
     protected internal virtual void InternalOnCredentialsUpdatedCallBack(AtProtoCredential credentials)
     {
         ArgumentNullException.ThrowIfNull(credentials);
+
+        if (_disposed)
+        {
+            return;
+        }
 
         if (credentials is AccessCredentials accessCredentials)
         {

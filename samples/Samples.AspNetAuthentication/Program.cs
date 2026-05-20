@@ -6,16 +6,13 @@ using idunno.Bluesky.AspNet.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDistributedMemoryCache();
 builder.Services.AddAuthentication(BlueskyAuthenticationDefaults.AuthenticationScheme)
     .AddBluesky(options =>
     {
     });
-
 builder.Services.AddProfileClaimsTransformer();
-
-// Adding the profile claims transformer requires an IDistributedCache.
 builder.Services.AddTransient<IClaimsTransformation, ProfileClaimsTransformer>();
+builder.Services.AddBlueskyAgentFactory();
 
 // Add services to the container.
 builder.Services.AddRazorPages();

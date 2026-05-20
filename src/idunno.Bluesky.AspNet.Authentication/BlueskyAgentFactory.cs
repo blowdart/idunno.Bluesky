@@ -11,18 +11,30 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// Creates a Bluesky agent.
 /// </summary>
 [SuppressMessage("Performance", "CA1812", Justification = "Used in dependency injection.")]
-internal sealed class BlueskyAgentFactory
+public sealed class BlueskyAgentFactory
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<BlueskyAgentFactory> _logger;
 
+    /// <summary>
+    /// Creates a new instance of the <see cref="BlueskyAgentFactory"/> class.
+    /// </summary>
+    /// <param name="contextAccessor">The <see cref="IHttpContextAccessor"/></param>
+    /// <param name="authenticationOptionsMonitor">The <see cref="IOptionsMonitor{BlueskyAuthenticationOptions}"/></param>
+    /// <param name="agentOptionsMonitor">The <see cref="IOptionsMonitor{BlueskyAgentOptions}"/></param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/></param>
+    /// <exception cref="ArgumentNullException">Thrown if any of the parameters are <see langword="null"/>.</exception>
     public BlueskyAgentFactory(
         IHttpContextAccessor contextAccessor,
         IOptionsMonitor<BlueskyAuthenticationOptions> authenticationOptionsMonitor,
         IOptionsMonitor<BlueskyAgentOptions> agentOptionsMonitor,
         ILoggerFactory loggerFactory)
     {
+        ArgumentNullException.ThrowIfNull(contextAccessor);
+        ArgumentNullException.ThrowIfNull(authenticationOptionsMonitor);
         ArgumentNullException.ThrowIfNull(authenticationOptionsMonitor.CurrentValue.IdentityStore);
+        ArgumentNullException.ThrowIfNull(agentOptionsMonitor);
+        ArgumentNullException.ThrowIfNull(loggerFactory);
 
         IdentityStore = authenticationOptionsMonitor.CurrentValue.IdentityStore;
         AuthenticationOptions = authenticationOptionsMonitor.CurrentValue;
@@ -42,7 +54,11 @@ internal sealed class BlueskyAgentFactory
 
     internal IIdentityStore IdentityStore { get; }
 
-    public async Task<BlueskyAgent> CreateBlueskyAgent()
+    /// <summary>
+    /// Creates a <see cref="BlueskyAgent"/>.
+    /// </summary>
+    /// <returns>A new instance of <see cref="BlueskyAgent"/>.</returns>
+    public BlueskyAgent CreateAgent()
     {
         BlueskyAgent agent;
         
@@ -72,11 +88,6 @@ internal sealed class BlueskyAgentFactory
 
             await IdentityStore.Renew(IIdentityStore.BuildClaimsIdentity(accessCredentials)).ConfigureAwait(false);
         };
-
-        if (agent.Credentials is not null && DateTime.UtcNow >= agent.Credentials.ExpiresOn)
-        {
-            await agent.RefreshCredentials().ConfigureAwait(false);
-        }
 
         return agent;
     }
