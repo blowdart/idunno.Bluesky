@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 using idunno.Bluesky.AspNet.Authentication;
 
-namespace Samples.AspNetAuthentication.Areas.Account.Pages;
+namespace Samples.AspNetAuthentication.Areas.Identity.Pages.Account;
 
 [AllowAnonymous]
 public class CallbackModel(BlueskySignInManager blueskySignInManager, ILogger<LoginModel> logger) : PageModel

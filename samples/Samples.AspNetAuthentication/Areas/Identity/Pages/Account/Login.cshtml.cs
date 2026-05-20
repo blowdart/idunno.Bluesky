@@ -8,7 +8,7 @@ using idunno.AtProto;
 using idunno.Bluesky;
 using idunno.Bluesky.AspNet.Authentication;
 
-namespace Samples.AspNetAuthentication.Areas.Account.Pages;
+namespace Samples.AspNetAuthentication.Areas.Identity.Pages.Account;
 
 [AllowAnonymous]
 public class LoginModel(BlueskySignInManager blueskyAuthenticationManager, ILogger<LoginModel> logger) : PageModel

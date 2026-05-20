@@ -1,0 +1,34 @@
+@using idunno.Bluesky.AspNet.Authentication
+
+<ul class="navbar-nav">
+    @if (User.Identity?.IsAuthenticated ?? false)
+    {
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-area="Account" asp-page="/Identity/Manage/Index" title="Manage">
+                @if (User.Avatar is not null)
+                {
+                    <img src="@User.Avatar" alt="Avatar" class="rounded-circle" width="30" height="30" />
+                }
+                else if (User.DisplayName is not null)
+                {
+                    <span>Hello @User.DisplayName!</span>
+                }
+                else
+                {
+                    <span>Hello @User.Identity?.Name!</span>
+                }
+            </a>
+        </li>
+        <li class="nav-item">
+            <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/Index", new { area = "" })">
+                <button type="submit" class="nav-link btn btn-link text-dark">Logout</button>
+            </form>
+        </li>
+    }
+    else
+    {
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Login">Login</a>
+        </li>
+    }
+</ul>
