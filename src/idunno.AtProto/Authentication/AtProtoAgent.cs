@@ -118,6 +118,11 @@ public partial class AtProtoAgent
     {
         get
         {
+            if (_disposed)
+            {
+                return false;
+            }
+
             return _credentials is IAccessCredential accessCredential &&
                 accessCredential.Did is not null &&
                 accessCredential.ExpiresOn > DateTimeOffset.UtcNow;
