@@ -138,24 +138,25 @@ public partial class AtProtoAgent
     {
         ArgumentNullException.ThrowIfNull(credentials);
 
-        if (_disposed)
+        if (credentials is DPoPAccessCredentials dPopAccessCredentials)
         {
-            return;
-        }
-
-        if (credentials is AccessCredentials accessCredentials)
-        {
-            Credentials = accessCredentials;
             Logger.OnCredentialUpdatedCallbackCalled(_logger);
-
-            OnCredentialsUpdated(new CredentialsUpdatedEventArgs(accessCredentials.Did, accessCredentials.Service, accessCredentials));
-        }
-        else if (credentials is DPoPAccessCredentials dPopAccessCredentials)
-        {
-            Credentials = dPopAccessCredentials;
-            Logger.OnCredentialUpdatedCallbackCalled(_logger);
-
             OnCredentialsUpdated(new CredentialsUpdatedEventArgs(dPopAccessCredentials.Did, dPopAccessCredentials.Service, dPopAccessCredentials));
+
+            if (!_disposed)
+            {
+                Credentials = dPopAccessCredentials;
+            }
+        }
+        else if (credentials is AccessCredentials accessCredentials)
+        {
+            Logger.OnCredentialUpdatedCallbackCalled(_logger);
+            OnCredentialsUpdated(new CredentialsUpdatedEventArgs(accessCredentials.Did, accessCredentials.Service, accessCredentials));
+
+            if (!_disposed)
+            {
+                Credentials = accessCredentials;
+            }
         }
         else
         {

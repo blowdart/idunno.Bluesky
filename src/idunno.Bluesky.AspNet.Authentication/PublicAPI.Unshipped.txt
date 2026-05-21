@@ -10,6 +10,8 @@ idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.BlueskyAgentOp
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.BlueskyAgentOptionsMonitor.get -> Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.BlueskyAgentOptions!>!
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.BlueskyAuthenticationHandler(Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions!>! options, Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.BlueskyAgentOptions!>! agentOptions, Microsoft.Extensions.Logging.ILoggerFactory! logger, System.Text.Encodings.Web.UrlEncoder! encoder) -> void
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.BlueskyAuthenticationHandler(Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions!>! options, Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.BlueskyAgentOptions!>! agentOptions, Microsoft.Extensions.Logging.ILoggerFactory! logger, System.Text.Encodings.Web.UrlEncoder! encoder, Microsoft.AspNetCore.Authentication.ISystemClock! clock) -> void
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.CurrentUserDid.get -> idunno.AtProto.Did?
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.CurrentUserDid.set -> void
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.Events.get -> idunno.Bluesky.AspNet.Authentication.Events.BlueskyAuthenticationEvents!
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.Events.set -> void
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions

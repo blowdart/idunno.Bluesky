@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -9,7 +10,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 
 using idunno.Bluesky.AspNet.Authentication.Events;
-using System.Text.Json.Serialization;
 
 namespace idunno.Bluesky.AspNet.Authentication;
 

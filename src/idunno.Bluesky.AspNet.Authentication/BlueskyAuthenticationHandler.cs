@@ -30,8 +30,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
     private readonly IIdentityStore _identityStore;
 
     private Task<AuthenticateResult>? _readCookieTask;
-    private Did? _identityStoreDid;
-
+    
 #pragma warning disable S4487 // Unread "private" fields should be removed
     private DateTimeOffset? _refreshIssuedUtc;
     private DateTimeOffset? _refreshExpiresUtc;
@@ -111,6 +110,12 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
     /// Gets the current <see cref="BlueskyAgentOptions"/>.
     /// </summary>
     protected BlueskyAgentOptions BlueskyAgentOptions => BlueskyAgentOptionsMonitor.CurrentValue;
+
+    /// <summary>
+    /// Gets or sets the <see cref="Did"/> for the current user.
+    /// This is typically set during the authentication process from a claim in the authentication cookie.
+    /// </summary>
+    protected Did? CurrentUserDid { get; set; }
 
     /// <summary>
     /// Creates a new instance of the events instance.
@@ -272,9 +277,9 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
         CookieOptions cookieOptions = BuildCookieOptions();
 
-        if (_identityStoreDid is not null)
+        if (CurrentUserDid is not null)
         {
-            await _identityStore.Remove(_identityStoreDid).ConfigureAwait(false);
+            await _identityStore.Remove(CurrentUserDid).ConfigureAwait(false);
         }
 
         var context = new BlueskySigningOutContext(
@@ -297,7 +302,6 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
         Logger.AuthenticationSchemeSignedOut(Scheme.Name);
     }
-
 
     private CookieOptions BuildCookieOptions()
     {
@@ -430,7 +434,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
             return AuthenticateResults.s_missingDidInCookie;
         }
        
-        _identityStoreDid = new Did(didClaim.Value);
+        CurrentUserDid = new Did(didClaim.Value);
         ClaimsIdentity? storedIdentity = await _identityStore.GetIdentity(didClaim.Value).ConfigureAwait(false);
 
         if (storedIdentity == null)
@@ -443,8 +447,8 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
         if (expiresUtc != null && expiresUtc.Value < currentUtc)
         {
-            await _identityStore.Remove(_identityStoreDid).ConfigureAwait(false);
-            _identityStoreDid = null;
+            await _identityStore.Remove(CurrentUserDid).ConfigureAwait(false);
+            CurrentUserDid = null;
             return AuthenticateResults.s_expiredTicket;
         }
 

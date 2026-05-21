@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -8,7 +7,7 @@ using idunno.Bluesky.AspNet.Authentication;
 namespace Samples.AspNetAuthentication.Areas.Identity.Pages.Account;
 
 [AllowAnonymous]
-public class LogoutModel() : PageModel
+public class LogoutModel(BlueskySignInManager blueskySignInManager) : PageModel
 {
     [BindProperty(SupportsGet = true)]
     public InputModel Input { get; set; } = default!;
@@ -20,7 +19,7 @@ public class LogoutModel() : PageModel
 
     public async Task<IActionResult> OnPost(string? returnUrl = null)
     {
-        await HttpContext.SignOutAsync(BlueskyAuthenticationDefaults.AuthenticationScheme);
+        await blueskySignInManager.SignOut();
 
         if (returnUrl != null)
         {

@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 using idunno.AtProto;
@@ -17,6 +16,11 @@ public class IndexModel(BlueskyAgent agent) : PageModel
     public async void OnGet()
     {
         System.Diagnostics.Debug.WriteLine(HttpContext.User?.Identity?.Name);
+
+        agent.CredentialsUpdated += async (s, e) =>
+        {
+            System.Diagnostics.Debug.WriteLine($"Credentials updated for DID: {e.Did}, Service: {e.Service}");
+        };
 
         if (User is not null && User.Identity?.IsAuthenticated == true && User.Identity is ClaimsIdentity && User.Did is not null)
         {

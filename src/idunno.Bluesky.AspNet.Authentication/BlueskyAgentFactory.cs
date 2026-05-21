@@ -1,9 +1,14 @@
+// Copyright (c) Barry Dorrans. All rights reserved.
+// Licensed under the MIT License.
+
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
-using idunno.AtProto.Authentication;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
+using idunno.AtProto.Authentication;
 
 namespace idunno.Bluesky.AspNet.Authentication;
 
