@@ -8,7 +8,7 @@ using idunno.AtProto;
 using idunno.AtProto.Repo;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
-namespace idunno.Standard.Site;
+namespace Standard.Site;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
@@ -17,6 +17,8 @@ namespace idunno.Standard.Site;
 /// <remarks>
 /// <para>See <see href="https://standard.site"/></para>
 /// </remarks>
+[JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType, IgnoreUnrecognizedTypeDiscriminators = true)]
+[JsonDerivedType(typeof(Document), "site.standard.document")]
 public record Document : Document<JsonNode>
 {
     /// <summary>
@@ -362,20 +364,6 @@ public record Document<T> : AtProtoRecord where T : class
     [SuppressMessage("Design", "CA1056:URI-like properties should not be strings", Justification = "Lexicon definition has this property as either an https URI or an AtUri.")]
     [JsonIgnore]
     protected virtual string CanonicalUrl => $"{Site}{Path}";
-
-    /// <summary>
-    /// Gets and sets the lexicon type identifier for the record.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Customize this property in derived classes to provide a specific lexicon type identifier.
-    /// This is used when serializing the record to include the $type property required by your lexicon.
-    /// </para>
-    /// </remarks>
-    [JsonInclude]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [JsonPropertyName("$type")]
-    public virtual string? Type { get; set; } = "site.standard.document";
 
     /// <summary>
     /// Points to a publication record (at://) or a publication url (https://) for loose documents. Avoid trailing slashes.

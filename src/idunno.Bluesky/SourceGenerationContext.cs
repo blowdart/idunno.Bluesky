@@ -333,14 +333,20 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(GetEmbedExternalResponse))]
 
 [JsonSerializable(typeof(Standard.Site.Graph.Subscription), TypeInfoPropertyName = "StandardSiteGraphSubscription")]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<Standard.Site.Graph.Subscription>), TypeInfoPropertyName = "StandardSiteGraphSubscriptionRecord")]
 [JsonSerializable(typeof(Standard.Site.BasicTheme), TypeInfoPropertyName = "StandardSiteBasicTheme")]
 [JsonSerializable(typeof(Standard.Site.Document), TypeInfoPropertyName = "StandardSiteDocument")]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<Standard.Site.Document>), TypeInfoPropertyName = "StandardSiteDocumentRecord")]
 [JsonSerializable(typeof(Standard.Site.Preferences), TypeInfoPropertyName = "StandardSitePreferences")]
 [JsonSerializable(typeof(Standard.Site.Publication), TypeInfoPropertyName = "StandardSitePublication")]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<Standard.Site.Publication>), TypeInfoPropertyName = "StandardSitePublicationRecord")]
 [JsonSerializable(typeof(Standard.Site.ThemeColor), TypeInfoPropertyName = "StandardSiteThemeColor")]
 [JsonSerializable(typeof(Standard.Site.ThemeColorRgb), TypeInfoPropertyName = "StandardSiteThemeColorRgb")]
 [JsonSerializable(typeof(Standard.Site.ThemeColorRgba), TypeInfoPropertyName = "StandardSiteThemeColorRgba")]
 
+[JsonSerializable(typeof(GermNetwork.Com.Declaration), TypeInfoPropertyName = "GermNetworkComDeclaration")]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<GermNetwork.Com.Declaration>), TypeInfoPropertyName = "GermNetworkComDeclarationRecord")]
+[JsonSerializable(typeof(GermNetwork.Com.MessageMe), TypeInfoPropertyName = "GermNetworkComMessageMe")]
 
 internal partial class SourceGenerationContext : JsonSerializerContext
 {

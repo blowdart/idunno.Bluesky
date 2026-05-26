@@ -1,9 +1,10 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
+using idunno.AtProto;
 
 namespace idunno.Bluesky;
 
@@ -17,12 +18,13 @@ public static class BlueskyJsonSerializerOptions
     private static readonly JsonSerializerOptions s_options = new(JsonSerializerOptions.Web)
     {
         TypeInfoResolver = SourceGenerationContext.Default,
+        AllowOutOfOrderMetadataProperties = true
     };
 
     /// <summary>
     /// Creates a new set of <see cref="JsonSerializerOptions"/> for Bluesky types.
     /// </summary>
-    public static JsonSerializerOptions Options => new(s_options);
+    public static JsonSerializerOptions Options => AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(SourceGenerationContext.Default);
 
     /// <summary>
     /// Gets the default <see cref="IJsonTypeInfoResolver"/> for Bluesky types.

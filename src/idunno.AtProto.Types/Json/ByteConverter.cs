@@ -1,7 +1,6 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -12,7 +11,7 @@ namespace idunno.AtProto.Json;
 /// </summary>
 public sealed class ByteConverter : JsonConverter<Bytes>
 {
-    private readonly static string s_propertyName = JsonEncodedText.Encode("$bytes").ToString();
+    private static readonly string s_propertyName = JsonEncodedText.Encode("$bytes").ToString();
 
     /// <summary>
     /// Reads and converts JSON to an <see cref="Bytes"/>.
@@ -60,7 +59,6 @@ public sealed class ByteConverter : JsonConverter<Bytes>
         {
             throw new JsonException();
         }
-        reader.Read();
 
         return bytes;
     }

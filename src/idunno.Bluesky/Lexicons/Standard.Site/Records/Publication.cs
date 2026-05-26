@@ -2,11 +2,12 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
+
 using idunno.AtProto;
 using idunno.AtProto.Repo;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
-namespace idunno.Standard.Site;
+namespace Standard.Site;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
@@ -15,6 +16,8 @@ namespace idunno.Standard.Site;
 /// <remarks>
 /// <para>See <see href="https://standard.site"/></para>
 /// </remarks>
+[JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType, IgnoreUnrecognizedTypeDiscriminators = true)]
+[JsonDerivedType(typeof(Publication), "site.standard.publication")]
 public record Publication : Publication<Preferences>
 {
     /// <summary>
@@ -82,19 +85,6 @@ public record Publication<T> : AtProtoRecord where T : Preferences
         BasicTheme = basicTheme;
         Preferences = preferences;
     }
-
-    /// <summary>
-    /// Gets and sets the lexicon type identifier for the record.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Customize this property in derived classes to provide a specific lexicon type identifier.
-    /// This is used when serializing the record to include the $type property required by your lexicon.
-    /// </para>
-    /// </remarks>
-    [JsonInclude]
-    [JsonPropertyName("$type")]
-    public virtual string? Type { get; set; } = "site.standard.publication";
 
     /// <summary>
     /// Gets the base publication url (ex: https://standard.site). The canonical document URL is formed by combining this value with the document path.

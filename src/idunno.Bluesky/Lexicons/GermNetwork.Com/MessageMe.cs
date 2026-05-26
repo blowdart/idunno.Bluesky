@@ -11,8 +11,8 @@ namespace GermNetwork.Com;
 /// A declaration of who can message this account
 /// </summary>
 [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
-[JsonDerivedType(typeof(Declaration), "com.germnetwork.declaration#messageMe")]
-public sealed record MessageMe
+[JsonDerivedType(typeof(MessageMe), "com.germnetwork.declaration#messageMe")]
+public record MessageMe
 {
     /// <summary>
     /// Creates a new instance of <see cref="MessageMe"/>.
@@ -26,12 +26,12 @@ public sealed record MessageMe
     public MessageMe(Uri messageMeUrl, string showButtonTo)
     {
         ArgumentNullException.ThrowIfNull(messageMeUrl);
-        ArgumentOutOfRangeException.ThrowIfLessThan(1, messageMeUrl.ToString().Length);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(2047, messageMeUrl.ToString().Length);
+        ArgumentOutOfRangeException.ThrowIfLessThan(messageMeUrl.ToString().Length, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan( messageMeUrl.ToString().Length, 2047);
 
         ArgumentNullException.ThrowIfNull(showButtonTo);
-        ArgumentOutOfRangeException.ThrowIfLessThan(1, showButtonTo.Length);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(100, showButtonTo.Length);
+        ArgumentOutOfRangeException.ThrowIfLessThan(showButtonTo.Length, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(showButtonTo.Length, 100);
 
 
         MessageMeUrl = messageMeUrl;
@@ -52,8 +52,8 @@ public sealed record MessageMe
         {
             ArgumentNullException.ThrowIfNull(value);
 
-            ArgumentOutOfRangeException.ThrowIfLessThan(1, value.ToString().Length);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(2047, value.ToString().Length);
+            ArgumentOutOfRangeException.ThrowIfLessThan(value.ToString().Length, 1);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.ToString().Length, 2047);
 
             field = value;
         }
@@ -75,8 +75,8 @@ public sealed record MessageMe
         set
         {
             ArgumentNullException.ThrowIfNull(value);
-            ArgumentOutOfRangeException.ThrowIfLessThan(1, value.Length);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(100, value.Length);
+            ArgumentOutOfRangeException.ThrowIfLessThan(value.Length, 1);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, 100);
             field = value;
         }
     }

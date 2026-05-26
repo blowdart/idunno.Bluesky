@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
@@ -25,6 +25,7 @@ namespace idunno.AtProto;
 [JsonSerializable(typeof(Nsid))]
 [JsonSerializable(typeof(RecordKey))]
 [JsonSerializable(typeof(TimestampIdentifier))]
+[JsonSerializable(typeof(Bytes))]
 internal partial class SourceGenerationContext : JsonSerializerContext
 {
 }

@@ -120,91 +120,88 @@ idunno.Bluesky.Embed.External.View.UpdatedAt.get -> System.DateTimeOffset?
 idunno.Bluesky.Embed.External.View.UpdatedAt.init -> void
 idunno.Bluesky.Embed.External.View.Uri.get -> System.Uri!
 idunno.Bluesky.Embed.External.View.Uri.init -> void
-idunno.Standard.Site.BasicTheme
-idunno.Standard.Site.BasicTheme.Accent.get -> idunno.Standard.Site.ThemeColor!
-idunno.Standard.Site.BasicTheme.Accent.set -> void
-idunno.Standard.Site.BasicTheme.AccentForeground.get -> idunno.Standard.Site.ThemeColor!
-idunno.Standard.Site.BasicTheme.AccentForeground.set -> void
-idunno.Standard.Site.BasicTheme.Background.get -> idunno.Standard.Site.ThemeColor!
-idunno.Standard.Site.BasicTheme.Background.set -> void
-idunno.Standard.Site.BasicTheme.BasicTheme(idunno.Standard.Site.ThemeColor! background, idunno.Standard.Site.ThemeColor! foreground, idunno.Standard.Site.ThemeColor! accent, idunno.Standard.Site.ThemeColor! accentForeground) -> void
-idunno.Standard.Site.BasicTheme.Foreground.get -> idunno.Standard.Site.ThemeColor!
-idunno.Standard.Site.BasicTheme.Foreground.set -> void
-idunno.Standard.Site.Document
-idunno.Standard.Site.Document.Document(idunno.AtProto.AtUri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, System.Text.Json.Nodes.JsonNode? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
-idunno.Standard.Site.Document.Document(string! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, System.Text.Json.Nodes.JsonNode? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
-idunno.Standard.Site.Document.Document(System.Uri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, System.Text.Json.Nodes.JsonNode? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
-idunno.Standard.Site.Document<T>
-idunno.Standard.Site.Document<T>.BSkyPostRef.get -> idunno.AtProto.Repo.StrongReference?
-idunno.Standard.Site.Document<T>.BSkyPostRef.set -> void
-idunno.Standard.Site.Document<T>.Content.get -> T?
-idunno.Standard.Site.Document<T>.Content.set -> void
-idunno.Standard.Site.Document<T>.CoverImage.get -> idunno.AtProto.Repo.Blob?
-idunno.Standard.Site.Document<T>.CoverImage.set -> void
-idunno.Standard.Site.Document<T>.Description.get -> string?
-idunno.Standard.Site.Document<T>.Description.set -> void
-idunno.Standard.Site.Document<T>.Document(idunno.AtProto.AtUri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, T? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
-idunno.Standard.Site.Document<T>.Document(string! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, T? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
-idunno.Standard.Site.Document<T>.Document(System.Uri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, T? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
-idunno.Standard.Site.Document<T>.Path.get -> string?
-idunno.Standard.Site.Document<T>.Path.set -> void
-idunno.Standard.Site.Document<T>.PublishedAt.get -> System.DateTimeOffset
-idunno.Standard.Site.Document<T>.PublishedAt.set -> void
-idunno.Standard.Site.Document<T>.Site.get -> string!
-idunno.Standard.Site.Document<T>.Site.set -> void
-idunno.Standard.Site.Document<T>.Tags.get -> System.Collections.Generic.IEnumerable<string!>?
-idunno.Standard.Site.Document<T>.Tags.set -> void
-idunno.Standard.Site.Document<T>.TextContent.get -> string?
-idunno.Standard.Site.Document<T>.TextContent.set -> void
-idunno.Standard.Site.Document<T>.Title.get -> string!
-idunno.Standard.Site.Document<T>.Title.set -> void
-idunno.Standard.Site.Document<T>.UpdatedAt.get -> System.DateTimeOffset?
-idunno.Standard.Site.Document<T>.UpdatedAt.set -> void
-idunno.Standard.Site.Graph.Subscription
-idunno.Standard.Site.Graph.Subscription.Publication.get -> idunno.AtProto.AtUri!
-idunno.Standard.Site.Graph.Subscription.Publication.init -> void
-idunno.Standard.Site.Graph.Subscription.Subscription(idunno.AtProto.AtUri! publication) -> void
-idunno.Standard.Site.Preferences
-idunno.Standard.Site.Preferences.Preferences(bool showInDiscover) -> void
-idunno.Standard.Site.Preferences.ShowInDiscover.get -> bool
-idunno.Standard.Site.Preferences.ShowInDiscover.set -> void
-idunno.Standard.Site.Publication
-idunno.Standard.Site.Publication.Publication(System.Uri! url, string! name, idunno.AtProto.Repo.Blob? icon = null, string? description = null, idunno.Standard.Site.BasicTheme? basicTheme = null, idunno.Standard.Site.Preferences? preferences = null) -> void
-idunno.Standard.Site.Publication<T>
-idunno.Standard.Site.Publication<T>.BasicTheme.get -> idunno.Standard.Site.BasicTheme?
-idunno.Standard.Site.Publication<T>.BasicTheme.set -> void
-idunno.Standard.Site.Publication<T>.Description.get -> string?
-idunno.Standard.Site.Publication<T>.Description.set -> void
-idunno.Standard.Site.Publication<T>.Icon.get -> idunno.AtProto.Repo.Blob?
-idunno.Standard.Site.Publication<T>.Icon.set -> void
-idunno.Standard.Site.Publication<T>.Name.get -> string!
-idunno.Standard.Site.Publication<T>.Name.set -> void
-idunno.Standard.Site.Publication<T>.Preferences.get -> T?
-idunno.Standard.Site.Publication<T>.Preferences.set -> void
-idunno.Standard.Site.Publication<T>.Publication(System.Uri! url, string! name, idunno.AtProto.Repo.Blob? icon = null, string? description = null, idunno.Standard.Site.BasicTheme? basicTheme = null, T? preferences = null) -> void
-idunno.Standard.Site.Publication<T>.Url.get -> System.Uri!
-idunno.Standard.Site.Publication<T>.Url.set -> void
-idunno.Standard.Site.ThemeColor
-idunno.Standard.Site.ThemeColor.ThemeColor() -> void
-idunno.Standard.Site.ThemeColorRgb
-idunno.Standard.Site.ThemeColorRgb.Blue.get -> int
-idunno.Standard.Site.ThemeColorRgb.Blue.set -> void
-idunno.Standard.Site.ThemeColorRgb.Green.get -> int
-idunno.Standard.Site.ThemeColorRgb.Green.set -> void
-idunno.Standard.Site.ThemeColorRgb.Red.get -> int
-idunno.Standard.Site.ThemeColorRgb.Red.set -> void
-idunno.Standard.Site.ThemeColorRgb.ThemeColorRgb(int red, int green, int blue) -> void
-idunno.Standard.Site.ThemeColorRgba
-idunno.Standard.Site.ThemeColorRgba.Alpha.get -> int
-idunno.Standard.Site.ThemeColorRgba.Alpha.set -> void
-idunno.Standard.Site.ThemeColorRgba.ThemeColorRgba(int red, int green, int blue, int alpha) -> void
+Standard.Site.BasicTheme
+Standard.Site.BasicTheme.Accent.get -> Standard.Site.ThemeColor!
+Standard.Site.BasicTheme.Accent.set -> void
+Standard.Site.BasicTheme.AccentForeground.get -> Standard.Site.ThemeColor!
+Standard.Site.BasicTheme.AccentForeground.set -> void
+Standard.Site.BasicTheme.Background.get -> Standard.Site.ThemeColor!
+Standard.Site.BasicTheme.Background.set -> void
+Standard.Site.BasicTheme.BasicTheme(Standard.Site.ThemeColor! background, Standard.Site.ThemeColor! foreground, Standard.Site.ThemeColor! accent, Standard.Site.ThemeColor! accentForeground) -> void
+Standard.Site.BasicTheme.Foreground.get -> Standard.Site.ThemeColor!
+Standard.Site.BasicTheme.Foreground.set -> void
+Standard.Site.Document
+Standard.Site.Document.Document(idunno.AtProto.AtUri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, System.Text.Json.Nodes.JsonNode? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
+Standard.Site.Document.Document(string! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, System.Text.Json.Nodes.JsonNode? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
+Standard.Site.Document.Document(System.Uri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, System.Text.Json.Nodes.JsonNode? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
+Standard.Site.Document<T>
+Standard.Site.Document<T>.BSkyPostRef.get -> idunno.AtProto.Repo.StrongReference?
+Standard.Site.Document<T>.BSkyPostRef.set -> void
+Standard.Site.Document<T>.Content.get -> T?
+Standard.Site.Document<T>.Content.set -> void
+Standard.Site.Document<T>.CoverImage.get -> idunno.AtProto.Repo.Blob?
+Standard.Site.Document<T>.CoverImage.set -> void
+Standard.Site.Document<T>.Description.get -> string?
+Standard.Site.Document<T>.Description.set -> void
+Standard.Site.Document<T>.Document(idunno.AtProto.AtUri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, T? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
+Standard.Site.Document<T>.Document(string! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, T? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
+Standard.Site.Document<T>.Document(System.Uri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, T? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
+Standard.Site.Document<T>.Path.get -> string?
+Standard.Site.Document<T>.Path.set -> void
+Standard.Site.Document<T>.PublishedAt.get -> System.DateTimeOffset
+Standard.Site.Document<T>.PublishedAt.set -> void
+Standard.Site.Document<T>.Site.get -> string!
+Standard.Site.Document<T>.Site.set -> void
+Standard.Site.Document<T>.Tags.get -> System.Collections.Generic.IEnumerable<string!>?
+Standard.Site.Document<T>.Tags.set -> void
+Standard.Site.Document<T>.TextContent.get -> string?
+Standard.Site.Document<T>.TextContent.set -> void
+Standard.Site.Document<T>.Title.get -> string!
+Standard.Site.Document<T>.Title.set -> void
+Standard.Site.Document<T>.UpdatedAt.get -> System.DateTimeOffset?
+Standard.Site.Document<T>.UpdatedAt.set -> void
+Standard.Site.Graph.Subscription
+Standard.Site.Graph.Subscription.Publication.get -> idunno.AtProto.AtUri!
+Standard.Site.Graph.Subscription.Publication.init -> void
+Standard.Site.Graph.Subscription.Subscription(idunno.AtProto.AtUri! publication) -> void
+Standard.Site.Preferences
+Standard.Site.Preferences.ExtensionData.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>?
+Standard.Site.Preferences.ExtensionData.set -> void
+Standard.Site.Preferences.Preferences(bool showInDiscover) -> void
+Standard.Site.Preferences.ShowInDiscover.get -> bool
+Standard.Site.Preferences.ShowInDiscover.set -> void
+Standard.Site.Publication
+Standard.Site.Publication.Publication(System.Uri! url, string! name, idunno.AtProto.Repo.Blob? icon = null, string? description = null, Standard.Site.BasicTheme? basicTheme = null, Standard.Site.Preferences? preferences = null) -> void
+Standard.Site.Publication<T>
+Standard.Site.Publication<T>.BasicTheme.get -> Standard.Site.BasicTheme?
+Standard.Site.Publication<T>.BasicTheme.set -> void
+Standard.Site.Publication<T>.Description.get -> string?
+Standard.Site.Publication<T>.Description.set -> void
+Standard.Site.Publication<T>.Icon.get -> idunno.AtProto.Repo.Blob?
+Standard.Site.Publication<T>.Icon.set -> void
+Standard.Site.Publication<T>.Name.get -> string!
+Standard.Site.Publication<T>.Name.set -> void
+Standard.Site.Publication<T>.Preferences.get -> T?
+Standard.Site.Publication<T>.Preferences.set -> void
+Standard.Site.Publication<T>.Publication(System.Uri! url, string! name, idunno.AtProto.Repo.Blob? icon = null, string? description = null, Standard.Site.BasicTheme? basicTheme = null, T? preferences = null) -> void
+Standard.Site.Publication<T>.Url.get -> System.Uri!
+Standard.Site.Publication<T>.Url.set -> void
+Standard.Site.ThemeColor
+Standard.Site.ThemeColor.ThemeColor() -> void
+Standard.Site.ThemeColorRgb
+Standard.Site.ThemeColorRgb.Blue.get -> int
+Standard.Site.ThemeColorRgb.Blue.set -> void
+Standard.Site.ThemeColorRgb.Green.get -> int
+Standard.Site.ThemeColorRgb.Green.set -> void
+Standard.Site.ThemeColorRgb.Red.get -> int
+Standard.Site.ThemeColorRgb.Red.set -> void
+Standard.Site.ThemeColorRgb.ThemeColorRgb(int red, int green, int blue) -> void
+Standard.Site.ThemeColorRgba
+Standard.Site.ThemeColorRgba.Alpha.get -> int
+Standard.Site.ThemeColorRgba.Alpha.set -> void
+Standard.Site.ThemeColorRgba.ThemeColorRgba(int red, int green, int blue, int alpha) -> void
 static idunno.Bluesky.BlueskyServer.GetEmbedExternalView(System.Uri! url, idunno.AtProto.AtUri![]! uris, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Embed.EmbeddedExternalView!>!>!
 static readonly GermNetwork.Com.ShowButtonToKnownValues.Everyone -> string!
 static readonly GermNetwork.Com.ShowButtonToKnownValues.None -> string!
 static readonly GermNetwork.Com.ShowButtonToKnownValues.UsersIFollow -> string!
-virtual idunno.Standard.Site.Document<T>.CanonicalUrl.get -> string!
-virtual idunno.Standard.Site.Document<T>.Type.get -> string?
-virtual idunno.Standard.Site.Document<T>.Type.set -> void
-virtual idunno.Standard.Site.Preferences.Type.get -> string?
-virtual idunno.Standard.Site.Publication<T>.Type.get -> string?
-virtual idunno.Standard.Site.Publication<T>.Type.set -> void
+virtual Standard.Site.Document<T>.CanonicalUrl.get -> string!

@@ -35,8 +35,8 @@ public record Declaration : AtProtoRecord
         ArgumentNullException.ThrowIfNull(version);
         ArgumentNullException.ThrowIfNull(currentKey);
 
-        ArgumentOutOfRangeException.ThrowIfLessThan(5, version.Length);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(14, version.Length);
+        ArgumentOutOfRangeException.ThrowIfLessThan(version.Length, 5);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(version.Length, 14);
 
         Version = version;
         CurrentKey = currentKey;
@@ -58,8 +58,8 @@ public record Declaration : AtProtoRecord
         set
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
-            ArgumentOutOfRangeException.ThrowIfLessThan(5, value.Length);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(14, value.Length);
+            ArgumentOutOfRangeException.ThrowIfLessThan(value.Length, 5);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, 14);
             field = value;
         }
     }

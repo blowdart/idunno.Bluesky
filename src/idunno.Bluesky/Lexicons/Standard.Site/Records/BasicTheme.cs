@@ -4,12 +4,14 @@
 using System.Text.Json.Serialization;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
-namespace idunno.Standard.Site;
+namespace Standard.Site;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// Simplified standard.site publication theme for tools and apps to utilize when displaying content.
 /// </summary>
+[JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+[JsonDerivedType(typeof(BasicTheme), "site.standard.theme.basic")]
 public record BasicTheme
 {
     /// <summary>
@@ -37,7 +39,7 @@ public record BasicTheme
     /// <summary>
     /// Color used for content background.
     /// </summary>
-    /// <exception cref="System.ArgumentNullException">Thrown when the value is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when the value is <see langword="null"/>.</exception>
     [JsonRequired]
     public ThemeColor Background
     {
