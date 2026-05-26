@@ -34,7 +34,8 @@
 | | [app.bsky.draft.deleteDraft](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/draft/deleteDraft.json) | `BlueskyAgent.DeleteDraft()` | ✔ |
 | | [app.bsky.draft.getDrafts](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/draft/getDrafts.json) | `BlueskyAgent.GetDrafts()` | ✔ |
 | | [app.bsky.draft.updateDraft](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/draft/updateDraft.json) | `BlueskyAgent.UpdateDraft()` | ✔ |
-| **Feed** | [app.bsky.feed.DescribeFeedGenerator](https://docs.bsky.app/docs/api/app-bsky-feed-describe-feed-generator) | `BlueskyAgent.DescribeFeedGenerator()` | ✔ |
+| **Embed** | [app.bsky.embed.getExternalView](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/embed/getEmbedExternalView.json) | `BlueskyAgent.GetExternalView()` | ✔ |
+| **Feed** | [app.bsky.feed.describeFeedGenerator](https://docs.bsky.app/docs/api/app-bsky-feed-describe-feed-generator) | `BlueskyAgent.DescribeFeedGenerator()` | ✔ |
 | | [app.bsky.feed.getActorFeeds](https://docs.bsky.app/docs/api/app-bsky-feed-get-actor-feeds) | `BlueskyAgent.GetActorFeeds()` | ✔ |
 | | [app.bsky.feed.getActorLikes](https://docs.bsky.app/docs/api/app-bsky-feed-get-actor-likes) | `BlueskyAgent.GetActorLikes()` | ✔ |
 | | [app.bsky.feed.getAuthorFeed](https://docs.bsky.app/docs/api/app-bsky-feed-get-author-feed) | `BlueskyAgent.GetAuthorFeed()` | ✔ |

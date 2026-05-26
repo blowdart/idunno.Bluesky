@@ -1,1 +1,17 @@
-﻿#nullable enable
+#nullable enable
+idunno.AtProto.Bytes
+idunno.AtProto.Bytes.Base64EncodedValue.get -> string!
+idunno.AtProto.Bytes.Bytes(byte[]! bytes) -> void
+idunno.AtProto.Bytes.Bytes(string! s) -> void
+idunno.AtProto.Bytes.Equals(idunno.AtProto.Bytes? other) -> bool
+idunno.AtProto.Bytes.ToBytes() -> byte[]!
+idunno.AtProto.Bytes.Value.get -> System.Collections.Generic.ICollection<byte>!
+idunno.AtProto.Json.ByteConverter
+idunno.AtProto.Json.ByteConverter.ByteConverter() -> void
+override idunno.AtProto.Bytes.Equals(object? obj) -> bool
+override idunno.AtProto.Bytes.GetHashCode() -> int
+override idunno.AtProto.Bytes.ToString() -> string!
+override idunno.AtProto.Json.ByteConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> idunno.AtProto.Bytes?
+override idunno.AtProto.Json.ByteConverter.Write(System.Text.Json.Utf8JsonWriter! writer, idunno.AtProto.Bytes! value, System.Text.Json.JsonSerializerOptions! options) -> void
+static idunno.AtProto.Bytes.implicit operator idunno.AtProto.Bytes!(byte[]! bytes) -> idunno.AtProto.Bytes!
+static idunno.AtProto.Bytes.implicit operator idunno.AtProto.Bytes!(string! s) -> idunno.AtProto.Bytes!

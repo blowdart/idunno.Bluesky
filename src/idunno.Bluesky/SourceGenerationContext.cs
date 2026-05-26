@@ -12,6 +12,7 @@ using idunno.Bluesky.Chat.Model;
 using idunno.Bluesky.Drafts;
 using idunno.Bluesky.Drafts.Model;
 using idunno.Bluesky.Embed;
+using idunno.Bluesky.Embed.Model;
 using idunno.Bluesky.Feed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.Feed.Model;
@@ -323,6 +324,23 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(GetDraftsResponse))]
 [JsonSerializable(typeof(DeleteDraftRequest))]
 [JsonSerializable(typeof(UpdateDraftRequest))]
+
+[JsonSerializable(typeof(Embed.External.Properties), TypeInfoPropertyName = "AppBskyEmbedExternalExternal")]
+[JsonSerializable(typeof(Embed.External.View), TypeInfoPropertyName = "AppBskyEmbedExternalView")]
+[JsonSerializable(typeof(Embed.External.Source.ColorRgb))]
+[JsonSerializable(typeof(Embed.External.Source.Theme), TypeInfoPropertyName = "AppBskyEmbedExternalViewExternalSourceTheme")]
+[JsonSerializable(typeof(Embed.External.Source.View), TypeInfoPropertyName = "AppBskyEmbedExternalViewExternalSource")]
+[JsonSerializable(typeof(GetEmbedExternalResponse))]
+
+[JsonSerializable(typeof(Standard.Site.Graph.Subscription), TypeInfoPropertyName = "StandardSiteGraphSubscription")]
+[JsonSerializable(typeof(Standard.Site.BasicTheme), TypeInfoPropertyName = "StandardSiteBasicTheme")]
+[JsonSerializable(typeof(Standard.Site.Document), TypeInfoPropertyName = "StandardSiteDocument")]
+[JsonSerializable(typeof(Standard.Site.Preferences), TypeInfoPropertyName = "StandardSitePreferences")]
+[JsonSerializable(typeof(Standard.Site.Publication), TypeInfoPropertyName = "StandardSitePublication")]
+[JsonSerializable(typeof(Standard.Site.ThemeColor), TypeInfoPropertyName = "StandardSiteThemeColor")]
+[JsonSerializable(typeof(Standard.Site.ThemeColorRgb), TypeInfoPropertyName = "StandardSiteThemeColorRgb")]
+[JsonSerializable(typeof(Standard.Site.ThemeColorRgba), TypeInfoPropertyName = "StandardSiteThemeColorRgba")]
+
 
 internal partial class SourceGenerationContext : JsonSerializerContext
 {

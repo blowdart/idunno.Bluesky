@@ -199,7 +199,6 @@ idunno.Bluesky.Actor.ProfileAssociated.Labeler.get -> bool
 idunno.Bluesky.Actor.ProfileAssociated.Labeler.init -> void
 idunno.Bluesky.Actor.ProfileAssociated.Lists.get -> int
 idunno.Bluesky.Actor.ProfileAssociated.Lists.init -> void
-idunno.Bluesky.Actor.ProfileAssociated.ProfileAssociated(int lists, int feedGens, int starterPacks, bool labeler, idunno.Bluesky.Actor.ProfileAssociatedChat? chat, idunno.Bluesky.Actor.ActivitySubscriptions? activitySubscription) -> void
 idunno.Bluesky.Actor.ProfileAssociated.StarterPacks.get -> int
 idunno.Bluesky.Actor.ProfileAssociated.StarterPacks.init -> void
 idunno.Bluesky.Actor.ProfileAssociatedChat
@@ -702,23 +701,6 @@ idunno.Bluesky.Embed.Caption.Lang.get -> string!
 idunno.Bluesky.Embed.Caption.Lang.init -> void
 idunno.Bluesky.Embed.EmbeddedBase
 idunno.Bluesky.Embed.EmbeddedExternal
-idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(idunno.Bluesky.Embed.ExternalProperties! external) -> void
-idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title, string? description = null, idunno.AtProto.Repo.Blob? thumbnail = null) -> void
-idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(System.Uri! uri, string! title, string? description = null, idunno.AtProto.Repo.Blob? thumbnail = null) -> void
-idunno.Bluesky.Embed.EmbeddedExternal.External.get -> idunno.Bluesky.Embed.ExternalProperties!
-idunno.Bluesky.Embed.EmbeddedExternal.External.init -> void
-idunno.Bluesky.Embed.EmbeddedExternalView
-idunno.Bluesky.Embed.EmbeddedExternalView.External.get -> idunno.Bluesky.Embed.EmbeddedExternalViewProperties!
-idunno.Bluesky.Embed.EmbeddedExternalView.External.init -> void
-idunno.Bluesky.Embed.EmbeddedExternalViewProperties
-idunno.Bluesky.Embed.EmbeddedExternalViewProperties.Description.get -> string!
-idunno.Bluesky.Embed.EmbeddedExternalViewProperties.Description.init -> void
-idunno.Bluesky.Embed.EmbeddedExternalViewProperties.ThumbnailUri.get -> System.Uri?
-idunno.Bluesky.Embed.EmbeddedExternalViewProperties.ThumbnailUri.init -> void
-idunno.Bluesky.Embed.EmbeddedExternalViewProperties.Title.get -> string!
-idunno.Bluesky.Embed.EmbeddedExternalViewProperties.Title.init -> void
-idunno.Bluesky.Embed.EmbeddedExternalViewProperties.Uri.get -> System.Uri!
-idunno.Bluesky.Embed.EmbeddedExternalViewProperties.Uri.init -> void
 idunno.Bluesky.Embed.EmbeddedImage
 idunno.Bluesky.Embed.EmbeddedImage.AltText.get -> string!
 idunno.Bluesky.Embed.EmbeddedImage.AltText.init -> void
@@ -789,19 +771,6 @@ idunno.Bluesky.Embed.EmbeddedVideoView.Presentation.init -> void
 idunno.Bluesky.Embed.EmbeddedVideoView.ThumbnailUri.get -> System.Uri!
 idunno.Bluesky.Embed.EmbeddedVideoView.ThumbnailUri.init -> void
 idunno.Bluesky.Embed.EmbeddedView
-idunno.Bluesky.Embed.ExternalProperties
-idunno.Bluesky.Embed.ExternalProperties.AssociatedRecord.get -> idunno.AtProto.AtUri?
-idunno.Bluesky.Embed.ExternalProperties.AssociatedRecord.set -> void
-idunno.Bluesky.Embed.ExternalProperties.Description.get -> string?
-idunno.Bluesky.Embed.ExternalProperties.Description.set -> void
-idunno.Bluesky.Embed.ExternalProperties.ExternalProperties(string! uri, string! title, string? description = null, idunno.AtProto.Repo.Blob? thumbnail = null, idunno.AtProto.AtUri? associatedRecord = null) -> void
-idunno.Bluesky.Embed.ExternalProperties.ExternalProperties(System.Uri! uri, string! title, string? description = null, idunno.AtProto.Repo.Blob? thumbnail = null, idunno.AtProto.AtUri? associatedRecord = null) -> void
-idunno.Bluesky.Embed.ExternalProperties.Thumbnail.get -> idunno.AtProto.Repo.Blob?
-idunno.Bluesky.Embed.ExternalProperties.Thumbnail.set -> void
-idunno.Bluesky.Embed.ExternalProperties.Title.get -> string!
-idunno.Bluesky.Embed.ExternalProperties.Title.set -> void
-idunno.Bluesky.Embed.ExternalProperties.Uri.get -> System.Uri!
-idunno.Bluesky.Embed.ExternalProperties.Uri.set -> void
 idunno.Bluesky.Embed.VideoPresentationKnownValues
 static idunno.Bluesky.Embed.VideoPresentationKnownValues.Default.get -> string!
 static idunno.Bluesky.Embed.VideoPresentationKnownValues.Gif.get -> string!

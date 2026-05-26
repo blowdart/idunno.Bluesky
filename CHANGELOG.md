@@ -1,5 +1,53 @@
 # Version History
 
+## 1.9.0
+
+## Added
+
+### AtProto.Types
+
+* Added `Bytes` type to represent byte arrays in AtProto.
+
+### idunno.Bluesky
+
+* Added classes for Germ Network lexicon.
+* Added classes for Standard.Site lexicon.
+
+## Changed
+
+### idunno.Bluesky
+
+* Updated `EmbeddedExternalView` to support the new [Standard Site integration](https://github.com/bluesky-social/atproto/discussions/4978).
+* Updated `EmbeddedExternal` to support the new [Standard Site integration](https://github.com/bluesky-social/atproto/discussions/4978).
+* Updated `ProfileViewBasic` to add properties for Germ integration.
+
+## Breaking Changes
+
+### idunno.Bluesky
+
+* Moved various external Embedded content classes to their own files and namespaces. This is a breaking change if you are using these classes directory, rather than through the utility methods on `BlueskyAgent`.
+
+## 1.8.3 - 2026-05-16
+
+## Added
+
+### idunno.Bluesky
+
+* Added validation to `PostBuilder` to check its internal state before converting to a post.
+  You can call `IsValid()` to check if the `PostBuilder` is coherent and enumerate through `ValidationErrors()` to
+  see the errors that are present.
+* Added some more helpers to `PostBuilder`, including `Add` overloads for self labels,
+  `ContainsGraphicMedia`, `ContainsNudity`, `ContainsPorn` and `ContainsSexualContent` for setting individual self labels.
+* Added `.ReplyTo()` to `PostBuilder` for replying to a post or a thread.
+* Added `.Quote()` to `PostBuilder` for adding a quote of another post to the post content.
+* Added various `Add` overloads to `PostBuilder` for adding content to the post body, including hash tags, links and mentions.
+
+## Changed
+
+### idunno.Bluesky
+
+* Updated `PostBuilder` to allow for replies to quote other posts. Fixes [#343](https://github.com/blowdart/idunno.Bluesky/issues/343), thank you [OatmealDome](https://github.com/OatmealDome).
+
 ## 1.8.2 - 2026-05-11
 
 ## Added
