@@ -1402,6 +1402,14 @@ idunno.Bluesky.PostBuilder
 idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.Embed.EmbeddedImage! image) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.Embed.EmbeddedVideo! video) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.Add(System.Collections.Generic.ICollection<idunno.Bluesky.Embed.EmbeddedImage!>! images) -> idunno.Bluesky.PostBuilder!
+idunno.Bluesky.PostBuilder.Add(char c) -> idunno.Bluesky.PostBuilder!
+idunno.Bluesky.PostBuilder.Add(char c, int repeatCount) -> idunno.Bluesky.PostBuilder!
+idunno.Bluesky.PostBuilder.Add(idunno.AtProto.Labels.SelfLabel! selfLabel) -> idunno.Bluesky.PostBuilder!
+idunno.Bluesky.PostBuilder.Add(idunno.AtProto.Repo.StrongReference! strongReference) -> idunno.Bluesky.PostBuilder!
+idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.RichText.HashTag! hashTag) -> idunno.Bluesky.PostBuilder!
+idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.RichText.Link! link) -> idunno.Bluesky.PostBuilder!
+idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.RichText.Mention! mention) -> idunno.Bluesky.PostBuilder!
+idunno.Bluesky.PostBuilder.Add(string! s) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.Append(char value) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.Append(char value, int repeatCount) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.Append(idunno.Bluesky.RichText.HashTag! hashTag) -> idunno.Bluesky.PostBuilder!
@@ -1409,6 +1417,10 @@ idunno.Bluesky.PostBuilder.Append(idunno.Bluesky.RichText.Link! link) -> idunno.
 idunno.Bluesky.PostBuilder.Append(idunno.Bluesky.RichText.Mention! mention) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.Append(string? value) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.ApplyInteractionPreferences(idunno.Bluesky.Actor.InteractionPreferences! interactionPreferences) -> void
+idunno.Bluesky.PostBuilder.ContainsGraphicMedia() -> idunno.Bluesky.PostBuilder!
+idunno.Bluesky.PostBuilder.ContainsNudity() -> idunno.Bluesky.PostBuilder!
+idunno.Bluesky.PostBuilder.ContainsPorn() -> idunno.Bluesky.PostBuilder!
+idunno.Bluesky.PostBuilder.ContainsSexualContent() -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.DisableEmbedding.get -> bool
 idunno.Bluesky.PostBuilder.DisableEmbedding.set -> void
 idunno.Bluesky.PostBuilder.DisableReplies.get -> bool
@@ -1416,6 +1428,7 @@ idunno.Bluesky.PostBuilder.DisableReplies.set -> void
 idunno.Bluesky.PostBuilder.Embed.get -> idunno.Bluesky.Embed.EmbeddedBase?
 idunno.Bluesky.PostBuilder.Embed.set -> void
 idunno.Bluesky.PostBuilder.EmbedRecord(idunno.Bluesky.Embed.EmbeddedBase! embeddedRecord) -> void
+idunno.Bluesky.PostBuilder.Equals(idunno.Bluesky.PostBuilder? other) -> bool
 idunno.Bluesky.PostBuilder.ExtractFacets(idunno.Bluesky.RichText.IFacetExtractor! facetExtractor, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 idunno.Bluesky.PostBuilder.Facets.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.RichText.Facet!>!
 idunno.Bluesky.PostBuilder.GraphemeLength.get -> int
@@ -1427,6 +1440,8 @@ idunno.Bluesky.PostBuilder.HasVideo.get -> bool
 idunno.Bluesky.PostBuilder.Images.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Embed.EmbeddedImage!>!
 idunno.Bluesky.PostBuilder.InReplyTo.get -> idunno.Bluesky.ReplyReferences?
 idunno.Bluesky.PostBuilder.InReplyTo.set -> void
+idunno.Bluesky.PostBuilder.IsValid() -> bool
+idunno.Bluesky.PostBuilder.Label(idunno.Bluesky.PostSelfLabels! labels) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.Langs.get -> System.Collections.Generic.IEnumerable<string!>?
 idunno.Bluesky.PostBuilder.Length.get -> int
 idunno.Bluesky.PostBuilder.MaxCapacity.get -> int
@@ -1437,16 +1452,27 @@ idunno.Bluesky.PostBuilder.PostBuilder(string? text, string! lang, System.DateTi
 idunno.Bluesky.PostBuilder.PostBuilder(string? text, System.Collections.Generic.ICollection<string!>? langs = null, System.DateTimeOffset? createdAt = null, System.Collections.Generic.ICollection<idunno.Bluesky.Embed.EmbeddedImage!>? images = null, System.Collections.Generic.ICollection<idunno.Bluesky.RichText.Facet!>? facets = null, idunno.Bluesky.PostSelfLabels? labels = null, System.Collections.Generic.ICollection<string!>? tags = null) -> void
 idunno.Bluesky.PostBuilder.PostGateRules.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Feed.Gates.PostGateRule!>?
 idunno.Bluesky.PostBuilder.PostGateRules.set -> void
+idunno.Bluesky.PostBuilder.Quote(idunno.AtProto.Repo.StrongReference! strongReference) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.QuotePost.get -> idunno.AtProto.Repo.StrongReference?
 idunno.Bluesky.PostBuilder.QuotePost.set -> void
-idunno.Bluesky.PostBuilder.SetSelfLabels(idunno.Bluesky.PostSelfLabels! labels) -> void
+idunno.Bluesky.PostBuilder.ReplyTo(idunno.AtProto.Repo.StrongReference! postReference, idunno.Bluesky.BlueskyAgent! agent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.PostBuilder!>!
+idunno.Bluesky.PostBuilder.ReplyTo(idunno.Bluesky.ReplyReferences! replyReferences) -> idunno.Bluesky.PostBuilder!
+idunno.Bluesky.PostBuilder.SetSelfLabels(idunno.Bluesky.PostSelfLabels! labels) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.Tags.get -> System.Collections.Generic.IEnumerable<string!>?
 idunno.Bluesky.PostBuilder.Text.get -> string?
 idunno.Bluesky.PostBuilder.ThreadGateRules.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Feed.Gates.ThreadGateRule!>?
 idunno.Bluesky.PostBuilder.ThreadGateRules.set -> void
 idunno.Bluesky.PostBuilder.ToPost() -> idunno.Bluesky.Post!
 idunno.Bluesky.PostBuilder.Utf8Length.get -> int
+idunno.Bluesky.PostBuilder.ValidationErrors() -> System.Collections.Generic.IEnumerable<string!>!
 idunno.Bluesky.PostBuilder.Video.get -> idunno.Bluesky.Embed.EmbeddedVideo?
+idunno.Bluesky.PostBuilder.WithText(string! text) -> idunno.Bluesky.PostBuilder!
+static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, char c) -> idunno.Bluesky.PostBuilder!
+static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, idunno.AtProto.Labels.SelfLabel! selfLabel) -> idunno.Bluesky.PostBuilder!
+static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, idunno.AtProto.Repo.StrongReference! strongReference) -> idunno.Bluesky.PostBuilder!
+static idunno.Bluesky.PostBuilder.operator +(idunno.Bluesky.PostBuilder! postBuilder, idunno.AtProto.Labels.SelfLabel! selfLabel) -> idunno.Bluesky.PostBuilder!
+static idunno.Bluesky.PostBuilder.operator +(idunno.Bluesky.PostBuilder! postBuilder, idunno.AtProto.Repo.StrongReference! strongReference) -> idunno.Bluesky.PostBuilder!
+static idunno.Bluesky.PostBuilder.Quote(idunno.Bluesky.PostBuilder! postBuilder, idunno.AtProto.Repo.StrongReference! strongReference) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilderException
 idunno.Bluesky.PostBuilderException.PostBuilderException() -> void
 idunno.Bluesky.PostBuilderException.PostBuilderException(string! message) -> void
@@ -1870,7 +1896,7 @@ static idunno.Bluesky.Feed.Gates.ThreadGate.NoReplies(idunno.AtProto.AtUri! post
 static idunno.Bluesky.Moderation.WellKnown.ReportOptions.get -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.List<idunno.Bluesky.Moderation.ReportOption!>!>!
 static idunno.Bluesky.Moderation.WellKnown.ReportTargets.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
 static idunno.Bluesky.Moderation.WellKnown.ReportType.get -> System.Collections.Generic.IReadOnlyDictionary<idunno.Bluesky.Moderation.ReportType, string!>!
-static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, char c, int repeatCount = 1) -> idunno.Bluesky.PostBuilder!
+static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, char c, int repeatCount) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, idunno.Bluesky.Embed.EmbeddedImage! image) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, idunno.Bluesky.Embed.EmbeddedVideo! video) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, idunno.Bluesky.RichText.HashTag! hashTag) -> idunno.Bluesky.PostBuilder!

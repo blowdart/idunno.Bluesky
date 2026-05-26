@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 abstract idunno.AtProto.Authentication.AtProtoCredential.SetAuthenticationHeaders(System.Net.Http.HttpRequestMessage! httpRequestMessage) -> void
 override idunno.AtProto.Authentication.AtProtoCredential.ToString() -> string!
 const idunno.AtProto.AtProtoAgentOptions.AtProtoAgent = "AtProtoAgent" -> string!
@@ -634,9 +634,12 @@ idunno.AtProto.Labels.SelfLabel.Value.get -> string!
 idunno.AtProto.Labels.SelfLabel.Value.init -> void
 idunno.AtProto.Labels.SelfLabels
 idunno.AtProto.Labels.SelfLabels.AddLabel(string! name) -> void
+idunno.AtProto.Labels.SelfLabels.AddLabel(idunno.AtProto.Labels.SelfLabel! label) -> void
 idunno.AtProto.Labels.SelfLabels.Contains(string! label) -> bool
+idunno.AtProto.Labels.SelfLabels.Contains(idunno.AtProto.Labels.SelfLabel! label) -> bool
 idunno.AtProto.Labels.SelfLabels.RemoveLabel(string! name) -> void
 idunno.AtProto.Labels.SelfLabels.SelfLabels() -> void
+idunno.AtProto.Labels.SelfLabels.SelfLabels(idunno.AtProto.Labels.SelfLabel! value) -> void
 idunno.AtProto.Labels.SelfLabels.SelfLabels(System.Collections.Generic.IReadOnlyList<idunno.AtProto.Labels.SelfLabel!>! values) -> void
 idunno.AtProto.Labels.SelfLabels.Values.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.Labels.SelfLabel!>!
 idunno.AtProto.Labels.SelfLabels.Values.set -> void
