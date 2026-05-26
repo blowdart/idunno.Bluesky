@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 abstract idunno.AtProto.AtIdentifier.Value.get -> string!
 const idunno.AtProto.Did.ValidationRegex = "^did:[a-z0-9]+(?::(?:%[A-F0-9]{2}|[a-zA-Z0-9._-]+)*)+(?<!:)$" -> string!
 const idunno.AtProto.Handle.ValidationRegex = "^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$" -> string!
@@ -23,6 +23,22 @@ idunno.AtProto.AtUriFormatException.AtUriFormatException() -> void
 idunno.AtProto.AtUriFormatException.AtUriFormatException(string! message) -> void
 idunno.AtProto.AtUriFormatException.AtUriFormatException(string! message, System.Exception! inner) -> void
 idunno.AtProto.AtUriFormatException.AtUriFormatException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
+idunno.AtProto.Bytes
+idunno.AtProto.Bytes.Base64EncodedValue.get -> string!
+idunno.AtProto.Bytes.Bytes(byte[]! bytes) -> void
+idunno.AtProto.Bytes.Bytes(string! s) -> void
+idunno.AtProto.Bytes.Equals(idunno.AtProto.Bytes? other) -> bool
+idunno.AtProto.Bytes.ToBytes() -> byte[]!
+idunno.AtProto.Bytes.Value.get -> System.Collections.Generic.ICollection<byte>!
+idunno.AtProto.Json.ByteConverter
+idunno.AtProto.Json.ByteConverter.ByteConverter() -> void
+override idunno.AtProto.Bytes.Equals(object? obj) -> bool
+override idunno.AtProto.Bytes.GetHashCode() -> int
+override idunno.AtProto.Bytes.ToString() -> string!
+override idunno.AtProto.Json.ByteConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> idunno.AtProto.Bytes?
+override idunno.AtProto.Json.ByteConverter.Write(System.Text.Json.Utf8JsonWriter! writer, idunno.AtProto.Bytes! value, System.Text.Json.JsonSerializerOptions! options) -> void
+static idunno.AtProto.Bytes.implicit operator idunno.AtProto.Bytes!(byte[]! bytes) -> idunno.AtProto.Bytes!
+static idunno.AtProto.Bytes.implicit operator idunno.AtProto.Bytes!(string! s) -> idunno.AtProto.Bytes!
 idunno.AtProto.Cid
 idunno.AtProto.Cid.Cid(byte version, ulong codec, byte[]! hash) -> void
 idunno.AtProto.Cid.Cid(byte[]! bytes) -> void
