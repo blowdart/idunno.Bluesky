@@ -11,7 +11,7 @@ namespace Standard.Site;
 /// An RGBA color value.
 /// </summary>
 [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]
-[JsonDerivedType(typeof(ThemeColorRgb), typeDiscriminator: "site.standard.theme.color#rgba")]
+[JsonDerivedType(typeof(ThemeColorRgba), typeDiscriminator: "site.standard.theme.color#rgba")]
 public record ThemeColorRgba : ThemeColorRgb
 {
     /// <summary>
