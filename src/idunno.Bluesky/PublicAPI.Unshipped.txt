@@ -30,6 +30,9 @@ idunno.Bluesky.Actor.ProfileAssociatedGerm.ProfileAssociatedGerm(System.Uri! mes
 idunno.Bluesky.Actor.ProfileAssociatedGerm.ShowButtonTo.get -> string!
 idunno.Bluesky.Actor.ProfileAssociatedGerm.ShowButtonTo.set -> void
 idunno.Bluesky.Actor.ShowButtonToKnownValues
+idunno.Bluesky.Actor.StatusView.Labels.get -> System.Collections.Generic.ICollection<idunno.AtProto.Labels.Label!>?
+idunno.Bluesky.Actor.StatusView.Labels.init -> void
+idunno.Bluesky.Actor.StatusView.StatusView(string! Status, System.Text.Json.Nodes.JsonNode! Record, idunno.Bluesky.Embed.EmbeddedView? Embed, System.Collections.Generic.ICollection<idunno.AtProto.Labels.Label!>? Labels, System.DateTimeOffset? ExpiresAt, bool? IsActive, idunno.AtProto.AtUri? uri, idunno.AtProto.Cid? cid) -> void
 idunno.Bluesky.BlueskyAgent.GetEmbedExternalView(idunno.Bluesky.Feed.PostView! postView) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Embed.EmbeddedExternalView!>!>!
 idunno.Bluesky.BlueskyAgent.GetEmbedExternalView(idunno.Bluesky.Feed.PostView! postView, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Embed.EmbeddedExternalView!>!>!
 idunno.Bluesky.BlueskyAgent.GetEmbedExternalView(idunno.Bluesky.Feed.PostView! postView, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Embed.EmbeddedExternalView!>!>!

@@ -12,6 +12,7 @@
 
 * Added classes for Germ Network lexicon.
 * Added classes for Standard.Site lexicon.
+* Added `Labels` property to `StatusView` to represent labels associated with a status. See [[APP-1775] Hydrate labels for actor statuses](https://github.com/bluesky-social/atproto/pull/4555)
 
 ## Changed
 
@@ -19,7 +20,7 @@
 
 * Updated `EmbeddedExternalView` to support the new [Standard Site integration](https://github.com/bluesky-social/atproto/discussions/4978).
 * Updated `EmbeddedExternal` to support the new [Standard Site integration](https://github.com/bluesky-social/atproto/discussions/4978).
-* Updated `ProfileViewBasic` to add properties for Germ integration.
+* Updated `ProfileViewBasic` to add properties for [Germ integration](https://github.com/bluesky-social/atproto/pull/4415).
 
 ## Breaking Changes
 
