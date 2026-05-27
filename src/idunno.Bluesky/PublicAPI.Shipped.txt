@@ -1,4 +1,6 @@
 #nullable enable
+const idunno.Bluesky.Actor.ShowButtonToKnownValues.Everyone = "everyone" -> string!
+const idunno.Bluesky.Actor.ShowButtonToKnownValues.UsersIFollow = "usersIFollow" -> string!
 const idunno.Bluesky.BlueskyAgentOptions.BlueskyAgent = "BlueskyAgent" -> string!
 const idunno.Bluesky.ConversationLogTypeDiscriminators.BeginConversation = "chat.bsky.convo.defs#logBeginConvo" -> string!
 const idunno.Bluesky.ConversationLogTypeDiscriminators.CreateMessage = "chat.bsky.convo.defs#logCreateMessage" -> string!
@@ -44,6 +46,25 @@ const idunno.Bluesky.RecordType.Verification = "app.bsky.graph.verification" -> 
 const idunno.Bluesky.ThreadGateTypeDiscriminators.FollowedUsers = "app.bsky.feed.threadgate#followingRule" -> string!
 const idunno.Bluesky.ThreadGateTypeDiscriminators.ListMembers = "app.bsky.feed.threadgate#listRule" -> string!
 const idunno.Bluesky.ThreadGateTypeDiscriminators.MentionedUsers = "app.bsky.feed.threadgate#mentionRule" -> string!
+GermNetwork.Com.Declaration
+GermNetwork.Com.Declaration.ContinuityProofs.get -> System.Collections.Generic.ICollection<idunno.AtProto.Bytes!>?
+GermNetwork.Com.Declaration.ContinuityProofs.set -> void
+GermNetwork.Com.Declaration.CurrentKey.get -> idunno.AtProto.Bytes!
+GermNetwork.Com.Declaration.CurrentKey.set -> void
+GermNetwork.Com.Declaration.Declaration(string! version, idunno.AtProto.Bytes! currentKey, GermNetwork.Com.MessageMe? messageMe = null, idunno.AtProto.Bytes? keyPackage = null, System.Collections.Generic.ICollection<idunno.AtProto.Bytes!>? continuityProofs = null) -> void
+GermNetwork.Com.Declaration.KeyPackage.get -> idunno.AtProto.Bytes?
+GermNetwork.Com.Declaration.KeyPackage.set -> void
+GermNetwork.Com.Declaration.MessageMe.get -> GermNetwork.Com.MessageMe?
+GermNetwork.Com.Declaration.MessageMe.set -> void
+GermNetwork.Com.Declaration.Version.get -> string!
+GermNetwork.Com.Declaration.Version.set -> void
+GermNetwork.Com.MessageMe
+GermNetwork.Com.MessageMe.MessageMe(System.Uri! messageMeUrl, string! showButtonTo) -> void
+GermNetwork.Com.MessageMe.MessageMeUrl.get -> System.Uri!
+GermNetwork.Com.MessageMe.MessageMeUrl.set -> void
+GermNetwork.Com.MessageMe.ShowButtonTo.get -> string!
+GermNetwork.Com.MessageMe.ShowButtonTo.set -> void
+GermNetwork.Com.ShowButtonToKnownValues
 idunno.Bluesky.Actor.ActivitySubscriptions
 idunno.Bluesky.Actor.ActivitySubscriptions.ActivitySubscriptions(idunno.Bluesky.Notifications.NotificationAllowedFrom allowSubscriptions) -> void
 idunno.Bluesky.Actor.ActivitySubscriptions.allowSubscriptions.get -> idunno.Bluesky.Notifications.NotificationAllowedFrom
@@ -195,16 +216,25 @@ idunno.Bluesky.Actor.ProfileAssociated.Chat.get -> idunno.Bluesky.Actor.ProfileA
 idunno.Bluesky.Actor.ProfileAssociated.Chat.init -> void
 idunno.Bluesky.Actor.ProfileAssociated.FeedGens.get -> int
 idunno.Bluesky.Actor.ProfileAssociated.FeedGens.init -> void
+idunno.Bluesky.Actor.ProfileAssociated.Germ.get -> idunno.Bluesky.Actor.ProfileAssociatedGerm?
+idunno.Bluesky.Actor.ProfileAssociated.Germ.init -> void
 idunno.Bluesky.Actor.ProfileAssociated.Labeler.get -> bool
 idunno.Bluesky.Actor.ProfileAssociated.Labeler.init -> void
 idunno.Bluesky.Actor.ProfileAssociated.Lists.get -> int
 idunno.Bluesky.Actor.ProfileAssociated.Lists.init -> void
 idunno.Bluesky.Actor.ProfileAssociated.StarterPacks.get -> int
 idunno.Bluesky.Actor.ProfileAssociated.StarterPacks.init -> void
+idunno.Bluesky.Actor.ProfileAssociated.ProfileAssociated(int lists, int feedGens, int starterPacks, bool labeler, idunno.Bluesky.Actor.ProfileAssociatedChat? chat, idunno.Bluesky.Actor.ProfileAssociatedGerm? germ, idunno.Bluesky.Actor.ActivitySubscriptions? activitySubscription) -> void
 idunno.Bluesky.Actor.ProfileAssociatedChat
 idunno.Bluesky.Actor.ProfileAssociatedChat.AllowIncoming.get -> idunno.Bluesky.Actor.AllowIncomingChat
 idunno.Bluesky.Actor.ProfileAssociatedChat.AllowIncoming.init -> void
 idunno.Bluesky.Actor.ProfileAssociatedChat.ProfileAssociatedChat(idunno.Bluesky.Actor.AllowIncomingChat allowIncoming) -> void
+idunno.Bluesky.Actor.ProfileAssociatedGerm
+idunno.Bluesky.Actor.ProfileAssociatedGerm.MessageMeUrl.get -> System.Uri!
+idunno.Bluesky.Actor.ProfileAssociatedGerm.MessageMeUrl.set -> void
+idunno.Bluesky.Actor.ProfileAssociatedGerm.ProfileAssociatedGerm(System.Uri! messageMeUrl, string! showButtonTo) -> void
+idunno.Bluesky.Actor.ProfileAssociatedGerm.ShowButtonTo.get -> string!
+idunno.Bluesky.Actor.ProfileAssociatedGerm.ShowButtonTo.set -> void
 idunno.Bluesky.Actor.ProfileView
 idunno.Bluesky.Actor.ProfileView.Description.get -> string?
 idunno.Bluesky.Actor.ProfileView.Description.init -> void
@@ -278,6 +308,7 @@ idunno.Bluesky.Actor.SavedFeedPreferenceType
 idunno.Bluesky.Actor.SavedFeedPreferenceType.Feed = 0 -> idunno.Bluesky.Actor.SavedFeedPreferenceType
 idunno.Bluesky.Actor.SavedFeedPreferenceType.List = 1 -> idunno.Bluesky.Actor.SavedFeedPreferenceType
 idunno.Bluesky.Actor.SavedFeedPreferenceType.Timeline = 2 -> idunno.Bluesky.Actor.SavedFeedPreferenceType
+idunno.Bluesky.Actor.ShowButtonToKnownValues
 idunno.Bluesky.Actor.StatusView
 idunno.Bluesky.Actor.StatusView.cid.get -> idunno.AtProto.Cid?
 idunno.Bluesky.Actor.StatusView.cid.init -> void
@@ -287,11 +318,13 @@ idunno.Bluesky.Actor.StatusView.ExpiresAt.get -> System.DateTimeOffset?
 idunno.Bluesky.Actor.StatusView.ExpiresAt.init -> void
 idunno.Bluesky.Actor.StatusView.IsActive.get -> bool?
 idunno.Bluesky.Actor.StatusView.IsActive.init -> void
+idunno.Bluesky.Actor.StatusView.Labels.get -> System.Collections.Generic.ICollection<idunno.AtProto.Labels.Label!>?
+idunno.Bluesky.Actor.StatusView.Labels.init -> void
 idunno.Bluesky.Actor.StatusView.Record.get -> System.Text.Json.Nodes.JsonNode!
 idunno.Bluesky.Actor.StatusView.Record.init -> void
 idunno.Bluesky.Actor.StatusView.Status.get -> string!
 idunno.Bluesky.Actor.StatusView.Status.init -> void
-idunno.Bluesky.Actor.StatusView.StatusView(string! Status, System.Text.Json.Nodes.JsonNode! Record, idunno.Bluesky.Embed.EmbeddedView? Embed, System.DateTimeOffset? ExpiresAt, bool? IsActive, idunno.AtProto.AtUri? uri, idunno.AtProto.Cid? cid) -> void
+idunno.Bluesky.Actor.StatusView.StatusView(string! Status, System.Text.Json.Nodes.JsonNode! Record, idunno.Bluesky.Embed.EmbeddedView? Embed, System.Collections.Generic.ICollection<idunno.AtProto.Labels.Label!>? Labels, System.DateTimeOffset? ExpiresAt, bool? IsActive, idunno.AtProto.AtUri? uri, idunno.AtProto.Cid? cid) -> void
 idunno.Bluesky.Actor.StatusView.uri.get -> idunno.AtProto.AtUri?
 idunno.Bluesky.Actor.StatusView.uri.init -> void
 idunno.Bluesky.Actor.ThreadSortingMode
@@ -389,6 +422,11 @@ idunno.Bluesky.BlueskyAgent.GetBookmarks(int? limit, string? cursor = null, Syst
 idunno.Bluesky.BlueskyAgent.GetConversation(string! id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.ConversationView!>!>!
 idunno.Bluesky.BlueskyAgent.GetConversationForMembers(System.Collections.Generic.ICollection<idunno.AtProto.Did!>! members, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.ConversationView!>!>!
 idunno.Bluesky.BlueskyAgent.GetConversationLog(string? cursor = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Logs!>!>!
+idunno.Bluesky.BlueskyAgent.GetEmbedExternalView(idunno.Bluesky.Feed.PostView! postView) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Embed.EmbeddedExternalView!>!>!
+idunno.Bluesky.BlueskyAgent.GetEmbedExternalView(idunno.Bluesky.Feed.PostView! postView, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Embed.EmbeddedExternalView!>!>!
+idunno.Bluesky.BlueskyAgent.GetEmbedExternalView(idunno.Bluesky.Feed.PostView! postView, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Embed.EmbeddedExternalView!>!>!
+idunno.Bluesky.BlueskyAgent.GetEmbedExternalView(idunno.Bluesky.Feed.PostView! postView, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Embed.EmbeddedExternalView!>!>!
+idunno.Bluesky.BlueskyAgent.GetEmbedExternalView(System.Uri! url, idunno.AtProto.AtUri![]! uris, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Embed.EmbeddedExternalView!>!>!
 idunno.Bluesky.BlueskyAgent.GetFeed(idunno.AtProto.AtUri! feed, int? limit = null, string? cursor = null, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? headers = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Feed.FeedViewPost!>!>!>!
 idunno.Bluesky.BlueskyAgent.GetFeedGenerator(idunno.AtProto.AtUri! feed, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Feed.FeedGenerator!>!>!
 idunno.Bluesky.BlueskyAgent.GetFeedGeneratorDescription(System.Uri! generatorUri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Feed.FeedGeneratorDescription!>!>!
@@ -701,6 +739,22 @@ idunno.Bluesky.Embed.Caption.Lang.get -> string!
 idunno.Bluesky.Embed.Caption.Lang.init -> void
 idunno.Bluesky.Embed.EmbeddedBase
 idunno.Bluesky.Embed.EmbeddedExternal
+idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(idunno.Bluesky.Embed.External.Properties! external) -> void
+idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title) -> void
+idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title, idunno.AtProto.Repo.Blob? thumbnail) -> void
+idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title, string? description) -> void
+idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title, string? description, idunno.AtProto.Repo.Blob? thumbnail) -> void
+idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title, string? description, idunno.AtProto.Repo.Blob? thumbnail, idunno.AtProto.Repo.StrongReference![]! associatedRefs) -> void
+idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(System.Uri! uri, string! title) -> void
+idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(System.Uri! uri, string! title, idunno.AtProto.Repo.Blob? thumbnail) -> void
+idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(System.Uri! uri, string! title, string? description) -> void
+idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(System.Uri! uri, string! title, string? description, idunno.AtProto.Repo.Blob? thumbnail) -> void
+idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(System.Uri! uri, string! title, string? description, idunno.AtProto.Repo.Blob? thumbnail, idunno.AtProto.Repo.StrongReference![]? associatedRefs) -> void
+idunno.Bluesky.Embed.EmbeddedExternal.External.get -> idunno.Bluesky.Embed.External.Properties!
+idunno.Bluesky.Embed.EmbeddedExternal.External.init -> void
+idunno.Bluesky.Embed.EmbeddedExternalView
+idunno.Bluesky.Embed.EmbeddedExternalView.External.get -> idunno.Bluesky.Embed.External.View!
+idunno.Bluesky.Embed.EmbeddedExternalView.External.init -> void
 idunno.Bluesky.Embed.EmbeddedImage
 idunno.Bluesky.Embed.EmbeddedImage.AltText.get -> string!
 idunno.Bluesky.Embed.EmbeddedImage.AltText.init -> void
@@ -771,6 +825,75 @@ idunno.Bluesky.Embed.EmbeddedVideoView.Presentation.init -> void
 idunno.Bluesky.Embed.EmbeddedVideoView.ThumbnailUri.get -> System.Uri!
 idunno.Bluesky.Embed.EmbeddedVideoView.ThumbnailUri.init -> void
 idunno.Bluesky.Embed.EmbeddedView
+idunno.Bluesky.Embed.External.Properties
+idunno.Bluesky.Embed.External.Properties.AssociatedRefs.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Repo.StrongReference!>?
+idunno.Bluesky.Embed.External.Properties.AssociatedRefs.set -> void
+idunno.Bluesky.Embed.External.Properties.Description.get -> string?
+idunno.Bluesky.Embed.External.Properties.Description.set -> void
+idunno.Bluesky.Embed.External.Properties.Properties(string! uri, string! title) -> void
+idunno.Bluesky.Embed.External.Properties.Properties(string! uri, string! title, string! description) -> void
+idunno.Bluesky.Embed.External.Properties.Properties(string! uri, string! title, string! description, idunno.AtProto.Repo.Blob? thumbnail) -> void
+idunno.Bluesky.Embed.External.Properties.Properties(string! uri, string! title, string? description, idunno.AtProto.Repo.Blob? thumbnail, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Repo.StrongReference!>? associatedRefs) -> void
+idunno.Bluesky.Embed.External.Properties.Properties(System.Uri! uri, string! title, string? description = null, idunno.AtProto.Repo.Blob? thumbnail = null, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Repo.StrongReference!>? associatedRefs = null) -> void
+idunno.Bluesky.Embed.External.Properties.Thumbnail.get -> idunno.AtProto.Repo.Blob?
+idunno.Bluesky.Embed.External.Properties.Thumbnail.set -> void
+idunno.Bluesky.Embed.External.Properties.Title.get -> string!
+idunno.Bluesky.Embed.External.Properties.Title.set -> void
+idunno.Bluesky.Embed.External.Properties.Uri.get -> System.Uri!
+idunno.Bluesky.Embed.External.Properties.Uri.set -> void
+idunno.Bluesky.Embed.External.Source.ColorRgb
+idunno.Bluesky.Embed.External.Source.ColorRgb.Blue.get -> int
+idunno.Bluesky.Embed.External.Source.ColorRgb.Blue.init -> void
+idunno.Bluesky.Embed.External.Source.ColorRgb.ColorRgb(int red, int green, int blue) -> void
+idunno.Bluesky.Embed.External.Source.ColorRgb.Green.get -> int
+idunno.Bluesky.Embed.External.Source.ColorRgb.Green.init -> void
+idunno.Bluesky.Embed.External.Source.ColorRgb.Red.get -> int
+idunno.Bluesky.Embed.External.Source.ColorRgb.Red.set -> void
+idunno.Bluesky.Embed.External.Source.Theme
+idunno.Bluesky.Embed.External.Source.Theme.AccentForegroundRGB.get -> idunno.Bluesky.Embed.External.Source.ColorRgb?
+idunno.Bluesky.Embed.External.Source.Theme.AccentForegroundRGB.init -> void
+idunno.Bluesky.Embed.External.Source.Theme.AccentRGB.get -> idunno.Bluesky.Embed.External.Source.ColorRgb?
+idunno.Bluesky.Embed.External.Source.Theme.AccentRGB.init -> void
+idunno.Bluesky.Embed.External.Source.Theme.BackgroundRGB.get -> idunno.Bluesky.Embed.External.Source.ColorRgb?
+idunno.Bluesky.Embed.External.Source.Theme.BackgroundRGB.init -> void
+idunno.Bluesky.Embed.External.Source.Theme.ForegroundRGB.get -> idunno.Bluesky.Embed.External.Source.ColorRgb?
+idunno.Bluesky.Embed.External.Source.Theme.ForegroundRGB.init -> void
+idunno.Bluesky.Embed.External.Source.View
+idunno.Bluesky.Embed.External.Source.View.Description.get -> string?
+idunno.Bluesky.Embed.External.Source.View.Description.init -> void
+idunno.Bluesky.Embed.External.Source.View.Icon.get -> System.Uri?
+idunno.Bluesky.Embed.External.Source.View.Icon.init -> void
+idunno.Bluesky.Embed.External.Source.View.Theme.get -> idunno.Bluesky.Embed.External.Source.Theme?
+idunno.Bluesky.Embed.External.Source.View.Theme.init -> void
+idunno.Bluesky.Embed.External.Source.View.Title.get -> string!
+idunno.Bluesky.Embed.External.Source.View.Title.init -> void
+idunno.Bluesky.Embed.External.Source.View.Uri.get -> System.Uri!
+idunno.Bluesky.Embed.External.Source.View.Uri.init -> void
+idunno.Bluesky.Embed.External.View
+idunno.Bluesky.Embed.External.View.AssociatedProfiles.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Actor.ProfileViewBasic!>?
+idunno.Bluesky.Embed.External.View.AssociatedProfiles.init -> void
+idunno.Bluesky.Embed.External.View.AssociatedRefs.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Repo.StrongReference!>?
+idunno.Bluesky.Embed.External.View.AssociatedRefs.init -> void
+idunno.Bluesky.Embed.External.View.CreatedAt.get -> System.DateTimeOffset?
+idunno.Bluesky.Embed.External.View.CreatedAt.init -> void
+idunno.Bluesky.Embed.External.View.Description.get -> string!
+idunno.Bluesky.Embed.External.View.Description.init -> void
+idunno.Bluesky.Embed.External.View.ExtensionData.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>?
+idunno.Bluesky.Embed.External.View.ExtensionData.set -> void
+idunno.Bluesky.Embed.External.View.Labels.get -> System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Labels.Label!>?
+idunno.Bluesky.Embed.External.View.Labels.init -> void
+idunno.Bluesky.Embed.External.View.ReadingTime.get -> int?
+idunno.Bluesky.Embed.External.View.ReadingTime.init -> void
+idunno.Bluesky.Embed.External.View.Source.get -> idunno.Bluesky.Embed.External.Source.View!
+idunno.Bluesky.Embed.External.View.Source.init -> void
+idunno.Bluesky.Embed.External.View.ThumbnailUri.get -> System.Uri?
+idunno.Bluesky.Embed.External.View.ThumbnailUri.init -> void
+idunno.Bluesky.Embed.External.View.Title.get -> string!
+idunno.Bluesky.Embed.External.View.Title.init -> void
+idunno.Bluesky.Embed.External.View.UpdatedAt.get -> System.DateTimeOffset?
+idunno.Bluesky.Embed.External.View.UpdatedAt.init -> void
+idunno.Bluesky.Embed.External.View.Uri.get -> System.Uri!
+idunno.Bluesky.Embed.External.View.Uri.init -> void
 idunno.Bluesky.Embed.VideoPresentationKnownValues
 static idunno.Bluesky.Embed.VideoPresentationKnownValues.Default.get -> string!
 static idunno.Bluesky.Embed.VideoPresentationKnownValues.Gif.get -> string!
@@ -1782,6 +1905,86 @@ idunno.Bluesky.View.ExtensionData.get -> System.Collections.Generic.IDictionary<
 idunno.Bluesky.View.ExtensionData.set -> void
 idunno.Bluesky.View.View() -> void
 idunno.Bluesky.WellKnownDistributedIdentifiers
+Standard.Site.BasicTheme
+Standard.Site.BasicTheme.Accent.get -> Standard.Site.ThemeColor!
+Standard.Site.BasicTheme.Accent.set -> void
+Standard.Site.BasicTheme.AccentForeground.get -> Standard.Site.ThemeColor!
+Standard.Site.BasicTheme.AccentForeground.set -> void
+Standard.Site.BasicTheme.Background.get -> Standard.Site.ThemeColor!
+Standard.Site.BasicTheme.Background.set -> void
+Standard.Site.BasicTheme.BasicTheme(Standard.Site.ThemeColor! background, Standard.Site.ThemeColor! foreground, Standard.Site.ThemeColor! accent, Standard.Site.ThemeColor! accentForeground) -> void
+Standard.Site.BasicTheme.Foreground.get -> Standard.Site.ThemeColor!
+Standard.Site.BasicTheme.Foreground.set -> void
+Standard.Site.Document
+Standard.Site.Document.Document(idunno.AtProto.AtUri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, System.Text.Json.Nodes.JsonNode? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
+Standard.Site.Document.Document(string! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, System.Text.Json.Nodes.JsonNode? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
+Standard.Site.Document.Document(System.Uri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, System.Text.Json.Nodes.JsonNode? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
+Standard.Site.Document<T>
+Standard.Site.Document<T>.BSkyPostRef.get -> idunno.AtProto.Repo.StrongReference?
+Standard.Site.Document<T>.BSkyPostRef.set -> void
+Standard.Site.Document<T>.Content.get -> T?
+Standard.Site.Document<T>.Content.set -> void
+Standard.Site.Document<T>.CoverImage.get -> idunno.AtProto.Repo.Blob?
+Standard.Site.Document<T>.CoverImage.set -> void
+Standard.Site.Document<T>.Description.get -> string?
+Standard.Site.Document<T>.Description.set -> void
+Standard.Site.Document<T>.Document(idunno.AtProto.AtUri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, T? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
+Standard.Site.Document<T>.Document(string! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, T? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
+Standard.Site.Document<T>.Document(System.Uri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, T? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
+Standard.Site.Document<T>.Path.get -> string?
+Standard.Site.Document<T>.Path.set -> void
+Standard.Site.Document<T>.PublishedAt.get -> System.DateTimeOffset
+Standard.Site.Document<T>.PublishedAt.set -> void
+Standard.Site.Document<T>.Site.get -> string!
+Standard.Site.Document<T>.Site.set -> void
+Standard.Site.Document<T>.Tags.get -> System.Collections.Generic.IEnumerable<string!>?
+Standard.Site.Document<T>.Tags.set -> void
+Standard.Site.Document<T>.TextContent.get -> string?
+Standard.Site.Document<T>.TextContent.set -> void
+Standard.Site.Document<T>.Title.get -> string!
+Standard.Site.Document<T>.Title.set -> void
+Standard.Site.Document<T>.UpdatedAt.get -> System.DateTimeOffset?
+Standard.Site.Document<T>.UpdatedAt.set -> void
+Standard.Site.Graph.Subscription
+Standard.Site.Graph.Subscription.Publication.get -> idunno.AtProto.AtUri!
+Standard.Site.Graph.Subscription.Publication.init -> void
+Standard.Site.Graph.Subscription.Subscription(idunno.AtProto.AtUri! publication) -> void
+Standard.Site.Preferences
+Standard.Site.Preferences.ExtensionData.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>?
+Standard.Site.Preferences.ExtensionData.set -> void
+Standard.Site.Preferences.Preferences(bool showInDiscover) -> void
+Standard.Site.Preferences.ShowInDiscover.get -> bool
+Standard.Site.Preferences.ShowInDiscover.set -> void
+Standard.Site.Publication
+Standard.Site.Publication.Publication(System.Uri! url, string! name, idunno.AtProto.Repo.Blob? icon = null, string? description = null, Standard.Site.BasicTheme? basicTheme = null, Standard.Site.Preferences? preferences = null) -> void
+Standard.Site.Publication<T>
+Standard.Site.Publication<T>.BasicTheme.get -> Standard.Site.BasicTheme?
+Standard.Site.Publication<T>.BasicTheme.set -> void
+Standard.Site.Publication<T>.Description.get -> string?
+Standard.Site.Publication<T>.Description.set -> void
+Standard.Site.Publication<T>.Icon.get -> idunno.AtProto.Repo.Blob?
+Standard.Site.Publication<T>.Icon.set -> void
+Standard.Site.Publication<T>.Name.get -> string!
+Standard.Site.Publication<T>.Name.set -> void
+Standard.Site.Publication<T>.Preferences.get -> T?
+Standard.Site.Publication<T>.Preferences.set -> void
+Standard.Site.Publication<T>.Publication(System.Uri! url, string! name, idunno.AtProto.Repo.Blob? icon = null, string? description = null, Standard.Site.BasicTheme? basicTheme = null, T? preferences = null) -> void
+Standard.Site.Publication<T>.Url.get -> System.Uri!
+Standard.Site.Publication<T>.Url.set -> void
+Standard.Site.ThemeColor
+Standard.Site.ThemeColor.ThemeColor() -> void
+Standard.Site.ThemeColorRgb
+Standard.Site.ThemeColorRgb.Blue.get -> int
+Standard.Site.ThemeColorRgb.Blue.set -> void
+Standard.Site.ThemeColorRgb.Green.get -> int
+Standard.Site.ThemeColorRgb.Green.set -> void
+Standard.Site.ThemeColorRgb.Red.get -> int
+Standard.Site.ThemeColorRgb.Red.set -> void
+Standard.Site.ThemeColorRgb.ThemeColorRgb(int red, int green, int blue) -> void
+Standard.Site.ThemeColorRgba
+Standard.Site.ThemeColorRgba.Alpha.get -> int
+Standard.Site.ThemeColorRgba.Alpha.set -> void
+Standard.Site.ThemeColorRgba.ThemeColorRgba(int red, int green, int blue, int alpha) -> void
 override idunno.Bluesky.Actor.ProfileView.ToString() -> string!
 override idunno.Bluesky.Actor.ProfileViewBasic.ToString() -> string!
 override idunno.Bluesky.Actor.ProfileViewDetailed.ToString() -> string!
@@ -1809,6 +2012,7 @@ static idunno.Bluesky.BlueskyServer.GetBookmarks(string? cursor, int? limit, Sys
 static idunno.Bluesky.BlueskyServer.GetConversation(string! id, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.ConversationView!>!>!
 static idunno.Bluesky.BlueskyServer.GetConversationForMembers(System.Collections.Generic.ICollection<idunno.AtProto.Did!>! members, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.ConversationView!>!>!
 static idunno.Bluesky.BlueskyServer.GetConversationLog(string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Logs!>!>!
+static idunno.Bluesky.BlueskyServer.GetEmbedExternalView(System.Uri! url, idunno.AtProto.AtUri![]! uris, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Embed.EmbeddedExternalView!>!>!
 static idunno.Bluesky.BlueskyServer.GetFeed(idunno.AtProto.AtUri! feed, int? limit, string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? headers = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Feed.FeedViewPost!>!>!>!
 static idunno.Bluesky.BlueskyServer.GetFeedGenerator(idunno.AtProto.AtUri! feed, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Feed.FeedGenerator!>!>!
 static idunno.Bluesky.BlueskyServer.GetFeedGeneratorDescription(System.Uri! generatorUri, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Feed.FeedGeneratorDescription!>!>!
@@ -1927,6 +2131,9 @@ static idunno.Bluesky.TypeResolver.JsonTypeInfoResolver.get -> System.Text.Json.
 static idunno.Bluesky.TypeResolver.JsonTypeInfoResolvers.get -> System.Collections.Generic.IList<System.Text.Json.Serialization.Metadata.IJsonTypeInfoResolver!>!
 static idunno.Bluesky.WellKnownDistributedIdentifiers.BlueskyModerationLabeler.get -> idunno.AtProto.Did!
 static idunno.Bluesky.WellKnownDistributedIdentifiers.Video.get -> idunno.AtProto.Did!
+static readonly GermNetwork.Com.ShowButtonToKnownValues.Everyone -> string!
+static readonly GermNetwork.Com.ShowButtonToKnownValues.None -> string!
+static readonly GermNetwork.Com.ShowButtonToKnownValues.UsersIFollow -> string!
 static readonly idunno.Bluesky.DefaultServiceUris.BlueskyApiUri -> System.Uri!
 static readonly idunno.Bluesky.DefaultServiceUris.PublicAppViewUri -> System.Uri!
 static readonly idunno.Bluesky.Maximum.BatchedMessages -> int
@@ -2074,3 +2281,4 @@ static readonly idunno.Bluesky.Maximum.ListedDrafts -> int
 idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, idunno.Bluesky.PostSelfLabels? postSelfLabels, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedImage!>? embedImages, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedVideo!>? embedVideos, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedExternal!>? embedExternals, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedRecord!>? embedRecords) -> void
 idunno.Bluesky.PostSelfLabels.ToSelfLabels() -> idunno.AtProto.Labels.SelfLabels!
 static idunno.Bluesky.PostSelfLabels.explicit operator idunno.AtProto.Labels.SelfLabels!(idunno.Bluesky.PostSelfLabels! postSelfLabels) -> idunno.AtProto.Labels.SelfLabels!
+virtual Standard.Site.Document<T>.CanonicalUrl.get -> string!

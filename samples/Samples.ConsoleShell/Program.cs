@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics;
+using GermNetwork.Com;
 using idunno.AtProto;
 using idunno.AtProto.Repo;
 using idunno.Bluesky;
@@ -89,6 +90,10 @@ public sealed class Program
                 }
             }
             // END-AUTHENTICATION
+
+            AtProtoHttpResult<AtProtoRepositoryRecord<Declaration>> getRecordResult = await agent.GetRecord<Declaration>(
+                new AtUri("at://blowdart.me/com.germnetwork.declaration/self"),
+                cancellationToken: cancellationToken);
 
             var getPostViewResult = await agent.GetPost(new AtUri("at://did:plc:dpajgwmnecpdyjyqzjzm6bnb/app.bsky.feed.post/3mmexpn42dk27"), cancellationToken: cancellationToken);
             getPostViewResult.EnsureSucceeded();
