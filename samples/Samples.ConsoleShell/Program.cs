@@ -2,12 +2,11 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics;
-using GermNetwork.Com;
-using idunno.AtProto;
-using idunno.AtProto.Repo;
-using idunno.Bluesky;
-using idunno.Bluesky.Embed;
 using Microsoft.Extensions.Logging;
+
+using idunno.AtProto;
+using idunno.Bluesky;
+
 using Samples.Common;
 
 namespace Samples.ConsoleShell;
@@ -33,7 +32,7 @@ public sealed class Program
         ArgumentException.ThrowIfNullOrEmpty(password);
 
         // Uncomment the next line to route all requests through Fiddler Everywhere
-        proxyUri = new Uri("http://localhost:8866");
+        // proxyUri = new Uri("http://localhost:8866");
 
         // Uncomment the next line to route all requests  through Fiddler Classic
         // proxyUri = new Uri("http://localhost:8888");
