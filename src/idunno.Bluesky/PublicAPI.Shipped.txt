@@ -356,6 +356,10 @@ idunno.Bluesky.Actor.VerificationView.CreatedAt.get -> System.DateTimeOffset
 idunno.Bluesky.Actor.VerificationView.CreatedAt.init -> void
 idunno.Bluesky.Actor.VerificationView.Issuer.get -> idunno.AtProto.Did!
 idunno.Bluesky.Actor.VerificationView.Issuer.init -> void
+idunno.Bluesky.Actor.VerificationView.IssuerDisplayName.get -> string?
+idunno.Bluesky.Actor.VerificationView.IssuerDisplayName.init -> void
+idunno.Bluesky.Actor.VerificationView.IssuerHandle.get -> idunno.AtProto.Handle?
+idunno.Bluesky.Actor.VerificationView.IssuerHandle.init -> void
 idunno.Bluesky.Actor.VerificationView.IsValid.get -> bool
 idunno.Bluesky.Actor.VerificationView.IsValid.init -> void
 idunno.Bluesky.Actor.VerificationView.Uri.get -> idunno.AtProto.AtUri!

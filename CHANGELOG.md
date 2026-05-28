@@ -23,6 +23,7 @@
 * Updated `EmbeddedExternalView` to support the new [Standard Site integration](https://github.com/bluesky-social/atproto/discussions/4978).
 * Updated `EmbeddedExternal` to support the new [Standard Site integration](https://github.com/bluesky-social/atproto/discussions/4978).
 * Updated `ProfileViewBasic` to add properties for [Germ integration](https://github.com/bluesky-social/atproto/pull/4415).
+* Updated `VerificationView` to add properties for [Fix app.bsky.actor.getProfile verifier data](https://github.com/bluesky-social/atproto/pull/5016)
 
 ## Breaking Changes
 
