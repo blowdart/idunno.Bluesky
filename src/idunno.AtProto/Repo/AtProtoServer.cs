@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -1518,7 +1518,7 @@ public static partial class AtProtoServer
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to PostBlob().")]
 
-    public static async Task<AtProtoHttpResult<Blob>> UploadBlob(
+    public static async Task<AtProtoHttpResult<AtProto.Blob>> UploadBlob(
         byte[] blob,
         string mimeType,
         Uri service,

@@ -19,7 +19,9 @@ namespace idunno.AtProto;
 
 [JsonSerializable(typeof(AtIdentifier))]
 [JsonSerializable(typeof(AtUri))]
+[JsonSerializable(typeof(Blob))]
 [JsonSerializable(typeof(Cid))]
+[JsonSerializable(typeof(CidLink))]
 [JsonSerializable(typeof(Did))]
 [JsonSerializable(typeof(Handle))]
 [JsonSerializable(typeof(Nsid))]

@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json;
@@ -357,8 +357,8 @@ public class DraftToPostTests
         {
             context.Response.StatusCode = 200;
             var createBlobResponse = new CreateBlobResponse(
-                new Blob(
-                    new BlobReference(s_expectedBlobCid),
+                new AtProto.Blob(
+                    new CidLink(s_expectedBlobCid),
                     $"image/{Path.GetExtension(imagePath)[1..]}",
                     (int)new FileInfo(imagePath).Length));
 
@@ -548,8 +548,8 @@ public class DraftToPostTests
         {
             context.Response.StatusCode = 200;
             var createBlobResponse = new CreateBlobResponse(
-                new Blob(
-                    new BlobReference(s_expectedBlobCid),
+                new AtProto.Blob(
+                    new CidLink(s_expectedBlobCid),
                     $"image/{Path.GetExtension(imagePath)[1..]}",
                     (int)new FileInfo(imagePath).Length));
 
@@ -696,8 +696,8 @@ public class DraftToPostTests
 
             context.Response.StatusCode = 200;
             var createBlobResponse = new CreateBlobResponse(
-                new Blob(
-                    new BlobReference(s_expectedBlobCid),
+                new AtProto.Blob(
+                    new CidLink(s_expectedBlobCid),
                     $"image/{Path.GetExtension(imagePath)[1..]}",
                     (int)new FileInfo(imagePath).Length));
 
@@ -813,8 +813,8 @@ public class DraftToPostTests
 
             context.Response.StatusCode = 200;
             var createBlobResponse = new CreateBlobResponse(
-                new Blob(
-                    new BlobReference(s_expectedBlobCid),
+                new AtProto.Blob(
+                    new CidLink(s_expectedBlobCid),
                     $"image/{Path.GetExtension(imagePath)[1..]}",
                     (int)new FileInfo(imagePath).Length));
 
@@ -932,8 +932,8 @@ public class DraftToPostTests
 
             context.Response.StatusCode = 200;
             var createBlobResponse = new CreateBlobResponse(
-                new Blob(
-                    new BlobReference(s_expectedBlobCid),
+                new AtProto.Blob(
+                    new CidLink(s_expectedBlobCid),
                     $"image/{Path.GetExtension(imagePath)[1..]}",
                     (int)new FileInfo(imagePath).Length));
 
@@ -1054,8 +1054,8 @@ public class DraftToPostTests
 
             context.Response.StatusCode = 200;
             var createBlobResponse = new CreateBlobResponse(
-                new Blob(
-                    new BlobReference(s_expectedBlobCid),
+                new AtProto.Blob(
+                    new CidLink(s_expectedBlobCid),
                     $"image/{Path.GetExtension(imagePath)[1..]}",
                     (int)new FileInfo(imagePath).Length));
 
@@ -1176,8 +1176,8 @@ public class DraftToPostTests
 
             context.Response.StatusCode = 200;
             var createBlobResponse = new CreateBlobResponse(
-                new Blob(
-                    new BlobReference(s_expectedBlobCid),
+                new AtProto.Blob(
+                    new CidLink(s_expectedBlobCid),
                     $"image/{Path.GetExtension(imagePath)[1..]}",
                     (int)new FileInfo(imagePath).Length));
 

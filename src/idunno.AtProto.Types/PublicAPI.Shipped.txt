@@ -39,6 +39,14 @@ override idunno.AtProto.Json.ByteConverter.Read(ref System.Text.Json.Utf8JsonRea
 override idunno.AtProto.Json.ByteConverter.Write(System.Text.Json.Utf8JsonWriter! writer, idunno.AtProto.Bytes! value, System.Text.Json.JsonSerializerOptions! options) -> void
 static idunno.AtProto.Bytes.implicit operator idunno.AtProto.Bytes!(byte[]! bytes) -> idunno.AtProto.Bytes!
 static idunno.AtProto.Bytes.implicit operator idunno.AtProto.Bytes!(string! s) -> idunno.AtProto.Bytes!
+idunno.AtProto.Blob
+idunno.AtProto.Blob.Blob(idunno.AtProto.CidLink! reference, string! mimeType, int size) -> void
+idunno.AtProto.Blob.MimeType.get -> string!
+idunno.AtProto.Blob.MimeType.init -> void
+idunno.AtProto.Blob.Reference.get -> idunno.AtProto.CidLink!
+idunno.AtProto.Blob.Reference.init -> void
+idunno.AtProto.Blob.Size.get -> int
+idunno.AtProto.Blob.Size.init -> void
 idunno.AtProto.Cid
 idunno.AtProto.Cid.Cid(byte version, ulong codec, byte[]! hash) -> void
 idunno.AtProto.Cid.Cid(byte[]! bytes) -> void
@@ -50,6 +58,10 @@ idunno.AtProto.Cid.Hash.get -> System.Collections.Generic.IReadOnlyList<byte>!
 idunno.AtProto.Cid.ToBytes() -> byte[]!
 idunno.AtProto.Cid.Value.get -> string!
 idunno.AtProto.Cid.Version.get -> byte
+idunno.AtProto.CidLink
+idunno.AtProto.CidLink.CidLink(idunno.AtProto.Cid! link) -> void
+idunno.AtProto.CidLink.Link.get -> idunno.AtProto.Cid!
+idunno.AtProto.CidLink.Link.init -> void
 idunno.AtProto.Did
 idunno.AtProto.Did.Did(string! s) -> void
 idunno.AtProto.Did.Equals(idunno.AtProto.Did? other) -> bool

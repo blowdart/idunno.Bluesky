@@ -1,4 +1,4 @@
-﻿// Copyright(c) Barry Dorrans. All rights reserved.
+// Copyright(c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Diagnostics.CodeAnalysis;
@@ -1909,6 +1909,7 @@ public partial class AtProtoAgent : Agent
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
     /// <exception cref="FileNotFoundException">Thrown when the file specified by <paramref name="fileName"/> could not be found.</exception>
     /// <exception cref="HttpRequestException">Thrown when there is a problem uploading the blob to the server.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
     public async Task<AtProtoHttpResult<Blob>> UploadBlob(
         string fileName,
         string mimeType,
@@ -1973,6 +1974,7 @@ public partial class AtProtoAgent : Agent
     /// <exception cref="ArgumentException">Thrown when <paramref name="blob"/> has a zero length or if <paramref name="mimeType"/> is <see langword="null"/> or empty.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
     /// <exception cref="HttpRequestException">Thrown when there is a problem uploading the blob to the server.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
     public async Task<AtProtoHttpResult<Blob>> UploadBlob(
         byte[] blob,
         string mimeType,

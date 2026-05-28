@@ -165,7 +165,7 @@ public class PostTests
         Assert.Equal(new Uri("https://estrattonbailey.pckt.blog/test-post-bn5bcy2"), embeddedExternal.External.Uri);
         Assert.NotNull(embeddedExternal.External.Thumbnail);
         Assert.NotNull(embeddedExternal.External.Thumbnail.Reference);
-        Assert.IsType<BlobReference>(embeddedExternal.External.Thumbnail.Reference);
+        Assert.IsType<CidLink>(embeddedExternal.External.Thumbnail.Reference);
         Assert.NotNull(embeddedExternal.External.Thumbnail.Reference.Link);
         Assert.Equal("bafkreialkemyugm7zjxulfifk57md4cawvt4jdvgchsomgqu6hdihltdxi", embeddedExternal.External.Thumbnail.Reference.Link);
         Assert.Equal(908330, embeddedExternal.External.Thumbnail.Size);

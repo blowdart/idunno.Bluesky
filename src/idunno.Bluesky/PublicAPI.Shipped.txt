@@ -382,7 +382,7 @@ idunno.Bluesky.BlueskyAgent.CreateBlueskyRecord<TRecord>(TRecord! record, idunno
 idunno.Bluesky.BlueskyAgent.CreateBookmark(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 idunno.Bluesky.BlueskyAgent.CreateBookmark(idunno.AtProto.Repo.StrongReference! strongReference, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 idunno.Bluesky.BlueskyAgent.CreateList(idunno.Bluesky.Record.BlueskyList! list, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
-idunno.Bluesky.BlueskyAgent.CreateLiveStatus(System.Uri! uri, string! title, string? description = null, idunno.AtProto.Repo.Blob? previewBlob = null, int? durationMinutes = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.CreateLiveStatus(System.Uri! uri, string! title, string? description = null, idunno.AtProto.Blob? previewBlob = null, int? durationMinutes = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.CreateStatus(idunno.Bluesky.Record.Status! status, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.CreateModerationReport(idunno.AtProto.Did! labelerDid, idunno.AtProto.Moderation.SubjectType! subject, idunno.Bluesky.Moderation.ReportType reportType, string? reason, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Moderation.ModerationReport!>!>!
 idunno.Bluesky.BlueskyAgent.CreateProfile(idunno.Bluesky.Record.Profile! profile, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
@@ -545,7 +545,7 @@ idunno.Bluesky.BlueskyAgent.SendMessage(string! id, idunno.Bluesky.Chat.MessageI
 idunno.Bluesky.BlueskyAgent.SendMessage(string! id, string! message, bool extractFacets = true, idunno.AtProto.Repo.StrongReference? embeddedPost = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.MessageView!>!>!
 idunno.Bluesky.BlueskyAgent.SendMessageBatch(System.Collections.Generic.ICollection<idunno.Bluesky.Chat.BatchedMessage!>! batchedMessages, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.Collections.Generic.ICollection<idunno.Bluesky.Chat.MessageView!>!>!>!
 idunno.Bluesky.BlueskyAgent.SetActivitySubscription(idunno.AtProto.Did! subject, bool posts, bool replies, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Notifications.SubjectActivitySubscription!>!>!
-idunno.Bluesky.BlueskyAgent.SetLiveStatus(System.Uri! uri, string! title, string? description = null, idunno.AtProto.Repo.Blob? previewBlob = null, int? durationMinutes = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.SetLiveStatus(System.Uri! uri, string! title, string? description = null, idunno.AtProto.Blob? previewBlob = null, int? durationMinutes = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.SetNotificationDeclaration(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Notifications.Declaration!>! declaration, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.SetNotificationDeclaration(idunno.Bluesky.Notifications.NotificationAllowedFrom notificationAllowedFrom, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.SetNotificationPreferences(idunno.Bluesky.Notifications.Preferences! preferences, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Notifications.Preferences!>!>!
@@ -732,8 +732,8 @@ idunno.Bluesky.Embed.AspectRatio.Height.init -> void
 idunno.Bluesky.Embed.AspectRatio.Width.get -> int
 idunno.Bluesky.Embed.AspectRatio.Width.init -> void
 idunno.Bluesky.Embed.Caption
-idunno.Bluesky.Embed.Caption.Caption(string! lang, idunno.AtProto.Repo.Blob! file) -> void
-idunno.Bluesky.Embed.Caption.File.get -> idunno.AtProto.Repo.Blob!
+idunno.Bluesky.Embed.Caption.Caption(string! lang, idunno.AtProto.Blob! file) -> void
+idunno.Bluesky.Embed.Caption.File.get -> idunno.AtProto.Blob!
 idunno.Bluesky.Embed.Caption.File.init -> void
 idunno.Bluesky.Embed.Caption.Lang.get -> string!
 idunno.Bluesky.Embed.Caption.Lang.init -> void
@@ -741,15 +741,15 @@ idunno.Bluesky.Embed.EmbeddedBase
 idunno.Bluesky.Embed.EmbeddedExternal
 idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(idunno.Bluesky.Embed.External.Properties! external) -> void
 idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title) -> void
-idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title, idunno.AtProto.Repo.Blob? thumbnail) -> void
+idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title, idunno.AtProto.Blob? thumbnail) -> void
 idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title, string? description) -> void
-idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title, string? description, idunno.AtProto.Repo.Blob? thumbnail) -> void
-idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title, string? description, idunno.AtProto.Repo.Blob? thumbnail, idunno.AtProto.Repo.StrongReference![]! associatedRefs) -> void
+idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title, string? description, idunno.AtProto.Blob? thumbnail) -> void
+idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title, string? description, idunno.AtProto.Blob? thumbnail, idunno.AtProto.Repo.StrongReference![]! associatedRefs) -> void
 idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(System.Uri! uri, string! title) -> void
-idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(System.Uri! uri, string! title, idunno.AtProto.Repo.Blob? thumbnail) -> void
+idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(System.Uri! uri, string! title, idunno.AtProto.Blob? thumbnail) -> void
 idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(System.Uri! uri, string! title, string? description) -> void
-idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(System.Uri! uri, string! title, string? description, idunno.AtProto.Repo.Blob? thumbnail) -> void
-idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(System.Uri! uri, string! title, string? description, idunno.AtProto.Repo.Blob? thumbnail, idunno.AtProto.Repo.StrongReference![]? associatedRefs) -> void
+idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(System.Uri! uri, string! title, string? description, idunno.AtProto.Blob? thumbnail) -> void
+idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(System.Uri! uri, string! title, string? description, idunno.AtProto.Blob? thumbnail, idunno.AtProto.Repo.StrongReference![]? associatedRefs) -> void
 idunno.Bluesky.Embed.EmbeddedExternal.External.get -> idunno.Bluesky.Embed.External.Properties!
 idunno.Bluesky.Embed.EmbeddedExternal.External.init -> void
 idunno.Bluesky.Embed.EmbeddedExternalView
@@ -760,8 +760,8 @@ idunno.Bluesky.Embed.EmbeddedImage.AltText.get -> string!
 idunno.Bluesky.Embed.EmbeddedImage.AltText.init -> void
 idunno.Bluesky.Embed.EmbeddedImage.AspectRatio.get -> idunno.Bluesky.Embed.AspectRatio?
 idunno.Bluesky.Embed.EmbeddedImage.AspectRatio.init -> void
-idunno.Bluesky.Embed.EmbeddedImage.EmbeddedImage(idunno.AtProto.Repo.Blob! image, string! altText, idunno.Bluesky.Embed.AspectRatio? aspectRatio = null) -> void
-idunno.Bluesky.Embed.EmbeddedImage.Image.get -> idunno.AtProto.Repo.Blob!
+idunno.Bluesky.Embed.EmbeddedImage.EmbeddedImage(idunno.AtProto.Blob! image, string! altText, idunno.Bluesky.Embed.AspectRatio? aspectRatio = null) -> void
+idunno.Bluesky.Embed.EmbeddedImage.Image.get -> idunno.AtProto.Blob!
 idunno.Bluesky.Embed.EmbeddedImage.Image.init -> void
 idunno.Bluesky.Embed.EmbeddedImages
 idunno.Bluesky.Embed.EmbeddedImages.EmbeddedImages(System.Collections.Generic.ICollection<idunno.Bluesky.Embed.EmbeddedImage!>! images) -> void
@@ -804,12 +804,12 @@ idunno.Bluesky.Embed.EmbeddedVideo.AspectRatio.get -> idunno.Bluesky.Embed.Aspec
 idunno.Bluesky.Embed.EmbeddedVideo.AspectRatio.init -> void
 idunno.Bluesky.Embed.EmbeddedVideo.Captions.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Embed.Caption!>?
 idunno.Bluesky.Embed.EmbeddedVideo.Captions.init -> void
-idunno.Bluesky.Embed.EmbeddedVideo.EmbeddedVideo(idunno.AtProto.Repo.Blob! video, idunno.Bluesky.Embed.Caption! caption, string? altText, idunno.Bluesky.Embed.AspectRatio? aspectRatio) -> void
-idunno.Bluesky.Embed.EmbeddedVideo.EmbeddedVideo(idunno.AtProto.Repo.Blob! video, System.Collections.Generic.ICollection<idunno.Bluesky.Embed.Caption!>? captions = null, string? altText = null, idunno.Bluesky.Embed.AspectRatio? aspectRatio = null, string? presentation = null) -> void
-idunno.Bluesky.Embed.EmbeddedVideo.EmbeddedVideo(idunno.AtProto.Repo.Blob! video, System.Collections.Generic.ICollection<idunno.Bluesky.Embed.Caption!>? captions, string? altText, idunno.Bluesky.Embed.AspectRatio? aspectRatio) -> void
+idunno.Bluesky.Embed.EmbeddedVideo.EmbeddedVideo(idunno.AtProto.Blob! video, idunno.Bluesky.Embed.Caption! caption, string? altText, idunno.Bluesky.Embed.AspectRatio? aspectRatio) -> void
+idunno.Bluesky.Embed.EmbeddedVideo.EmbeddedVideo(idunno.AtProto.Blob! video, System.Collections.Generic.ICollection<idunno.Bluesky.Embed.Caption!>? captions = null, string? altText = null, idunno.Bluesky.Embed.AspectRatio? aspectRatio = null, string? presentation = null) -> void
+idunno.Bluesky.Embed.EmbeddedVideo.EmbeddedVideo(idunno.AtProto.Blob! video, System.Collections.Generic.ICollection<idunno.Bluesky.Embed.Caption!>? captions, string? altText, idunno.Bluesky.Embed.AspectRatio? aspectRatio) -> void
 idunno.Bluesky.Embed.EmbeddedVideo.Presentation.get -> string?
 idunno.Bluesky.Embed.EmbeddedVideo.Presentation.init -> void
-idunno.Bluesky.Embed.EmbeddedVideo.Video.get -> idunno.AtProto.Repo.Blob!
+idunno.Bluesky.Embed.EmbeddedVideo.Video.get -> idunno.AtProto.Blob!
 idunno.Bluesky.Embed.EmbeddedVideo.Video.init -> void
 idunno.Bluesky.Embed.EmbeddedVideoView
 idunno.Bluesky.Embed.EmbeddedVideoView.AltText.get -> string!
@@ -832,10 +832,10 @@ idunno.Bluesky.Embed.External.Properties.Description.get -> string?
 idunno.Bluesky.Embed.External.Properties.Description.set -> void
 idunno.Bluesky.Embed.External.Properties.Properties(string! uri, string! title) -> void
 idunno.Bluesky.Embed.External.Properties.Properties(string! uri, string! title, string! description) -> void
-idunno.Bluesky.Embed.External.Properties.Properties(string! uri, string! title, string! description, idunno.AtProto.Repo.Blob? thumbnail) -> void
-idunno.Bluesky.Embed.External.Properties.Properties(string! uri, string! title, string? description, idunno.AtProto.Repo.Blob? thumbnail, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Repo.StrongReference!>? associatedRefs) -> void
-idunno.Bluesky.Embed.External.Properties.Properties(System.Uri! uri, string! title, string? description = null, idunno.AtProto.Repo.Blob? thumbnail = null, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Repo.StrongReference!>? associatedRefs = null) -> void
-idunno.Bluesky.Embed.External.Properties.Thumbnail.get -> idunno.AtProto.Repo.Blob?
+idunno.Bluesky.Embed.External.Properties.Properties(string! uri, string! title, string! description, idunno.AtProto.Blob? thumbnail) -> void
+idunno.Bluesky.Embed.External.Properties.Properties(string! uri, string! title, string? description, idunno.AtProto.Blob? thumbnail, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Repo.StrongReference!>? associatedRefs) -> void
+idunno.Bluesky.Embed.External.Properties.Properties(System.Uri! uri, string! title, string? description = null, idunno.AtProto.Blob? thumbnail = null, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Repo.StrongReference!>? associatedRefs = null) -> void
+idunno.Bluesky.Embed.External.Properties.Thumbnail.get -> idunno.AtProto.Blob?
 idunno.Bluesky.Embed.External.Properties.Thumbnail.set -> void
 idunno.Bluesky.Embed.External.Properties.Title.get -> string!
 idunno.Bluesky.Embed.External.Properties.Title.set -> void
@@ -1616,9 +1616,9 @@ idunno.Bluesky.Record.Block.Block(idunno.AtProto.Did! subject, System.DateTimeOf
 idunno.Bluesky.Record.Block.Subject.get -> idunno.AtProto.Did!
 idunno.Bluesky.Record.Block.Subject.init -> void
 idunno.Bluesky.Record.BlueskyList
-idunno.Bluesky.Record.BlueskyList.Avatar.get -> idunno.AtProto.Repo.Blob?
+idunno.Bluesky.Record.BlueskyList.Avatar.get -> idunno.AtProto.Blob?
 idunno.Bluesky.Record.BlueskyList.Avatar.set -> void
-idunno.Bluesky.Record.BlueskyList.BlueskyList(string! name, idunno.Bluesky.Graph.ListPurpose purpose, string? description, System.Collections.Generic.IEnumerable<idunno.Bluesky.RichText.Facet!>? descriptionFacets = null, idunno.AtProto.Repo.Blob? avatar = null, idunno.AtProto.Labels.SelfLabels? labels = null, System.DateTimeOffset? createdAt = null) -> void
+idunno.Bluesky.Record.BlueskyList.BlueskyList(string! name, idunno.Bluesky.Graph.ListPurpose purpose, string? description, System.Collections.Generic.IEnumerable<idunno.Bluesky.RichText.Facet!>? descriptionFacets = null, idunno.AtProto.Blob? avatar = null, idunno.AtProto.Labels.SelfLabels? labels = null, System.DateTimeOffset? createdAt = null) -> void
 idunno.Bluesky.Record.BlueskyList.Description.get -> string?
 idunno.Bluesky.Record.BlueskyList.Description.set -> void
 idunno.Bluesky.Record.BlueskyList.DescriptionFacets.get -> System.Collections.Generic.IEnumerable<idunno.Bluesky.RichText.Facet!>?
@@ -1667,9 +1667,9 @@ idunno.Bluesky.Record.Like.Subject.init -> void
 idunno.Bluesky.Record.Like.Via.get -> idunno.AtProto.Repo.StrongReference?
 idunno.Bluesky.Record.Like.Via.init -> void
 idunno.Bluesky.Record.Profile
-idunno.Bluesky.Record.Profile.Avatar.get -> idunno.AtProto.Repo.Blob?
+idunno.Bluesky.Record.Profile.Avatar.get -> idunno.AtProto.Blob?
 idunno.Bluesky.Record.Profile.Avatar.set -> void
-idunno.Bluesky.Record.Profile.Banner.get -> idunno.AtProto.Repo.Blob?
+idunno.Bluesky.Record.Profile.Banner.get -> idunno.AtProto.Blob?
 idunno.Bluesky.Record.Profile.Banner.set -> void
 idunno.Bluesky.Record.Profile.Bot.get -> bool
 idunno.Bluesky.Record.Profile.Bot.set -> void
@@ -1687,8 +1687,8 @@ idunno.Bluesky.Record.Profile.Labels.get -> idunno.AtProto.Labels.SelfLabels?
 idunno.Bluesky.Record.Profile.Labels.init -> void
 idunno.Bluesky.Record.Profile.PinnedPost.get -> idunno.AtProto.Repo.StrongReference?
 idunno.Bluesky.Record.Profile.PinnedPost.set -> void
-idunno.Bluesky.Record.Profile.Profile(string? displayName = null, string? description = null, string? pronouns = null, System.Uri? website = null, idunno.AtProto.Repo.Blob? avatar = null, idunno.AtProto.Repo.Blob? banner = null, idunno.AtProto.Repo.StrongReference? pinnedPost = null, idunno.AtProto.Labels.SelfLabels? labels = null, System.DateTimeOffset? createdAt = null) -> void
-idunno.Bluesky.Record.Profile.Profile(string? displayName, string? description, string? pronouns, System.Uri? website, idunno.AtProto.Repo.Blob? avatar, idunno.AtProto.Repo.Blob? banner, idunno.AtProto.Repo.StrongReference? joinedViaStarterPack, idunno.AtProto.Repo.StrongReference? pinnedPost, idunno.AtProto.Labels.SelfLabels? labels, System.DateTimeOffset? createdAt) -> void
+idunno.Bluesky.Record.Profile.Profile(string? displayName = null, string? description = null, string? pronouns = null, System.Uri? website = null, idunno.AtProto.Blob? avatar = null, idunno.AtProto.Blob? banner = null, idunno.AtProto.Repo.StrongReference? pinnedPost = null, idunno.AtProto.Labels.SelfLabels? labels = null, System.DateTimeOffset? createdAt = null) -> void
+idunno.Bluesky.Record.Profile.Profile(string? displayName, string? description, string? pronouns, System.Uri? website, idunno.AtProto.Blob? avatar, idunno.AtProto.Blob? banner, idunno.AtProto.Repo.StrongReference? joinedViaStarterPack, idunno.AtProto.Repo.StrongReference? pinnedPost, idunno.AtProto.Labels.SelfLabels? labels, System.DateTimeOffset? createdAt) -> void
 idunno.Bluesky.Record.Profile.Pronouns.get -> string?
 idunno.Bluesky.Record.Profile.Pronouns.set -> void
 idunno.Bluesky.Record.Profile.Website.get -> System.Uri?
@@ -1875,7 +1875,7 @@ idunno.Bluesky.Video.JobState.Failed = 4 -> idunno.Bluesky.Video.JobState
 idunno.Bluesky.Video.JobState.InProgress = 2 -> idunno.Bluesky.Video.JobState
 idunno.Bluesky.Video.JobState.Unknown = 0 -> idunno.Bluesky.Video.JobState
 idunno.Bluesky.Video.JobStatus
-idunno.Bluesky.Video.JobStatus.Blob.get -> idunno.AtProto.Repo.Blob?
+idunno.Bluesky.Video.JobStatus.Blob.get -> idunno.AtProto.Blob?
 idunno.Bluesky.Video.JobStatus.Blob.init -> void
 idunno.Bluesky.Video.JobStatus.Did.get -> idunno.AtProto.Did!
 idunno.Bluesky.Video.JobStatus.Did.init -> void
@@ -1916,21 +1916,21 @@ Standard.Site.BasicTheme.BasicTheme(Standard.Site.ThemeColor! background, Standa
 Standard.Site.BasicTheme.Foreground.get -> Standard.Site.ThemeColor!
 Standard.Site.BasicTheme.Foreground.set -> void
 Standard.Site.Document
-Standard.Site.Document.Document(idunno.AtProto.AtUri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, System.Text.Json.Nodes.JsonNode? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
-Standard.Site.Document.Document(string! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, System.Text.Json.Nodes.JsonNode? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
-Standard.Site.Document.Document(System.Uri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, System.Text.Json.Nodes.JsonNode? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
+Standard.Site.Document.Document(idunno.AtProto.AtUri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Blob? coverImage = null, System.Text.Json.Nodes.JsonNode? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
+Standard.Site.Document.Document(string! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Blob? coverImage = null, System.Text.Json.Nodes.JsonNode? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
+Standard.Site.Document.Document(System.Uri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Blob? coverImage = null, System.Text.Json.Nodes.JsonNode? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
 Standard.Site.Document<T>
 Standard.Site.Document<T>.BSkyPostRef.get -> idunno.AtProto.Repo.StrongReference?
 Standard.Site.Document<T>.BSkyPostRef.set -> void
 Standard.Site.Document<T>.Content.get -> T?
 Standard.Site.Document<T>.Content.set -> void
-Standard.Site.Document<T>.CoverImage.get -> idunno.AtProto.Repo.Blob?
+Standard.Site.Document<T>.CoverImage.get -> idunno.AtProto.Blob?
 Standard.Site.Document<T>.CoverImage.set -> void
 Standard.Site.Document<T>.Description.get -> string?
 Standard.Site.Document<T>.Description.set -> void
-Standard.Site.Document<T>.Document(idunno.AtProto.AtUri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, T? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
-Standard.Site.Document<T>.Document(string! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, T? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
-Standard.Site.Document<T>.Document(System.Uri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Repo.Blob? coverImage = null, T? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
+Standard.Site.Document<T>.Document(idunno.AtProto.AtUri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Blob? coverImage = null, T? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
+Standard.Site.Document<T>.Document(string! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Blob? coverImage = null, T? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
+Standard.Site.Document<T>.Document(System.Uri! site, string! title, System.DateTimeOffset publishedAt, string? path = null, string? description = null, idunno.AtProto.Blob? coverImage = null, T? content = null, string? textContent = null, idunno.AtProto.Repo.StrongReference? bskyPostRef = null, System.Collections.Generic.IEnumerable<string!>? tags = null, System.DateTimeOffset? updatedAt = null) -> void
 Standard.Site.Document<T>.Path.get -> string?
 Standard.Site.Document<T>.Path.set -> void
 Standard.Site.Document<T>.PublishedAt.get -> System.DateTimeOffset
@@ -1956,19 +1956,19 @@ Standard.Site.Preferences.Preferences(bool showInDiscover) -> void
 Standard.Site.Preferences.ShowInDiscover.get -> bool
 Standard.Site.Preferences.ShowInDiscover.set -> void
 Standard.Site.Publication
-Standard.Site.Publication.Publication(System.Uri! url, string! name, idunno.AtProto.Repo.Blob? icon = null, string? description = null, Standard.Site.BasicTheme? basicTheme = null, Standard.Site.Preferences? preferences = null) -> void
+Standard.Site.Publication.Publication(System.Uri! url, string! name, idunno.AtProto.Blob? icon = null, string? description = null, Standard.Site.BasicTheme? basicTheme = null, Standard.Site.Preferences? preferences = null) -> void
 Standard.Site.Publication<T>
 Standard.Site.Publication<T>.BasicTheme.get -> Standard.Site.BasicTheme?
 Standard.Site.Publication<T>.BasicTheme.set -> void
 Standard.Site.Publication<T>.Description.get -> string?
 Standard.Site.Publication<T>.Description.set -> void
-Standard.Site.Publication<T>.Icon.get -> idunno.AtProto.Repo.Blob?
+Standard.Site.Publication<T>.Icon.get -> idunno.AtProto.Blob?
 Standard.Site.Publication<T>.Icon.set -> void
 Standard.Site.Publication<T>.Name.get -> string!
 Standard.Site.Publication<T>.Name.set -> void
 Standard.Site.Publication<T>.Preferences.get -> T?
 Standard.Site.Publication<T>.Preferences.set -> void
-Standard.Site.Publication<T>.Publication(System.Uri! url, string! name, idunno.AtProto.Repo.Blob? icon = null, string? description = null, Standard.Site.BasicTheme? basicTheme = null, T? preferences = null) -> void
+Standard.Site.Publication<T>.Publication(System.Uri! url, string! name, idunno.AtProto.Blob? icon = null, string? description = null, Standard.Site.BasicTheme? basicTheme = null, T? preferences = null) -> void
 Standard.Site.Publication<T>.Url.get -> System.Uri!
 Standard.Site.Publication<T>.Url.set -> void
 Standard.Site.ThemeColor

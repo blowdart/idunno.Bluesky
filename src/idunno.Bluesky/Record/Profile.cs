@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -31,13 +31,14 @@ public record Profile : BlueskyRecord
     /// <param name="pinnedPost">A <see cref="StrongReference"/> to the profile's pinned post, if any.</param>
     /// <param name="labels">Any <see cref="SelfLabels"/> applied to the profile.</param>
     /// <param name="createdAt">The <see cref="DateTimeOffset"/>The <see cref="DateTimeOffset"/> the record was created at.</param>
+    [SuppressMessage("ApiDesign", "RS0027:API with optional parameter(s) should have the most parameters amongst its public overloads", Justification = "Ease of use")]
     public Profile(
         string? displayName = null,
         string? description = null,
         string? pronouns = null,
         Uri? website = null,
-        Blob? avatar = null,
-        Blob? banner = null,
+        AtProto.Blob? avatar = null,
+        AtProto.Blob? banner = null,
         StrongReference? pinnedPost = null,
         SelfLabels? labels = null,
         DateTimeOffset? createdAt = null) : this(
@@ -52,7 +53,7 @@ public record Profile : BlueskyRecord
             labels: labels,
             createdAt: createdAt)
     {
-        if (createdAt is not null)
+        if (createdAt is null)
         {
             CreatedAt = DateTimeOffset.UtcNow;
         }
@@ -77,8 +78,8 @@ public record Profile : BlueskyRecord
         string? description,
         string? pronouns,
         Uri? website,
-        Blob? avatar,
-        Blob? banner,
+        AtProto.Blob? avatar,
+        AtProto.Blob? banner,
         StrongReference? joinedViaStarterPack,
         StrongReference? pinnedPost,
         SelfLabels? labels,
@@ -183,13 +184,13 @@ public record Profile : BlueskyRecord
     /// Gets a small image to be displayed next to posts from account.
     /// </summary>
     [JsonInclude]
-    public Blob? Avatar { get; set; }
+    public AtProto.Blob? Avatar { get; set; }
 
     /// <summary>
     /// Gets a larger horizontal image to display behind profile view
     /// </summary>
     [JsonInclude]
-    public Blob? Banner { get; set; }
+    public AtProto.Blob? Banner { get; set; }
 
     /// <summary>
     /// If the user joined via a starter pack gets a <see cref="StrongReference"/> to that starter pack.

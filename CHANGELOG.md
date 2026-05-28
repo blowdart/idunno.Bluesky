@@ -4,9 +4,11 @@
 
 ## Added
 
-### AtProto.Types
+### idunno.AtProto.Types
 
-* Added `Bytes` type to represent byte arrays in AtProto.
+* Moved the atproto `Blob` type from idunno.AtProto.
+* Added the atproto `CidLink` type.
+* Added the atproto `Bytes` type and associated JSON converter.
 
 ### idunno.Bluesky
 
@@ -24,9 +26,14 @@
 
 ## Breaking Changes
 
+### idunno.AtProto
+
+* Marked `Repos.Blob` as obsolete in favour of `Blob` in `idunno.AtProto.Types`.
+* Marked `Repos.BlobReference` as obsolete in favour of `CidLink` in `idunno.AtProto.Types`.
+
 ### idunno.Bluesky
 
-* Moved various external Embedded content classes to their own files and namespaces. This is a breaking change if you are using these classes directory, rather than through the utility methods on `BlueskyAgent`.
+* Moved various external Embedded content classes to their own files and namespaces. This is a breaking change if you are using these classes directly, rather than through the utility methods on `BlueskyAgent`.
 
 ## 1.8.3 - 2026-05-16
 

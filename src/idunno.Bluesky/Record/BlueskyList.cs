@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -32,7 +32,7 @@ public record BlueskyList : BlueskyTimestampedRecord
         DateTimeOffset createdAt,
         string? description = null,
         IEnumerable<Facet>? descriptionFacets = null,
-        Blob? avatar = null,
+        AtProto.Blob? avatar = null,
         SelfLabels? labels = null) : base(createdAt)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
@@ -73,7 +73,7 @@ public record BlueskyList : BlueskyTimestampedRecord
         ListPurpose purpose,
         string? description,
         IEnumerable<Facet>? descriptionFacets = null,
-        Blob? avatar = null,
+        AtProto.Blob? avatar = null,
         SelfLabels? labels = null,
         DateTimeOffset? createdAt = null) : base(createdAt)
     {
@@ -163,7 +163,7 @@ public record BlueskyList : BlueskyTimestampedRecord
     /// Gets the avatar for the list, if any.
     /// </summary>
     [JsonInclude]
-    public Blob? Avatar { get; set; }
+    public AtProto.Blob? Avatar { get; set; }
 
     /// <summary>
     /// Gets self labels for the list, if any.

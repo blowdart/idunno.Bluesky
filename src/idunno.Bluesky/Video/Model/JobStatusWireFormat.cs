@@ -1,11 +1,10 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
-using idunno.AtProto.Repo;
 
 namespace idunno.Bluesky.Video.Model;
 
@@ -17,7 +16,7 @@ internal sealed record JobStatusWireFormat
         Did did,
         string? stateAsString,
         int? progress,
-        Blob? blob,
+        AtProto.Blob? blob,
         string? error,
         string? message)
     {
@@ -47,7 +46,7 @@ internal sealed record JobStatusWireFormat
     public int? Progress { get; init; } = 0;
 
     [JsonInclude]
-    public Blob? Blob { get; init; }
+    public AtProto.Blob? Blob { get; init; }
 
     [JsonInclude]
     public string? Error { get; init; }

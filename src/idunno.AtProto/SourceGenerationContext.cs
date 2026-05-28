@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Collections.ObjectModel;
@@ -36,7 +36,9 @@ namespace idunno.AtProto;
 
 [JsonSerializable(typeof(AtIdentifier))]
 [JsonSerializable(typeof(AtUri))]
+[JsonSerializable(typeof(Blob))]
 [JsonSerializable(typeof(Cid))]
+[JsonSerializable(typeof(CidLink))]
 [JsonSerializable(typeof(Did))]
 [JsonSerializable(typeof(DidDocument))]
 [JsonSerializable(typeof(Handle))]
@@ -62,8 +64,11 @@ namespace idunno.AtProto;
 [JsonSerializable(typeof(Contact))]
 
 [JsonSerializable(typeof(RepoDescription))]
-[JsonSerializable(typeof(Blob))]
-[JsonSerializable(typeof(BlobReference))]
+
+#pragma warning disable 618
+[JsonSerializable(typeof(Repo.Blob), TypeInfoPropertyName = "ObsoleteBlob")]
+[JsonSerializable(typeof(Repo.BlobReference), TypeInfoPropertyName = "ObsoleteBlobReference")]
+#pragma warning restore 618
 
 [JsonSerializable(typeof(BaseSessionResponse))]
 [JsonSerializable(typeof(CreateSessionRequest))]

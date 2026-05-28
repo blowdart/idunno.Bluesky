@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -2151,7 +2151,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        AtProtoHttpResult<Blob> uploadResult = await UploadBlob(
+        AtProtoHttpResult<AtProto.Blob> uploadResult = await UploadBlob(
             imageAsBytes,
             mimeType,
             cancellationToken: cancellationToken).ConfigureAwait(false);

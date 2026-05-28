@@ -1,8 +1,8 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 namespace idunno.AtProto.Repo.Models;
 
-internal sealed record CreateBlobResponse(Blob Blob)
+internal sealed record CreateBlobResponse(AtProto.Blob Blob)
 {
 }

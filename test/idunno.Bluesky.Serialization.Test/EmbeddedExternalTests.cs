@@ -45,7 +45,7 @@ public class EmbeddedExternalTests
         Assert.Equal(new Uri("https://esb-lol-test.leaflet.pub/"), embeddedExternal.External.Uri);
         Assert.NotNull(embeddedExternal.External.Thumbnail);
         Assert.NotNull(embeddedExternal.External.Thumbnail.Reference);
-        Assert.IsType<BlobReference>(embeddedExternal.External.Thumbnail.Reference);
+        Assert.IsType<CidLink>(embeddedExternal.External.Thumbnail.Reference);
         Assert.NotNull(embeddedExternal.External.Thumbnail.Reference.Link);
         Assert.Equal("bafkreieh4pmve3mz2d6kwoownym2woak4pwuhb4ia74nb6x5u3pfuhv3cm", embeddedExternal.External.Thumbnail.Reference.Link);
         Assert.Equal(95089, embeddedExternal.External.Thumbnail.Size);
@@ -86,7 +86,7 @@ public class EmbeddedExternalTests
         Assert.Equal(new Uri("https://esb-lol-test.pckt.blog/"), embeddedExternal.External.Uri);
         Assert.NotNull(embeddedExternal.External.Thumbnail);
         Assert.NotNull(embeddedExternal.External.Thumbnail.Reference);
-        Assert.IsType<BlobReference>(embeddedExternal.External.Thumbnail.Reference);
+        Assert.IsType<CidLink>(embeddedExternal.External.Thumbnail.Reference);
         Assert.NotNull(embeddedExternal.External.Thumbnail.Reference.Link);
         Assert.Equal("bafkreieuuwkzutguy5lfdmxockflk7wx5lvf2fi73nlj4trwbrht6f4loi", embeddedExternal.External.Thumbnail.Reference.Link);
         Assert.Equal(119911, embeddedExternal.External.Thumbnail.Size);
@@ -139,7 +139,7 @@ public class EmbeddedExternalTests
         Assert.Equal(new Uri("https://estrattonbailey.pckt.blog/test-post-bn5bcy2"), embeddedExternal.External.Uri);
         Assert.NotNull(embeddedExternal.External.Thumbnail);
         Assert.NotNull(embeddedExternal.External.Thumbnail.Reference);
-        Assert.IsType<BlobReference>(embeddedExternal.External.Thumbnail.Reference);
+        Assert.IsType<CidLink>(embeddedExternal.External.Thumbnail.Reference);
         Assert.NotNull(embeddedExternal.External.Thumbnail.Reference.Link);
         Assert.Equal("bafkreialkemyugm7zjxulfifk57md4cawvt4jdvgchsomgqu6hdihltdxi", embeddedExternal.External.Thumbnail.Reference.Link);
         Assert.Equal(908330, embeddedExternal.External.Thumbnail.Size);
