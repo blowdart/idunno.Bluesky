@@ -121,19 +121,19 @@ internal static partial class Logger
     [LoggerMessage(103, LogLevel.Error, "DeleteDraft failed for {draftId} with status code {statusCode} error {error} message {message}")]
     internal static partial void DeleteDraftFailed(ILogger logger, TimestampIdentifier draftId, HttpStatusCode statusCode, string? error, string? message);
 
-    // OpenGraph errors
+    // Card Generator errors
     [LoggerMessage(110, LogLevel.Error, "Failed to upload OpenGraph image for {url} with status code {statusCode}, error {error} message {message}")]
-    internal static partial void OpenGraphImageUploadFailed(ILogger logger, Uri url, HttpStatusCode statusCode, string? error, string? message);
+    internal static partial void EmbeddedCardImageUploadFailed(ILogger logger, Uri url, HttpStatusCode statusCode, string? error, string? message);
 
     [LoggerMessage(111, LogLevel.Error, "Exception thrown when uploading OpenGraph image for {url}")]
-    internal static partial void OpenGraphImageUploadThrew(ILogger logger, Uri url, Exception ex);
+    internal static partial void EmbeddedCardImageUploadThrew(ILogger logger, Uri url, Exception ex);
 
     [LoggerMessage(112, LogLevel.Error, "Failed to get OpenGraph data for {url} with status code {statusCode}")]
     internal static partial void GetOpenGraphDataFailed(ILogger logger, Uri url, HttpStatusCode statusCode);
 
     [LoggerMessage(113, LogLevel.Information, "Retrieval of {url} failed with {statusCode}")]
-    internal static partial void GetOpenGraphRequestFailedWithStatusCode(ILogger logger, Uri url, HttpStatusCode statusCode);
+    internal static partial void EmbeddedCardGetRequestFailedWithStatusCode(ILogger logger, Uri url, HttpStatusCode statusCode);
 
-    [LoggerMessage(114, LogLevel.Error, "Exception thrown when getting OpenGraph data for {url}")]
-    internal static partial void GetOpenGraphDataThrew(ILogger logger, Uri url, Exception ex);
+    [LoggerMessage(114, LogLevel.Error, "Exception thrown when getting web page {url}")]
+    internal static partial void EmbeddedCardGetRequestThrew(ILogger logger, Uri url, Exception ex);
 }

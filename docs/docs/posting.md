@@ -418,7 +418,7 @@ Bluesky post, which will look something like this:
 ![An embedded link to Wikipedia's page on Baked Beans](media/embeddedCard.png "An embedded Card")
 
 To embed an Open Graph card you must include suitable embedded record in your post. Generation of an
-embedded record is provided by `OpenGraphClient`.
+embedded record is provided by `OpenGraphEmbeddedCardGenerator`.
 
 For example
 

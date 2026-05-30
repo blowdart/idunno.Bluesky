@@ -32,7 +32,7 @@ public sealed class Program
         ArgumentException.ThrowIfNullOrEmpty(password);
 
         // Uncomment the next line to route all requests through Fiddler Everywhere
-        // proxyUri = new Uri("http://localhost:8866");
+        proxyUri = new Uri("http://localhost:8866");
 
         // Uncomment the next line to route all requests  through Fiddler Classic
         // proxyUri = new Uri("http://localhost:8888");
@@ -89,6 +89,18 @@ public sealed class Program
                 }
             }
             // END-AUTHENTICATION
+
+            Uri uri = new("https://en.wikipedia.org/wiki/Heinz_Baked_Beans");
+            var openGraphClient = agent.OpenGraphEmbeddedCardGenerator();
+
+            var post = new Post($"Testing Open Graph embedding for {uri}.");
+            var openGraphCard = await openGraphClient.Generate(uri, cancellationToken);
+            if (openGraphCard != null)
+            {
+                post.Embed(openGraphCard);
+            }
+            await agent.Post(post, cancellationToken:cancellationToken);
+
 
             Debugger.Break();
         }
