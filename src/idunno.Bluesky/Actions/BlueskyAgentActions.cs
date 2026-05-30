@@ -3,16 +3,15 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
-
 using idunno.AtProto;
 using idunno.AtProto.Repo;
-
-using idunno.Bluesky.Embed;
-using idunno.Bluesky.Feed.Gates;
-using idunno.Bluesky.RichText;
 using idunno.Bluesky.Actor;
-using idunno.Bluesky.Record;
+using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed;
+using idunno.Bluesky.Feed.Gates;
+using idunno.Bluesky.Record;
+using idunno.Bluesky.RichText;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace idunno.Bluesky;
 
@@ -877,7 +876,7 @@ public partial class BlueskyAgent
         ArgumentNullException.ThrowIfNull(text);
         ArgumentNullException.ThrowIfNull(externalCard);
 
-        if ((text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
+        if (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(text),
@@ -931,6 +930,7 @@ public partial class BlueskyAgent
     /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
     /// <param name="postGateRules">Gating rules to apply to the <paramref name="post"/>, if any.</param>
     /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is <see langword="null"/>.</param>
+    /// <param name="extractFacets">Flag indicating whether facets should be extracted from the post text.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
@@ -940,6 +940,7 @@ public partial class BlueskyAgent
         ICollection<ThreadGateRule>? threadGateRules = null,
         ICollection<PostGateRule>? postGateRules = null,
         InteractionPreferences? interactionPreferences = null,
+        bool extractFacets = true,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(post);
@@ -947,6 +948,15 @@ public partial class BlueskyAgent
         if (!IsAuthenticated)
         {
             throw new AuthenticationRequiredException();
+        }
+
+        if (!string.IsNullOrEmpty(post.Text) && extractFacets)
+        {
+            IList<Facet>? facets = await FacetExtractor.ExtractFacets(post.Text, cancellationToken).ConfigureAwait(false);
+            if (facets is not null && facets.Count > 0)
+            {
+                post.Facets = facets;
+            }
         }
 
         AtProtoHttpResult<CreateRecordResult> result = await CreatePost(

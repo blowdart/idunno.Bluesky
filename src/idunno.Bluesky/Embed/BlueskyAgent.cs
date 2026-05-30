@@ -5,6 +5,8 @@ using idunno.AtProto;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed;
 
+using Microsoft.Extensions.Logging;
+
 namespace idunno.Bluesky;
 
 partial class BlueskyAgent
@@ -134,5 +136,17 @@ partial class BlueskyAgent
         var atUris = embeddedExternalView.External.AssociatedRefs.Select(r => r.Uri).ToList();
 
         return await GetEmbedExternalView(embeddedExternalView.External.Uri, [.. atUris], subscribedLabelers, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Returns a new instance of the <see cref="OpenGraphClient"/> class, configured to use the agent.
+    /// </summary>
+    /// <returns>A new instance of <see cref="OpenGraphClient"/>.</returns>
+    public OpenGraphClient GetOpenGraphClient()
+    {
+        return new OpenGraphClient(
+            agent:this,
+            httpClient: HttpClient,
+            logger:LoggerFactory.CreateLogger<OpenGraphClient>());
     }
 }

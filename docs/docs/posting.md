@@ -417,7 +417,26 @@ Bluesky post, which will look something like this:
 
 ![An embedded link to Wikipedia's page on Baked Beans](media/embeddedCard.png "An embedded Card")
 
-To embed an external link with a card create an instance of `EmbeddedExternal` then attach it to a `PostBuilder` with the `Embed()` method.
+To embed an Open Graph card you must include suitable embedded record in your post. Generation of an
+embedded record is provided by `OpenGraphClient`.
+
+For example
+
+```c#
+Uri uri = new("https://en.wikipedia.org/wiki/Heinz_Baked_Beans");
+var openGraphClient = agent.GetOpenGraphClient();
+
+var post = new Post($"Testing Open Graph embedding for {uri}.");
+var openGraphCard = await openGraphClient.GetOpenGraphEmbed(uri);
+if (openGraphCard != null)
+{
+    post.Embed(openGraphCard);
+}
+await agent.Post(post);
+```
+
+If you want to manually embed a link card create an instance of `EmbeddedExternal` then attach it to your `Post`
+with the `Embed` method, or to a `PostBuilder` with the `EmbedRecord()` method.
 
 ```c#
 var embeddedExternal = new(pageUri, title, description, thumbnailBlob);
@@ -426,30 +445,5 @@ postBuilder.EmbedRecord(embeddedExternal);
 
 var postResult = await agent.Post(postBuilder, cancellationToken: cancellationToken);
 ```
-
-If you don't want to use a `PostBuilder` you can use the appropriate `Post()` method
-
-```c#
-var postResult = agent.Post(externalCard: embeddedExternal, cancellationToken: cancellationToken);
-```
-
-You can use libraries like [OpenGraph.net](https://github.com/ghorsey/OpenGraph-Net/) or [X.Web.MetaExtractor](https://www.nuget.org/packages/X.Web.MetaExtractor) to retrieve
-Open Graph properties from which you can construct a card. For example, using OpenGraph.Net
-
-```
-Uri pageUri = new ("https://en.wikipedia.org/wiki/Baked_beans");
-OpenGraph graph = await OpenGraph.ParseUrlAsync(pageUri, cancellationToken: cancellationToken);
-
-string? title = graph.Title;
-string? description = graph.Description;
-
-// Check to see if there's a different URI specified in the graph metadata.
-if (graph.Url is not null)
-{
-    pageUri = graph.Url;
-}
-```
-The [Embedded Card sample](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.EmbeddedCard) shows how to use
-OpenGraph.Net to extract the metadata, and to retrieve a preview image and use it, if the metadata has an image property.
 
 Posts with an embedded card don't need any post text.
