@@ -16,6 +16,7 @@
 * Added classes for Standard.Site lexicon.
 * Added `Labels` property to `StatusView` to represent labels associated with a status. See [[APP-1775] Hydrate labels for actor statuses](https://github.com/bluesky-social/atproto/pull/4555)
 * Added `OpenGraphEmbeddedCardGenerator` to generate embedded records from Open Graph metadata, and documented its use.
+* Added `StandardSiteEmbeddedCardGenerator` to generate embedded records from [standard.site](https://standard.site), and documented its use.
 
 ## Changed
 

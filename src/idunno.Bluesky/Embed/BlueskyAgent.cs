@@ -139,14 +139,26 @@ partial class BlueskyAgent
     }
 
     /// <summary>
-    /// Returns a new instance of the <see cref="Embed.OpenGraphEmbeddedCardGenerator"/> class, configured to use the agent.
+    /// Returns a new instance of a <see cref="OpenGraphEmbeddedCardGenerator"/> class, configured to use the agent.
     /// </summary>
-    /// <returns>A new instance of <see cref="Embed.OpenGraphEmbeddedCardGenerator"/>.</returns>
-    public OpenGraphEmbeddedCardGenerator OpenGraphEmbeddedCardGenerator()
+    /// <returns>A new instance of <see cref="OpenGraphEmbeddedCardGenerator"/>.</returns>
+    public OpenGraphEmbeddedCardGenerator CreateOpenGraphEmbeddedCardGenerator()
     {
         return new OpenGraphEmbeddedCardGenerator(
-            agent:this,
+            agent: this,
             httpClient: HttpClient,
-            logger:LoggerFactory.CreateLogger<OpenGraphEmbeddedCardGenerator>());
+            logger: LoggerFactory.CreateLogger<OpenGraphEmbeddedCardGenerator>());
     }
+
+    /// <summary>
+    /// Returns a new instance of a <see cref="StandardSiteCardGenerator"/> class, configured to use the agent.
+    /// </summary>
+    /// <returns>A new instance of <see cref="StandardSiteCardGenerator"/>.</returns>
+    public StandardSiteCardGenerator CreateStandardSiteEmbeddedCardGenerator()
+    {
+        return new StandardSiteCardGenerator(
+            agent: this,
+            httpClient: HttpClient,
+            logger: LoggerFactory.CreateLogger<StandardSiteCardGenerator>());
+     }
 }

@@ -112,6 +112,7 @@
   </Folder>
   <Folder Name="/docs/docs/media/">
     <File Path="docs/docs/images/embeddedCard.png" />
+    <File Path="docs/docs/media/standardSiteEmbeddedCard.png" />
     <File Path="docs/docs/media/vs-AdditionalInformation.png" />
     <File Path="docs/docs/media/vs-CreateNewConsoleApp.png" />
   </Folder>

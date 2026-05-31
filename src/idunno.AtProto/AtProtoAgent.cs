@@ -1509,6 +1509,41 @@ public partial class AtProtoAgent : Agent
     /// Gets the record specified by the identifying parameters.
     /// </summary>
     /// <param name="uri">The <see cref="AtUri"/> of the record to retrieve.</param>
+    /// <param name="pds">The <see cref="Uri"/> of the personal data server to retrieve the record from.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="pds"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an incorrect format.</exception>
+    public async Task<AtProtoHttpResult<AtProtoRepositoryRecord>> GetRawRecord(
+        AtUri uri,
+        Uri pds,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(uri);
+        ArgumentNullException.ThrowIfNull(pds);
+
+        if (uri.Repo is null)
+        {
+            throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
+        }
+
+        if (uri.Collection is null)
+        {
+            throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+        }
+
+        if (uri.RecordKey is null)
+        {
+            throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+        }
+
+        return await GetRawRecord(uri.Repo, uri.Collection, uri.RecordKey, cid: null, service: pds, serviceProxy: null, cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Gets the record specified by the identifying parameters.
+    /// </summary>
+    /// <param name="uri">The <see cref="AtUri"/> of the record to retrieve.</param>
     /// <param name="cid">The CID of the version of the record to retrieve.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
@@ -1587,6 +1622,44 @@ public partial class AtProtoAgent : Agent
         service ??= await ResolvePdsUriFromRepo(uri.Repo, cancellationToken: cancellationToken).ConfigureAwait(false);
 
         return await GetRawRecord(uri.Repo, uri.Collection, uri.RecordKey, cid: cid, service: service, serviceProxy: null, cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Gets the record specified by the identifying parameters.
+    /// </summary>
+    /// <param name="uri">The <see cref="AtUri"/> of the record to retrieve.</param>
+    /// <param name="cid">The CID of the version of the record to retrieve.</param>
+    /// <param name="pds">The <see cref="Uri"/> of the personal data server to retrieve the record from.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="cid"/>, or <paramref name="pds"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is in an incorrect format.</exception>
+    public async Task<AtProtoHttpResult<AtProtoRepositoryRecord>> GetRawRecord(
+        AtUri uri,
+        Cid cid,
+        Uri pds,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(uri);
+        ArgumentNullException.ThrowIfNull(cid);
+        ArgumentNullException.ThrowIfNull(pds);
+
+        if (uri.Repo is null)
+        {
+            throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
+        }
+
+        if (uri.Collection is null)
+        {
+            throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+        }
+
+        if (uri.RecordKey is null)
+        {
+            throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+        }
+
+        return await GetRawRecord(uri.Repo, uri.Collection, uri.RecordKey, cid: cid, service: pds, serviceProxy: null, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

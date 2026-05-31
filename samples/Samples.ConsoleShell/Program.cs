@@ -90,16 +90,17 @@ public sealed class Program
             }
             // END-AUTHENTICATION
 
-            Uri uri = new("https://en.wikipedia.org/wiki/Heinz_Baked_Beans");
-            var openGraphClient = agent.OpenGraphEmbeddedCardGenerator();
+            Uri uri = new("https://lab.leaflet.pub/3mmwnyfqhyc2d");
+            var standardSiteCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
 
-            var post = new Post($"Testing Open Graph embedding for {uri}.");
-            var openGraphCard = await openGraphClient.Generate(uri, cancellationToken);
-            if (openGraphCard != null)
+            var post = new Post($"Testing Standard Site embedding for {uri}.");
+            var card = await standardSiteCardGenerator.Generate(uri, cancellationToken);
+            if (card != null)
             {
-                post.Embed(openGraphCard);
+                post.Embed(card);
             }
             await agent.Post(post, cancellationToken:cancellationToken);
+
 
 
             Debugger.Break();

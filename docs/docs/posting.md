@@ -410,7 +410,7 @@ which takes a collection of tags, and the `PostBuilder` class has a tags propert
 > [!TIP]
 > Do not begin the tag text with the # character. If you include a hash character you end up with a double hashed tag.
 
-## <a name="openGraphCards">Embedding an external link (Open Graph cards)</a>
+## <a name="openGraphCards">Creating embedded cards.</a>
 
 [Open Graph](https://ogp.me/) is a standard that allows web pages to become a rich object in a social graph. Open Graph metadata allows you to embed a rich link card in a
 Bluesky post, which will look something like this:
@@ -424,10 +424,10 @@ For example
 
 ```c#
 Uri uri = new("https://en.wikipedia.org/wiki/Heinz_Baked_Beans");
-var openGraphClient = agent.GetOpenGraphClient();
+var openGraphCardGenerator = agent.CreateOpenGraphEmbeddedCardGenerator();
 
 var post = new Post($"Testing Open Graph embedding for {uri}.");
-var openGraphCard = await openGraphClient.GetOpenGraphEmbed(uri);
+var openGraphCard = await openGraphCardGenerator.GetOpenGraphEmbed(uri);
 if (openGraphCard != null)
 {
     post.Embed(openGraphCard);
@@ -444,6 +444,30 @@ var postBuilder = new PostBuilder("Embedded record test");
 postBuilder.EmbedRecord(embeddedExternal);
 
 var postResult = await agent.Post(postBuilder, cancellationToken: cancellationToken);
+```
+
+Standard.Site embedding is also supported, which allows you to embed a card for a page on a [standard.site](https://standard.site/) compatible
+blogging system, such as [leaflet.pub](https://leaflet.pub), or [Sequoia](https://sequoia.pub).
+
+![An embedded card for a leaflet.pub document](media/standardSiteEmbeddedCard.png "An embedded card for a standard.site compatible document")
+
+
+A standard.site embedded card can include extra UX in Bluesky clients like a button to subscribe to the publication,
+or view the publication.
+
+To generate a Standard.Site card use the `StandardSiteCardGenerator` class.
+
+```c#
+Uri uri = new("https://lab.leaflet.pub/3mmwnyfqhyc2d");
+var standardSiteCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
+
+var post = new Post($"Testing Standard Site embedding for {uri}.");
+var standardSiteCard = await standardSiteCardGenerator.GetStandardSiteEmbed(uri);
+if (standardSiteCard != null)
+{
+    post.Embed(standardSiteCard);
+}
+await agent.Post(post);
 ```
 
 Posts with an embedded card don't need any post text.

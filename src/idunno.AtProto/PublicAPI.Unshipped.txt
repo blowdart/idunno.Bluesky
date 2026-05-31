@@ -1,1 +1,3 @@
 #nullable enable
+idunno.AtProto.AtProtoAgent.GetRawRecord(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid, System.Uri! pds, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord!>!>!
+idunno.AtProto.AtProtoAgent.GetRawRecord(idunno.AtProto.AtUri! uri, System.Uri! pds, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord!>!>!

@@ -136,4 +136,20 @@ internal static partial class Logger
 
     [LoggerMessage(114, LogLevel.Error, "Exception thrown when getting web page {url}")]
     internal static partial void EmbeddedCardGetRequestThrew(ILogger logger, Uri url, Exception ex);
+
+    [LoggerMessage(115, LogLevel.Error, "Failed to find or parse site.standard.document link for {url}")]
+    internal static partial void FailedToFindOrParseSiteStandardDocumentLink(ILogger logger, Uri url);
+
+    [LoggerMessage(116, LogLevel.Error, "Author DID/repo is not present in the site.standard.document link {atUri} for {url}")]
+    internal static partial void AuthorDidRepoNotPresentInSiteStandardDocumentLink(ILogger logger, AtUri atUri, Uri url);
+
+    [LoggerMessage(117, LogLevel.Error, "PDS for author DID {did} not found for {url}")]
+    internal static partial void PdsForAuthorDidNotFound(ILogger logger, Did did, Uri url);
+
+    [LoggerMessage(118, LogLevel.Error, "Publication DID/repo is not present in the site.standard.publication link {atUri} for {url} nor in well-known location")]
+    internal static partial void PublicationDidRepoNotPresent(ILogger logger, AtUri atUri, Uri url);
+
+    [LoggerMessage(119, LogLevel.Error, "PDS for publication DID {did} not found for {url}")]
+    internal static partial void PdsForPublicationDidNotFound(ILogger logger, Did did, Uri url);
+
 }
