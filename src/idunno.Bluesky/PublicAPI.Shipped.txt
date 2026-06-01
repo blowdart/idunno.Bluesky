@@ -2169,9 +2169,6 @@ static idunno.Bluesky.TypeResolver.JsonTypeInfoResolver.get -> System.Text.Json.
 static idunno.Bluesky.TypeResolver.JsonTypeInfoResolvers.get -> System.Collections.Generic.IList<System.Text.Json.Serialization.Metadata.IJsonTypeInfoResolver!>!
 static idunno.Bluesky.WellKnownDistributedIdentifiers.BlueskyModerationLabeler.get -> idunno.AtProto.Did!
 static idunno.Bluesky.WellKnownDistributedIdentifiers.Video.get -> idunno.AtProto.Did!
-static readonly GermNetwork.Com.ShowButtonToKnownValues.Everyone -> string!
-static readonly GermNetwork.Com.ShowButtonToKnownValues.None -> string!
-static readonly GermNetwork.Com.ShowButtonToKnownValues.UsersIFollow -> string!
 static readonly idunno.Bluesky.DefaultServiceUris.BlueskyApiUri -> System.Uri!
 static readonly idunno.Bluesky.DefaultServiceUris.PublicAppViewUri -> System.Uri!
 static readonly idunno.Bluesky.Maximum.BatchedMessages -> int
