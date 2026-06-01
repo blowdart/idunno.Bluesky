@@ -40,7 +40,7 @@ public record ThemeColorRgba : ThemeColorRgb
     /// <summary>
     /// The alpha value of the color.
     /// </summary>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is outside the range 0-255.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is outside the range 0-100.</exception>
     [JsonPropertyName("a")]
     [JsonRequired]
     public int Alpha

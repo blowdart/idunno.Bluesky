@@ -56,7 +56,7 @@ public sealed class Bytes : IEquatable<Bytes>
     [JsonInclude]
     [JsonRequired]
     [JsonPropertyName("$bytes")]
-    public ICollection<byte> Value => _bytes;
+    public ICollection<byte> Value => [.. _bytes];
 
     /// <summary>
     /// Gets the base64 encoded value of this instance.
@@ -79,7 +79,7 @@ public sealed class Bytes : IEquatable<Bytes>
     /// <returns>The byte value of this instance.</returns>
     public byte[] ToBytes()
     {
-        return _bytes;
+        return [.. _bytes];
     }
 
     /// <summary>
@@ -139,7 +139,7 @@ public sealed class Bytes : IEquatable<Bytes>
     /// Returns the hash code for this <see cref="Bytes"/>.
     /// </summary>
     /// <returns>The hash code for this <see cref="Bytes"/>.</returns>
-    public override int GetHashCode() => Value != null ? _bytes.GetHashCode() : 0;
+    public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(_base64Encoded);
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString();

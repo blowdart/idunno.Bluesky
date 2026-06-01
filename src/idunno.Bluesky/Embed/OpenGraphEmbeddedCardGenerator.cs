@@ -61,7 +61,7 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
     }
 
     /// <summary>
-    /// Gets an <see cref="EmbeddedExternal"/> for <paramref name="uri"/>, prefering OpenGraph data if available.
+    /// Gets an <see cref="EmbeddedExternal"/> for <paramref name="uri"/>, preferring OpenGraph data if available.
     /// </summary>
     /// <param name="uri">The URI to retrieve OpenGraph data from.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>

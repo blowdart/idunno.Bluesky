@@ -152,4 +152,7 @@ internal static partial class Logger
     [LoggerMessage(119, LogLevel.Error, "PDS for publication DID {did} not found for {url}")]
     internal static partial void PdsForPublicationDidNotFound(ILogger logger, Did did, Uri url);
 
+    [LoggerMessage(120, LogLevel.Error, "Exception thrown when getting image from {url}")]
+    internal static partial void EmbeddedCardImageGetRequestThrew(ILogger logger, Uri url, Exception ex);
+
 }

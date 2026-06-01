@@ -199,7 +199,7 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
         }
         catch (Exception ex)
         {
-            Logger.EmbeddedCardGetRequestThrew(ILogger, uri, ex);
+            Logger.EmbeddedCardImageGetRequestThrew(ILogger, uri, ex);
         }
 
         return result;

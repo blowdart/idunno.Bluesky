@@ -30,7 +30,7 @@ public record Profile : BlueskyRecord
     /// <param name="banner">A larger horizontal image to display behind profile view, if any.</param>
     /// <param name="pinnedPost">A <see cref="StrongReference"/> to the profile's pinned post, if any.</param>
     /// <param name="labels">Any <see cref="SelfLabels"/> applied to the profile.</param>
-    /// <param name="createdAt">The <see cref="DateTimeOffset"/>The <see cref="DateTimeOffset"/> the record was created at.</param>
+    /// <param name="createdAt">The <see cref="DateTimeOffset"/> the record was created at.</param>
     [SuppressMessage("ApiDesign", "RS0027:API with optional parameter(s) should have the most parameters amongst its public overloads", Justification = "Ease of use")]
     public Profile(
         string? displayName = null,
@@ -71,7 +71,7 @@ public record Profile : BlueskyRecord
     /// <param name="joinedViaStarterPack">A <see cref="StrongReference"/> to the starter pack the account joined through, if any.</param>
     /// <param name="pinnedPost">A <see cref="StrongReference"/> to the profile's pinned post, if any.</param>
     /// <param name="labels">Any <see cref="SelfLabels"/> applied to the profile.</param>
-    /// <param name="createdAt">The <see cref="DateTimeOffset"/>The <see cref="DateTimeOffset"/> the record was created at.</param>
+    /// <param name="createdAt">The <see cref="DateTimeOffset"/> the record was created at.</param>
     [JsonConstructor]
     public Profile(
         string? displayName,
@@ -103,7 +103,7 @@ public record Profile : BlueskyRecord
             Labels = new SelfLabels();
         }
 
-        CreatedAt = createdAt;
+        CreatedAt = createdAt ?? DateTimeOffset.UtcNow;
     }
 
     /// <summary>

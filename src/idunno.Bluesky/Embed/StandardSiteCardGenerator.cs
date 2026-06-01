@@ -46,7 +46,7 @@ public sealed partial class StandardSiteCardGenerator : OpenGraphEmbeddedCardGen
     /// Creates a new instance of <see cref="StandardSiteCardGenerator"/>.
     /// </summary>
     /// <param name="agent">The <see cref="BlueskyAgent"/> to use for thumbnail uploading.</param>
-    /// <param name="httpClient">The <see cref="HttpClient"/> to use for making HTTP requests to retrieve OpenGraph data.</param>
+    /// <param name="httpClient">The <see cref="HttpClient"/> to use for making HTTP requests to retrieve Standard.Site data.</param>
     /// <param name="logger">The <see cref="Microsoft.Extensions.Logging.ILogger"/> to use for logging. If <see langword="null" />, a no-op logger will be used.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> is <see langword="null" />.</exception>
     public StandardSiteCardGenerator(BlueskyAgent agent, HttpClient httpClient, ILogger<StandardSiteCardGenerator> logger)
@@ -58,11 +58,11 @@ public sealed partial class StandardSiteCardGenerator : OpenGraphEmbeddedCardGen
     }
 
     /// <summary>
-    /// Gets an <see cref="EmbeddedExternal"/> for <paramref name="uri"/>, prefering OpenGraph data if available.
+    /// Gets an <see cref="EmbeddedExternal"/> for <paramref name="uri"/>, preferring Standard.Site metadata if available.
     /// </summary>
-    /// <param name="uri">The URI to retrieve OpenGraph data from.</param>
+    /// <param name="uri">The URI to retrieve Standard.Site data from.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>An <see cref="EmbeddedExternal"/> if OpenGraph data is found; otherwise, <see langword="null"/>.</returns>
+    /// <returns>An <see cref="EmbeddedExternal"/> if Standard.Site metadata is found; otherwise, <see langword="null"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is <see langword="null" /></exception>
     public override async Task<EmbeddedExternal?> Generate(Uri uri, CancellationToken cancellationToken = default)
     {
@@ -78,11 +78,11 @@ public sealed partial class StandardSiteCardGenerator : OpenGraphEmbeddedCardGen
         return null;
     }
 
-    /// <summary>Creates an <see cref="EmbeddedExternal"/> from OpenGraph metadata, supplemented with Standard.Site metadata if available.</summary>
-    /// <param name="uri">The URI to retrieve OpenGraph and Standard.Site data from.</param>
+    /// <summary>Creates an <see cref="EmbeddedExternal"/> from Standard.Site metadata, supplemented with OpenGraph metadata if available.</summary>
+    /// <param name="uri">The URI to retrieve Standard.Site and OpenGraph data from.</param>
     /// <param name="pageContent">The HTML content of the page.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>An <see cref="EmbeddedExternal"/> if OpenGraph data is found; otherwise, <see langword="null"/>.</returns>
+    /// <returns>An <see cref="EmbeddedExternal"/> if Standard.Site metadata is found; otherwise, <see langword="null"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is <see langword="null" /></exception>
     [SuppressMessage("Minor Code Smell", "S3267:Loops should be simplified with \"LINQ\" expressions", Justification = "Avoid linq allocations in a hot path.")]
     private async Task<EmbeddedExternal?> CreateEmbeddedExternalFromSiteStandardMetadata(Uri uri, string pageContent, CancellationToken cancellationToken = default)
@@ -129,11 +129,11 @@ public sealed partial class StandardSiteCardGenerator : OpenGraphEmbeddedCardGen
             }
 
             Did? documentAuthorDid = null;
-            if (publicationAtUri.Repo is Handle documentAuthorHandle)
+            if (documentAtUri.Repo is Handle documentAuthorHandle)
             {
                 documentAuthorDid = await Agent.ResolveHandle(documentAuthorHandle, cancellationToken).ConfigureAwait(false);
             }
-            else if (publicationAtUri.Repo is Did did)
+            else if (documentAtUri.Repo is Did did)
             {
                 documentAuthorDid = did;
             }
