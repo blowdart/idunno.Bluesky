@@ -832,7 +832,7 @@ public partial class BlueskyAgent
         Uri uri,
         string title,
         string? description = null,
-        idunno.AtProto.Blob? previewBlob =null,
+        idunno.AtProto.Blob? previewBlob = null,
         int? durationMinutes = null,
         CancellationToken cancellationToken = default)
     {

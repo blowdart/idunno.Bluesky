@@ -90,7 +90,10 @@ public sealed class Program
             }
             // END-AUTHENTICATION
 
-            Debugger.Break();
+            if (Debugger.IsAttached)
+            {
+                Debugger.Break();
+            }
         }
     }
 }
