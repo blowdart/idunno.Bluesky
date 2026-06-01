@@ -155,7 +155,7 @@ public sealed partial class StandardSiteCardGenerator : OpenGraphEmbeddedCardGen
         {
             if (documentAtUri.Repo is null)
             {
-                Bluesky.Logger.FailedToFindOrParseSiteStandardDocumentLink(Logger, uri);
+                Bluesky.Logger.AuthorDidRepoNotPresentInSiteStandardDocumentLink(Logger, documentAtUri, uri);
                 return result;
             }
 
