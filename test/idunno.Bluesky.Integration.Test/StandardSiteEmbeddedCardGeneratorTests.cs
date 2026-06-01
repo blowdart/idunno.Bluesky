@@ -46,19 +46,19 @@ public class StandardSiteEmbeddedCardGeneratorTests
             {
                 if (request.Path == "/document/12345")
                 {
-                    await response.WriteAsync(@"<!DOCTYPE html>");
-                    await response.WriteAsync(@"<html>");
-                    await response.WriteAsync(@"<head>");
-                    await response.WriteAsync($@"<title>{expectedCardTitle}</title>");
-                    await response.WriteAsync($@"<meta property=""og:title"" content=""{expectedCardTitle}"" />");
-                    await response.WriteAsync($@"<meta property=""og:description"" content=""{expectedCardDescription}"" />");
-                    await response.WriteAsync($@"<meta property=""og:url"" content=""{expectedCardUrl}"" />");
-                    await response.WriteAsync($@"<meta property=""og:image"" content=""{TestServerBuilder.DefaultUri}document/12345/image.png"" />");
-                    await response.WriteAsync(@"</head>");
-                    await response.WriteAsync(@"<body>");
-                    await response.WriteAsync($@"<h1>{expectedCardTitle}</h1>");
-                    await response.WriteAsync(@"</body>");
-                    await response.WriteAsync(@"</html>");
+                    await response.WriteAsync("<!DOCTYPE html>");
+                    await response.WriteAsync("<html>");
+                    await response.WriteAsync("<head>");
+                    await response.WriteAsync($"<title>{expectedCardTitle}</title>");
+                    await response.WriteAsync($"<meta property=\"og:title\" content=\"{expectedCardTitle}\" />");
+                    await response.WriteAsync($"<meta property=\"og:description\" content=\"{expectedCardDescription}\" />");
+                    await response.WriteAsync($"<meta property=\"og:url\" content=\"{expectedCardUrl}\" />");
+                    await response.WriteAsync($"<meta property=\"og:image\" content=\"{TestServerBuilder.DefaultUri}document/12345/image.png\" />");
+                    await response.WriteAsync("</head>");
+                    await response.WriteAsync("<body>");
+                    await response.WriteAsync($"<h1>{expectedCardTitle}</h1>");
+                    await response.WriteAsync("</body>");
+                    await response.WriteAsync("</html>");
                     return;
                 }
 
@@ -132,21 +132,21 @@ public class StandardSiteEmbeddedCardGeneratorTests
             {
                 if (request.Path == "/document/12345")
                 {
-                    await response.WriteAsync(@"<!DOCTYPE html>");
-                    await response.WriteAsync(@"<html>");
-                    await response.WriteAsync(@"<head>");
-                    await response.WriteAsync($@"<title>{expectedCardTitle}</title>");
-                    await response.WriteAsync($@"<meta property=""og:title"" content=""{expectedCardTitle}"" />");
-                    await response.WriteAsync($@"<meta property=""og:description"" content=""{expectedCardDescription}"" />");
-                    await response.WriteAsync($@"<meta property=""og:url"" content=""{expectedCardUrl}"" />");
-                    await response.WriteAsync($@"<meta property=""og:image"" content=""{TestServerBuilder.DefaultUri}document/12345/image.png"" />");
-                    await response.WriteAsync($@"<link rel=""site.standard.document"" href=""{expectedStandardSiteDocument}"" />");
-                    await response.WriteAsync($@"<link rel=""site.standard.publication"" href=""{expectedStandardSitePublication}"" />");
-                    await response.WriteAsync(@"</head>");
-                    await response.WriteAsync(@"<body>");
-                    await response.WriteAsync($@"<h1>{expectedCardTitle}</h1>");
-                    await response.WriteAsync(@"</body>");
-                    await response.WriteAsync(@"</html>");
+                    await response.WriteAsync("<!DOCTYPE html>");
+                    await response.WriteAsync("<html>");
+                    await response.WriteAsync("<head>");
+                    await response.WriteAsync($"<title>{expectedCardTitle}</title>");
+                    await response.WriteAsync($"<meta property=\"og:title\" content=\"{expectedCardTitle}\" />");
+                    await response.WriteAsync($"<meta property=\"og:description\" content=\"{expectedCardDescription}\" />");
+                    await response.WriteAsync($"<meta property=\"og:url\" content=\"{expectedCardUrl}\" />");
+                    await response.WriteAsync($"<meta property=\"og:image\" content=\"{TestServerBuilder.DefaultUri}document/12345/image.png\" />");
+                    await response.WriteAsync($"<link rel=\"site.standard.document\" href=\"{expectedStandardSiteDocument}\" />");
+                    await response.WriteAsync($"<link rel=\"site.standard.publication\" href=\"{expectedStandardSitePublication}\" />");
+                    await response.WriteAsync("</head>");
+                    await response.WriteAsync("<body>");
+                    await response.WriteAsync($"<h1>{expectedCardTitle}</h1>");
+                    await response.WriteAsync("</body>");
+                    await response.WriteAsync("</html>");
                     return;
                 }
 
@@ -287,20 +287,20 @@ public class StandardSiteEmbeddedCardGeneratorTests
             {
                 if (request.Path == "/document/12345")
                 {
-                    await response.WriteAsync(@"<!DOCTYPE html>");
-                    await response.WriteAsync(@"<html>");
-                    await response.WriteAsync(@"<head>");
-                    await response.WriteAsync($@"<title>{expectedCardTitle}</title>");
-                    await response.WriteAsync($@"<meta property=""og:title"" content=""{expectedCardTitle}"" />");
-                    await response.WriteAsync($@"<meta property=""og:description"" content=""{expectedCardDescription}"" />");
-                    await response.WriteAsync($@"<meta property=""og:url"" content=""{expectedCardUrl}"" />");
-                    await response.WriteAsync($@"<meta property=""og:image"" content=""{TestServerBuilder.DefaultUri}document/12345/image.png"" />");
-                    await response.WriteAsync($@"<link rel=""site.standard.document"" href=""{expectedStandardSiteDocument}"" />");
-                    await response.WriteAsync(@"</head>");
-                    await response.WriteAsync(@"<body>");
-                    await response.WriteAsync($@"<h1>{expectedCardTitle}</h1>");
-                    await response.WriteAsync(@"</body>");
-                    await response.WriteAsync(@"</html>");
+                    await response.WriteAsync("<!DOCTYPE html>");
+                    await response.WriteAsync("<html>");
+                    await response.WriteAsync("<head>");
+                    await response.WriteAsync($"<title>{expectedCardTitle}</title>");
+                    await response.WriteAsync($"<meta property=\"og:title\" content=\"{expectedCardTitle}\" />");
+                    await response.WriteAsync($"<meta property=\"og:description\" content=\"{expectedCardDescription}\" />");
+                    await response.WriteAsync($"<meta property=\"og:url\" content=\"{expectedCardUrl}\" />");
+                    await response.WriteAsync($"<meta property=\"og:image\" content=\"{TestServerBuilder.DefaultUri}document/12345/image.png\" />");
+                    await response.WriteAsync($"<link rel=\"site.standard.document\" href=\"{expectedStandardSiteDocument}\" />");
+                    await response.WriteAsync("</head>");
+                    await response.WriteAsync("<body>");
+                    await response.WriteAsync($"<h1>{expectedCardTitle}</h1>");
+                    await response.WriteAsync("</body>");
+                    await response.WriteAsync("</html>");
                     return;
                 }
 
@@ -441,21 +441,21 @@ public class StandardSiteEmbeddedCardGeneratorTests
             {
                 if (request.Path == "/document/12345")
                 {
-                    await response.WriteAsync(@"<!DOCTYPE html>");
-                    await response.WriteAsync(@"<html>");
-                    await response.WriteAsync(@"<head>");
-                    await response.WriteAsync($@"<title>{expectedCardTitle}</title>");
-                    await response.WriteAsync($@"<meta property=""og:title"" content=""{expectedCardTitle}"" />");
-                    await response.WriteAsync($@"<meta property=""og:description"" content=""{expectedCardDescription}"" />");
-                    await response.WriteAsync($@"<meta property=""og:url"" content=""{expectedCardUrl}"" />");
-                    await response.WriteAsync($@"<meta property=""og:image"" content=""{TestServerBuilder.DefaultUri}document/12345/image.png"" />");
-                    await response.WriteAsync($@"<link rel=""site.standard.document"" href=""{expectedStandardSiteDocument}"" />");
-                    await response.WriteAsync($@"<link rel=""site.standard.publication"" href=""{expectedStandardSitePublication}"" />");
-                    await response.WriteAsync(@"</head>");
-                    await response.WriteAsync(@"<body>");
-                    await response.WriteAsync($@"<h1>{expectedCardTitle}</h1>");
-                    await response.WriteAsync(@"</body>");
-                    await response.WriteAsync(@"</html>");
+                    await response.WriteAsync("<!DOCTYPE html>");
+                    await response.WriteAsync("<html>");
+                    await response.WriteAsync("<head>");
+                    await response.WriteAsync($"<title>{expectedCardTitle}</title>");
+                    await response.WriteAsync($"<meta property=\"og:title\" content=\"{expectedCardTitle}\" />");
+                    await response.WriteAsync($"<meta property=\"og:description\" content=\"{expectedCardDescription}\" />");
+                    await response.WriteAsync($"<meta property=\"og:url\" content=\"{expectedCardUrl}\" />");
+                    await response.WriteAsync($"<meta property=\"og:image\" content=\"{TestServerBuilder.DefaultUri}document/12345/image.png\" />");
+                    await response.WriteAsync($"<link rel=\"site.standard.document\" href=\"{expectedStandardSiteDocument}\" />");
+                    await response.WriteAsync($"<link rel=\"site.standard.publication\" href=\"{expectedStandardSitePublication}\" />");
+                    await response.WriteAsync("</head>");
+                    await response.WriteAsync("<body>");
+                    await response.WriteAsync($"<h1>{expectedCardTitle}</h1>");
+                    await response.WriteAsync("</body>");
+                    await response.WriteAsync("</html>");
                     return;
                 }
 
@@ -570,23 +570,23 @@ public class StandardSiteEmbeddedCardGeneratorTests
             {
                 if (request.Path == "/document/12345")
                 {
-                    await response.WriteAsync(@"<!DOCTYPE html>");
-                    await response.WriteAsync(@"<html>");
-                    await response.WriteAsync(@"<head>");
-                    await response.WriteAsync($@"<title>{expectedCardTitle}</title>");
-                    await response.WriteAsync($@"<meta property=""og:title"" content=""{expectedCardTitle}"" />");
-                    await response.WriteAsync($@"<meta property=""og:description"" content=""{expectedCardDescription}"" />");
-                    await response.WriteAsync($@"<meta property=""og:url"" content=""{expectedCardUrl}"" />");
-                    await response.WriteAsync($@"<meta property=""og:image"" content=""{TestServerBuilder.DefaultUri}document/12345/image.png"" />");
-                    await response.WriteAsync($@"<link rel=""site.standard.document"" href=""{expectedStandardSiteDocument}"" />");
-                    await response.WriteAsync($@"<link rel=""site.standard.document"" href=""WRONG"" />");
-                    await response.WriteAsync($@"<link rel=""site.standard.publication"" href=""{expectedStandardSitePublication}"" />");
-                    await response.WriteAsync($@"<link rel=""site.standard.publication"" href=""WRONG"" />");
-                    await response.WriteAsync(@"</head>");
-                    await response.WriteAsync(@"<body>");
-                    await response.WriteAsync($@"<h1>{expectedCardTitle}</h1>");
-                    await response.WriteAsync(@"</body>");
-                    await response.WriteAsync(@"</html>");
+                    await response.WriteAsync("<!DOCTYPE html>");
+                    await response.WriteAsync("<html>");
+                    await response.WriteAsync("<head>");
+                    await response.WriteAsync($"<title>{expectedCardTitle}</title>");
+                    await response.WriteAsync($"<meta property=\"og:title\" content=\"{expectedCardTitle}\" />");
+                    await response.WriteAsync($"<meta property=\"og:description\" content=\"{expectedCardDescription}\" />");
+                    await response.WriteAsync($"<meta property=\"og:url\" content=\"{expectedCardUrl}\" />");
+                    await response.WriteAsync($"<meta property=\"og:image\" content=\"{TestServerBuilder.DefaultUri}document/12345/image.png\" />");
+                    await response.WriteAsync($"<link rel=\"site.standard.document\" href=\"{expectedStandardSiteDocument}\" />");
+                    await response.WriteAsync($"<link rel=\"site.standard.document\" href=\"WRONG\" />");
+                    await response.WriteAsync($"<link rel=\"site.standard.publication\" href=\"{expectedStandardSitePublication}\" />");
+                    await response.WriteAsync($"<link rel=\"site.standard.publication\" href=\"WRONG\" />");
+                    await response.WriteAsync("</head>");
+                    await response.WriteAsync("<body>");
+                    await response.WriteAsync($"<h1>{expectedCardTitle}</h1>");
+                    await response.WriteAsync("</body>");
+                    await response.WriteAsync("</html>");
                     return;
                 }
 

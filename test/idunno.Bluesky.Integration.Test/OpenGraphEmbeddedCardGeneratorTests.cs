@@ -38,19 +38,19 @@ public class OpenGraphEmbeddedCardGeneratorTests
             {
                 if (request.Path == "/document/12345")
                 {
-                    await response.WriteAsync(@"<!DOCTYPE html>");
-                    await response.WriteAsync(@"<html>");
-                    await response.WriteAsync(@"<head>");
-                    await response.WriteAsync($@"<title>{expectedCardTitle}</title>");
-                    await response.WriteAsync($@"<meta property=""og:title"" content=""{expectedCardTitle}"" />");
-                    await response.WriteAsync($@"<meta property=""og:description"" content=""{expectedCardDescription}"" />");
-                    await response.WriteAsync($@"<meta property=""og:url"" content=""{expectedCardUrl}"" />");
-                    await response.WriteAsync($@"<meta property=""og:image"" content=""{TestServerBuilder.DefaultUri}document/12345/image.png"" />");
-                    await response.WriteAsync(@"</head>");
-                    await response.WriteAsync(@"<body>");
-                    await response.WriteAsync($@"<h1>{expectedCardTitle}</h1>");
-                    await response.WriteAsync(@"</body>");
-                    await response.WriteAsync(@"</html>");
+                    await response.WriteAsync("<!DOCTYPE html>");
+                    await response.WriteAsync("<html>");
+                    await response.WriteAsync("<head>");
+                    await response.WriteAsync($"<title>{expectedCardTitle}</title>");
+                    await response.WriteAsync($"<meta property=\"og:title\" content=\"{expectedCardTitle}\" />");
+                    await response.WriteAsync($"<meta property=\"og:description\" content=\"{expectedCardDescription}\" />");
+                    await response.WriteAsync($"<meta property=\"og:url\" content=\"{expectedCardUrl}\" />");
+                    await response.WriteAsync($"<meta property=\"og:image\" content=\"{TestServerBuilder.DefaultUri}document/12345/image.png\" />");
+                    await response.WriteAsync("</head>");
+                    await response.WriteAsync("<body>");
+                    await response.WriteAsync($"<h1>{expectedCardTitle}</h1>");
+                    await response.WriteAsync("</body>");
+                    await response.WriteAsync("</html>");
                     return;
                 }
 
@@ -116,18 +116,18 @@ public class OpenGraphEmbeddedCardGeneratorTests
             {
                 if (request.Path == "/document/12345")
                 {
-                    await response.WriteAsync(@"<!DOCTYPE html>");
-                    await response.WriteAsync(@"<html>");
-                    await response.WriteAsync(@"<head>");
-                    await response.WriteAsync($@"<title>{expectedCardTitle}</title>");
-                    await response.WriteAsync($@"<meta property=""og:title"" content=""{expectedCardTitle}"" />");
-                    await response.WriteAsync($@"<meta property=""og:url"" content=""{expectedCardUrl}"" />");
-                    await response.WriteAsync($@"<meta property=""og:image"" content=""{TestServerBuilder.DefaultUri}document/12345/image.png"" />");
-                    await response.WriteAsync(@"</head>");
-                    await response.WriteAsync(@"<body>");
-                    await response.WriteAsync($@"<h1>{expectedCardTitle}</h1>");
-                    await response.WriteAsync(@"</body>");
-                    await response.WriteAsync(@"</html>");
+                    await response.WriteAsync("<!DOCTYPE html>");
+                    await response.WriteAsync("<html>");
+                    await response.WriteAsync("<head>");
+                    await response.WriteAsync($"<title>{expectedCardTitle}</title>");
+                    await response.WriteAsync($"<meta property=\"og:title\" content=\"{expectedCardTitle}\" />");
+                    await response.WriteAsync($"<meta property=\"og:url\" content=\"{expectedCardUrl}\" />");
+                    await response.WriteAsync($"<meta property=\"og:image\" content=\"{TestServerBuilder.DefaultUri}document/12345/image.png\" />");
+                    await response.WriteAsync("</head>");
+                    await response.WriteAsync("<body>");
+                    await response.WriteAsync($"<h1>{expectedCardTitle}</h1>");
+                    await response.WriteAsync("</body>");
+                    await response.WriteAsync("</html>");
                     return;
                 }
 
@@ -192,18 +192,18 @@ public class OpenGraphEmbeddedCardGeneratorTests
             {
                 if (request.Path == "/document/12345")
                 {
-                    await response.WriteAsync(@"<!DOCTYPE html>");
-                    await response.WriteAsync(@"<html>");
-                    await response.WriteAsync(@"<head>");
-                    await response.WriteAsync($@"<title>{expectedCardTitle}</title>");
-                    await response.WriteAsync($@"<meta property=""og:title"" content=""{expectedCardTitle}"" />");
-                    await response.WriteAsync($@"<meta property=""og:description"" content=""{expectedCardDescription}"" />");
-                    await response.WriteAsync($@"<meta property=""og:url"" content=""{expectedCardUrl}"" />");
-                    await response.WriteAsync(@"</head>");
-                    await response.WriteAsync(@"<body>");
-                    await response.WriteAsync($@"<h1>{expectedCardTitle}</h1>");
-                    await response.WriteAsync(@"</body>");
-                    await response.WriteAsync(@"</html>");
+                    await response.WriteAsync("<!DOCTYPE html>");
+                    await response.WriteAsync("<html>");
+                    await response.WriteAsync("<head>");
+                    await response.WriteAsync($"<title>{expectedCardTitle}</title>");
+                    await response.WriteAsync($"<meta property=\"og:title\" content=\"{expectedCardTitle}\" />");
+                    await response.WriteAsync($"<meta property=\"og:description\" content=\"{expectedCardDescription}\" />");
+                    await response.WriteAsync($"<meta property=\"og:url\" content=\"{expectedCardUrl}\" />");
+                    await response.WriteAsync("</head>");
+                    await response.WriteAsync("<body>");
+                    await response.WriteAsync($"<h1>{expectedCardTitle}</h1>");
+                    await response.WriteAsync("</body>");
+                    await response.WriteAsync("</html>");
                     return;
                 }
             }
@@ -253,22 +253,22 @@ public class OpenGraphEmbeddedCardGeneratorTests
             {
                 if (request.Path == "/document/12345")
                 {
-                    await response.WriteAsync(@"<!DOCTYPE html>");
-                    await response.WriteAsync(@"<html>");
-                    await response.WriteAsync(@"<head>");
-                    await response.WriteAsync($@"<title>{expectedCardTitle}</title>");
-                    await response.WriteAsync($@"<meta property=""og:title"" content=""{expectedCardTitle}"" />");
-                    await response.WriteAsync($@"<meta property=""og:title"" content=""WRONG"" />");
-                    await response.WriteAsync($@"<meta property=""og:description"" content=""{expectedCardDescription}"" />");
-                    await response.WriteAsync($@"<meta property=""og:description"" content=""WRONG"" />");
-                    await response.WriteAsync($@"<meta property=""og:url"" content=""{expectedCardUrl}"" />");
-                    await response.WriteAsync($@"<meta property=""og:url"" content=""WRONG"" />");
-                    await response.WriteAsync($@"<meta property=""og:image"" content=""{TestServerBuilder.DefaultUri}document/12345/image.png"" />");
-                    await response.WriteAsync(@"</head>");
-                    await response.WriteAsync(@"<body>");
-                    await response.WriteAsync($@"<h1>{expectedCardTitle}</h1>");
-                    await response.WriteAsync(@"</body>");
-                    await response.WriteAsync(@"</html>");
+                    await response.WriteAsync("<!DOCTYPE html>");
+                    await response.WriteAsync("<html>");
+                    await response.WriteAsync("<head>");
+                    await response.WriteAsync($"<title>{expectedCardTitle}</title>");
+                    await response.WriteAsync($"<meta property=\"og:title\" content=\"{expectedCardTitle}\" />");
+                    await response.WriteAsync($"<meta property=\"og:title\" content=\"WRONG\" />");
+                    await response.WriteAsync($"<meta property=\"og:description\" content=\"{expectedCardDescription}\" />");
+                    await response.WriteAsync($"<meta property=\"og:description\" content=\"WRONG\" />");
+                    await response.WriteAsync($"<meta property=\"og:url\" content=\"{expectedCardUrl}\" />");
+                    await response.WriteAsync($"<meta property=\"og:url\" content=\"WRONG\" />");
+                    await response.WriteAsync($"<meta property=\"og:image\" content=\"{TestServerBuilder.DefaultUri}document/12345/image.png\" />");
+                    await response.WriteAsync("</head>");
+                    await response.WriteAsync("<body>");
+                    await response.WriteAsync($"<h1>{expectedCardTitle}</h1>");
+                    await response.WriteAsync("</body>");
+                    await response.WriteAsync("</html>");
                     return;
                 }
 

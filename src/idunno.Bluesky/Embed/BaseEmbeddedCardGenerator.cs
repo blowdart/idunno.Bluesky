@@ -171,19 +171,26 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
 
                         if (!imageMimeType.Equals(UnknownImageType, StringComparison.OrdinalIgnoreCase) && Agent is not null)
                         {
-                            // Upload the image blob
-                            AtProtoHttpResult<Blob> uploadResult = await Agent.UploadBlob(
-                                blob: imageData,
-                                mimeType: imageMimeType,
-                                cancellationToken: cancellationToken).ConfigureAwait(false);
+                            try
+                            {
+                                // Upload the image blob
+                                AtProtoHttpResult<Blob> uploadResult = await Agent.UploadBlob(
+                                    blob: imageData,
+                                    mimeType: imageMimeType,
+                                    cancellationToken: cancellationToken).ConfigureAwait(false);
 
-                            if (uploadResult.Succeeded)
-                            {
-                                result = uploadResult.Result;
+                                if (uploadResult.Succeeded)
+                                {
+                                    result = uploadResult.Result;
+                                }
+                                else
+                                {
+                                    Bluesky.Logger.EmbeddedCardImageUploadFailed(Logger, uri, uploadResult.StatusCode, uploadResult.AtErrorDetail?.Error, uploadResult.AtErrorDetail?.Message);
+                                }
                             }
-                            else
+                            catch (Exception ex)
                             {
-                                Bluesky.Logger.EmbeddedCardImageUploadFailed(Logger, uri, uploadResult.StatusCode, uploadResult.AtErrorDetail?.Error, uploadResult.AtErrorDetail?.Message);
+                                Bluesky.Logger.EmbeddedCardImageUploadThrew(Logger, uri, ex);
                             }
                         }
                     }

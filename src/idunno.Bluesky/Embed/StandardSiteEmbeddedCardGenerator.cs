@@ -17,7 +17,7 @@ namespace idunno.Bluesky.Embed;
 /// </summary>
 public sealed partial class StandardSiteCardGenerator : OpenGraphEmbeddedCardGenerator
 {
-    [GeneratedRegex(@"<link rel=\""site.standard.([^\""]+)\"" href=\""([^\""]+)\""", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex("<link rel=\"site.standard.([^\"]+)\" href=\"([^\"]+)\"", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex s_SiteStandardLinkRegex();
 
     /// <summary>
