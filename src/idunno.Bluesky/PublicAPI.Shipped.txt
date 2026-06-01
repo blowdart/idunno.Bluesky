@@ -65,6 +65,9 @@ GermNetwork.Com.MessageMe.MessageMeUrl.set -> void
 GermNetwork.Com.MessageMe.ShowButtonTo.get -> string!
 GermNetwork.Com.MessageMe.ShowButtonTo.set -> void
 GermNetwork.Com.ShowButtonToKnownValues
+const GermNetwork.Com.ShowButtonToKnownValues.Everyone = "everyone" -> string!
+const GermNetwork.Com.ShowButtonToKnownValues.None = "none" -> string!
+const GermNetwork.Com.ShowButtonToKnownValues.UsersIFollow = "usersIFollow" -> string!
 idunno.Bluesky.Actor.ActivitySubscriptions
 idunno.Bluesky.Actor.ActivitySubscriptions.ActivitySubscriptions(idunno.Bluesky.Notifications.NotificationAllowedFrom allowSubscriptions) -> void
 idunno.Bluesky.Actor.ActivitySubscriptions.allowSubscriptions.get -> idunno.Bluesky.Notifications.NotificationAllowedFrom
@@ -867,7 +870,7 @@ idunno.Bluesky.Embed.External.Source.ColorRgb.ColorRgb(int red, int green, int b
 idunno.Bluesky.Embed.External.Source.ColorRgb.Green.get -> int
 idunno.Bluesky.Embed.External.Source.ColorRgb.Green.init -> void
 idunno.Bluesky.Embed.External.Source.ColorRgb.Red.get -> int
-idunno.Bluesky.Embed.External.Source.ColorRgb.Red.set -> void
+idunno.Bluesky.Embed.External.Source.ColorRgb.Red.init -> void
 idunno.Bluesky.Embed.External.Source.Theme
 idunno.Bluesky.Embed.External.Source.Theme.AccentForegroundRGB.get -> idunno.Bluesky.Embed.External.Source.ColorRgb?
 idunno.Bluesky.Embed.External.Source.Theme.AccentForegroundRGB.init -> void

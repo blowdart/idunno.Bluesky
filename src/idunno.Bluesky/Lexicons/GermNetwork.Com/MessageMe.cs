@@ -90,16 +90,16 @@ public static class ShowButtonToKnownValues
     /// <summary>
     /// Show the message button to no-one.
     /// </summary>
-    public static readonly string None = "none";
+    public const string None = "none";
 
     /// <summary>
     /// Show the message button to actors followed by the user.
     /// </summary>
-    public static readonly string UsersIFollow = "usersIFollow";
+    public const string UsersIFollow = "usersIFollow";
 
     /// <summary>
     /// Show the message button to everyone.
     /// </summary>
-    public static readonly string Everyone = "everyone";
+    public const string Everyone = "everyone";
 
 }

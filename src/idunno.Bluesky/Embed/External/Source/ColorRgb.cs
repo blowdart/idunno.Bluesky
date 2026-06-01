@@ -42,7 +42,7 @@ public record ColorRgb
     public int Red
     {
         get;
-        set
+        init
         {
             ArgumentOutOfRangeException.ThrowIfNegative(value);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(value, 255);

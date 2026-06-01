@@ -14,8 +14,7 @@ This will create a Bluesky post that has a card attached to it, rendered in a cl
 
 ![An embedded card for Wikipedia's page on Baked Beans](../media/embeddedCard.png "An embedded Card")
 
-Card generator requires the agent to be authenticated as, if there is image metadata, the agent will
-download the image and upload it to the user's personal data store as a blob.
+Card generators require the agent to be authenticated to allow the uploading of any thumbnail image.
 
 You may notice that the URI for the code does not need to appear in the text of the post, as the card is attached to the post separately.
 This can be useful for creating more engaging posts that don't rely on links in the text.

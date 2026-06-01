@@ -113,7 +113,7 @@ public record View
     public IReadOnlyCollection<Label>? Labels { get; init; }
 
     /// <summary>
-    /// Gets the view over the source of the external embed, if any.
+    /// Gets the view over the source of the external embed.
     /// </summary>
     [JsonInclude]
     public Source.View Source { get; init; }

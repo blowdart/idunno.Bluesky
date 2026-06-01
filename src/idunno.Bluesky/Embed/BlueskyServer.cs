@@ -22,7 +22,7 @@ public static partial class BlueskyServer
     /// Returns `associatedRefs` (strongRefs to embed into a post's external.associatedRefs),
     /// the raw `associatedRecords`, and a hydrated `view`.
     /// The response is empty when no records were resolvable, or when validation determined the resolved records don't actually back the requested <paramref name="url"/>;
-    /// clients should fall back to their own link-card rendering in that case and skip writing strongRefs to the post.",
+    /// clients should fall back to their own link-card rendering in that case and skip writing strongRefs to the post.
     /// </summary>
     /// <param name="url">The canonical web URL the embed represents (typically the URL the user pasted into the composer). Used as the returned view's `uri`. May be used for validation in the future.</param>
     /// <param name="uris">An array of AT-URIs to resolve into the data needed for the embed.</param>

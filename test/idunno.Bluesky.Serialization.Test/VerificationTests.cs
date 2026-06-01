@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 
+using idunno.AtProto;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Record;
 
@@ -82,7 +83,7 @@ public class VerificationTests
         Assert.True(actual.IsValid);
         Assert.Equal(DateTimeOffset.Parse("2025-04-21T10:49:31.969Z"), actual.CreatedAt);
         Assert.Equal("Test Issuer", actual.IssuerDisplayName!);
-        Assert.Equal("jerification.bot", actual.IssuerHandle!);
+        Assert.Equal(new Handle("jerification.bot"), actual.IssuerHandle!);
     }
 
     [Fact]
@@ -108,7 +109,7 @@ public class VerificationTests
         Assert.True(actual.IsValid);
         Assert.Equal(DateTimeOffset.Parse("2025-04-21T10:49:31.969Z"), actual.CreatedAt);
         Assert.Equal("Test Issuer", actual.IssuerDisplayName!);
-        Assert.Equal("jerification.bot", actual.IssuerHandle!);
+        Assert.Equal(new Handle("jerification.bot"), actual.IssuerHandle!);
     }
 
 
