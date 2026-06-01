@@ -29,7 +29,7 @@ to subscribe to the publication, or read the document.
 Posts can only have one card attached to them, so if you have multiple links in a post, you will need to choose which one to create a card for.
 
 > [!TIP]
-> The standard.site metadata format is a superset of Open Graph, so you can use the StandardSiteCardGenerator to create cards from Open Graph metadata.
-> Practically, this means you always use the StandardSiteCardGenerator without worrying about losing support for Open Graph metadata.
+> The standard.site metadata format is a superset of Open Graph, so you can use the StandardSiteEmbeddedCardGenerator to create cards from Open Graph metadata.
+> Practically, this means you always use the StandardSiteEmbeddedCardGenerator without worrying about losing support for Open Graph metadata.
 >
  > If the page can't be fetched (or if the page declares an invalid canonical URL via `og:url`), card generators will return `null`.

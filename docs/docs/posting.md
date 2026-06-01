@@ -454,14 +454,14 @@ blogging system, such as [leaflet.pub](https://leaflet.pub), or [Sequoia](https:
 A standard.site embedded card can include extra UX in Bluesky clients like a button to subscribe to the publication,
 or view the publication.
 
-To generate a Standard.Site card use the `StandardSiteCardGenerator` class.
+To generate a Standard.Site card use the `StandardSiteEmbeddedCardGenerator` class.
 
 ```c#
 Uri uri = new("https://lab.leaflet.pub/3mmwnyfqhyc2d");
-var standardSiteCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
+var StandardSiteEmbeddedCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
 
 var post = new Post($"Testing Standard Site embedding for {uri}.");
-var standardSiteCard = await standardSiteCardGenerator.Generate(uri);
+var standardSiteCard = await StandardSiteEmbeddedCardGenerator.Generate(uri);
 if (standardSiteCard != null)
 {
     post.Embed(standardSiteCard);
@@ -470,8 +470,8 @@ await agent.Post(post);
 ```
 
 > [!TIP]
-> The standard.site metadata format is a superset of Open Graph, so you can use the StandardSiteCardGenerator to create cards from Open Graph metadata.
-> Practically, this means you always use the StandardSiteCardGenerator without worrying about losing support for Open Graph metadata.
+> The standard.site metadata format is a superset of Open Graph, so you can use the StandardSiteEmbeddedCardGenerator to create cards from Open Graph metadata.
+> Practically, this means you always use the StandardSiteEmbeddedCardGenerator without worrying about losing support for Open Graph metadata.
 
 
 Posts with an embedded card don't need any post text.

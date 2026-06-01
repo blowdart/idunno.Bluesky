@@ -53,10 +53,6 @@ public record Profile : BlueskyRecord
             labels: labels,
             createdAt: createdAt)
     {
-        if (createdAt is null)
-        {
-            CreatedAt = DateTimeOffset.UtcNow;
-        }
     }
 
     /// <summary>

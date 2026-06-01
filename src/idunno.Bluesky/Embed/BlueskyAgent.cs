@@ -151,12 +151,12 @@ partial class BlueskyAgent
     }
 
     /// <summary>
-    /// Returns a new instance of a <see cref="StandardSiteCardGenerator"/> class, configured to use the agent.
+    /// Returns a new instance of a <see cref="StandardSiteEmbeddedCardGenerator"/> class, configured to use the agent.
     /// </summary>
-    /// <returns>A new instance of <see cref="StandardSiteCardGenerator"/>.</returns>
-    public StandardSiteCardGenerator CreateStandardSiteEmbeddedCardGenerator()
+    /// <returns>A new instance of <see cref="StandardSiteEmbeddedCardGenerator"/>.</returns>
+    public StandardSiteEmbeddedCardGenerator CreateStandardSiteEmbeddedCardGenerator()
     {
-        return new StandardSiteCardGenerator(
+        return new StandardSiteEmbeddedCardGenerator(
             agent: this,
             httpClient: HttpClient,
             loggerFactory: LoggerFactory);

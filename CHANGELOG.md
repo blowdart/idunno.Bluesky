@@ -22,7 +22,7 @@
 
 ### idunno.Bluesky
 
-* `BlueskyAgent.Post(Post post)` now extract facets from the post text by default, as promised in documentation. You can use the `extractFacets` parameter to control this behavior.
+* `BlueskyAgent.Post(Post post)` now extracts facets from the post text by default, as promised in documentation. You can use the `extractFacets` parameter to control this behavior.
 * Updated `EmbeddedExternalView` to support the new [Standard Site integration](https://github.com/bluesky-social/atproto/discussions/4978).
 * Updated `EmbeddedExternal` to support the new [Standard Site integration](https://github.com/bluesky-social/atproto/discussions/4978).
 * Updated `ProfileViewBasic` to add properties for [Germ integration](https://github.com/bluesky-social/atproto/pull/4415).

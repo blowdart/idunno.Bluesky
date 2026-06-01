@@ -84,9 +84,9 @@ public class StandardSiteEmbeddedCardGeneratorTests
             agent.Credentials = expectedCredentials;
 
             Uri uri = new($"{TestServerBuilder.DefaultUri}document/12345");
-            StandardSiteCardGenerator standardSiteCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
+            StandardSiteEmbeddedCardGenerator StandardSiteEmbeddedCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
 
-            EmbeddedExternal? card = await standardSiteCardGenerator.Generate(uri, TestContext.Current.CancellationToken);
+            EmbeddedExternal? card = await StandardSiteEmbeddedCardGenerator.Generate(uri, TestContext.Current.CancellationToken);
 
             Assert.NotNull(card);
 
@@ -231,9 +231,9 @@ public class StandardSiteEmbeddedCardGeneratorTests
             agent.Credentials = expectedCredentials;
 
             Uri uri = new($"{TestServerBuilder.DefaultUri}document/12345");
-            StandardSiteCardGenerator standardSiteCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
+            StandardSiteEmbeddedCardGenerator StandardSiteEmbeddedCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
 
-            EmbeddedExternal? card = await standardSiteCardGenerator.Generate(uri, TestContext.Current.CancellationToken);
+            EmbeddedExternal? card = await StandardSiteEmbeddedCardGenerator.Generate(uri, TestContext.Current.CancellationToken);
 
             Assert.NotNull(card);
 
@@ -385,9 +385,9 @@ public class StandardSiteEmbeddedCardGeneratorTests
             agent.Credentials = expectedCredentials;
 
             Uri uri = new($"{TestServerBuilder.DefaultUri}document/12345");
-            StandardSiteCardGenerator standardSiteCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
+            StandardSiteEmbeddedCardGenerator StandardSiteEmbeddedCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
 
-            EmbeddedExternal? card = await standardSiteCardGenerator.Generate(uri, TestContext.Current.CancellationToken);
+            EmbeddedExternal? card = await StandardSiteEmbeddedCardGenerator.Generate(uri, TestContext.Current.CancellationToken);
 
             Assert.NotNull(card);
 
@@ -517,9 +517,9 @@ public class StandardSiteEmbeddedCardGeneratorTests
             agent.Credentials = expectedCredentials;
 
             Uri uri = new($"{TestServerBuilder.DefaultUri}document/12345");
-            StandardSiteCardGenerator standardSiteCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
+            StandardSiteEmbeddedCardGenerator StandardSiteEmbeddedCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
 
-            EmbeddedExternal? card = await standardSiteCardGenerator.Generate(uri, TestContext.Current.CancellationToken);
+            EmbeddedExternal? card = await StandardSiteEmbeddedCardGenerator.Generate(uri, TestContext.Current.CancellationToken);
 
             Assert.NotNull(card);
 
@@ -671,9 +671,9 @@ public class StandardSiteEmbeddedCardGeneratorTests
             agent.Credentials = expectedCredentials;
 
             Uri uri = new($"{TestServerBuilder.DefaultUri}document/12345");
-            StandardSiteCardGenerator standardSiteCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
+            StandardSiteEmbeddedCardGenerator StandardSiteEmbeddedCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
 
-            EmbeddedExternal? card = await standardSiteCardGenerator.Generate(uri, TestContext.Current.CancellationToken);
+            EmbeddedExternal? card = await StandardSiteEmbeddedCardGenerator.Generate(uri, TestContext.Current.CancellationToken);
 
             Assert.NotNull(card);
 

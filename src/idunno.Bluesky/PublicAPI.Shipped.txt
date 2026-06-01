@@ -391,7 +391,7 @@ idunno.Bluesky.BlueskyAgent.CreateBookmark(idunno.AtProto.Repo.StrongReference! 
 idunno.Bluesky.BlueskyAgent.CreateList(idunno.Bluesky.Record.BlueskyList! list, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.CreateLiveStatus(System.Uri! uri, string! title, string? description = null, idunno.AtProto.Blob? previewBlob = null, int? durationMinutes = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.CreateOpenGraphEmbeddedCardGenerator() -> idunno.Bluesky.Embed.OpenGraphEmbeddedCardGenerator!
-idunno.Bluesky.BlueskyAgent.CreateStandardSiteEmbeddedCardGenerator() -> idunno.Bluesky.Embed.StandardSiteCardGenerator!
+idunno.Bluesky.BlueskyAgent.CreateStandardSiteEmbeddedCardGenerator() -> idunno.Bluesky.Embed.StandardSiteEmbeddedCardGenerator!
 idunno.Bluesky.BlueskyAgent.CreateStatus(idunno.Bluesky.Record.Status! status, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.CreateModerationReport(idunno.AtProto.Did! labelerDid, idunno.AtProto.Moderation.SubjectType! subject, idunno.Bluesky.Moderation.ReportType reportType, string? reason, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Moderation.ModerationReport!>!>!
 idunno.Bluesky.BlueskyAgent.CreateProfile(idunno.Bluesky.Record.Profile! profile, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
@@ -926,12 +926,12 @@ idunno.Bluesky.Embed.OpenGraphEmbeddedCardGenerator.OpenGraphEmbeddedCardGenerat
 idunno.Bluesky.Embed.OpenGraphEmbeddedCardGenerator.OpenGraphEmbeddedCardGenerator(idunno.Bluesky.BlueskyAgent! agent, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory) -> void
 idunno.Bluesky.Embed.OpenGraphEmbeddedCardGenerator.CreateEmbeddedExternalFromOpenGraphMetadata(System.Uri! uri, string! pageContent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Embed.EmbeddedExternal?>!
 override idunno.Bluesky.Embed.OpenGraphEmbeddedCardGenerator.Generate(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Embed.EmbeddedExternal?>!
-idunno.Bluesky.Embed.StandardSiteCardGenerator
-idunno.Bluesky.Embed.StandardSiteCardGenerator.StandardSiteCardGenerator(idunno.Bluesky.BlueskyAgent! agent) -> void
-idunno.Bluesky.Embed.StandardSiteCardGenerator.StandardSiteCardGenerator(idunno.Bluesky.BlueskyAgent! agent, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory) -> void
-idunno.Bluesky.Embed.StandardSiteCardGenerator.StandardSiteCardGenerator(idunno.Bluesky.BlueskyAgent! agent, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILogger! logger) -> void
-idunno.Bluesky.Embed.StandardSiteCardGenerator.StandardSiteCardGenerator(idunno.Bluesky.BlueskyAgent! agent, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory) -> void
-override idunno.Bluesky.Embed.StandardSiteCardGenerator.Generate(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Embed.EmbeddedExternal?>!
+idunno.Bluesky.Embed.StandardSiteEmbeddedCardGenerator
+idunno.Bluesky.Embed.StandardSiteEmbeddedCardGenerator.StandardSiteEmbeddedCardGenerator(idunno.Bluesky.BlueskyAgent! agent) -> void
+idunno.Bluesky.Embed.StandardSiteEmbeddedCardGenerator.StandardSiteEmbeddedCardGenerator(idunno.Bluesky.BlueskyAgent! agent, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory) -> void
+idunno.Bluesky.Embed.StandardSiteEmbeddedCardGenerator.StandardSiteEmbeddedCardGenerator(idunno.Bluesky.BlueskyAgent! agent, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILogger! logger) -> void
+idunno.Bluesky.Embed.StandardSiteEmbeddedCardGenerator.StandardSiteEmbeddedCardGenerator(idunno.Bluesky.BlueskyAgent! agent, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory) -> void
+override idunno.Bluesky.Embed.StandardSiteEmbeddedCardGenerator.Generate(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Embed.EmbeddedExternal?>!
 idunno.Bluesky.Embed.VideoPresentationKnownValues
 static idunno.Bluesky.Embed.VideoPresentationKnownValues.Default.get -> string!
 static idunno.Bluesky.Embed.VideoPresentationKnownValues.Gif.get -> string!

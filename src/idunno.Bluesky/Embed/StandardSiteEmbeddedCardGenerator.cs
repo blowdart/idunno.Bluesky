@@ -15,62 +15,62 @@ namespace idunno.Bluesky.Embed;
 /// <summary>
 /// Generates an Embedded Card using Standard.Site and OpenGraph metadata from the target URI.
 /// </summary>
-public sealed partial class StandardSiteCardGenerator : OpenGraphEmbeddedCardGenerator
+public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbeddedCardGenerator
 {
     [GeneratedRegex("<link rel=\"site.standard.([^\"]+)\" href=\"([^\"]+)\"", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex s_SiteStandardLinkRegex();
 
     /// <summary>
-    /// Creates a new instance of <see cref="StandardSiteCardGenerator"/>.
+    /// Creates a new instance of <see cref="StandardSiteEmbeddedCardGenerator"/>.
     /// </summary>
     /// <param name="agent">The <see cref="BlueskyAgent"/> to use for thumbnail uploading.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> is <see langword="null" />.</exception>
-    public StandardSiteCardGenerator(BlueskyAgent agent) : this(agent: agent, loggerFactory: null)
+    public StandardSiteEmbeddedCardGenerator(BlueskyAgent agent) : this(agent: agent, loggerFactory: null)
     {
         ArgumentNullException.ThrowIfNull(agent);
     }
 
     /// <summary>
-    /// Creates a new instance of <see cref="StandardSiteCardGenerator"/>.
+    /// Creates a new instance of <see cref="StandardSiteEmbeddedCardGenerator"/>.
     /// </summary>
     /// <param name="agent">The <see cref="BlueskyAgent"/> to use for thumbnail uploading.</param>
     /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> to use for logging. If <see langword="null" />, a no-op logger will be used.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> is <see langword="null" />.</exception>
-    public StandardSiteCardGenerator(BlueskyAgent agent, ILoggerFactory? loggerFactory)
+    public StandardSiteEmbeddedCardGenerator(BlueskyAgent agent, ILoggerFactory? loggerFactory)
         : base(agent: agent)
     {
         ArgumentNullException.ThrowIfNull(agent);
         ArgumentNullException.ThrowIfNull(agent.HttpClient);
 
         loggerFactory ??= NullLoggerFactory.Instance;
-        Logger = loggerFactory.CreateLogger<StandardSiteCardGenerator>();
+        Logger = loggerFactory.CreateLogger<StandardSiteEmbeddedCardGenerator>();
     }
 
     /// <summary>
-    /// Creates a new instance of <see cref="StandardSiteCardGenerator"/>.
+    /// Creates a new instance of <see cref="StandardSiteEmbeddedCardGenerator"/>.
     /// </summary>
     /// <param name="agent">The <see cref="BlueskyAgent"/> to use for thumbnail uploading.</param>
     /// <param name="httpClient">The <see cref="HttpClient"/> to use for making HTTP requests to retrieve Standard.Site data.</param>
     /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> to use for logging. If <see langword="null" />, a no-op logger will be used.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> is <see langword="null" />.</exception>
-    public StandardSiteCardGenerator(BlueskyAgent agent, HttpClient httpClient, ILoggerFactory? loggerFactory)
+    public StandardSiteEmbeddedCardGenerator(BlueskyAgent agent, HttpClient httpClient, ILoggerFactory? loggerFactory)
         : base(agent, httpClient, loggerFactory)
     {
         ArgumentNullException.ThrowIfNull(agent);
         ArgumentNullException.ThrowIfNull(httpClient);
 
         loggerFactory ??= NullLoggerFactory.Instance;
-        Logger = loggerFactory.CreateLogger<StandardSiteCardGenerator>();
+        Logger = loggerFactory.CreateLogger<StandardSiteEmbeddedCardGenerator>();
     }
 
     /// <summary>
-    /// Creates a new instance of <see cref="StandardSiteCardGenerator"/>.
+    /// Creates a new instance of <see cref="StandardSiteEmbeddedCardGenerator"/>.
     /// </summary>
     /// <param name="agent">The <see cref="BlueskyAgent"/> to use for thumbnail uploading.</param>
     /// <param name="httpClient">The <see cref="HttpClient"/> to use for making HTTP requests to retrieve Standard.Site data.</param>
     /// <param name="logger">The <see cref="ILogger"/> to use for logging. If <see langword="null" />, a no-op logger will be used.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> is <see langword="null" />.</exception>
-    public StandardSiteCardGenerator(BlueskyAgent agent, HttpClient httpClient, ILogger logger)
+    public StandardSiteEmbeddedCardGenerator(BlueskyAgent agent, HttpClient httpClient, ILogger logger)
         : base(agent, httpClient, logger)
     {
         ArgumentNullException.ThrowIfNull(agent);

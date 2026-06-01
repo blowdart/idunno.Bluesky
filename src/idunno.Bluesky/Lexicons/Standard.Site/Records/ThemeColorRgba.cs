@@ -15,7 +15,7 @@ namespace Standard.Site;
 public record ThemeColorRgba : ThemeColorRgb
 {
     /// <summary>
-    /// Create a new <see cref="ThemeColorRgb"/> instance.
+    /// Create a new <see cref="ThemeColorRgba"/> instance.
     /// </summary>
     /// <param name="red">The red value for the color.</param>
     /// <param name="green">The green value for the color.</param>
@@ -25,13 +25,6 @@ public record ThemeColorRgba : ThemeColorRgb
     /// is outside their valid ranges.</exception>
     public ThemeColorRgba(int red, int green, int blue, int alpha) : base(red, green, blue)
     {
-        ArgumentOutOfRangeException.ThrowIfNegative(red);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(red, 255);
-        ArgumentOutOfRangeException.ThrowIfNegative(green);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(green, 255);
-        ArgumentOutOfRangeException.ThrowIfNegative(blue);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(blue, 255);
-
         ArgumentOutOfRangeException.ThrowIfNegative(alpha);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(alpha, 100);
         Alpha = alpha;
