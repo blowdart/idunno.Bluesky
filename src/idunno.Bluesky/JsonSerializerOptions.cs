@@ -10,5 +10,5 @@ public partial class BlueskyServer
     /// <summary>
     /// Gets a <see cref="JsonSerializerOptions"/> which includes the Bluesky record types.
     /// </summary>
-    public static JsonSerializerOptions BlueskyJsonSerializerOptions { get; } = Bluesky.BlueskyJsonSerializerOptions.Options;
+    public static JsonSerializerOptions BlueskyJsonSerializerOptions { get; } = global::idunno.Bluesky.BlueskyJsonSerializerOptions.Options;
 }

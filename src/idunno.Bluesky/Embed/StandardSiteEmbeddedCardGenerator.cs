@@ -85,7 +85,7 @@ public sealed partial class StandardSiteCardGenerator : OpenGraphEmbeddedCardGen
     /// </summary>
     /// <param name="uri">The URI to retrieve Standard.Site data from.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>An <see cref="EmbeddedExternal"/> if Standard.Site metadata is found; otherwise, <see langword="null"/>.</returns>
+    /// <returns>An <see cref="EmbeddedExternal"/> if the page can be fetched; otherwise, <see langword="null"/>. Standard.Site metadata will be preferred when available.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is <see langword="null" /></exception>
     /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> is not an absolute URI.</exception>
     [SuppressMessage("Documentation", "CSENSE020:Potential ghost parameter reference in documentation", Justification = "Not a ghost reference.")]

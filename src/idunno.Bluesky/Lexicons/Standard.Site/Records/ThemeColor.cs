@@ -11,7 +11,7 @@ namespace Standard.Site;
 /// Color information for themes.
 /// </summary>
 /// <remarks>
-///<para>Only <see cref="ThemeColorRgb"/> is supported at this moment. This class is used for future expansion.</para>
+///<para>Only <see cref="ThemeColorRgb"/> is supported at this moment. <see cref="ThemeColorRgba"/> is reserved for future expansion and is not part of any production records.</para>
 /// </remarks>
 [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]
 [JsonDerivedType(typeof(ThemeColorRgb), typeDiscriminator: "site.standard.theme.color#rgb")]

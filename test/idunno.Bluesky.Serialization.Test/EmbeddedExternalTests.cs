@@ -55,7 +55,7 @@ public class EmbeddedExternalTests
     }
 
     [Fact]
-    public void ExternalEmbedDeserializesCorrectlyWithAPkctPublication()
+    public void ExternalEmbedDeserializesCorrectlyWithPkctPublicationData()
     {
         var json = """
             {
@@ -96,7 +96,7 @@ public class EmbeddedExternalTests
     }
 
     [Fact]
-    public void ExternalEmbedDeserializesCorreclyWithAPkctPublicationWithAssociatedRefs()
+    public void ExternalEmbedDeserializesCorrectlyWithAPkctPublicationAndAssociatedRefs()
     {
         var json = """
             {
