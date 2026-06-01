@@ -729,18 +729,6 @@ idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.ExtensionData.get -> System
 idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.ExtensionData.set -> void
 idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.Value.get -> TRecord!
 idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.Value.set -> void
-idunno.AtProto.Repo.Blob
-idunno.AtProto.Repo.Blob.Blob(idunno.AtProto.Repo.BlobReference! reference, string! mimeType, int size) -> void
-idunno.AtProto.Repo.Blob.MimeType.get -> string!
-idunno.AtProto.Repo.Blob.MimeType.init -> void
-idunno.AtProto.Repo.Blob.Reference.get -> idunno.AtProto.Repo.BlobReference!
-idunno.AtProto.Repo.Blob.Reference.init -> void
-idunno.AtProto.Repo.Blob.Size.get -> int
-idunno.AtProto.Repo.Blob.Size.init -> void
-idunno.AtProto.Repo.BlobReference
-idunno.AtProto.Repo.BlobReference.BlobReference(idunno.AtProto.Cid! link) -> void
-idunno.AtProto.Repo.BlobReference.Link.get -> idunno.AtProto.Cid!
-idunno.AtProto.Repo.BlobReference.Link.init -> void
 idunno.AtProto.Repo.Commit
 idunno.AtProto.Repo.Commit.Cid.get -> idunno.AtProto.Cid!
 idunno.AtProto.Repo.Commit.Cid.init -> void

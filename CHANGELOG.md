@@ -32,8 +32,8 @@
 
 ### idunno.AtProto
 
-* Marked `Repos.Blob` as obsolete in favour of `Blob` in `idunno.AtProto.Types`.
-* Marked `Repos.BlobReference` as obsolete in favour of `CidLink` in `idunno.AtProto.Types`.
+* Moved `Blob` type to `idunno.AtProto.Types`.
+* Moved `BlobReference` type and renamed to `CidLink` in `idunno.AtProto.Types`.
 
 ### idunno.Bluesky
 

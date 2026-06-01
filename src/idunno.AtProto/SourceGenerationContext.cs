@@ -65,11 +65,6 @@ namespace idunno.AtProto;
 
 [JsonSerializable(typeof(RepoDescription))]
 
-#pragma warning disable 618
-[JsonSerializable(typeof(Repo.Blob), TypeInfoPropertyName = "ObsoleteBlob")]
-[JsonSerializable(typeof(Repo.BlobReference), TypeInfoPropertyName = "ObsoleteBlobReference")]
-#pragma warning restore 618
-
 [JsonSerializable(typeof(BaseSessionResponse))]
 [JsonSerializable(typeof(CreateSessionRequest))]
 [JsonSerializable(typeof(CreateSessionResponse))]
