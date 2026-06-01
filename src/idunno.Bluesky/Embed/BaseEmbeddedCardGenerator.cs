@@ -22,9 +22,8 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
     /// </summary>
     /// <param name="agent">The <see cref="BlueskyAgent"/> used to upload images for embedded cards.</param>
     /// <param name="httpClient">The <see cref="HttpClient"/> used for making HTTP requests.</param>
-    /// <param name="logger">The logger used to log messages.</param>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
-    protected BaseEmbeddedCardGenerator(BlueskyAgent agent, HttpClient? httpClient, ILogger? logger = null)
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> is <see langword="null"/>.</exception>
+    protected BaseEmbeddedCardGenerator(BlueskyAgent agent, HttpClient? httpClient)
     {
         ArgumentNullException.ThrowIfNull(agent);
 
@@ -38,8 +37,6 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
         {
             HttpClient = httpClient;
         }
-
-        ILogger = logger ?? NullLogger.Instance;
     }
 
     /// <summary>
@@ -55,7 +52,7 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
     /// <summary>
     /// Gets the logger used to log messages
     /// </summary>
-    protected ILogger ILogger { get; }
+    protected ILogger Logger { get; set;  } = NullLogger.Instance;
 
     /// <summary>
     /// Gets the mime type returned if the content type of an image is unknown.
@@ -94,7 +91,7 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
                 using HttpResponseMessage response = await HttpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
                 {
-                    Logger.EmbeddedCardGetRequestFailedWithStatusCode(ILogger, uri, response.StatusCode);
+                    Bluesky.Logger.EmbeddedCardGetRequestFailedWithStatusCode(Logger, uri, response.StatusCode);
                     return null;
                 }
 
@@ -103,7 +100,7 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
             }
             catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
             {
-                Logger.EmbeddedCardGetRequestThrew(ILogger, uri, ex);
+                Bluesky.Logger.EmbeddedCardGetRequestThrew(Logger, uri, ex);
                 return null;
             }
         }
@@ -186,20 +183,20 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
                             }
                             else
                             {
-                                Logger.EmbeddedCardImageUploadFailed(ILogger, uri, uploadResult.StatusCode, uploadResult.AtErrorDetail?.Error, uploadResult.AtErrorDetail?.Message);
+                                Bluesky.Logger.EmbeddedCardImageUploadFailed(Logger, uri, uploadResult.StatusCode, uploadResult.AtErrorDetail?.Error, uploadResult.AtErrorDetail?.Message);
                             }
                         }
                     }
                     else
                     {
-                        Logger.EmbeddedCardGetRequestFailedWithStatusCode(ILogger, uri, response.StatusCode);
+                        Bluesky.Logger.EmbeddedCardGetRequestFailedWithStatusCode(Logger, uri, response.StatusCode);
                     }
                 }
             }
         }
         catch (Exception ex)
         {
-            Logger.EmbeddedCardImageGetRequestThrew(ILogger, uri, ex);
+            Bluesky.Logger.EmbeddedCardImageGetRequestThrew(Logger, uri, ex);
         }
 
         return result;

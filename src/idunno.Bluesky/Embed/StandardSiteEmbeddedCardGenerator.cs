@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
@@ -24,7 +25,7 @@ public sealed partial class StandardSiteCardGenerator : OpenGraphEmbeddedCardGen
     /// </summary>
     /// <param name="agent">The <see cref="BlueskyAgent"/> to use for thumbnail uploading.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> is <see langword="null" />.</exception>
-    public StandardSiteCardGenerator(BlueskyAgent agent) : this(agent: agent, logger: null)
+    public StandardSiteCardGenerator(BlueskyAgent agent) : this(agent: agent, loggerFactory: null)
     {
         ArgumentNullException.ThrowIfNull(agent);
     }
@@ -33,13 +34,16 @@ public sealed partial class StandardSiteCardGenerator : OpenGraphEmbeddedCardGen
     /// Creates a new instance of <see cref="StandardSiteCardGenerator"/>.
     /// </summary>
     /// <param name="agent">The <see cref="BlueskyAgent"/> to use for thumbnail uploading.</param>
-    /// <param name="logger">The <see cref="ILogger"/> to use for logging. If <see langword="null" />, a no-op logger will be used.</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> to use for logging. If <see langword="null" />, a no-op logger will be used.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> is <see langword="null" />.</exception>
-    public StandardSiteCardGenerator(BlueskyAgent agent, ILogger<StandardSiteCardGenerator>? logger)
-        : base(agent, agent?.HttpClient!, logger!)
+    public StandardSiteCardGenerator(BlueskyAgent agent, ILoggerFactory? loggerFactory)
+        : base(agent: agent)
     {
         ArgumentNullException.ThrowIfNull(agent);
         ArgumentNullException.ThrowIfNull(agent.HttpClient);
+
+        loggerFactory ??= NullLoggerFactory.Instance;
+        Logger = loggerFactory.CreateLogger<StandardSiteCardGenerator>();
     }
 
     /// <summary>
@@ -47,14 +51,33 @@ public sealed partial class StandardSiteCardGenerator : OpenGraphEmbeddedCardGen
     /// </summary>
     /// <param name="agent">The <see cref="BlueskyAgent"/> to use for thumbnail uploading.</param>
     /// <param name="httpClient">The <see cref="HttpClient"/> to use for making HTTP requests to retrieve Standard.Site data.</param>
-    /// <param name="logger">The <see cref="Microsoft.Extensions.Logging.ILogger"/> to use for logging. If <see langword="null" />, a no-op logger will be used.</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> to use for logging. If <see langword="null" />, a no-op logger will be used.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> is <see langword="null" />.</exception>
-    public StandardSiteCardGenerator(BlueskyAgent agent, HttpClient httpClient, ILogger<StandardSiteCardGenerator> logger)
+    public StandardSiteCardGenerator(BlueskyAgent agent, HttpClient httpClient, ILoggerFactory? loggerFactory)
+        : base(agent, httpClient, loggerFactory)
+    {
+        ArgumentNullException.ThrowIfNull(agent);
+        ArgumentNullException.ThrowIfNull(httpClient);
+
+        loggerFactory ??= NullLoggerFactory.Instance;
+        Logger = loggerFactory.CreateLogger<StandardSiteCardGenerator>();
+    }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="StandardSiteCardGenerator"/>.
+    /// </summary>
+    /// <param name="agent">The <see cref="BlueskyAgent"/> to use for thumbnail uploading.</param>
+    /// <param name="httpClient">The <see cref="HttpClient"/> to use for making HTTP requests to retrieve Standard.Site data.</param>
+    /// <param name="logger">The <see cref="ILogger"/> to use for logging. If <see langword="null" />, a no-op logger will be used.</param>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> is <see langword="null" />.</exception>
+    public StandardSiteCardGenerator(BlueskyAgent agent, HttpClient httpClient, ILogger logger)
         : base(agent, httpClient, logger)
     {
         ArgumentNullException.ThrowIfNull(agent);
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(logger);
+
+        Logger = logger;
     }
 
     /// <summary>
@@ -64,9 +87,17 @@ public sealed partial class StandardSiteCardGenerator : OpenGraphEmbeddedCardGen
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>An <see cref="EmbeddedExternal"/> if Standard.Site metadata is found; otherwise, <see langword="null"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is <see langword="null" /></exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> is not an absolute URI.</exception>
+    [SuppressMessage("Documentation", "CSENSE020:Potential ghost parameter reference in documentation", Justification = "Not a ghost reference.")]
     public override async Task<EmbeddedExternal?> Generate(Uri uri, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
+
+        if (!uri.IsAbsoluteUri)
+        {
+            throw new ArgumentException("URI must be absolute.", nameof(uri));
+        }
+
 
         string? pageContent = await GetPageContent(uri, cancellationToken).ConfigureAwait(false);
 
@@ -124,7 +155,7 @@ public sealed partial class StandardSiteCardGenerator : OpenGraphEmbeddedCardGen
         {
             if (documentAtUri.Repo is null)
             {
-                Logger.FailedToFindOrParseSiteStandardDocumentLink(ILogger, uri);
+                Bluesky.Logger.FailedToFindOrParseSiteStandardDocumentLink(Logger, uri);
                 return result;
             }
 
@@ -140,14 +171,14 @@ public sealed partial class StandardSiteCardGenerator : OpenGraphEmbeddedCardGen
 
             if (documentAuthorDid is null)
             {
-                Logger.AuthorDidRepoNotPresentInSiteStandardDocumentLink(ILogger, documentAtUri, uri);
+                Bluesky.Logger.AuthorDidRepoNotPresentInSiteStandardDocumentLink(Logger, documentAtUri, uri);
                 return result;
             }
 
             Uri? documentRecordPds = await Agent.ResolvePds(documentAuthorDid, cancellationToken).ConfigureAwait(false);
             if (documentRecordPds is null)
             {
-                Logger.PdsForAuthorDidNotFound(ILogger, documentAuthorDid, uri);
+                Bluesky.Logger.PdsForAuthorDidNotFound(Logger, documentAuthorDid, uri);
                 return result;
             }
 
@@ -175,7 +206,7 @@ public sealed partial class StandardSiteCardGenerator : OpenGraphEmbeddedCardGen
 
                 if (publicationAuthorDid is null)
                 {
-                    Logger.PublicationDidRepoNotPresent(ILogger, publicationAtUri, uri);
+                    Bluesky.Logger.PublicationDidRepoNotPresent(Logger, publicationAtUri, uri);
                     return result;
                 }
 
@@ -192,7 +223,7 @@ public sealed partial class StandardSiteCardGenerator : OpenGraphEmbeddedCardGen
 
                 if (publicationRecordPds is null)
                 {
-                    Logger.PdsForPublicationDidNotFound(ILogger, publicationAuthorDid, uri);
+                    Bluesky.Logger.PdsForPublicationDidNotFound(Logger, publicationAuthorDid, uri);
                     return result;
                 }
 

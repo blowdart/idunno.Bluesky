@@ -1646,17 +1646,17 @@ public partial class AtProtoAgent : Agent
 
         if (uri.Repo is null)
         {
-            throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
+            throw new ArgumentException("${uri} does not have a repo.", nameof(uri));
         }
 
         if (uri.Collection is null)
         {
-            throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+            throw new ArgumentException("${uri} does not have a collection.", nameof(uri));
         }
 
         if (uri.RecordKey is null)
         {
-            throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+            throw new ArgumentException("${uri} does not have an rKey.", nameof(uri));
         }
 
         return await GetRawRecord(uri.Repo, uri.Collection, uri.RecordKey, cid: cid, service: pds, serviceProxy: null, cancellationToken: cancellationToken).ConfigureAwait(false);

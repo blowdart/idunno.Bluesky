@@ -147,7 +147,7 @@ partial class BlueskyAgent
         return new OpenGraphEmbeddedCardGenerator(
             agent: this,
             httpClient: HttpClient,
-            logger: LoggerFactory.CreateLogger<OpenGraphEmbeddedCardGenerator>());
+            loggerFactory: LoggerFactory);
     }
 
     /// <summary>
@@ -159,6 +159,6 @@ partial class BlueskyAgent
         return new StandardSiteCardGenerator(
             agent: this,
             httpClient: HttpClient,
-            logger: LoggerFactory.CreateLogger<StandardSiteCardGenerator>());
+            loggerFactory: LoggerFactory);
      }
 }

@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 using idunno.AtProto;
 
@@ -27,7 +28,7 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
     /// </summary>
     /// <param name="agent">The <see cref="BlueskyAgent"/> to use for thumbnail uploading.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> is <see langword="null" />.</exception>
-    public OpenGraphEmbeddedCardGenerator(BlueskyAgent agent) : this(agent: agent, logger: null)
+    public OpenGraphEmbeddedCardGenerator(BlueskyAgent agent) : this(agent: agent, loggerFactory: null)
     {
         ArgumentNullException.ThrowIfNull(agent);
     }
@@ -36,13 +37,31 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
     /// Creates a new instance of <see cref="OpenGraphEmbeddedCardGenerator"/>.
     /// </summary>
     /// <param name="agent">The <see cref="BlueskyAgent"/> to use for thumbnail uploading.</param>
-    /// <param name="logger">The <see cref="ILogger"/> to use for logging. If <see langword="null" />, a no-op logger will be used.</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> to use for logging. If <see langword="null" />, a no-op logger will be used.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> is <see langword="null" />.</exception>
-    public OpenGraphEmbeddedCardGenerator(BlueskyAgent agent, ILogger<OpenGraphEmbeddedCardGenerator>? logger)
-        : base(agent, agent?.HttpClient, logger)
+    public OpenGraphEmbeddedCardGenerator(BlueskyAgent agent, ILoggerFactory? loggerFactory)
+        : base(agent, agent?.HttpClient)
     {
         ArgumentNullException.ThrowIfNull(agent);
         ArgumentNullException.ThrowIfNull(agent.HttpClient);
+
+        loggerFactory ??= NullLoggerFactory.Instance;
+        Logger = loggerFactory.CreateLogger<OpenGraphEmbeddedCardGenerator>();
+    }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="OpenGraphEmbeddedCardGenerator"/>.
+    /// </summary>
+    /// <param name="agent">The <see cref="BlueskyAgent"/> to use for thumbnail uploading.</param>
+    /// <param name="logger">The <see cref="ILogger"/> to use for logging.</param>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> or <paramref name="logger"/> is <see langword="null" />.</exception>
+    protected OpenGraphEmbeddedCardGenerator(BlueskyAgent agent, ILogger logger)
+        : base(agent, agent?.HttpClient)
+    {
+        ArgumentNullException.ThrowIfNull(agent);
+        ArgumentNullException.ThrowIfNull(agent.HttpClient);
+        ArgumentNullException.ThrowIfNull(logger);
+        Logger = logger;
     }
 
     /// <summary>
@@ -50,14 +69,33 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
     /// </summary>
     /// <param name="agent">The <see cref="BlueskyAgent"/> to use for thumbnail uploading.</param>
     /// <param name="httpClient">The <see cref="HttpClient"/> to use for making HTTP requests to retrieve OpenGraph data.</param>
-    /// <param name="logger">The <see cref="Microsoft.Extensions.Logging.ILogger"/> to use for logging. If <see langword="null" />, a no-op logger will be used.</param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> to use for logging. If <see langword="null" />, a no-op logger will be used.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> is <see langword="null" />.</exception>
-    public OpenGraphEmbeddedCardGenerator(BlueskyAgent agent, HttpClient httpClient, ILogger<OpenGraphEmbeddedCardGenerator> logger)
-        : base(agent, httpClient, logger)
+    public OpenGraphEmbeddedCardGenerator(BlueskyAgent agent, HttpClient httpClient, ILoggerFactory? loggerFactory)
+        : base(agent, httpClient)
+    {
+        ArgumentNullException.ThrowIfNull(agent);
+        ArgumentNullException.ThrowIfNull(httpClient);
+
+        loggerFactory ??= NullLoggerFactory.Instance;
+        Logger = loggerFactory.CreateLogger<OpenGraphEmbeddedCardGenerator>();
+    }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="OpenGraphEmbeddedCardGenerator"/>.
+    /// </summary>
+    /// <param name="agent">The <see cref="BlueskyAgent"/> to use for thumbnail uploading.</param>
+    /// <param name="httpClient">The <see cref="HttpClient"/> to use for making HTTP requests to retrieve OpenGraph data.</param>
+    /// <param name="logger">The <see cref="ILogger"/> to use for logging.</param>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/>, <paramref name="httpClient"/>, or <paramref name="logger"/> is <see langword="null" />.</exception>
+    protected OpenGraphEmbeddedCardGenerator(BlueskyAgent agent, HttpClient httpClient, ILogger logger)
+        : base(agent, httpClient)
     {
         ArgumentNullException.ThrowIfNull(agent);
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(logger);
+
+        Logger = logger;
     }
 
     /// <summary>
@@ -67,9 +105,16 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>An <see cref="EmbeddedExternal"/> if OpenGraph data is found; otherwise, <see langword="null"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is <see langword="null" /></exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> is not an absolute URI.</exception>
+    [SuppressMessage("Documentation", "CSENSE020:Potential ghost parameter reference in documentation", Justification = "Not a ghost reference.")]
     public override async Task<EmbeddedExternal?> Generate(Uri uri, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
+
+        if (!uri.IsAbsoluteUri)
+        {
+            throw new ArgumentException("URI must be absolute.", nameof(uri));
+        }
 
         string? pageContent = await GetPageContent(uri, cancellationToken).ConfigureAwait(false);
 
@@ -87,10 +132,17 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>An <see cref="EmbeddedExternal"/> if OpenGraph data is found; otherwise, <see langword="null"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is <see langword="null" /></exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> is not an absolute URI.</exception>
     [SuppressMessage("Minor Code Smell", "S3267:Loops should be simplified with \"LINQ\" expressions", Justification = "Avoid linq allocations in a hot path.")]
+    [SuppressMessage("Documentation", "CSENSE020:Potential ghost parameter reference in documentation", Justification = "Not a ghost reference.")]
     protected async Task<EmbeddedExternal?> CreateEmbeddedExternalFromOpenGraphMetadata(Uri uri, string pageContent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
+
+        if (!uri.IsAbsoluteUri)
+        {
+            throw new ArgumentException("URI must be absolute.", nameof(uri));
+        }
 
         Dictionary<string, string> openGraphProperties = [];
 
@@ -107,7 +159,12 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
 
         // Look for the basic OpenGraph properties that are required for an OpenCard embed. If they are not present, fall back to using the page title and supplied URI.
         string? canonicalUrl = openGraphProperties.TryGetValue("url", out string? openGraphUrl) ? openGraphUrl : uri.ToString();
-        string? title = openGraphProperties.TryGetValue("title", out string? titleValue) ? titleValue : null;
+        if (!Uri.TryCreate(canonicalUrl, UriKind.Absolute, out Uri? _))
+        {
+            return null;
+        }
+
+        string? title = openGraphProperties.TryGetValue("title", out string? titleValue) ? titleValue : canonicalUrl;
         string? description = openGraphProperties.TryGetValue("description", out string? descriptionValue) ? descriptionValue : null;
         Blob? thumb = null;
 

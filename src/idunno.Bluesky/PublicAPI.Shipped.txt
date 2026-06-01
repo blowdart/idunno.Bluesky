@@ -745,13 +745,14 @@ idunno.Bluesky.Embed.Caption.Lang.get -> string!
 idunno.Bluesky.Embed.Caption.Lang.init -> void
 abstract idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.Generate(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Embed.EmbeddedExternal?>!
 idunno.Bluesky.Embed.BaseEmbeddedCardGenerator
+idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.BaseEmbeddedCardGenerator(idunno.Bluesky.BlueskyAgent! agent, System.Net.Http.HttpClient? httpClient) -> void
 idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.Agent.get -> idunno.Bluesky.BlueskyAgent!
-idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.BaseEmbeddedCardGenerator(idunno.Bluesky.BlueskyAgent! agent, System.Net.Http.HttpClient? httpClient, Microsoft.Extensions.Logging.ILogger? logger = null) -> void
 idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.Dispose() -> void
 idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.DownloadAndUploadImageBlob(string! uri, string? imageMimeType = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Blob?>!
 idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.DownloadAndUploadImageBlob(System.Uri! uri, string? imageMimeType = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Blob?>!
 idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.HttpClient.get -> System.Net.Http.HttpClient!
-idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.ILogger.get -> Microsoft.Extensions.Logging.ILogger!
+idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.Logger.get -> Microsoft.Extensions.Logging.ILogger!
+idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.Logger.set -> void
 static idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.UnknownImageType.get -> string!
 virtual idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.Dispose(bool disposing) -> void
 virtual idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.GetPageContent(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!
@@ -916,14 +917,17 @@ idunno.Bluesky.Embed.IEmbeddedCardGenerator
 idunno.Bluesky.Embed.IEmbeddedCardGenerator.Generate(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Embed.EmbeddedExternal?>!
 idunno.Bluesky.Embed.OpenGraphEmbeddedCardGenerator
 idunno.Bluesky.Embed.OpenGraphEmbeddedCardGenerator.OpenGraphEmbeddedCardGenerator(idunno.Bluesky.BlueskyAgent! agent) -> void
-idunno.Bluesky.Embed.OpenGraphEmbeddedCardGenerator.OpenGraphEmbeddedCardGenerator(idunno.Bluesky.BlueskyAgent! agent, Microsoft.Extensions.Logging.ILogger<idunno.Bluesky.Embed.OpenGraphEmbeddedCardGenerator!>? logger) -> void
-idunno.Bluesky.Embed.OpenGraphEmbeddedCardGenerator.OpenGraphEmbeddedCardGenerator(idunno.Bluesky.BlueskyAgent! agent, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILogger<idunno.Bluesky.Embed.OpenGraphEmbeddedCardGenerator!>! logger) -> void
+idunno.Bluesky.Embed.OpenGraphEmbeddedCardGenerator.OpenGraphEmbeddedCardGenerator(idunno.Bluesky.BlueskyAgent! agent, Microsoft.Extensions.Logging.ILogger! logger) -> void
+idunno.Bluesky.Embed.OpenGraphEmbeddedCardGenerator.OpenGraphEmbeddedCardGenerator(idunno.Bluesky.BlueskyAgent! agent, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory) -> void
+idunno.Bluesky.Embed.OpenGraphEmbeddedCardGenerator.OpenGraphEmbeddedCardGenerator(idunno.Bluesky.BlueskyAgent! agent, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILogger! logger) -> void
+idunno.Bluesky.Embed.OpenGraphEmbeddedCardGenerator.OpenGraphEmbeddedCardGenerator(idunno.Bluesky.BlueskyAgent! agent, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory) -> void
 idunno.Bluesky.Embed.OpenGraphEmbeddedCardGenerator.CreateEmbeddedExternalFromOpenGraphMetadata(System.Uri! uri, string! pageContent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Embed.EmbeddedExternal?>!
 override idunno.Bluesky.Embed.OpenGraphEmbeddedCardGenerator.Generate(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Embed.EmbeddedExternal?>!
 idunno.Bluesky.Embed.StandardSiteCardGenerator
 idunno.Bluesky.Embed.StandardSiteCardGenerator.StandardSiteCardGenerator(idunno.Bluesky.BlueskyAgent! agent) -> void
-idunno.Bluesky.Embed.StandardSiteCardGenerator.StandardSiteCardGenerator(idunno.Bluesky.BlueskyAgent! agent, Microsoft.Extensions.Logging.ILogger<idunno.Bluesky.Embed.StandardSiteCardGenerator!>? logger) -> void
-idunno.Bluesky.Embed.StandardSiteCardGenerator.StandardSiteCardGenerator(idunno.Bluesky.BlueskyAgent! agent, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILogger<idunno.Bluesky.Embed.StandardSiteCardGenerator!>! logger) -> void
+idunno.Bluesky.Embed.StandardSiteCardGenerator.StandardSiteCardGenerator(idunno.Bluesky.BlueskyAgent! agent, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory) -> void
+idunno.Bluesky.Embed.StandardSiteCardGenerator.StandardSiteCardGenerator(idunno.Bluesky.BlueskyAgent! agent, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILogger! logger) -> void
+idunno.Bluesky.Embed.StandardSiteCardGenerator.StandardSiteCardGenerator(idunno.Bluesky.BlueskyAgent! agent, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory) -> void
 override idunno.Bluesky.Embed.StandardSiteCardGenerator.Generate(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Embed.EmbeddedExternal?>!
 idunno.Bluesky.Embed.VideoPresentationKnownValues
 static idunno.Bluesky.Embed.VideoPresentationKnownValues.Default.get -> string!
