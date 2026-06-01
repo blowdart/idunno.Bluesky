@@ -29,7 +29,7 @@ public record Publication : Publication<Preferences>
     /// <param name="description">Optional brief description of the publication. If specified must be &lt; 3000 characters and &lt; 300 graphemes.</param>
     /// <param name="basicTheme">Optional simplified publication theme for tools and apps to utilize when displaying content.</param>
     /// <param name="preferences">Optional record containing platform specific preferences (with a few shared properties).</param>
-    public Publication(Uri url, string name, idunno.AtProto.Blob? icon = null, string? description = null, BasicTheme? basicTheme = null, Preferences? preferences = null)
+    public Publication(Uri url, string name, Blob? icon = null, string? description = null, BasicTheme? basicTheme = null, Preferences? preferences = null)
         : base(url, name, icon, description, basicTheme, preferences)
     {
     }
@@ -54,7 +54,7 @@ public record Publication<T> : AtProtoRecord where T : Preferences
     /// <param name="basicTheme">Optional simplified publication theme for tools and apps to utilize when displaying content.</param>
     /// <param name="preferences">Optional record containing platform specific preferences (with a few shared properties).</param>
     /// <exception cref="ArgumentException">Thrown when the provided arguments are invalid.</exception>
-    public Publication(Uri url, string name, idunno.AtProto.Blob? icon = null, string? description = null, BasicTheme? basicTheme = null, T? preferences = null)
+    public Publication(Uri url, string name, Blob? icon = null, string? description = null, BasicTheme? basicTheme = null, T? preferences = null)
     {
         ArgumentNullException.ThrowIfNull(url);
         ArgumentException.ThrowIfNullOrEmpty(name);
@@ -102,7 +102,7 @@ public record Publication<T> : AtProtoRecord where T : Preferences
     /// Gets the optional image to identify the publication, if any.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public idunno.AtProto.Blob? Icon { get; set; }
+    public Blob? Icon { get; set; }
 
     /// <summary>
     /// Gets the description of the publication, if any.

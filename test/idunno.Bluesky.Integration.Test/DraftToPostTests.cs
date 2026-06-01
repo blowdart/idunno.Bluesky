@@ -357,7 +357,7 @@ public class DraftToPostTests
         {
             context.Response.StatusCode = 200;
             var createBlobResponse = new CreateBlobResponse(
-                new AtProto.Blob(
+                new Blob(
                     new CidLink(s_expectedBlobCid),
                     $"image/{Path.GetExtension(imagePath)[1..]}",
                     (int)new FileInfo(imagePath).Length));
@@ -548,7 +548,7 @@ public class DraftToPostTests
         {
             context.Response.StatusCode = 200;
             var createBlobResponse = new CreateBlobResponse(
-                new AtProto.Blob(
+                new Blob(
                     new CidLink(s_expectedBlobCid),
                     $"image/{Path.GetExtension(imagePath)[1..]}",
                     (int)new FileInfo(imagePath).Length));
@@ -696,7 +696,7 @@ public class DraftToPostTests
 
             context.Response.StatusCode = 200;
             var createBlobResponse = new CreateBlobResponse(
-                new AtProto.Blob(
+                new Blob(
                     new CidLink(s_expectedBlobCid),
                     $"image/{Path.GetExtension(imagePath)[1..]}",
                     (int)new FileInfo(imagePath).Length));
@@ -813,7 +813,7 @@ public class DraftToPostTests
 
             context.Response.StatusCode = 200;
             var createBlobResponse = new CreateBlobResponse(
-                new AtProto.Blob(
+                new Blob(
                     new CidLink(s_expectedBlobCid),
                     $"image/{Path.GetExtension(imagePath)[1..]}",
                     (int)new FileInfo(imagePath).Length));
@@ -932,7 +932,7 @@ public class DraftToPostTests
 
             context.Response.StatusCode = 200;
             var createBlobResponse = new CreateBlobResponse(
-                new AtProto.Blob(
+                new Blob(
                     new CidLink(s_expectedBlobCid),
                     $"image/{Path.GetExtension(imagePath)[1..]}",
                     (int)new FileInfo(imagePath).Length));
@@ -1054,7 +1054,7 @@ public class DraftToPostTests
 
             context.Response.StatusCode = 200;
             var createBlobResponse = new CreateBlobResponse(
-                new AtProto.Blob(
+                new Blob(
                     new CidLink(s_expectedBlobCid),
                     $"image/{Path.GetExtension(imagePath)[1..]}",
                     (int)new FileInfo(imagePath).Length));
@@ -1176,7 +1176,7 @@ public class DraftToPostTests
 
             context.Response.StatusCode = 200;
             var createBlobResponse = new CreateBlobResponse(
-                new AtProto.Blob(
+                new Blob(
                     new CidLink(s_expectedBlobCid),
                     $"image/{Path.GetExtension(imagePath)[1..]}",
                     (int)new FileInfo(imagePath).Length));

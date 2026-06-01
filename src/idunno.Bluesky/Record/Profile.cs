@@ -37,8 +37,8 @@ public record Profile : BlueskyRecord
         string? description = null,
         string? pronouns = null,
         Uri? website = null,
-        AtProto.Blob? avatar = null,
-        AtProto.Blob? banner = null,
+        Blob? avatar = null,
+        Blob? banner = null,
         StrongReference? pinnedPost = null,
         SelfLabels? labels = null,
         DateTimeOffset? createdAt = null) : this(
@@ -74,8 +74,8 @@ public record Profile : BlueskyRecord
         string? description,
         string? pronouns,
         Uri? website,
-        AtProto.Blob? avatar,
-        AtProto.Blob? banner,
+        Blob? avatar,
+        Blob? banner,
         StrongReference? joinedViaStarterPack,
         StrongReference? pinnedPost,
         SelfLabels? labels,
@@ -180,13 +180,13 @@ public record Profile : BlueskyRecord
     /// Gets a small image to be displayed next to posts from account.
     /// </summary>
     [JsonInclude]
-    public AtProto.Blob? Avatar { get; set; }
+    public Blob? Avatar { get; set; }
 
     /// <summary>
     /// Gets a larger horizontal image to display behind profile view
     /// </summary>
     [JsonInclude]
-    public AtProto.Blob? Banner { get; set; }
+    public Blob? Banner { get; set; }
 
     /// <summary>
     /// If the user joined via a starter pack gets a <see cref="StrongReference"/> to that starter pack.

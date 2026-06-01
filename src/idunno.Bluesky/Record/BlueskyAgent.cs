@@ -798,7 +798,7 @@ public partial class BlueskyAgent
     /// <param name="uri">The uri of the live stream.</param>
     /// <param name="title">The title of the stream.</param>
     /// <param name="description">An optional description of the stream.</param>
-    /// <param name="previewBlob">An optional <see cref="idunno.AtProto.Blob"/> containing a preview image for the stream.</param>
+    /// <param name="previewBlob">An optional <see cref="Blob"/> containing a preview image for the stream.</param>
     /// <param name="durationMinutes">The optional duration of the stream in minutes.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -809,7 +809,7 @@ public partial class BlueskyAgent
         Uri uri,
         string title,
         string? description = null,
-        idunno.AtProto.Blob? previewBlob = null,
+        Blob? previewBlob = null,
         int? durationMinutes = null,
         CancellationToken cancellationToken = default)
     {
@@ -822,7 +822,7 @@ public partial class BlueskyAgent
     /// <param name="uri">The uri of the live stream.</param>
     /// <param name="title">The title of the stream.</param>
     /// <param name="description">An optional description of the stream.</param>
-    /// <param name="previewBlob">An optional <see cref="idunno.AtProto.Blob"/> containing a preview image for the stream.</param>
+    /// <param name="previewBlob">An optional <see cref="Blob"/> containing a preview image for the stream.</param>
     /// <param name="durationMinutes">The optional duration of the stream in minutes.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -832,7 +832,7 @@ public partial class BlueskyAgent
         Uri uri,
         string title,
         string? description = null,
-        idunno.AtProto.Blob? previewBlob = null,
+        Blob? previewBlob = null,
         int? durationMinutes = null,
         CancellationToken cancellationToken = default)
     {

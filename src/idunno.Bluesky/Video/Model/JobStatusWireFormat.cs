@@ -16,7 +16,7 @@ internal sealed record JobStatusWireFormat
         Did did,
         string? stateAsString,
         int? progress,
-        AtProto.Blob? blob,
+        Blob? blob,
         string? error,
         string? message)
     {
@@ -46,7 +46,7 @@ internal sealed record JobStatusWireFormat
     public int? Progress { get; init; } = 0;
 
     [JsonInclude]
-    public AtProto.Blob? Blob { get; init; }
+    public Blob? Blob { get; init; }
 
     [JsonInclude]
     public string? Error { get; init; }

@@ -2190,7 +2190,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        AtProtoHttpResult<AtProto.Blob> uploadResult = await UploadBlob(
+        AtProtoHttpResult<Blob> uploadResult = await UploadBlob(
             imageAsBytes,
             mimeType,
             cancellationToken: cancellationToken).ConfigureAwait(false);

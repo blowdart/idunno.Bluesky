@@ -50,7 +50,7 @@ public record Document : Document<JsonNode>
         DateTimeOffset publishedAt,
         string? path = null,
         string? description = null,
-        idunno.AtProto.Blob? coverImage = null,
+        Blob? coverImage = null,
         JsonNode? content = null,
         string? textContent = null,
         StrongReference? bskyPostRef = null,
@@ -98,7 +98,7 @@ public record Document : Document<JsonNode>
         DateTimeOffset publishedAt,
         string? path = null,
         string? description = null,
-        idunno.AtProto.Blob? coverImage = null,
+        Blob? coverImage = null,
         JsonNode? content = null,
         string? textContent = null,
         StrongReference? bskyPostRef = null,
@@ -146,7 +146,7 @@ public record Document : Document<JsonNode>
         DateTimeOffset publishedAt,
         string? path = null,
         string? description = null,
-        idunno.AtProto.Blob? coverImage = null,
+        Blob? coverImage = null,
         JsonNode? content = null,
         string? textContent = null,
         StrongReference? bskyPostRef = null,
@@ -206,7 +206,7 @@ public record Document<T> : AtProtoRecord where T : class
         DateTimeOffset publishedAt,
         string? path = null,
         string? description = null,
-        idunno.AtProto.Blob? coverImage = null,
+        Blob? coverImage = null,
         T? content = null,
         string? textContent = null,
         StrongReference? bskyPostRef = null,
@@ -264,7 +264,7 @@ public record Document<T> : AtProtoRecord where T : class
         DateTimeOffset publishedAt,
         string? path = null,
         string? description = null,
-        idunno.AtProto.Blob? coverImage = null,
+        Blob? coverImage = null,
         T? content = null,
         string? textContent = null,
         StrongReference? bskyPostRef = null,
@@ -325,7 +325,7 @@ public record Document<T> : AtProtoRecord where T : class
         DateTimeOffset publishedAt,
         string? path = null,
         string? description = null,
-        idunno.AtProto.Blob? coverImage = null,
+        Blob? coverImage = null,
         T? content = null,
         string? textContent = null,
         StrongReference? bskyPostRef = null,
@@ -465,7 +465,7 @@ public record Document<T> : AtProtoRecord where T : class
     /// <exception cref="ArgumentException">Thrown when the MIME type is <see langword="null" /> or empty, or not an image MIME type.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the image size exceeds the maximum allowed size.</exception>  
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public idunno.AtProto.Blob? CoverImage
+    public Blob? CoverImage
     {
         get;
 

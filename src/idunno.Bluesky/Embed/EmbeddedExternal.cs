@@ -3,6 +3,7 @@
 
 using System.Text.Json.Serialization;
 
+using idunno.AtProto;
 using idunno.AtProto.Repo;
 
 namespace idunno.Bluesky.Embed;
@@ -56,9 +57,9 @@ public sealed record EmbeddedExternal : EmbeddedBase
     /// </summary>
     /// <param name="uri">The external <see cref="Uri"/> for the link.</param>
     /// <param name="title">The title for the external link.</param>
-    /// <param name="thumbnail">The <see cref="AtProto.Blob"/> for the thumbnail of the link, if any.</param>
+    /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
-    public EmbeddedExternal(Uri uri, string title, AtProto.Blob? thumbnail) :
+    public EmbeddedExternal(Uri uri, string title, Blob? thumbnail) :
         this(new External.Properties(uri, title, description: null, thumbnail))
     {
         ArgumentNullException.ThrowIfNull(uri);
@@ -71,9 +72,9 @@ public sealed record EmbeddedExternal : EmbeddedBase
     /// <param name="uri">The external <see cref="Uri"/> for the link.</param>
     /// <param name="title">The title for the external link.</param>
     /// <param name="description">The description of the external link, if any.</param>
-    /// <param name="thumbnail">The <see cref="AtProto.Blob"/> for the thumbnail of the link, if any.</param>
+    /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
-    public EmbeddedExternal(Uri uri, string title, string? description, AtProto.Blob? thumbnail) :
+    public EmbeddedExternal(Uri uri, string title, string? description, Blob? thumbnail) :
         this(new External.Properties(uri, title, description, thumbnail))
     {
         ArgumentNullException.ThrowIfNull(uri);
@@ -86,10 +87,10 @@ public sealed record EmbeddedExternal : EmbeddedBase
     /// <param name="uri">The external <see cref="Uri"/> for the link.</param>
     /// <param name="title">The title for the external link.</param>
     /// <param name="description">The description of the external link, if any.</param>
-    /// <param name="thumbnail">The <see cref="AtProto.Blob"/> for the thumbnail of the link, if any.</param>
+    /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
     /// <param name="associatedRefs">An array of strong references associated with the embed.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
-    public EmbeddedExternal(Uri uri, string title, string? description, AtProto.Blob? thumbnail, StrongReference[]? associatedRefs) :
+    public EmbeddedExternal(Uri uri, string title, string? description, Blob? thumbnail, StrongReference[]? associatedRefs) :
         this(new External.Properties(uri, title, description, thumbnail, associatedRefs))
     {
         ArgumentNullException.ThrowIfNull(uri);
@@ -128,9 +129,9 @@ public sealed record EmbeddedExternal : EmbeddedBase
     /// </summary>
     /// <param name="uri">The external <see cref="Uri"/> for the link.</param>
     /// <param name="title">The title for the external link.</param>
-    /// <param name="thumbnail">The <see cref="AtProto.Blob"/> for the thumbnail of the link, if any.</param>
+    /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
-    public EmbeddedExternal(string uri, string title, AtProto.Blob? thumbnail) :
+    public EmbeddedExternal(string uri, string title, Blob? thumbnail) :
         this(new External.Properties(new Uri(uri), title, description : null , thumbnail))
     {
         ArgumentNullException.ThrowIfNull(uri);
@@ -143,9 +144,9 @@ public sealed record EmbeddedExternal : EmbeddedBase
     /// <param name="uri">The external <see cref="Uri"/> for the link.</param>
     /// <param name="title">The title for the external link.</param>
     /// <param name="description">The description of the external link, if any.</param>
-    /// <param name="thumbnail">The <see cref="AtProto.Blob"/> for the thumbnail of the link, if any.</param>
+    /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
-    public EmbeddedExternal(string uri, string title, string? description, AtProto.Blob? thumbnail) :
+    public EmbeddedExternal(string uri, string title, string? description, Blob? thumbnail) :
         this(new External.Properties(new Uri(uri), title, description, thumbnail))
     {
         ArgumentNullException.ThrowIfNull(uri);
@@ -158,10 +159,10 @@ public sealed record EmbeddedExternal : EmbeddedBase
     /// <param name="uri">The external <see cref="Uri"/> for the link.</param>
     /// <param name="title">The title for the external link.</param>
     /// <param name="description">The description of the external link, if any.</param>
-    /// <param name="thumbnail">The <see cref="AtProto.Blob"/> for the thumbnail of the link, if any.</param>
+    /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
     /// <param name="associatedRefs">An array of strong references associated with the embed.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
-    public EmbeddedExternal(string uri, string title, string? description, AtProto.Blob? thumbnail, StrongReference[] associatedRefs) :
+    public EmbeddedExternal(string uri, string title, string? description, Blob? thumbnail, StrongReference[] associatedRefs) :
         this(new External.Properties(new Uri(uri), title, description, thumbnail, associatedRefs))
     {
         ArgumentNullException.ThrowIfNull(uri);

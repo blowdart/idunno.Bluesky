@@ -1517,8 +1517,7 @@ public static partial class AtProtoServer
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to PostBlob().")]
-
-    public static async Task<AtProtoHttpResult<AtProto.Blob>> UploadBlob(
+    public static async Task<AtProtoHttpResult<Blob>> UploadBlob(
         byte[] blob,
         string mimeType,
         Uri service,

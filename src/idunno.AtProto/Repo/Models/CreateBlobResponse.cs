@@ -3,6 +3,6 @@
 
 namespace idunno.AtProto.Repo.Models;
 
-internal sealed record CreateBlobResponse(AtProto.Blob Blob)
+internal sealed record CreateBlobResponse(Blob Blob)
 {
 }
