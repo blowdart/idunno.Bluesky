@@ -87,7 +87,7 @@ public class PostTests
     }
 
     [Fact]
-    public void PostWithPcktEmbeddedExternalDerializesCorrectly()
+    public void PostWithPcktEmbeddedExternalDeserializesCorrectly()
     {
         string json = """
             {

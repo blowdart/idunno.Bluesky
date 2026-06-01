@@ -19,7 +19,7 @@ public sealed class ByteConverter : JsonConverter<Bytes>
     /// <param name="reader">The reader.</param>
     /// <param name="typeToConvert">The type to convert.</param>
     /// <param name="options">An object that specifies serialization options to use.</param>
-    /// <returns>An <see cref="AtUri"/> created from the JSON.</returns>
+    /// <returns>A <see cref="Bytes"/> instance created from the JSON.</returns>
     /// <exception cref="JsonException">Thrown when the JSON to be converted is not a string token.</exception>
     public override Bytes? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {

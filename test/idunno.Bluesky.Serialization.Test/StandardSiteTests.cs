@@ -1,12 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
+
 using idunno.AtProto.Repo;
 using Standard.Site;
 
@@ -109,7 +105,7 @@ public class StandardSiteTests
         Assert.Equal("at://did:plc:ragtjsm2j2vknwkz3zp4oxrd/site.standard.publication/3ly4hnkatvc2p", documentRecord.Value.Site);
         Assert.Equal("Title", documentRecord.Value.Title);
         Assert.Equal("It actually calms me down", documentRecord.Value.Description);
-        Assert.Equal(DateTime.Parse("2025-09-05T20:21:24.309Z"), documentRecord.Value.PublishedAt);
+        Assert.Equal(DateTimeOffset.Parse("2025-09-05T20:21:24.309Z"), documentRecord.Value.PublishedAt);
         Assert.NotNull(documentRecord.Value.Content);
     }
 
