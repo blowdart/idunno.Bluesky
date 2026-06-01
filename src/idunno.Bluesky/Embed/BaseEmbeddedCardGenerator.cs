@@ -238,11 +238,7 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
     {
         if (!_isDisposed)
         {
-            if (disposing)
-            {
-                HttpClient?.Dispose();
-            }
-
+            // HttpClient is owned by the caller/agent; do not dispose it here.
             _isDisposed = true;
         }
     }

@@ -1,7 +1,7 @@
 # Embedded cards in posts
 
 Bluesky supports embedding content from external websites in posts, through cards. A card can be created
-from [Open Graph](https://ogp.me/ metadata, or [standard.site](https://standard.site) known metadata embedded in the page linked to.
+from [Open Graph](https://ogp.me/) metadata, or [standard.site](https://standard.site) known metadata embedded in the page linked to.
 
 To create a card you create an instance of a card generator, call the `Generate` method, and
 then attach the results to a post.
@@ -30,7 +30,7 @@ to subscribe to the publication, or read the document.
 Posts can only have one card attached to them, so if you have multiple links in a post, you will need to choose which one to create a card for.
 
 > [!TIP]
-> The standard.site metadata format is a superset of Open Graph, so you can the StandardSiteCardGenerator to create cards from Open Graph metadata.
+> The standard.site metadata format is a superset of Open Graph, so you can use the StandardSiteCardGenerator to create cards from Open Graph metadata.
 > Practically, this means you always use the StandardSiteCardGenerator without worrying about losing support for Open Graph metadata.
 >
 > If there is no metadata present in the URI you want to generate a card for card generators will return `null`.

@@ -99,7 +99,7 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
             string property = match.Groups[1].Value;
             string content = match.Groups[2].Value;
 
-            if (!string.IsNullOrEmpty(property))
+            if (!string.IsNullOrEmpty(property) && !openGraphProperties.ContainsKey(property))
             {
                 openGraphProperties.Add(property, content);
             }

@@ -427,7 +427,7 @@ Uri uri = new("https://en.wikipedia.org/wiki/Heinz_Baked_Beans");
 var openGraphCardGenerator = agent.CreateOpenGraphEmbeddedCardGenerator();
 
 var post = new Post($"Testing Open Graph embedding for {uri}.");
-var openGraphCard = await openGraphCardGenerator.GetOpenGraphEmbed(uri);
+var openGraphCard = await openGraphCardGenerator.Generate(uri);
 if (openGraphCard != null)
 {
     post.Embed(openGraphCard);
@@ -451,7 +451,6 @@ blogging system, such as [leaflet.pub](https://leaflet.pub), or [Sequoia](https:
 
 ![An embedded card for a leaflet.pub document](media/standardSiteEmbeddedCard.png "An embedded card for a standard.site compatible document")
 
-
 A standard.site embedded card can include extra UX in Bluesky clients like a button to subscribe to the publication,
 or view the publication.
 
@@ -462,12 +461,17 @@ Uri uri = new("https://lab.leaflet.pub/3mmwnyfqhyc2d");
 var standardSiteCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
 
 var post = new Post($"Testing Standard Site embedding for {uri}.");
-var standardSiteCard = await standardSiteCardGenerator.GetStandardSiteEmbed(uri);
+var standardSiteCard = await standardSiteCardGenerator.Generate(uri);
 if (standardSiteCard != null)
 {
     post.Embed(standardSiteCard);
 }
 await agent.Post(post);
 ```
+
+> [!TIP]
+> The standard.site metadata format is a superset of Open Graph, so you can use the StandardSiteCardGenerator to create cards from Open Graph metadata.
+> Practically, this means you always use the StandardSiteCardGenerator without worrying about losing support for Open Graph metadata.
+
 
 Posts with an embedded card don't need any post text.

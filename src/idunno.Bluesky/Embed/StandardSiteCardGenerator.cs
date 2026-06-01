@@ -96,7 +96,7 @@ public sealed partial class StandardSiteCardGenerator : OpenGraphEmbeddedCardGen
             string property = match.Groups[1].Value;
             string content = match.Groups[2].Value;
 
-            if (!string.IsNullOrEmpty(property))
+            if (!string.IsNullOrEmpty(property) && !siteStandardLinks.ContainsKey(property))
             {
                 siteStandardLinks.Add(property, content);
             }

@@ -31,8 +31,8 @@ public sealed class Bytes : IEquatable<Bytes>
         ArgumentNullException.ThrowIfNull(bytes);
         ArgumentOutOfRangeException.ThrowIfZero(bytes.Length);
 
-        _bytes = bytes;
-        _base64Encoded = Convert.ToBase64String(bytes);
+        _bytes = (byte[])bytes.Clone();
+        _base64Encoded = Convert.ToBase64String(_bytes);
     }
 
     /// <summary>
