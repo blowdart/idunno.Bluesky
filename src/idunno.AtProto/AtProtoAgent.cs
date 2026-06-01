@@ -15,8 +15,6 @@ using idunno.AtProto.Repo;
 using idunno.AtProto.Server.Models;
 using idunno.DidPlcDirectory;
 
-using Blob = idunno.AtProto.Repo.Blob;
-
 namespace idunno.AtProto;
 
 /// <summary>
@@ -1524,17 +1522,17 @@ public partial class AtProtoAgent : Agent
 
         if (uri.Repo is null)
         {
-            throw new ArgumentException("{uri} does not have a repo.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have a repo.", nameof(uri));
         }
 
         if (uri.Collection is null)
         {
-            throw new ArgumentException("{uri} does not have a collection.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have a collection.", nameof(uri));
         }
 
         if (uri.RecordKey is null)
         {
-            throw new ArgumentException("{uri} does not have an rKey.", nameof(uri));
+            throw new ArgumentException($"{uri} does not have an rKey.", nameof(uri));
         }
 
         return await GetRawRecord(uri.Repo, uri.Collection, uri.RecordKey, cid: null, service: pds, serviceProxy: null, cancellationToken: cancellationToken).ConfigureAwait(false);

@@ -935,6 +935,7 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("Minor Code Smell", "S3267:Loops should be simplified with \"LINQ\" expressions", Justification = "Remove linq for clarity")]
     public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
         Post post,
         ICollection<ThreadGateRule>? threadGateRules = null,
@@ -961,11 +962,27 @@ public partial class BlueskyAgent
                 }
                 else
                 {
-                    foreach (Facet? facet in from Facet facet in facets
-                                          where facet is not null &&!post.Facets.Contains(facet)
-                                          select facet)
+                    foreach (Facet? facet in facets)
                     {
-                        post.Facets.Add(facet);
+                        if (facet is not null)
+                        {
+                            bool matchingFacetLocationFound = false;
+                            foreach (Facet? existingFacet in post.Facets)
+                            {
+                                if (existingFacet is not null &&
+                                    existingFacet.Index.ByteStart == facet.Index.ByteStart &&
+                                    existingFacet.Index.ByteEnd == facet.Index.ByteEnd &&
+                                    existingFacet.Features.SequenceEqual(facet.Features))
+                                {
+                                    matchingFacetLocationFound = true;
+                                }
+                            }
+
+                            if (!matchingFacetLocationFound)
+                            {
+                                post.Facets.Add(facet);
+                            }
+                        }
                     }
                 }
             }
