@@ -71,19 +71,12 @@ public class OpenGraphEmbeddedCardGeneratorTests
             }
         });
 
-        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
-
         using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
         {
             agent.Credentials = expectedCredentials;
 
             Uri uri = new ($"{TestServerBuilder.DefaultUri}document/12345");
             OpenGraphEmbeddedCardGenerator openGraphCardGenerator = agent.CreateOpenGraphEmbeddedCardGenerator();
-
-            Post post = new()
-            {
-                Text = $"Check out this document: {uri}"
-            };
 
             EmbeddedExternal? card = await openGraphCardGenerator.Generate(uri, TestContext.Current.CancellationToken);
 
@@ -155,19 +148,12 @@ public class OpenGraphEmbeddedCardGeneratorTests
             }
         });
 
-        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
-
         using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
         {
             agent.Credentials = expectedCredentials;
 
             Uri uri = new($"{TestServerBuilder.DefaultUri}document/12345");
             OpenGraphEmbeddedCardGenerator openGraphCardGenerator = agent.CreateOpenGraphEmbeddedCardGenerator();
-
-            Post post = new()
-            {
-                Text = $"Check out this document: {uri}"
-            };
 
             EmbeddedExternal? card = await openGraphCardGenerator.Generate(uri, TestContext.Current.CancellationToken);
 
@@ -223,19 +209,12 @@ public class OpenGraphEmbeddedCardGeneratorTests
             }
         });
 
-        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
-
         using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
         {
             agent.Credentials = expectedCredentials;
 
             Uri uri = new($"{TestServerBuilder.DefaultUri}document/12345");
             OpenGraphEmbeddedCardGenerator openGraphCardGenerator = agent.CreateOpenGraphEmbeddedCardGenerator();
-
-            Post post = new()
-            {
-                Text = $"Check out this document: {uri}"
-            };
 
             EmbeddedExternal? card = await openGraphCardGenerator.Generate(uri, TestContext.Current.CancellationToken);
 
@@ -310,19 +289,12 @@ public class OpenGraphEmbeddedCardGeneratorTests
             }
         });
 
-        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
-
         using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
         {
             agent.Credentials = expectedCredentials;
 
             Uri uri = new($"{TestServerBuilder.DefaultUri}document/12345");
             OpenGraphEmbeddedCardGenerator openGraphCardGenerator = agent.CreateOpenGraphEmbeddedCardGenerator();
-
-            Post post = new()
-            {
-                Text = $"Check out this document: {uri}"
-            };
 
             EmbeddedExternal? card = await openGraphCardGenerator.Generate(uri, TestContext.Current.CancellationToken);
 

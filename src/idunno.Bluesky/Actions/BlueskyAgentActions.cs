@@ -955,7 +955,17 @@ public partial class BlueskyAgent
             IList<Facet>? facets = await FacetExtractor.ExtractFacets(post.Text, cancellationToken).ConfigureAwait(false);
             if (facets is not null && facets.Count > 0)
             {
-                post.Facets = facets;
+                if (post.Facets == null || post.Facets.Count == 0)
+                {
+                    post.Facets = facets;
+                }
+                else
+                {
+                    foreach (var facet in facets)
+                    {
+                        post.Facets.Add(facet);
+                    }
+                }
             }
         }
 

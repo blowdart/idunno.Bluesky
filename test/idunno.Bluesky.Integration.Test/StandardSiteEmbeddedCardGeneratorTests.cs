@@ -79,19 +79,12 @@ public class StandardSiteEmbeddedCardGeneratorTests
             }
         });
 
-        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
-
         using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
         {
             agent.Credentials = expectedCredentials;
 
             Uri uri = new($"{TestServerBuilder.DefaultUri}document/12345");
             StandardSiteCardGenerator standardSiteCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
-
-            Post post = new()
-            {
-                Text = $"Check out this document: {uri}"
-            };
 
             EmbeddedExternal? card = await standardSiteCardGenerator.Generate(uri, TestContext.Current.CancellationToken);
 
@@ -233,19 +226,12 @@ public class StandardSiteEmbeddedCardGeneratorTests
             }
         });
 
-        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
-
         using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
         {
             agent.Credentials = expectedCredentials;
 
             Uri uri = new($"{TestServerBuilder.DefaultUri}document/12345");
             StandardSiteCardGenerator standardSiteCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
-
-            Post post = new()
-            {
-                Text = $"Check out this document: {uri}"
-            };
 
             EmbeddedExternal? card = await standardSiteCardGenerator.Generate(uri, TestContext.Current.CancellationToken);
 
@@ -394,19 +380,12 @@ public class StandardSiteEmbeddedCardGeneratorTests
             }
         });
 
-        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
-
         using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
         {
             agent.Credentials = expectedCredentials;
 
             Uri uri = new($"{TestServerBuilder.DefaultUri}document/12345");
             StandardSiteCardGenerator standardSiteCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
-
-            Post post = new()
-            {
-                Text = $"Check out this document: {uri}"
-            };
 
             EmbeddedExternal? card = await standardSiteCardGenerator.Generate(uri, TestContext.Current.CancellationToken);
 
@@ -533,19 +512,12 @@ public class StandardSiteEmbeddedCardGeneratorTests
             }
         });
 
-        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
-
         using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
         {
             agent.Credentials = expectedCredentials;
 
             Uri uri = new($"{TestServerBuilder.DefaultUri}document/12345");
             StandardSiteCardGenerator standardSiteCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
-
-            Post post = new()
-            {
-                Text = $"Check out this document: {uri}"
-            };
 
             EmbeddedExternal? card = await standardSiteCardGenerator.Generate(uri, TestContext.Current.CancellationToken);
 
@@ -694,19 +666,12 @@ public class StandardSiteEmbeddedCardGeneratorTests
             }
         });
 
-        HttpClient httpClient = new TestHttpClientFactory(testServer).CreateClient();
-
         using (var agent = new BlueskyAgent(new TestHttpClientFactory(testServer)))
         {
             agent.Credentials = expectedCredentials;
 
             Uri uri = new($"{TestServerBuilder.DefaultUri}document/12345");
             StandardSiteCardGenerator standardSiteCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
-
-            Post post = new()
-            {
-                Text = $"Check out this document: {uri}"
-            };
 
             EmbeddedExternal? card = await standardSiteCardGenerator.Generate(uri, TestContext.Current.CancellationToken);
 

@@ -62,7 +62,7 @@ public class StandardSiteTests
         Assert.Equal("at://did:plc:ragtjsm2j2vknwkz3zp4oxrd/site.standard.publication/3ly4hnkatvc2p", documentRecord.Value.Site);
         Assert.Equal("Title", documentRecord.Value.Title);
         Assert.Equal("It actually calms me down", documentRecord.Value.Description);
-        Assert.Equal(DateTime.Parse("2025-09-05T20:21:24.309Z"), documentRecord.Value.PublishedAt);
+        Assert.Equal(DateTimeOffset.Parse("2025-09-05T20:21:24.309Z"), documentRecord.Value.PublishedAt);
         Assert.NotNull(documentRecord.Value.Content);
     }
 
