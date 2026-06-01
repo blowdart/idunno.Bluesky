@@ -12,6 +12,7 @@ using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.Record;
 using idunno.Bluesky.RichText;
 using static System.Net.Mime.MediaTypeNames;
+using System.Linq;
 
 namespace idunno.Bluesky;
 
@@ -961,7 +962,9 @@ public partial class BlueskyAgent
                 }
                 else
                 {
-                    foreach (var facet in facets)
+                    foreach (Facet? facet in from Facet facet in facets
+                                          where facet is not null &&!post.Facets.Contains(facet)
+                                          select facet)
                     {
                         post.Facets.Add(facet);
                     }
