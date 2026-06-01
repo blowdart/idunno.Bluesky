@@ -120,6 +120,7 @@
     <File Path="docs/docs/tutorials/blockingUsers.md" />
     <File Path="docs/docs/tutorials/creatingAPost.md" />
     <File Path="docs/docs/tutorials/editingProfiles.md" />
+    <File Path="docs/docs/tutorials/embeddingCards.md" />
     <File Path="docs/docs/tutorials/followingAndUnfollowing.md" />
     <File Path="docs/docs/tutorials/likingAndReposting.md" />
     <File Path="docs/docs/tutorials/muteAndUnmute.md" />
@@ -131,6 +132,7 @@
     <File Path="docs/docs/tutorials/viewingThreads.md" />
   </Folder>
   <Folder Name="/docs/docs/tutorials/code/">
+    <File Path="docs/docs/tutorials/code/embeddedCard.cs" />
     <File Path="docs/docs/tutorials/code/feed.cs" />
     <File Path="docs/docs/tutorials/code/helloWorld.cs" />
     <File Path="docs/docs/tutorials/code/lists.cs" />

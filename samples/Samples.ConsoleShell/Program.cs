@@ -32,7 +32,7 @@ public sealed class Program
         ArgumentException.ThrowIfNullOrEmpty(password);
 
         // Uncomment the next line to route all requests through Fiddler Everywhere
-        proxyUri = new Uri("http://localhost:8866");
+        // proxyUri = new Uri("http://localhost:8866");
 
         // Uncomment the next line to route all requests  through Fiddler Classic
         // proxyUri = new Uri("http://localhost:8888");
@@ -89,19 +89,6 @@ public sealed class Program
                 }
             }
             // END-AUTHENTICATION
-
-            Uri uri = new("https://lab.leaflet.pub/3mmwnyfqhyc2d");
-            var standardSiteCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
-
-            var post = new Post($"Testing Standard Site embedding for {uri}.");
-            var card = await standardSiteCardGenerator.Generate(uri, cancellationToken);
-            if (card != null)
-            {
-                post.Embed(card);
-            }
-            await agent.Post(post, cancellationToken:cancellationToken);
-
-
 
             Debugger.Break();
         }
