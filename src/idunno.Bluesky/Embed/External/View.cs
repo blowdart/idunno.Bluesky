@@ -43,7 +43,7 @@ public record View
         DateTimeOffset? updatedAt,
         int? readingTime,
         IReadOnlyCollection<Label>? labels,
-        Source.View source,
+        Source.View? source,
         IReadOnlyCollection<StrongReference>? associatedRefs,
         IReadOnlyCollection<ProfileViewBasic>? associatedProfiles) : base()
     {
@@ -113,10 +113,10 @@ public record View
     public IReadOnlyCollection<Label>? Labels { get; init; }
 
     /// <summary>
-    /// Gets the view over the source of the external embed.
+    /// Gets the view over the source of the external embed, if available.
     /// </summary>
     [JsonInclude]
-    public Source.View Source { get; init; }
+    public Source.View? Source { get; init; }
 
     /// <summary>
     /// Gets the <see cref="AtUri"/> of the Atmosphere records that backed this view, if any.

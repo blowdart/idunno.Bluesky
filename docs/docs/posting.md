@@ -458,10 +458,10 @@ To generate a Standard.Site card use the `StandardSiteEmbeddedCardGenerator` cla
 
 ```c#
 Uri uri = new("https://lab.leaflet.pub/3mmwnyfqhyc2d");
-var StandardSiteEmbeddedCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
+var standardSiteEmbeddedCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
 
 var post = new Post($"Testing Standard Site embedding for {uri}.");
-var standardSiteCard = await StandardSiteEmbeddedCardGenerator.Generate(uri);
+var standardSiteCard = await standardSiteEmbeddedCardGenerator.Generate(uri);
 if (standardSiteCard != null)
 {
     post.Embed(standardSiteCard);

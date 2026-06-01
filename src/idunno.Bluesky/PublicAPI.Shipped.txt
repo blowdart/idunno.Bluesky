@@ -906,7 +906,7 @@ idunno.Bluesky.Embed.External.View.Labels.get -> System.Collections.Generic.IRea
 idunno.Bluesky.Embed.External.View.Labels.init -> void
 idunno.Bluesky.Embed.External.View.ReadingTime.get -> int?
 idunno.Bluesky.Embed.External.View.ReadingTime.init -> void
-idunno.Bluesky.Embed.External.View.Source.get -> idunno.Bluesky.Embed.External.Source.View!
+idunno.Bluesky.Embed.External.View.Source.get -> idunno.Bluesky.Embed.External.Source.View?
 idunno.Bluesky.Embed.External.View.Source.init -> void
 idunno.Bluesky.Embed.External.View.ThumbnailUri.get -> System.Uri?
 idunno.Bluesky.Embed.External.View.ThumbnailUri.init -> void
