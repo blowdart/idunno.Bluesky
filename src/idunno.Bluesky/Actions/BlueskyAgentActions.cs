@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+
 using idunno.AtProto;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
@@ -11,8 +12,6 @@ using idunno.Bluesky.Feed;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.Record;
 using idunno.Bluesky.RichText;
-using static System.Net.Mime.MediaTypeNames;
-using System.Linq;
 
 namespace idunno.Bluesky;
 
