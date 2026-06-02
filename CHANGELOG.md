@@ -1,6 +1,6 @@
 # Version History
 
-## 1.9.0
+## 2.0.0 - 2026-02-06
 
 ## Added
 
