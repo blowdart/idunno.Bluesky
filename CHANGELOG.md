@@ -1,5 +1,48 @@
 # Version History
 
+## 1.9.0
+
+## Added
+
+### idunno.AtProto.Types
+
+* Moved the atproto `Blob` type from idunno.AtProto.
+* Added the atproto `CidLink` type.
+* Added the atproto `Bytes` type and associated JSON converter.
+
+### idunno.Bluesky
+
+* Added classes for Germ Network lexicon.
+* Added classes for Standard.Site lexicon.
+* Added `Labels` property to `StatusView` to represent labels associated with a status. See [[APP-1775] Hydrate labels for actor statuses](https://github.com/bluesky-social/atproto/pull/4555)
+* Added `OpenGraphEmbeddedCardGenerator` to generate embedded records from Open Graph metadata, and documented its use.
+* Added `StandardSiteEmbeddedCardGenerator` to generate embedded records from [standard.site](https://standard.site), and documented its use.
+
+## Changed
+
+### idunno.Bluesky
+
+* `BlueskyAgent.Post(Post post)` now extracts facets from the post text by default, as promised in documentation. You can use the `extractFacets` parameter to control this behavior.
+* Updated `EmbeddedExternalView` to support the new [Standard Site integration](https://github.com/bluesky-social/atproto/discussions/4978).
+* Updated `EmbeddedExternal` to support the new [Standard Site integration](https://github.com/bluesky-social/atproto/discussions/4978).
+* Updated `ProfileViewBasic` to add properties for [Germ integration](https://github.com/bluesky-social/atproto/pull/4415).
+* Updated `VerificationView` to add properties for [Fix app.bsky.actor.getProfile verifier data](https://github.com/bluesky-social/atproto/pull/5016)
+
+## Breaking Changes
+
+### idunno.AtProto
+
+* Moved `Blob` type to `idunno.AtProto.Types`.
+* Moved `BlobReference` type and renamed to `CidLink` in `idunno.AtProto.Types`.
+
+### idunno.Bluesky
+
+* Moved various external Embedded content classes to their own files and namespaces. This is a breaking change if you are using these classes directly, rather than through the utility methods on `BlueskyAgent`.
+* Removed previously marked obsolete `BlueskyAgent.SetLiveStatus` method. Update your code to use `BlueskyAgent.CreateLiveStatus` instead.
+* Removed previously marked obsolete `BlueskyAgent.SetStatus` method. Update your code to use `BlueskyAgent.CreateStatus` instead.
+* Removed previously marked obsolete `SelfLabelNames` class. Update your code to use `SelfLabelValues` instead.
+* `CreateLiveStatus` now requires a description.
+
 ## 1.8.3 - 2026-05-16
 
 ## Added

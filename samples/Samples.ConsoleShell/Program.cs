@@ -1,12 +1,12 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using Microsoft.Extensions.Logging;
 
-using Samples.Common;
-
 using idunno.AtProto;
 using idunno.Bluesky;
+
+using Samples.Common;
 
 namespace Samples.ConsoleShell;
 
@@ -89,7 +89,6 @@ public sealed class Program
             }
             // END-AUTHENTICATION
 
-            // Your code goes here
         }
     }
 }

@@ -1,9 +1,9 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
 
-namespace idunno.AtProto.Repo;
+namespace idunno.AtProto;
 
 /// <summary>
 /// Represents a blob contained in a repo.
@@ -20,7 +20,7 @@ public record Blob
     /// <param name="reference">Reference information for linking to the blob in a post.</param>
     /// <param name="mimeType">The mime type of the blob.</param>
     /// <param name="size">The size of the blob in bytes.</param>
-    public Blob(BlobReference reference, string mimeType, int size)
+    public Blob(CidLink reference, string mimeType, int size)
     {
         Reference = reference;
         MimeType = mimeType;
@@ -32,17 +32,17 @@ public record Blob
     /// </summary>
     [JsonInclude]
     [JsonPropertyName("ref")]
-    public BlobReference Reference { get; init;}
+    public CidLink Reference { get; init; }
 
     /// <summary>
     /// The MIME type for the blob.
     /// </summary>
     [JsonInclude]
-    public string MimeType { get; init;}
+    public string MimeType { get; init; }
 
     /// <summary>
     /// The size of the blob, in bytes.
     /// </summary>
     [JsonInclude]
-    public int Size { get; init;}
+    public int Size { get; init; }
 }

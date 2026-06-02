@@ -1,9 +1,10 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
+using idunno.AtProto;
 
 namespace idunno.Bluesky;
 
@@ -14,18 +15,20 @@ public static class BlueskyJsonSerializerOptions
 {
     [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "All the AtProto Types are captured in source gen")]
     [UnconditionalSuppressMessage("AOT", "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.", Justification = "All the AtProto Types are captured in source gen")]
+    [SuppressMessage("Style", "IDE0032:Use auto property", Justification = "Won't work with the suppress message attributes")]
     private static readonly JsonSerializerOptions s_options = new(JsonSerializerOptions.Web)
     {
         TypeInfoResolver = SourceGenerationContext.Default,
+        AllowOutOfOrderMetadataProperties = true
     };
 
     /// <summary>
     /// Creates a new set of <see cref="JsonSerializerOptions"/> for Bluesky types.
     /// </summary>
-    public static JsonSerializerOptions Options => new(s_options);
+    public static JsonSerializerOptions Options => AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(s_options);
 
     /// <summary>
     /// Gets the default <see cref="IJsonTypeInfoResolver"/> for Bluesky types.
     /// </summary>
-    public static IJsonTypeInfoResolver TypeInfoResolver => s_options.TypeInfoResolver!;
+    public static IJsonTypeInfoResolver TypeInfoResolver => Options.TypeInfoResolver!;
 }

@@ -117,8 +117,8 @@ idunno.AtProto.AtProtoAgent.Service.get -> System.Uri!
 idunno.AtProto.AtProtoAgent.Service.set -> void
 idunno.AtProto.AtProtoAgent.TokenRefreshFailed -> System.EventHandler<idunno.AtProto.Events.TokenRefreshFailedEventArgs!>?
 idunno.AtProto.AtProtoAgent.Unauthenticated -> System.EventHandler<idunno.AtProto.Events.UnauthenticatedEventArgs!>?
-idunno.AtProto.AtProtoAgent.UploadBlob(byte[]! blob, string! mimeType, System.Uri? service = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Blob!>!>!
-idunno.AtProto.AtProtoAgent.UploadBlob(string! fileName, string! mimeType, System.Uri? service = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Blob!>!>!
+idunno.AtProto.AtProtoAgent.UploadBlob(byte[]! blob, string! mimeType, System.Uri? service = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Blob!>!>!
+idunno.AtProto.AtProtoAgent.UploadBlob(string! fileName, string! mimeType, System.Uri? service = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Blob!>!>!
 idunno.AtProto.AtProtoAgentBuilder
 idunno.AtProto.AtProtoAgentBuilder.AtProtoAgentBuilder() -> void
 idunno.AtProto.AtProtoAgentBuilder.BackgroundTokenRefreshEnabled.get -> bool
@@ -729,18 +729,6 @@ idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.ExtensionData.get -> System
 idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.ExtensionData.set -> void
 idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.Value.get -> TRecord!
 idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord>.Value.set -> void
-idunno.AtProto.Repo.Blob
-idunno.AtProto.Repo.Blob.Blob(idunno.AtProto.Repo.BlobReference! reference, string! mimeType, int size) -> void
-idunno.AtProto.Repo.Blob.MimeType.get -> string!
-idunno.AtProto.Repo.Blob.MimeType.init -> void
-idunno.AtProto.Repo.Blob.Reference.get -> idunno.AtProto.Repo.BlobReference!
-idunno.AtProto.Repo.Blob.Reference.init -> void
-idunno.AtProto.Repo.Blob.Size.get -> int
-idunno.AtProto.Repo.Blob.Size.init -> void
-idunno.AtProto.Repo.BlobReference
-idunno.AtProto.Repo.BlobReference.BlobReference(idunno.AtProto.Cid! link) -> void
-idunno.AtProto.Repo.BlobReference.Link.get -> idunno.AtProto.Cid!
-idunno.AtProto.Repo.BlobReference.Link.init -> void
 idunno.AtProto.Repo.Commit
 idunno.AtProto.Repo.Commit.Cid.get -> idunno.AtProto.Cid!
 idunno.AtProto.Repo.Commit.Cid.init -> void
@@ -911,7 +899,7 @@ static idunno.AtProto.AtProtoServer.QueryLabels(System.Collections.Generic.IEnum
 static idunno.AtProto.AtProtoServer.RefreshSession(idunno.AtProto.Authentication.RefreshCredential! refreshCredential, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? credentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Authentication.Session!>!>!
 static idunno.AtProto.AtProtoServer.ResolveHandle(idunno.AtProto.Handle! handle, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Did?>!
 static idunno.AtProto.AtProtoServer.ResolveHandle(string! handle, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Did?>!
-static idunno.AtProto.AtProtoServer.UploadBlob(byte[]! blob, string! mimeType, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, string? serviceProxy = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Blob!>!>!
+static idunno.AtProto.AtProtoServer.UploadBlob(byte[]! blob, string! mimeType, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, string? serviceProxy = null, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Blob!>!>!
 static idunno.AtProto.Authentication.AtProtoCredential.Create(System.Security.Claims.ClaimsIdentity! identity) -> idunno.AtProto.Authentication.DPoPAccessCredentials!
 static idunno.AtProto.Authentication.AtProtoCredential.Create(System.Security.Claims.ClaimsPrincipal! principal) -> idunno.AtProto.Authentication.DPoPAccessCredentials!
 static idunno.AtProto.Authentication.AtProtoCredential.Create(System.Uri! service, idunno.AtProto.Authentication.AuthenticationType authenticationType, string? accessJwt = null, string? refreshToken = null, string? dPoPProofKey = null, string? dPoPNonce = null) -> idunno.AtProto.Authentication.AtProtoCredential!
