@@ -439,7 +439,7 @@ If you want to manually embed a link card create an instance of `EmbeddedExterna
 with the `Embed` method, or to a `PostBuilder` with the `EmbedRecord()` method.
 
 ```c#
-var embeddedExternal = new(pageUri, title, description, thumbnailBlob);
+var embeddedExternal = new(pageUri, title, description ?? string.Empty, thumbnailBlob);
 var postBuilder = new PostBuilder("Embedded record test");
 postBuilder.EmbedRecord(embeddedExternal);
 

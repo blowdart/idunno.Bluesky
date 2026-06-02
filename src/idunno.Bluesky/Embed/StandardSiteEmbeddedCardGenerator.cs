@@ -150,7 +150,7 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
         }
 
         // If the document metadata is not an AtUri we can't do anything with it, so return the open graph result (which may be null if there was no open graph metadata).
-        if (!AtUri.TryParse(documentMetadata, out AtUri? documentAtUri))
+        if (!AtUri.TryParse(documentMetadata.Trim(), out AtUri? documentAtUri))
         {
             return result;
         }
@@ -177,7 +177,7 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
         }
 
         // If the publication metadata is not an AtUri we can't do anything with it, so return the open graph result (which may be null if there was no open graph metadata).
-        if (!AtUri.TryParse(publicationMetadata, out AtUri? publicationAtUri))
+        if (!AtUri.TryParse(publicationMetadata.Trim(), out AtUri? publicationAtUri))
         {
             return result;
         }

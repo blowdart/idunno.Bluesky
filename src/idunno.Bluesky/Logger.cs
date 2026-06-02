@@ -122,10 +122,10 @@ internal static partial class Logger
     internal static partial void DeleteDraftFailed(ILogger logger, TimestampIdentifier draftId, HttpStatusCode statusCode, string? error, string? message);
 
     // Card Generator errors
-    [LoggerMessage(110, LogLevel.Error, "Failed to upload OpenGraph image for {url} with status code {statusCode}, error {error} message {message}")]
+    [LoggerMessage(110, LogLevel.Error, "Failed to upload embedded card image for {url} with status code {statusCode}, error {error} message {message}")]
     internal static partial void EmbeddedCardImageUploadFailed(ILogger logger, Uri url, HttpStatusCode statusCode, string? error, string? message);
 
-    [LoggerMessage(111, LogLevel.Error, "Exception thrown when uploading OpenGraph image for {url}")]
+    [LoggerMessage(111, LogLevel.Error, "Exception thrown when uploading embedded card image for {url}")]
     internal static partial void EmbeddedCardImageUploadThrew(ILogger logger, Uri url, Exception ex);
 
     [LoggerMessage(112, LogLevel.Error, "Failed to get OpenGraph data for {url} with status code {statusCode}")]
