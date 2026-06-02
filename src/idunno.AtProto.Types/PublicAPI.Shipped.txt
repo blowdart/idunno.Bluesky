@@ -62,6 +62,8 @@ idunno.AtProto.CidLink
 idunno.AtProto.CidLink.CidLink(idunno.AtProto.Cid! link) -> void
 idunno.AtProto.CidLink.Link.get -> idunno.AtProto.Cid!
 idunno.AtProto.CidLink.Link.init -> void
+idunno.AtProto.CidLink.Equals(idunno.AtProto.CidLink? other) -> bool
+override idunno.AtProto.CidLink.GetHashCode() -> int
 idunno.AtProto.Did
 idunno.AtProto.Did.Did(string! s) -> void
 idunno.AtProto.Did.Equals(idunno.AtProto.Did? other) -> bool

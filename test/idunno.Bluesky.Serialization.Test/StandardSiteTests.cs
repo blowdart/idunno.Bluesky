@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
-
+using idunno.AtProto;
 using idunno.AtProto.Repo;
 using Standard.Site;
 
@@ -144,7 +144,7 @@ public class StandardSiteTests
         Assert.Equal(new Uri("https://pfrazee.leaflet.pub"), publicationRecord.Value.Url);
         Assert.Equal(273897, publicationRecord.Value.Icon!.Size);
         Assert.Equal("image/png", publicationRecord.Value.Icon.MimeType);
-        Assert.Equal("bafkreighxlygswtkinvkvcm67igorlys6ldigjftn2zzvy35d6fbnr6rbi", publicationRecord.Value.Icon.Reference!.Link);
+        Assert.Equal(new CidLink(new Cid("bafkreighxlygswtkinvkvcm67igorlys6ldigjftn2zzvy35d6fbnr6rbi")), publicationRecord.Value.Icon.Reference!);
         Assert.True(publicationRecord.Value.Preferences!.ShowInDiscover);
         Assert.True(publicationRecord.Value.Preferences!.ExtensionData!.ContainsKey("showComments"));
         Assert.True(publicationRecord.Value.Preferences!.ExtensionData!["showComments"].GetBoolean());
@@ -185,7 +185,7 @@ public class StandardSiteTests
         Assert.Equal(new Uri("https://pfrazee.leaflet.pub"), publicationRecord.Value.Url);
         Assert.Equal(273897, publicationRecord.Value.Icon!.Size);
         Assert.Equal("image/png", publicationRecord.Value.Icon.MimeType);
-        Assert.Equal("bafkreighxlygswtkinvkvcm67igorlys6ldigjftn2zzvy35d6fbnr6rbi", publicationRecord.Value.Icon.Reference!.Link);
+        Assert.Equal(new CidLink(new Cid("bafkreighxlygswtkinvkvcm67igorlys6ldigjftn2zzvy35d6fbnr6rbi")), publicationRecord.Value.Icon.Reference!);
         Assert.True(publicationRecord.Value.Preferences!.ShowInDiscover);
         Assert.True(publicationRecord.Value.Preferences!.ExtensionData!.ContainsKey("showComments"));
         Assert.True(publicationRecord.Value.Preferences!.ExtensionData!["showComments"].GetBoolean());
