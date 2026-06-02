@@ -1,4 +1,4 @@
-﻿# standard.site
+# standard.site
 
 ## One schema. Every platform.
 

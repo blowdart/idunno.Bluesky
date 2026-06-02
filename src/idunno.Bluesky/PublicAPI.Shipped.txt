@@ -1718,7 +1718,8 @@ idunno.Bluesky.Record.Profile.Labels.get -> idunno.AtProto.Labels.SelfLabels?
 idunno.Bluesky.Record.Profile.Labels.init -> void
 idunno.Bluesky.Record.Profile.PinnedPost.get -> idunno.AtProto.Repo.StrongReference?
 idunno.Bluesky.Record.Profile.PinnedPost.set -> void
-idunno.Bluesky.Record.Profile.Profile(string? displayName = null, string? description = null, string? pronouns = null, System.Uri? website = null, idunno.AtProto.Blob? avatar = null, idunno.AtProto.Blob? banner = null, idunno.AtProto.Repo.StrongReference? pinnedPost = null, idunno.AtProto.Labels.SelfLabels? labels = null, System.DateTimeOffset? createdAt = null) -> void
+idunno.Bluesky.Record.Profile.Profile(string? displayName = null, string? description = null, string? pronouns = null, System.Uri? website = null, idunno.AtProto.Blob? avatar = null, idunno.AtProto.Blob? banner = null, idunno.AtProto.Repo.StrongReference? pinnedPost = null, idunno.AtProto.Labels.SelfLabels? labels = null) -> void
+idunno.Bluesky.Record.Profile.Profile(string? displayName, string? description, string? pronouns, System.Uri? website, idunno.AtProto.Blob? avatar, idunno.AtProto.Blob? banner, idunno.AtProto.Repo.StrongReference? pinnedPost, idunno.AtProto.Labels.SelfLabels? labels, System.DateTimeOffset createdAt) -> void
 idunno.Bluesky.Record.Profile.Profile(string? displayName, string? description, string? pronouns, System.Uri? website, idunno.AtProto.Blob? avatar, idunno.AtProto.Blob? banner, idunno.AtProto.Repo.StrongReference? joinedViaStarterPack, idunno.AtProto.Repo.StrongReference? pinnedPost, idunno.AtProto.Labels.SelfLabels? labels, System.DateTimeOffset? createdAt) -> void
 idunno.Bluesky.Record.Profile.Pronouns.get -> string?
 idunno.Bluesky.Record.Profile.Pronouns.set -> void

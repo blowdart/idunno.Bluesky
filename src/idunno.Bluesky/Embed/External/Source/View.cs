@@ -10,7 +10,7 @@ namespace idunno.Bluesky.Embed.External.Source;
 /// </summary>
 [JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
 [JsonDerivedType(typeof(View), typeDiscriminator: "app.bsky.embed.external#viewExternalSource")]
-public record View :Bluesky.View
+public record View : Bluesky.View
 {
     [JsonConstructor]
     internal View(Uri uri, Uri? icon, string title, string? description, Theme? theme) : base()

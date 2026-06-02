@@ -20,6 +20,41 @@ namespace idunno.Bluesky.Record;
 public record Profile : BlueskyRecord
 {
     /// <summary>
+    /// Creates a new instance of <see cref="Profile"/>, with the creation date set to the current UTC time.
+    /// </summary>
+    /// <param name="displayName">The display name of the account, if any.</param>
+    /// <param name="description">The description for the account, if any.</param>
+    /// <param name="pronouns">The pronouns for the account, if any.</param>
+    /// <param name="website">The website for the account, if any.</param>
+    /// <param name="avatar">A small image to be displayed next to posts from account, if any.</param>
+    /// <param name="banner">A larger horizontal image to display behind profile view, if any.</param>
+    /// <param name="pinnedPost">A <see cref="StrongReference"/> to the profile's pinned post, if any.</param>
+    /// <param name="labels">Any <see cref="SelfLabels"/> applied to the profile.</param>
+    [SuppressMessage("ApiDesign", "RS0027:API with optional parameter(s) should have the most parameters amongst its public overloads", Justification = "Ease of use")]
+    public Profile(
+        string? displayName = null,
+        string? description = null,
+        string? pronouns = null,
+        Uri? website = null,
+        Blob? avatar = null,
+        Blob? banner = null,
+        StrongReference? pinnedPost = null,
+        SelfLabels? labels = null) : this(
+            displayName: displayName,
+            description: description,
+            pronouns: pronouns,
+            website: website,
+            avatar: avatar,
+            banner: banner,
+            joinedViaStarterPack: null,
+            pinnedPost: pinnedPost,
+            labels: labels,
+            createdAt: null)
+    {
+        CreatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
     /// Creates a new instance of <see cref="Profile"/>.
     /// </summary>
     /// <param name="displayName">The display name of the account, if any.</param>
@@ -33,15 +68,15 @@ public record Profile : BlueskyRecord
     /// <param name="createdAt">The <see cref="DateTimeOffset"/> the record was created at.</param>
     [SuppressMessage("ApiDesign", "RS0027:API with optional parameter(s) should have the most parameters amongst its public overloads", Justification = "Ease of use")]
     public Profile(
-        string? displayName = null,
-        string? description = null,
-        string? pronouns = null,
-        Uri? website = null,
-        Blob? avatar = null,
-        Blob? banner = null,
-        StrongReference? pinnedPost = null,
-        SelfLabels? labels = null,
-        DateTimeOffset? createdAt = null) : this(
+        string? displayName,
+        string? description,
+        string? pronouns,
+        Uri? website,
+        Blob? avatar,
+        Blob? banner,
+        StrongReference? pinnedPost,
+        SelfLabels? labels,
+        DateTimeOffset createdAt) : this(
             displayName: displayName,
             description: description,
             pronouns: pronouns,
@@ -99,11 +134,11 @@ public record Profile : BlueskyRecord
             Labels = new SelfLabels();
         }
 
-        CreatedAt = createdAt ?? DateTimeOffset.UtcNow;
+        CreatedAt = createdAt;
     }
 
     /// <summary>
-    /// Gets the creation date/time of the profile, if provided.
+    /// Gets the creation date/time of the profile, if known.
     /// </summary>
     public DateTimeOffset? CreatedAt { get; set; }
 
