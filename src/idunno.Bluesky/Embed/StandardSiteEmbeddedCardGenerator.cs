@@ -50,7 +50,7 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
     /// Creates a new instance of <see cref="StandardSiteEmbeddedCardGenerator"/>.
     /// </summary>
     /// <param name="agent">The <see cref="BlueskyAgent"/> to use for thumbnail uploading.</param>
-    /// <param name="httpClient">The <see cref="HttpClient"/> to use for making HTTP requests to retrieve Standard.Site data.</param>
+    /// <param name="httpClient">The <see cref="HttpClient"/> to use for making HTTP requests to retrieve Standard.Site data. Ensure the client is hardened against SSRF attacks.</param>
     /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> to use for logging. If <see langword="null" />, a no-op logger will be used.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> is <see langword="null" />.</exception>
     public StandardSiteEmbeddedCardGenerator(BlueskyAgent agent, HttpClient httpClient, ILoggerFactory? loggerFactory)
@@ -67,7 +67,7 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
     /// Creates a new instance of <see cref="StandardSiteEmbeddedCardGenerator"/>.
     /// </summary>
     /// <param name="agent">The <see cref="BlueskyAgent"/> to use for thumbnail uploading.</param>
-    /// <param name="httpClient">The <see cref="HttpClient"/> to use for making HTTP requests to retrieve Standard.Site data.</param>
+    /// <param name="httpClient">The <see cref="HttpClient"/> to use for making HTTP requests to retrieve Standard.Site data. Ensure the client is hardened against SSRF attacks.</param>
     /// <param name="logger">The <see cref="ILogger"/> to use for logging. If <see langword="null" />, a no-op logger will be used.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> is <see langword="null" />.</exception>
     public StandardSiteEmbeddedCardGenerator(BlueskyAgent agent, HttpClient httpClient, ILogger logger)
@@ -85,7 +85,7 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
     /// </summary>
     /// <param name="uri">The URI to retrieve Standard.Site data from.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>An <see cref="EmbeddedExternal"/> if the page can be fetched; otherwise, <see langword="null"/>. Standard.Site metadata will be preferred when available.</returns>
+    /// <returns>An <see cref="EmbeddedExternal"/> if the page can be fetched and contains correct metadata. If only OpenGraph metadata is available an OpenGraph embed will be returned; otherwise, <see langword="null"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is <see langword="null" /></exception>
     /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> is not an absolute URI.</exception>
     [SuppressMessage("Documentation", "CSENSE020:Potential ghost parameter reference in documentation", Justification = "Not a ghost reference.")]
@@ -142,7 +142,7 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
         string? documentMetadata = siteStandardLinks.TryGetValue("document", out string? value) ? value : null;
         string? publicationMetadata = siteStandardLinks.TryGetValue("publication", out value) ? value : null;
 
-        // A minimum of the document metadata is requried to have a valid standard site embed,
+        // A minimum of the document metadata is required to have a valid standard site embed,
         // so if it's not present, return the open graph result (which may be null if there was no open graph metadata).
         if (documentMetadata is null)
         {

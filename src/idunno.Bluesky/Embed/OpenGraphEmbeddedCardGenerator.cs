@@ -68,7 +68,7 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
     /// Creates a new instance of <see cref="OpenGraphEmbeddedCardGenerator"/>.
     /// </summary>
     /// <param name="agent">The <see cref="BlueskyAgent"/> to use for thumbnail uploading.</param>
-    /// <param name="httpClient">The <see cref="HttpClient"/> to use for making HTTP requests to retrieve OpenGraph data.</param>
+    /// <param name="httpClient">The <see cref="HttpClient"/> to use for making HTTP requests to retrieve OpenGraph data. Ensure the client is hardened against SSRF attacks.</param>
     /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> to use for logging. If <see langword="null" />, a no-op logger will be used.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/> is <see langword="null" />.</exception>
     public OpenGraphEmbeddedCardGenerator(BlueskyAgent agent, HttpClient httpClient, ILoggerFactory? loggerFactory)
@@ -85,7 +85,7 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
     /// Creates a new instance of <see cref="OpenGraphEmbeddedCardGenerator"/>.
     /// </summary>
     /// <param name="agent">The <see cref="BlueskyAgent"/> to use for thumbnail uploading.</param>
-    /// <param name="httpClient">The <see cref="HttpClient"/> to use for making HTTP requests to retrieve OpenGraph data.</param>
+    /// <param name="httpClient">The <see cref="HttpClient"/> to use for making HTTP requests to retrieve OpenGraph data. Ensure the client is hardened against SSRF attacks.</param>
     /// <param name="logger">The <see cref="ILogger"/> to use for logging.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="agent"/>, <paramref name="httpClient"/>, or <paramref name="logger"/> is <see langword="null" />.</exception>
     protected OpenGraphEmbeddedCardGenerator(BlueskyAgent agent, HttpClient httpClient, ILogger logger)

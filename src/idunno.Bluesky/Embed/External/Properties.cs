@@ -106,7 +106,7 @@ public record Properties
     public string Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the <see cref="Uri"/> to a thumbnail image for the external link.
+    /// Gets or sets the <see cref="Blob"/> to a thumbnail image for the external link.
     /// </summary>
     [JsonInclude]
     [JsonPropertyName("thumb")]
@@ -114,7 +114,7 @@ public record Properties
     public Blob? Thumbnail { get; set; }
 
     /// <summary>
-    /// Gets or sets the <see cref="AtUri"/> of the Atmosphere record representing this external content, if it exists.
+    /// Gets or sets a collection of <see cref="StrongReference"/>s to the Atmosphere records representing this external content, if they exist.
     /// </summary>
     [JsonInclude]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
