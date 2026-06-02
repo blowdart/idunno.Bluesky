@@ -20,9 +20,6 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
     [GeneratedRegex("<meta property=\"og:([^\"]+)\" content=\"([^\"]+)\"", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex s_OpenGraphPropertyRegex();
 
-    [GeneratedRegex(@"<title>(.*?)</title>", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex s_TitleTag();
-
     /// <summary>
     /// Creates a new instance of <see cref="OpenGraphEmbeddedCardGenerator"/>.
     /// </summary>

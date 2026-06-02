@@ -105,7 +105,7 @@ public sealed class Bytes : IEquatable<Bytes>
     /// </summary>
     /// <param name="other">A <see cref="Bytes"/> or <see langword="null"/> to compare to this <see cref="Bytes"/>.</param>
     /// <returns>
-    /// <see langword="true"/> if this <see cref="Bytes"/> and the specified <paramref name="other"/>> refer to the same object,
+    /// <see langword="true"/> if this <see cref="Bytes"/> and the specified <paramref name="other"/> refer to the same object,
     /// this Bytes and the specified obj are both the same type of object and those objects are equal,
     /// or if this Bytes and the specified obj are both <see langword="null"/>, otherwise, <see langword="false"/>.
     /// </returns>
@@ -131,7 +131,7 @@ public sealed class Bytes : IEquatable<Bytes>
     /// </summary>
     /// <param name="obj">An object to compare to this <see cref="Bytes"/>.</param>
     /// <returns>
-    /// <see langword="true"/> if this <see cref="Bytes"/> and the specified <paramref name="obj"/>> refer to the same object,
+    /// <see langword="true"/> if this <see cref="Bytes"/> and the specified <paramref name="obj"/> refer to the same object,
     /// this Bytes and the specified obj are both the same type of object and those objects are equal,
     /// or if this Bytes and the specified obj are both <see langword="null"/>, otherwise, <see langword="false"/>.
     /// </returns>

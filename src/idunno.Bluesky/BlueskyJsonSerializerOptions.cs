@@ -24,10 +24,10 @@ public static class BlueskyJsonSerializerOptions
     /// <summary>
     /// Creates a new set of <see cref="JsonSerializerOptions"/> for Bluesky types.
     /// </summary>
-    public static JsonSerializerOptions Options => AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(SourceGenerationContext.Default);
+    public static JsonSerializerOptions Options => AtProtoServer.BuildChainedTypeInfoResolverJsonSerializerOptions(s_options);
 
     /// <summary>
     /// Gets the default <see cref="IJsonTypeInfoResolver"/> for Bluesky types.
     /// </summary>
-    public static IJsonTypeInfoResolver TypeInfoResolver => s_options.TypeInfoResolver!;
+    public static IJsonTypeInfoResolver TypeInfoResolver => Options.TypeInfoResolver!;
 }
