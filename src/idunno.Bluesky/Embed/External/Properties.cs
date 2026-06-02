@@ -25,16 +25,17 @@ public record Properties
     /// <param name="description">The description of the external link, if any.</param>
     /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
     /// <param name="associatedRefs">The collection of <see cref="StrongReference"/> representing the Atmosphere records for this external content, if any.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="title"/>, or <paramref name="description"/> is <see langword="null"/>.</exception>
     [JsonConstructor]
     [SuppressMessage(
         "ApiDesign",
         "RS0027:API with optional parameter(s) should have the most parameters amongst its public overloads",
         Justification = "Alternate constructions take URI as a string, so having the exact same parameters ensures consistency")]
-    public Properties(Uri uri, string title, string? description = null, Blob? thumbnail = null, IReadOnlyCollection<StrongReference>? associatedRefs = null) : base()
+    public Properties(Uri uri, string title, string description, Blob? thumbnail = null, IReadOnlyCollection<StrongReference>? associatedRefs = null) : base()
     {
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(title);
+        ArgumentNullException.ThrowIfNull(description);
 
         Uri = uri;
         Title = title;
@@ -48,23 +49,10 @@ public record Properties
     /// </summary>
     /// <param name="uri">The external uri for the link.</param>
     /// <param name="title">The title for the external link.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
-    [SuppressMessage("Design", "CA1054:URI-like parameters should not be strings", Justification = "Alternative constructor for convenience")]
-    public Properties(string uri, string title) :
-        this(uri: new Uri(uri), title: title)
-    {
-    }
-
-    /// <summary>
-    /// Creates a new instance of <see cref="Properties"/>.
-    /// </summary>
-    /// <param name="uri">The external uri for the link.</param>
-    /// <param name="title">The title for the external link.</param>
     /// <param name="description">The description of the external link.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="title"/>, or <paramref name="description"/> is <see langword="null"/>.</exception>
     [SuppressMessage("Design", "CA1054:URI-like parameters should not be strings", Justification = "Alternative constructor for convenience")]
-    public Properties(string uri, string title, string description) :
-        this(uri: new Uri(uri), title: title, description: description)
+    public Properties(string uri, string title, string description) : this(uri: new Uri(uri), title: title, description: description)
     {
     }
 
@@ -75,7 +63,7 @@ public record Properties
     /// <param name="title">The title for the external link.</param>
     /// <param name="description">The description of the external link.</param>
     /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="title"/>, or <paramref name="description"/> is <see langword="null"/>.</exception>
     [SuppressMessage("Design", "CA1054:URI-like parameters should not be strings", Justification = "Alternative constructor for convenience")]
     public Properties(string uri, string title, string description, Blob? thumbnail) :
         this(uri: new Uri(uri), title: title, description: description, thumbnail: thumbnail)
@@ -90,8 +78,8 @@ public record Properties
     /// <param name="description">The description of the external link.</param>
     /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
     /// <param name="associatedRefs">The collection of <see cref="StrongReference"/> representing the Atmosphere records for this external content, if any.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="title"/> is <see langword="null"/>.</exception>
-    public Properties(string uri, string title, string? description, Blob? thumbnail, IReadOnlyCollection<StrongReference>? associatedRefs) :
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="title"/>, or <paramref name="description"/> is <see langword="null"/>.</exception>
+    public Properties(string uri, string title, string description, Blob? thumbnail, IReadOnlyCollection<StrongReference>? associatedRefs) :
         this(new Uri(uri), title, description, thumbnail, associatedRefs)
     {
     }
@@ -115,8 +103,7 @@ public record Properties
     /// </summary>
     [JsonInclude]
     [JsonRequired]
-    [NotNull]
-    public string? Description { get; set; }
+    public string Description { get; set; }
 
     /// <summary>
     /// Gets or sets the <see cref="Uri"/> to a thumbnail image for the external link.

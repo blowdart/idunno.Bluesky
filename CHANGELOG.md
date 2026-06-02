@@ -38,6 +38,9 @@
 ### idunno.Bluesky
 
 * Moved various external Embedded content classes to their own files and namespaces. This is a breaking change if you are using these classes directly, rather than through the utility methods on `BlueskyAgent`.
+* Removed previously marked obsolete `BlueskyAgent.SetLiveStatus` method. Update your code to use `BlueskyAgent.CreateLiveStatus` instead.
+* Removed previously marked obsolete `BlueskyAgent.SetStatus` method. Update your code to use `BlueskyAgent.CreateStatus` instead.
+* Removed previously marked obsolete `SelfLabelNames` class. Update your code to use `SelfLabelValues` instead.
 
 ## 1.8.3 - 2026-05-16
 

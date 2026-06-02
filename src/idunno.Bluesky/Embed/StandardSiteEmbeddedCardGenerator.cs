@@ -120,6 +120,12 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
     {
         EmbeddedExternal? result = await CreateEmbeddedExternalFromOpenGraphMetadata(uri, pageContent, cancellationToken).ConfigureAwait(false);
 
+        // We don't have any open graph metadata so we can't supplement it with the standard site metadata, so we might as well just return null at this point.
+        if (result == null)
+        {
+            return result;
+        }
+
         Dictionary<string, string> siteStandardLinks = [];
 
         foreach (Match match in s_SiteStandardLinkRegex().Matches(pageContent))
@@ -136,10 +142,22 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
         string? documentMetadata = siteStandardLinks.TryGetValue("document", out string? value) ? value : null;
         string? publicationMetadata = siteStandardLinks.TryGetValue("publication", out value) ? value : null;
 
-        AtUri? documentAtUri = null;
-
-        if (documentMetadata is not null && AtUri.TryParse(documentMetadata, out documentAtUri) && publicationMetadata is null)
+        // A minimum of the document metadata is requried to have a valid standard site embed,
+        // so if it's not present, return the open graph result (which may be null if there was no open graph metadata).
+        if (documentMetadata is null)
         {
+            return result;
+        }
+
+        // If the document metadata is not an AtUri we can't do anything with it, so return the open graph result (which may be null if there was no open graph metadata).
+        if (!AtUri.TryParse(documentMetadata, out AtUri? documentAtUri))
+        {
+            return result;
+        }
+
+        if (publicationMetadata is null)
+        {
+            // Try to resolve via /.well-know/
             UriBuilder publicationMetaDataPathBuilder = new()
             {
                 Scheme = uri.Scheme,
@@ -151,103 +169,95 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
             publicationMetadata = await GetPageContent(publicationMetaDataPathBuilder.Uri, cancellationToken).ConfigureAwait(false);
         }
 
-        if (documentAtUri is not null && publicationMetadata is not null && AtUri.TryParse(publicationMetadata, out AtUri? publicationAtUri))
+        // If there is no publication metadata after trying embeds and the well-known path
+        // we can't create a standard site embed, so return the open graph result (which may be null if there was no open graph metadata).
+        if (publicationMetadata is null)
         {
-            if (documentAtUri.Repo is null)
+            return result;
+        }
+
+        // If the publication metadata is not an AtUri we can't do anything with it, so return the open graph result (which may be null if there was no open graph metadata).
+        if (!AtUri.TryParse(publicationMetadata, out AtUri? publicationAtUri))
+        {
+            return result;
+        }
+
+        Did? documentAuthorDid = null;
+        if (documentAtUri.Repo is Handle documentAuthorHandle)
+        {
+            documentAuthorDid = await Agent.ResolveHandle(documentAuthorHandle, cancellationToken).ConfigureAwait(false);
+        }
+        else if (documentAtUri.Repo is Did did)
+        {
+            documentAuthorDid = did;
+        }
+
+        if (documentAuthorDid is null)
+        {
+            Bluesky.Logger.AuthorDidResolutionFailed(Logger, uri, documentAtUri);
+            return result;
+        }
+
+        Uri? documentRecordPds = await Agent.ResolvePds(documentAuthorDid, cancellationToken).ConfigureAwait(false);
+        if (documentRecordPds is null)
+        {
+            Bluesky.Logger.PdsForAuthorDidNotFound(Logger, documentAuthorDid, uri);
+            return result;
+        }
+
+        AtProtoHttpResult<AtProtoRepositoryRecord> documentRecordResult = await Agent.GetRawRecord(
+            uri: documentAtUri,
+            pds: documentRecordPds,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (documentRecordResult.Succeeded)
+        {
+            Did? publicationAuthorDid = null;
+
+            if (documentAtUri.Repo.Equals(publicationAtUri.Repo))
             {
-                Bluesky.Logger.AuthorDidRepoNotPresentInSiteStandardDocumentLink(Logger, documentAtUri, uri);
+                publicationAuthorDid = documentAuthorDid;
+            }
+            else if (publicationAtUri.Repo is Handle publicationAuthorHandle)
+            {
+                publicationAuthorDid = await Agent.ResolveHandle(publicationAuthorHandle, cancellationToken).ConfigureAwait(false);
+            }
+            else if (publicationAtUri.Repo is Did did)
+            {
+                publicationAuthorDid = did;
+            }
+
+            if (publicationAuthorDid is null)
+            {
+                Bluesky.Logger.PublicationDidRepoNotPresent(Logger, publicationAtUri, uri);
                 return result;
             }
 
-            Did? documentAuthorDid = null;
-            if (documentAtUri.Repo is Handle documentAuthorHandle)
+            Uri? publicationRecordPds;
+
+            if (documentAuthorDid.Equals(publicationAuthorDid))
             {
-                documentAuthorDid = await Agent.ResolveHandle(documentAuthorHandle, cancellationToken).ConfigureAwait(false);
+                publicationRecordPds = documentRecordPds;
             }
-            else if (documentAtUri.Repo is Did did)
+            else
             {
-                documentAuthorDid = did;
+                publicationRecordPds = await Agent.ResolvePds(publicationAuthorDid, cancellationToken).ConfigureAwait(false);
             }
 
-            if (documentAuthorDid is null)
+            if (publicationRecordPds is null)
             {
-                Bluesky.Logger.AuthorDidResolutionFailed(Logger, uri, documentAtUri);
+                Bluesky.Logger.PdsForPublicationDidNotFound(Logger, publicationAuthorDid, uri);
                 return result;
             }
 
-            Uri? documentRecordPds = await Agent.ResolvePds(documentAuthorDid, cancellationToken).ConfigureAwait(false);
-            if (documentRecordPds is null)
+            AtProtoHttpResult<AtProtoRepositoryRecord> publicationRecordResult = await Agent.GetRawRecord(
+                uri: publicationAtUri,
+                pds: publicationRecordPds,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (publicationRecordResult.Succeeded)
             {
-                Bluesky.Logger.PdsForAuthorDidNotFound(Logger, documentAuthorDid, uri);
-                return result;
-            }
-
-            AtProtoHttpResult<AtProtoRepositoryRecord> documentRecordResult = await Agent.GetRawRecord(
-                uri: documentAtUri,
-                pds: documentRecordPds,
-                cancellationToken:  cancellationToken).ConfigureAwait(false);
-
-            if (documentRecordResult.Succeeded)
-            {
-                Did? publicationAuthorDid = null;
-
-                if (documentAtUri.Repo.Equals(publicationAtUri.Repo))
-                {
-                    publicationAuthorDid = documentAuthorDid;
-                }
-                else if (publicationAtUri.Repo is Handle publicationAuthorHandle)
-                {
-                    publicationAuthorDid = await Agent.ResolveHandle(publicationAuthorHandle, cancellationToken).ConfigureAwait(false);
-                }
-                else if (publicationAtUri.Repo is Did did)
-                {
-                    publicationAuthorDid = did;
-                }
-
-                if (publicationAuthorDid is null)
-                {
-                    Bluesky.Logger.PublicationDidRepoNotPresent(Logger, publicationAtUri, uri);
-                    return result;
-                }
-
-                Uri? publicationRecordPds;
-
-                if (documentAuthorDid.Equals(publicationAuthorDid))
-                {
-                    publicationRecordPds = documentRecordPds;
-                }
-                else
-                {
-                    publicationRecordPds = await Agent.ResolvePds(publicationAuthorDid, cancellationToken).ConfigureAwait(false);
-                }
-
-                if (publicationRecordPds is null)
-                {
-                    Bluesky.Logger.PdsForPublicationDidNotFound(Logger, publicationAuthorDid, uri);
-                    return result;
-                }
-
-                AtProtoHttpResult<AtProtoRepositoryRecord> publicationRecordResult = await Agent.GetRawRecord(
-                    uri: publicationAtUri,
-                    pds: publicationRecordPds,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                if (publicationRecordResult.Succeeded)
-                {
-                    if (result is null)
-                    {
-                        result = new EmbeddedExternal(
-                            uri: uri,
-                            title: uri.ToString(),
-                            description: null,
-                            thumbnail: null,
-                            associatedRefs: [documentRecordResult.Result.StrongReference, publicationRecordResult.Result.StrongReference]);
-                    }
-                    else
-                    {
-                        result.External.AssociatedRefs = [documentRecordResult.Result.StrongReference, publicationRecordResult.Result.StrongReference];
-                    }
-                }
+                result.External.AssociatedRefs = [documentRecordResult.Result.StrongReference, publicationRecordResult.Result.StrongReference];
             }
         }
 

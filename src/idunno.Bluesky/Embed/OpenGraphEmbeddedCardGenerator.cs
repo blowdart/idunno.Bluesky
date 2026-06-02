@@ -203,7 +203,7 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
         return new EmbeddedExternal(
             uri: canonicalUrl,
             title: title ?? canonicalUrl,
-            description: description,
+            description: description ?? canonicalUrl,
             thumbnail: thumb
         );
     }
