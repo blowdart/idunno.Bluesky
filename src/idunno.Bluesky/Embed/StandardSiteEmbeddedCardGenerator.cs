@@ -113,7 +113,7 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
     /// <param name="uri">The URI to retrieve Standard.Site and OpenGraph data from.</param>
     /// <param name="pageContent">The HTML content of the page.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>An <see cref="EmbeddedExternal"/> if Standard.Site metadata is found; otherwise, <see langword="null"/>.</returns>
+    /// <returns>An <see cref="EmbeddedExternal"/> if Standard.Site metadata is found; otherwise attempts to fall back to an OpenGraph embed, and if that fails, <see langword="null"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is <see langword="null" /></exception>
     [SuppressMessage("Minor Code Smell", "S3267:Loops should be simplified with \"LINQ\" expressions", Justification = "Avoid linq allocations in a hot path.")]
     private async Task<EmbeddedExternal?> CreateEmbeddedExternalFromSiteStandardMetadata(Uri uri, string pageContent, CancellationToken cancellationToken = default)

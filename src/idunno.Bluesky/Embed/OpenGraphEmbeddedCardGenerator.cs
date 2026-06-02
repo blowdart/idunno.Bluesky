@@ -157,8 +157,15 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
             }
         }
 
+
+
         // Look for the basic OpenGraph properties that are required for an OpenCard embed. If they are not present, fall back to using the page title and supplied URI.
-        string? canonicalUrl = openGraphProperties.TryGetValue("url", out string? openGraphUrl) ? openGraphUrl : uri.ToString();
+        string? canonicalUrl = openGraphProperties.TryGetValue("url", out string? openGraphUrl) ? openGraphUrl : null;
+        if (canonicalUrl is null)
+        {
+            return null;
+        }
+
         if (!Uri.TryCreate(canonicalUrl, UriKind.Absolute, out Uri? _))
         {
             return null;

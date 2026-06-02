@@ -26,7 +26,7 @@ public record View :Bluesky.View
     /// Gets the URI of the source. For example, the https:// URL of a site.standard.publication record.
     /// </summary>
     [JsonRequired]
-    public required Uri Uri { get; init; }
+    public Uri Uri { get; init; }
 
     /// <summary>
     /// Gets the fully-qualified URL where an icon representing the source can be fetched. For example, CDN location provided by the App View.
@@ -37,7 +37,7 @@ public record View :Bluesky.View
     /// Gets the title of the external source record. For example, the title of a site.standard.publication record.
     /// </summary>
     [JsonRequired]
-    public required string Title { get; init; }
+    public string Title { get; init; }
 
     /// <summary>
     /// Gets the description of the external source record, if available.

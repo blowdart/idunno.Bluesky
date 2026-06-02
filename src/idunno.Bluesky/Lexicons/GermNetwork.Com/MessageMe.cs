@@ -44,6 +44,7 @@ public record MessageMe
     /// </summary>
     /// <exception cref="ArgumentNullException">Thrown when the value is <see langword="null" />.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is less than 1 character or greater than 2047 characters.</exception>
+    /// <exception cref="ArgumentException">Thrown when the value has a non-empty fragment component.</exception>
     public Uri MessageMeUrl
     {
         get;
@@ -51,6 +52,11 @@ public record MessageMe
         set
         {
             ArgumentNullException.ThrowIfNull(value);
+
+            if (!string.IsNullOrEmpty(value.Fragment))
+            {
+                throw new ArgumentException("MessageMeUrl must have an empty fragment component.", nameof(value));
+            }
 
             ArgumentOutOfRangeException.ThrowIfLessThan(value.ToString().Length, 1);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(value.ToString().Length, 2047);
