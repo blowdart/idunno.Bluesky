@@ -157,7 +157,7 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
 
         if (publicationMetadata is null)
         {
-            // Try to resolve via /.well-know/
+            // Try to resolve via /.well-known/
             UriBuilder publicationMetaDataPathBuilder = new()
             {
                 Scheme = uri.Scheme,

@@ -203,19 +203,17 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
                         using (Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
                         {
                             // Get the first six bytes of the content to check the file signature and prevent downloading large files that aren't images
-                            byte[] header = ArrayPool<byte>.Shared.Rent(6);
-                            try
+                            // Don't rent a buffer here as it may return a larger size than requested.
+                            byte[] header = new byte[6];
+                            int headerBytesRead = await stream.ReadAtLeastAsync(
+                                header,
+                                header.Length,
+                                throwOnEndOfStream: false,
+                                cancellationToken: cancellationToken).ConfigureAwait(false);
+                            if (headerBytesRead < header.Length)
                             {
-                                int bytesRead = await stream.ReadAsync(header, cancellationToken).ConfigureAwait(false);
-                                if (bytesRead < header.Length)
-                                {
-                                    Logger.EmbeddedCardImageTooSmall(ILogger, uri);
-                                    return null;
-                                }
-                            }
-                            finally
-                            {
-                                ArrayPool<byte>.Shared.Return(header);
+                                Logger.EmbeddedCardImageTooSmall(ILogger, uri);
+                                return null;
                             }
 
                             imageMimeType ??= SniffImageContentType(header) ?? UnknownImageType;
@@ -226,7 +224,7 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
                                 return null;
                             }
 
-                            string fileName = Path.GetRandomFileName();
+                            string fileName = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
                             byte[] readBuffer = ArrayPool<byte>.Shared.Rent(bufferSize);
 
                             try

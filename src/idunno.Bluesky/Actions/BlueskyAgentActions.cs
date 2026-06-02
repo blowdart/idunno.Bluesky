@@ -962,6 +962,11 @@ public partial class BlueskyAgent
                 }
                 else
                 {
+                    if (post.Facets.IsReadOnly)
+                    {
+                        post.Facets = [.. post.Facets];
+                    }
+
                     foreach (Facet? facet in facets)
                     {
                         if (facet is not null)
