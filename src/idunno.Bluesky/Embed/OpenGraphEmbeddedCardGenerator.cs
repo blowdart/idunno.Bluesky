@@ -43,7 +43,7 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
         ArgumentNullException.ThrowIfNull(agent.HttpClient);
 
         loggerFactory ??= NullLoggerFactory.Instance;
-        Logger = loggerFactory.CreateLogger<OpenGraphEmbeddedCardGenerator>();
+        ILogger = loggerFactory.CreateLogger<OpenGraphEmbeddedCardGenerator>();
     }
 
     /// <summary>
@@ -58,7 +58,7 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
         ArgumentNullException.ThrowIfNull(agent);
         ArgumentNullException.ThrowIfNull(agent.HttpClient);
         ArgumentNullException.ThrowIfNull(logger);
-        Logger = logger;
+        ILogger = logger;
     }
 
     /// <summary>
@@ -75,7 +75,7 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
         ArgumentNullException.ThrowIfNull(httpClient);
 
         loggerFactory ??= NullLoggerFactory.Instance;
-        Logger = loggerFactory.CreateLogger<OpenGraphEmbeddedCardGenerator>();
+        ILogger = loggerFactory.CreateLogger<OpenGraphEmbeddedCardGenerator>();
     }
 
     /// <summary>
@@ -92,7 +92,7 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(logger);
 
-        Logger = logger;
+        ILogger = logger;
     }
 
     /// <summary>
@@ -180,7 +180,7 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
             thumb = await DownloadAndUploadImageBlob(
                 imageUri,
                 openGraphProperties.TryGetValue("image:type", out string? imageMimeType) ? imageMimeType : null,
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken : cancellationToken).ConfigureAwait(false);
         }
 
         return new EmbeddedExternal(

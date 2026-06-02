@@ -7,6 +7,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using idunno.AtProto;
+using System.Buffers;
+using System.Runtime.ConstrainedExecution;
 
 namespace idunno.Bluesky.Embed;
 
@@ -52,7 +54,7 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
     /// <summary>
     /// Gets the logger used to log messages
     /// </summary>
-    protected ILogger Logger { get; set;  } = NullLogger.Instance;
+    protected ILogger ILogger { get; set; } = NullLogger.Instance;
 
     /// <summary>
     /// Gets the mime type returned if the content type of an image is unknown.
@@ -99,7 +101,7 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
                 using HttpResponseMessage response = await HttpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
                 {
-                    Bluesky.Logger.EmbeddedCardGetRequestFailedWithStatusCode(Logger, uri, response.StatusCode);
+                    Logger.EmbeddedCardGetRequestFailedWithStatusCode(ILogger, uri, response.StatusCode);
                     return null;
                 }
 
@@ -108,7 +110,7 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
             }
             catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
             {
-                Bluesky.Logger.EmbeddedCardGetRequestThrew(Logger, uri, ex);
+                Logger.EmbeddedCardGetRequestThrew(ILogger, uri, ex);
                 return null;
             }
         }
@@ -119,18 +121,30 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
     /// </summary>
     /// <param name="uri">The URI of the image to download.</param>
     /// <param name="imageMimeType">The mime type of the image, if known.</param>
+    /// <param name="maxDownloadSize">The maximum number of bytes to download.</param>
+    /// <param name="bufferSize">The size of the buffer to use when downloading the image.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The uploaded <see cref="Blob"/> or <see langword="null"/> if the operation fails.</returns>
     /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> is not a valid URI.</exception>
     [SuppressMessage("Documentation", "CSENSE020:Potential ghost parameter reference in documentation", Justification = "Not a ghost reference")]
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Allows for string/Uri overloads")]
-    protected async Task<Blob?> DownloadAndUploadImageBlob(string uri, string? imageMimeType = null, CancellationToken cancellationToken = default)
+    protected async Task<Blob?> DownloadAndUploadImageBlob(
+        string uri,
+        string? imageMimeType = null,
+        long maxDownloadSize = 2000000,
+        int bufferSize = 1000000,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(uri);
 
         if (Uri.TryCreate(uri, UriKind.Absolute, out Uri? imageUri))
         {
-            return await DownloadAndUploadImageBlob(uri: imageUri, imageMimeType: imageMimeType, cancellationToken: cancellationToken).ConfigureAwait(false);
+            return await DownloadAndUploadImageBlob(
+                uri: imageUri,
+                imageMimeType: imageMimeType,
+                maxDownloadSize: maxDownloadSize,
+                bufferSize: bufferSize,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         else
         {
@@ -143,13 +157,20 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
     /// </summary>
     /// <param name="uri">The URI of the image to download.</param>
     /// <param name="imageMimeType">The mime type of the image, if known.</param>
+    /// <param name="maxDownloadSize">The maximum number of bytes to download.</param>
+    /// <param name="bufferSize">The size of the buffer to use when downloading the image.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The uploaded <see cref="Blob"/> or <see langword="null"/> if the operation fails.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is <see langword="null"/>.</exception>
     /// <exception cref="UnauthorizedAccessException">Thrown if the agent is not authenticated.</exception>
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Error handling")]
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Allows for string/Uri overloads")]
-    protected async Task<Blob?> DownloadAndUploadImageBlob(Uri uri, string? imageMimeType = null, CancellationToken cancellationToken = default)
+    protected async Task<Blob?> DownloadAndUploadImageBlob(
+        Uri uri,
+        string? imageMimeType = null,
+        long maxDownloadSize = 2000000,
+        int bufferSize = 1000000,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
 
@@ -173,45 +194,116 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
                 {
                     if (response.IsSuccessStatusCode)
                     {
-                        byte[] imageData = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
-
-                        imageMimeType ??= SniffImageContentType(imageData) ?? UnknownImageType;
-
-                        if (!imageMimeType.Equals(UnknownImageType, StringComparison.OrdinalIgnoreCase) && Agent is not null)
+                        if (response.Content.Headers.ContentLength is not null && response.Content.Headers.ContentLength > maxDownloadSize)
                         {
+                            Logger.EmbeddedCardImageTooLarge(ILogger, uri, response.Content.Headers.ContentLength.Value, maxDownloadSize);
+                            return null;
+                        }
+
+                        using (Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
+                        {
+                            // Get the first six bytes of the content to check the file signature and prevent downloading large files that aren't images
+                            byte[] header = ArrayPool<byte>.Shared.Rent(6);
                             try
                             {
-                                // Upload the image blob
-                                AtProtoHttpResult<Blob> uploadResult = await Agent.UploadBlob(
-                                    blob: imageData,
-                                    mimeType: imageMimeType,
-                                    cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                                if (uploadResult.Succeeded)
+                                int bytesRead = await stream.ReadAsync(header, cancellationToken).ConfigureAwait(false);
+                                if (bytesRead < header.Length)
                                 {
-                                    result = uploadResult.Result;
-                                }
-                                else
-                                {
-                                    Bluesky.Logger.EmbeddedCardImageUploadFailed(Logger, uri, uploadResult.StatusCode, uploadResult.AtErrorDetail?.Error, uploadResult.AtErrorDetail?.Message);
+                                    Logger.EmbeddedCardImageTooSmall(ILogger, uri);
+                                    return null;
                                 }
                             }
-                            catch (Exception ex)
+                            finally
                             {
-                                Bluesky.Logger.EmbeddedCardImageUploadThrew(Logger, uri, ex);
+                                ArrayPool<byte>.Shared.Return(header);
+                            }
+
+                            imageMimeType ??= SniffImageContentType(header) ?? UnknownImageType;
+                            if (imageMimeType == UnknownImageType)
+                            {
+                                stream.Close();
+                                Logger.EmbeddedCardImageTypeNotRecognized(ILogger, uri);
+                                return null;
+                            }
+
+                            string fileName = Path.GetRandomFileName();
+                            byte[] readBuffer = ArrayPool<byte>.Shared.Rent(bufferSize);
+
+                            try
+                            {
+                                using (var fileStream = new FileStream(fileName, FileMode.CreateNew, FileAccess.Write, FileShare.None, bufferSize, useAsync: true))
+                                {
+                                    // Write the header bytes we already read
+                                    await fileStream.WriteAsync(header, cancellationToken).ConfigureAwait(false);
+
+                                    // Write the rest of the stream to a temporary file
+                                    int totalBytesRead = header.Length;
+                                    int bytesRead;
+                                    while ((bytesRead = await stream.ReadAsync(readBuffer, cancellationToken).ConfigureAwait(false)) > 0)
+                                    {
+                                        await fileStream.WriteAsync(readBuffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
+                                        totalBytesRead += bytesRead;
+
+                                        if (totalBytesRead > maxDownloadSize)
+                                        {
+                                            fileStream.Close();
+                                            Logger.EmbeddedCardImageTooLarge(ILogger, uri, totalBytesRead, maxDownloadSize);
+                                            return null;
+                                        }
+                                    }
+                                    await fileStream.FlushAsync(cancellationToken).ConfigureAwait(false);
+                                    fileStream.Close();
+                                }
+
+                                try
+                                {
+                                    // Upload the image blob
+                                    AtProtoHttpResult<Blob> uploadResult = await Agent.UploadBlob(
+                                        fileName: fileName,
+                                        mimeType: imageMimeType,
+                                        cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                                    if (uploadResult.Succeeded)
+                                    {
+                                        result = uploadResult.Result;
+                                    }
+                                    else
+                                    {
+                                        Logger.EmbeddedCardImageUploadFailed(ILogger, uri, uploadResult.StatusCode, uploadResult.AtErrorDetail?.Error, uploadResult.AtErrorDetail?.Message);
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Logger.EmbeddedCardImageUploadThrew(ILogger, uri, ex);
+                                }
+
+                            }
+                            finally
+                            {
+                                stream.Close();
+                                ArrayPool<byte>.Shared.Return(readBuffer);
+
+                                try
+                                {
+                                    File.Delete(fileName);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Logger.CouldNotDeleteTemporaryFile(ILogger, fileName, ex);
+                                }
                             }
                         }
                     }
                     else
                     {
-                        Bluesky.Logger.EmbeddedCardGetRequestFailedWithStatusCode(Logger, uri, response.StatusCode);
+                        Logger.EmbeddedCardGetRequestFailedWithStatusCode(ILogger, uri, response.StatusCode);
                     }
                 }
             }
         }
         catch (Exception ex)
         {
-            Bluesky.Logger.EmbeddedCardImageGetRequestThrew(Logger, uri, ex);
+            Logger.EmbeddedCardImageGetRequestThrew(ILogger, uri, ex);
         }
 
         return result;

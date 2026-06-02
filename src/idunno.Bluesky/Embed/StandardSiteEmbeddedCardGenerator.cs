@@ -43,7 +43,7 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
         ArgumentNullException.ThrowIfNull(agent.HttpClient);
 
         loggerFactory ??= NullLoggerFactory.Instance;
-        Logger = loggerFactory.CreateLogger<StandardSiteEmbeddedCardGenerator>();
+        ILogger = loggerFactory.CreateLogger<StandardSiteEmbeddedCardGenerator>();
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
         ArgumentNullException.ThrowIfNull(httpClient);
 
         loggerFactory ??= NullLoggerFactory.Instance;
-        Logger = loggerFactory.CreateLogger<StandardSiteEmbeddedCardGenerator>();
+        ILogger = loggerFactory.CreateLogger<StandardSiteEmbeddedCardGenerator>();
     }
 
     /// <summary>
@@ -77,7 +77,7 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(logger);
 
-        Logger = logger;
+        ILogger = logger;
     }
 
     /// <summary>
@@ -194,14 +194,14 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
 
         if (documentAuthorDid is null)
         {
-            Bluesky.Logger.AuthorDidResolutionFailed(Logger, uri, documentAtUri);
+            Bluesky.Logger.AuthorDidResolutionFailed(ILogger, uri, documentAtUri);
             return result;
         }
 
         Uri? documentRecordPds = await Agent.ResolvePds(documentAuthorDid, cancellationToken).ConfigureAwait(false);
         if (documentRecordPds is null)
         {
-            Bluesky.Logger.PdsForAuthorDidNotFound(Logger, documentAuthorDid, uri);
+            Bluesky.Logger.PdsForAuthorDidNotFound(ILogger, documentAuthorDid, uri);
             return result;
         }
 
@@ -229,7 +229,7 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
 
             if (publicationAuthorDid is null)
             {
-                Bluesky.Logger.PublicationDidRepoNotPresent(Logger, publicationAtUri, uri);
+                Bluesky.Logger.PublicationDidRepoNotPresent(ILogger, publicationAtUri, uri);
                 return result;
             }
 
@@ -246,7 +246,7 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
 
             if (publicationRecordPds is null)
             {
-                Bluesky.Logger.PdsForPublicationDidNotFound(Logger, publicationAuthorDid, uri);
+                Bluesky.Logger.PdsForPublicationDidNotFound(ILogger, publicationAuthorDid, uri);
                 return result;
             }
 

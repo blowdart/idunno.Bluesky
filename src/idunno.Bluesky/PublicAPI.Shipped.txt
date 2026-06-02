@@ -749,11 +749,11 @@ idunno.Bluesky.Embed.BaseEmbeddedCardGenerator
 idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.BaseEmbeddedCardGenerator(idunno.Bluesky.BlueskyAgent! agent, System.Net.Http.HttpClient? httpClient) -> void
 idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.Agent.get -> idunno.Bluesky.BlueskyAgent!
 idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.Dispose() -> void
-idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.DownloadAndUploadImageBlob(string! uri, string? imageMimeType = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Blob?>!
-idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.DownloadAndUploadImageBlob(System.Uri! uri, string? imageMimeType = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Blob?>!
+idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.DownloadAndUploadImageBlob(string! uri, string? imageMimeType = null, long maxDownloadSize = 2000000, int bufferSize = 1000000, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Blob?>!
+idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.DownloadAndUploadImageBlob(System.Uri! uri, string? imageMimeType = null, long maxDownloadSize = 2000000, int bufferSize = 1000000, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Blob?>!
 idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.HttpClient.get -> System.Net.Http.HttpClient!
-idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.Logger.get -> Microsoft.Extensions.Logging.ILogger!
-idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.Logger.set -> void
+idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.ILogger.get -> Microsoft.Extensions.Logging.ILogger!
+idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.ILogger.set -> void
 static idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.UnknownImageType.get -> string!
 virtual idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.Dispose(bool disposing) -> void
 virtual idunno.Bluesky.Embed.BaseEmbeddedCardGenerator.GetPageContent(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string?>!

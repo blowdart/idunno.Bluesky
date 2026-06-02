@@ -158,4 +158,15 @@ internal static partial class Logger
     [LoggerMessage(121, LogLevel.Error, "Author DID resolution failed for {atUri} when processing {uri}")]
     internal static partial void AuthorDidResolutionFailed(ILogger logger, Uri uri, AtUri atUri);
 
+    [LoggerMessage(122, LogLevel.Debug, "{uri} returned a file too small to be an image")]
+    internal static partial void EmbeddedCardImageTooSmall(ILogger logger, Uri uri);
+
+    [LoggerMessage(123, LogLevel.Debug, "Content for {uri} is not recognized as an image")]
+    internal static partial void EmbeddedCardImageTypeNotRecognized(ILogger logger, Uri uri);
+
+    [LoggerMessage(124, LogLevel.Error, "Image from {url} is too large, {contentLength} bytes. Maximum allowed size is {maxSize} bytes.")]
+    internal static partial void EmbeddedCardImageTooLarge(ILogger logger, Uri url, long contentLength, long maxSize);
+
+    [LoggerMessage(125, LogLevel.Error, "Could not delete temporary file {fileName}")]
+    internal static partial void CouldNotDeleteTemporaryFile(ILogger logger, string fileName, Exception ex);
 }

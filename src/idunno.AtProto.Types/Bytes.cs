@@ -18,8 +18,6 @@ public sealed class Bytes : IEquatable<Bytes>
 {
     private readonly byte[] _bytes;
 
-    private readonly string _base64Encoded;
-
     /// <summary>
     /// Creates a new instance of <see cref="Bytes"/> from a byte array.
     /// </summary>
@@ -32,7 +30,7 @@ public sealed class Bytes : IEquatable<Bytes>
         ArgumentOutOfRangeException.ThrowIfZero(bytes.Length);
 
         _bytes = (byte[])bytes.Clone();
-        _base64Encoded = Convert.ToBase64String(_bytes);
+        Base64EncodedValue = Convert.ToBase64String(_bytes);
     }
 
     /// <summary>
@@ -49,7 +47,7 @@ public sealed class Bytes : IEquatable<Bytes>
         _bytes = Convert.FromBase64String(s);
 
         // As Convert.FromBaseString() ignores spaces, reconvert back to a normalized form to ensure the string is in a consistent format.
-        _base64Encoded = Convert.ToBase64String(_bytes);
+        Base64EncodedValue = Convert.ToBase64String(_bytes);
     }
 
     /// <summary>
@@ -64,7 +62,7 @@ public sealed class Bytes : IEquatable<Bytes>
     /// Gets the base64 encoded value of this instance.
     /// </summary>
     [JsonIgnore]
-    public string Base64EncodedValue => _base64Encoded;
+    public string Base64EncodedValue { get; }
 
     /// <summary>
     /// Serializes the bytes of this instance to a base64 encoded string.
@@ -72,7 +70,7 @@ public sealed class Bytes : IEquatable<Bytes>
     /// <returns>A base64 encoded string representation of the bytes.</returns>
     public override string ToString()
     {
-        return _base64Encoded;
+        return Base64EncodedValue;
     }
 
     /// <summary>
@@ -141,7 +139,7 @@ public sealed class Bytes : IEquatable<Bytes>
     /// Returns the hash code for this <see cref="Bytes"/>.
     /// </summary>
     /// <returns>The hash code for this <see cref="Bytes"/>.</returns>
-    public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(_base64Encoded);
+    public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(Base64EncodedValue);
 
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebuggerDisplay => ToString();
