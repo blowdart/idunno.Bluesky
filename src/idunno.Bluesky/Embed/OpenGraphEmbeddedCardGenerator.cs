@@ -130,7 +130,7 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
     /// <param name="uri">The URI to retrieve OpenGraph data from.</param>
     /// <param name="pageContent">The HTML content of the page.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>An <see cref="EmbeddedExternal"/> if OpenGraph data is found; otherwise, <see langword="null"/>.</returns>
+    /// <returns>An <see cref="EmbeddedExternal"/> if enough OpenGraph data is found; otherwise, <see langword="null"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="uri"/> is <see langword="null" /></exception>
     /// <exception cref="ArgumentException">Thrown if <paramref name="uri"/> is not an absolute URI.</exception>
     [SuppressMessage("Minor Code Smell", "S3267:Loops should be simplified with \"LINQ\" expressions", Justification = "Avoid linq allocations in a hot path.")]
@@ -157,37 +157,23 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
             }
         }
 
+        // Look for the basic OpenGraph properties that are required for an OpenCard embed.
+        string? title = openGraphProperties.TryGetValue("title", out string? titleValue) ? titleValue : null;
 
-
-        // Look for the basic OpenGraph properties that are required for an OpenCard embed. If they are not present, fall back to using the page title and supplied URI.
-        string? canonicalUrl = openGraphProperties.TryGetValue("url", out string? openGraphUrl) ? openGraphUrl : null;
-        if (canonicalUrl is null)
+        // We at least need a title.
+        if (string.IsNullOrEmpty(title))
         {
             return null;
         }
 
+        string? canonicalUrl = openGraphProperties.TryGetValue("url", out string? openGraphUrl) ? openGraphUrl : uri.ToString();
         if (!Uri.TryCreate(canonicalUrl, UriKind.Absolute, out Uri? _))
         {
             return null;
         }
 
-        string? title = openGraphProperties.TryGetValue("title", out string? titleValue) ? titleValue : canonicalUrl;
-        string? description = openGraphProperties.TryGetValue("description", out string? descriptionValue) ? descriptionValue : null;
+        string? description = openGraphProperties.TryGetValue("description", out string? descriptionValue) ? descriptionValue : string.Empty;
         Blob? thumb = null;
-
-        // No OpenGraph title property found, so fall back to using the page title or URL as the embed title.
-        if (string.IsNullOrEmpty(title))
-        {
-            Match titleMatch = s_TitleTag().Match(pageContent);
-            if (titleMatch.Success)
-            {
-                title = titleMatch.Groups[1].Value;
-            }
-            else
-            {
-                title = uri.ToString();
-            }
-        }
 
         if (openGraphProperties.TryGetValue("image", out string? imageUrl) &&
             Agent is not null &&
@@ -202,7 +188,7 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
 
         return new EmbeddedExternal(
             uri: canonicalUrl,
-            title: title ?? canonicalUrl,
+            title: title,
             description: description ?? canonicalUrl,
             thumbnail: thumb
         );
