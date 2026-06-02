@@ -410,46 +410,68 @@ which takes a collection of tags, and the `PostBuilder` class has a tags propert
 > [!TIP]
 > Do not begin the tag text with the # character. If you include a hash character you end up with a double hashed tag.
 
-## <a name="openGraphCards">Embedding an external link (Open Graph cards)</a>
+## <a name="openGraphCards">Creating embedded cards.</a>
 
 [Open Graph](https://ogp.me/) is a standard that allows web pages to become a rich object in a social graph. Open Graph metadata allows you to embed a rich link card in a
 Bluesky post, which will look something like this:
 
 ![An embedded link to Wikipedia's page on Baked Beans](media/embeddedCard.png "An embedded Card")
 
-To embed an external link with a card create an instance of `EmbeddedExternal` then attach it to a `PostBuilder` with the `Embed()` method.
+To embed an Open Graph card you must include suitable embedded record in your post. Generation of an
+embedded record is provided by `OpenGraphEmbeddedCardGenerator`.
+
+For example
 
 ```c#
-var embeddedExternal = new(pageUri, title, description, thumbnailBlob);
+Uri uri = new("https://en.wikipedia.org/wiki/Heinz_Baked_Beans");
+var openGraphCardGenerator = agent.CreateOpenGraphEmbeddedCardGenerator();
+
+var post = new Post($"Testing Open Graph embedding for {uri}.");
+var openGraphCard = await openGraphCardGenerator.Generate(uri);
+if (openGraphCard != null)
+{
+    post.Embed(openGraphCard);
+}
+await agent.Post(post);
+```
+
+If you want to manually embed a link card create an instance of `EmbeddedExternal` then attach it to your `Post`
+with the `Embed` method, or to a `PostBuilder` with the `EmbedRecord()` method.
+
+```c#
+var embeddedExternal = new(pageUri, title, description ?? string.Empty, thumbnailBlob);
 var postBuilder = new PostBuilder("Embedded record test");
 postBuilder.EmbedRecord(embeddedExternal);
 
 var postResult = await agent.Post(postBuilder, cancellationToken: cancellationToken);
 ```
 
-If you don't want to use a `PostBuilder` you can use the appropriate `Post()` method
+Standard.Site embedding is also supported, which allows you to embed a card for a page on a [standard.site](https://standard.site/) compatible
+blogging system, such as [leaflet.pub](https://leaflet.pub), or [Sequoia](https://sequoia.pub).
+
+![An embedded card for a leaflet.pub document](media/standardSiteEmbeddedCard.png "An embedded card for a standard.site compatible document")
+
+A standard.site embedded card can include extra UX in Bluesky clients like a button to subscribe to the publication,
+or view the publication.
+
+To generate a Standard.Site card use the `StandardSiteEmbeddedCardGenerator` class.
 
 ```c#
-var postResult = agent.Post(externalCard: embeddedExternal, cancellationToken: cancellationToken);
-```
+Uri uri = new("https://lab.leaflet.pub/3mmwnyfqhyc2d");
+var standardSiteEmbeddedCardGenerator = agent.CreateStandardSiteEmbeddedCardGenerator();
 
-You can use libraries like [OpenGraph.net](https://github.com/ghorsey/OpenGraph-Net/) or [X.Web.MetaExtractor](https://www.nuget.org/packages/X.Web.MetaExtractor) to retrieve
-Open Graph properties from which you can construct a card. For example, using OpenGraph.Net
-
-```
-Uri pageUri = new ("https://en.wikipedia.org/wiki/Baked_beans");
-OpenGraph graph = await OpenGraph.ParseUrlAsync(pageUri, cancellationToken: cancellationToken);
-
-string? title = graph.Title;
-string? description = graph.Description;
-
-// Check to see if there's a different URI specified in the graph metadata.
-if (graph.Url is not null)
+var post = new Post($"Testing Standard Site embedding for {uri}.");
+var standardSiteCard = await standardSiteEmbeddedCardGenerator.Generate(uri);
+if (standardSiteCard != null)
 {
-    pageUri = graph.Url;
+    post.Embed(standardSiteCard);
 }
+await agent.Post(post);
 ```
-The [Embedded Card sample](https://github.com/blowdart/idunno.atproto/tree/main/samples/Samples.EmbeddedCard) shows how to use
-OpenGraph.Net to extract the metadata, and to retrieve a preview image and use it, if the metadata has an image property.
+
+> [!TIP]
+> The standard.site metadata format is a superset of Open Graph, so you can use the StandardSiteEmbeddedCardGenerator to create cards from Open Graph metadata.
+> Practically, this means you always use the StandardSiteEmbeddedCardGenerator without worrying about losing support for Open Graph metadata.
+
 
 Posts with an embedded card don't need any post text.

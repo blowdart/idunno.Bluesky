@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json;
@@ -52,7 +52,7 @@ public sealed class AtUriConverter : JsonConverter<AtUri>
     /// Writes the specified <see cref="AtUri"></see> as JSON.
     /// </summary>
     /// <param name="writer">The writer to write to.</param>
-    /// <param name="value">The <see cref="Did"/> to convert to JSON.</param>
+    /// <param name="value">The <see cref="AtUri"/> to convert to JSON.</param>
     /// <param name="options">An object that specifies serialization options to use.</param>
     /// <exception cref="ArgumentNullException">Throws when <paramref name="writer"/> or <paramref name="value"/> is <see langword="null"/>.</exception>
     public override void Write(Utf8JsonWriter writer, AtUri value, JsonSerializerOptions options)
