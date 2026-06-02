@@ -171,7 +171,7 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
 
             if (documentAuthorDid is null)
             {
-                Bluesky.Logger.AuthorDidRepoNotPresentInSiteStandardDocumentLink(Logger, documentAtUri, uri);
+                Bluesky.Logger.AuthorDidResolutionFailed(Logger, uri, documentAtUri);
                 return result;
             }
 

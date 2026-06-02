@@ -155,4 +155,7 @@ internal static partial class Logger
     [LoggerMessage(120, LogLevel.Error, "Exception thrown when getting image from {url}")]
     internal static partial void EmbeddedCardImageGetRequestThrew(ILogger logger, Uri url, Exception ex);
 
+    [LoggerMessage(121, LogLevel.Error, "Author DID resolution failed for {atUri} when processing {uri}")]
+    internal static partial void AuthorDidResolutionFailed(ILogger logger, Uri uri, AtUri atUri);
+
 }
