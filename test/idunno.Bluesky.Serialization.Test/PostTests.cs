@@ -2,8 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+
 using idunno.AtProto;
-using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.RichText;
 

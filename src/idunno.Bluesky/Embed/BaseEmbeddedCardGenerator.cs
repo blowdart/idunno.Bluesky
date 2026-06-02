@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using idunno.AtProto;
 using System.Buffers;
-using System.Runtime.ConstrainedExecution;
 
 namespace idunno.Bluesky.Embed;
 

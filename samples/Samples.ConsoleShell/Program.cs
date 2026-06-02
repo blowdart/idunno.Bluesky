@@ -1,7 +1,6 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;

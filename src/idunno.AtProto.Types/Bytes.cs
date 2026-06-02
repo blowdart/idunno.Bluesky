@@ -46,7 +46,7 @@ public sealed class Bytes : IEquatable<Bytes>
 
         _bytes = Convert.FromBase64String(s);
 
-        // As Convert.FromBaseString() ignores spaces, reconvert back to a normalized form to ensure the string is in a consistent format.
+        // As Convert.FromBase64String() ignores spaces, reconvert back to a normalized form to ensure the string is in a consistent format.
         Base64EncodedValue = Convert.ToBase64String(_bytes);
     }
 
