@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
@@ -13,12 +13,20 @@ namespace idunno.Bluesky.Actor;
 public sealed record VerificationView
 {
     [JsonConstructor]
-    internal VerificationView(Did issuer, AtUri uri, bool isValid, DateTimeOffset createdAt)
+    internal VerificationView(
+        Did issuer,
+        AtUri uri,
+        bool isValid,
+        DateTimeOffset createdAt,
+        string? issuerDisplayName,
+        Handle? issuerHandle)
     {
         Issuer = issuer;
         Uri = uri;
         IsValid = isValid;
         CreatedAt = createdAt;
+        IssuerDisplayName = issuerDisplayName;
+        IssuerHandle = issuerHandle;
     }
 
     /// <summary>
@@ -48,4 +56,15 @@ public sealed record VerificationView
     [JsonInclude]
     [JsonRequired]
     public DateTimeOffset CreatedAt { get; init; }
+    
+    /// <summary>
+    /// Gets the display name of the actor who issued the verification.
+    /// </summary>
+    [JsonInclude]
+    public string? IssuerDisplayName { get; init; }
+
+    /// <summary>
+    /// Gets the <see cref="Handle"/> of the actor who issued the verification.
+    /// </summary>
+    public Handle? IssuerHandle { get; init; }
 }

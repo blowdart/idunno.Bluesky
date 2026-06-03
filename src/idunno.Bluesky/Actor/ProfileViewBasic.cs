@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics;
@@ -158,7 +158,7 @@ public record ProfileViewBasic : View
     /// Returns a list of label values for labels that appear to have been applied by the actor to themselves, based on the label source and uri.
     /// </summary>
     /// <remarks>
-    /// <para>Known Bluesky label values can be found in <see cref="SelfLabelNames"/>.</para>
+    /// <para>Known Bluesky label values can be found in <see cref="SelfLabelValues"/>.</para>
     /// </remarks>
     [JsonIgnore]
     public IReadOnlyList<string> SelfLabels

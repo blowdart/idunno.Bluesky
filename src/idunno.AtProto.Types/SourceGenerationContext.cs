@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
@@ -19,12 +19,15 @@ namespace idunno.AtProto;
 
 [JsonSerializable(typeof(AtIdentifier))]
 [JsonSerializable(typeof(AtUri))]
+[JsonSerializable(typeof(Blob))]
 [JsonSerializable(typeof(Cid))]
+[JsonSerializable(typeof(CidLink))]
 [JsonSerializable(typeof(Did))]
 [JsonSerializable(typeof(Handle))]
 [JsonSerializable(typeof(Nsid))]
 [JsonSerializable(typeof(RecordKey))]
 [JsonSerializable(typeof(TimestampIdentifier))]
+[JsonSerializable(typeof(Bytes))]
 internal partial class SourceGenerationContext : JsonSerializerContext
 {
 }

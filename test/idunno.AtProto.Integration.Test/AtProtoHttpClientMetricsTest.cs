@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.Metrics;
@@ -13,6 +13,7 @@ using Microsoft.Extensions.Primitives;
 
 using Duende.IdentityModel.OidcClient.DPoP;
 
+using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
@@ -1588,7 +1589,7 @@ public class AtProtoHttpClientMetricsTest
                 response.StatusCode = 200;
 
                 var blob = new Blob(
-                    reference: new BlobReference(expectedCid),
+                    reference: new CidLink(expectedCid),
                     mimeType: "text/plain",
                     size: 1234);
 

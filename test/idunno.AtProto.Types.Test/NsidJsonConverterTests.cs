@@ -1,9 +1,9 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json;
 
-namespace idunno.AtProto.Serialization.Test;
+namespace idunno.AtProto.Types.Test;
 
 [ExcludeFromCodeCoverage]
 public class NsidJsonConverterTests

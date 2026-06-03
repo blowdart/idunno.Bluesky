@@ -1,11 +1,9 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json;
 
-using idunno.AtProto.Repo;
-
-namespace idunno.AtProto.Serialization.Test;
+namespace idunno.AtProto.Types.Test;
 
 [ExcludeFromCodeCoverage]
 public class BlobTests
@@ -15,9 +13,9 @@ public class BlobTests
     [Fact]
     public void BlobSerializesProperlyWithSourceGeneratedJsonContext()
     {
-        Blob blob = new (new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), mimeType: "mime/type", size: 1024);
+        Blob blob = new (new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), mimeType: "mime/type", size: 1024);
 
-        string blobAsJson = JsonSerializer.Serialize(blob, AtProtoServer.AtProtoJsonSerializerOptions);
+        string blobAsJson = JsonSerializer.Serialize(blob, SourceGenerationContext.Default.Blob);
 
         Assert.Equal("{\"$type\":\"blob\",\"ref\":{\"$link\":\"bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a\"},\"mimeType\":\"mime/type\",\"size\":1024}", blobAsJson);
     }
@@ -25,7 +23,7 @@ public class BlobTests
     [Fact]
     public void BlobSerializesProperlyWithNoSourceGeneration()
     {
-        Blob blob = new(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), mimeType: "mime/type", size: 1024);
+        Blob blob = new(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), mimeType: "mime/type", size: 1024);
 
         string blobAsJson = JsonSerializer.Serialize(blob, _jsonSerializerOptions);
 
@@ -46,7 +44,7 @@ public class BlobTests
         }
         """;
 
-        Blob? blob = JsonSerializer.Deserialize<Blob>(blobAsJson, AtProtoServer.AtProtoJsonSerializerOptions);
+        Blob? blob = JsonSerializer.Deserialize(blobAsJson, SourceGenerationContext.Default.Blob);
 
         Assert.NotNull(blob);
         Assert.Equal("mime/type", blob.MimeType);
