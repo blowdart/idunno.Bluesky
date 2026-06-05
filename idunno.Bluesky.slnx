@@ -32,6 +32,9 @@
     <File Path=".github/workflows/prerelease.yml" />
     <File Path=".github/workflows/release.yml" />
   </Folder>
+  <Folder Name="/.vscode/">
+    <File Path=".vscode/settings.json" />
+  </Folder>
   <Folder Name="/docs/">
     <File Path="docs/.editorconfig" />
     <File Path="docs/docfx.json" />
