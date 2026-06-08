@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using idunno.AtProto.Events;
@@ -81,5 +81,4 @@ public partial class AtProtoAgent
             unauthenticated?.Invoke(this, e);
         }
     }
-
 }

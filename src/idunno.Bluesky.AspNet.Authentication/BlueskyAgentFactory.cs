@@ -19,7 +19,6 @@ namespace idunno.Bluesky.AspNet.Authentication;
 public sealed class BlueskyAgentFactory
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly ILogger<BlueskyAgentFactory> _logger;
 
     /// <summary>
     /// Creates a new instance of the <see cref="BlueskyAgentFactory"/> class.
@@ -47,8 +46,6 @@ public sealed class BlueskyAgentFactory
         BlueskyAgentOptions.LoggerFactory = loggerFactory;
 
         _httpContextAccessor = contextAccessor;
-        _logger = loggerFactory.CreateLogger<BlueskyAgentFactory>();
-
     }
 
     internal BlueskyAuthenticationOptions AuthenticationOptions { get; }
@@ -83,16 +80,7 @@ public sealed class BlueskyAgentFactory
             agent = new BlueskyAgent(options: BlueskyAgentOptions);
         }
 
-        agent.CredentialsUpdated += async (s, e) =>
-        {
-            if (e.AccessCredentials is not DPoPAccessCredentials accessCredentials)
-            {
-                _logger.CredentialsRefreshedNotDPoP(e.Did);
-                return;
-            }
-
-            await IdentityStore.Renew(IIdentityStore.BuildClaimsIdentity(accessCredentials)).ConfigureAwait(false);
-        };
+        agent.CredentialsUpdated += IdentityStore.OnCredentialsUpdated;
 
         return agent;
     }

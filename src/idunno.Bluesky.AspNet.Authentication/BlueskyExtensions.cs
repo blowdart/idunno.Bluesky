@@ -151,7 +151,7 @@ public static class BlueskyExtensions
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
         services.AddOptions<BlueskyAgentOptions>();
         services.AddSingleton<BlueskyAgentFactory>();
-        services.AddScoped<BlueskyAgent>(provider => provider.GetRequiredService<BlueskyAgentFactory>().CreateAgent());
+        services.AddScoped(provider => provider.GetRequiredService<BlueskyAgentFactory>().CreateAgent());
 
         return services;
     }

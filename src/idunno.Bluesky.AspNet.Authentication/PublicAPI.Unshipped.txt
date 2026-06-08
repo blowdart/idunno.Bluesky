@@ -143,11 +143,12 @@ idunno.Bluesky.AspNet.Authentication.ICorrelationStateCache.AddOAuthLoginState(S
 idunno.Bluesky.AspNet.Authentication.ICorrelationStateCache.GetOAuthLoginState(System.Guid correlationId) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.OAuthLoginState?>!
 idunno.Bluesky.AspNet.Authentication.IIdentityStore
 idunno.Bluesky.AspNet.Authentication.IIdentityStore.Add(System.Security.Claims.ClaimsIdentity! claimsIdentity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-idunno.Bluesky.AspNet.Authentication.IIdentityStore.BuildClaimsIdentity(idunno.AtProto.Authentication.DPoPAccessCredentials! credentials, string? scheme = null) -> System.Security.Claims.ClaimsIdentity!
+idunno.Bluesky.AspNet.Authentication.IIdentityStore.BuildClaimsIdentity(idunno.AtProto.Authentication.AccessCredentials! credentials, string? scheme = null) -> System.Security.Claims.ClaimsIdentity!
 idunno.Bluesky.AspNet.Authentication.IIdentityStore.GetIdentity(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Security.Claims.ClaimsIdentity?>!
+idunno.Bluesky.AspNet.Authentication.IIdentityStore.OnCredentialsUpdated(object? sender, idunno.AtProto.Events.CredentialsUpdatedEventArgs! e) -> void
 idunno.Bluesky.AspNet.Authentication.IIdentityStore.Remove(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-idunno.Bluesky.AspNet.Authentication.IIdentityStore.Renew(idunno.AtProto.Authentication.DPoPAccessCredentials! credentials) -> System.Threading.Tasks.Task!
-idunno.Bluesky.AspNet.Authentication.IIdentityStore.Renew(idunno.AtProto.Authentication.DPoPAccessCredentials! credentials, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Authentication.IIdentityStore.Renew(idunno.AtProto.Authentication.AccessCredentials! credentials) -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Authentication.IIdentityStore.Renew(idunno.AtProto.Authentication.AccessCredentials! credentials, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.IIdentityStore.Renew(System.Security.Claims.ClaimsIdentity! identity) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.IIdentityStore.Renew(System.Security.Claims.ClaimsIdentity! identity, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.IProfileCache

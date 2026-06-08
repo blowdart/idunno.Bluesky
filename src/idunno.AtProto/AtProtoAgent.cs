@@ -109,7 +109,7 @@ public partial class AtProtoAgent : Agent
 
     /// <summary>
     /// Creates a new instance of <see cref="AtProtoAgent"/> and sets the agent authentication to
-    /// a <see cref="DPoPAccessCredentials"/> derived from the <paramref name="principal"/>.
+    /// a <see cref="AccessCredentials"/> derived from the <paramref name="principal"/>.
     /// </summary>
     /// <param name="principal">The <see cref="ClaimsPrincipal"/> to extract authentication properties from.</param>
     /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
@@ -120,7 +120,7 @@ public partial class AtProtoAgent : Agent
     {
         ArgumentNullException.ThrowIfNull(principal);
 
-        DPoPAccessCredentials credentials = AtProtoCredential.Create(principal);
+        var credentials = AtProtoCredential.Create(principal);
         OriginalService = credentials.Service;
         Service = credentials.Service;
         _credentials = credentials;

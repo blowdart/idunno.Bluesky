@@ -5,6 +5,7 @@ using System.Security.Claims;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
+using idunno.AtProto.Events;
 
 namespace idunno.Bluesky.AspNet.Authentication;
 
@@ -44,7 +45,7 @@ public interface IIdentityStore
     /// <returns>The task object representing the asynchronous operation.</returns>
     Task Renew(ClaimsIdentity identity) => Renew(identity, default);
 
-   /// <summary>
+    /// <summary>
     /// Renews the specified <paramref name="identity"/> in the identity store.
     /// </summary>
     /// <param name="identity">The <see cref="ClaimsIdentity"/> to renew</param>
@@ -55,39 +56,53 @@ public interface IIdentityStore
     /// <summary>
     /// Renews the specified <paramref name="credentials"/> in the identity store.
     /// </summary>
-    /// <param name="credentials">The <see cref="DPoPAccessCredentials"/> to renew</param>
+    /// <param name="credentials">The <see cref="AccessCredentials"/> to renew</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    Task Renew(DPoPAccessCredentials credentials) => Renew(credentials, default);
+    Task Renew(AccessCredentials credentials) => Renew(credentials, default);
 
     /// <summary>
     /// Renews the specified <paramref name="credentials"/> in the identity store.
     /// </summary>
-    /// <param name="credentials">The <see cref="DPoPAccessCredentials"/> to renew</param>
+    /// <param name="credentials">The <see cref="AccessCredentials"/> to renew</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="System.ArgumentNullException">Thrown when <paramref name="credentials"/> is <see langword="null" />.</exception>
-    Task Renew(DPoPAccessCredentials credentials, CancellationToken cancellationToken)
+    Task Renew(AccessCredentials credentials, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(credentials);
         return Renew(BuildClaimsIdentity(credentials), cancellationToken);
     }
 
     /// <summary>
-    /// Builds a <see cref="ClaimsIdentity"/> from the specified <see cref="DPoPAccessCredentials"/>.
+    /// Called by an agent when it receives an <see cref="CredentialsUpdatedEventArgs"/>.
+    /// A store should use this to update the cached identity for the specified <see cref="Did"/> with the new credentials.
     /// </summary>
-    /// <param name="credentials">The <see cref="DPoPAccessCredentials"/> to build an identity from.</param>
+    /// <param name="sender">The source of the event.</param>
+    /// <param name="e">The <see cref="CredentialsUpdatedEventArgs"/> instance containing the event data.</param>
+    public virtual void OnCredentialsUpdated(object? sender, CredentialsUpdatedEventArgs e)
+    {
+        if (e is not null && e.AccessCredentials is not null)
+        {
+            _ = Renew(e.AccessCredentials);
+        }
+    }
+
+    /// <summary>
+    /// Builds a <see cref="ClaimsIdentity"/> from the specified <see cref="AccessCredentials"/>.
+    /// </summary>
+    /// <param name="credentials">The <see cref="AccessCredentials"/> to build an identity from.</param>
     /// <param name="scheme">The authentication scheme.</param>
-    /// <returns>A <see cref="ClaimsIdentity"/> from the specified <see cref="DPoPAccessCredentials"/></returns>
+    /// <returns>A <see cref="ClaimsIdentity"/> from the specified <see cref="AccessCredentials"/></returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="credentials"/> is <see langword="null" />.</exception>
-    static ClaimsIdentity BuildClaimsIdentity(DPoPAccessCredentials credentials, string? scheme = null)
+    static ClaimsIdentity BuildClaimsIdentity(AccessCredentials credentials, string? scheme = null)
     {
         ArgumentNullException.ThrowIfNull(credentials);
 
         scheme ??= BlueskyAuthenticationDefaults.AuthenticationScheme;
 
-        ClaimsIdentity identity = new(
-            [
-                new Claim(
+        List<Claim> claims =
+        [
+            new Claim(
                 AtProtoClaims.Did,
                 credentials.Did,
                 ClaimValueTypes.String,
@@ -102,18 +117,27 @@ public interface IIdentityStore
                 credentials.RefreshToken,
                 ClaimValueTypes.String,
                 credentials.Service.ToString()),
-            new Claim(
-                AtProtoClaims.DPoPProof,
-                credentials.DPoPProofKey,
-                ClaimValueTypes.String,
-                credentials.Service.ToString()),
-            new Claim(
-                AtProtoClaims.DPoPNonce,
-                credentials.DPoPNonce,
-                ClaimValueTypes.String,
-                credentials.Service.ToString()),
-        ],
-        authenticationType: scheme);
+        ];
+
+        if (credentials is DPoPAccessCredentials dPoPAccessCredentials)
+        {
+            claims.Add(
+                new Claim(
+                    AtProtoClaims.DPoPProof,
+                    dPoPAccessCredentials.DPoPProofKey,
+                    ClaimValueTypes.String,
+                    credentials.Service.ToString()));
+            claims.Add(
+                new Claim(
+                    AtProtoClaims.DPoPNonce,
+                    dPoPAccessCredentials.DPoPNonce,
+                    ClaimValueTypes.String,
+                    credentials.Service.ToString()));
+        }
+
+        ClaimsIdentity identity = new(
+            claims: claims,
+            authenticationType: scheme);
 
         return identity;
     }
