@@ -1,10 +1,10 @@
-﻿# Working with drafts
+# Working with drafts
 
 Bluesky has a drafts feature, where you can save an in progress post or thread and return to it in the original client,
 or another client, recall it, and turn it into a post. This is useful if you're writing a Bluesky client.
 
 Drafts are not public data and cannot be accessed as PDS records,
-they most be accessed through the drafts API, `CreateDaft`, `DeleteDraft`, `GetDrafts `and `UpdateDraft`.
+they most be accessed through the drafts API, `CreateDraft`, `DeleteDraft`, `GetDrafts `and `UpdateDraft`.
 
 # Saving a draft
 
@@ -66,7 +66,7 @@ If the user edits and draft and wants to resave it as a draft, use the `UpdateDr
 If a user wants to delete a draft , use the `DeleteDraft` method, which takes the `draftId` for the draft presented in the `DraftView`
 returned by `GetDrafts`.
 
-# Turning a daft into a post
+# Turning a draft into a post
 
 To turn a draft into a post, use the `Post` method, passing in the `DraftWithId` instance for the draft you want to post.
 If you want the draft to be automatically deleted if the post is successfully created, set the `deleteDraft` parameter to true.
