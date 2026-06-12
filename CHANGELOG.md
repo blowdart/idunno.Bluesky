@@ -1,5 +1,19 @@
 # Version History
 
+## 2.1.0 - **Unreleased**
+
+## Added
+
+### idunno.Bluesky
+
+* Added `EmbeddedGallery` and `EmbeddedGalleryImage` types to support the new [image gallery format](https://github.com/bluesky-social/atproto/pull/4827).
+  Note that `EmbeddedGalleryImage` requires an aspect ratio, unlike the `EmbeddedImage` type.
+* Added new overloads to `BlueskyAgent.Post` to support `EmbeddedGallery` content.
+  If you pass more than 4 `EmbeddedImage` items to `Post()`, it will attempt to convert them to `EmbeddedGallery` format. Your `EmbeddedImage`
+  instances must have an aspect ratio for this to work, otherwise an exception will be thrown.
+  You can use [Magick.NET](https://github.com/dlemstra/Magick.NET), [ImageSharp](https://github.com/SixLabors/ImageSharp) or other image processing libraries to calculate the aspect ratio of your images if needed.
+
+
 ## 2.0.0 - 2026-02-06
 
 ## Added

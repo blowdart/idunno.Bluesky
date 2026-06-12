@@ -126,6 +126,15 @@
   <data name="PostBuilderAddQuoteToNonPostError" xml:space="preserve">
     <value>Only strong references to records of collection 'app.bsky.feed.post' can be quoted.</value>
   </data>
+  <data name="PostBuilderCannotHaveImagesAndGalleryImages" xml:space="preserve">
+    <value>Post cannot contain both images and gallery images.</value>
+  </data>
+  <data name="PostBuilderHasTooManyGalleryImages" xml:space="preserve">
+    <value>Cannot have more than {0} gallery images.</value>
+  </data>
+  <data name="PostBuilderHasTooManyImages" xml:space="preserve">
+    <value>Cannot have more than {0} images.</value>
+  </data>
   <data name="PostCannotHaveImagesAndVideoValidationError" xml:space="preserve">
     <value>Post cannot have both images and video.</value>
   </data>

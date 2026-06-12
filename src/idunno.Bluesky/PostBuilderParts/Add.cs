@@ -392,6 +392,59 @@ public sealed partial class PostBuilder
     }
 
     /// <summary>
+    /// Adds a <see cref="EmbeddedGalleryImage"/> to this instance.
+    /// </summary>
+    /// <param name="image">The <see cref="EmbeddedGalleryImage"/> to add.</param>
+    /// <returns>A reference to this instance after the append operation has completed.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the maximum number of gallery items is exceeded or a video is already present.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is <see langword="null"/>.</exception>
+    public PostBuilder Add(EmbeddedGalleryImage image)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+        lock (_syncLock)
+        {
+            if (_embeddedVideo is not null)
+            {
+                throw new ArgumentOutOfRangeException(nameof(image), Properties.Resources.PostBuilderCannotHaveImagesAndGalleryImages);
+            }
+            if (_embeddedGalleryImages.Count >= MaxGalleryItems)
+            {
+                throw new ArgumentOutOfRangeException(nameof(image), $"cannot have more than {MaxGalleryItems} in a post.");
+            }
+            _embeddedGalleryImages.Add(image);
+        }
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a <see cref="EmbeddedGalleryImage"/> to the specified <paramref name="postBuilder"/>.
+    /// </summary>
+    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the image to.</param>
+    /// <param name="image">The <see cref="EmbeddedGalleryImage"/> to add.</param>
+    /// <returns>The <paramref name="postBuilder"/> after the append operation has completed.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the maximum number of gallery items is exceeded or a video is already present.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
+    public static PostBuilder Add(PostBuilder postBuilder, EmbeddedGalleryImage image)
+    {
+        ArgumentNullException.ThrowIfNull(postBuilder);
+        ArgumentNullException.ThrowIfNull(image);
+        lock (postBuilder._syncLock)
+        {
+            if (postBuilder._embeddedVideo is not null)
+            {
+                throw new ArgumentOutOfRangeException(nameof(image), Properties.Resources.PostBuilderCannotHaveImagesAndGalleryImages);
+            }
+            if (postBuilder._embeddedGalleryImages.Count >= postBuilder.MaxGalleryItems)
+            {
+                throw new ArgumentOutOfRangeException(nameof(image), $"cannot have more than {postBuilder.MaxGalleryItems} in a post.");
+            }
+            postBuilder._embeddedGalleryImages.Add(image);
+        }
+        return postBuilder;
+    }
+
+
+    /// <summary>
     /// Adds a copy of the specified string to the record text of the specified <paramref name="postBuilder" />.
     /// </summary>
     /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the string to.</param>
@@ -536,5 +589,19 @@ public sealed partial class PostBuilder
         ArgumentNullException.ThrowIfNull(selfLabel);
         ArgumentNullException.ThrowIfNull(selfLabel.Value);
         return Add(postBuilder, selfLabel);
+    }
+
+    /// <summary>
+    /// Adds an <see cref="EmbeddedGalleryImage"/> to the specified <paramref name="postBuilder" />.
+    /// </summary>
+    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the image to.</param>
+    /// <param name="image">The <see cref="EmbeddedGalleryImage"/> to add.</param>
+    /// <returns>The <paramref name="postBuilder"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
+    public static PostBuilder operator +(PostBuilder postBuilder, EmbeddedGalleryImage image)
+    {
+        ArgumentNullException.ThrowIfNull(postBuilder);
+        ArgumentNullException.ThrowIfNull(image);
+        return Add(postBuilder, image);
     }
 }

@@ -1,6 +1,7 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
@@ -233,10 +234,7 @@ public record class Post : BlueskyTimestampedRecord
             new EmbeddedImages([image]),
             reply: reply,
             labels: labels,
-            tags: tags)
-    {
-        ArgumentNullException.ThrowIfNull(image);
-    }
+            tags: tags) => ArgumentNullException.ThrowIfNull(image);
 
     /// <summary>
     /// Creates a new instance of <see cref="Post"/>.
@@ -266,10 +264,7 @@ public record class Post : BlueskyTimestampedRecord
             new EmbeddedImages([image]),
             reply : reply,
             labels: labels,
-            tags: tags)
-    {
-        ArgumentNullException.ThrowIfNull(image);
-    }
+            tags: tags) => ArgumentNullException.ThrowIfNull(image);
 
     /// <summary>
     /// Creates a new instance of <see cref="Post"/>.
@@ -295,7 +290,7 @@ public record class Post : BlueskyTimestampedRecord
             createdAt: DateTimeOffset.UtcNow,
             facets: facets,
             langs: langs,
-            new EmbeddedImages(images),
+            embeddedRecord: null,
             reply: reply,
             labels: labels,
             tags: tags)
@@ -303,7 +298,23 @@ public record class Post : BlueskyTimestampedRecord
         ArgumentNullException.ThrowIfNull(images);
 
         ArgumentOutOfRangeException.ThrowIfZero(images.Count);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(images.Count, Maximum.ImagesInPost);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(images.Count, Maximum.GalleryItems);
+
+        if (images is EmbeddedGallery imagesGallery)
+        {
+            EmbeddedRecord = imagesGallery;
+        }
+        else
+        {
+            if (images.Count > Maximum.ImagesInPost)
+            {
+                EmbeddedRecord = new EmbeddedGallery(images);
+            }
+            else
+            {
+                EmbeddedRecord = new EmbeddedImages(images);
+            }
+        }
     }
 
     /// <summary>
@@ -369,10 +380,7 @@ public record class Post : BlueskyTimestampedRecord
             video,
             reply: reply,
             labels: labels,
-            tags: tags)
-    {
-        ArgumentNullException.ThrowIfNull(video);
-    }
+            tags: tags) => ArgumentNullException.ThrowIfNull(video);
 
     /// <summary>
     /// Creates a new instance of <see cref="Post"/>.
@@ -402,10 +410,67 @@ public record class Post : BlueskyTimestampedRecord
             video,
             reply: reply,
             labels: labels,
-            tags: tags)
-    {
-        ArgumentNullException.ThrowIfNull(video);
-    }
+            tags: tags) => ArgumentNullException.ThrowIfNull(video);
+
+    /// <summary>
+    /// Creates a new instance of <see cref="Post"/>.
+    /// </summary>
+    /// <param name="text">The text for the post.</param>
+    /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created on.</param>
+    /// <param name="gallery">The <see cref="EmbeddedGallery"/> to embed in the post.</param>
+    /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
+    /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
+    /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
+    /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
+    /// <param name="tags">A collection of tags to apply to the post, if any.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="gallery"/> is <see langword="null"/>.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convenience constructors")]
+    public Post(
+        string? text,
+        DateTimeOffset createdAt,
+        EmbeddedGallery gallery,
+        ICollection<Facet>? facets = null,
+        ICollection<string>? langs = null,
+        ReplyReferences? reply = null,
+        SelfLabels? labels = null,
+        ICollection<string>? tags = null)
+        : this(text,
+            createdAt: createdAt,
+            facets: facets,
+            langs: langs,
+            embeddedRecord: gallery,
+            reply: reply,
+            labels: labels,
+            tags: tags) => ArgumentNullException.ThrowIfNull(gallery);
+
+    /// <summary>
+    /// Creates a new instance of <see cref="Post"/>.
+    /// </summary>
+    /// <param name="text">The text for the post.</param>
+    /// <param name="gallery">The <see cref="EmbeddedGallery"/> to embed in the post.</param>
+    /// <param name="facets">A collection of <see cref="Facet"/>s for the post.</param>
+    /// <param name="langs">A collection of language strings, if any, that the post is written in.</param>
+    /// <param name="reply">The <see cref="ReplyReferences"/>, if any, of the post this post is in reply to.</param>
+    /// <param name="labels">A collection of <see cref="SelfLabels"/> to apply to the post, if any.</param>
+    /// <param name="tags">A collection of tags to apply to the post, if any.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="gallery"/> is <see langword="null"/>.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convenience constructors")]
+    public Post(
+        string? text,
+        EmbeddedGallery gallery,
+        ICollection<Facet>? facets = null,
+        ICollection<string>? langs = null,
+        ReplyReferences? reply = null,
+        SelfLabels? labels = null,
+        ICollection<string>? tags = null)
+        : this(text,
+            createdAt: DateTimeOffset.UtcNow,
+            facets: facets,
+            langs: langs,
+            embeddedRecord: gallery,
+            reply: reply,
+            labels: labels,
+            tags: tags) => ArgumentNullException.ThrowIfNull(gallery);
 
     /// <summary>
     /// Gets the text for the post, if any.

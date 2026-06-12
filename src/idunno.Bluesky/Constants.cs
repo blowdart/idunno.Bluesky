@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Reflection.Metadata;
 using idunno.AtProto;
 
 namespace idunno.Bluesky;
@@ -194,6 +195,11 @@ public static class Maximum
     /// The maximum length of text in an individual draft, in graphemes.
     /// </summary>
     public static readonly int DraftTextLengthInGraphemes = 1000;
+
+    /// <summary>
+    /// The maximum number of items in a gallery.
+    /// </summary>
+    public static readonly int GalleryItems = 10;
 }
 
 /// <summary>
@@ -427,6 +433,11 @@ public static class EmbeddedRecordTypeDiscriminators
     /// The json type discriminator for embedded video.
     /// </summary>
     public const string Video = "app.bsky.embed.video";
+
+    /// <summary>
+    /// The json discriminator for an embedded image gallery.
+    /// </summary>
+    public const string Gallery = "app.bsky.embed.gallery";
 }
 
 /// <summary>

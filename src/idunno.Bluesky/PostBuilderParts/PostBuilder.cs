@@ -25,10 +25,11 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
 #if NET9_0_OR_GREATER
     private readonly Lock _syncLock = new ();
 #else
-    private readonly object _syncLock = new ();
+    private readonly object _syncLock = new();
 #endif
     private readonly Post _post;
     private readonly List<EmbeddedImage> _embeddedImages = [];
+    private readonly List<EmbeddedGalleryImage> _embeddedGalleryImages = [];
     private EmbeddedVideo? _embeddedVideo;
     private List<ThreadGateRule>? _threadGateRules;
     private List<PostGateRule>? _postGateRules;
@@ -37,6 +38,8 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     private static readonly CompositeFormat s_postTextExceedsMaxLengthValidationError = CompositeFormat.Parse(Properties.Resources.PostTextExceedsMaxLengthValidationError);
     private static readonly CompositeFormat s_postTextExceedsMaxLengthInGraphemesValidationError = CompositeFormat.Parse(Properties.Resources.PostTextExceedsMaxLengthInGraphemesValidationError);
     private static readonly CompositeFormat s_postTextExceedsMaxLength = CompositeFormat.Parse(Properties.Resources.PostTextExceedsMaxLengths);
+    private static readonly CompositeFormat s_postHasTooManyImages = CompositeFormat.Parse(Properties.Resources.PostBuilderHasTooManyImages);
+    private static readonly CompositeFormat s_postHasTooManyGalleryImages = CompositeFormat.Parse(Properties.Resources.PostBuilderHasTooManyGalleryImages);
 
     /// <summary>
     /// Creates a new instance of a <see cref="PostBuilder"/>.
@@ -123,11 +126,11 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
             }
         }
 
-        if (images is not null && images.Count > Maximum.ImagesInPost)
+        if (images is not null && images.Count > Maximum.GalleryItems)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(images),
-                $"cannot have more than {Maximum.ImagesInPost} images.");
+                string.Format(null, s_postHasTooManyImages, Maximum.GalleryItems));
         }
 
         if (langs is not null)
@@ -163,7 +166,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
             };
         }
 
-        if (images is not null)
+        if (images is not null && images.Count > 0)
         {
             _embeddedImages.AddRange(images);
         }
@@ -189,6 +192,77 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
         }
     }
 
+    /// <summary>
+    /// Creates a new instance of a <see cref="PostBuilder"/>.
+    /// </summary>
+    /// <param name="text">The text for the post.</param>
+    /// <param name="galleryImages">A collection of <see cref="EmbeddedGalleryImage"/>s to attach to the post.</param>
+    /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
+    /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
+    /// <param name="labels">Any self labels to apply to the post.</param>
+    /// <param name="tags">Any tags to apply to the post.</param>
+    /// <exception cref="ArgumentException">Thrown when the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long or <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="galleryImages"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> for the post is too long or <paramref name="galleryImages"/> contains too many images, or <paramref name="tags"/> has too many tags, or a tag that exceeds the maximum length.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convience constructor")]
+    public PostBuilder(
+        string? text,
+        ICollection<EmbeddedGalleryImage> galleryImages,
+        DateTimeOffset? createdAt = null,
+        ICollection<Facet>? facets = null,
+        PostSelfLabels? labels = null,
+        ICollection<string>? tags = null) : this(
+            text: text,
+            langs: null,
+            createdAt: createdAt,
+            galleryImages: galleryImages,
+            facets: facets,
+            labels: labels,
+            tags: tags)
+    {
+    }
+
+    /// <summary>
+    /// Creates a new instance of a <see cref="PostBuilder"/>.
+    /// </summary>
+    /// <param name="text">The text for the post.</param>
+    /// <param name="galleryImages">A collection of <see cref="EmbeddedGalleryImage"/>s to attach to the post.</param>
+    /// <param name="langs">The languages for the post.</param>
+    /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
+    /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
+    /// <param name="labels">Any self labels to apply to the post.</param>
+    /// <param name="tags">Any tags to apply to the post.</param>
+    /// <exception cref="ArgumentException">Thrown when the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long or <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="galleryImages"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> for the post is too long or <paramref name="galleryImages"/> contains too many images, or <paramref name="tags"/> has too many tags, or a tag that exceeds the maximum length.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convience constructor")]
+    public PostBuilder(
+        string? text,
+        ICollection<EmbeddedGalleryImage> galleryImages,
+        ICollection<string>? langs = null,
+        DateTimeOffset? createdAt = null,
+        ICollection<Facet>? facets = null,
+        PostSelfLabels? labels = null,
+        ICollection<string>? tags = null) : this(
+            text: text,
+            langs: langs,
+            createdAt: createdAt,
+            images: null,
+            facets: facets,
+            labels: labels,
+            tags: tags)
+    {
+        ArgumentNullException.ThrowIfNull(galleryImages);
+
+        if (galleryImages.Count > Maximum.GalleryItems)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(galleryImages),
+                string.Format(null, s_postHasTooManyGalleryImages, Maximum.GalleryItems));
+        }
+
+        _embeddedGalleryImages.AddRange(galleryImages);
+    }
 
     /// <summary>
     /// Gets a flag indicating whether this instance has any record text.
@@ -259,6 +333,13 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Matching StringBuilder property.")]
     [SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static", Justification = "Matching StringBuilder property.")]
     public int MaxImages => Maximum.ImagesInPost;
+
+    /// <summary>
+    /// Gets the maximum capacity of gallery images allowed in this instance
+    /// </summary>
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Matching StringBuilder property.")]
+    [SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static", Justification = "Matching StringBuilder property.")]
+    public int MaxGalleryItems => Maximum.GalleryItems;
 
     /// <summary>
     /// Gets a copy of the text for this instance.
@@ -358,7 +439,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
             }
         }
     }
-        
+
 
     /// <summary>
     /// Gets a flag indicating whether this instance has any images
@@ -386,11 +467,49 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                 if (value is not null)
                 {
                     _embeddedImages.AddRange(value);
+                    _embeddedGalleryImages.Clear();
                     _embeddedVideo = null;
                 }
                 else
                 {
                     _embeddedImages.Clear();
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets a flag indicating whether this instance has any gallery images
+    /// </summary>
+    [MemberNotNullWhen(true, nameof(GalleryImages))]
+    public bool HasGalleryImages => _embeddedGalleryImages is not null && _embeddedGalleryImages.Count > 0;
+
+    /// <summary>
+    /// Gets a readonly list of the gallery images for the post.
+    /// </summary>
+    public IReadOnlyCollection<EmbeddedGalleryImage> GalleryImages
+    {
+        get
+        {
+            lock (_syncLock)
+            {
+                return new List<EmbeddedGalleryImage>(_embeddedGalleryImages).AsReadOnly();
+            }
+        }
+
+        private set
+        {
+            lock (_syncLock)
+            {
+                if (value is not null)
+                {
+                    _embeddedGalleryImages.AddRange(value);
+                    _embeddedImages.Clear();
+                    _embeddedVideo = null;
+                }
+                else
+                {
+                    _embeddedGalleryImages.Clear();
                 }
             }
         }
@@ -464,6 +583,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                 if (value is not null)
                 {
                     _embeddedImages.Clear();
+                    _embeddedGalleryImages.Clear();
                     _embeddedVideo = value;
                 }
                 else
@@ -497,7 +617,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
 
         set
         {
-            if (value is not null && 
+            if (value is not null &&
                 (value.Parent.Uri.Collection != CollectionNsid.Post ||
                  value.Root.Uri.Collection != CollectionNsid.Post))
             {
@@ -700,8 +820,8 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                     if (_postGateRules != null)
                     {
                         foreach (PostGateRule? rule in from PostGateRule rule in _postGateRules
-                                             where rule is DisableEmbeddingRule
-                                             select rule)
+                                                       where rule is DisableEmbeddingRule
+                                                       select rule)
                         {
                             _postGateRules.Remove(rule);
                         }
@@ -1041,27 +1161,71 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                 throw new PostBuilderException(Properties.Resources.EmptyPostTextValidationError);
             }
 
-            if (HasVideo && HasImages)
+            if (HasVideo && (HasImages || HasGalleryImages))
             {
                 throw new PostBuilderException(Properties.Resources.PostCannotHaveImagesAndVideoValidationError);
             }
 
+            if (HasImages && HasGalleryImages)
+            {
+                throw new PostBuilderException(Properties.Resources.PostBuilderCannotHaveImagesAndGalleryImages);
+            }
+
             if (HasImages)
+            {
+                if (_embeddedImages.Count > Maximum.ImagesInPost)
+                {
+                    if (InReplyTo is null && QuotePost is null)
+                    {
+                        // Plain old post
+                        _post.EmbeddedRecord = new EmbeddedGallery(_embeddedImages);
+                    }
+                    else if (QuotePost is not null)
+                    {
+                        // Quote post, so we need fix up the embedded record to include images.
+                        _post.EmbeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), new EmbeddedGallery(_embeddedImages));
+                    }
+                    else
+                    {
+                        // Reply post
+                        _post.EmbeddedRecord = new EmbeddedGallery(_embeddedImages);
+                    }
+                }
+                else
+                {
+                    if (InReplyTo is null && QuotePost is null)
+                    {
+                        // Plain old post
+                        _post.EmbeddedRecord = new EmbeddedImages(_embeddedImages);
+                    }
+                    else if (QuotePost is not null)
+                    {
+                        // Quote post, so we need fix up the embedded record to include images.
+                        _post.EmbeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), new EmbeddedImages(_embeddedImages));
+                    }
+                    else
+                    {
+                        // Reply post
+                        _post.EmbeddedRecord = new EmbeddedImages(_embeddedImages);
+                    }
+                }
+            }
+            else if (HasGalleryImages)
             {
                 if (InReplyTo is null && QuotePost is null)
                 {
                     // Plain old post
-                    _post.EmbeddedRecord = new EmbeddedImages(_embeddedImages);
+                    _post.EmbeddedRecord = new EmbeddedGallery(_embeddedImages);
                 }
                 else if (QuotePost is not null)
                 {
                     // Quote post, so we need fix up the embedded record to include images.
-                    _post.EmbeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), new EmbeddedImages(_embeddedImages));
+                    _post.EmbeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), new EmbeddedGallery(_embeddedImages));
                 }
                 else
                 {
                     // Reply post
-                    _post.EmbeddedRecord = new EmbeddedImages(_embeddedImages);
+                    _post.EmbeddedRecord = new EmbeddedGallery(_embeddedImages);
                 }
             }
 
@@ -1151,7 +1315,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// </summary>
     /// <param name="other">The <see cref="PostBuilder"/> to compare with the current instance.</param>
     /// <returns><see langword="true"/> if the specified <see cref="PostBuilder"/> is equal to the current instance; otherwise, <see langword="false"/>.</returns>
-    public bool Equals(PostBuilder? other) => other is not null && 
+    public bool Equals(PostBuilder? other) => other is not null &&
         EqualityComparer<Post>.Default.Equals(_post, other._post) &&
         EqualityComparer<List<EmbeddedImage>>.Default.Equals(_embeddedImages, other._embeddedImages) &&
         EqualityComparer<List<ThreadGateRule>?>.Default.Equals(_threadGateRules, other._threadGateRules) &&
@@ -1212,7 +1376,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
 
         lock (_syncLock)
         {
-            Post postRecord = new (_post);
+            Post postRecord = new(_post);
 
             if (_embeddedImages is not null)
             {
