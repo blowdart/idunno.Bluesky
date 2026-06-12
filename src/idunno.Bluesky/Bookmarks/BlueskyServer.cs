@@ -1,14 +1,14 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
-
 using idunno.Bluesky.Bookmarks;
 using idunno.Bluesky.Bookmarks.Model;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky;
 
@@ -51,7 +51,7 @@ public static partial class BlueskyServer
         HttpClient httpClient,
         Action<AtProtoCredential>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
-        CancellationToken cancellationToken=default)
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(cid);
@@ -64,7 +64,7 @@ public static partial class BlueskyServer
 
         AtProtoHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
 
-        CreateBookmarkRequest request = new (uri, cid);
+        CreateBookmarkRequest request = new(uri, cid);
 
         AtProtoHttpResult<EmptyResponse> response = await client.Post(
             service,

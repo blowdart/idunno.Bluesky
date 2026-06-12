@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
@@ -31,7 +31,7 @@ public abstract record AtProtoRepositoryObject : AtProtoObject
     /// Gets the <see cref="AtUri"/> of the record.
     /// </summary>
     [JsonRequired]
-    public AtUri Uri {get; init;}
+    public AtUri Uri { get; init; }
 
     /// <summary>
     /// Gets the <see cref="AtProto.Cid">Content Identifier</see> of the record.

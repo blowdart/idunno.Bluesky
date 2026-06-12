@@ -1,13 +1,8 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.IdentityModel.JsonWebTokens;
 
 using Duende.IdentityModel.Client;
 using Duende.IdentityModel.OidcClient;
@@ -15,6 +10,11 @@ using Duende.IdentityModel.OidcClient.DPoP;
 using Duende.IdentityModel.OidcClient.Results;
 
 using idunno.AtProto.Server.Models;
+
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace idunno.AtProto.Authentication;
 

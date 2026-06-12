@@ -1,14 +1,14 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Security.Claims;
 
+using idunno.AtProto;
+using idunno.AtProto.Authentication;
+using idunno.Bluesky.RichText;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-
-using idunno.AtProto;
-using idunno.Bluesky.RichText;
-using idunno.AtProto.Authentication;
 
 namespace idunno.Bluesky;
 
@@ -29,7 +29,7 @@ public partial class BlueskyAgent : AtProtoAgent
     ///     <see langword="false"/> if you are using a debugging proxy which does not support CRLs.
     ///   </para>
     /// </remarks>
-    public BlueskyAgent(BlueskyAgentOptions ? options = null) : base (
+    public BlueskyAgent(BlueskyAgentOptions? options = null) : base(
         service: DefaultServiceUris.BlueskyApiUri,
         options: options)
     {
@@ -198,7 +198,7 @@ public partial class BlueskyAgent : AtProtoAgent
     /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="principal"/> or <paramref name="httpClientFactory"/>is <see langword="null"/>.</exception>
     public BlueskyAgent(ClaimsPrincipal principal, IHttpClientFactory httpClientFactory, BlueskyAgentOptions? options = null) : base(
-            principal : principal,
+            principal: principal,
             httpClientFactory: httpClientFactory,
             options: options)
     {

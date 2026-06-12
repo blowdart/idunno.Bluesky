@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Net.Http.Headers;
@@ -318,7 +318,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
-            cancellationToken : cancellationToken).ConfigureAwait(false);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -359,7 +359,7 @@ public partial class BlueskyAgent
                 atErrorDetail: postsView.AtErrorDetail,
                 rateLimit: postsView.RateLimit);
         }
-   }
+    }
 
     /// <summary>
     /// Gets the <see cref="PostView"/>s for a specified list of posts (by <see cref="AtUri"/>).
@@ -813,7 +813,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="query" /> is <see langword="null"/></exception>
     public async Task<AtProtoHttpResult<SearchResults>> SearchPosts(
         string query,
-        DateTimeOffset since ,
+        DateTimeOffset since,
         DateTimeOffset until,
         SearchOrder? searchOrder = null,
         AtIdentifier? mentions = null,

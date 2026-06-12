@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
+
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
@@ -196,7 +197,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(FeedViewPost))]
 [JsonSerializable(typeof(GeneratorView))]
 [JsonSerializable(typeof(GeneratorViewerState))]
-[JsonSerializable(typeof(Feed.Like), TypeInfoPropertyName ="FeedLike")]
+[JsonSerializable(typeof(Feed.Like), TypeInfoPropertyName = "FeedLike")]
 [JsonSerializable(typeof(Likes))]
 [JsonSerializable(typeof(NotFoundPost))]
 [JsonSerializable(typeof(PostThread))]

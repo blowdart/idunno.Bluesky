@@ -1,15 +1,15 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text;
 
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.TestHost;
-
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
-using idunno.Bluesky.Video;
 using idunno.AtProto.Server.Models;
+using idunno.Bluesky.Video;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.TestHost;
 
 namespace idunno.Bluesky.Integration.Test;
 
@@ -143,7 +143,7 @@ public class VideoTests
                         }
 
                         response.StatusCode = 200;
-                        response.ContentType= "application/json";
+                        response.ContentType = "application/json";
 
                         await response.WriteAsync("{");
                         await response.WriteAsync($"\"did\":\"did:plc:test\",");

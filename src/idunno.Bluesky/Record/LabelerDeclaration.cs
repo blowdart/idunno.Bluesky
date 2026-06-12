@@ -1,7 +1,8 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
+
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 
@@ -37,7 +38,7 @@ public record LabelerDeclaration : BlueskyRecord
     /// <summary>
     /// Gets the set of subject types (account, record, etc) this service accepts reports on.
     /// </summary>
-    public ICollection<string>? SubjectTypes { get; init; } = Array.Empty <string>();
+    public ICollection<string>? SubjectTypes { get; init; } = Array.Empty<string>();
 
     /// <summary>
     /// Gets the set of record types (collection <see cref="Nsid"/>s) which can be reported to this service.

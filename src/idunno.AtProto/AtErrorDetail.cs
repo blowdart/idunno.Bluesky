@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -17,7 +17,7 @@ public sealed class AtErrorDetail
     internal AtErrorDetail()
     {
     }
-    
+
     /// <summary>
     /// Creates an new instance of <see cref="AtErrorDetail"/>
     /// </summary>

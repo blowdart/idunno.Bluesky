@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
@@ -97,7 +97,7 @@ public sealed record PostView : PostViewBase
     /// The value of the post record.
     /// </summary>
     [JsonRequired]
-    public Post Record {get; init;}
+    public Post Record { get; init; }
 
     /// <summary>
     /// The number of replies to this post.

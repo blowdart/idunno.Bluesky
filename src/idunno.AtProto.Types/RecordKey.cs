@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Runtime.CompilerServices;
@@ -54,7 +54,7 @@ public sealed partial class RecordKey : IEquatable<RecordKey>
     /// This is commonly used for records attached to an individual user, for which only
     /// one record is provided, for example a user's profile record.
     /// </summary>
-    public static RecordKey Self  => new("self");
+    public static RecordKey Self => new("self");
 
     /// <summary>
     /// Returns a string representation of this <see cref="RecordKey"/>.

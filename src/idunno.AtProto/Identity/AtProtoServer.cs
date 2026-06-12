@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using DnsClient;
@@ -64,7 +64,7 @@ public static partial class AtProtoServer
 
         loggerFactory ??= NullLoggerFactory.Instance;
         ILogger logger = loggerFactory.CreateLogger(typeof(AtProtoServer));
-        
+
         LookupClient lookupClient = new(new LookupClientOptions()
         {
             ContinueOnDnsError = true,

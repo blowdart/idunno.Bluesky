@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using idunno.Bluesky.Notifications.PreferenceTypes;
@@ -19,7 +19,7 @@ internal sealed record PutPreferencesV2Request(
     NonFilterablePreference Unverified,
     NonFilterablePreference Verified)
 {
-    public PutPreferencesV2Request(Preferences preferences) :this(
+    public PutPreferencesV2Request(Preferences preferences) : this(
         Chat: preferences.Chat,
         Follow: preferences.Follow,
         LikeViaRepost: preferences.LikeViaRepost,

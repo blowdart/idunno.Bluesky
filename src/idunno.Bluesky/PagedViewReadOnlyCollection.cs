@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Collections.ObjectModel;
@@ -11,7 +11,7 @@ namespace idunno.Bluesky;
 /// <typeparam name="T">The type of <see cref="View"/>s the list contains.</typeparam>
 /// <param name="list">The list to create this instance of <see cref="PagedViewReadOnlyCollection{T}"/> from.</param>
 /// <param name="cursor">An optional cursor for pagination.</param>
-public class PagedViewReadOnlyCollection<T>(IList<T> list, string? cursor = null) : ReadOnlyCollection <T>(list) where T : View
+public class PagedViewReadOnlyCollection<T>(IList<T> list, string? cursor = null) : ReadOnlyCollection<T>(list) where T : View
 {
     /// <summary>
     /// Creates a new instance of <see cref="PagedViewReadOnlyCollection{T}"/> with an empty list and no cursor.
@@ -25,7 +25,7 @@ public class PagedViewReadOnlyCollection<T>(IList<T> list, string? cursor = null
     /// </summary>
     /// <param name="collection">A collection of <typeparamref name="T"/> to create this instance of <see cref="PagedViewReadOnlyCollection{T}"/> from.</param>
     /// <param name="cursor">An optional cursor for pagination.</param>
-    public PagedViewReadOnlyCollection(ICollection<T> collection, string? cursor = null) :this([.. collection], cursor)
+    public PagedViewReadOnlyCollection(ICollection<T> collection, string? cursor = null) : this([.. collection], cursor)
     {
     }
 

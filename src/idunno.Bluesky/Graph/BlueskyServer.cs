@@ -5,13 +5,13 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto;
+using idunno.AtProto.Authentication;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Graph;
 using idunno.Bluesky.Graph.Model;
-using idunno.AtProto.Authentication;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky;
 

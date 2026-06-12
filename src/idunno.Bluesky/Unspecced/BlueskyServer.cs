@@ -1,11 +1,9 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
-
-using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
@@ -14,6 +12,8 @@ using idunno.Bluesky.Feed;
 using idunno.Bluesky.Graph;
 using idunno.Bluesky.Unspecced;
 using idunno.Bluesky.Unspecced.Model;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky;
 
@@ -384,7 +384,7 @@ public static partial class BlueskyServer
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
     {
-        StringBuilder queryStringBuilder = new ();
+        StringBuilder queryStringBuilder = new();
         string? queryString = string.Empty;
 
         if (parameters != null && parameters.Count > 0)

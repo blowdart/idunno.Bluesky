@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 namespace idunno.AtProto.Types.Test;
@@ -104,7 +104,7 @@ public class HandleTests
     {
         Handle actual = new(value);
         Assert.NotNull(actual);
-        Assert.Equal (value.ToLowerInvariant(), actual.ToString());
+        Assert.Equal(value.ToLowerInvariant(), actual.ToString());
     }
 
     [Theory]

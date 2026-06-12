@@ -1,15 +1,15 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Net;
 using System.Text.Json;
 
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.TestHost;
-
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.TestHost;
 
 namespace idunno.AtProto.Integration.Test;
 
@@ -141,7 +141,7 @@ public class RepoTests
                 accessJwt: JwtBuilder.CreateJwt(expectedDid, TestServerBuilder.DefaultUri.ToString()),
                 refreshToken: "refreshToken");
 
-        JsonElement capturedRecordValue = default ;
+        JsonElement capturedRecordValue = default;
 
         TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
         {
@@ -185,7 +185,7 @@ public class RepoTests
                 response.StatusCode = 200;
                 var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid)
                 {
-                    Commit = new (expectedCid, "revision"),
+                    Commit = new(expectedCid, "revision"),
                     ValidationStatus = "valid"
                 };
 
@@ -204,10 +204,10 @@ public class RepoTests
             creator: expectedDid,
             rKey: expectedRecordKey,
             validate: true,
-            swapCommit : null,
+            swapCommit: null,
             service: TestServerBuilder.DefaultUri,
             accessCredentials: expectedCredentials,
-            httpClient : httpClient,
+            httpClient: httpClient,
             cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(response.Succeeded);
@@ -282,7 +282,7 @@ public class RepoTests
                 response.StatusCode = 200;
                 var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid)
                 {
-                    Commit = new (expectedCid, "revision"),
+                    Commit = new(expectedCid, "revision"),
                     ValidationStatus = "valid"
                 };
                 await response.WriteAsJsonAsync(serverDescription);
@@ -461,7 +461,7 @@ public class RepoTests
                 response.StatusCode = 200;
                 var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid)
                 {
-                    Commit = new (expectedCid, "revision"),
+                    Commit = new(expectedCid, "revision"),
                     ValidationStatus = "valid"
                 };
                 await response.WriteAsJsonAsync(serverDescription);
@@ -522,7 +522,7 @@ public class RepoTests
                 response.StatusCode = 200;
                 var serverDescription = new CreateRecordResponse(expectedAtUri, expectedCid)
                 {
-                    Commit = new (expectedCid, "revision"),
+                    Commit = new(expectedCid, "revision"),
                     ValidationStatus = "valid"
                 };
 
@@ -1605,7 +1605,7 @@ public class RepoTests
         using (var agent = new AtProtoAgent(
             service: TestServerBuilder.DefaultUri,
             httpClientFactory: new TestHttpClientFactory(testServer),
-            options: new ()
+            options: new()
             {
                 HttpJsonOptions = httpJsonOptions
             }))
@@ -2066,7 +2066,7 @@ public class RepoTests
             cid: null,
             service: TestServerBuilder.DefaultUri,
             httpClient: httpClient,
-            accessCredentials:expectedCredentials,
+            accessCredentials: expectedCredentials,
             cancellationToken: TestContext.Current.CancellationToken);
     }
 }

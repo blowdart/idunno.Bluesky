@@ -4,11 +4,11 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-
 using idunno.AtProto;
 using idunno.AtProto.Repo;
+
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.Bluesky.Embed;
 

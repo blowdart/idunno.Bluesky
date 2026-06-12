@@ -152,7 +152,7 @@ public class PostTests
         Assert.Equal(DateTimeOffset.Parse("2026-05-21T17:41:14.270Z"), post.CreatedAt);
         Assert.NotNull(post.Facets);
         Assert.Single(post.Facets);
-        Assert.Equal(0,post.Facets.ElementAt(0)!.Index!.ByteStart);
+        Assert.Equal(0, post.Facets.ElementAt(0)!.Index!.ByteStart);
         Assert.Equal(41, post.Facets.ElementAt(0)!.Index!.ByteEnd);
         Assert.Single(post.Facets.ElementAt(0)!.Features);
         Assert.IsType<LinkFacetFeature>(post.Facets.ElementAt(0)!.Features!.ElementAt(0));

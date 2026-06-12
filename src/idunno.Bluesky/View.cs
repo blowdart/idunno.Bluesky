@@ -1,9 +1,9 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-using System.Text.Json.Serialization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace idunno.Bluesky;
 
@@ -23,7 +23,7 @@ public record View
     /// <summary>
     /// Creates a new instance of <see cref="View"/>.
     /// </summary>
-    public View() {}
+    public View() { }
 
     /// <summary>
     /// A list of keys and element data that do not map to any strongly typed properties.

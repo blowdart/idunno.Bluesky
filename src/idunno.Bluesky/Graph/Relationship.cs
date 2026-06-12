@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
@@ -25,7 +25,7 @@ public sealed record Relationship : RelationshipType
     /// <param name="blockingByList">If the actor is blocked by this <see cref="Did" /> via a block list, contains the <see cref="AtUri"/> of the ListBlock record.</param>
     /// <param name="blockedByList">If the actor blocks this <see cref="Did" /> by a block list, this is the <see cref="AtUri"/> of the ListBlock record.</param>
     [JsonConstructor]
-    public Relationship(Did did, AtUri?following, AtUri? followedBy, AtUri? blocking, AtUri? blockedBy, AtUri? blockingByList, AtUri? blockedByList)
+    public Relationship(Did did, AtUri? following, AtUri? followedBy, AtUri? blocking, AtUri? blockedBy, AtUri? blockingByList, AtUri? blockedByList)
     {
         Did = did;
         Following = following;

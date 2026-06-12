@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -41,7 +41,7 @@ public record AtProtoRepositoryRecord : AtProtoRepositoryObject
 /// Represents an <see cref="AtProtoRecord"/> retrieved from a repository.
 /// </summary>
 /// <typeparam name="TRecord">The type of the record.</typeparam>
-public record AtProtoRepositoryRecord<TRecord> : AtProtoRepositoryObject where TRecord: AtProtoRecord
+public record AtProtoRepositoryRecord<TRecord> : AtProtoRepositoryObject where TRecord : AtProtoRecord
 {
     /// <summary>
     /// Creates a new instance of at AT Proto record.

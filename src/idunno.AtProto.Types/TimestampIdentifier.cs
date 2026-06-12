@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics;
@@ -75,7 +75,7 @@ public sealed partial class TimestampIdentifier
     {
         ArgumentNullException.ThrowIfNull(recordKey);
 
-        if (recordKey.ToString().Length!= TidLength || !s_Validator().IsMatch(recordKey.ToString()))
+        if (recordKey.ToString().Length != TidLength || !s_Validator().IsMatch(recordKey.ToString()))
         {
             throw new ArgumentException("not a valid TimeStampIdentifier", nameof(recordKey));
         }

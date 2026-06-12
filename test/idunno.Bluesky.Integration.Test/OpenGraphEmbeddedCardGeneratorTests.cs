@@ -1,12 +1,12 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.TestHost;
-
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Embed;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.TestHost;
 
 namespace idunno.Bluesky.Integration.Test;
 
@@ -75,7 +75,7 @@ public class OpenGraphEmbeddedCardGeneratorTests
         {
             agent.Credentials = expectedCredentials;
 
-            Uri uri = new ($"{TestServerBuilder.DefaultUri}document/12345");
+            Uri uri = new($"{TestServerBuilder.DefaultUri}document/12345");
             OpenGraphEmbeddedCardGenerator openGraphCardGenerator = agent.CreateOpenGraphEmbeddedCardGenerator();
 
             EmbeddedExternal? card = await openGraphCardGenerator.Generate(uri, TestContext.Current.CancellationToken);

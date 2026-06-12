@@ -1,15 +1,12 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using BlueskyBot;
+using Coravel;
+using Coravel.Invocable;
+using idunno.Bluesky;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
-using Coravel;
-using Coravel.Invocable;
-
-using idunno.Bluesky;
-
-using BlueskyBot;
 
 // Setup an application host then
 // * register and Options provider for BotSettings and bind to the config

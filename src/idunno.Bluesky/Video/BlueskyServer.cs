@@ -1,15 +1,15 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Headers;
 
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto;
+using idunno.AtProto.Authentication;
 using idunno.Bluesky.Video;
 using idunno.Bluesky.Video.Model;
-using idunno.AtProto.Authentication;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky;
 
@@ -104,7 +104,7 @@ public partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(serviceCredential);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<UploadLimits> client = new (AppViewProxy, loggerFactory);
+        AtProtoHttpClient<UploadLimits> client = new(AppViewProxy, loggerFactory);
 
         return await client.Get(
             service,
@@ -169,7 +169,7 @@ public partial class BlueskyServer
                 $"{UploadVideoEndpoint}?did={Uri.EscapeDataString(did)}&name={Uri.EscapeDataString(fileName)}",
                 video,
                 requestHeaders: null,
-                contentHeaders : contentHeaders,
+                contentHeaders: contentHeaders,
                 credentials: serviceCredential,
                 httpClient: httpClient,
                 jsonSerializerOptions: BlueskyJsonSerializerOptions,

@@ -1,11 +1,8 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
-
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.TestHost;
 
 using Duende.IdentityModel.OidcClient.DPoP;
 
@@ -13,6 +10,9 @@ using idunno.AtProto.Authentication;
 using idunno.AtProto.Authentication.Models;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.TestHost;
 
 namespace idunno.AtProto.Integration.Test;
 
@@ -328,10 +328,10 @@ public class AuthenticationTests
                 var createRecordResponse = new CreateRecordResponse(
                     new($"at://{(string?)requestJson["repo"]}/{(string?)requestJson["collection"]}/rkey"),
                     new("bafyreihd3v4j"))
-                    {
-                        Commit = null,
-                        ValidationStatus = "valid"
-                    };
+                {
+                    Commit = null,
+                    ValidationStatus = "valid"
+                };
 
                 await response.WriteAsJsonAsync(createRecordResponse, _jsonSerializerOptions);
                 return;
@@ -464,7 +464,7 @@ public class AuthenticationTests
 
             TestRecord recordValue = new() { TestValue = "test" };
 
-            await Assert.ThrowsAsync<AccessTokenException>(async() => await agent.CreateRecord(recordValue, collection, cancellationToken: TestContext.Current.CancellationToken));
+            await Assert.ThrowsAsync<AccessTokenException>(async () => await agent.CreateRecord(recordValue, collection, cancellationToken: TestContext.Current.CancellationToken));
         }
     }
 

@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Security.Claims;
@@ -63,7 +63,7 @@ public abstract class AtProtoCredential(Uri service, AuthenticationType authenti
     public static AtProtoCredential Create(
         Uri service,
         AuthenticationType authenticationType,
-        string? accessJwt=null,
+        string? accessJwt = null,
         string? refreshToken = null,
         string? dPoPProofKey = null,
         string? dPoPNonce = null)

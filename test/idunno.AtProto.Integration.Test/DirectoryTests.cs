@@ -1,17 +1,17 @@
-﻿// Copyright(c) Barry Dorrans. All rights reserved.
+// Copyright(c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Diagnostics.Metrics;
 using System.Net;
 using System.Text.Json;
 
+using idunno.AtProto.DidPlcDirectory;
+using idunno.DidPlcDirectory;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
-
-using idunno.AtProto.DidPlcDirectory;
-using idunno.DidPlcDirectory;
 
 namespace idunno.AtProto.Integration.Test;
 
@@ -105,7 +105,7 @@ public class DirectoryTests
         IReadOnlyList<CollectedMeasurement<long>> failedMeasurements = totalFailedRequestsCollector.GetMeasurementSnapshot();
         Assert.Empty(failedMeasurements);
 
-        IReadOnlyList <CollectedMeasurement<double>> durationMeasurements = requestDurationCollector.GetMeasurementSnapshot();
+        IReadOnlyList<CollectedMeasurement<double>> durationMeasurements = requestDurationCollector.GetMeasurementSnapshot();
         Assert.Single(durationMeasurements);
     }
 

@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
@@ -100,5 +100,5 @@ public record FeedItem
     /// The AT URI of the feed.
     /// </summary>
     [JsonRequired]
-    public AtUri Uri { get; init;  }
+    public AtUri Uri { get; init; }
 }

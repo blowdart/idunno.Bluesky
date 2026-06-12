@@ -12,7 +12,10 @@
   If you pass more than 4 `EmbeddedImage` items to `Post()`, it will attempt to convert them to `EmbeddedGallery` format. Your `EmbeddedImage`
   instances must have an aspect ratio for this to work, otherwise an exception will be thrown.
   You can use [Magick.NET](https://github.com/dlemstra/Magick.NET), [ImageSharp](https://github.com/SixLabors/ImageSharp) or other image processing libraries to calculate the aspect ratio of your images if needed.
-
+* Added new overloads to `PostBuilder` to support `EmbeddedGallery` content.
+  If you use the `+` operator to add more than 4 `EmbeddedImage` items to a `PostBuilder`, it will attempt to convert them to `EmbeddedGallery` format. Your `EmbeddedImage`
+  instances must have an aspect ratio for this to work, otherwise an exception will be thrown.
+  You can use [Magick.NET](https://github.com/dlemstra/Magick.NET), [ImageSharp](https://github.com/SixLabors/ImageSharp) or other image processing libraries to calculate the aspect ratio of your images if needed.
 
 ## 2.0.0 - 2026-02-06
 

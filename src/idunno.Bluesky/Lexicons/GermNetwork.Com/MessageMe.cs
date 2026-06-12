@@ -27,7 +27,7 @@ public record MessageMe
     {
         ArgumentNullException.ThrowIfNull(messageMeUrl);
         ArgumentOutOfRangeException.ThrowIfLessThan(messageMeUrl.ToString().Length, 1);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan( messageMeUrl.ToString().Length, 2047);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(messageMeUrl.ToString().Length, 2047);
 
         ArgumentNullException.ThrowIfNull(showButtonTo);
         ArgumentOutOfRangeException.ThrowIfLessThan(showButtonTo.Length, 1);

@@ -3,9 +3,10 @@
 
 using System.Text.Json;
 
-using idunno.AtProto.Repo;
 using GermNetwork.Com;
+
 using idunno.AtProto;
+using idunno.AtProto.Repo;
 
 namespace idunno.Bluesky.Serialization.Test;
 

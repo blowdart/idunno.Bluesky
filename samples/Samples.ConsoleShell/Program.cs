@@ -1,10 +1,11 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto;
 using idunno.Bluesky;
+using idunno.Bluesky.Embed;
+
+using Microsoft.Extensions.Logging;
 
 using Samples.Common;
 
@@ -31,7 +32,7 @@ public sealed class Program
         ArgumentException.ThrowIfNullOrEmpty(password);
 
         // Uncomment the next line to route all requests through Fiddler Everywhere
-        // proxyUri = new Uri("http://localhost:8866");
+        proxyUri = new Uri("http://localhost:8866");
 
         // Uncomment the next line to route all requests  through Fiddler Classic
         // proxyUri = new Uri("http://localhost:8888");
@@ -89,6 +90,61 @@ public sealed class Program
             }
             // END-AUTHENTICATION
 
+            ICollection<EmbeddedGalleryImage> uploadedImages = [];
+            for (int i = 1; i < 10; i++)
+            {
+                AtProtoHttpResult<Blob> uploadResult = await agent.UploadBlob(
+                        fileName: $"C:\\Users\\BarryDorrans\\Downloads\\{i}.webp",
+                        mimeType: "image/webp",
+                        cancellationToken: cancellationToken);
+
+                if (uploadResult.Succeeded)
+                {
+                    AspectRatio aspectRatio = new(198, 138);
+
+                    if (i == 1)
+                    {
+                        aspectRatio = new(142, 138);
+                    }
+                    else if (i == 9)
+                    {
+                        aspectRatio = new(164, 138);
+                    }
+
+                    uploadedImages.Add(new EmbeddedGalleryImage(
+                        image: uploadResult.Result,
+                        altText: "Long cat is long, sideways",
+                        aspectRatio: aspectRatio));
+                }
+            }
+
+            var embeddedGallery = new EmbeddedGallery(uploadedImages);
+
+            var post = new Post("Long cat is long, sideways", embeddedGallery);
+
+            var postResult = await agent.Post(post, cancellationToken: cancellationToken);
+
+            if (postResult.Succeeded)
+            {
+                Console.WriteLine($"Post created with URI {postResult.Result.Uri}");
+                await agent.DeletePost(postResult.Result.Uri, cancellationToken);
+            }
+            else
+            {
+                ConsoleColor oldColor = Console.ForegroundColor;
+
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Failed to create post.");
+                Console.ForegroundColor = oldColor;
+
+                if (postResult.AtErrorDetail is not null)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+
+                    Console.WriteLine($"Server returned {postResult.AtErrorDetail.Error} / {postResult.AtErrorDetail.Message}");
+                    Console.ForegroundColor = oldColor;
+                }
+            }
         }
     }
 }

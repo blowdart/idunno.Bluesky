@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Net;
@@ -6,10 +6,10 @@ using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Reflection;
 
+using idunno.DidPlcDirectory;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-
-using idunno.DidPlcDirectory;
 
 namespace idunno.AtProto;
 

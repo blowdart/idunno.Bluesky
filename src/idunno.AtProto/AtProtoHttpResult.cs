@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -26,7 +26,7 @@ public class AtProtoHttpResult<TResult>
     /// <param name="httpResponseHeaders">The <see cref="HttpResponseHeaders"/> returned by the request</param>
     /// <param name="atErrorDetail">The <see cref="AtErrorDetail"/> returned by the API call, if any.</param>
     /// <param name="rateLimit">The API rate limit for the current user, if the response included one.</param>
-    public AtProtoHttpResult(TResult? result, HttpStatusCode statusCode, HttpResponseHeaders? httpResponseHeaders, AtErrorDetail ? atErrorDetail = null, RateLimit? rateLimit = null)
+    public AtProtoHttpResult(TResult? result, HttpStatusCode statusCode, HttpResponseHeaders? httpResponseHeaders, AtErrorDetail? atErrorDetail = null, RateLimit? rateLimit = null)
     {
         Result = result;
         StatusCode = statusCode;
@@ -51,7 +51,7 @@ public class AtProtoHttpResult<TResult>
     /// <summary>
     /// The extended error information, if any, if the request was unsuccessful.
     /// </summary>
-    public AtErrorDetail? AtErrorDetail {get; internal set; }
+    public AtErrorDetail? AtErrorDetail { get; internal set; }
 
     /// <summary>
     /// A flag indicating if the https request returned a status code of OK or No Content and a result is present.

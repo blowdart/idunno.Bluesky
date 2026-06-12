@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.RegularExpressions;
@@ -94,7 +94,7 @@ public sealed partial class DefaultFacetExtractor : IFacetExtractor
                 extractedTag = extractedTag.Substring(0, extractedTag.Length - 1);
             }
 
-            if (extractedTag.Length <= 1 )
+            if (extractedTag.Length <= 1)
             {
                 break;
             }
@@ -133,7 +133,7 @@ public sealed partial class DefaultFacetExtractor : IFacetExtractor
             // This will have the $ prefix.
             string extractedTag = match.Value;
 
-            if (extractedTag.Length <=2)
+            if (extractedTag.Length <= 2)
             {
                 break;
             }
@@ -177,7 +177,7 @@ public sealed partial class DefaultFacetExtractor : IFacetExtractor
         List<Facet> mentions = [];
         MatchCollection matches = s_MentionRegex().Matches(text);
 
-        foreach(Match match in matches)
+        foreach (Match match in matches)
         {
             string handle = match.Value[1..];
 

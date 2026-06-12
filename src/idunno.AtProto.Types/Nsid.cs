@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics;
@@ -259,7 +259,7 @@ public sealed partial class Nsid : IEquatable<Nsid>
             }
         }
 
-        for (int i=0; i<labels.Length; i++)
+        for (int i = 0; i < labels.Length; i++)
         {
             string label = labels[i];
 

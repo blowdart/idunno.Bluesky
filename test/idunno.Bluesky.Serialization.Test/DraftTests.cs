@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json;
@@ -365,7 +365,7 @@ public class DraftTests
             Assert.Equal(expectedLangs[offset], actualLanguage.GetValue<string>());
             offset++;
         }
-       
+
     }
 
     [Fact]
@@ -450,7 +450,7 @@ public class DraftTests
             Nudity = true
         };
 
-        DraftPost expectedDraftPost = new (
+        DraftPost expectedDraftPost = new(
             expectedDraftPostText,
             postSelfLabels: expectedSelfLabels,
             embedImages: null,

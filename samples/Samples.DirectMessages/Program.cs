@@ -1,16 +1,16 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics;
 using System.Text;
-
-using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
 using idunno.Bluesky;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Chat;
 using idunno.Bluesky.Embed;
+
+using Microsoft.Extensions.Logging;
 
 using Samples.Common;
 

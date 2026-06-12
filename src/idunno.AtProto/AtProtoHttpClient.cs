@@ -12,13 +12,13 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-
 using Duende.IdentityModel.OidcClient.DPoP;
 
 using idunno.AtProto.Authentication;
 using idunno.Security;
+
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.AtProto;
 
@@ -88,7 +88,7 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
         ArgumentException.ThrowIfNullOrEmpty(endpoint);
 
         using (HttpClient internalClient = new(
-            handler : _defaultClientHandler,
+            handler: _defaultClientHandler,
             disposeHandler: true)
         {
             DefaultRequestVersion = HttpVersion.Version20,
@@ -332,7 +332,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <remarks>
     ///<para>Passing <see langword="null"/> as the <paramref name="serviceProxy"/> value will suppress the checks for the presence of the atproto-proxy header on requests by this instance.</para>
     /// </remarks>
-    public AtProtoHttpClient(string? serviceProxy, ILoggerFactory? loggerFactory) :this(
+    public AtProtoHttpClient(string? serviceProxy, ILoggerFactory? loggerFactory) : this(
         serviceProxy: serviceProxy,
         requestHeaders: null,
         loggerFactory: loggerFactory,
@@ -363,7 +363,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="requestHeader"/> is <see langword="null"/>.</exception>
     public AtProtoHttpClient(string serviceProxy, NameValueHeaderValue requestHeader, ILoggerFactory? loggerFactory) : this(
-            serviceProxy : serviceProxy,
+            serviceProxy: serviceProxy,
             requestHeaders: [requestHeader],
             loggerFactory: loggerFactory,
             meterFactory: null)
@@ -445,7 +445,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
         string? serviceProxy,
         ICollection<NameValueHeaderValue>? requestHeaders,
         ILoggerFactory? loggerFactory,
-        IMeterFactory? meterFactory) 
+        IMeterFactory? meterFactory)
     {
         requestHeaders ??= [];
 

@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using idunno.AtProto.Authentication.Models;
@@ -49,7 +49,7 @@ public record Session
         EmailAuthFactor = createSessionResponse.EmailAuthFactor;
     }
 
-    internal Session(GetSessionResponse getSessionResponse, AccessCredentials accessCredentials) 
+    internal Session(GetSessionResponse getSessionResponse, AccessCredentials accessCredentials)
     {
         ArgumentNullException.ThrowIfNull(getSessionResponse);
 

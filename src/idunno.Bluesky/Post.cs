@@ -171,7 +171,7 @@ public record class Post : BlueskyTimestampedRecord
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="langs"/> is empty.</exception>
     public Post(
         string text,
-        ICollection<string> langs) : this(text: text, facets: null, langs: langs, embeddedRecord: null, reply: null, labels : null, tags : null)
+        ICollection<string> langs) : this(text: text, facets: null, langs: langs, embeddedRecord: null, reply: null, labels: null, tags: null)
     {
         ArgumentException.ThrowIfNullOrEmpty(text);
         ArgumentNullException.ThrowIfNull(langs);
@@ -257,12 +257,12 @@ public record class Post : BlueskyTimestampedRecord
         ReplyReferences? reply = null,
         SelfLabels? labels = null,
         ICollection<string>? tags = null)
-        : this (text,
+        : this(text,
             createdAt: createdAt,
             facets: facets,
             langs: langs,
             new EmbeddedImages([image]),
-            reply : reply,
+            reply: reply,
             labels: labels,
             tags: tags) => ArgumentNullException.ThrowIfNull(image);
 

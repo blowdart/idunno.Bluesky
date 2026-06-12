@@ -1,14 +1,14 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Globalization;
 using System.Text;
 
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto;
 using idunno.AtProto.Jetstream;
+
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 namespace Samples.Jetstream;
 

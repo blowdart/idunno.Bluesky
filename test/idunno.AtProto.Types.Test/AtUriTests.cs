@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 namespace idunno.AtProto.Types.Test;
@@ -136,7 +136,7 @@ public class AtUriTests
     [InlineData("at://did:plc:asdf123/com.atproto.feed.post ")]
     [InlineData("at://did:plc:asdf123/com.atproto.feed.post# ")]
     [InlineData("at://did:plc:asdf123/com.atproto.feed.post#/ ")]
-    [InlineData("at://did:plc:asdf123/com.atproto.feed.post#/frag ")] 
+    [InlineData("at://did:plc:asdf123/com.atproto.feed.post#/frag ")]
     [InlineData("at://did:plc:asdf123/com.atproto.feed.post#fr ag")]
     [InlineData("//did:plc:asdf123")]
     [InlineData("at://name")]

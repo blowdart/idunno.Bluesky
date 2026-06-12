@@ -3,10 +3,10 @@
 
 using System.Net;
 
+using idunno.Security;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-
-using idunno.Security;
 
 namespace idunno.AtProto;
 

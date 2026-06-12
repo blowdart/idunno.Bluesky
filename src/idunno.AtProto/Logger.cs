@@ -1,11 +1,11 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Net;
 
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto.Repo;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.AtProto;
 
@@ -60,7 +60,7 @@ internal static partial class Logger
     internal static partial void BackgroundTokenRefreshFired(ILogger logger);
 
     [LoggerMessage(23, LogLevel.Error, "StartTokenRefreshTimer() called but token refresh is disabled")]
-    internal static partial void TokenRefreshTimerStartCalledButRefreshDisabled (ILogger logger);
+    internal static partial void TokenRefreshTimerStartCalledButRefreshDisabled(ILogger logger);
 
     [LoggerMessage(24, LogLevel.Error, "RefreshToken API call threw")]
     internal static partial void TokenRefreshApiThrew(ILogger logger, Exception e);
@@ -265,7 +265,7 @@ internal static partial class Logger
     [LoggerMessage(500, LogLevel.Debug, "Resolving {handle} via DNS, looking for {txtRecord}")]
     internal static partial void ResolvingHandleViaDNS(ILogger logger, Handle handle, string txtRecord);
 
-    [LoggerMessage(501, LogLevel.Debug,"Resolved {handle} via DNS to {did}")]
+    [LoggerMessage(501, LogLevel.Debug, "Resolved {handle} via DNS to {did}")]
     internal static partial void ResolvedHandleToDidViaDNS(ILogger logger, Handle handle, Did did);
 
     [LoggerMessage(502, LogLevel.Debug, "Resolving {handle} via HTTP, requesting {uri}")]
@@ -309,7 +309,7 @@ internal static partial class Logger
     internal static partial void OAuthClientRefreshCalled(ILogger logger, Uri service, Uri authority);
 
     [LoggerMessage(611, LogLevel.Error, "OAuthClient refresh failed with {error} {errorDescription}")]
-    internal static partial void OAuthClientRefreshFailedByAuthority (ILogger logger, string error, string errorDescription);
+    internal static partial void OAuthClientRefreshFailedByAuthority(ILogger logger, string error, string errorDescription);
 
     [LoggerMessage(612, LogLevel.Debug, "OAuthClient refresh succeeded, token issued by authority {authority}")]
     internal static partial void OAuthClientRefreshSucceeded(ILogger logger, Uri authority);

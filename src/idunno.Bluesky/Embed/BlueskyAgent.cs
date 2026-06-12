@@ -160,5 +160,5 @@ partial class BlueskyAgent
             agent: this,
             httpClient: HttpClient,
             loggerFactory: LoggerFactory);
-     }
+    }
 }

@@ -56,7 +56,7 @@ public sealed record VerificationView
     [JsonInclude]
     [JsonRequired]
     public DateTimeOffset CreatedAt { get; init; }
-    
+
     /// <summary>
     /// Gets the display name of the actor who issued the verification.
     /// </summary>

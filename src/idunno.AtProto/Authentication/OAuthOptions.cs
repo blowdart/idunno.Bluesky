@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 namespace idunno.AtProto.Authentication;
@@ -35,7 +35,7 @@ public sealed class OAuthOptions
     public OAuthOptions(string clientId, Uri? returnUri = null, IEnumerable<string>? scopes = null)
     {
         ClientId = clientId;
-    
+
         ReturnUri = returnUri;
 
         if (scopes is not null)

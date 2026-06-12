@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
@@ -20,7 +20,7 @@ internal sealed record Track : AtProtoRecord
 
         if (name.Length > 3000 || name.GetGraphemeLength() > 300)
         {
-             // Arbitrary limits for demonstration purposes.
+            // Arbitrary limits for demonstration purposes.
             throw new ArgumentException("Track name is too long.", nameof(name));
         }
 

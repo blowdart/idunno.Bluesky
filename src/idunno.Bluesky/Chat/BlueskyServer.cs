@@ -1,16 +1,16 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto;
+using idunno.AtProto.Authentication;
 using idunno.Bluesky.Chat;
 using idunno.Bluesky.Chat.Model;
-using idunno.AtProto.Authentication;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky;
 
@@ -102,7 +102,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AcceptConversationRequest request = new (conversationId);
+        AcceptConversationRequest request = new(conversationId);
 
         AtProtoHttpClient<AcceptConversationResponse> client = new(ChatProxy, loggerFactory);
 
@@ -249,7 +249,7 @@ public static partial class BlueskyServer
             request,
             credentials: accessCredentials,
             httpClient: httpClient,
-            jsonSerializerOptions : BlueskyJsonSerializerOptions,
+            jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -697,7 +697,7 @@ public static partial class BlueskyServer
             $"{LeaveConvoEndpoint}",
             request,
             credentials: accessCredentials,
-            httpClient:httpClient,
+            httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);

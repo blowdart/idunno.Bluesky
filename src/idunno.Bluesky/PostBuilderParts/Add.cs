@@ -1,11 +1,10 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
-
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.RichText;
-using idunno.AtProto.Labels;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky;

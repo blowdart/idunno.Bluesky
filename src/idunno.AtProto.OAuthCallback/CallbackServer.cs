@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -23,7 +23,7 @@ public sealed class CallbackServer : IAsyncDisposable
     private const int DefaultTimeout = 60 * 5; // 5 minutes
 
     private readonly ILogger<CallbackServer> _logger;
-    private readonly TaskCompletionSource<string> _source = new ();
+    private readonly TaskCompletionSource<string> _source = new();
 
     private WebApplication? _listener;
 

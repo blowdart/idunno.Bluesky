@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -14,7 +14,7 @@ namespace idunno.AtProto.Jetstream;
 /// </summary>
 public sealed class AtProtoJetstreamBuilder
 {
-    private static readonly Uri s_defaultUri = new ("wss://jetstream1.us-west.bsky.network");
+    private static readonly Uri s_defaultUri = new("wss://jetstream1.us-west.bsky.network");
 
     /// <summary>
     /// Creates a new instance of <see cref="AtProtoJetstreamBuilder"/>.
@@ -136,7 +136,7 @@ public sealed class AtProtoJetstreamBuilder
     /// </summary>
     /// <param name="compressionDictionary">A byte[] containing a custom zst dictionary.</param>
     /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
-    public AtProtoJetstreamBuilder WithCompressionDictionary(byte [] compressionDictionary)
+    public AtProtoJetstreamBuilder WithCompressionDictionary(byte[] compressionDictionary)
     {
         CompressionDictionary = compressionDictionary;
 
