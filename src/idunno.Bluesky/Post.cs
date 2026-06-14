@@ -58,7 +58,14 @@ public record class Post : BlueskyTimestampedRecord
         EmbeddedBase? embeddedRecord = null,
         ReplyReferences? reply = null,
         SelfLabels? labels = null,
-        ICollection<string>? tags = null) : base(createdAt)
+        ICollection<string>? tags = null) : this(
+            createdAt: createdAt,
+            facets: facets,
+            langs: langs,
+            embeddedRecord: embeddedRecord,
+            reply: reply,
+            labels: labels,
+            tags: tags)
     {
         if (string.IsNullOrWhiteSpace(text) && embeddedRecord is null)
         {
@@ -73,43 +80,6 @@ public record class Post : BlueskyTimestampedRecord
         }
 
         Text = text;
-        Reply = reply;
-        Facets = facets;
-        Langs = langs;
-
-        EmbeddedRecord = embeddedRecord;
-
-        if (labels is not null)
-        {
-            Labels = labels;
-        }
-
-        if (tags is not null)
-        {
-            List<string> tagList = [.. tags];
-
-            if (tagList.Count > Maximum.ExternalTagsInPost)
-            {
-                throw new ArgumentOutOfRangeException(nameof(tags), $"Cannot contain more than {Maximum.ExternalTagsInPost} tags.");
-            }
-
-            int position = 0;
-            foreach (string tag in tagList)
-            {
-                if (string.IsNullOrEmpty(tag))
-                {
-                    throw new ArgumentException($"Tag[{position}] is null or empty", nameof(tags));
-                }
-
-                if (tag.Length > Maximum.TagLengthInCharacters || tag.GetGraphemeLength() > Maximum.TagLengthInGraphemes)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(tags), $"Tag[{position}] is longer than {Maximum.TagLengthInCharacters} characters or {Maximum.TagLengthInGraphemes} graphemes");
-                }
-                position++;
-            }
-
-            Tags = tagList;
-        }
     }
 
     /// <summary>
@@ -278,6 +248,8 @@ public record class Post : BlueskyTimestampedRecord
     /// <param name="tags">A collection of tags to apply to the post, if any.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="images"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="images"/> or empty, or contains more than the maximum allowed number of images.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="images"/> contains images without aspect ratios when more than the maximum allowed number of images are included.</exception>
+    [SuppressMessage("Minor Code Smell", "S3267:Loops should be simplified with \"LINQ\" expressions", Justification = "Avoid linq in hot paths")]
     public Post(
         string? text,
         ICollection<EmbeddedImage> images,
@@ -286,7 +258,7 @@ public record class Post : BlueskyTimestampedRecord
         ReplyReferences? reply = null,
         SelfLabels? labels = null,
         ICollection<string>? tags = null)
-        : this(text,
+        : this(
             createdAt: DateTimeOffset.UtcNow,
             facets: facets,
             langs: langs,
@@ -308,6 +280,14 @@ public record class Post : BlueskyTimestampedRecord
         {
             if (images.Count > Maximum.ImagesInPost)
             {
+                foreach (EmbeddedImage image in images)
+                {
+                    if (image.AspectRatio is null)
+                    {
+                        throw new ArgumentException($"Each image must have an aspect ratio when more than {Maximum.ImagesInPost} images are included.", nameof(images));
+                    }
+                }
+
                 EmbeddedRecord = new EmbeddedGallery(images);
             }
             else
@@ -315,6 +295,8 @@ public record class Post : BlueskyTimestampedRecord
                 EmbeddedRecord = new EmbeddedImages(images);
             }
         }
+
+        Text = text;
     }
 
     /// <summary>
@@ -471,6 +453,56 @@ public record class Post : BlueskyTimestampedRecord
             reply: reply,
             labels: labels,
             tags: tags) => ArgumentNullException.ThrowIfNull(gallery);
+
+    private Post(
+        DateTimeOffset createdAt,
+        ICollection<Facet>? facets,
+        ICollection<string>? langs,
+        EmbeddedBase? embeddedRecord,
+        ReplyReferences? reply,
+        SelfLabels? labels,
+        ICollection<string>? tags) : base(createdAt)
+    {
+        Reply = reply;
+        Facets = facets;
+        Langs = langs;
+
+        EmbeddedRecord = embeddedRecord;
+
+        if (labels is not null)
+        {
+            Labels = labels;
+        }
+
+        if (tags is not null)
+        {
+            List<string> tagList = [.. tags];
+
+            if (tagList.Count > Maximum.ExternalTagsInPost)
+            {
+                throw new ArgumentOutOfRangeException(nameof(tags), $"Cannot contain more than {Maximum.ExternalTagsInPost} tags.");
+            }
+
+            int position = 0;
+            foreach (string tag in tagList)
+            {
+                if (string.IsNullOrEmpty(tag))
+                {
+                    throw new ArgumentException($"Tag[{position}] is null or empty", nameof(tags));
+                }
+
+                if (tag.Length > Maximum.TagLengthInCharacters || tag.GetGraphemeLength() > Maximum.TagLengthInGraphemes)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(tags), $"Tag[{position}] is longer than {Maximum.TagLengthInCharacters} characters or {Maximum.TagLengthInGraphemes} graphemes");
+                }
+                position++;
+            }
+
+            Tags = tagList;
+        }
+    }
+
+
 
     /// <summary>
     /// Gets the text for the post, if any.

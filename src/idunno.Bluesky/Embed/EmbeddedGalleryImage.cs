@@ -34,6 +34,23 @@ public record EmbeddedGalleryImage
     }
 
     /// <summary>
+    /// Creates a new instance of <see cref="EmbeddedGalleryImage"/> from the specified <paramref name="image"/>.
+    /// </summary>
+    /// <param name="image">The <see cref="EmbeddedImage"/> to create the gallery image from.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> or any of its properties are <see langword="null"/>.</exception>
+    public EmbeddedGalleryImage(EmbeddedImage image)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+        ArgumentNullException.ThrowIfNull(image.Image);
+        ArgumentNullException.ThrowIfNull(image.AltText);
+        ArgumentNullException.ThrowIfNull(image.AspectRatio);
+
+        Image = image.Image;
+        AltText = image.AltText;
+        AspectRatio = image.AspectRatio;
+    }
+
+    /// <summary>
     /// Gets a <see cref="Blob"/> containing details of the uploaded image.
     /// </summary>
     [JsonInclude]

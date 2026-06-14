@@ -7,6 +7,8 @@ using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.RichText;
 
+using static System.Net.Mime.MediaTypeNames;
+
 namespace idunno.Bluesky.Test;
 
 [ExcludeFromCodeCoverage]
@@ -421,7 +423,7 @@ public class PostTests
     {
         List<EmbeddedImage> images = [];
 
-        for (int i = 0; i <= Maximum.ImagesInPost; i++)
+        for (int i = 0; i <= Maximum.GalleryItems; i++)
         {
             images.Add(new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text"));
         }
@@ -635,7 +637,7 @@ public class PostTests
 
         Assert.Equal(0, post.Length);
         Assert.Equal(0, post.GraphemeLength);
-        Assert.Equal(0, post.Utf8Length); ;
+        Assert.Equal(0, post.Utf8Length);
     }
 
     [Fact]
@@ -684,5 +686,84 @@ public class PostTests
         ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("test", tags: [tag]));
 
         Assert.Equal("tags", caughtException.ParamName);
+    }
+
+    [Fact]
+    public void ConstructorThrowsWhenImagesIsUnderTheMaxGalleryCountButImagesPassedHaveNoAspectRatio()
+    {
+        List<EmbeddedImage> images = [];
+
+        for (int i = 0; i < Maximum.GalleryItems; i++)
+        {
+            images.Add(new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text"));
+        }
+
+        ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post("text", images: images));
+
+        Assert.Equal("images", caughtException.ParamName);
+    }
+
+    [Fact]
+    public void WhenPassingMoreImagesThanPostImageCountPostEmbedsThemAsAGallery()
+    {
+        List<EmbeddedImage> images = [];
+
+        for (int i = 0; i <= Maximum.ImagesInPost; i++)
+        {
+            images.Add(new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text", new AspectRatio(100, 100)));
+        }
+
+        Post post = new ("text", images: images);
+
+        Assert.IsType<EmbeddedGallery>(post.EmbeddedRecord);
+        Assert.Equal("text", post.Text);
+    }
+
+    [Fact]
+    public void WhenPassingExactlyMaximumImagesInPostPostDoesNotConvertFromEmbeddedImagesToGallery()
+    {
+        List<EmbeddedImage> images = [];
+
+        for (int i = 0; i < Maximum.ImagesInPost; i++)
+        {
+            images.Add(new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text", new AspectRatio(100, 100)));
+        }
+
+        Post post = new("text", images: images);
+
+        Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
+        Assert.Equal("text", post.Text);
+    }
+
+    [Fact]
+    public void WhenPassingMoreImagesThanPostImageCountAndNoTextPostEmbedsThemAsAGallery()
+    {
+        List<EmbeddedImage> images = [];
+
+        for (int i = 0; i <= Maximum.ImagesInPost; i++)
+        {
+            images.Add(new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text", new AspectRatio(100, 100)));
+        }
+
+        Post post = new(text: null, images: images);
+
+        Assert.IsType<EmbeddedGallery>(post.EmbeddedRecord);
+        Assert.Null(post.Text);
+    }
+
+    [Fact]
+    public void WhenPassingExactlyMaximumImagesInPostAndNoTextPostDoesNotConvertFromEmbeddedImagesToGallery()
+    {
+        List<EmbeddedImage> images = [];
+
+        for (int i = 0; i < Maximum.ImagesInPost; i++)
+        {
+            images.Add(new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text", new AspectRatio(100, 100)));
+        }
+
+        Post post = new(text:null, images: images);
+
+        Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
+        Assert.Null(post.Text);
     }
 }

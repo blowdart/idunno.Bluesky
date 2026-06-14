@@ -115,6 +115,15 @@ namespace idunno.Bluesky.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Post cannot have more than {0} images with a null AspectRatio..
+        /// </summary>
+        internal static string PostBuilderTooManyImagesWithoutAspectRatio {
+            get {
+                return ResourceManager.GetString("PostBuilderTooManyImagesWithoutAspectRatio", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Post cannot have both images and video..
         /// </summary>
         internal static string PostCannotHaveImagesAndVideoValidationError {
@@ -124,7 +133,7 @@ namespace idunno.Bluesky.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Post contains self labels but no media.
+        ///   Looks up a localized string similar to Post contains self labels but no media..
         /// </summary>
         internal static string PostHasLabelsButNoMediaValidationError {
             get {

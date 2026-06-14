@@ -40,6 +40,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     private static readonly CompositeFormat s_postTextExceedsMaxLength = CompositeFormat.Parse(Properties.Resources.PostTextExceedsMaxLengths);
     private static readonly CompositeFormat s_postHasTooManyImages = CompositeFormat.Parse(Properties.Resources.PostBuilderHasTooManyImages);
     private static readonly CompositeFormat s_postHasTooManyGalleryImages = CompositeFormat.Parse(Properties.Resources.PostBuilderHasTooManyGalleryImages);
+    private static readonly CompositeFormat s_tooManyImagesWithoutAspectRatio = CompositeFormat.Parse(Properties.Resources.PostBuilderTooManyImagesWithoutAspectRatio);
 
     /// <summary>
     /// Creates a new instance of a <see cref="PostBuilder"/>.
@@ -87,8 +88,12 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
     /// <param name="labels">Any self labels to apply to the post.</param>
     /// <param name="tags">Any tags to apply to the post.</param>
-    /// <exception cref="ArgumentException">Thrown when the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long or <paramref name="tags"/> contains a <see langword="null"/> or empty tag.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> for the post is too long or <paramref name="images"/> contains too many images, or <paramref name="tags"/> has too many tags, or a tag that exceeds the maximum length.</exception>
+    /// <exception cref="ArgumentException">Thrown when the <paramref name="text"/> for a <see cref="PostBuilder"/> is too long or <paramref name="tags"/> contains a <see langword="null"/> or empty tag,</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    ///   Thrown when <paramref name="text"/> for the post is too long or <paramref name="images"/> contains too many images,
+    ///   or if there are too many <paramref name="images"/> without an <see cref="EmbeddedImage.AspectRatio"/>,
+    ///   or <paramref name="tags"/> has too many tags, or a tag that exceeds the maximum length.</exception>
+    [SuppressMessage("Minor Code Smell", "S3267:Loops should be simplified with \"LINQ\" expressions", Justification = "linq expression is not actually a simplification.")]
     public PostBuilder(
         string? text,
         ICollection<string>? langs = null,
@@ -131,6 +136,19 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
             throw new ArgumentOutOfRangeException(
                 nameof(images),
                 string.Format(null, s_postHasTooManyImages, Maximum.GalleryItems));
+        }
+
+        if (images is not null && images.Count > Maximum.ImagesInPost)
+        {
+            foreach (EmbeddedImage image in images)
+            {
+                if (image.AspectRatio is null)
+                {
+                    throw new ArgumentOutOfRangeException(
+                        nameof(images),
+                        string.Format(null, s_tooManyImagesWithoutAspectRatio, Maximum.ImagesInPost));
+                }
+            }
         }
 
         if (langs is not null)
@@ -197,7 +215,6 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// </summary>
     /// <param name="text">The text for the post.</param>
     /// <param name="galleryImages">A collection of <see cref="EmbeddedGalleryImage"/>s to attach to the post.</param>
-    /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
     /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
     /// <param name="labels">Any self labels to apply to the post.</param>
     /// <param name="tags">Any tags to apply to the post.</param>
@@ -208,13 +225,12 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     public PostBuilder(
         string? text,
         ICollection<EmbeddedGalleryImage> galleryImages,
-        DateTimeOffset? createdAt = null,
         ICollection<Facet>? facets = null,
         PostSelfLabels? labels = null,
         ICollection<string>? tags = null) : this(
             text: text,
+            createdAt: null,
             langs: null,
-            createdAt: createdAt,
             galleryImages: galleryImages,
             facets: facets,
             labels: labels,
@@ -227,8 +243,8 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// </summary>
     /// <param name="text">The text for the post.</param>
     /// <param name="galleryImages">A collection of <see cref="EmbeddedGalleryImage"/>s to attach to the post.</param>
-    /// <param name="langs">The languages for the post.</param>
     /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
+    /// <param name="langs">The languages for the post.</param>
     /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
     /// <param name="labels">Any self labels to apply to the post.</param>
     /// <param name="tags">Any tags to apply to the post.</param>
@@ -239,8 +255,8 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     public PostBuilder(
         string? text,
         ICollection<EmbeddedGalleryImage> galleryImages,
+        DateTimeOffset? createdAt,
         ICollection<string>? langs = null,
-        DateTimeOffset? createdAt = null,
         ICollection<Facet>? facets = null,
         PostSelfLabels? labels = null,
         ICollection<string>? tags = null) : this(
@@ -449,6 +465,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
 
     /// <summary>
     /// Gets a readonly list of the images for the post.
+    /// If the number of images is greater than the maximum allowed in a post, the resulting post may use a gallery view instead of an image view.
     /// </summary>
     public IReadOnlyCollection<EmbeddedImage> Images
     {
@@ -1215,17 +1232,17 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                 if (InReplyTo is null && QuotePost is null)
                 {
                     // Plain old post
-                    _post.EmbeddedRecord = new EmbeddedGallery(_embeddedImages);
+                    _post.EmbeddedRecord = new EmbeddedGallery(_embeddedGalleryImages);
                 }
                 else if (QuotePost is not null)
                 {
                     // Quote post, so we need fix up the embedded record to include images.
-                    _post.EmbeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), new EmbeddedGallery(_embeddedImages));
+                    _post.EmbeddedRecord = new EmbeddedRecordWithMedia(new EmbeddedRecord(QuotePost), new EmbeddedGallery(_embeddedGalleryImages));
                 }
                 else
                 {
                     // Reply post
-                    _post.EmbeddedRecord = new EmbeddedGallery(_embeddedImages);
+                    _post.EmbeddedRecord = new EmbeddedGallery(_embeddedGalleryImages);
                 }
             }
 

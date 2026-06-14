@@ -212,34 +212,6 @@ public class PostBuilderTests
     }
 
     [Fact]
-    public void ConstructorShouldThrowWhenAddingTooManyImages()
-    {
-        _ = new PostBuilder(
-            "Image Test",
-            images:
-            [
-                    new (new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
-                    new (new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
-                    new (new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
-                    new (new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
-            ]);
-
-        ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>("images", () =>
-        {
-            _ = new PostBuilder(
-                "Image Test",
-                images:
-                [
-                    new (new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
-                    new (new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
-                    new (new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
-                    new (new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
-                    new (new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text")
-                ]);
-        });
-    }
-
-    [Fact]
     public void ConstructorThrowsWhenAnEmptyTagIsPassed()
     {
         List<string> tags = [string.Empty];
@@ -462,5 +434,262 @@ public class PostBuilderTests
         Assert.Equivalent(
             selfLabels,
             post.Labels);
+    }
+
+    [Fact]
+    public void ConstructorShouldThrowWhenAddingTooManyImagesWithNoAspectRatio()
+    {
+        _ = new PostBuilder(
+                "Image Test",
+                images:
+                [
+                    new (new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
+                    new (new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
+                    new (new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
+                    new (new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
+                ]);
+
+        ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>("images", () =>
+        {
+            _ = new PostBuilder(
+                "Image Test",
+                images:
+                [
+                    new (new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
+                    new (new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
+                    new (new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
+                    new (new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text"),
+                    new (new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text")
+                ]);
+        });
+    }
+
+    [Fact]
+    public void ConstructorShouldThrownWhenAddingTooManyGalleryImages()
+    {
+        List<EmbeddedGalleryImage> galleryImages = [];
+
+        for (int i = 0; i < 10; i++)
+        {
+            galleryImages.Add(new(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text", new AspectRatio(128, 128)));
+        }
+
+        _ = new PostBuilder(
+            "Gallery Images Test",
+            galleryImages: galleryImages);
+
+        galleryImages.Add(new(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text", new AspectRatio(128, 128)));
+
+        ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>("galleryImages", () =>
+        {
+            _ = new PostBuilder(
+                "Gallery Images Test",
+                galleryImages: galleryImages);
+        });
+    }
+
+    [Fact]
+    public void ConstructorShouldNotThrowIfTooManyImagesWithAnAspectRatioButUnderTheGalleryLimitAreAdded()
+    {
+        List<EmbeddedImage> images = [];
+
+        for (int i = 0; i < Maximum.GalleryItems; i++)
+        {
+            images.Add(new(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text", new AspectRatio(128, 128)));
+        }
+
+        _ = new PostBuilder(
+            "Gallery Auto Convert Images Test",
+            images: images);
+
+    }
+
+    [Fact]
+    public void ConstructorAddingOverImageMaximumWithAspectRatioResultsInAnEmbeddedGalleryRecord()
+    {
+        List<EmbeddedImage> images = [];
+
+        for (int i = 0; i < Maximum.GalleryItems; i++)
+        {
+            images.Add(new(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text", new AspectRatio(128, 128)));
+        }
+
+        PostBuilder postBuilder = new(
+            "Gallery Auto Convert Images Test",
+            images: images);
+
+        Post post = postBuilder.ToPost();
+
+        Assert.IsType<EmbeddedGallery>(post.EmbeddedRecord);
+    }
+
+    [Fact]
+    public void ConstructorAddingUnderImageMaximumResultsInAnEmbeddedImagesRecord()
+    {
+        List<EmbeddedImage> images = [];
+
+        for (int i = 0; i < Maximum.ImagesInPost; i++)
+        {
+            images.Add(new(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text", new AspectRatio(128, 128)));
+        }
+
+        PostBuilder postBuilder = new(
+            "Gallery Auto Convert Images Test",
+            images: images);
+
+        Post post = postBuilder.ToPost();
+
+        Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
+    }
+
+    [Fact]
+    public void AddingImagesAndKeepingUnderThePostImageLimitResultsInAnEmbeddedImagesRecord()
+    {
+        PostBuilder postBuilder = new("Embedded Images Test");
+
+        for (int i = 0; i < Maximum.ImagesInPost; i++)
+        {
+            postBuilder.Add(
+                new EmbeddedImage(
+                    image: new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1),
+                    altText: "alt text",
+                    aspectRatio: new AspectRatio(128, 128))
+                );
+        }
+
+        Post post = postBuilder.ToPost();
+        Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
+    }
+
+    [Fact]
+    public void AddingImagesAndGoingOverThePostImageLimitResultsInAnEmbeddedGalleryRecord()
+    {
+        PostBuilder postBuilder = new("Embedded Images Test");
+
+        for (int i = 0; i <= Maximum.ImagesInPost; i++)
+        {
+            postBuilder.Add(
+                new EmbeddedImage(
+                    image: new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1),
+                    altText: "alt text",
+                    aspectRatio: new AspectRatio(128, 128))
+                );
+        }
+
+        Post post = postBuilder.ToPost();
+        Assert.IsType<EmbeddedGallery>(post.EmbeddedRecord);
+    }
+
+    [Fact]
+    public void AddingGalleryImagesAndGoingOverTheGalleryImageLimitResultsInAnException()
+    {
+        PostBuilder postBuilder = new("Embedded Gallery Test");
+        for (int i = 0; i < Maximum.GalleryItems; i++)
+        {
+            postBuilder.Add(
+                new EmbeddedGalleryImage(
+                    image: new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1),
+                    altText: "alt text",
+                    aspectRatio: new AspectRatio(128, 128))
+                );
+        }
+        ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>("image", () =>
+        {
+            postBuilder.Add(
+                new EmbeddedGalleryImage(
+                    image: new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1),
+                    altText: "alt text",
+                    aspectRatio: new AspectRatio(128, 128))
+                );
+        });
+    }
+
+    [Fact]
+    public void AddingImagesAndGoingOverTheGalleryImageLimitResultsInAnException()
+    {
+        PostBuilder postBuilder = new("Embedded Gallery Test");
+        for (int i = 0; i < Maximum.GalleryItems; i++)
+        {
+            postBuilder.Add(
+                new EmbeddedImage(
+                    image: new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1),
+                    altText: "alt text",
+                    aspectRatio: new AspectRatio(128, 128))
+                );
+        }
+        ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>("image", () =>
+        {
+            postBuilder.Add(
+                new EmbeddedImage(
+                    image: new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1),
+                    altText: "alt text",
+                    aspectRatio: new AspectRatio(128, 128))
+                );
+        });
+    }
+
+    [Fact]
+    public void AddingGalleryImagesToAPostQuotingAPostResultsInAnEmbeddedRecordWithMedia()
+    {
+        PostBuilder postBuilder = new("Embedded Gallery Test");
+        postBuilder.Quote(new StrongReference(
+            "at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3mo6lfpduzs27",
+            "bafyreidy5bwjjqxh6v3mvlnbrmpn37qce5r7ggdvbfqq7yszm5uq2qbhyu"));
+        for (int i = 0; i < Maximum.GalleryItems; i++)
+        {
+            postBuilder.Add(
+                new EmbeddedGalleryImage(
+                    image: new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1),
+                    altText: "alt text",
+                    aspectRatio: new AspectRatio(128, 128))
+                );
+        }
+        Post post = postBuilder.ToPost();
+        Assert.IsType<EmbeddedRecordWithMedia>(post.EmbeddedRecord);
+    }
+
+    [Fact]
+    public void CannotAddGalleryImagesWhenAPostBuilderAlreadyHasVideo()
+    {
+        PostBuilder postBuilder = new("Gallery/Video Test");
+        postBuilder.Add(
+            new EmbeddedVideo(
+                video: new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "video/mp4", 1),
+                altText: "alt text",
+                aspectRatio: new AspectRatio(128, 128))
+            );
+
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+        {
+            postBuilder.Add(
+                 new EmbeddedGalleryImage(
+                    image: new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1),
+                    altText: "alt text",
+                    aspectRatio: new AspectRatio(128, 128))
+                );
+        });
+    }
+
+    [Fact]
+    public void CannotAddedStrongReferenceWhenAPostBuilderAlreadyHasAQuote()
+    {
+        PostBuilder postBuilder = new("Double Quote Test");
+        postBuilder.Quote(new StrongReference(
+            "at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3mo6lfpduzs27",
+            "bafyreidy5bwjjqxh6v3mvlnbrmpn37qce5r7ggdvbfqq7yszm5uq2qbhyu"));
+
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+        {
+            postBuilder.Quote(new StrongReference(
+                "at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3mo6lfpduzs27",
+                "bafyreidy5bwjjqxh6v3mvlnbrmpn37qce5r7ggdvbfqq7yszm5uq2qbhyu"));
+        });
+
+        InvalidOperationException addEx = Assert.Throws<InvalidOperationException>(() =>
+        {
+            postBuilder.Add(new StrongReference(
+                "at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3mo6lfpduzs27",
+                "bafyreidy5bwjjqxh6v3mvlnbrmpn37qce5r7ggdvbfqq7yszm5uq2qbhyu"));
+        });
     }
 }

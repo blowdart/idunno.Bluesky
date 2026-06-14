@@ -135,11 +135,14 @@
   <data name="PostBuilderHasTooManyImages" xml:space="preserve">
     <value>Cannot have more than {0} images.</value>
   </data>
+  <data name="PostBuilderTooManyImagesWithoutAspectRatio" xml:space="preserve">
+    <value>Post cannot have more than {0} images with a null AspectRatio.</value>
+  </data>
   <data name="PostCannotHaveImagesAndVideoValidationError" xml:space="preserve">
     <value>Post cannot have both images and video.</value>
   </data>
   <data name="PostHasLabelsButNoMediaValidationError" xml:space="preserve">
-    <value>Post contains self labels but no media</value>
+    <value>Post contains self labels but no media.</value>
   </data>
   <data name="PostTextExceedsMaxLengthInGraphemesValidationError" xml:space="preserve">
     <value>Post text cannot be longer than {0} graphemes.</value>
