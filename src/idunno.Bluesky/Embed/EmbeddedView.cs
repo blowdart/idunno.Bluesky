@@ -3,6 +3,8 @@
 
 using System.Text.Json.Serialization;
 
+using idunno.Bluesky.Embed.Gallery;
+
 namespace idunno.Bluesky.Embed;
 
 /// <summary>
@@ -14,6 +16,7 @@ namespace idunno.Bluesky.Embed;
 [JsonDerivedType(typeof(EmbeddedVideoView), typeDiscriminator: "app.bsky.embed.video#view")]
 [JsonDerivedType(typeof(EmbeddedRecordView), typeDiscriminator: "app.bsky.embed.record#view")]
 [JsonDerivedType(typeof(EmbeddedRecordWithMediaView), typeDiscriminator: "app.bsky.embed.recordWithMedia#view")]
+[JsonDerivedType(typeof(Gallery.View), typeDiscriminator: "app.bsky.embed.gallery#view")]
 public record EmbeddedView : View
 {
 }

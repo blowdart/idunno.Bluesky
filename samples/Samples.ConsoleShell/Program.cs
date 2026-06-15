@@ -4,6 +4,7 @@
 using idunno.AtProto;
 using idunno.Bluesky;
 using idunno.Bluesky.Embed;
+using idunno.Bluesky.Feed;
 
 using Microsoft.Extensions.Logging;
 
@@ -90,61 +91,8 @@ public sealed class Program
             }
             // END-AUTHENTICATION
 
-            ICollection<EmbeddedGalleryImage> uploadedImages = [];
-            for (int i = 1; i < 10; i++)
-            {
-                AtProtoHttpResult<Blob> uploadResult = await agent.UploadBlob(
-                        fileName: $"C:\\Users\\BarryDorrans\\Downloads\\{i}.webp",
-                        mimeType: "image/webp",
-                        cancellationToken: cancellationToken);
+            AtProtoHttpResult<PostView> postViewResult = await agent.GetPost("at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3l66cdbste424", cancellationToken: cancellationToken);
 
-                if (uploadResult.Succeeded)
-                {
-                    AspectRatio aspectRatio = new(198, 138);
-
-                    if (i == 1)
-                    {
-                        aspectRatio = new(142, 138);
-                    }
-                    else if (i == 9)
-                    {
-                        aspectRatio = new(164, 138);
-                    }
-
-                    uploadedImages.Add(new EmbeddedGalleryImage(
-                        image: uploadResult.Result,
-                        altText: "Long cat is long, sideways",
-                        aspectRatio: aspectRatio));
-                }
-            }
-
-            var embeddedGallery = new EmbeddedGallery(uploadedImages);
-
-            var post = new Post("Long cat is long, sideways", embeddedGallery);
-
-            var postResult = await agent.Post(post, cancellationToken: cancellationToken);
-
-            if (postResult.Succeeded)
-            {
-                Console.WriteLine($"Post created with URI {postResult.Result.Uri}");
-                await agent.DeletePost(postResult.Result.Uri, cancellationToken);
-            }
-            else
-            {
-                ConsoleColor oldColor = Console.ForegroundColor;
-
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Failed to create post.");
-                Console.ForegroundColor = oldColor;
-
-                if (postResult.AtErrorDetail is not null)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-
-                    Console.WriteLine($"Server returned {postResult.AtErrorDetail.Error} / {postResult.AtErrorDetail.Message}");
-                    Console.ForegroundColor = oldColor;
-                }
-            }
         }
     }
 }

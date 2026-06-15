@@ -164,8 +164,10 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(ViewDetached))]
 [JsonSerializable(typeof(ViewNotFound))]
 [JsonSerializable(typeof(ViewRecord))]
-[JsonSerializable(typeof(EmbeddedGallery))]
-[JsonSerializable(typeof(EmbeddedGalleryImage))]
+[JsonSerializable(typeof(idunno.Bluesky.Embed.EmbeddedGallery))]
+[JsonSerializable(typeof(idunno.Bluesky.Embed.Gallery.GalleryImage))]
+[JsonSerializable(typeof(idunno.Bluesky.Embed.Gallery.View), TypeInfoPropertyName = "GalleryView")]
+[JsonSerializable(typeof(idunno.Bluesky.Embed.Gallery.ViewImage), TypeInfoPropertyName = "GalleryViewImage")]
 
 [JsonSerializable(typeof(DisableEmbeddingRule))]
 [JsonSerializable(typeof(FollowerRule))]

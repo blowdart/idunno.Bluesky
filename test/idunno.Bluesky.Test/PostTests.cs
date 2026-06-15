@@ -713,7 +713,7 @@ public class PostTests
             images.Add(new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text", new AspectRatio(100, 100)));
         }
 
-        Post post = new ("text", images: images);
+        Post post = new("text", images: images);
 
         Assert.IsType<EmbeddedGallery>(post.EmbeddedRecord);
         Assert.Equal("text", post.Text);
@@ -761,7 +761,7 @@ public class PostTests
             images.Add(new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text", new AspectRatio(100, 100)));
         }
 
-        Post post = new(text:null, images: images);
+        Post post = new(text: null, images: images);
 
         Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
         Assert.Null(post.Text);

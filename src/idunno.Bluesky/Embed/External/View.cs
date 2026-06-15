@@ -15,7 +15,7 @@ namespace idunno.Bluesky.Embed.External;
 /// <summary>
 /// The view properties on a view over an <see cref="EmbeddedExternal"/> record.
 /// </summary>
-[JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+[JsonPolymorphic(UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
 [JsonDerivedType(typeof(View), typeDiscriminator: "app.bsky.embed.external#viewExternal")]
 public record View
 {

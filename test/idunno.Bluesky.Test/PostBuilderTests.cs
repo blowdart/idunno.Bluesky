@@ -5,6 +5,7 @@ using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
+using idunno.Bluesky.Embed.Gallery;
 
 namespace idunno.Bluesky.Test;
 
@@ -402,7 +403,7 @@ public class PostBuilderTests
     {
         var selfLabels = new SelfLabels(new SelfLabel(SelfLabelValues.Nudity));
         var postSelfLabels = new PostSelfLabels(selfLabels);
-        var postBuilder = new PostBuilder(
+        PostBuilder postBuilder = new PostBuilder(
             "text",
             images: [new(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1), "alt text")],
             createdAt: DateTimeOffset.UtcNow)
@@ -467,7 +468,7 @@ public class PostBuilderTests
     [Fact]
     public void ConstructorShouldThrownWhenAddingTooManyGalleryImages()
     {
-        List<EmbeddedGalleryImage> galleryImages = [];
+        List<GalleryImage> galleryImages = [];
 
         for (int i = 0; i < 10; i++)
         {
@@ -587,7 +588,7 @@ public class PostBuilderTests
         for (int i = 0; i < Maximum.GalleryItems; i++)
         {
             postBuilder.Add(
-                new EmbeddedGalleryImage(
+                new GalleryImage(
                     image: new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1),
                     altText: "alt text",
                     aspectRatio: new AspectRatio(128, 128))
@@ -596,7 +597,7 @@ public class PostBuilderTests
         ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>("image", () =>
         {
             postBuilder.Add(
-                new EmbeddedGalleryImage(
+                new GalleryImage(
                     image: new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1),
                     altText: "alt text",
                     aspectRatio: new AspectRatio(128, 128))
@@ -638,7 +639,7 @@ public class PostBuilderTests
         for (int i = 0; i < Maximum.GalleryItems; i++)
         {
             postBuilder.Add(
-                new EmbeddedGalleryImage(
+                new GalleryImage(
                     image: new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1),
                     altText: "alt text",
                     aspectRatio: new AspectRatio(128, 128))
@@ -662,7 +663,7 @@ public class PostBuilderTests
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
         {
             postBuilder.Add(
-                 new EmbeddedGalleryImage(
+                 new GalleryImage(
                     image: new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1),
                     altText: "alt text",
                     aspectRatio: new AspectRatio(128, 128))

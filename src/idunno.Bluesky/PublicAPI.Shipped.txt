@@ -69,9 +69,9 @@ const GermNetwork.Com.ShowButtonToKnownValues.Everyone = "everyone" -> string!
 const GermNetwork.Com.ShowButtonToKnownValues.None = "none" -> string!
 const GermNetwork.Com.ShowButtonToKnownValues.UsersIFollow = "usersIFollow" -> string!
 idunno.Bluesky.Actor.ActivitySubscriptions
-idunno.Bluesky.Actor.ActivitySubscriptions.ActivitySubscriptions(idunno.Bluesky.Notifications.NotificationAllowedFrom allowSubscriptions) -> void
-idunno.Bluesky.Actor.ActivitySubscriptions.allowSubscriptions.get -> idunno.Bluesky.Notifications.NotificationAllowedFrom
-idunno.Bluesky.Actor.ActivitySubscriptions.allowSubscriptions.init -> void
+idunno.Bluesky.Actor.ActivitySubscriptions.ActivitySubscriptions(idunno.Bluesky.Notifications.NotificationAllowedFrom AllowSubscriptions) -> void
+idunno.Bluesky.Actor.ActivitySubscriptions.AllowSubscriptions.get -> idunno.Bluesky.Notifications.NotificationAllowedFrom
+idunno.Bluesky.Actor.ActivitySubscriptions.AllowSubscriptions.init -> void
 idunno.Bluesky.Actor.ActorViewerState
 idunno.Bluesky.Actor.ActorViewerState.ActivitySubscription.get -> idunno.Bluesky.Notifications.ActivitySubscription?
 idunno.Bluesky.Actor.ActorViewerState.ActivitySubscription.init -> void

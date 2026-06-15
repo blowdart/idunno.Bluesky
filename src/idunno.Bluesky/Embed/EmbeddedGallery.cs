@@ -3,6 +3,8 @@
 
 using System.Text.Json.Serialization;
 
+using idunno.Bluesky.Embed.Gallery;
+
 namespace idunno.Bluesky.Embed;
 
 /// <summary>
@@ -11,15 +13,13 @@ namespace idunno.Bluesky.Embed;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1710:Identifiers should have correct suffix", Justification = "Matches Bluesky lexicon")]
 public record EmbeddedGallery : EmbeddedMediaBase
 {
-    private readonly List<EmbeddedGalleryImage> _items;
-
     /// <summary>
     /// Creates a new instance of the <see cref="EmbeddedGallery"/> class.
     /// </summary>
     /// <param name="items">The collection of <see cref="EmbeddedImage"/> items to include in the gallery.</param>
     /// <exception cref="ArgumentException">Thrown when the items collection contains <see langword="null" /> values or items with invalid properties.</exception>
     [JsonConstructor]
-    public EmbeddedGallery(ICollection<EmbeddedGalleryImage> items)
+    public EmbeddedGallery(ICollection<GalleryImage> items)
     {
         ArgumentNullException.ThrowIfNull(items);
 
@@ -33,7 +33,7 @@ public record EmbeddedGallery : EmbeddedMediaBase
             throw new ArgumentException($"Items collection cannot contain more than {Maximum.GalleryItems} items.", nameof(items));
         }
 
-        foreach (EmbeddedGalleryImage? item in items)
+        foreach (GalleryImage? item in items)
         {
             if (item is null)
             {
@@ -51,7 +51,7 @@ public record EmbeddedGallery : EmbeddedMediaBase
             }
         }
 
-        _items = [.. items];
+        Items = [.. items];
     }
 
 
@@ -74,7 +74,7 @@ public record EmbeddedGallery : EmbeddedMediaBase
             throw new ArgumentException($"Items collection cannot contain more than {Maximum.GalleryItems} items.", nameof(items));
         }
 
-        List<EmbeddedGalleryImage> galleryItems = new(items.Count);
+        List<GalleryImage> galleryItems = new(items.Count);
 
         foreach (EmbeddedImage? item in items)
         {
@@ -98,10 +98,10 @@ public record EmbeddedGallery : EmbeddedMediaBase
                 throw new ArgumentException("Items collection cannot contain items with null AspectRatio property.", nameof(items));
             }
 
-            galleryItems.Add(new EmbeddedGalleryImage(item.Image, item.AltText, item.AspectRatio));
+            galleryItems.Add(new GalleryImage(item.Image, item.AltText, item.AspectRatio));
         }
 
-        _items = [.. galleryItems];
+        Items = [.. galleryItems];
     }
 
     /// <summary>
@@ -109,52 +109,52 @@ public record EmbeddedGallery : EmbeddedMediaBase
     /// </summary>
     [JsonInclude]
     [JsonRequired]
-    public IReadOnlyCollection<EmbeddedGalleryImage> Items => _items.AsReadOnly();
+    public ICollection<GalleryImage> Items { get; internal set; }
 
     /// <summary>
     /// Gets the number of elements contained in the gallery.
     /// </summary>
     [JsonIgnore]
-    public int Count => _items.Count;
+    public int Count => Items.Count;
 
     /// <summary>
-    /// Adds an <see cref="EmbeddedGalleryImage"/> item to the gallery.
+    /// Adds an <see cref="GalleryImage"/> item to the gallery.
     /// </summary>
-    /// <param name="item">The <see cref="EmbeddedGalleryImage"/> item to add.</param>
+    /// <param name="item">The <see cref="GalleryImage"/> item to add.</param>
     /// <exception cref="InvalidOperationException">Thrown when the gallery already contains the maximum number of items.</exception>
-    public void Add(EmbeddedGalleryImage item)
+    public void Add(GalleryImage item)
     {
-        if (_items.Count >= Maximum.GalleryItems)
+        if (Items.Count >= Maximum.GalleryItems)
         {
             throw new InvalidOperationException($"Cannot add more than {Maximum.GalleryItems} items to the gallery.");
         }
 
-        _items.Add(item);
+        Items.Add(item);
     }
 
     /// <summary>
     /// Removes all items from the gallery.
     /// </summary>
-    public void Clear() => _items.Clear();
+    public void Clear() => Items.Clear();
 
     /// <summary>
     /// Determines whether the gallery contains a specific <see cref="EmbeddedImage"/> item.
     /// </summary>
     /// <param name="item">The <see cref="EmbeddedImage"/> item to locate in the gallery.</param>
     /// <returns><see langword="true"/> if the item is found; otherwise, <see langword="false"/>.</returns>
-    public bool Contains(EmbeddedGalleryImage item) => _items.Contains(item);
+    public bool Contains(GalleryImage item) => Items.Contains(item);
 
     /// <summary>
     /// Copies the elements of the gallery to an array, starting at a particular array index.
     /// </summary>
     /// <param name="array">The destination array.</param>
     /// <param name="arrayIndex">The zero-based index in the array at which copying begins.</param>
-    public void CopyTo(EmbeddedGalleryImage[] array, int arrayIndex) => _items.CopyTo(array, arrayIndex);
+    public void CopyTo(GalleryImage[] array, int arrayIndex) => Items.CopyTo(array, arrayIndex);
 
     /// <summary>
-    /// Removes a specific <see cref="EmbeddedGalleryImage"/> item from the gallery.
+    /// Removes a specific <see cref="GalleryImage"/> item from the gallery.
     /// </summary>
-    /// <param name="item">The <see cref="EmbeddedGalleryImage"/> item to remove.</param>
+    /// <param name="item">The <see cref="GalleryImage"/> item to remove.</param>
     /// <returns><see langword="true"/> if the item was successfully removed; otherwise, <see langword="false"/>.</returns>
-    public bool Remove(EmbeddedGalleryImage item) => _items.Remove(item);
+    public bool Remove(GalleryImage item) => Items.Remove(item);
 }

@@ -17,6 +17,12 @@
   instances must have an aspect ratio for this to work, otherwise an exception will be thrown.
   You can use [Magick.NET](https://github.com/dlemstra/Magick.NET), [ImageSharp](https://github.com/SixLabors/ImageSharp) or other image processing libraries to calculate the aspect ratio of your images if needed.
 
+## Breaking Changes
+
+### idunno.Bluesky
+
+* Corrected case of `AllowSubscriptions` property on `ActivitySubscriptions`.
+
 ## 2.0.0 - 2026-02-06
 
 ## Added

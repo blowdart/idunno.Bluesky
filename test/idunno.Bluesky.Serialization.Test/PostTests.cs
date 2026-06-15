@@ -178,6 +178,171 @@ public class PostTests
         Assert.Equal(new AtUri("at://did:plc:3jpt2mvvsumj2r7eqk4gzzjz/site.standard.document/3mloolvzj2jsy"), embeddedExternal.External.AssociatedRefs.ElementAt(0).Uri);
         Assert.Equal("bafyreigzwdefal6ueevleagplq64yadnxwv6ci5t6tizu3sshszwfe3e64", embeddedExternal.External.AssociatedRefs.ElementAt(1)!.Cid);
         Assert.Equal(new AtUri("at://did:plc:3jpt2mvvsumj2r7eqk4gzzjz/site.standard.publication/3mlooltppoh4a"), embeddedExternal.External.AssociatedRefs.ElementAt(1).Uri);
+    }
 
+    [Fact]
+    public void PostWithEmbeddedGalleryDeserializesCorrectly()
+    {
+        string json = """
+            {
+                    "text": "Long cat is long, sideways",
+                    "$type": "app.bsky.feed.post",
+                    "embed": {
+                        "$type": "app.bsky.embed.gallery",
+                        "items": [
+                            {
+                                "alt": "Long cat is long, sideways",
+                                "$type": "app.bsky.embed.gallery#image",
+                                "image": {
+                                    "ref": {
+                                        "$link": "bafkreidsj4g5hv2glhdr5yznsml2njqgeomc4hsx46fdyqlyyj6pzbhheu"
+                                    },
+                                    "size": 1432,
+                                    "$type": "blob",
+                                    "mimeType": "image/webp"
+                                },
+                                "aspectRatio": {
+                                    "width": 142,
+                                    "height": 138
+                                }
+                            },
+                            {
+                                "alt": "Long cat is long, sideways",
+                                "$type": "app.bsky.embed.gallery#image",
+                                "image": {
+                                    "ref": {
+                                        "$link": "bafkreierjvtgtcqt53o5rfrlahctdeiczekegsxpo5nyxhn4qywgghiln4"
+                                    },
+                                    "size": 1260,
+                                    "$type": "blob",
+                                    "mimeType": "image/webp"
+                                },
+                                "aspectRatio": {
+                                    "width": 198,
+                                    "height": 138
+                                }
+                            },
+                            {
+                                "alt": "Long cat is long, sideways",
+                                "$type": "app.bsky.embed.gallery#image",
+                                "image": {
+                                    "ref": {
+                                        "$link": "bafkreierjvtgtcqt53o5rfrlahctdeiczekegsxpo5nyxhn4qywgghiln4"
+                                    },
+                                    "size": 1260,
+                                    "$type": "blob",
+                                    "mimeType": "image/webp"
+                                },
+                                "aspectRatio": {
+                                    "width": 198,
+                                    "height": 138
+                                }
+                            },
+                            {
+                                "alt": "Long cat is long, sideways",
+                                "$type": "app.bsky.embed.gallery#image",
+                                "image": {
+                                    "ref": {
+                                        "$link": "bafkreierjvtgtcqt53o5rfrlahctdeiczekegsxpo5nyxhn4qywgghiln4"
+                                    },
+                                    "size": 1260,
+                                    "$type": "blob",
+                                    "mimeType": "image/webp"
+                                },
+                                "aspectRatio": {
+                                    "width": 198,
+                                    "height": 138
+                                }
+                            },
+                            {
+                                "alt": "Long cat is long, sideways",
+                                "$type": "app.bsky.embed.gallery#image",
+                                "image": {
+                                    "ref": {
+                                        "$link": "bafkreierjvtgtcqt53o5rfrlahctdeiczekegsxpo5nyxhn4qywgghiln4"
+                                    },
+                                    "size": 1260,
+                                    "$type": "blob",
+                                    "mimeType": "image/webp"
+                                },
+                                "aspectRatio": {
+                                    "width": 198,
+                                    "height": 138
+                                }
+                            },
+                            {
+                                "alt": "Long cat is long, sideways",
+                                "$type": "app.bsky.embed.gallery#image",
+                                "image": {
+                                    "ref": {
+                                        "$link": "bafkreierjvtgtcqt53o5rfrlahctdeiczekegsxpo5nyxhn4qywgghiln4"
+                                    },
+                                    "size": 1260,
+                                    "$type": "blob",
+                                    "mimeType": "image/webp"
+                                },
+                                "aspectRatio": {
+                                    "width": 198,
+                                    "height": 138
+                                }
+                            },
+                            {
+                                "alt": "Long cat is long, sideways",
+                                "$type": "app.bsky.embed.gallery#image",
+                                "image": {
+                                    "ref": {
+                                        "$link": "bafkreierjvtgtcqt53o5rfrlahctdeiczekegsxpo5nyxhn4qywgghiln4"
+                                    },
+                                    "size": 1260,
+                                    "$type": "blob",
+                                    "mimeType": "image/webp"
+                                },
+                                "aspectRatio": {
+                                    "width": 198,
+                                    "height": 138
+                                }
+                            },
+                            {
+                                "alt": "Long cat is long, sideways",
+                                "$type": "app.bsky.embed.gallery#image",
+                                "image": {
+                                    "ref": {
+                                        "$link": "bafkreierjvtgtcqt53o5rfrlahctdeiczekegsxpo5nyxhn4qywgghiln4"
+                                    },
+                                    "size": 1260,
+                                    "$type": "blob",
+                                    "mimeType": "image/webp"
+                                },
+                                "aspectRatio": {
+                                    "width": 198,
+                                    "height": 138
+                                }
+                            },
+                            {
+                                "alt": "Long cat is long, sideways",
+                                "$type": "app.bsky.embed.gallery#image",
+                                "image": {
+                                    "ref": {
+                                        "$link": "bafkreigfkwp7thnpirniwjombepq2iyuqqtauu6qazr3yeqgrd567d5vue"
+                                    },
+                                    "size": 1398,
+                                    "$type": "blob",
+                                    "mimeType": "image/webp"
+                                },
+                                "aspectRatio": {
+                                    "width": 164,
+                                    "height": 138
+                                }
+                            }
+                        ]
+                    },
+                    "createdAt": "2026-06-11T13:58:57.7406626+00:00"
+            }
+            """;
+
+        Post? post = JsonSerializer.Deserialize<Post>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+
+        Assert.NotNull(post);
+        Assert.IsType<EmbeddedGallery>(post.EmbeddedRecord);
     }
 }

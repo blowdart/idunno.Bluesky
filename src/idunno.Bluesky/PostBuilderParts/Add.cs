@@ -4,6 +4,7 @@
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
+using idunno.Bluesky.Embed.Gallery;
 using idunno.Bluesky.RichText;
 
 using Microsoft.Extensions.Hosting;
@@ -219,12 +220,12 @@ public sealed partial class PostBuilder
                         throw new ArgumentException("Cannot convert images to gallery entries due to missing AspectRatio.", nameof(image));
                     }
 
-                    _embeddedGalleryImages.Add(new (embeddedImage));
+                    _embeddedGalleryImages.Add(new(embeddedImage));
                 }
 
                 if (image.AspectRatio is not null)
                 {
-                    _embeddedGalleryImages.Add(new EmbeddedGalleryImage(image));
+                    _embeddedGalleryImages.Add(new GalleryImage(image));
                     _embeddedImages.Clear();
                 }
                 else
@@ -236,7 +237,7 @@ public sealed partial class PostBuilder
             {
                 if (image.AspectRatio is not null)
                 {
-                    _embeddedGalleryImages.Add(new EmbeddedGalleryImage(image));
+                    _embeddedGalleryImages.Add(new GalleryImage(image));
                 }
                 else
                 {
@@ -335,7 +336,7 @@ public sealed partial class PostBuilder
                 {
                     if (image.AspectRatio is not null)
                     {
-                        _embeddedGalleryImages.Add(new EmbeddedGalleryImage(image));
+                        _embeddedGalleryImages.Add(new GalleryImage(image));
                     }
                     else
                     {
@@ -488,14 +489,14 @@ public sealed partial class PostBuilder
     }
 
     /// <summary>
-    /// Adds a <see cref="EmbeddedGalleryImage"/> to this instance.
+    /// Adds a <see cref="GalleryImage"/> to this instance.
     /// </summary>
-    /// <param name="image">The <see cref="EmbeddedGalleryImage"/> to add.</param>
+    /// <param name="image">The <see cref="GalleryImage"/> to add.</param>
     /// <returns>A reference to this instance after the append operation has completed.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the maximum number of gallery items is exceeded.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is <see langword="null"/>.</exception>
     /// <exception cref="System.InvalidOperationException">Thrown when a video is already present or there are existing images.</exception>
-    public PostBuilder Add(EmbeddedGalleryImage image)
+    public PostBuilder Add(GalleryImage image)
     {
         ArgumentNullException.ThrowIfNull(image);
         lock (_syncLock)
@@ -518,14 +519,14 @@ public sealed partial class PostBuilder
     }
 
     /// <summary>
-    /// Adds a <see cref="EmbeddedGalleryImage"/> to the specified <paramref name="postBuilder"/>.
+    /// Adds a <see cref="GalleryImage"/> to the specified <paramref name="postBuilder"/>.
     /// </summary>
     /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the image to.</param>
-    /// <param name="image">The <see cref="EmbeddedGalleryImage"/> to add.</param>
+    /// <param name="image">The <see cref="GalleryImage"/> to add.</param>
     /// <returns>The <paramref name="postBuilder"/> after the append operation has completed.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the maximum number of gallery items is exceeded or a video is already present.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
-    public static PostBuilder Add(PostBuilder postBuilder, EmbeddedGalleryImage image)
+    public static PostBuilder Add(PostBuilder postBuilder, GalleryImage image)
     {
         ArgumentNullException.ThrowIfNull(postBuilder);
         ArgumentNullException.ThrowIfNull(image);
@@ -681,13 +682,13 @@ public sealed partial class PostBuilder
     }
 
     /// <summary>
-    /// Adds an <see cref="EmbeddedGalleryImage"/> to the specified <paramref name="postBuilder" />.
+    /// Adds a <see cref="GalleryImage"/> to the specified <paramref name="postBuilder" />.
     /// </summary>
     /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the image to.</param>
-    /// <param name="image">The <see cref="EmbeddedGalleryImage"/> to add.</param>
+    /// <param name="image">The <see cref="GalleryImage"/> to add.</param>
     /// <returns>The <paramref name="postBuilder"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
-    public static PostBuilder operator +(PostBuilder postBuilder, EmbeddedGalleryImage image)
+    public static PostBuilder operator +(PostBuilder postBuilder, GalleryImage image)
     {
         ArgumentNullException.ThrowIfNull(postBuilder);
         ArgumentNullException.ThrowIfNull(image);

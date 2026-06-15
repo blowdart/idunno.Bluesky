@@ -10,6 +10,7 @@ using idunno.AtProto.Repo;
 
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Embed;
+using idunno.Bluesky.Embed.Gallery;
 using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.RichText;
 
@@ -29,7 +30,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
 #endif
     private readonly Post _post;
     private readonly List<EmbeddedImage> _embeddedImages = [];
-    private readonly List<EmbeddedGalleryImage> _embeddedGalleryImages = [];
+    private readonly List<GalleryImage> _embeddedGalleryImages = [];
     private EmbeddedVideo? _embeddedVideo;
     private List<ThreadGateRule>? _threadGateRules;
     private List<PostGateRule>? _postGateRules;
@@ -214,7 +215,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// Creates a new instance of a <see cref="PostBuilder"/>.
     /// </summary>
     /// <param name="text">The text for the post.</param>
-    /// <param name="galleryImages">A collection of <see cref="EmbeddedGalleryImage"/>s to attach to the post.</param>
+    /// <param name="galleryImages">A collection of <see cref="GalleryImage"/>s to attach to the post.</param>
     /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
     /// <param name="labels">Any self labels to apply to the post.</param>
     /// <param name="tags">Any tags to apply to the post.</param>
@@ -224,7 +225,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convience constructor")]
     public PostBuilder(
         string? text,
-        ICollection<EmbeddedGalleryImage> galleryImages,
+        ICollection<GalleryImage> galleryImages,
         ICollection<Facet>? facets = null,
         PostSelfLabels? labels = null,
         ICollection<string>? tags = null) : this(
@@ -242,7 +243,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// Creates a new instance of a <see cref="PostBuilder"/>.
     /// </summary>
     /// <param name="text">The text for the post.</param>
-    /// <param name="galleryImages">A collection of <see cref="EmbeddedGalleryImage"/>s to attach to the post.</param>
+    /// <param name="galleryImages">A collection of <see cref="GalleryImage"/>s to attach to the post.</param>
     /// <param name="createdAt">The <see cref="DateTimeOffset"/> the post was created at.</param>
     /// <param name="langs">The languages for the post.</param>
     /// <param name="facets">A collection of <see cref="Facet"/>s to attach to the post text, if any.</param>
@@ -254,7 +255,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Convience constructor")]
     public PostBuilder(
         string? text,
-        ICollection<EmbeddedGalleryImage> galleryImages,
+        ICollection<GalleryImage> galleryImages,
         DateTimeOffset? createdAt,
         ICollection<string>? langs = null,
         ICollection<Facet>? facets = null,
@@ -504,13 +505,13 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// <summary>
     /// Gets a readonly list of the gallery images for the post.
     /// </summary>
-    public IReadOnlyCollection<EmbeddedGalleryImage> GalleryImages
+    public IReadOnlyCollection<GalleryImage> GalleryImages
     {
         get
         {
             lock (_syncLock)
             {
-                return new List<EmbeddedGalleryImage>(_embeddedGalleryImages).AsReadOnly();
+                return new List<GalleryImage>(_embeddedGalleryImages).AsReadOnly();
             }
         }
 
