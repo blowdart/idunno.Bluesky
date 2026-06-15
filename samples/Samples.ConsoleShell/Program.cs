@@ -33,7 +33,7 @@ public sealed class Program
         ArgumentException.ThrowIfNullOrEmpty(password);
 
         // Uncomment the next line to route all requests through Fiddler Everywhere
-        proxyUri = new Uri("http://localhost:8866");
+        // proxyUri = new Uri("http://localhost:8866");
 
         // Uncomment the next line to route all requests  through Fiddler Classic
         // proxyUri = new Uri("http://localhost:8888");
@@ -91,8 +91,7 @@ public sealed class Program
             }
             // END-AUTHENTICATION
 
-            AtProtoHttpResult<PostView> postViewResult = await agent.GetPost("at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3l66cdbste424", cancellationToken: cancellationToken);
-
+            // Your code goes here.
         }
     }
 }
