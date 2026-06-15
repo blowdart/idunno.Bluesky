@@ -7,6 +7,7 @@ const idunno.Bluesky.ConversationLogTypeDiscriminators.CreateMessage = "chat.bsk
 const idunno.Bluesky.ConversationLogTypeDiscriminators.DeleteMessage = "chat.bsky.convo.defs#logDeleteMessage" -> string!
 const idunno.Bluesky.ConversationLogTypeDiscriminators.LeaveConversation = "chat.bsky.convo.defs#logLeaveConvo" -> string!
 const idunno.Bluesky.EmbeddedRecordTypeDiscriminators.External = "app.bsky.embed.external" -> string!
+const idunno.Bluesky.EmbeddedRecordTypeDiscriminators.Gallery = "app.bsky.embed.gallery" -> string!
 const idunno.Bluesky.EmbeddedRecordTypeDiscriminators.Images = "app.bsky.embed.images" -> string!
 const idunno.Bluesky.EmbeddedRecordTypeDiscriminators.Record = "app.bsky.embed.record" -> string!
 const idunno.Bluesky.EmbeddedRecordTypeDiscriminators.RecordWithMedia = "app.bsky.embed.recordWithMedia" -> string!
@@ -771,6 +772,16 @@ idunno.Bluesky.Embed.EmbeddedExternal.External.init -> void
 idunno.Bluesky.Embed.EmbeddedExternalView
 idunno.Bluesky.Embed.EmbeddedExternalView.External.get -> idunno.Bluesky.Embed.External.View!
 idunno.Bluesky.Embed.EmbeddedExternalView.External.init -> void
+idunno.Bluesky.Embed.EmbeddedGallery
+idunno.Bluesky.Embed.EmbeddedGallery.Add(idunno.Bluesky.Embed.Gallery.GalleryImage! item) -> void
+idunno.Bluesky.Embed.EmbeddedGallery.Clear() -> void
+idunno.Bluesky.Embed.EmbeddedGallery.Contains(idunno.Bluesky.Embed.Gallery.GalleryImage! item) -> bool
+idunno.Bluesky.Embed.EmbeddedGallery.CopyTo(idunno.Bluesky.Embed.Gallery.GalleryImage![]! array, int arrayIndex) -> void
+idunno.Bluesky.Embed.EmbeddedGallery.Count.get -> int
+idunno.Bluesky.Embed.EmbeddedGallery.EmbeddedGallery(System.Collections.Generic.ICollection<idunno.Bluesky.Embed.EmbeddedImage!>! items) -> void
+idunno.Bluesky.Embed.EmbeddedGallery.EmbeddedGallery(System.Collections.Generic.ICollection<idunno.Bluesky.Embed.Gallery.GalleryImage!>! items) -> void
+idunno.Bluesky.Embed.EmbeddedGallery.Items.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Embed.Gallery.GalleryImage!>!
+idunno.Bluesky.Embed.EmbeddedGallery.Remove(idunno.Bluesky.Embed.Gallery.GalleryImage! item) -> bool
 idunno.Bluesky.Embed.EmbeddedImage
 idunno.Bluesky.Embed.EmbeddedImage.AltText.get -> string!
 idunno.Bluesky.Embed.EmbeddedImage.AltText.init -> void
@@ -909,6 +920,29 @@ idunno.Bluesky.Embed.External.View.UpdatedAt.get -> System.DateTimeOffset?
 idunno.Bluesky.Embed.External.View.UpdatedAt.init -> void
 idunno.Bluesky.Embed.External.View.Uri.get -> System.Uri!
 idunno.Bluesky.Embed.External.View.Uri.init -> void
+idunno.Bluesky.Embed.Gallery.GalleryImage
+idunno.Bluesky.Embed.Gallery.GalleryImage.AltText.get -> string!
+idunno.Bluesky.Embed.Gallery.GalleryImage.AltText.init -> void
+idunno.Bluesky.Embed.Gallery.GalleryImage.AspectRatio.get -> idunno.Bluesky.Embed.AspectRatio!
+idunno.Bluesky.Embed.Gallery.GalleryImage.AspectRatio.init -> void
+idunno.Bluesky.Embed.Gallery.GalleryImage.GalleryImage(idunno.AtProto.Blob! image, string! altText, idunno.Bluesky.Embed.AspectRatio! aspectRatio) -> void
+idunno.Bluesky.Embed.Gallery.GalleryImage.GalleryImage(idunno.Bluesky.Embed.EmbeddedImage! image) -> void
+idunno.Bluesky.Embed.Gallery.GalleryImage.Image.get -> idunno.AtProto.Blob!
+idunno.Bluesky.Embed.Gallery.GalleryImage.Image.init -> void
+idunno.Bluesky.Embed.Gallery.View
+idunno.Bluesky.Embed.Gallery.View.Items.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Embed.Gallery.ViewImage!>!
+idunno.Bluesky.Embed.Gallery.View.Items.init -> void
+idunno.Bluesky.Embed.Gallery.View.View(System.Collections.Generic.ICollection<idunno.Bluesky.Embed.Gallery.ViewImage!>! items) -> void
+idunno.Bluesky.Embed.Gallery.ViewImage
+idunno.Bluesky.Embed.Gallery.ViewImage.AltText.get -> string!
+idunno.Bluesky.Embed.Gallery.ViewImage.AltText.init -> void
+idunno.Bluesky.Embed.Gallery.ViewImage.AspectRatio.get -> idunno.Bluesky.Embed.AspectRatio!
+idunno.Bluesky.Embed.Gallery.ViewImage.AspectRatio.init -> void
+idunno.Bluesky.Embed.Gallery.ViewImage.FullSize.get -> System.Uri!
+idunno.Bluesky.Embed.Gallery.ViewImage.FullSize.init -> void
+idunno.Bluesky.Embed.Gallery.ViewImage.Thumbnail.get -> System.Uri!
+idunno.Bluesky.Embed.Gallery.ViewImage.Thumbnail.init -> void
+idunno.Bluesky.Embed.Gallery.ViewImage.ViewImage(System.Uri! thumbnail, System.Uri! fullSize, string! altText, idunno.Bluesky.Embed.AspectRatio! aspectRatio) -> void
 idunno.Bluesky.Embed.IEmbeddedCardGenerator
 idunno.Bluesky.Embed.IEmbeddedCardGenerator.Generate(System.Uri! uri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.Bluesky.Embed.EmbeddedExternal?>!
 idunno.Bluesky.Embed.OpenGraphEmbeddedCardGenerator
@@ -1546,6 +1580,8 @@ idunno.Bluesky.Post.Post(string? text, System.DateTimeOffset createdAt, idunno.B
 idunno.Bluesky.Post.Post(string? text, System.DateTimeOffset createdAt, idunno.Bluesky.Embed.EmbeddedVideo! video, System.Collections.Generic.ICollection<idunno.Bluesky.RichText.Facet!>? facets = null, System.Collections.Generic.ICollection<string!>? langs = null, idunno.Bluesky.ReplyReferences? reply = null, idunno.AtProto.Labels.SelfLabels? labels = null, System.Collections.Generic.ICollection<string!>? tags = null) -> void
 idunno.Bluesky.Post.Post(string? text, System.DateTimeOffset createdAt, System.Collections.Generic.ICollection<idunno.Bluesky.Embed.EmbeddedImage!>! images, System.Collections.Generic.ICollection<idunno.Bluesky.RichText.Facet!>? facets = null, System.Collections.Generic.ICollection<string!>? langs = null, idunno.Bluesky.ReplyReferences? reply = null, idunno.AtProto.Labels.SelfLabels? labels = null, System.Collections.Generic.ICollection<string!>? tags = null) -> void
 idunno.Bluesky.Post.Post(string? text, System.DateTimeOffset createdAt, System.Collections.Generic.ICollection<idunno.Bluesky.RichText.Facet!>? facets = null, System.Collections.Generic.ICollection<string!>? langs = null, idunno.Bluesky.Embed.EmbeddedBase? embeddedRecord = null, idunno.Bluesky.ReplyReferences? reply = null, idunno.AtProto.Labels.SelfLabels? labels = null, System.Collections.Generic.ICollection<string!>? tags = null) -> void
+idunno.Bluesky.Post.Post(string? text, idunno.Bluesky.Embed.EmbeddedGallery! gallery, System.Collections.Generic.ICollection<idunno.Bluesky.RichText.Facet!>? facets = null, System.Collections.Generic.ICollection<string!>? langs = null, idunno.Bluesky.ReplyReferences? reply = null, idunno.AtProto.Labels.SelfLabels? labels = null, System.Collections.Generic.ICollection<string!>? tags = null) -> void
+idunno.Bluesky.Post.Post(string? text, System.DateTimeOffset createdAt, idunno.Bluesky.Embed.EmbeddedGallery! gallery, System.Collections.Generic.ICollection<idunno.Bluesky.RichText.Facet!>? facets = null, System.Collections.Generic.ICollection<string!>? langs = null, idunno.Bluesky.ReplyReferences? reply = null, idunno.AtProto.Labels.SelfLabels? labels = null, System.Collections.Generic.ICollection<string!>? tags = null) -> void
 idunno.Bluesky.Post.RemoveEmbed() -> void
 idunno.Bluesky.Post.Reply.get -> idunno.Bluesky.ReplyReferences?
 idunno.Bluesky.Post.SetSelfLabels(idunno.Bluesky.PostSelfLabels! labels) -> void
@@ -1555,6 +1591,7 @@ idunno.Bluesky.Post.Utf8Length.get -> int
 idunno.Bluesky.PostBuilder
 idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.Embed.EmbeddedImage! image) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.Embed.EmbeddedVideo! video) -> idunno.Bluesky.PostBuilder!
+idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.Embed.Gallery.GalleryImage! image) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.Add(System.Collections.Generic.ICollection<idunno.Bluesky.Embed.EmbeddedImage!>! images) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.Add(char c) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.Add(char c, int repeatCount) -> idunno.Bluesky.PostBuilder!
@@ -1585,8 +1622,10 @@ idunno.Bluesky.PostBuilder.EmbedRecord(idunno.Bluesky.Embed.EmbeddedBase! embedd
 idunno.Bluesky.PostBuilder.Equals(idunno.Bluesky.PostBuilder? other) -> bool
 idunno.Bluesky.PostBuilder.ExtractFacets(idunno.Bluesky.RichText.IFacetExtractor! facetExtractor, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 idunno.Bluesky.PostBuilder.Facets.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.RichText.Facet!>!
+idunno.Bluesky.PostBuilder.GalleryImages.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Embed.Gallery.GalleryImage!>!
 idunno.Bluesky.PostBuilder.GraphemeLength.get -> int
 idunno.Bluesky.PostBuilder.HasEmbed.get -> bool
+idunno.Bluesky.PostBuilder.HasGalleryImages.get -> bool
 idunno.Bluesky.PostBuilder.HasImages.get -> bool
 idunno.Bluesky.PostBuilder.HasTags.get -> bool
 idunno.Bluesky.PostBuilder.HasText.get -> bool
@@ -1600,10 +1639,13 @@ idunno.Bluesky.PostBuilder.Langs.get -> System.Collections.Generic.IEnumerable<s
 idunno.Bluesky.PostBuilder.Length.get -> int
 idunno.Bluesky.PostBuilder.MaxCapacity.get -> int
 idunno.Bluesky.PostBuilder.MaxCapacityGraphemes.get -> int
+idunno.Bluesky.PostBuilder.MaxGalleryItems.get -> int
 idunno.Bluesky.PostBuilder.MaxImages.get -> int
 idunno.Bluesky.PostBuilder.PostBuilder() -> void
 idunno.Bluesky.PostBuilder.PostBuilder(string? text, string! lang, System.DateTimeOffset? createdAt = null, System.Collections.Generic.ICollection<idunno.Bluesky.Embed.EmbeddedImage!>? images = null, System.Collections.Generic.ICollection<idunno.Bluesky.RichText.Facet!>? facets = null, idunno.Bluesky.PostSelfLabels? labels = null, System.Collections.Generic.ICollection<string!>? tags = null) -> void
 idunno.Bluesky.PostBuilder.PostBuilder(string? text, System.Collections.Generic.ICollection<string!>? langs = null, System.DateTimeOffset? createdAt = null, System.Collections.Generic.ICollection<idunno.Bluesky.Embed.EmbeddedImage!>? images = null, System.Collections.Generic.ICollection<idunno.Bluesky.RichText.Facet!>? facets = null, idunno.Bluesky.PostSelfLabels? labels = null, System.Collections.Generic.ICollection<string!>? tags = null) -> void
+idunno.Bluesky.PostBuilder.PostBuilder(string? text, System.Collections.Generic.ICollection<idunno.Bluesky.Embed.Gallery.GalleryImage!>! galleryImages, System.Collections.Generic.ICollection<idunno.Bluesky.RichText.Facet!>? facets = null, idunno.Bluesky.PostSelfLabels? labels = null, System.Collections.Generic.ICollection<string!>? tags = null) -> void
+idunno.Bluesky.PostBuilder.PostBuilder(string? text, System.Collections.Generic.ICollection<idunno.Bluesky.Embed.Gallery.GalleryImage!>! galleryImages, System.DateTimeOffset? createdAt, System.Collections.Generic.ICollection<string!>? langs = null, System.Collections.Generic.ICollection<idunno.Bluesky.RichText.Facet!>? facets = null, idunno.Bluesky.PostSelfLabels? labels = null, System.Collections.Generic.ICollection<string!>? tags = null) -> void
 idunno.Bluesky.PostBuilder.PostGateRules.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Feed.Gates.PostGateRule!>?
 idunno.Bluesky.PostBuilder.PostGateRules.set -> void
 idunno.Bluesky.PostBuilder.Quote(idunno.AtProto.Repo.StrongReference! strongReference) -> idunno.Bluesky.PostBuilder!
@@ -2128,6 +2170,7 @@ static idunno.Bluesky.Moderation.WellKnown.ReportType.get -> System.Collections.
 static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, char c, int repeatCount) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, idunno.Bluesky.Embed.EmbeddedImage! image) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, idunno.Bluesky.Embed.EmbeddedVideo! video) -> idunno.Bluesky.PostBuilder!
+static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, idunno.Bluesky.Embed.Gallery.GalleryImage! image) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, idunno.Bluesky.RichText.HashTag! hashTag) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, idunno.Bluesky.RichText.Link! link) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, idunno.Bluesky.RichText.Mention! mention) -> idunno.Bluesky.PostBuilder!
@@ -2142,6 +2185,7 @@ static idunno.Bluesky.PostBuilder.operator !=(idunno.Bluesky.PostBuilder? lhs, i
 static idunno.Bluesky.PostBuilder.operator +(idunno.Bluesky.PostBuilder! postBuilder, char c) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.operator +(idunno.Bluesky.PostBuilder! postBuilder, idunno.Bluesky.Embed.EmbeddedImage! image) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.operator +(idunno.Bluesky.PostBuilder! postBuilder, idunno.Bluesky.Embed.EmbeddedVideo! video) -> idunno.Bluesky.PostBuilder!
+static idunno.Bluesky.PostBuilder.operator +(idunno.Bluesky.PostBuilder! postBuilder, idunno.Bluesky.Embed.Gallery.GalleryImage! image) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.operator +(idunno.Bluesky.PostBuilder! postBuilder, idunno.Bluesky.RichText.HashTag! hashTag) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.operator +(idunno.Bluesky.PostBuilder! postBuilder, idunno.Bluesky.RichText.Link! link) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.operator +(idunno.Bluesky.PostBuilder! postBuilder, idunno.Bluesky.RichText.Mention! mention) -> idunno.Bluesky.PostBuilder!
@@ -2167,6 +2211,7 @@ static readonly idunno.Bluesky.Maximum.DescriptionLengthInGraphemes -> int
 static readonly idunno.Bluesky.Maximum.DisplayNameLength -> int
 static readonly idunno.Bluesky.Maximum.DisplayNameLengthInGraphemes -> int
 static readonly idunno.Bluesky.Maximum.ExternalTagsInPost -> int
+static readonly idunno.Bluesky.Maximum.GalleryItems -> int
 static readonly idunno.Bluesky.Maximum.ImagesInPost -> int
 static readonly idunno.Bluesky.Maximum.MessageLengthInCharacters -> int
 static readonly idunno.Bluesky.Maximum.MessagesToList -> int
