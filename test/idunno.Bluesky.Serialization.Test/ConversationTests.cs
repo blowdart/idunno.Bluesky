@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 
+using idunno.AtProto;
 using idunno.Bluesky.Chat;
 using idunno.Bluesky.Chat.Actor;
 using idunno.Bluesky.Chat.Model;
@@ -1077,13 +1078,59 @@ public class ConversationTests
         Assert.Equal("did:plc:mvgsfujvam5iekxlk3howidu", conversationMemberProfileView.Did);
         Assert.Equal("anotherbot.idunno.blue", conversationMemberProfileView.Handle);
         Assert.Equal("Test Bot #2", conversationMemberProfileView.DisplayName);
+        Assert.Equal(
+            new Uri("https://cdn.bsky.app/img/avatar/plain/did:plc:mvgsfujvam5iekxlk3howidu/bafkreigom4rh7v3ruxzhjbivwtrwzs5gr54lc2at2wueemji6d4aljo7ua"),
+            conversationMemberProfileView.Avatar);
+        Assert.NotNull(conversationMemberProfileView.Associated);
+        Assert.NotNull(conversationMemberProfileView.Viewer);
+        Assert.Empty(conversationMemberProfileView.Labels);
+        Assert.Equal(DateTimeOffset.Parse("2024-11-26T15:39:59.145Z"), conversationMemberProfileView.CreatedAt);
+        Assert.False(conversationMemberProfileView.ChatDisabled);
+
         Assert.IsType<GroupConversationMember>(conversationMemberProfileView.Kind);
         GroupConversationMember? memberKind = conversationMemberProfileView.Kind as GroupConversationMember;
-        Assert.Equal(Chat.Actor.MemberRole.Owner, memberKind!.MemberRole);
+        Assert.Equal(Chat.Actor.MemberRole.Owner, memberKind!.Role);
+
+        conversationMemberProfileView = conversationView.Members.ElementAt(1);
+
+        Assert.IsType<GroupConversationMember>(conversationMemberProfileView.Kind);
+        memberKind = conversationMemberProfileView.Kind as GroupConversationMember;
+        Assert.Equal(Chat.Actor.MemberRole.Standard, memberKind!.Role);
+        Assert.NotNull(memberKind.AddedBy);
+        Assert.Equal(new Did("did:plc:mvgsfujvam5iekxlk3howidu"), memberKind.AddedBy.Did);
+
+        Assert.NotNull(conversationView.LastMessage);
+        Assert.Equal("3moh3aswtrx2h", conversationView.LastMessage.Id);
+        Assert.Equal("2222224rdcznj", conversationView.LastMessage.Revision);
+
+        Assert.IsType<MessageView>(conversationView.LastMessage);
+        var lastmessage = conversationView.LastMessage as MessageView;
+        Assert.Equal("did:plc:mvgsfujvam5iekxlk3howidu", lastmessage!.Sender.Did);
+        Assert.Equal("This is a group chat", lastmessage.Text);
+        Assert.Empty(lastmessage.Reactions);
+        Assert.Equal(DateTimeOffset.Parse("2026-06-17T00:40:14.774Z"), lastmessage.SentAt);
 
         Assert.Equal(1, conversationView.UnreadCount);
         Assert.Equal(ConversationStatus.Requested, conversationView.Status);
         Assert.False(conversationView.Muted);
+
         Assert.IsType<GroupConversation>(conversationView.Kind);
+        var groupConversation = conversationView.Kind as GroupConversation;
+        Assert.Equal("Test Group Chat", groupConversation!.Name);
+        Assert.NotNull(groupConversation.JoinLink);
+
+        Assert.Equal("OyiHQqB", groupConversation.JoinLink.Code);
+        Assert.Equal(Group.LinkEnabledStatus.Enabled, groupConversation.JoinLink.EnabledStatus);
+        Assert.False(groupConversation.JoinLink.RequireApproval);
+        Assert.Equal(Group.JoinRule.Anyone, groupConversation.JoinLink.JoinRule);
+        Assert.Equal(DateTimeOffset.Parse("2026-06-17T12:47:59.822Z"), groupConversation.JoinLink.CreatedAt);
+
+        Assert.Equal(ConversationLockStatus.Unlocked, groupConversation.LockStatus);
+        Assert.False(groupConversation.LockStatusModerationOverride);
+        Assert.Equal(2, groupConversation.MemberCount);
+        Assert.Equal(50, groupConversation.MemberLimit);
+        Assert.Equal(DateTimeOffset.Parse("2026-06-17T00:40:05.563Z"), groupConversation.CreatedAt);
+
+        // TODO: Add assertions for second message, a direct conversation
     }
 }

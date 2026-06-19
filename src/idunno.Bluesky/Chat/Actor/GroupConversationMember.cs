@@ -11,10 +11,10 @@ namespace idunno.Bluesky.Chat.Actor;
 public sealed record GroupConversationMember : MemberKind
 {
     [JsonConstructor]
-    internal GroupConversationMember(ProfileViewBasic? addedBy, string memberRole)
+    internal GroupConversationMember(ProfileViewBasic? addedBy, string role)
     {
         AddedBy = addedBy;
-        MemberRole = memberRole;
+        Role = role;
     }
 
     /// <summary>
@@ -25,5 +25,6 @@ public sealed record GroupConversationMember : MemberKind
     /// <summary>
     /// Gets the role of the member in the group conversation. Known values are contained in <see cref="MemberRole"/>.
     /// </summary>
-    public string MemberRole { get; init; }
+    [JsonRequired]
+    public string Role { get; init; }
 }

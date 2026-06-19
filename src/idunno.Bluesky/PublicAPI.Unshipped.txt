@@ -43,8 +43,8 @@ idunno.Bluesky.Chat.Actor.DirectConversationMember
 idunno.Bluesky.Chat.Actor.GroupConversationMember
 idunno.Bluesky.Chat.Actor.GroupConversationMember.AddedBy.get -> idunno.Bluesky.Chat.Actor.ProfileViewBasic?
 idunno.Bluesky.Chat.Actor.GroupConversationMember.AddedBy.init -> void
-idunno.Bluesky.Chat.Actor.GroupConversationMember.MemberRole.get -> string!
-idunno.Bluesky.Chat.Actor.GroupConversationMember.MemberRole.init -> void
+idunno.Bluesky.Chat.Actor.GroupConversationMember.Role.get -> string!
+idunno.Bluesky.Chat.Actor.GroupConversationMember.Role.init -> void
 idunno.Bluesky.Chat.Actor.MemberKind
 idunno.Bluesky.Chat.Actor.MemberRole
 idunno.Bluesky.Chat.Actor.PastGroupConversationMember

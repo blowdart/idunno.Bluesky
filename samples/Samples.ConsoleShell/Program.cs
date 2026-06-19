@@ -3,8 +3,6 @@
 
 using idunno.AtProto;
 using idunno.Bluesky;
-using idunno.Bluesky.Embed;
-using idunno.Bluesky.Feed;
 
 using Microsoft.Extensions.Logging;
 
@@ -33,7 +31,7 @@ public sealed class Program
         ArgumentException.ThrowIfNullOrEmpty(password);
 
         // Uncomment the next line to route all requests through Fiddler Everywhere
-        // proxyUri = new Uri("http://localhost:8866");
+        proxyUri = new Uri("http://localhost:8866");
 
         // Uncomment the next line to route all requests  through Fiddler Classic
         // proxyUri = new Uri("http://localhost:8888");
@@ -92,6 +90,13 @@ public sealed class Program
             // END-AUTHENTICATION
 
             // Your code goes here.
+
+            var listConversationsResult = await agent.ListConversations(cancellationToken: cancellationToken);
+
+            var conversationId = listConversationsResult.Result!.ElementAt(0).Id;
+
+            var conversationMembersResult = await agent.GetConversationMembers(conversationId, cancellationToken: cancellationToken);
+
         }
     }
 }

@@ -4,36 +4,39 @@
 
 | Group | Endpoint | Class / Method | Status |
 | ----- | -------- | -------------- | ------ |
-| **Actor** | [app.bsky.actor.getProfile](https://docs.bsky.app/docs/api/app-bsky-actor-get-profile) | `BlueskyAgent.GetProfile()` | ✔ |
-| | [app.bsky.actor.getProfiles](https://docs.bsky.app/docs/api/app-bsky-actor-get-profiles) | `BlueskyAgent.GetProfiles()` | ✔ |
-| | [app.bsky.actor.getPreferences](https://docs.bsky.app/docs/api/app-bsky-actor-get-preferences) | `BlueskyAgent.GetPreferences()` | ✔ |
-| | [app.bsky.actor.getSuggestions](https://docs.bsky.app/docs/api/app-bsky-actor-get-suggestions) | `BlueskyAgent.GetSuggestions()` | ✔ |
-| | [app.bsky.actor.putPreferences](https://docs.bsky.app/docs/api/app-bsky-actor-put-preferences) | `BlueskyAgent.PutPreferences()` | ✔ |
-| | [app.bsky.actor.searchActors](https://docs.bsky.app/docs/api/app-bsky-actor-search-actors) | `BlueskyAgent.SearchActors()` | ✔ |
-| | [app.bsky.actor.searchActorsTypeahead](https://docs.bsky.app/docs/api/app-bsky-actor-search-actors-typeahead) | `BlueskyAgent.SearchActorsTypeahead()` | ✔ |
-| **Bookmarks** | [app.bsky.bookmark.createBookmark](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/bookmark/createBookmark.json) | `BlueskyAgent.CreateBookmark()` | ✔ |
-| | [app.bsky.bookmark.deleteBookmark](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/bookmark/deleteBookmark.json) | `BlueskyAgent.DeleteBookmark()` | ✔ |
-| | [app.bsky.bookmark.getBookmarks](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/bookmark/getBookmarks.json) | `BlueskyAgent.GetBookmarks()` | ✔ |
-| **Direct Messages** | [chat.bsky.convo.acceptConvo](https://docs.bsky.app/docs/api/chat-bsky-convo-accept-convo) | `BlueskyAgent.AcceptConversation()` | ✔ |
-| | [chat.bsky.convo.AddReaction](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/addReaction.json) | `BlueskyAgent.AddReaction()` | ✔ |
-| | [chat.bsky.convo.deleteMessageForSelf](https://docs.bsky.app/docs/api/chat-bsky-convo-delete-message-for-self) | `BlueskyAgent.DeleteMessageForSelf()` | ✔ |
-| | [chat.bsky.convo.getConvoForMembers](https://docs.bsky.app/docs/api/chat-bsky-convo-get-convo-for-members) | `BlueskyAgent.GetConversationForMembers()` | ✔ |
-| | [chat.bsky.convo.getConvo](https://docs.bsky.app/docs/api/chat-bsky-convo-get-convo) | `BlueskyAgent.GetConversation()` | ✔ |
+| **Actor** | [app.bsky.actor.getProfile](https://endpoints.bsky.app/#bluesky-app/tag/appbskyactor/GET/xrpc/app.bsky.actor.getProfile) | `BlueskyAgent.GetProfile()` | ✔ |
+| | [app.bsky.actor.getProfiles](https://endpoints.bsky.app/#bluesky-app/tag/appbskyactor/GET/xrpc/app.bsky.actor.getProfiles) | `BlueskyAgent.GetProfiles()` | ✔ |
+| | [app.bsky.actor.getPreferences](https://endpoints.bsky.app/#bluesky-app/tag/appbskyactor/GET/xrpc/app.bsky.actor.getPreferences) | `BlueskyAgent.GetPreferences()` | ✔ |
+| | [app.bsky.actor.getSuggestions](https://endpoints.bsky.app/#bluesky-app/tag/appbskyactor/GET/xrpc/app.bsky.actor.getSuggestions) | `BlueskyAgent.GetSuggestions()` | ✔ |
+| | [app.bsky.actor.putPreferences](https://endpoints.bsky.app/#bluesky-app/tag/appbskyactor/POST/xrpc/app.bsky.actor.putPreferences) | `BlueskyAgent.PutPreferences()` | ✔ |
+| | [app.bsky.actor.searchActors](https://endpoints.bsky.app/#bluesky-app/tag/appbskyactor/GET/xrpc/app.bsky.actor.searchActors) | `BlueskyAgent.SearchActors()` | ✔ |
+| | [app.bsky.actor.searchActorsTypeahead](https://endpoints.bsky.app/#bluesky-app/tag/appbskyactor/GET/xrpc/app.bsky.actor.searchActorsTypeahead) | `BlueskyAgent.SearchActorsTypeahead()` | ✔ |
+| **Bookmarks** | [app.bsky.bookmark.createBookmark](https://endpoints.bsky.app/#bluesky-app/tag/appbskybookmark/POST/xrpc/app.bsky.bookmark.createBookmark) | `BlueskyAgent.CreateBookmark()` | ✔ |
+| | [app.bsky.bookmark.deleteBookmark](https://endpoints.bsky.app/#bluesky-app/tag/appbskybookmark/POST/xrpc/app.bsky.bookmark.deleteBookmark) | `BlueskyAgent.DeleteBookmark()` | ✔ |
+| | [app.bsky.bookmark.getBookmarks](https://endpoints.bsky.app/#bluesky-app/tag/appbskybookmark/GET/xrpc/app.bsky.bookmark.getBookmarks) | `BlueskyAgent.GetBookmarks()` | ✔ |
+| **Direct Messages** | [chat.bsky.convo.acceptConvo](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/acceptConvo.json) | `BlueskyAgent.AcceptConversation()` | ✔ |
+| | [chat.bsky.convo.addReaction](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/addReaction.json) | `BlueskyAgent.AddReaction()` | ✔ |
+| | [chat.bsky.convo.deleteMessageForSelf](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/deleteMessageForSelf.json) | `BlueskyAgent.DeleteMessageForSelf()` | ✔ |
+| | [chat.bsky.convo.getConvo](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getConvo.json) | `BlueskyAgent.GetConversation()` | ✔ |
+| | [chat.bsky.convo.getConvoAvailability](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getConvoAvailability.json) | `BlueskyAgent.GetConversationAvailability()` | ✔ |
+| | [chat.bsky.convo.getConvoForMembers](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getConvoForMembers.json) | `BlueskyAgent.GetConversationForMembers()` | ✔ |
+| | [chat.bsky.convo.getConvoMembers](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getConvoMembers.json) | `BlueskyAgent.GetConversationMembers()` | ✔ |
 | | [chat.bsky.convo.getLog](https://docs.bsky.app/docs/api/chat-bsky-convo-get-log) | `BlueskyAgent.GetConversationLog()` | ✔ |
 | | [chat.bsky.convo.getMessages](https://docs.bsky.app/docs/api/chat-bsky-convo-get-messages) | `BlueskyAgent.GetMessages()` | ✔ |
+| | [chat.bsky.convo.getUnreadCounts](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getUnreadCounts.json) | `BlueskyAgent.GetUnreadCounts()` | ✔ |
 | | [chat.bsky.convo.leaveConvo](https://docs.bsky.app/docs/api/chat-bsky-convo-leave-convo) | `BlueskyAgent.LeaveConversation()` | ✔ |
 | | [chat.bsky.convo.listConvos](https://docs.bsky.app/docs/api/chat-bsky-convo-list-convos) | `BlueskyAgent.ListConversations()` | ✔ |
 | | [chat.bsky.convo.muteConvos](https://docs.bsky.app/docs/api/chat-bsky-convo-mute-convo) | `BlueskyAgent.MuteConversation()` | ✔ |
 | | [chat.bsky.convo.sendMessageBatch](https://docs.bsky.app/docs/api/chat-bsky-convo-send-message-batch) | `BlueskyAgent.SendMessageBatch()` | ✔ |
 | | [chat.bsky.convo.sendMessage](https://docs.bsky.app/docs/api/chat-bsky-convo-send-message) | `BlueskyAgent.SendMessage()` | ✔ |
-| | [chat.bsky.convo.RemoveReaction](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/removeReaction.json) | `BlueskyAgent.RemoveReaction()` | ✔ |
+| | [chat.bsky.convo.removeReaction](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/removeReaction.json) | `BlueskyAgent.RemoveReaction()` | ✔ |
 | | [chat.bsky.convo.unmuteConvos](https://docs.bsky.app/docs/api/chat-bsky-convo-unmute-convo) | `BlueskyAgent.UnmuteConversation()` | ✔ |
 | | [chat.bsky.convo.updateAllRead](https://docs.bsky.app/docs/api/chat-bsky-convo-update-all-read) | `BlueskyAgent.UpdateRead()` | ✔ |
 | | [chat.bsky.convo.updateRead](https://docs.bsky.app/docs/api/chat-bsky-convo-update-read) | `BlueskyAgent.UpdateRead()` | ✔ |
-| **Drafts** | [app.bsky.draft.createDraft](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/draft/createDraft.json) | `BlueskyAgent.CreateDraft()` | ✔ |
-| | [app.bsky.draft.deleteDraft](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/draft/deleteDraft.json) | `BlueskyAgent.DeleteDraft()` | ✔ |
-| | [app.bsky.draft.getDrafts](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/draft/getDrafts.json) | `BlueskyAgent.GetDrafts()` | ✔ |
-| | [app.bsky.draft.updateDraft](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/draft/updateDraft.json) | `BlueskyAgent.UpdateDraft()` | ✔ |
+| **Drafts** | [app.bsky.draft.createDraft](https://endpoints.bsky.app/#bluesky-app/tag/appbskydraft/POST/xrpc/app.bsky.draft.createDraft) | `BlueskyAgent.CreateDraft()` | ✔ |
+| | [app.bsky.draft.deleteDraft](https://endpoints.bsky.app/#bluesky-app/tag/appbskydraft/POST/xrpc/app.bsky.draft.deleteDraft) | `BlueskyAgent.DeleteDraft()` | ✔ |
+| | [app.bsky.draft.getDrafts](https://endpoints.bsky.app/#bluesky-app/tag/appbskydraft/GET/xrpc/app.bsky.draft.getDrafts) | `BlueskyAgent.GetDrafts()` | ✔ |
+| | [app.bsky.draft.updateDraft](https://endpoints.bsky.app/#bluesky-app/tag/appbskydraft/POST/xrpc/app.bsky.draft.updateDraft) | `BlueskyAgent.UpdateDraft()` | ✔ |
 | **Embed** | [app.bsky.embed.getEmbedExternalView](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/embed/getEmbedExternalView.json) | `BlueskyAgent.GetEmbedExternalView()` | ✔ |
 | **Feed** | [app.bsky.feed.describeFeedGenerator](https://docs.bsky.app/docs/api/app-bsky-feed-describe-feed-generator) | `BlueskyAgent.DescribeFeedGenerator()` | ✔ |
 | | [app.bsky.feed.getActorFeeds](https://docs.bsky.app/docs/api/app-bsky-feed-get-actor-feeds) | `BlueskyAgent.GetActorFeeds()` | ✔ |
