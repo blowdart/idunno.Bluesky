@@ -636,7 +636,7 @@ public static partial class BlueskyServer
         }
         else
         {
-            return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileViewBasic>> (
+            return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileViewBasic>>(
                 null,
                 response.StatusCode,
                 response.HttpResponseHeaders,

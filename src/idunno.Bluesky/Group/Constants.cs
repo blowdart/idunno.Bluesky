@@ -34,4 +34,3 @@ public static class JoinRule
     /// </summary>
     public const string FollowedByOwner = "followedByOwner";
 }
-

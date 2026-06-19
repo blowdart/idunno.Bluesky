@@ -94,7 +94,7 @@ public sealed record ProfileViewBasic : View
     /// Flag indicating the actor cannot actively participate in conversations
     /// </summary>
     public bool? ChatDisabled { get; init; }
-    
+
     /// <summary>
     /// Gets the verification state of the actor.
     /// </summary>

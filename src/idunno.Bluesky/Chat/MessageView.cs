@@ -39,7 +39,7 @@ public sealed record MessageView : MessageViewBase
         EmbeddedRecordView embed,
         IReadOnlyCollection<ReactionView>? reactions,
         MessageViewSender sender,
-        DateTimeOffset sentAt) : base(id, revision,sentAt)
+        DateTimeOffset sentAt) : base(id, revision, sentAt)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(revision);

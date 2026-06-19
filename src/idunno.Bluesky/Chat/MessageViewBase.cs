@@ -27,7 +27,7 @@ public record MessageViewBase : View
     ///   Thrown when either of <paramref name="id" /> or <paramref name="revision"/> are <see langword="null"/>.
     /// </exception>
     [JsonConstructor]
-    public MessageViewBase(string id, string revision,DateTimeOffset sentAt)
+    public MessageViewBase(string id, string revision, DateTimeOffset sentAt)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(revision);

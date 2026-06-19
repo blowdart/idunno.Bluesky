@@ -54,7 +54,7 @@ public static class MemberRole
     /// The user is the owner of the chat.
     /// </summary>
     public const string Owner = "owner";
-    
+
     /// <summary>
     /// The user is a standard member of the chat.
     /// </summary>
