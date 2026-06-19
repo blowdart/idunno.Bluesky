@@ -1131,6 +1131,9 @@ public class ConversationTests
         Assert.Equal(50, groupConversation.MemberLimit);
         Assert.Equal(DateTimeOffset.Parse("2026-06-17T00:40:05.563Z"), groupConversation.CreatedAt);
 
-        // TODO: Add assertions for second message, a direct conversation
+        conversationView = conversations.Conversations.ElementAt(1);
+
+        Assert.IsType<DirectConversationMember>(conversationView.Members.ElementAt(0).Kind);
+        Assert.IsType<DirectConversation>(conversationView.Kind);
     }
 }
