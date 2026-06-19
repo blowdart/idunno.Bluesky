@@ -289,6 +289,11 @@ public static class CollectionNsid
     /// The NSID for an actor's notification declaration record.
     /// </summary>
     public static Nsid NotificationDeclaration => new("app.bsky.notification.declaration");
+
+    /// <summary>
+    /// The NSID for an actor's chat declaration record.
+    /// </summary>
+    public static Nsid ChatDeclaration => new("chat.bsky.actor.declaration");
 }
 
 /// <summary>

@@ -158,7 +158,8 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.DirectConversationMember))]
 [JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.GroupConversationMember))]
 [JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.PastGroupConversationMember))]
-
+[JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.Declaration), TypeInfoPropertyName = "ChatActorDeclaration")]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<idunno.Bluesky.Chat.Actor.Declaration>), TypeInfoPropertyName = "ChatActorDeclarationRecord")]
 
 [JsonSerializable(typeof(ReferredUser))]
 [JsonSerializable(typeof(SystemMessageView))]
