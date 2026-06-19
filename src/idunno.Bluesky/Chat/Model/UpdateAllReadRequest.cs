@@ -7,12 +7,12 @@ namespace idunno.Bluesky.Chat.Model;
 
 internal record UpdateAllReadRequest
 {
-    public UpdateAllReadRequest(ConversationStatus status)
+    public UpdateAllReadRequest(string status)
     {
         Status = status;
     }
 
     [JsonInclude]
     [JsonRequired]
-    public ConversationStatus Status { get; init; }
+    public string Status { get; init; }
 }

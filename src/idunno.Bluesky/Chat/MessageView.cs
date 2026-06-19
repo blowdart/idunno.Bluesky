@@ -39,7 +39,7 @@ public sealed record MessageView : MessageViewBase
         EmbeddedRecordView embed,
         IReadOnlyCollection<ReactionView>? reactions,
         MessageViewSender sender,
-        DateTimeOffset sentAt) : base(id, revision, sender, sentAt)
+        DateTimeOffset sentAt) : base(id, revision,sentAt)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(revision);
@@ -49,6 +49,7 @@ public sealed record MessageView : MessageViewBase
 
         Text = text;
         Embed = embed;
+        Sender = sender;
 
         if (facets == null)
         {
@@ -95,4 +96,11 @@ public sealed record MessageView : MessageViewBase
     /// </summary>
     [JsonInclude]
     public IReadOnlyCollection<ReactionView> Reactions { get; init; }
+
+    /// <summary>
+    /// Gets a view over the message author.
+    /// </summary>
+    [JsonInclude]
+    [JsonRequired]
+    public MessageViewSender Sender { get; init; }
 }

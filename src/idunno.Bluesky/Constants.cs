@@ -1,8 +1,6 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Reflection.Metadata;
-
 using idunno.AtProto;
 
 namespace idunno.Bluesky;
@@ -512,48 +510,6 @@ public static class ThreadGateTypeDiscriminators
     /// Allow list members to reply.
     /// </summary>
     public const string ListMembers = "app.bsky.feed.threadgate#listRule";
-}
-
-/// <summary>
-/// Type discriminators for message objects
-/// </summary>
-public static class MessageTypeDiscriminators
-{
-    /// <summary>
-    /// A view over a message.
-    /// </summary>
-    public const string MessageView = "chat.bsky.convo.defs#messageView";
-
-    /// <summary>
-    /// A view over a deleted message.
-    /// </summary>
-    public const string DeletedMessageView = "chat.bsky.convo.defs#deletedMessageView";
-}
-
-/// <summary>
-/// Type discriminators for conversation logging.
-/// </summary>
-public static class ConversationLogTypeDiscriminators
-{
-    /// <summary>
-    /// A log entry indicating the beginning of a conversation.
-    /// </summary>
-    public const string BeginConversation = "chat.bsky.convo.defs#logBeginConvo";
-
-    /// <summary>
-    /// A log entry indicating leaving a conversation.
-    /// </summary>
-    public const string LeaveConversation = "chat.bsky.convo.defs#logLeaveConvo";
-
-    /// <summary>
-    /// A log entry indicating a message was created in a conversation.
-    /// </summary>
-    public const string CreateMessage = "chat.bsky.convo.defs#logCreateMessage";
-
-    /// <summary>
-    /// A log entry indicating a message was deleted in a conversation.
-    /// </summary>
-    public const string DeleteMessage = "chat.bsky.convo.defs#logDeleteMessage";
 }
 
 /// <summary>

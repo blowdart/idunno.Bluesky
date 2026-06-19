@@ -3,6 +3,7 @@
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
+using idunno.Bluesky.Actor;
 using idunno.Bluesky.Chat;
 using idunno.Bluesky.RichText;
 
@@ -207,6 +208,109 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
+    /// Gets the availability of a conversation between the authenticated user, and the user identified by <paramref name="member"/>.
+    /// If an existing conversationg is found for these members, it is returned.
+    /// </summary>
+    /// <param name="member">The <see cref="Did"/> of the actor to check availability for.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="member"/> is <see langword="null"/>.</exception>
+    public async Task<AtProtoHttpResult<ConversationAvailability>> GetConversationAvailability(
+        Did member)
+    {
+        ArgumentNullException.ThrowIfNull(member);
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        return await GetConversationAvailability(
+            [member],
+            cancellationToken: default).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Gets the availability of a conversation between the authenticated user, and the user identified by <paramref name="member"/>.
+    /// If an existing conversationg is found for these members, it is returned.
+    /// </summary>
+    /// <param name="member">The <see cref="Did"/> of the actor to check availability for.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="member"/> is <see langword="null"/>.</exception>
+    public async Task<AtProtoHttpResult<ConversationAvailability>> GetConversationAvailability(
+        Did member,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(member);
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        return await GetConversationAvailability(
+            [member],
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Gets the availability of a conversation between the authenticated user, and the users identified by <paramref name="members"/>.
+    /// If an existing conversationg is found for these members, it is returned.
+    /// </summary>
+    /// <param name="members">A collection of <see cref="Did"/> of actors to check availability for.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="members"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="members"/> is empty or contains more than the maximum allowed members.</exception>
+    public async Task<AtProtoHttpResult<ConversationAvailability>> GetConversationAvailability(
+        ICollection<Did> members)
+    {
+        ArgumentNullException.ThrowIfNull(members);
+        ArgumentOutOfRangeException.ThrowIfZero(members.Count);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(members.Count, Maximum.ConversationMembers);
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        return await GetConversationAvailability(
+            members,
+            cancellationToken: default).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Gets the availability of a conversation between the authenticated user, and the users identified by <paramref name="members"/>.
+    /// If an existing conversationg is found for these members, it is returned.
+    /// </summary>
+    /// <param name="members">A collection of <see cref="Did"/> of actors to check availability for.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="members"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="members"/> is empty or contains more than the maximum allowed members.</exception>
+    public async Task<AtProtoHttpResult<ConversationAvailability>> GetConversationAvailability(
+        ICollection<Did> members,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(members);
+        ArgumentOutOfRangeException.ThrowIfZero(members.Count);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(members.Count, Maximum.ConversationMembers);
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        return await BlueskyServer.GetConversationAvailability(
+            members,
+            service: Service,
+            accessCredentials: Credentials,
+            httpClient: HttpClient,
+            onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+            loggerFactory: LoggerFactory,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Enumerates the conversation log.
     /// </summary>
     /// <param name="cursor">A cursor used for pagination.</param>
@@ -223,6 +327,38 @@ public partial class BlueskyAgent
         }
 
         return await BlueskyServer.GetConversationLog(
+            cursor,
+            service: Service,
+            accessCredentials: Credentials,
+            httpClient: HttpClient,
+            onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+            loggerFactory: LoggerFactory,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Gets a <see cref="PagedViewReadOnlyCollection{ProfileViewBasic}"/> representing the members of a conversation.
+    /// </summary>
+    /// <param name="id">The identifier of the conversation.</param>
+    /// <param name="limit">An optional limit on the number of members to retrieve in each page.</param>
+    /// <param name="cursor">An optional cursor used for pagination.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+    public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileViewBasic>>> GetConversationMembers(
+        string id,
+        int? limit = null,
+        string? cursor = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        return await BlueskyServer.GetConversationMembers(
+            id,
+            limit,
             cursor,
             service: Service,
             accessCredentials: Credentials,
@@ -259,6 +395,29 @@ public partial class BlueskyAgent
             id,
             limit,
             cursor,
+            service: Service,
+            accessCredentials: Credentials,
+            httpClient: HttpClient,
+            onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+            loggerFactory: LoggerFactory,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Gets the count of unread conversations for the authenticated user.
+    /// </summary>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+    public async Task<AtProtoHttpResult<UnreadConversationCounts>> GetUnreadCounts(
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        return await BlueskyServer.GetUnreadCounts(
             service: Service,
             accessCredentials: Credentials,
             httpClient: HttpClient,

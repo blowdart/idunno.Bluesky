@@ -1,7 +1,6 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using idunno.Bluesky.Actor;
@@ -24,18 +23,21 @@ public sealed record ConversationView : View
     /// <param name="muted">A flag indicating whether the conversation is muted.</param>
     /// <param name="unreadCount">A count of the number of unread messages in the conversation.</param>
     /// <param name="status">The status of the conversation. If <see langword="null"/> defaults to <see cref="ConversationStatus.Requested"/></param>
+    /// <param name="kind">The kind of conversation, if any.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="id"/>, <paramref name="revision"/> is <see langword="null"/> or whitespace.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="members"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="members"/> is empty.</exception>
+    [JsonConstructor]
     public ConversationView(
         string id,
         string revision,
-        IReadOnlyCollection<ProfileViewBasic> members,
+        IReadOnlyCollection<Actor.ProfileViewBasic> members,
         MessageViewBase? lastMessage,
         MessageAndReactionView? lastReaction,
         bool muted,
         long unreadCount,
-        ConversationStatus? status)
+        string? status,
+        ConversationKind? kind)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(revision);
@@ -46,20 +48,13 @@ public sealed record ConversationView : View
 
         Id = id;
         Revision = revision;
-        Members = new List<ProfileViewBasic>(members).AsReadOnly();
+        Members = new List<Actor.ProfileViewBasic>(members).AsReadOnly();
         LastMessage = lastMessage;
         LastReaction = lastReaction;
         Muted = muted;
         UnreadCount = unreadCount;
-
-        if (status is not null)
-        {
-            Status = (ConversationStatus)status;
-        }
-        else
-        {
-            Status = ConversationStatus.Requested;
-        }
+        Status = status;
+        Kind = kind;
     }
 
     /// <summary>
@@ -82,7 +77,7 @@ public sealed record ConversationView : View
     /// </summary>
     [JsonInclude]
     [JsonRequired]
-    public IReadOnlyCollection<ProfileViewBasic> Members { get; init; }
+    public IReadOnlyCollection<Actor.ProfileViewBasic> Members { get; init; }
 
     /// <summary>
     /// Gets a <see cref="MessageViewBase">view</see> over the last message in the conversation, if any.
@@ -111,9 +106,13 @@ public sealed record ConversationView : View
     public long UnreadCount { get; init; }
 
     /// <summary>
-    /// Gets the status of the conversation
+    /// Gets the status of the conversation. Known values are defined in <see cref="ConversationStatus"/>.
     /// </summary>
     [JsonInclude]
-    [NotNull]
-    public ConversationStatus? Status { get; init; }
+    public string? Status { get; init; }
+
+    /// <summary>
+    /// Gtets the kind of conversation, if any.
+    /// </summary>
+    public ConversationKind? Kind { get; init; }
 }

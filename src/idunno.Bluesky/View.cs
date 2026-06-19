@@ -8,7 +8,7 @@ using System.Text.Json.Serialization;
 namespace idunno.Bluesky;
 
 /// <summary>
-/// Base class for view records.
+/// Base class for views
 /// </summary>
 [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
 [JsonDerivedType(typeof(Feed.GeneratorView), typeDiscriminator: EmbeddedViewTypeDiscriminators.GeneratorView)]
@@ -17,6 +17,7 @@ namespace idunno.Bluesky;
 [JsonDerivedType(typeof(Graph.StarterPackViewBasic), typeDiscriminator: EmbeddedViewTypeDiscriminators.StarterPackViewBasic)]
 [JsonDerivedType(typeof(Embed.ViewRecord), typeDiscriminator: EmbeddedViewTypeDiscriminators.ViewRecord)]
 [JsonDerivedType(typeof(Embed.EmbeddedView), typeDiscriminator: EmbeddedViewTypeDiscriminators.EmbedView)]
+[JsonDerivedType(typeof(Group.JoinLinkView), typeDiscriminator: "chat.bsky.group.defs#joinLinkView")]
 
 public record View
 {

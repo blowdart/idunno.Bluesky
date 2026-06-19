@@ -1,46 +1,40 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Text.Json.Serialization;
+using idunno.Bluesky.Chat.SystemMessages;
 
 namespace idunno.Bluesky.Chat;
 
 /// <summary>
-/// Presents a view over a message that has been deleted.
+/// Presents a view over a system message.
 /// </summary>
-public sealed record DeletedMessageView : MessageViewBase
+public sealed record SystemMessageView : MessageViewBase
 {
     /// <summary>
-    /// Creates a new instance of <see cref="DeletedMessageView"/>.
+    /// Creates a new instance of <see cref="SystemMessageView"/>.
     /// </summary>
+    /// <param name="data">The system message data.</param>
     /// <param name="id">The message ID.</param>
     /// <param name="revision">The message revision.</param>
-    /// <param name="sender">A view over the message author.</param>
     /// <param name="sentAt">The <see cref="DateTimeOffset"/> the message was sent on.</param>
     /// <exception cref="ArgumentException">
     ///   Thrown when <paramref name="id" /> or <paramref name="revision"/> is <see langword="null"/> or whitespace.
     /// </exception>
-    /// <exception cref="ArgumentNullException">
-    ///   Thrown when <paramref name="sender"/> is <see langword="null"/>.
-    /// </exception>
-    public DeletedMessageView(
+    public SystemMessageView(
+        SystemMessageBase data,
         string id,
         string revision,
-        MessageViewSender sender,
         DateTimeOffset sentAt) : base(id, revision, sentAt)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(revision);
 
-        ArgumentNullException.ThrowIfNull(sender);
-
-        Sender = sender;
+        ArgumentNullException.ThrowIfNull(data);
+        Data = data;
     }
 
     /// <summary>
-    /// Gets a view over the message author.
+    /// Gets the system message data.
     /// </summary>
-    [JsonInclude]
-    [JsonRequired]
-    public MessageViewSender Sender { get; init; }
+    public SystemMessageBase Data { get; init; }
 }

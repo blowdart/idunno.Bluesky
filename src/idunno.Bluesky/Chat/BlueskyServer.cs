@@ -7,6 +7,7 @@ using System.Text;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
+using idunno.Bluesky.Actor;
 using idunno.Bluesky.Chat;
 using idunno.Bluesky.Chat.Model;
 
@@ -29,6 +30,15 @@ public static partial class BlueskyServer
 
     // https://docs.bsky.app/docs/api/chat-bsky-convo-get-convo
     private const string GetConvoEndpoint = "/xrpc/chat.bsky.convo.getConvo";
+
+    // https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getConvoAvailability.json
+    private const string GetConvoAvailabilityEndpoint = "/xrpc/chat.bsky.convo.getConvoAvailability";
+
+    // https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getConvoMembers.json
+    private const string GetConvoMembersEndpoint = "/xrpc/chat.bsky.convo.getConvoMembers";
+
+    // https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getUnreadCounts.json
+    private const string GetUnreadCountsEndpoint = "/xrpc/chat.bsky.convo.getUnreadCounts";
 
     // https://docs.bsky.app/docs/api/chat-bsky-convo-list-convos
     private const string ListConvosEndpoint = "/xrpc/chat.bsky.convo.listConvos";
@@ -336,91 +346,6 @@ public static partial class BlueskyServer
     }
 
     /// <summary>
-    /// Enumerates a list of conversations the current user is a part of.
-    /// </summary>
-    /// <param name="limit">The number of conversations to return.</param>
-    /// <param name="cursor">A cursor used for pagination.</param>
-    /// <param name="service">The <see cref="Uri"/> of the service to retrieve the conversations from.</param>
-    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
-    /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
-    /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/>is &lt;1 or &gt; the maximum number of conversations to list.</exception>
-    [UnconditionalSuppressMessage(
-        "Trimming",
-        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
-        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-    [UnconditionalSuppressMessage("AOT",
-        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
-        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-    public static async Task<AtProtoHttpResult<Conversations>> ListConversations(
-        int? limit,
-        string? cursor,
-        Uri service,
-        AccessCredentials accessCredentials,
-        HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
-        ILoggerFactory? loggerFactory = default,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(service);
-        ArgumentNullException.ThrowIfNull(accessCredentials);
-        ArgumentNullException.ThrowIfNull(httpClient);
-
-        int limitValue = limit ?? 50;
-
-        ArgumentOutOfRangeException.ThrowIfNegative(limitValue);
-        ArgumentOutOfRangeException.ThrowIfZero(limitValue);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, Maximum.ConversationsToList);
-
-        StringBuilder queryStringBuilder = new();
-        if (limit is not null)
-        {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&limit={limit}");
-        }
-
-        if (cursor is not null)
-        {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor)}");
-        }
-
-        string queryString = queryStringBuilder.ToString();
-
-        AtProtoHttpClient<ListConversationsResponse> client = new(ChatProxy, loggerFactory);
-
-        AtProtoHttpResult<ListConversationsResponse> response = await client.Get(
-            service,
-            $"{ListConvosEndpoint}?{queryString}",
-            credentials: accessCredentials,
-            httpClient: httpClient,
-            jsonSerializerOptions: BlueskyJsonSerializerOptions,
-            onCredentialsUpdated: onCredentialsUpdated,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        if (response.Succeeded)
-        {
-            return new AtProtoHttpResult<Conversations>(
-                new Conversations(response.Result.Conversations),
-                response.StatusCode,
-                response.HttpResponseHeaders,
-                response.AtErrorDetail,
-                response.RateLimit);
-        }
-        else
-        {
-            return new AtProtoHttpResult<Conversations>(
-                null,
-                response.StatusCode,
-                response.HttpResponseHeaders,
-                response.AtErrorDetail,
-                response.RateLimit);
-        }
-    }
-
-    /// <summary>
     /// Gets a <see cref="ConversationView">view</see> over a conversation by its <paramref name="id"/>.
     /// </summary>
     /// <param name="id">The conversation identifier.</param>
@@ -477,6 +402,77 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<ConversationView>(
+                null,
+                response.StatusCode,
+                response.HttpResponseHeaders,
+                response.AtErrorDetail,
+                response.RateLimit);
+        }
+    }
+
+    /// <summary>
+    /// Check whether the current authenticated user and the other actors can start a 1-1 chat.
+    /// Only applicable to direct (non-group) conversations. If an existing conversation is found for these members, it is returned.
+    /// Does not create a new conversation if it doesn't exist.
+    /// </summary>
+    /// <param name="members">A collection of <see cref="Did"/> of actors to check availability for..</param>
+    /// <param name="service">The <see cref="Uri"/> of the service to the conversation availability from.</param>
+    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
+    /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="members"/> is empty or contains more than the maximum allowed members.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    [UnconditionalSuppressMessage("AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    public static async Task<AtProtoHttpResult<ConversationAvailability>> GetConversationAvailability(
+        ICollection<Did> members,
+        Uri service,
+        AccessCredentials accessCredentials,
+        HttpClient httpClient,
+        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        ILoggerFactory? loggerFactory = default,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(members);
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(accessCredentials);
+        ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentOutOfRangeException.ThrowIfZero(members.Count);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(members.Count, Maximum.ConversationMembers);
+
+        AtProtoHttpClient<ConversationAvailability> client = new(ChatProxy, loggerFactory);
+        StringBuilder queryStringBuilder = new();
+        foreach (Did did in members)
+        {
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"members={Uri.EscapeDataString(did)}&");
+        }
+        queryStringBuilder.Length--;
+        string queryString = queryStringBuilder.ToString();
+
+        AtProtoHttpResult<ConversationAvailability> response = await client.Get(
+            service,
+            $"{GetConvoAvailabilityEndpoint}?{queryString}",
+            credentials: accessCredentials,
+            httpClient: httpClient,
+            jsonSerializerOptions: BlueskyJsonSerializerOptions,
+            onCredentialsUpdated: onCredentialsUpdated,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (response.Succeeded)
+        {
+            return response;
+        }
+        else
+        {
+            return new AtProtoHttpResult<ConversationAvailability>(
                 null,
                 response.StatusCode,
                 response.HttpResponseHeaders,
@@ -546,6 +542,101 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<Logs>(
+                null,
+                response.StatusCode,
+                response.HttpResponseHeaders,
+                response.AtErrorDetail,
+                response.RateLimit);
+        }
+    }
+
+    /// <summary>
+    /// Enumerates the members in a conversation
+    /// </summary>
+    /// <param name="id">The conversation identifier whose members should be retrieved.</param>
+    /// <param name="limit">An optional limit on the number of members to retrieve in each page.</param>
+    /// <param name="cursor">An optional cursor used for pagination.</param>
+    /// <param name="service">The <see cref="Uri"/> of the service to retrieve the conversation members from.</param>
+    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
+    /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="id"/> is <see langword="null"/> or empty.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
+    /// </exception>
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    [UnconditionalSuppressMessage("AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileViewBasic>>> GetConversationMembers(
+        string id,
+        int? limit,
+        string? cursor,
+        Uri service,
+        AccessCredentials accessCredentials,
+        HttpClient httpClient,
+        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        ILoggerFactory? loggerFactory = default,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(id);
+
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(accessCredentials);
+        ArgumentNullException.ThrowIfNull(httpClient);
+
+        if (limit is not null)
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.MessagesToList);
+        }
+
+        StringBuilder queryStringBuilder = new();
+        queryStringBuilder.Append(CultureInfo.InvariantCulture, $"convoId={Uri.EscapeDataString(id)}");
+
+        if (cursor != null)
+        {
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor)}");
+        }
+
+        if (limit != null)
+        {
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&limit={limit}");
+        }
+
+        string queryString = queryStringBuilder.ToString();
+
+        AtProtoHttpClient<GetConversationMembersResponse> client = new(ChatProxy, loggerFactory);
+
+        AtProtoHttpResult<GetConversationMembersResponse> response = await client.Get(
+            service,
+            $"{GetConvoMembersEndpoint}?{queryString}",
+            credentials: accessCredentials,
+            httpClient: httpClient,
+            jsonSerializerOptions: BlueskyJsonSerializerOptions,
+            onCredentialsUpdated: onCredentialsUpdated,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (response.Succeeded)
+        {
+            return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileViewBasic>>(
+                new PagedViewReadOnlyCollection<ProfileViewBasic>(response.Result.Members, response.Result.Cursor),
+                response.StatusCode,
+                response.HttpResponseHeaders,
+                response.AtErrorDetail,
+                response.RateLimit);
+        }
+        else
+        {
+            return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileViewBasic>> (
                 null,
                 response.StatusCode,
                 response.HttpResponseHeaders,
@@ -650,6 +741,64 @@ public static partial class BlueskyServer
     }
 
     /// <summary>
+    /// Gets the count of unread conversations for the authenticated user.
+    /// </summary>
+    /// <param name="service">The <see cref="Uri"/> of the service to leave the conversation on.</param>
+    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
+    /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
+    /// </exception>
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+    [UnconditionalSuppressMessage("AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
+    public static async Task<AtProtoHttpResult<UnreadConversationCounts>> GetUnreadCounts(
+        Uri service,
+        AccessCredentials accessCredentials,
+        HttpClient httpClient,
+        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        ILoggerFactory? loggerFactory = default,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(accessCredentials);
+        ArgumentNullException.ThrowIfNull(httpClient);
+
+        AtProtoHttpClient<UnreadConversationCounts> client = new(ChatProxy, loggerFactory);
+
+        AtProtoHttpResult<UnreadConversationCounts> response = await client.Get(
+            service,
+            $"{GetUnreadCountsEndpoint}",
+            credentials: accessCredentials,
+            httpClient: httpClient,
+            jsonSerializerOptions: BlueskyJsonSerializerOptions,
+            onCredentialsUpdated: onCredentialsUpdated,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (response.Succeeded)
+        {
+            return response;
+        }
+        else
+        {
+            return new AtProtoHttpResult<UnreadConversationCounts>(
+                null,
+                response.StatusCode,
+                response.HttpResponseHeaders,
+                response.AtErrorDetail,
+                response.RateLimit);
+        }
+    }
+
+    /// <summary>
     /// Leaves the conversation identified by <paramref name="id"/>.
     /// </summary>
     /// <param name="id">The conversation identifier to leave.</param>
@@ -709,6 +858,91 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<ConversationReference>(
+                null,
+                response.StatusCode,
+                response.HttpResponseHeaders,
+                response.AtErrorDetail,
+                response.RateLimit);
+        }
+    }
+
+    /// <summary>
+    /// Enumerates a list of conversations the current user is a part of.
+    /// </summary>
+    /// <param name="limit">The number of conversations to return.</param>
+    /// <param name="cursor">A cursor used for pagination.</param>
+    /// <param name="service">The <see cref="Uri"/> of the service to retrieve the conversations from.</param>
+    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
+    /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/>is &lt;1 or &gt; the maximum number of conversations to list.</exception>
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    [UnconditionalSuppressMessage("AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    public static async Task<AtProtoHttpResult<Conversations>> ListConversations(
+        int? limit,
+        string? cursor,
+        Uri service,
+        AccessCredentials accessCredentials,
+        HttpClient httpClient,
+        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        ILoggerFactory? loggerFactory = default,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(accessCredentials);
+        ArgumentNullException.ThrowIfNull(httpClient);
+
+        int limitValue = limit ?? 50;
+
+        ArgumentOutOfRangeException.ThrowIfNegative(limitValue);
+        ArgumentOutOfRangeException.ThrowIfZero(limitValue);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, Maximum.ConversationsToList);
+
+        StringBuilder queryStringBuilder = new();
+        if (limit is not null)
+        {
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&limit={limit}");
+        }
+
+        if (cursor is not null)
+        {
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor)}");
+        }
+
+        string queryString = queryStringBuilder.ToString();
+
+        AtProtoHttpClient<ListConversationsResponse> client = new(ChatProxy, loggerFactory);
+
+        AtProtoHttpResult<ListConversationsResponse> response = await client.Get(
+            service,
+            $"{ListConvosEndpoint}?{queryString}",
+            credentials: accessCredentials,
+            httpClient: httpClient,
+            jsonSerializerOptions: BlueskyJsonSerializerOptions,
+            onCredentialsUpdated: onCredentialsUpdated,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (response.Succeeded)
+        {
+            return new AtProtoHttpResult<Conversations>(
+                new Conversations(response.Result.Conversations),
+                response.StatusCode,
+                response.HttpResponseHeaders,
+                response.AtErrorDetail,
+                response.RateLimit);
+        }
+        else
+        {
+            return new AtProtoHttpResult<Conversations>(
                 null,
                 response.StatusCode,
                 response.HttpResponseHeaders,
@@ -1088,7 +1322,7 @@ public static partial class BlueskyServer
     /// <summary>
     /// Marks all conversations with the specified <paramref name="status"/> as read.
     /// </summary>
-    /// <param name="status">The <see cref="ConversationStatus"/> of the conversations to mark as read.</param>
+    /// <param name="status">The status of the conversations to mark as read. Known values are held in <see cref="ConversationStatus"/>.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to mark the conversation on.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
@@ -1107,7 +1341,7 @@ public static partial class BlueskyServer
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
     public static async Task<AtProtoHttpResult<ulong>> UpdateAllRead(
-        ConversationStatus status,
+        string status,
         Uri service,
         AccessCredentials accessCredentials,
         HttpClient httpClient,

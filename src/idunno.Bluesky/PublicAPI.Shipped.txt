@@ -2,10 +2,6 @@
 const idunno.Bluesky.Actor.ShowButtonToKnownValues.Everyone = "everyone" -> string!
 const idunno.Bluesky.Actor.ShowButtonToKnownValues.UsersIFollow = "usersIFollow" -> string!
 const idunno.Bluesky.BlueskyAgentOptions.BlueskyAgent = "BlueskyAgent" -> string!
-const idunno.Bluesky.ConversationLogTypeDiscriminators.BeginConversation = "chat.bsky.convo.defs#logBeginConvo" -> string!
-const idunno.Bluesky.ConversationLogTypeDiscriminators.CreateMessage = "chat.bsky.convo.defs#logCreateMessage" -> string!
-const idunno.Bluesky.ConversationLogTypeDiscriminators.DeleteMessage = "chat.bsky.convo.defs#logDeleteMessage" -> string!
-const idunno.Bluesky.ConversationLogTypeDiscriminators.LeaveConversation = "chat.bsky.convo.defs#logLeaveConvo" -> string!
 const idunno.Bluesky.EmbeddedRecordTypeDiscriminators.External = "app.bsky.embed.external" -> string!
 const idunno.Bluesky.EmbeddedRecordTypeDiscriminators.Gallery = "app.bsky.embed.gallery" -> string!
 const idunno.Bluesky.EmbeddedRecordTypeDiscriminators.Images = "app.bsky.embed.images" -> string!
@@ -22,8 +18,6 @@ const idunno.Bluesky.EmbeddedViewTypeDiscriminators.ListView = "app.bsky.graph.d
 const idunno.Bluesky.EmbeddedViewTypeDiscriminators.StarterPackViewBasic = "app.bsky.graph.defs#starterPackViewBasic" -> string!
 const idunno.Bluesky.EmbeddedViewTypeDiscriminators.ViewRecord = "app.bsky.embed.record#viewRecord" -> string!
 const idunno.Bluesky.FacetTypeDiscriminators.Poll = "blue.poll.post.facet#option" -> string!
-const idunno.Bluesky.MessageTypeDiscriminators.DeletedMessageView = "chat.bsky.convo.defs#deletedMessageView" -> string!
-const idunno.Bluesky.MessageTypeDiscriminators.MessageView = "chat.bsky.convo.defs#messageView" -> string!
 const idunno.Bluesky.Record.KnownStatusValues.Live = "app.bsky.actor.status#live" -> string!
 const idunno.Bluesky.RecordType.Block = "app.bsky.graph.block" -> string!
 const idunno.Bluesky.RecordType.BlockedPost = "app.bsky.feed.defs#blockedPost" -> string!
@@ -628,24 +622,17 @@ idunno.Bluesky.Chat.Conversations
 idunno.Bluesky.Chat.Conversations.Conversations() -> void
 idunno.Bluesky.Chat.Conversations.Conversations(System.Collections.Generic.ICollection<idunno.Bluesky.Chat.ConversationView!>! collection, string? cursor = null) -> void
 idunno.Bluesky.Chat.Conversations.Conversations(System.Collections.Generic.IList<idunno.Bluesky.Chat.ConversationView!>! list, string? cursor = null) -> void
-idunno.Bluesky.Chat.ConversationStatus
-idunno.Bluesky.Chat.ConversationStatus.Accepted = 1 -> idunno.Bluesky.Chat.ConversationStatus
-idunno.Bluesky.Chat.ConversationStatus.Requested = 0 -> idunno.Bluesky.Chat.ConversationStatus
 idunno.Bluesky.Chat.ConversationView
-idunno.Bluesky.Chat.ConversationView.ConversationView(string! id, string! revision, System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Actor.ProfileViewBasic!>! members, idunno.Bluesky.Chat.MessageViewBase? lastMessage, idunno.Bluesky.Chat.MessageAndReactionView? lastReaction, bool muted, long unreadCount, idunno.Bluesky.Chat.ConversationStatus? status) -> void
 idunno.Bluesky.Chat.ConversationView.Id.get -> string!
 idunno.Bluesky.Chat.ConversationView.Id.init -> void
 idunno.Bluesky.Chat.ConversationView.LastMessage.get -> idunno.Bluesky.Chat.MessageViewBase?
 idunno.Bluesky.Chat.ConversationView.LastMessage.init -> void
 idunno.Bluesky.Chat.ConversationView.LastReaction.get -> idunno.Bluesky.Chat.MessageAndReactionView?
 idunno.Bluesky.Chat.ConversationView.LastReaction.init -> void
-idunno.Bluesky.Chat.ConversationView.Members.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Actor.ProfileViewBasic!>!
-idunno.Bluesky.Chat.ConversationView.Members.init -> void
 idunno.Bluesky.Chat.ConversationView.Muted.get -> bool
 idunno.Bluesky.Chat.ConversationView.Muted.init -> void
 idunno.Bluesky.Chat.ConversationView.Revision.get -> string!
 idunno.Bluesky.Chat.ConversationView.Revision.init -> void
-idunno.Bluesky.Chat.ConversationView.Status.get -> idunno.Bluesky.Chat.ConversationStatus?
 idunno.Bluesky.Chat.ConversationView.Status.init -> void
 idunno.Bluesky.Chat.ConversationView.UnreadCount.get -> long
 idunno.Bluesky.Chat.ConversationView.UnreadCount.init -> void
@@ -707,11 +694,9 @@ idunno.Bluesky.Chat.MessageView.Text.init -> void
 idunno.Bluesky.Chat.MessageViewBase
 idunno.Bluesky.Chat.MessageViewBase.Id.get -> string!
 idunno.Bluesky.Chat.MessageViewBase.Id.init -> void
-idunno.Bluesky.Chat.MessageViewBase.MessageViewBase(string! id, string! revision, idunno.Bluesky.Chat.MessageViewSender! sender, System.DateTimeOffset sentAt) -> void
+idunno.Bluesky.Chat.MessageViewBase.MessageViewBase(string! id, string! revision, System.DateTimeOffset sentAt) -> void
 idunno.Bluesky.Chat.MessageViewBase.Revision.get -> string!
 idunno.Bluesky.Chat.MessageViewBase.Revision.init -> void
-idunno.Bluesky.Chat.MessageViewBase.Sender.get -> idunno.Bluesky.Chat.MessageViewSender!
-idunno.Bluesky.Chat.MessageViewBase.Sender.init -> void
 idunno.Bluesky.Chat.MessageViewBase.SentAt.get -> System.DateTimeOffset
 idunno.Bluesky.Chat.MessageViewBase.SentAt.init -> void
 idunno.Bluesky.Chat.MessageViewSender
@@ -731,7 +716,6 @@ idunno.Bluesky.Chat.ReactionViewSender.Did.get -> idunno.AtProto.Did!
 idunno.Bluesky.Chat.ReactionViewSender.Did.init -> void
 idunno.Bluesky.Chat.ReactionViewSender.ReactionViewSender(idunno.AtProto.Did! did) -> void
 idunno.Bluesky.CollectionNsid
-idunno.Bluesky.ConversationLogTypeDiscriminators
 idunno.Bluesky.DefaultServiceUris
 idunno.Bluesky.Embed.AspectRatio
 idunno.Bluesky.Embed.AspectRatio.AspectRatio(int width, int height) -> void
@@ -1417,7 +1401,6 @@ idunno.Bluesky.Labeler.LabelerViewerState
 idunno.Bluesky.Labeler.LabelerViewerState.Like.get -> idunno.AtProto.AtUri?
 idunno.Bluesky.Labeler.LabelerViewerState.Like.init -> void
 idunno.Bluesky.Maximum
-idunno.Bluesky.MessageTypeDiscriminators
 idunno.Bluesky.Moderation.ReportOption
 idunno.Bluesky.Moderation.ReportOption.Description.get -> string!
 idunno.Bluesky.Moderation.ReportOption.Description.init -> void
@@ -2143,8 +2126,6 @@ static idunno.Bluesky.BlueskyServer.UnmuteActor(idunno.AtProto.AtIdentifier! act
 static idunno.Bluesky.BlueskyServer.UnmuteActorList(idunno.AtProto.AtUri! listUri, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 static idunno.Bluesky.BlueskyServer.UnmuteConversation(string! id, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.ConversationView!>!>!
 static idunno.Bluesky.BlueskyServer.UnmuteThread(idunno.AtProto.AtUri! rootUri, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
-static idunno.Bluesky.BlueskyServer.UpdateAllRead(idunno.Bluesky.Chat.ConversationStatus status, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<ulong>!>!
-static idunno.Bluesky.BlueskyServer.UpdateNotificationSeenAt(System.DateTimeOffset seenAt, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 static idunno.Bluesky.BlueskyServer.UpdateRead(string! conversationId, string? messageId, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.ConversationView!>!>!
 static idunno.Bluesky.BlueskyServer.UploadVideo(idunno.AtProto.Did! did, string! fileName, byte[]! video, System.Uri! service, idunno.AtProto.Authentication.ServiceCredential! serviceCredential, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Video.JobStatus!>!>!
 static idunno.Bluesky.CollectionNsid.Block.get -> idunno.AtProto.Nsid!

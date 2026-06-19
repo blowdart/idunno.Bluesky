@@ -10,6 +10,7 @@ using idunno.Bluesky.Actor.Model;
 using idunno.Bluesky.Bookmarks.Model;
 using idunno.Bluesky.Chat;
 using idunno.Bluesky.Chat.Model;
+using idunno.Bluesky.Chat.SystemMessages;
 using idunno.Bluesky.Drafts;
 using idunno.Bluesky.Drafts.Model;
 using idunno.Bluesky.Embed;
@@ -19,6 +20,7 @@ using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.Feed.Model;
 using idunno.Bluesky.Graph;
 using idunno.Bluesky.Graph.Model;
+using idunno.Bluesky.Group;
 using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Model;
 using idunno.Bluesky.Notifications;
@@ -94,7 +96,9 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(ProfileAssociated))]
 [JsonSerializable(typeof(ProfileAssociatedChat))]
 [JsonSerializable(typeof(ProfileView))]
-[JsonSerializable(typeof(ProfileViewBasic))]
+[JsonSerializable(typeof(ProfileViewBasic), TypeInfoPropertyName = "ProfileViewBasic")]
+[JsonSerializable(typeof(ICollection<ProfileViewBasic>), TypeInfoPropertyName = "ProfileViewBasicCollection")]
+[JsonSerializable(typeof(IReadOnlyCollection<ProfileViewBasic>), TypeInfoPropertyName = "ProfileViewBasicReadOnlyCollection")]
 [JsonSerializable(typeof(ProfileViewDetailed))]
 [JsonSerializable(typeof(SavedFeedPreference))]
 [JsonSerializable(typeof(SavedFeedPreference2))]
@@ -135,13 +139,33 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(ReactionView))]
 [JsonSerializable(typeof(ReactionViewSender))]
 [JsonSerializable(typeof(MessageAndReactionView))]
-[JsonSerializable(typeof(ConversationStatus))]
 [JsonSerializable(typeof(AddReactionRequest))]
 [JsonSerializable(typeof(AddReactionResponse))]
 [JsonSerializable(typeof(RemoveReactionRequest))]
 [JsonSerializable(typeof(RemoveReactionResponse))]
 [JsonSerializable(typeof(UpdateAllReadRequest))]
 [JsonSerializable(typeof(UpdateAllReadResponse))]
+[JsonSerializable(typeof(UnreadConversationCounts))]
+[JsonSerializable(typeof(ConversationAvailability))]
+[JsonSerializable(typeof(GetConversationMembersResponse))]
+[JsonSerializable(typeof(GroupConversation))]
+
+[JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.Declaration), TypeInfoPropertyName = "ChatActorDeclaration")]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.ProfileViewBasic), TypeInfoPropertyName = "ChatActorProfileViewBasic")]
+[JsonSerializable(typeof(ICollection<idunno.Bluesky.Chat.Actor.ProfileViewBasic>), TypeInfoPropertyName = "ChatActorProfileViewBasicCollection")]
+[JsonSerializable(typeof(IReadOnlyCollection<idunno.Bluesky.Chat.Actor.ProfileViewBasic>), TypeInfoPropertyName = "ChatActorProfileViewBasicReadOnlyCollection")]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.MemberKind))]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.DirectConversationMember))]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.GroupConversationMember))]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.PastGroupConversationMember))]
+
+
+[JsonSerializable(typeof(ReferredUser))]
+[JsonSerializable(typeof(SystemMessageView))]
+[JsonSerializable(typeof(SystemMessageBase))]
+[JsonSerializable(typeof(AddMemberSystemMessage))]
+
+[JsonSerializable(typeof(JoinLinkView))]
 
 [JsonSerializable(typeof(AspectRatio))]
 [JsonSerializable(typeof(EmbeddedBase))]
