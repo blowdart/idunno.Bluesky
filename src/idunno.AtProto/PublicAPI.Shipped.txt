@@ -945,3 +945,39 @@ OpenTelemetry.Metrics.AtProtoMetricsExtensions
 static OpenTelemetry.Metrics.AtProtoMetricsExtensions.AddAtProtoHttpClientMetrics(this OpenTelemetry.Metrics.MeterProviderBuilder! builder) -> OpenTelemetry.Metrics.MeterProviderBuilder!
 static OpenTelemetry.Metrics.AtProtoMetricsExtensions.AddAtProtoDirectoryMetrics(this OpenTelemetry.Metrics.MeterProviderBuilder! builder) -> OpenTelemetry.Metrics.MeterProviderBuilder!
 static OpenTelemetry.Metrics.AtProtoMetricsExtensions.AddAtProtoJetstreamMetrics(this OpenTelemetry.Metrics.MeterProviderBuilder! builder) -> OpenTelemetry.Metrics.MeterProviderBuilder!
+idunno.AtProto.AccountNotFound
+idunno.AtProto.AccountTakedown
+idunno.AtProto.AtErrorDetail.AtErrorDetail() -> void
+idunno.AtProto.AtErrorDetail.AtErrorDetail(idunno.AtProto.AtErrorDetail! other) -> void
+idunno.AtProto.AtProtoError
+idunno.AtProto.AtProtoError.AtProtoError(idunno.AtProto.AtErrorDetail! other) -> void
+idunno.AtProto.AuthFactorTokenRequired
+idunno.AtProto.BadExpiration
+idunno.AtProto.BlobNotFound
+idunno.AtProto.BlockNotFound
+idunno.AtProto.ConsumerTooSlow
+idunno.AtProto.DidDeactivated
+idunno.AtProto.DidNotFound
+idunno.AtProto.DuplicateCreate
+idunno.AtProto.ExpiredToken
+idunno.AtProto.FutureCursor
+idunno.AtProto.HandleNotAvailable
+idunno.AtProto.HandleNotFound
+idunno.AtProto.HeadNotFound
+idunno.AtProto.HostBanned
+idunno.AtProto.HostNotFound
+idunno.AtProto.IncompatibleDidDoc
+idunno.AtProto.InvalidEmail
+idunno.AtProto.InvalidInviteCode
+idunno.AtProto.InvalidPasscode
+idunno.AtProto.InvalidSwap
+idunno.AtProto.InvalidToken
+idunno.AtProto.RecordNotFound
+idunno.AtProto.RepoDeactivated
+idunno.AtProto.RepoNotFound
+idunno.AtProto.RepoSuspended
+idunno.AtProto.RepoTakenDown
+idunno.AtProto.TokenRequired
+idunno.AtProto.UnresolvableDid
+idunno.AtProto.UnsupportedDomain
+static idunno.AtProto.AtProtoError.Map(idunno.AtProto.AtErrorDetail? atErrorDetail) -> idunno.AtProto.AtErrorDetail?

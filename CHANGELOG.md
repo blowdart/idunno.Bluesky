@@ -4,8 +4,44 @@
 
 ## Added
 
+### idunno.AtProto
+
+* Added error classes for known error messages.
+  * `AccountNotFound`
+  * `AccountTakedown`
+  * `AuthFactorTokenRequired`
+  * `BadExpiration`
+  * `BlobNotFound`
+  * `BlockNotFound`
+  * `ConsumerTooSlow`
+  * `DidDeactivated`
+  * `DidNotFound`
+  * `DuplicateCreate`
+  * `ExpiredToken`
+  * `FutureCursor`
+  * `HandleNotAvailable`
+  * `HandleNotFound`
+  * `HeadNotFound`
+  * `HostBanned`
+  * `HostNotFound`
+  * `IncompatibleDidDoc`
+  * `InvalidEmail`
+  * `InvalidInviteCode`
+  * `InvalidPasscode`
+  * `InvalidSwap`
+  * `InvalidToken`
+  * `RecordNotFound`
+  * `RepoDeactivated`
+  * `RepoNotFound`
+  * `RepoSuspended`
+  * `RepoTakenDown`
+  * `TokenRequired`
+  * `UnresolvableDid`
+  * `UnsupportedDomain`
+
 ### idunno.Bluesky
 
+* Added error classes for known error messages.
 * Added `EmbeddedGallery` and `EmbeddedGalleryImage` types to support the new [image gallery format](https://github.com/bluesky-social/atproto/pull/4827).
   Note that `EmbeddedGalleryImage` requires an aspect ratio, unlike the `EmbeddedImage` type.
 * Added new overloads to `BlueskyAgent.Post` to support `EmbeddedGallery` content.
