@@ -22,5 +22,5 @@ public sealed record MemberLeaveSystemMessage : SystemMessage
     /// Gets a current view of the member who left the group.
     /// </summary>
     [JsonRequired]
-    public ReferredUser Member { get; internal init; }
+    public ReferredUser Member { get; set; }
 }

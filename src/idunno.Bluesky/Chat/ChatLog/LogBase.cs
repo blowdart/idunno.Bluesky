@@ -64,7 +64,7 @@ public record LogBase : AtProtoObject
     [JsonInclude]
     [JsonRequired]
     [JsonPropertyName("convoId")]
-    public string ConversationId { get; internal init; }
+    public string ConversationId { get; set; }
 
     /// <summary>
     /// Gets the conversation revision.
@@ -72,5 +72,5 @@ public record LogBase : AtProtoObject
     [JsonInclude]
     [JsonRequired]
     [JsonPropertyName("rev")]
-    public string Revision { get; internal init; }
+    public string Revision { get; set; }
 }

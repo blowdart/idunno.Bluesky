@@ -28,5 +28,5 @@ public abstract record MessageLogBase : LogBase
     /// </summary>
     [JsonInclude]
     [JsonRequired]
-    public MessageViewBase Message { get; internal init; }
+    public MessageViewBase Message { get; set; }
 }

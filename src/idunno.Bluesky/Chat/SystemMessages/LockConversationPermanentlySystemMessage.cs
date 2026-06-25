@@ -22,5 +22,5 @@ public sealed record LockConversationPermanentlySystemMessage : SystemMessage
     /// Gets a current view of the user who locked the group.
     /// </summary>
     [JsonRequired]
-    public ReferredUser LockedBy { get; internal init; }
+    public ReferredUser LockedBy { get; set; }
 }

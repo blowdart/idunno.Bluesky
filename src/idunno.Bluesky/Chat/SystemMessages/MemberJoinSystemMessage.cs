@@ -24,17 +24,17 @@ public sealed record MemberJoinSystemMessage : SystemMessage
     /// Gets a current view of the member who joined.
     /// </summary>
     [JsonRequired]
-    public ReferredUser Member { get; internal init; }
+    public ReferredUser Member { get; set; }
 
     /// <summary>
     /// Role the user was added to the group with. The role from 'member' will reflect the current data, not historical.
     /// </summary>
     [JsonRequired]
-    public string Role { get; internal init; }
+    public string Role { get; set; }
 
     /// <summary>
     /// Gets who approved the request, if the join link was configured to require approval. <see langword="null" /> if approval was not required
     /// </summary>
-    public ReferredUser? ApprovedBy { get; internal init; }
+    public ReferredUser? ApprovedBy { get; set; }
 
 }

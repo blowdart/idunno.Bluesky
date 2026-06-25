@@ -30,5 +30,5 @@ public abstract record MessageRelatedProfilesLogBase : MessageLogBase
     /// Gets Profiles referred to in the system message.
     /// </summary>
     [JsonRequired]
-    public ProfileViewBasic RelatedProfiles { get; internal init; }
+    public ProfileViewBasic RelatedProfiles { get; set; }
 }

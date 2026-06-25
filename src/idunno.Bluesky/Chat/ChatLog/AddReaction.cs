@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using idunno.Bluesky.Chat.Actor;
@@ -27,11 +28,12 @@ public sealed record AddReaction : MessageLogBase
     /// </summary>
     [JsonInclude]
     [JsonRequired]
-    public ReactionView Reaction { get; internal init; }
+    public ReactionView Reaction { get; set; }
 
     /// <summary>
     /// Gets the profiles referred in the message and reaction views. This isn't required for compatibility, because it was added later, but should generally be present.
     /// </summary>
     [JsonInclude]
-    public ICollection<ProfileViewBasic>? RelatedProfiles { get; internal init; }
+    [SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Setter needed for deserialization.")]
+    public ICollection<ProfileViewBasic>? RelatedProfiles { get; set; }
 }

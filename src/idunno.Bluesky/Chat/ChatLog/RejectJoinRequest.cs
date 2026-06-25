@@ -30,5 +30,5 @@ public sealed record RejectJoinRequest : LogBase
     /// Gets the orospective member who requested to join.
     /// </summary>
     [JsonRequired]
-    public ProfileViewBasic Member { get; internal init; }
+    public ProfileViewBasic Member { get; set; }
 }

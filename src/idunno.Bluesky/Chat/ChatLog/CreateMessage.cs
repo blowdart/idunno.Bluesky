@@ -24,5 +24,5 @@ public sealed record CreateMessage : MessageLogBase
     /// Gets Profiles referred to in the message view. This isn't required for compatibility, because it was added later, but should generally be present.
     /// </summary>
     [JsonInclude]
-    public ProfileViewBasic? RelatedProfiles { get; internal init; }
+    public ProfileViewBasic? RelatedProfiles { get; set; }
 }

@@ -36,5 +36,5 @@ public sealed record SystemMessageView : MessageViewBase
     /// <summary>
     /// Gets the system message data.
     /// </summary>
-    public SystemMessage Data { get; internal init; }
+    public SystemMessage Data { get; set; }
 }

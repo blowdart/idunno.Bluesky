@@ -24,17 +24,17 @@ public sealed record AddMemberSystemMessage : SystemMessage
     /// Gets a reference to the actor added to a group chat.
     /// </summary>
     [JsonRequired]
-    public ReferredUser Member { get; internal init; }
+    public ReferredUser Member { get; set; }
 
     /// <summary>
     /// Gets the role the actor was added as. The role from <see cref="Member"/> will reflect the current data, not historical.
     /// </summary>
     [JsonRequired]
-    public string Role { get; internal init; }
+    public string Role { get; set; }
 
     /// <summary>
     /// Gets a reference to the actor who added <see cref="Member"/>
     /// </summary>
     [JsonRequired]
-    public ReferredUser AddedBy { get; internal init; }
+    public ReferredUser AddedBy { get; set; }
 }
