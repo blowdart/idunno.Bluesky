@@ -5,9 +5,10 @@ using System.Text.Json.Serialization;
 
 namespace idunno.Bluesky.Chat.Model;
 
-internal record RemoveReactionResponse
+internal record AddReactionResponse
 {
-    public RemoveReactionResponse(MessageView message)
+    [JsonConstructor]
+    public AddReactionResponse(MessageView message)
     {
         Message = message;
     }

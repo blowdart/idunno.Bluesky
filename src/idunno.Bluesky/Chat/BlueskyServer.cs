@@ -126,6 +126,8 @@ public static partial class BlueskyServer
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
+        response.MapError(BlueskyError.Map);
+
         return response;
     }
 
@@ -187,6 +189,8 @@ public static partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        response.MapError(BlueskyError.Map);
 
         if (response.Succeeded)
         {
@@ -263,6 +267,8 @@ public static partial class BlueskyServer
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
+        response.MapError(BlueskyError.Map);
+
         return response;
     }
 
@@ -324,6 +330,8 @@ public static partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        response.MapError(BlueskyError.Map);
 
         if (response.Succeeded)
         {
@@ -389,6 +397,8 @@ public static partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        response.MapError(BlueskyError.Map);
 
         if (response.Succeeded)
         {
@@ -466,6 +476,8 @@ public static partial class BlueskyServer
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
+        response.MapError(BlueskyError.Map);
+
         if (response.Succeeded)
         {
             return response;
@@ -529,6 +541,8 @@ public static partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        response.MapError(BlueskyError.Map);
 
         if (response.Succeeded)
         {

@@ -91,12 +91,15 @@ public sealed class Program
 
             // Your code goes here.
 
-            var listConversationsResult = await agent.ListConversations(cancellationToken: cancellationToken);
+            Did? anotherBot = await agent.ResolveHandle("anotherbot.idunno.blue", cancellationToken: cancellationToken);
+            Did? selfHostedDid = await agent.ResolveHandle("blowdart.pds.blowdart.blue", cancellationToken: cancellationToken);
 
-            var conversationId = listConversationsResult.Result!.ElementAt(0).Id;
+            Did[] members = [anotherBot!, selfHostedDid!];
 
-            var conversationMembersResult = await agent.GetConversationMembers(conversationId, cancellationToken: cancellationToken);
-
+            var createGroupResponse = await agent.CreateGroup(
+                members: members,
+                name: "Test Group",
+                cancellationToken: cancellationToken);
         }
     }
 }

@@ -7,6 +7,7 @@ using idunno.AtProto;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Chat;
+using idunno.Bluesky.Chat.Model;
 using idunno.Bluesky.RichText;
 
 namespace idunno.Bluesky;

@@ -1,1 +1,2 @@
 #nullable enable
+idunno.AtProto.AtProtoHttpResult<TResult>.MapError(System.Func<idunno.AtProto.AtErrorDetail?, idunno.AtProto.AtErrorDetail?>! mapFunc) -> void

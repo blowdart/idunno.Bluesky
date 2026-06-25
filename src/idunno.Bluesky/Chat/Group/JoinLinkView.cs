@@ -3,7 +3,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Group;
+namespace idunno.Bluesky.Chat.Group;
 
 /// <summary>
 /// Join link view to be used within a group view, so the conversation is surrounding, not specified inside this view.

@@ -25,32 +25,6 @@ public static class MessageTypeDiscriminators
 }
 
 /// <summary>
-/// Type discriminators for conversation logging.
-/// </summary>
-public static class ConversationLogTypeDiscriminators
-{
-    /// <summary>
-    /// A log entry indicating the beginning of a conversation.
-    /// </summary>
-    public const string BeginConversation = "chat.bsky.convo.defs#logBeginConvo";
-
-    /// <summary>
-    /// A log entry indicating leaving a conversation.
-    /// </summary>
-    public const string LeaveConversation = "chat.bsky.convo.defs#logLeaveConvo";
-
-    /// <summary>
-    /// A log entry indicating a message was created in a conversation.
-    /// </summary>
-    public const string CreateMessage = "chat.bsky.convo.defs#logCreateMessage";
-
-    /// <summary>
-    /// A log entry indicating a message was deleted in a conversation.
-    /// </summary>
-    public const string DeleteMessage = "chat.bsky.convo.defs#logDeleteMessage";
-}
-
-/// <summary>
 /// Known values for conversation member roles.
 /// </summary>
 public static class MemberRole

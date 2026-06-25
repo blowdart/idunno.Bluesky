@@ -7,6 +7,7 @@ namespace idunno.Bluesky.Chat.Model;
 
 internal record UpdateAllReadResponse
 {
+    [JsonConstructor]
     public UpdateAllReadResponse(ulong updatedCount) => UpdatedCount = updatedCount;
 
     [JsonInclude]

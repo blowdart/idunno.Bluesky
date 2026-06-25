@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json.Serialization;
+
 #pragma warning disable IDE0130
 namespace idunno.Bluesky.Chat;
 #pragma warning restore IDE0130
@@ -16,6 +18,7 @@ public sealed record DeleteMessage : MessageLogBase
     /// <param name="id">The conversation identifier.</param>
     /// <param name="revision">The conversation revision.</param>
     /// <param name="message">A <see cref="MessageViewBase">view</see> over the message the log entry refers to.</param>
+    [JsonConstructor]
     internal DeleteMessage(string id, string revision, MessageViewBase message) : base(id, revision, message)
     {
     }

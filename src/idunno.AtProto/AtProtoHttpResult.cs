@@ -100,4 +100,21 @@ public class AtProtoHttpResult<TResult>
 
         return this;
     }
+
+    /// <summary>
+    /// Runs a mapping function on the <see cref="Result"/> and <see cref="AtErrorDetail"/> properties, if they are not <see langword="null"/>.
+    /// </summary>
+    /// <param name="mapFunc">The mapping function to apply to the <see cref="AtErrorDetail"/> property.</param>
+    public void MapError(Func<AtErrorDetail?, AtErrorDetail?> mapFunc)
+    {
+        if (mapFunc is null)
+        {
+            return;
+        }
+
+        if (AtErrorDetail is not null)
+        {
+            AtErrorDetail = mapFunc(AtErrorDetail);
+        }
+    }
 }

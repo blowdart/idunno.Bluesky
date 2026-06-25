@@ -3,7 +3,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Chat;
+namespace idunno.Bluesky.Chat.Model;
 
 /// <summary>
 /// Encapsulates the response from an accept conversation request.
@@ -14,6 +14,7 @@ public record AcceptConversationResponse
     /// Creates a new instance of <see cref="AcceptConversationResponse"/>.
     /// </summary>
     /// <param name="revision">Revision of when the conversation was accepted. If <see langword="null"/>, the conversation was already accepted.</param>
+    [JsonConstructor]
     public AcceptConversationResponse(string? revision)
     {
         Revision = revision;
@@ -23,5 +24,5 @@ public record AcceptConversationResponse
     /// Revision of when the conversation was accepted. If <see langword="null"/>, the conversation was already accepted.
     /// </summary>
     [JsonPropertyName("rev")]
-    public string? Revision { get; init; }
+    public string? Revision { get; internal init; }
 }

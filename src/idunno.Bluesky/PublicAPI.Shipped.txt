@@ -363,7 +363,6 @@ idunno.Bluesky.Actor.VerificationView.IsValid.init -> void
 idunno.Bluesky.Actor.VerificationView.Uri.get -> idunno.AtProto.AtUri!
 idunno.Bluesky.Actor.VerificationView.Uri.init -> void
 idunno.Bluesky.BlueskyAgent
-idunno.Bluesky.BlueskyAgent.AcceptConversation(string! conversationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.AcceptConversationResponse!>!>!
 idunno.Bluesky.BlueskyAgent.AddPostGate(idunno.AtProto.AtUri! post, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.PostGateRule!>? rules = null, System.Collections.Generic.ICollection<idunno.AtProto.AtUri!>? detachedEmbeddingUris = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.AddPostGate(idunno.Bluesky.Feed.Gates.PostGate! postGate, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.AddReaction(string! conversationId, string! messageId, string! value, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.MessageView!>!>!
@@ -602,10 +601,6 @@ idunno.Bluesky.Bookmarks.BookmarkView.Item.get -> idunno.Bluesky.Feed.PostViewBa
 idunno.Bluesky.Bookmarks.BookmarkView.Item.init -> void
 idunno.Bluesky.Bookmarks.BookmarkView.Subject.get -> idunno.AtProto.Repo.StrongReference!
 idunno.Bluesky.Bookmarks.BookmarkView.Subject.init -> void
-idunno.Bluesky.Chat.AcceptConversationResponse
-idunno.Bluesky.Chat.AcceptConversationResponse.AcceptConversationResponse(string? revision) -> void
-idunno.Bluesky.Chat.AcceptConversationResponse.Revision.get -> string?
-idunno.Bluesky.Chat.AcceptConversationResponse.Revision.init -> void
 idunno.Bluesky.Chat.BatchedMessage
 idunno.Bluesky.Chat.BatchedMessage.BatchedMessage(string! conversationId, idunno.Bluesky.Chat.MessageInput! message) -> void
 idunno.Bluesky.Chat.BatchedMessage.ConversationId.get -> string!
@@ -642,11 +637,7 @@ idunno.Bluesky.Chat.DeletedMessageView.DeletedMessageView(string! id, string! re
 idunno.Bluesky.Chat.DeleteMessage
 idunno.Bluesky.Chat.LeaveConversation
 idunno.Bluesky.Chat.LogBase
-idunno.Bluesky.Chat.LogBase.Id.get -> string!
-idunno.Bluesky.Chat.LogBase.Id.init -> void
-idunno.Bluesky.Chat.LogBase.LogBase(string! id, string! revision) -> void
 idunno.Bluesky.Chat.LogBase.Revision.get -> string!
-idunno.Bluesky.Chat.LogBase.Revision.init -> void
 idunno.Bluesky.Chat.Logs
 idunno.Bluesky.Chat.Logs.Logs(string? cursor = null) -> void
 idunno.Bluesky.Chat.Logs.Logs(System.Collections.Generic.IEnumerable<idunno.Bluesky.Chat.LogBase!>! collection, string? cursor = null) -> void
@@ -667,8 +658,6 @@ idunno.Bluesky.Chat.MessageInput.Text.get -> string!
 idunno.Bluesky.Chat.MessageInput.Text.init -> void
 idunno.Bluesky.Chat.MessageLogBase
 idunno.Bluesky.Chat.MessageLogBase.Message.get -> idunno.Bluesky.Chat.MessageViewBase!
-idunno.Bluesky.Chat.MessageLogBase.Message.init -> void
-idunno.Bluesky.Chat.MessageLogBase.MessageLogBase(string! id, string! revision, idunno.Bluesky.Chat.MessageViewBase! message) -> void
 idunno.Bluesky.Chat.MessageReference
 idunno.Bluesky.Chat.MessageReference.ConversationId.get -> string!
 idunno.Bluesky.Chat.MessageReference.ConversationId.init -> void
@@ -2046,7 +2035,6 @@ static idunno.Bluesky.BlueskyAgent.CreateBuilder() -> idunno.Bluesky.BlueskyAgen
 static idunno.Bluesky.BlueskyAgentBuilder.Create() -> idunno.Bluesky.BlueskyAgentBuilder!
 static idunno.Bluesky.BlueskyJsonSerializerOptions.Options.get -> System.Text.Json.JsonSerializerOptions!
 static idunno.Bluesky.BlueskyJsonSerializerOptions.TypeInfoResolver.get -> System.Text.Json.Serialization.Metadata.IJsonTypeInfoResolver!
-static idunno.Bluesky.BlueskyServer.AcceptConversation(string! conversationId, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.AcceptConversationResponse!>!>!
 static idunno.Bluesky.BlueskyServer.AddReaction(string! conversationId, string! messageId, string! value, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.MessageView!>!>!
 static idunno.Bluesky.BlueskyServer.BlueskyJsonSerializerOptions.get -> System.Text.Json.JsonSerializerOptions!
 static idunno.Bluesky.BlueskyServer.CreateBookmark(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!

@@ -4,7 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
-using idunno.Bluesky.Group;
+using idunno.Bluesky.Chat.Group;
 
 namespace idunno.Bluesky.Chat;
 

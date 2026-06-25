@@ -1120,9 +1120,10 @@ public class ConversationTests
         Assert.NotNull(groupConversation.JoinLink);
 
         Assert.Equal("OyiHQqB", groupConversation.JoinLink.Code);
-        Assert.Equal(Group.LinkEnabledStatus.Enabled, groupConversation.JoinLink.EnabledStatus);
+
+        Assert.Equal(Chat.Group.LinkEnabledStatus.Enabled, groupConversation.JoinLink.EnabledStatus);
         Assert.False(groupConversation.JoinLink.RequireApproval);
-        Assert.Equal(Group.JoinRule.Anyone, groupConversation.JoinLink.JoinRule);
+        Assert.Equal(Chat.Group.JoinRule.Anyone, groupConversation.JoinLink.JoinRule);
         Assert.Equal(DateTimeOffset.Parse("2026-06-17T12:47:59.822Z"), groupConversation.JoinLink.CreatedAt);
 
         Assert.Equal(ConversationLockStatus.Unlocked, groupConversation.LockStatus);

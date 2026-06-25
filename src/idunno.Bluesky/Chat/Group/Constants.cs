@@ -1,7 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-namespace idunno.Bluesky.Group;
+namespace idunno.Bluesky.Chat.Group;
 
 /// <summary>
 /// Values indicating the status of a group conversation link.
@@ -33,4 +33,20 @@ public static class JoinRule
     /// Indicates that only users followed by the owner can join the group conversation.
     /// </summary>
     public const string FollowedByOwner = "followedByOwner";
+}
+
+/// <summary>
+/// Values indicating the status of a user's join request for a group conversation.
+/// </summary>
+public static class JoinStatus
+{
+    /// <summary>
+    /// Indicates that the user has joined the group conversation.
+    /// </summary>
+    public const string Joined = "joined";
+
+    /// <summary>
+    /// Indicates that the user's join request is pending approval.
+    /// </summary>
+    public const string Pending = "pending";
 }

@@ -9,7 +9,7 @@ using idunno.Bluesky.Actor;
 using idunno.Bluesky.Actor.Model;
 using idunno.Bluesky.Bookmarks.Model;
 using idunno.Bluesky.Chat;
-using idunno.Bluesky.Chat.Model;
+using idunno.Bluesky.Chat.Group;
 using idunno.Bluesky.Chat.SystemMessages;
 using idunno.Bluesky.Drafts;
 using idunno.Bluesky.Drafts.Model;
@@ -20,11 +20,9 @@ using idunno.Bluesky.Feed.Gates;
 using idunno.Bluesky.Feed.Model;
 using idunno.Bluesky.Graph;
 using idunno.Bluesky.Graph.Model;
-using idunno.Bluesky.Group;
 using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Model;
 using idunno.Bluesky.Notifications;
-using idunno.Bluesky.Notifications.Model;
 using idunno.Bluesky.Record;
 using idunno.Bluesky.RichText;
 using idunno.Bluesky.Unspecced;
@@ -107,24 +105,6 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(VerificationView))]
 [JsonSerializable(typeof(StatusView))]
 
-[JsonSerializable(typeof(BeginConversation))]
-[JsonSerializable(typeof(CreateMessage))]
-[JsonSerializable(typeof(DeleteMessage))]
-[JsonSerializable(typeof(LeaveConversation))]
-[JsonSerializable(typeof(LogBase))]
-[JsonSerializable(typeof(Logs))]
-[JsonSerializable(typeof(MessageLogBase))]
-[JsonSerializable(typeof(LogBase))]
-[JsonSerializable(typeof(ConversationIdPostRequest))]
-[JsonSerializable(typeof(ConversationResponse))]
-[JsonSerializable(typeof(DeleteMessageRequest))]
-[JsonSerializable(typeof(GetLogResponse))]
-[JsonSerializable(typeof(GetMessagesResponse))]
-[JsonSerializable(typeof(ListConversationsResponse))]
-[JsonSerializable(typeof(SendMessageRequest))]
-[JsonSerializable(typeof(SendMessageBatchRequest))]
-[JsonSerializable(typeof(SendMessageBatchResponse))]
-[JsonSerializable(typeof(UpdateReadRequest))]
 [JsonSerializable(typeof(BatchedMessage))]
 [JsonSerializable(typeof(ConversationReference))]
 [JsonSerializable(typeof(Conversations))]
@@ -139,16 +119,65 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(ReactionView))]
 [JsonSerializable(typeof(ReactionViewSender))]
 [JsonSerializable(typeof(MessageAndReactionView))]
-[JsonSerializable(typeof(AddReactionRequest))]
-[JsonSerializable(typeof(AddReactionResponse))]
-[JsonSerializable(typeof(RemoveReactionRequest))]
-[JsonSerializable(typeof(RemoveReactionResponse))]
-[JsonSerializable(typeof(UpdateAllReadRequest))]
-[JsonSerializable(typeof(UpdateAllReadResponse))]
 [JsonSerializable(typeof(UnreadConversationCounts))]
 [JsonSerializable(typeof(ConversationAvailability))]
-[JsonSerializable(typeof(GetConversationMembersResponse))]
 [JsonSerializable(typeof(GroupConversation))]
+
+[JsonSerializable(typeof(Chat.Logs), TypeInfoPropertyName = "ChatBSkyConvoLogs")]
+[JsonSerializable(typeof(Chat.LogBase), TypeInfoPropertyName = "ChatBSkyConvoLogBase")]
+[JsonSerializable(typeof(Chat.MessageLogBase), TypeInfoPropertyName = "ChatBSkyConvoMessageLogBase")]
+[JsonSerializable(typeof(Chat.AcceptConversation), TypeInfoPropertyName = "ChatBSkyConvoAcceptConversation")]
+[JsonSerializable(typeof(Chat.AddMember), TypeInfoPropertyName = "ChatBSkyConvoAddMember")]
+[JsonSerializable(typeof(Chat.AddReaction), TypeInfoPropertyName = "ChatBSkyConvoAddReaction")]
+[JsonSerializable(typeof(Chat.ApproveJoinRequest), TypeInfoPropertyName = "ChatBSkyConvoApproveJoinRequest")]
+[JsonSerializable(typeof(Chat.BeginConversation), TypeInfoPropertyName = "ChatBSkyConvoBeginConversation")]
+[JsonSerializable(typeof(Chat.CreateJoinLink), TypeInfoPropertyName = "ChatBSkyConvoCreateJoinLink")]
+[JsonSerializable(typeof(Chat.CreateMessage), TypeInfoPropertyName = "ChatBSkyConvoCreateMessage")]
+[JsonSerializable(typeof(Chat.DeleteMessage), TypeInfoPropertyName = "ChatBSkyConvoDeleteMessage")]
+[JsonSerializable(typeof(Chat.DisableJoinLink), TypeInfoPropertyName = "ChatBSkyConvoDisableJoinLink")]
+[JsonSerializable(typeof(Chat.EditJoinLink), TypeInfoPropertyName = "ChatBSkyConvoEditJoinLink")]
+[JsonSerializable(typeof(Chat.EditGroup), TypeInfoPropertyName = "ChatBSkyConvoEditGroup")]
+[JsonSerializable(typeof(Chat.EnableJoinLink), TypeInfoPropertyName = "ChatBSkyConvoEnableJoinLink")]
+[JsonSerializable(typeof(Chat.IncomingJoinRequest), TypeInfoPropertyName = "ChatBSkyConvoIncomingJoinRequest")]
+[JsonSerializable(typeof(Chat.LeaveConversation), TypeInfoPropertyName = "ChatBSkyConvoLeaveConversation")]
+[JsonSerializable(typeof(Chat.LockConversation), TypeInfoPropertyName = "ChatBSkyConvoLockConversation")]
+[JsonSerializable(typeof(Chat.LockConversationPermanently), TypeInfoPropertyName = "ChatBSkyConvoLockConversationPermanently")]
+[JsonSerializable(typeof(Chat.MemberJoin), TypeInfoPropertyName = "ChatBSkyConvoMemberJoin")]
+[JsonSerializable(typeof(Chat.MuteConversation), TypeInfoPropertyName = "ChatBSkyConvoMuteConversation")]
+[JsonSerializable(typeof(Chat.OutgoingJoinRequest), TypeInfoPropertyName = "ChatBSkyConvoOutgoingJoinRequest")]
+[JsonSerializable(typeof(Chat.ReadConversation), TypeInfoPropertyName = "ChatBSkyConvoReadConversation")]
+[JsonSerializable(typeof(Chat.ReadJoinRequests), TypeInfoPropertyName = "ChatBSkyConvoReadJoinRequests")]
+#pragma warning disable CS0618
+[JsonSerializable(typeof(Chat.ReadMessage), TypeInfoPropertyName = "ChatBSkyConvoReadMessage")]
+#pragma warning restore CS0618
+[JsonSerializable(typeof(Chat.RejectJoinRequest), TypeInfoPropertyName = "ChatBSkyConvoRejectJoinRequest")]
+[JsonSerializable(typeof(Chat.RemoveMember), TypeInfoPropertyName = "ChatBSkyConvoRemoveMember")]
+[JsonSerializable(typeof(Chat.RemoveReaction), TypeInfoPropertyName = "ChatBSkyConvoRemoveReaction")]
+[JsonSerializable(typeof(Chat.UnlockConversation), TypeInfoPropertyName = "ChatBSkyConvoUnlockConversation")]
+[JsonSerializable(typeof(Chat.UnmuteConversation), TypeInfoPropertyName = "ChatBSkyConvoUnmuteConversation")]
+[JsonSerializable(typeof(Chat.WithdrawIncomingJoinRequest), TypeInfoPropertyName = "ChatBSkyConvoWithdrawIncomingJoinRequest")]
+[JsonSerializable(typeof(Chat.WithdrawOutgoingJoinRequest), TypeInfoPropertyName = "ChatBSkyConvoWithdrawOutgoingJoinRequest")]
+
+[JsonSerializable(typeof(Chat.Model.AcceptConversationRequest))]
+[JsonSerializable(typeof(Chat.Model.AcceptConversationResponse))]
+[JsonSerializable(typeof(Chat.Model.AddReactionRequest))]
+[JsonSerializable(typeof(Chat.Model.AddReactionResponse))]
+[JsonSerializable(typeof(Chat.Model.ConversationIdPostRequest))]
+[JsonSerializable(typeof(Chat.Model.ConversationResponse))]
+[JsonSerializable(typeof(Chat.Model.DeleteMessageRequest))]
+[JsonSerializable(typeof(Chat.Model.GetConversationMembersResponse))]
+[JsonSerializable(typeof(Chat.Model.GetLogResponse))]
+[JsonSerializable(typeof(Chat.Model.GetMessagesResponse))]
+[JsonSerializable(typeof(Chat.Model.ListConversationsResponse))]
+[JsonSerializable(typeof(Chat.Model.RemoveReactionRequest))]
+[JsonSerializable(typeof(Chat.Model.RemoveReactionResponse))]
+[JsonSerializable(typeof(Chat.Model.SendMessageBatchRequest))]
+[JsonSerializable(typeof(Chat.Model.SendMessageBatchResponse))]
+[JsonSerializable(typeof(Chat.Model.SendMessageRequest))]
+[JsonSerializable(typeof(Chat.Model.UpdateAllReadRequest))]
+[JsonSerializable(typeof(Chat.Model.UpdateAllReadResponse))]
+[JsonSerializable(typeof(Chat.Model.UpdateReadRequest))]
+
 
 [JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.Declaration), TypeInfoPropertyName = "ChatActorDeclaration")]
 [JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.ProfileViewBasic), TypeInfoPropertyName = "ChatActorProfileViewBasic")]
@@ -377,6 +406,40 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(GermNetwork.Com.Declaration), TypeInfoPropertyName = "GermNetworkComDeclaration")]
 [JsonSerializable(typeof(AtProtoRepositoryRecord<GermNetwork.Com.Declaration>), TypeInfoPropertyName = "GermNetworkComDeclarationRecord")]
 [JsonSerializable(typeof(GermNetwork.Com.MessageMe), TypeInfoPropertyName = "GermNetworkComMessageMe")]
+
+[JsonSerializable(typeof(Chat.Group.DisabledJoinLinkPreviewView))]
+[JsonSerializable(typeof(Chat.Group.InvalidJoinLinkPreviewView))]
+[JsonSerializable(typeof(Chat.Group.JoinLinkPreviewView))]
+[JsonSerializable(typeof(Chat.Group.JoinLinkPreviewViewBase))]
+[JsonSerializable(typeof(Chat.Group.JoinLinkView))]
+[JsonSerializable(typeof(Chat.Group.JoinLinkViewerState))]
+[JsonSerializable(typeof(Chat.Group.JoinRequestView))]
+[JsonSerializable(typeof(PagedViewReadOnlyCollection<Chat.Group.JoinRequestView>))]
+
+[JsonSerializable(typeof(Chat.Group.Model.AddMembersRequest))]
+[JsonSerializable(typeof(Chat.Group.Model.AddMembersResponse))]
+[JsonSerializable(typeof(Chat.Group.Model.ApproveJoinRequest))]
+[JsonSerializable(typeof(Chat.Group.Model.ApproveJoinResponse))]
+[JsonSerializable(typeof(Chat.Group.Model.CreateGroupRequest))]
+[JsonSerializable(typeof(Chat.Group.Model.CreateGroupResponse))]
+[JsonSerializable(typeof(Chat.Group.Model.CreateJoinLinkRequest))]
+[JsonSerializable(typeof(Chat.Group.Model.CreateJoinLinkResponse))]
+[JsonSerializable(typeof(Chat.Group.Model.DisableJoinLinkRequest))]
+[JsonSerializable(typeof(Chat.Group.Model.DisableJoinLinkResponse))]
+[JsonSerializable(typeof(Chat.Group.Model.EditGroupRequest))]
+[JsonSerializable(typeof(Chat.Group.Model.EditGroupResponse))]
+[JsonSerializable(typeof(Chat.Group.Model.EditJoinLinkRequest))]
+[JsonSerializable(typeof(Chat.Group.Model.EditJoinLinkResponse))]
+[JsonSerializable(typeof(Chat.Group.Model.GetJoinLinkPreviewsResponse))]
+[JsonSerializable(typeof(Chat.Group.Model.ListJoinRequestsResponse))]
+[JsonSerializable(typeof(Chat.Group.Model.ListMutualGroupsResponse))]
+[JsonSerializable(typeof(Chat.Group.Model.RequestJoinRequest))]
+[JsonSerializable(typeof(Chat.Group.Model.RequestJoinResponse))]
+[JsonSerializable(typeof(Chat.Group.Model.RemoveMembersRequest))]
+[JsonSerializable(typeof(Chat.Group.Model.RemoveMembersResponse))]
+[JsonSerializable(typeof(Chat.Group.Model.RequestJoinRequest))]
+[JsonSerializable(typeof(Chat.Group.Model.RequestJoinResponse))]
+[JsonSerializable(typeof(Chat.Group.Model.WithdrawJoinRequestRequest))]
 
 internal partial class SourceGenerationContext : JsonSerializerContext
 {
