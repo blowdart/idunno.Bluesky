@@ -222,6 +222,7 @@ idunno.AtProto.AtProtoHttpResult<TResult>.AtErrorDetail.get -> idunno.AtProto.At
 idunno.AtProto.AtProtoHttpResult<TResult>.AtProtoHttpResult(TResult? result, System.Net.HttpStatusCode statusCode, System.Net.Http.Headers.HttpResponseHeaders? httpResponseHeaders, idunno.AtProto.AtErrorDetail? atErrorDetail = null, idunno.AtProto.RateLimit? rateLimit = null) -> void
 idunno.AtProto.AtProtoHttpResult<TResult>.EnsureSucceeded() -> idunno.AtProto.AtProtoHttpResult<TResult>!
 idunno.AtProto.AtProtoHttpResult<TResult>.HttpResponseHeaders.get -> System.Net.Http.Headers.HttpResponseHeaders?
+idunno.AtProto.AtProtoHttpResult<TResult>.MapError(System.Func<idunno.AtProto.AtErrorDetail?, idunno.AtProto.AtErrorDetail?>! mapFunc) -> void
 idunno.AtProto.AtProtoHttpResult<TResult>.RateLimit.get -> idunno.AtProto.RateLimit?
 idunno.AtProto.AtProtoHttpResult<TResult>.RateLimit.init -> void
 idunno.AtProto.AtProtoHttpResult<TResult>.Result.get -> TResult?

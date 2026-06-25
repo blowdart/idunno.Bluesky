@@ -38,6 +38,7 @@
   * `TokenRequired`
   * `UnresolvableDid`
   * `UnsupportedDomain`
+* Added `MapError` method to `AtProtoHttpResult<TResult>` which accepts a `Func<AtErrorDetail?, AtErrorDetail?>` to allow mapping for the generic `AtErrorDetail` type to a more specific error type.
 
 ### idunno.Bluesky
 
