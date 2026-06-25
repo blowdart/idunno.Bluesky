@@ -58,11 +58,8 @@ public partial class BlueskyServer
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        return new AtProtoHttpResult<RemoveMembersResponse>(
-            result: response.Result,
-            statusCode: response.StatusCode,
-            httpResponseHeaders: response.HttpResponseHeaders,
-            atErrorDetail: BlueskyError.Map(response.AtErrorDetail),
-            rateLimit: response.RateLimit);
+        response.MapError(BlueskyError.Map);
+
+        return response;
     }
 }

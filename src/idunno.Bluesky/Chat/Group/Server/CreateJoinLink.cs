@@ -51,7 +51,7 @@ public partial class BlueskyServer
 
         AtProtoHttpClient<CreateJoinLinkResponse> client = new(ChatProxy, loggerFactory);
 
-        AtProtoHttpResult<CreateJoinLinkResponse> result = await client.Post(
+        AtProtoHttpResult<CreateJoinLinkResponse> response = await client.Post(
             service,
             "/xrpc/chat.bsky.group.createJoinLink",
             new CreateJoinLinkRequest(conversationId, requireApproval, joinRule),
@@ -61,16 +61,8 @@ public partial class BlueskyServer
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        if (!result.Succeeded && result.AtErrorDetail is not null)
-        {
-            result = new AtProtoHttpResult<CreateJoinLinkResponse>(
-                result: result.Result,
-                statusCode: result.StatusCode,
-                httpResponseHeaders: result.HttpResponseHeaders,
-                atErrorDetail: BlueskyError.Map(result.AtErrorDetail),
-                rateLimit: result.RateLimit);
-        }
+        response.MapError(BlueskyError.Map);
 
-        return result;
+        return response;
     }
 }

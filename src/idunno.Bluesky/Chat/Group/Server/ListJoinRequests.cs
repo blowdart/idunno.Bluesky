@@ -68,6 +68,8 @@ public partial class BlueskyServer
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
+        response.MapError(BlueskyError.Map);
+
         // Flatten into collection
         PagedViewReadOnlyCollection<JoinRequestView> result;
         if (response.Result is not null)
@@ -83,7 +85,7 @@ public partial class BlueskyServer
             result: result,
             statusCode: response.StatusCode,
             httpResponseHeaders: response.HttpResponseHeaders,
-            atErrorDetail: BlueskyError.Map(response.AtErrorDetail),
+            atErrorDetail: response.AtErrorDetail,
             rateLimit: response.RateLimit);
     }
 }

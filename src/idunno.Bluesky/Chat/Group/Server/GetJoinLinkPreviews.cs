@@ -50,7 +50,7 @@ public partial class BlueskyServer
         string queryString = string.Join("&", codes.Select(code => $"codes={Uri.EscapeDataString(code)}"));
 
         AtProtoHttpClient<GetJoinLinkPreviewsResponse> client = new(ChatProxy, loggerFactory);
-        AtProtoHttpResult<GetJoinLinkPreviewsResponse> result = await client.Get(
+        AtProtoHttpResult<GetJoinLinkPreviewsResponse> response = await client.Get(
             service,
             $"/xrpc/chat.bsky.group.getJoinLinkPreviews?{queryString}",
             credentials: accessCredentials,
@@ -59,16 +59,8 @@ public partial class BlueskyServer
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        if (!result.Succeeded && result.AtErrorDetail is not null)
-        {
-            result = new AtProtoHttpResult<GetJoinLinkPreviewsResponse>(
-                result: result.Result,
-                statusCode: result.StatusCode,
-                httpResponseHeaders: result.HttpResponseHeaders,
-                atErrorDetail: BlueskyError.Map(result.AtErrorDetail),
-                rateLimit: result.RateLimit);
-        }
+        response.MapError(BlueskyError.Map);
 
-        return result;
+        return response;
     }
 }

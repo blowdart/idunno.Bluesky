@@ -52,7 +52,7 @@ public partial class BlueskyServer
 
         AtProtoHttpClient<EditGroupResponse> client = new(ChatProxy, loggerFactory);
 
-        AtProtoHttpResult<EditGroupResponse> result = await client.Post(
+        AtProtoHttpResult<EditGroupResponse> response = await client.Post(
             service,
             "/xrpc/chat.bsky.group.editGroup",
             new EditGroupRequest(conversationId, name),
@@ -62,16 +62,8 @@ public partial class BlueskyServer
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        if (!result.Succeeded && result.AtErrorDetail is not null)
-        {
-            result = new AtProtoHttpResult<EditGroupResponse>(
-                result: result.Result,
-                statusCode: result.StatusCode,
-                httpResponseHeaders: result.HttpResponseHeaders,
-                atErrorDetail: BlueskyError.Map(result.AtErrorDetail),
-                rateLimit: result.RateLimit);
-        }
+        response.MapError(BlueskyError.Map);
 
-        return result;
+        return response;
     }
 }

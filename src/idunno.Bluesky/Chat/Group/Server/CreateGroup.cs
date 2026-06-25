@@ -53,7 +53,7 @@ public partial class BlueskyServer
 
         AtProtoHttpClient<CreateGroupResponse> client = new(ChatProxy, loggerFactory);
 
-        AtProtoHttpResult<CreateGroupResponse> result = await client.Post(
+        AtProtoHttpResult<CreateGroupResponse> response = await client.Post(
             service,
             "/xrpc/chat.bsky.group.createGroup",
             new CreateGroupRequest(members, name),
@@ -63,16 +63,8 @@ public partial class BlueskyServer
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        if (!result.Succeeded && result.AtErrorDetail is not null)
-        {
-            result = new AtProtoHttpResult<CreateGroupResponse>(
-                result: result.Result,
-                statusCode: result.StatusCode,
-                httpResponseHeaders: result.HttpResponseHeaders,
-                atErrorDetail: BlueskyError.Map(result.AtErrorDetail),
-                rateLimit: result.RateLimit);
-        }
+        response.MapError(BlueskyError.Map);
 
-        return result;
+        return response;
     }
 }
