@@ -8,33 +8,33 @@ namespace idunno.Bluesky.Chat;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
-/// System message indicating a user was added to the group conversation.
+/// System message indicating a user joined the group conversation via a join link.
 /// </summary>
-public sealed record AddMemberSystemMessage : SystemMessage
+public sealed record MemberJoinSystemMessage : SystemMessage
 {
     [JsonConstructor]
-    internal AddMemberSystemMessage(ReferredUser member, string role, ReferredUser addedBy)
+    internal MemberJoinSystemMessage(ReferredUser member, string role, ReferredUser? approvedBy)
     {
         Member = member;
         Role = role;
-        AddedBy = addedBy;
+        ApprovedBy = approvedBy;
     }
 
     /// <summary>
-    /// Gets a reference to the actor added to a group chat.
+    /// Gets a current view of the member who joined.
     /// </summary>
     [JsonRequired]
     public ReferredUser Member { get; internal init; }
 
     /// <summary>
-    /// Gets the role the actor was added as. The role from <see cref="Member"/> will reflect the current data, not historical.
+    /// Role the user was added to the group with. The role from 'member' will reflect the current data, not historical.
     /// </summary>
     [JsonRequired]
     public string Role { get; internal init; }
 
     /// <summary>
-    /// Gets a reference to the actor who added <see cref="Member"/>
+    /// Gets who approved the request, if the join link was configured to require approval. <see langword="null" /> if approval was not required
     /// </summary>
-    [JsonRequired]
-    public ReferredUser AddedBy { get; internal init; }
+    public ReferredUser? ApprovedBy { get; internal init; }
+
 }

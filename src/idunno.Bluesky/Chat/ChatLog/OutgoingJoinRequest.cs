@@ -3,8 +3,6 @@
 
 using System.Text.Json.Serialization;
 
-using idunno.Bluesky.Chat.Actor;
-
 #pragma warning disable IDE0130
 namespace idunno.Bluesky.Chat;
 #pragma warning restore IDE0130

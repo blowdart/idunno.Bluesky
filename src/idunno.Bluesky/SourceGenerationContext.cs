@@ -10,7 +10,6 @@ using idunno.Bluesky.Actor.Model;
 using idunno.Bluesky.Bookmarks.Model;
 using idunno.Bluesky.Chat;
 using idunno.Bluesky.Chat.Group;
-using idunno.Bluesky.Chat.SystemMessages;
 using idunno.Bluesky.Drafts;
 using idunno.Bluesky.Drafts.Model;
 using idunno.Bluesky.Embed;
@@ -190,10 +189,21 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.Declaration), TypeInfoPropertyName = "ChatActorDeclaration")]
 [JsonSerializable(typeof(AtProtoRepositoryRecord<idunno.Bluesky.Chat.Actor.Declaration>), TypeInfoPropertyName = "ChatActorDeclarationRecord")]
 
-[JsonSerializable(typeof(ReferredUser))]
-[JsonSerializable(typeof(SystemMessageView))]
-[JsonSerializable(typeof(SystemMessageBase))]
-[JsonSerializable(typeof(AddMemberSystemMessage))]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.AddMemberSystemMessage), TypeInfoPropertyName = "ChatBSkyConvoAddMemberSystemMessage")]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.CreateJoinLinkSystemMessage), TypeInfoPropertyName = "ChatBSkyConvoCreateJoinLinkSystemMessage")]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.DisableJoinLinkSystemMessage), TypeInfoPropertyName = "ChatBSkyConvoDisableJoinLinkSystemMessage")]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.EditGroupSystemMessage), TypeInfoPropertyName = "ChatBSkyConvoEditGroupSystemMessage")]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.EditJoinLinkSystemMessage), TypeInfoPropertyName = "ChatBSkyConvoEditJoinLinkSystemMessage")]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.EnableJoinLinkSystemMessage), TypeInfoPropertyName = "ChatBSkyConvoEnableJoinLinkSystemMessage")]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.LockConversationSystemMessage), TypeInfoPropertyName = "ChatBSkyConvoLockConversationSystemMessage")]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.LockConversationPermanentlySystemMessage), TypeInfoPropertyName = "ChatBSkyConvoLockConversationPermanentlySystemMessage")]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.MemberJoinSystemMessage), TypeInfoPropertyName = "ChatBSkyConvoMemberJoinSystemMessage")]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.MemberLeaveSystemMessage), TypeInfoPropertyName = "ChatBSkyConvoMemberLeaveSystemMessage")]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.ReferredUser), TypeInfoPropertyName = "ChatBSkyConvoReferredUser")]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.RemoveMemberSystemMessage), TypeInfoPropertyName = "ChatBSkyConvoRemoveMemberSystemMessage")]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.SystemMessageView), TypeInfoPropertyName = "ChatBSkyConvoSystemMessageView")]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.SystemMessage))]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.UnlockConversationSystemMessage), TypeInfoPropertyName = "ChatBSkyConvoUnlockConversationSystemMessage")]
 
 [JsonSerializable(typeof(JoinLinkView))]
 

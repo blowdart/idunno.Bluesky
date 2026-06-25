@@ -102,6 +102,10 @@ idunno.Bluesky.Chat.Actor.ProfileViewBasic.Verification.init -> void
 idunno.Bluesky.Chat.Actor.ProfileViewBasic.Viewer.get -> idunno.Bluesky.Actor.ActorViewerState?
 idunno.Bluesky.Chat.Actor.ProfileViewBasic.Viewer.init -> void
 idunno.Bluesky.Chat.AddMember
+idunno.Bluesky.Chat.AddMemberSystemMessage
+idunno.Bluesky.Chat.AddMemberSystemMessage.AddedBy.get -> idunno.Bluesky.Chat.ReferredUser!
+idunno.Bluesky.Chat.AddMemberSystemMessage.Member.get -> idunno.Bluesky.Chat.ReferredUser!
+idunno.Bluesky.Chat.AddMemberSystemMessage.Role.get -> string!
 idunno.Bluesky.Chat.AddReaction
 idunno.Bluesky.Chat.AddReaction.Reaction.get -> idunno.Bluesky.Chat.ReactionView!
 idunno.Bluesky.Chat.AddReaction.RelatedProfiles.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Chat.Actor.ProfileViewBasic!>?
@@ -123,18 +127,25 @@ idunno.Bluesky.Chat.ConversationView.Members.get -> System.Collections.Generic.I
 idunno.Bluesky.Chat.ConversationView.Members.init -> void
 idunno.Bluesky.Chat.ConversationView.Status.get -> string?
 idunno.Bluesky.Chat.CreateJoinLink
+idunno.Bluesky.Chat.CreateJoinLinkSystemMessage
 idunno.Bluesky.Chat.CreateMessage.RelatedProfiles.get -> idunno.Bluesky.Chat.Actor.ProfileViewBasic?
 idunno.Bluesky.Chat.DeletedMessageView.Sender.get -> idunno.Bluesky.Chat.MessageViewSender!
 idunno.Bluesky.Chat.DeletedMessageView.Sender.init -> void
 idunno.Bluesky.Chat.DirectConversation
 idunno.Bluesky.Chat.DisableJoinLink
+idunno.Bluesky.Chat.DisableJoinLinkSystemMessage
 idunno.Bluesky.Chat.EditGroup
+idunno.Bluesky.Chat.EditGroupSystemMessage
+idunno.Bluesky.Chat.EditGroupSystemMessage.NewName.get -> string!
+idunno.Bluesky.Chat.EditGroupSystemMessage.OldName.get -> string!
 idunno.Bluesky.Chat.EditJoinLink
+idunno.Bluesky.Chat.EditJoinLinkSystemMessage
 idunno.Bluesky.Chat.Embed.JoinLink
 idunno.Bluesky.Chat.Embed.JoinLink.Code.get -> string!
 idunno.Bluesky.Chat.Embed.JoinLink.Code.init -> void
 idunno.Bluesky.Chat.Embed.JoinLink.JoinLink(string! code) -> void
 idunno.Bluesky.Chat.EnableJoinLink
+idunno.Bluesky.Chat.EnableJoinLinkSystemMessage
 idunno.Bluesky.Chat.Group.DisabledJoinLinkPreviewView
 idunno.Bluesky.Chat.Group.DisabledJoinLinkPreviewView.Code.get -> string!
 idunno.Bluesky.Chat.Group.DisabledJoinLinkPreviewView.Code.init -> void
@@ -233,10 +244,20 @@ idunno.Bluesky.Chat.IncomingJoinRequest
 idunno.Bluesky.Chat.IncomingJoinRequest.Member.get -> idunno.Bluesky.Chat.Actor.ProfileViewBasic!
 idunno.Bluesky.Chat.LockConversation
 idunno.Bluesky.Chat.LockConversationPermanently
+idunno.Bluesky.Chat.LockConversationPermanentlySystemMessage
+idunno.Bluesky.Chat.LockConversationPermanentlySystemMessage.LockedBy.get -> idunno.Bluesky.Chat.ReferredUser!
+idunno.Bluesky.Chat.LockConversationSystemMessage
+idunno.Bluesky.Chat.LockConversationSystemMessage.LockedBy.get -> idunno.Bluesky.Chat.ReferredUser!
 idunno.Bluesky.Chat.LogBase.ConversationId.get -> string!
 idunno.Bluesky.Chat.LogBase.LogBase(string! conversationId, string! revision) -> void
 idunno.Bluesky.Chat.MemberJoin
+idunno.Bluesky.Chat.MemberJoinSystemMessage
+idunno.Bluesky.Chat.MemberJoinSystemMessage.ApprovedBy.get -> idunno.Bluesky.Chat.ReferredUser?
+idunno.Bluesky.Chat.MemberJoinSystemMessage.Member.get -> idunno.Bluesky.Chat.ReferredUser!
+idunno.Bluesky.Chat.MemberJoinSystemMessage.Role.get -> string!
 idunno.Bluesky.Chat.MemberLeave
+idunno.Bluesky.Chat.MemberLeaveSystemMessage
+idunno.Bluesky.Chat.MemberLeaveSystemMessage.Member.get -> idunno.Bluesky.Chat.ReferredUser!
 idunno.Bluesky.Chat.MemberRole
 idunno.Bluesky.Chat.MessageRelatedProfilesLogBase
 idunno.Bluesky.Chat.MessageRelatedProfilesLogBase.RelatedProfiles.get -> idunno.Bluesky.Chat.Actor.ProfileViewBasic!
@@ -251,28 +272,26 @@ idunno.Bluesky.Chat.OutgoingJoinRequest
 idunno.Bluesky.Chat.ReadConversation
 idunno.Bluesky.Chat.ReadJoinRequests
 idunno.Bluesky.Chat.ReadMessage
+idunno.Bluesky.Chat.ReferredUser
+idunno.Bluesky.Chat.ReferredUser.Did.get -> idunno.AtProto.Did!
 idunno.Bluesky.Chat.RejectJoinRequest
 idunno.Bluesky.Chat.RejectJoinRequest.Member.get -> idunno.Bluesky.Chat.Actor.ProfileViewBasic!
 idunno.Bluesky.Chat.RemoveMember
+idunno.Bluesky.Chat.RemoveMemberSystemMessage
+idunno.Bluesky.Chat.RemoveMemberSystemMessage.Member.get -> idunno.Bluesky.Chat.ReferredUser!
+idunno.Bluesky.Chat.RemoveMemberSystemMessage.RemovedBy.get -> idunno.Bluesky.Chat.ReferredUser!
 idunno.Bluesky.Chat.RemoveReaction
 idunno.Bluesky.Chat.RemoveReaction.Reaction.get -> idunno.Bluesky.Chat.ReactionView!
 idunno.Bluesky.Chat.RemoveReaction.RelatedProfiles.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Chat.Actor.ProfileViewBasic!>?
-idunno.Bluesky.Chat.SystemMessages.AddMemberSystemMessage
-idunno.Bluesky.Chat.SystemMessages.AddMemberSystemMessage.AddedBy.get -> idunno.Bluesky.Chat.SystemMessages.ReferredUser!
-idunno.Bluesky.Chat.SystemMessages.AddMemberSystemMessage.AddedBy.init -> void
-idunno.Bluesky.Chat.SystemMessages.AddMemberSystemMessage.Member.get -> idunno.Bluesky.Chat.SystemMessages.ReferredUser!
-idunno.Bluesky.Chat.SystemMessages.AddMemberSystemMessage.Member.init -> void
-idunno.Bluesky.Chat.SystemMessages.AddMemberSystemMessage.Role.get -> string!
-idunno.Bluesky.Chat.SystemMessages.AddMemberSystemMessage.Role.init -> void
-idunno.Bluesky.Chat.SystemMessages.ReferredUser
-idunno.Bluesky.Chat.SystemMessages.ReferredUser.Did.get -> idunno.AtProto.Did!
-idunno.Bluesky.Chat.SystemMessages.ReferredUser.Did.init -> void
-idunno.Bluesky.Chat.SystemMessages.SystemMessageBase
+idunno.Bluesky.Chat.SystemMessage
+idunno.Bluesky.Chat.SystemMessage.ExtensionData.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>?
+idunno.Bluesky.Chat.SystemMessage.ExtensionData.set -> void
 idunno.Bluesky.Chat.SystemMessageView
-idunno.Bluesky.Chat.SystemMessageView.Data.get -> idunno.Bluesky.Chat.SystemMessages.SystemMessageBase!
-idunno.Bluesky.Chat.SystemMessageView.Data.init -> void
-idunno.Bluesky.Chat.SystemMessageView.SystemMessageView(idunno.Bluesky.Chat.SystemMessages.SystemMessageBase! data, string! id, string! revision, System.DateTimeOffset sentAt) -> void
+idunno.Bluesky.Chat.SystemMessageView.Data.get -> idunno.Bluesky.Chat.SystemMessage!
+idunno.Bluesky.Chat.SystemMessageView.SystemMessageView(idunno.Bluesky.Chat.SystemMessage! data, string! id, string! revision, System.DateTimeOffset sentAt) -> void
 idunno.Bluesky.Chat.UnlockConversation
+idunno.Bluesky.Chat.UnlockConversationSystemMessage
+idunno.Bluesky.Chat.UnlockConversationSystemMessage.UnlockedBy.get -> idunno.Bluesky.Chat.ReferredUser!
 idunno.Bluesky.Chat.UnmuteConversation
 idunno.Bluesky.Chat.UnreadConversationCounts
 idunno.Bluesky.Chat.UnreadConversationCounts.UnreadAcceptedConversations.get -> int

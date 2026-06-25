@@ -5,7 +5,9 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 
-namespace idunno.Bluesky.Chat.SystemMessages;
+#pragma warning disable IDE0130 // Namespace does not match folder structure
+namespace idunno.Bluesky.Chat;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// A pointer to the user a system message refers to.
@@ -27,5 +29,5 @@ public sealed record ReferredUser
     /// Gets the <see cref="AtProto.Did"/> of the user.
     /// </summary>
     [JsonRequired]
-    public Did Did { get; init; }
+    public Did Did { get; internal init; }
 }

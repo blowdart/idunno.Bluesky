@@ -1,9 +1,9 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using idunno.Bluesky.Chat.SystemMessages;
-
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Chat;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// Presents a view over a system message.
@@ -21,7 +21,7 @@ public sealed record SystemMessageView : MessageViewBase
     ///   Thrown when <paramref name="id" /> or <paramref name="revision"/> is <see langword="null"/> or whitespace.
     /// </exception>
     public SystemMessageView(
-        SystemMessageBase data,
+        SystemMessage data,
         string id,
         string revision,
         DateTimeOffset sentAt) : base(id, revision, sentAt)
@@ -36,5 +36,5 @@ public sealed record SystemMessageView : MessageViewBase
     /// <summary>
     /// Gets the system message data.
     /// </summary>
-    public SystemMessageBase Data { get; init; }
+    public SystemMessage Data { get; internal init; }
 }
