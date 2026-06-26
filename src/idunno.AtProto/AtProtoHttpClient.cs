@@ -54,9 +54,9 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
     public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived => _internalAtProtoHttpClient.OnResponseReceived;
 
     /// <summary>
-    /// Gets or sets a function called to map any error returned from an API call to a more specific error.
+    /// Gets the collections of functions called to map any error returned from an API call to a more specific error.
     /// </summary>
-    public Func<AtErrorDetail?, AtErrorDetail?> MapError { get; set; } = AtProtoError.Map;
+    public ICollection<Func<AtErrorDetail?, AtErrorDetail?>> MapError { get; } = [AtProtoError.Map];
 
     /// <summary>
     /// Gets the result of an AT Proto GET request, returning the raw response wrapped in an <see cref="AtProtoHttpResult{TResult}"/>.
@@ -92,7 +92,8 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrEmpty(endpoint);
 
-        _internalAtProtoHttpClient.MapError = MapError;
+        _internalAtProtoHttpClient.MapError.Clear();
+        _internalAtProtoHttpClient.MapError.AddRange(MapError);
 
         using (HttpClient internalHttpClient = new(
             handler: _defaultClientHandler,
@@ -148,7 +149,8 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
         ArgumentException.ThrowIfNullOrEmpty(service);
         ArgumentException.ThrowIfNullOrEmpty(endpoint);
 
-        _internalAtProtoHttpClient.MapError = MapError;
+        _internalAtProtoHttpClient.MapError.Clear();
+        _internalAtProtoHttpClient.MapError.AddRange(MapError);
 
         return await Get(
             service: new Uri(service),
@@ -197,7 +199,8 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrEmpty(endpoint);
 
-        _internalAtProtoHttpClient.MapError = MapError;
+        _internalAtProtoHttpClient.MapError.Clear();
+        _internalAtProtoHttpClient.MapError.AddRange(MapError);
 
         using (HttpClient internalHttpClient = new(
             handler: _defaultClientHandler,
@@ -254,7 +257,8 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
     {
-        _internalAtProtoHttpClient.MapError = MapError;
+        _internalAtProtoHttpClient.MapError.Clear();
+        _internalAtProtoHttpClient.MapError.AddRange(MapError);
 
         return await Post(
             service: new Uri(service),
@@ -506,9 +510,10 @@ public class AtProtoHttpClient<TResult> where TResult : class
     public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived { get; set; } = (responseMessage, cancellationToken) => Task.CompletedTask;
 
     /// <summary>
-    /// Gets or sets a function called to map any error returned from an API call to a more specific error.
+    /// Gets the collections of functions called to map any error returned from an API call to a more specific error.
     /// </summary>
-    public Func<AtErrorDetail?, AtErrorDetail?> MapError { get; set; } = AtProtoError.Map;
+    public ICollection<Func<AtErrorDetail?, AtErrorDetail?>> MapError { get; } = [AtProtoError.Map];
+
 
     /// <summary>
     /// Performs an unauthenticated GET request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
@@ -1144,10 +1149,15 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
         if (MapError is not null && errorDetail.Error is not null)
         {
-            AtErrorDetail? mappedErrorDetail = MapError(errorDetail);
-            if (mappedErrorDetail is not null)
+            foreach (Func<AtErrorDetail?, AtErrorDetail?> mapper in MapError)
             {
-                errorDetail = mappedErrorDetail;
+                AtErrorDetail? mappedErrorDetail = mapper(errorDetail);
+
+                if (mappedErrorDetail is not null && mappedErrorDetail.GetType() != typeof(AtErrorDetail))
+                {
+                    errorDetail = mappedErrorDetail;
+                    break;
+                }
             }
         }
 
