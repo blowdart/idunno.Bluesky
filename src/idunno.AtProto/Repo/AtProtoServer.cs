@@ -6,10 +6,6 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-using DnsClient.Protocol;
-
-using Duende.IdentityModel.OidcClient;
-
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
@@ -166,7 +162,7 @@ public static partial class AtProtoServer
                 result: new ApplyWritesResults(response.Result),
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
-                atErrorDetail: AtProtoError.Map(response.AtErrorDetail),
+                atErrorDetail: response.AtErrorDetail,
                 rateLimit: response.RateLimit);
         }
         else
@@ -175,7 +171,7 @@ public static partial class AtProtoServer
                 result: null,
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
-                atErrorDetail: AtProtoError.Map(response.AtErrorDetail),
+                atErrorDetail: response.AtErrorDetail,
                 rateLimit: response.RateLimit);
         }
     }
@@ -304,7 +300,7 @@ public static partial class AtProtoServer
                 result: new ApplyWritesResults(response.Result),
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
-                atErrorDetail: AtProtoError.Map(response.AtErrorDetail),
+                atErrorDetail: response.AtErrorDetail,
                 rateLimit: response.RateLimit);
         }
         else
@@ -313,7 +309,7 @@ public static partial class AtProtoServer
                 result: null,
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
-                atErrorDetail: AtProtoError.Map(response.AtErrorDetail),
+                atErrorDetail: response.AtErrorDetail,
                 rateLimit: response.RateLimit);
         }
     }
@@ -408,7 +404,7 @@ public static partial class AtProtoServer
                 result: new CreateRecordResult(response.Result),
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
-                atErrorDetail: AtProtoError.Map(response.AtErrorDetail),
+                atErrorDetail: response.AtErrorDetail,
                 rateLimit: response.RateLimit);
         }
         else
@@ -417,7 +413,7 @@ public static partial class AtProtoServer
                 result: null,
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
-                atErrorDetail: AtProtoError.Map(response.AtErrorDetail),
+                atErrorDetail: response.AtErrorDetail,
                 rateLimit: response.RateLimit);
         }
     }
@@ -525,7 +521,7 @@ public static partial class AtProtoServer
                 result: new CreateRecordResult(response.Result),
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
-                atErrorDetail: AtProtoError.Map(response.AtErrorDetail),
+                atErrorDetail: response.AtErrorDetail,
                 rateLimit: response.RateLimit);
         }
         else
@@ -534,7 +530,7 @@ public static partial class AtProtoServer
                 result: null,
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
-                atErrorDetail: AtProtoError.Map(response.AtErrorDetail),
+                atErrorDetail: response.AtErrorDetail,
                 rateLimit: response.RateLimit);
         }
     }
@@ -623,7 +619,7 @@ public static partial class AtProtoServer
                 response.Result.Commit,
                 response.StatusCode,
                 response.HttpResponseHeaders,
-                AtProtoError.Map(response.AtErrorDetail),
+                response.AtErrorDetail,
                 response.RateLimit);
         }
         else
@@ -632,7 +628,7 @@ public static partial class AtProtoServer
                 null,
                 response.StatusCode,
                 response.HttpResponseHeaders,
-                AtProtoError.Map(response.AtErrorDetail),
+                response.AtErrorDetail,
                 response.RateLimit);
         }
     }
@@ -803,7 +799,7 @@ public static partial class AtProtoServer
                 result: new PutRecordResult(response.Result),
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
-                atErrorDetail: AtProtoError.Map(response.AtErrorDetail),
+                atErrorDetail: response.AtErrorDetail,
                 rateLimit: response.RateLimit);
         }
         else
@@ -812,7 +808,7 @@ public static partial class AtProtoServer
                 result: null,
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
-                atErrorDetail: AtProtoError.Map(response.AtErrorDetail),
+                atErrorDetail: response.AtErrorDetail,
                 rateLimit: response.RateLimit);
         }
     }
@@ -988,7 +984,7 @@ public static partial class AtProtoServer
                 result: new PutRecordResult(response.Result),
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
-                atErrorDetail: AtProtoError.Map(response.AtErrorDetail),
+                atErrorDetail: response.AtErrorDetail,
                 rateLimit: response.RateLimit);
         }
         else
@@ -997,7 +993,7 @@ public static partial class AtProtoServer
                 result: null,
                 statusCode: response.StatusCode,
                 httpResponseHeaders: response.HttpResponseHeaders,
-                atErrorDetail: AtProtoError.Map(response.AtErrorDetail),
+                atErrorDetail: response.AtErrorDetail,
                 rateLimit: response.RateLimit);
         }
     }
@@ -1073,8 +1069,6 @@ public static partial class AtProtoServer
             httpClient,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        result.AtErrorDetail = AtProtoError.Map(result.AtErrorDetail);
 
         return result;
     }
@@ -1154,8 +1148,6 @@ public static partial class AtProtoServer
             jsonSerializerOptions: jsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        result.AtErrorDetail = AtProtoError.Map(result.AtErrorDetail);
-
         return result;
     }
 
@@ -1234,8 +1226,6 @@ public static partial class AtProtoServer
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        result.AtErrorDetail = AtProtoError.Map(result.AtErrorDetail);
 
         return result;
     }
@@ -1368,7 +1358,7 @@ public static partial class AtProtoServer
             result,
             response.StatusCode,
             response.HttpResponseHeaders,
-            AtProtoError.Map(response.AtErrorDetail),
+            response.AtErrorDetail,
             response.RateLimit);
     }
 
@@ -1507,7 +1497,7 @@ public static partial class AtProtoServer
             result,
             response.StatusCode,
             response.HttpResponseHeaders,
-            AtProtoError.Map(response.AtErrorDetail),
+            response.AtErrorDetail,
             response.RateLimit);
     }
 
@@ -1605,7 +1595,7 @@ public static partial class AtProtoServer
                 response.Result.Blob,
                 response.StatusCode,
                 response.HttpResponseHeaders,
-                AtProtoError.Map(response.AtErrorDetail),
+                response.AtErrorDetail,
                 response.RateLimit);
         }
         else
@@ -1614,7 +1604,7 @@ public static partial class AtProtoServer
                 null,
                 response.StatusCode,
                 response.HttpResponseHeaders,
-                AtProtoError.Map(response.AtErrorDetail),
+                response.AtErrorDetail,
                 response.RateLimit);
         }
     }
@@ -1657,8 +1647,6 @@ public static partial class AtProtoServer
             httpClient: httpClient,
             jsonSerializerOptions: SourceGenerationContext.Default.Options,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        result.AtErrorDetail = AtProtoError.Map(result.AtErrorDetail);
 
         return result;
     }

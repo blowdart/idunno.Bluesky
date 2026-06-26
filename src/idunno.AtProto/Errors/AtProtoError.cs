@@ -36,6 +36,7 @@ public abstract class AtProtoError : AtErrorDetail
         {
             AccountNotFound.ErrorTitle => new AccountNotFound(atErrorDetail),
             AccountTakedown.ErrorTitle => new AccountTakedown(atErrorDetail),
+            AuthenticationRequired.ErrorTitle => new AuthenticationRequired(atErrorDetail),
             AuthFactorTokenRequired.ErrorTitle => new AuthFactorTokenRequired(atErrorDetail),
             BadExpiration.ErrorTitle => new BadExpiration(atErrorDetail),
             BlobNotFound.ErrorTitle => new BlobNotFound(atErrorDetail),

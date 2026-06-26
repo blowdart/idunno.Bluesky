@@ -101,8 +101,6 @@ public static partial class AtProtoServer
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        response.MapError(AtProtoError.Map);
-
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedReadOnlyCollection<Label>>(

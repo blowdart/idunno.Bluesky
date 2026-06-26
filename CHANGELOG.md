@@ -9,6 +9,7 @@
 * Added error classes for known error messages.
   * `AccountNotFound`
   * `AccountTakedown`
+  * `AuthenticationRequired`
   * `AuthFactorTokenRequired`
   * `BadExpiration`
   * `BlobNotFound`
@@ -38,7 +39,8 @@
   * `TokenRequired`
   * `UnresolvableDid`
   * `UnsupportedDomain`
-* Added `MapError` method to `AtProtoHttpResult<TResult>` which accepts a `Func<AtErrorDetail?, AtErrorDetail?>` to allow mapping for the generic `AtErrorDetail` type to a more specific error type.
+* Added `MapError` property to `AtProtoHttpResult<TResult>` which can be set to a `Func<AtErrorDetail?, AtErrorDetail?>`
+  to allow mapping for the generic `AtErrorDetail` type to a more specific derived error type.
 
 ### idunno.Bluesky
 

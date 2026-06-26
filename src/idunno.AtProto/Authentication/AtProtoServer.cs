@@ -76,8 +76,6 @@ public static partial class AtProtoServer
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        createSessionResponse.MapError(AtProtoError.Map);
-
         if (createSessionResponse.Succeeded)
         {
             return new AtProtoHttpResult<Session>(
@@ -137,8 +135,6 @@ public static partial class AtProtoServer
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        response.MapError(AtProtoError.Map);
-
         return response;
     }
 
@@ -182,8 +178,6 @@ public static partial class AtProtoServer
             onCredentialsUpdated: credentialsUpdated,
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        refreshSessionResponse.MapError(AtProtoError.Map);
 
         if (!refreshSessionResponse.Succeeded)
         {
@@ -247,8 +241,6 @@ public static partial class AtProtoServer
             onCredentialsUpdated: credentialsUpdated,
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        getSessionResponse.MapError(AtProtoError.Map);
 
         if (getSessionResponse.Succeeded)
         {
@@ -341,8 +333,6 @@ public static partial class AtProtoServer
             onCredentialsUpdated: accessCredentialsUpdated,
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        result.MapError(AtProtoError.Map);
 
         if (result.Succeeded)
         {

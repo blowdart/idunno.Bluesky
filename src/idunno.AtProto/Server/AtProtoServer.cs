@@ -55,8 +55,6 @@ public static partial class AtProtoServer
             throw new ResponseParseException("Response missing required availableUserDomains array.");
         }
 
-        result.MapError(AtProtoError.Map);
-
         return result;
     }
 }

@@ -96,8 +96,6 @@ public static partial class AtProtoServer
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        result.MapError(AtProtoError.Map);
-
         return result;
     }
 }

@@ -37,7 +37,7 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
                         automaticDecompression: DecompressionMethods.All,
                         loggerFactory: loggerFactory);
 
-    private readonly AtProtoHttpClient<string> _internalClient = new(
+    private readonly AtProtoHttpClient<string> _internalAtProtoHttpClient = new(
             serviceProxy: serviceProxy,
             requestHeaders: null,
             loggerFactory: loggerFactory,
@@ -46,12 +46,17 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
     /// <summary>
     /// Gets or sets a function called when a request is about to be sent.
     /// </summary>
-    public Func<HttpRequestMessage, CancellationToken, Task> OnSendingRequest => _internalClient.OnSendingRequest;
+    public Func<HttpRequestMessage, CancellationToken, Task> OnSendingRequest => _internalAtProtoHttpClient.OnSendingRequest;
 
     /// <summary>
     /// Gets or sets a function called when a response has been received.
     /// </summary>
-    public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived => _internalClient.OnResponseReceived;
+    public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived => _internalAtProtoHttpClient.OnResponseReceived;
+
+    /// <summary>
+    /// Gets or sets a function called to map any error returned from an API call to a more specific error.
+    /// </summary>
+    public Func<AtErrorDetail?, AtErrorDetail?> MapError { get; set; } = AtProtoError.Map;
 
     /// <summary>
     /// Gets the result of an AT Proto GET request, returning the raw response wrapped in an <see cref="AtProtoHttpResult{TResult}"/>.
@@ -87,19 +92,21 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrEmpty(endpoint);
 
-        using (HttpClient internalClient = new(
+        _internalAtProtoHttpClient.MapError = MapError;
+
+        using (HttpClient internalHttpClient = new(
             handler: _defaultClientHandler,
             disposeHandler: true)
         {
             DefaultRequestVersion = HttpVersion.Version20,
-            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
+            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower,
         })
         {
-            return await _internalClient.Get(
+            return await _internalAtProtoHttpClient.Get(
                 service: service,
                 endpoint: endpoint,
                 credentials: credentials,
-                httpClient: httpClient ?? internalClient,
+                httpClient: httpClient ?? internalHttpClient,
                 onCredentialsUpdated: onCredentialsUpdated,
                 requestHeaders: requestHeaders,
                 subscribedLabelers: subscribedLabelers,
@@ -140,6 +147,8 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
     {
         ArgumentException.ThrowIfNullOrEmpty(service);
         ArgumentException.ThrowIfNullOrEmpty(endpoint);
+
+        _internalAtProtoHttpClient.MapError = MapError;
 
         return await Get(
             service: new Uri(service),
@@ -188,7 +197,9 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrEmpty(endpoint);
 
-        using (HttpClient internalClient = new(
+        _internalAtProtoHttpClient.MapError = MapError;
+
+        using (HttpClient internalHttpClient = new(
             handler: _defaultClientHandler,
             disposeHandler: true)
         {
@@ -196,12 +207,12 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
             DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
         })
         {
-            return await _internalClient.Post(
+            return await _internalAtProtoHttpClient.Post(
                 service: service,
                 endpoint: endpoint,
                 record: body,
                 credentials: credentials,
-                httpClient: httpClient ?? internalClient,
+                httpClient: httpClient ?? internalHttpClient,
                 onCredentialsUpdated: onCredentialsUpdated,
                 requestHeaders: requestHeaders,
                 subscribedLabelers: subscribedLabelers,
@@ -243,6 +254,8 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
     {
+        _internalAtProtoHttpClient.MapError = MapError;
+
         return await Post(
             service: new Uri(service),
             endpoint: endpoint,
@@ -305,7 +318,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
         meterFactory: null)
     {
     }
-
 
     /// <summary>
     /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
@@ -492,6 +504,11 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// Gets or sets a function called when a response has been received.
     /// </summary>
     public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived { get; set; } = (responseMessage, cancellationToken) => Task.CompletedTask;
+
+    /// <summary>
+    /// Gets or sets a function called to map any error returned from an API call to a more specific error.
+    /// </summary>
+    public Func<AtErrorDetail?, AtErrorDetail?> MapError { get; set; } = AtProtoError.Map;
 
     /// <summary>
     /// Performs an unauthenticated GET request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
@@ -1087,12 +1104,12 @@ public class AtProtoHttpClient<TResult> where TResult : class
     }
 
     [SuppressMessage("Major Code Smell", "S108:Nested blocks of code should not be left empty", Justification = "Catching unexpected exceptions in error handling, so as to return as much as can be returned.")]
-    private static async Task<AtErrorDetail> ExtractErrorDetailFromResponse(
+    private async Task<AtErrorDetail> ExtractErrorDetailFromResponse(
         HttpRequestMessage request,
         HttpResponseMessage responseMessage,
         CancellationToken cancellationToken = default)
     {
-        AtErrorDetail? errorDetail = new()
+        AtErrorDetail errorDetail = new()
         {
             Instance = request.RequestUri,
             HttpMethod = request.Method
@@ -1123,6 +1140,15 @@ public class AtProtoHttpClient<TResult> where TResult : class
             catch (NotSupportedException) { }
             catch (JsonException) { }
             catch (ArgumentNullException) { }
+        }
+
+        if (MapError is not null && errorDetail.Error is not null)
+        {
+            AtErrorDetail? mappedErrorDetail = MapError(errorDetail);
+            if (mappedErrorDetail is not null)
+            {
+                errorDetail = mappedErrorDetail;
+            }
         }
 
         return errorDetail;
@@ -1486,7 +1512,10 @@ public class AtProtoHttpClient<TResult> where TResult : class
                                 new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint),
                                 new KeyValuePair<string, object?>("http_method", httpMethod.ToString()));
 
-                            AtErrorDetail atErrorDetail = await ExtractErrorDetailFromResponse(httpRequestMessage, httpResponseMessage, cancellationToken).ConfigureAwait(false);
+                            AtErrorDetail atErrorDetail = await ExtractErrorDetailFromResponse(
+                                httpRequestMessage,
+                                httpResponseMessage,
+                                cancellationToken).ConfigureAwait(false);
 
                             // Retry if the error returned is there has been a DPoP nonce change and we're sending a DPoP authenticated request.
                             // BadRequest comes from an authorization server, Unauthorized comes from a resource server (the PDS).
