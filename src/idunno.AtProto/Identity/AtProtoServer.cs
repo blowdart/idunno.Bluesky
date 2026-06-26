@@ -46,6 +46,7 @@ public static partial class AtProtoServer
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="handle"/> is not a valid DNS name.</exception>"
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Catching all for logging purposes.")]
     public static async Task<Did?> ResolveHandle(
         Handle handle,
         HttpClient httpClient,
@@ -82,17 +83,25 @@ public static partial class AtProtoServer
 
             Logger.ResolvingHandleViaDNS(logger, handle, didTxtRecordHost);
 
-            IDnsQueryResponse dnsLookupResult = await lookupClient.QueryAsync(didTxtRecordHost, QueryType.TXT, QueryClass.IN, cancellationToken).ConfigureAwait(false);
-            if (!cancellationToken.IsCancellationRequested && !dnsLookupResult.HasError)
+            try
             {
-                foreach (TxtRecord? textRecord in dnsLookupResult.Answers.TxtRecords())
+
+                IDnsQueryResponse dnsLookupResult = await lookupClient.QueryAsync(didTxtRecordHost, QueryType.TXT, QueryClass.IN, cancellationToken).ConfigureAwait(false);
+                if (!cancellationToken.IsCancellationRequested && !dnsLookupResult.HasError)
                 {
-                    foreach (string? text in textRecord.Text.Where(t => t.StartsWith(didTextRecordPrefix, StringComparison.InvariantCulture)))
+                    foreach (TxtRecord? textRecord in dnsLookupResult.Answers.TxtRecords())
                     {
-                        did = new Did(text.Substring(didTextRecordPrefix.Length));
-                        Logger.ResolvedHandleToDidViaDNS(logger, handle, did);
+                        foreach (string? text in textRecord.Text.Where(t => t.StartsWith(didTextRecordPrefix, StringComparison.InvariantCulture)))
+                        {
+                            did = new Did(text.Substring(didTextRecordPrefix.Length));
+                            Logger.ResolvedHandleToDidViaDNS(logger, handle, did);
+                        }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                Logger.ErrorResolvingHandleViaDNS(logger, handle, ex);
             }
 
             if (!cancellationToken.IsCancellationRequested && did is null)
@@ -102,33 +111,40 @@ public static partial class AtProtoServer
 
                 Logger.ResolvingHandleViaHttp(logger, handle, didUri);
 
-                using (HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, didUri) { Headers = { Accept = { new("text/plain") } } })
+                try
                 {
-                    using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false))
+                    using (HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, didUri) { Headers = { Accept = { new("text/plain") } } })
                     {
-                        if (httpResponseMessage.IsSuccessStatusCode)
+                        using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false))
                         {
-                            string lookupResult = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
-                            Logger.HttpHandleResolutionReturned(logger, handle, lookupResult);
-
-                            if (!string.IsNullOrEmpty(lookupResult))
+                            if (httpResponseMessage.IsSuccessStatusCode)
                             {
-                                if (Did.TryParse(lookupResult, out did))
+                                string lookupResult = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+                                Logger.HttpHandleResolutionReturned(logger, handle, lookupResult);
+
+                                if (!string.IsNullOrEmpty(lookupResult))
                                 {
-                                    Logger.ResolvedHandleToDidViaHttp(logger, handle, did);
-                                }
-                                else
-                                {
-                                    Logger.HttpHandleResolutionParseFailed(logger, handle, didUri);
+                                    if (Did.TryParse(lookupResult, out did))
+                                    {
+                                        Logger.ResolvedHandleToDidViaHttp(logger, handle, did);
+                                    }
+                                    else
+                                    {
+                                        Logger.HttpHandleResolutionParseFailed(logger, handle, didUri);
+                                    }
                                 }
                             }
-                        }
-                        else
-                        {
-                            Logger.HttpHandleResolutionRequestFailed(logger, handle, didUri, httpResponseMessage.StatusCode);
+                            else
+                            {
+                                Logger.HttpHandleResolutionRequestFailed(logger, handle, didUri, httpResponseMessage.StatusCode);
+                            }
                         }
                     }
+                }
+                catch (Exception ex)
+                {
+                    Logger.ErrorResolvingHandleViaHttp(logger, handle, didUri, ex);
                 }
             }
         }

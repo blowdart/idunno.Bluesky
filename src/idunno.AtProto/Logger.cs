@@ -118,6 +118,12 @@ internal static partial class Logger
     [LoggerMessage(52, LogLevel.Debug, "ResolveHandle resolved {handle} to {did}")]
     internal static partial void ResolveHandleToDid(ILogger logger, string handle, Did did);
 
+    [LoggerMessage(53, LogLevel.Debug, "ResolveHandle DNS lookup for {handle} threw an exception")]
+    internal static partial void ErrorResolvingHandleViaDNS(ILogger logger, Handle handle, Exception ex);
+
+    [LoggerMessage(54, LogLevel.Debug, "ResolveHandle HTTP request for {handle} to {didUri} threw an exception")]
+    internal static partial void ErrorResolvingHandleViaHttp(ILogger logger, Handle handle, Uri didUri, Exception ex);
+
     [LoggerMessage(60, LogLevel.Debug, "ResolveDidDocument called for {did}")]
     internal static partial void ResolveDidDocumentCalled(ILogger logger, Did did);
 
