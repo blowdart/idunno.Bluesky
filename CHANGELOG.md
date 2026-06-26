@@ -45,6 +45,30 @@
 ### idunno.Bluesky
 
 * Added error classes for known error messages.
+  * `AccountSuspended`
+  * `BlockedActor`
+  * `BlockedSubject`
+  * `BlueskyError`
+  * `ConversationLocked`
+  * `EnabledJoinLinkAlreadyExists`
+  * `FollowRequired`
+  * `InsufficientRole`
+  * `InvalidCode`
+  * `InvalidConversation`
+  * `LinkDisabled`
+  * `MemberLimitReached`
+  * `MessageDeleteNotAllowed`
+  * `MessagesDisabled`
+  * `NewAccountCannotCreateGroup`
+  * `NoJoinLink`
+  * `NotFollowedBySender`
+  * `ReactionInvalidValue`
+  * `ReactionLimitReached`
+  * `ReactionMessageDeleted`
+  * `ReactionNotAllowed`
+  * `RecipientNotFound`
+  * `UserForbidsGroups`
+  * `UserKicked`
 * Added `EmbeddedGallery` and `EmbeddedGalleryImage` types to support the new [image gallery format](https://github.com/bluesky-social/atproto/pull/4827).
   Note that `EmbeddedGalleryImage` requires an aspect ratio, unlike the `EmbeddedImage` type.
 * Added new overloads to `BlueskyAgent.Post` to support `EmbeddedGallery` content.
