@@ -93,7 +93,7 @@
 
 * Corrected case of `AllowSubscriptions` property on `ActivitySubscriptions`.
 
-## 2.0.0 - 2026-02-06
+## 2.0.0 - 2026-06-02
 
 ## Added
 
