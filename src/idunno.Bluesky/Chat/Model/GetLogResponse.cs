@@ -18,9 +18,9 @@ internal sealed record GetLogResponse
     }
 
     [JsonInclude]
-    public string? Cursor { get; init; }
+    public string? Cursor { get; set; }
 
     [JsonInclude]
     [JsonRequired]
-    public ICollection<LogBase> Logs { get; init; }
+    public ICollection<LogBase> Logs { get; set; }
 }

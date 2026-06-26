@@ -12,17 +12,11 @@ namespace idunno.Bluesky.Chat;
 /// <summary>
 /// A log entry indicating a message was created in a chat.
 /// </summary>
-public sealed record CreateMessage : MessageLogBase
+public sealed record CreateMessage : MessageRelatedProfilesLogBase
 {
     [JsonConstructor]
-    internal CreateMessage(string conversationId, string revision, MessageViewBase message, ProfileViewBasic? relatedProfiles) : base(conversationId, revision, message)
+    internal CreateMessage(string conversationId, string revision, MessageViewBase message, ICollection<ProfileViewBasic> relatedProfiles)
+        : base(conversationId, revision, message, relatedProfiles)
     {
-        RelatedProfiles = relatedProfiles;
     }
-
-    /// <summary>
-    /// Gets Profiles referred to in the message view. This isn't required for compatibility, because it was added later, but should generally be present.
-    /// </summary>
-    [JsonInclude]
-    public ProfileViewBasic? RelatedProfiles { get; set; }
 }

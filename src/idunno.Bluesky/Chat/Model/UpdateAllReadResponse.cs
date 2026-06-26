@@ -12,5 +12,5 @@ internal record UpdateAllReadResponse
 
     [JsonInclude]
     [JsonRequired]
-    public ulong UpdatedCount { get; init; }
+    public ulong UpdatedCount { get; set; }
 }

@@ -16,7 +16,7 @@ namespace idunno.Bluesky.Chat;
 public sealed record AddMember : MessageRelatedProfilesLogBase
 {
     [JsonConstructor]
-    internal AddMember(string conversationId, string revision, MessageViewBase message, ProfileViewBasic relatedProfiles)
+    internal AddMember(string conversationId, string revision, MessageViewBase message, ICollection<ProfileViewBasic> relatedProfiles)
         : base(conversationId, revision, message, relatedProfiles)
     {
     }

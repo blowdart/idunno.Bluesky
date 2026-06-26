@@ -11,9 +11,9 @@ namespace idunno.Bluesky.Chat.Model;
 internal sealed class GetMessagesResponse(string? cursor, ICollection<MessageViewBase> messages)
 {
     [JsonInclude]
-    public string? Cursor { get; init; } = cursor;
+    public string? Cursor { get; set; } = cursor;
 
     [JsonInclude]
     [JsonRequired]
-    public ICollection<MessageViewBase> Messages { get; init; } = [.. messages];
+    public ICollection<MessageViewBase> Messages { get; set; } = [.. messages];
 }

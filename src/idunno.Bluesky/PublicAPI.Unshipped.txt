@@ -112,8 +112,6 @@ idunno.Bluesky.Chat.AddMemberSystemMessage.Role.set -> void
 idunno.Bluesky.Chat.AddReaction
 idunno.Bluesky.Chat.AddReaction.Reaction.get -> idunno.Bluesky.Chat.ReactionView!
 idunno.Bluesky.Chat.AddReaction.Reaction.set -> void
-idunno.Bluesky.Chat.AddReaction.RelatedProfiles.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Chat.Actor.ProfileViewBasic!>?
-idunno.Bluesky.Chat.AddReaction.RelatedProfiles.set -> void
 idunno.Bluesky.Chat.ApproveJoinRequest
 idunno.Bluesky.Chat.ApproveJoinRequest.Member.get -> idunno.Bluesky.Chat.Actor.ProfileViewBasic!
 idunno.Bluesky.Chat.ApproveJoinRequest.Member.set -> void
@@ -134,8 +132,6 @@ idunno.Bluesky.Chat.ConversationView.Members.init -> void
 idunno.Bluesky.Chat.ConversationView.Status.get -> string?
 idunno.Bluesky.Chat.CreateJoinLink
 idunno.Bluesky.Chat.CreateJoinLinkSystemMessage
-idunno.Bluesky.Chat.CreateMessage.RelatedProfiles.get -> idunno.Bluesky.Chat.Actor.ProfileViewBasic?
-idunno.Bluesky.Chat.CreateMessage.RelatedProfiles.set -> void
 idunno.Bluesky.Chat.DeletedMessageView.Sender.get -> idunno.Bluesky.Chat.MessageViewSender!
 idunno.Bluesky.Chat.DeletedMessageView.Sender.init -> void
 idunno.Bluesky.Chat.DirectConversation
@@ -279,7 +275,7 @@ idunno.Bluesky.Chat.MemberLeaveSystemMessage.Member.set -> void
 idunno.Bluesky.Chat.MemberRole
 idunno.Bluesky.Chat.MessageLogBase.Message.set -> void
 idunno.Bluesky.Chat.MessageRelatedProfilesLogBase
-idunno.Bluesky.Chat.MessageRelatedProfilesLogBase.RelatedProfiles.get -> idunno.Bluesky.Chat.Actor.ProfileViewBasic!
+idunno.Bluesky.Chat.MessageRelatedProfilesLogBase.RelatedProfiles.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Chat.Actor.ProfileViewBasic!>!
 idunno.Bluesky.Chat.MessageRelatedProfilesLogBase.RelatedProfiles.set -> void
 idunno.Bluesky.Chat.MessageTypeDiscriminators
 idunno.Bluesky.Chat.MessageView.Sender.get -> idunno.Bluesky.Chat.MessageViewSender!
@@ -287,6 +283,7 @@ idunno.Bluesky.Chat.MessageView.Sender.init -> void
 idunno.Bluesky.Chat.Model.AcceptConversationResponse
 idunno.Bluesky.Chat.Model.AcceptConversationResponse.AcceptConversationResponse(string? revision) -> void
 idunno.Bluesky.Chat.Model.AcceptConversationResponse.Revision.get -> string?
+idunno.Bluesky.Chat.Model.AcceptConversationResponse.Revision.set -> void
 idunno.Bluesky.Chat.MuteConversation
 idunno.Bluesky.Chat.OutgoingJoinRequest
 idunno.Bluesky.Chat.ReadConversation
@@ -307,8 +304,6 @@ idunno.Bluesky.Chat.RemoveMemberSystemMessage.RemovedBy.set -> void
 idunno.Bluesky.Chat.RemoveReaction
 idunno.Bluesky.Chat.RemoveReaction.Reaction.get -> idunno.Bluesky.Chat.ReactionView!
 idunno.Bluesky.Chat.RemoveReaction.Reaction.set -> void
-idunno.Bluesky.Chat.RemoveReaction.RelatedProfiles.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Chat.Actor.ProfileViewBasic!>?
-idunno.Bluesky.Chat.RemoveReaction.RelatedProfiles.set -> void
 idunno.Bluesky.Chat.SystemMessage
 idunno.Bluesky.Chat.SystemMessage.ExtensionData.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>?
 idunno.Bluesky.Chat.SystemMessage.ExtensionData.set -> void

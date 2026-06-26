@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using idunno.Bluesky.Chat.Actor;
@@ -20,7 +21,7 @@ public abstract record MessageRelatedProfilesLogBase : MessageLogBase
     /// <param name="conversationId">The conversation identifier.</param>
     /// <param name="revision">The conversation revision.</param>
     /// <param name="message">A <see cref="MessageViewBase">view</see> over the message the log entry refers to.</param>
-    private protected MessageRelatedProfilesLogBase(string conversationId, string revision, MessageViewBase message, ProfileViewBasic relatedProfiles)
+    private protected MessageRelatedProfilesLogBase(string conversationId, string revision, MessageViewBase message, ICollection<ProfileViewBasic> relatedProfiles)
         : base(conversationId, revision, message)
     {
         RelatedProfiles = relatedProfiles;
@@ -30,5 +31,6 @@ public abstract record MessageRelatedProfilesLogBase : MessageLogBase
     /// Gets Profiles referred to in the system message.
     /// </summary>
     [JsonRequired]
-    public ProfileViewBasic RelatedProfiles { get; set; }
+    [SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Setter needed for deserialization.")]
+    public ICollection<ProfileViewBasic> RelatedProfiles { get; set; }
 }

@@ -15,7 +15,7 @@ namespace idunno.Bluesky.Chat;
 public sealed record LockConversation : MessageRelatedProfilesLogBase
 {
     [JsonConstructor]
-    internal LockConversation(string conversationId, string revision, MessageViewBase message, ProfileViewBasic relatedProfiles)
+    internal LockConversation(string conversationId, string revision, MessageViewBase message, ICollection<ProfileViewBasic> relatedProfiles)
         : base(conversationId, revision, message, relatedProfiles)
     {
     }

@@ -18,5 +18,5 @@ internal sealed record ConversationResponse
     [JsonInclude]
     [JsonRequired]
     [JsonPropertyName("convo")]
-    public ConversationView Conversation { get; init; }
+    public ConversationView Conversation { get; set; }
 }

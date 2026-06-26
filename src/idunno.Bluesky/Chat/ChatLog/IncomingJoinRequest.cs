@@ -27,7 +27,7 @@ public sealed record IncomingJoinRequest : LogBase
     }
 
     /// <summary>
-    /// Gets the orospective member who requested to join.
+    /// Gets the prospective member who requested to join.
     /// </summary>
     [JsonRequired]
     public ProfileViewBasic Member { get; set; }

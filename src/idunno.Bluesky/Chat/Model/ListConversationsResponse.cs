@@ -22,5 +22,5 @@ internal sealed record ListConversationsResponse
     public ICollection<ConversationView> Conversations { get; init; }
 
     [JsonInclude]
-    public string? Cursor { get; init; }
+    public string? Cursor { get; set; }
 }

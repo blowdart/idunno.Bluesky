@@ -15,5 +15,5 @@ internal record AddReactionResponse
 
     [JsonInclude]
     [JsonRequired]
-    public MessageView Message { get; init; }
+    public MessageView Message { get; set; }
 }
