@@ -76,6 +76,8 @@ public static partial class AtProtoServer
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
+        createSessionResponse.MapError(AtProtoError.Map);
+
         if (createSessionResponse.Succeeded)
         {
             return new AtProtoHttpResult<Session>(
@@ -127,7 +129,7 @@ public static partial class AtProtoServer
 
         AtProtoHttpClient<EmptyResponse> request = new(loggerFactory);
 
-        AtProtoHttpResult<EmptyResponse> result = await request.Post(
+        AtProtoHttpResult<EmptyResponse> response = await request.Post(
             service: refreshCredential.Service,
             endpoint: DeleteSessionEndpoint,
             credentials: refreshCredential,
@@ -135,7 +137,9 @@ public static partial class AtProtoServer
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        return result;
+        response.MapError(AtProtoError.Map);
+
+        return response;
     }
 
     /// <summary>
@@ -178,6 +182,8 @@ public static partial class AtProtoServer
             onCredentialsUpdated: credentialsUpdated,
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        refreshSessionResponse.MapError(AtProtoError.Map);
 
         if (!refreshSessionResponse.Succeeded)
         {
@@ -241,6 +247,8 @@ public static partial class AtProtoServer
             onCredentialsUpdated: credentialsUpdated,
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        getSessionResponse.MapError(AtProtoError.Map);
 
         if (getSessionResponse.Succeeded)
         {
@@ -333,6 +341,8 @@ public static partial class AtProtoServer
             onCredentialsUpdated: accessCredentialsUpdated,
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        result.MapError(AtProtoError.Map);
 
         if (result.Succeeded)
         {

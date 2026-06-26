@@ -202,7 +202,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(idunno.Bluesky.Chat.ReferredUser), TypeInfoPropertyName = "ChatBSkyConvoReferredUser")]
 [JsonSerializable(typeof(idunno.Bluesky.Chat.RemoveMemberSystemMessage), TypeInfoPropertyName = "ChatBSkyConvoRemoveMemberSystemMessage")]
 [JsonSerializable(typeof(idunno.Bluesky.Chat.SystemMessageView), TypeInfoPropertyName = "ChatBSkyConvoSystemMessageView")]
-[JsonSerializable(typeof(idunno.Bluesky.Chat.SystemMessage))]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.SystemMessage), TypeInfoPropertyName = "ChatBSkyConvoSystemMessage")]
 [JsonSerializable(typeof(idunno.Bluesky.Chat.UnlockConversationSystemMessage), TypeInfoPropertyName = "ChatBSkyConvoUnlockConversationSystemMessage")]
 
 [JsonSerializable(typeof(JoinLinkView))]

@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Text;
 
 using idunno.AtProto.Authentication;
+using idunno.AtProto.Authentication.Models;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Labels.Models;
 
@@ -99,6 +100,8 @@ public static partial class AtProtoServer
             onCredentialsUpdated: onCredentialsUpdated,
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        response.MapError(AtProtoError.Map);
 
         if (response.Succeeded)
         {

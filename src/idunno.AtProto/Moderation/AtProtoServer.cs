@@ -86,7 +86,7 @@ public static partial class AtProtoServer
 
         AtProtoHttpClient<ModerationReport> client = new(atProtoProxy, loggerFactory);
 
-        return await client.Post(
+        AtProtoHttpResult<ModerationReport> result = await client.Post(
             service: service,
             endpoint: ModerationCreateReportEndpoint,
             record: request,
@@ -95,5 +95,9 @@ public static partial class AtProtoServer
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        result.MapError(AtProtoError.Map);
+
+        return result;
     }
 }
