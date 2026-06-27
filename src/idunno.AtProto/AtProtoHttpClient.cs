@@ -56,7 +56,7 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
     /// <summary>
     /// Gets the collections of functions called to map any error returned from an API call to a more specific error.
     /// </summary>
-    public ICollection<Func<AtErrorDetail?, AtErrorDetail?>> MapError { get; } = [AtProtoError.Map];
+    public IList<Func<AtErrorDetail?, AtErrorDetail?>> MapError { get; } = [AtProtoError.Map];
 
     /// <summary>
     /// Gets the result of an AT Proto GET request, returning the raw response wrapped in an <see cref="AtProtoHttpResult{TResult}"/>.
@@ -307,7 +307,12 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <summary>
     /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
     /// </summary>
-    internal AtProtoHttpClient() : this(loggerFactory: null)
+    public AtProtoHttpClient()
+        : this(
+              serviceProxy: null,
+              requestHeaders: null,
+              loggerFactory: null,
+              meterFactory: null)
     {
     }
 
@@ -315,11 +320,12 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
     /// </summary>
     /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
-    internal AtProtoHttpClient(ILoggerFactory? loggerFactory) : this(
-        serviceProxy: null,
-        requestHeaders: null,
-        loggerFactory: loggerFactory,
-        meterFactory: null)
+    public AtProtoHttpClient(ILoggerFactory? loggerFactory)
+        : this(
+            serviceProxy: null,
+            requestHeaders: null,
+            loggerFactory: loggerFactory,
+            meterFactory: null)
     {
     }
 
@@ -512,8 +518,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <summary>
     /// Gets the collections of functions called to map any error returned from an API call to a more specific error.
     /// </summary>
-    public ICollection<Func<AtErrorDetail?, AtErrorDetail?>> MapError { get; } = [AtProtoError.Map];
-
+    public IList<Func<AtErrorDetail?, AtErrorDetail?>> MapError { get; } = [AtProtoError.Map];
 
     /// <summary>
     /// Performs an unauthenticated GET request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
