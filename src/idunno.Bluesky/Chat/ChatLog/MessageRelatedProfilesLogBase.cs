@@ -21,6 +21,7 @@ public abstract record MessageRelatedProfilesLogBase : MessageLogBase
     /// <param name="conversationId">The conversation identifier.</param>
     /// <param name="revision">The conversation revision.</param>
     /// <param name="message">A <see cref="MessageViewBase">view</see> over the message the log entry refers to.</param>
+    /// <param name="relatedProfiles"></param>
     private protected MessageRelatedProfilesLogBase(string conversationId, string revision, MessageViewBase message, ICollection<ProfileViewBasic> relatedProfiles)
         : base(conversationId, revision, message)
     {

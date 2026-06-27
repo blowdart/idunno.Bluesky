@@ -15,7 +15,7 @@ public sealed record AcceptConversation : LogBase
     /// <summary>
     /// Constructs a new instance of <see cref="AcceptConversation"/>.
     /// </summary>
-    /// <param name="id">The conversation identifier.</param>
+    /// <param name="conversationId"></param>
     /// <param name="revision">The conversation revision.</param>
     [JsonConstructor]
     internal AcceptConversation(string conversationId, string revision) : base(conversationId, revision)

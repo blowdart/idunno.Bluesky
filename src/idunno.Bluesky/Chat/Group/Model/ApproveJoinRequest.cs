@@ -23,7 +23,7 @@ internal record ApproveJoinRequest
     [JsonRequired]
     [JsonPropertyName("convoId")]
     public string ConversationId { get; init; }
-    
+
     /// <summary>
     /// Gets the <see cref="Did"/> of the member to add to the conversation.
     /// </summary>

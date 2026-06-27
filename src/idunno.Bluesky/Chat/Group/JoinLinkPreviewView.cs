@@ -54,7 +54,7 @@ public sealed record JoinLinkPreviewView : View
     /// </summary>
     [JsonRequired]
     public string Name { get; init; }
-    
+
     /// <summary>
     /// Gets the owner of the group conversation.
     /// </summary>
@@ -72,7 +72,7 @@ public sealed record JoinLinkPreviewView : View
     /// </summary>
     [JsonRequired]
     public int MemberLimit { get; init; }
-    
+
     /// <summary>
     /// Gets a flag indicating whether approval is required to join the group conversation.
     /// </summary>

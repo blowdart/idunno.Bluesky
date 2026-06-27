@@ -19,7 +19,7 @@ public sealed record WithdrawIncomingJoinRequest : LogBase
     /// </summary>
     /// <param name="conversationId">The conversation identifier.</param>
     /// <param name="revision">The conversation revision.</param>
-    /// <param name="message">A <see cref="MessageViewBase">view</see> over the message the log entry refers to.</param>
+    /// <param name="member"></param>
     [JsonConstructor]
     internal WithdrawIncomingJoinRequest(string conversationId, string revision, ProfileViewBasic member) : base(conversationId, revision)
     {

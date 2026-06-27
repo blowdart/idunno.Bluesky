@@ -17,7 +17,6 @@ public sealed record OutgoingJoinRequest : LogBase
     /// </summary>
     /// <param name="conversationId">The conversation identifier.</param>
     /// <param name="revision">The conversation revision.</param>
-    /// <param name="message">A <see cref="MessageViewBase">view</see> over the message the log entry refers to.</param>
     [JsonConstructor]
     internal OutgoingJoinRequest(string conversationId, string revision) : base(conversationId, revision)
     {
