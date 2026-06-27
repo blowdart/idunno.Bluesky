@@ -49,7 +49,6 @@
   * `AccountSuspended`
   * `BlockedActor`
   * `BlockedSubject`
-  * `BlueskyError`
   * `ConversationLocked`
   * `EnabledJoinLinkAlreadyExists`
   * `FollowRequired`
@@ -80,6 +79,22 @@
   If you use the `+` operator to add more than 4 `EmbeddedImage` items to a `PostBuilder`, it will attempt to convert them to `EmbeddedGallery` format. Your `EmbeddedImage`
   instances must have an aspect ratio for this to work, otherwise an exception will be thrown.
   You can use [Magick.NET](https://github.com/dlemstra/Magick.NET), [ImageSharp](https://github.com/SixLabors/ImageSharp) or other image processing libraries to calculate the aspect ratio of your images if needed.
+* Added support for group conversation APIs, including
+  * `AddMembers`
+  * `ApproveJoin`
+  * `CreateGroup`
+  * `CreateJoinLink`
+  * `DisableJoinLink`
+  * `EditGroup`
+  * `EditJoinLink`
+  * `GetJoinLinkPreviews`
+  * `ListJoinRequests`
+  * `ListMutualGroups`
+  * `RejectJoinRequest`
+  * `RemoveMembers`
+  * `RequestJoin`
+  * `UpdateJoinRequestsRead`
+  * `WithdrawJoinRequest`
 
 ## Fixed
 
@@ -87,6 +102,12 @@
 
 * Added error handling inside `AtProtoAgent.ResolveHandle()` to swallow exceptions from DNS and HTTP lookup.
   Errors are logged as Debug log messages and the method will return null if errors are encountered.
+
+## Changed
+
+### idunno.AtProto.Types
+
+* Added comparison operators to `TimestampIdentifier` to allow for equality comparisons and sorting.
 
 ## Breaking Changes
 
