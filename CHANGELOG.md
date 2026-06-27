@@ -47,6 +47,7 @@
 * Added `BlueskyHttpClient` which derives from `AtProtoHttpClient` and adds the Bluesky specified error mapping.
 * Added error classes for known error messages.
   * `AccountSuspended`
+  * `BadQueryString`
   * `BlockedActor`
   * `BlockedSubject`
   * `ConversationLocked`

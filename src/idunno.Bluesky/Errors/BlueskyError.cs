@@ -40,6 +40,7 @@ public abstract class BlueskyError : AtErrorDetail
         return atErrorDetail.Error switch
         {
             AccountSuspended.ErrorTitle => new AccountSuspended(atErrorDetail),
+            BadQueryString.ErrorTitle => new BadQueryString(atErrorDetail),
             BlockedActor.ErrorTitle => new BlockedActor(atErrorDetail),
             BlockedSubject.ErrorTitle => new BlockedSubject(atErrorDetail),
             ConversationLocked.ErrorTitle => new ConversationLocked(atErrorDetail),

@@ -90,6 +90,7 @@ Supported error types for AtProto API calls include:
 Supported error types for Bluesky API calls include:
 
 * `AccountSuspended`
+* `BadQueryString`
 * `BlockedActor`
 * `BlockedSubject`
 * `BlueskyError`
