@@ -39,11 +39,12 @@
   * `TokenRequired`
   * `UnresolvableDid`
   * `UnsupportedDomain`
-* Added `MapError` property to `AtProtoHttpResult<TResult>` which can be set to a `Func<AtErrorDetail?, AtErrorDetail?>`
+* Added `MapError` property to `AtProtoHttpResult<TResult>` which is an `IList<Func<AtErrorDetail?, AtErrorDetail?>>`
   to allow mapping for the generic `AtErrorDetail` type to a more specific derived error type.
 
 ### idunno.Bluesky
 
+* Added `BlueskyHttpClient` which derives from `AtProtoHttpClient` and adds the Bluesky specified error mapping.
 * Added error classes for known error messages.
   * `AccountSuspended`
   * `BlockedActor`

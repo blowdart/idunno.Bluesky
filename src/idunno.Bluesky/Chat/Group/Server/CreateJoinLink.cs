@@ -49,7 +49,7 @@ public partial class BlueskyServer
         ArgumentException.ThrowIfNullOrEmpty(conversationId);
         ArgumentException.ThrowIfNullOrEmpty(joinRule);
 
-        AtProtoHttpClient<CreateJoinLinkResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<CreateJoinLinkResponse> client = new(ChatProxy, loggerFactory);
 
         AtProtoHttpResult<CreateJoinLinkResponse> response = await client.Post(
             service,
@@ -60,8 +60,6 @@ public partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        response.MapError(BlueskyError.Map);
 
         return response;
     }

@@ -62,7 +62,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
 
         CreateBookmarkRequest request = new(uri, cid);
 
@@ -116,7 +116,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
 
         DeleteBookmarkRequest request = new(uri);
 
@@ -176,7 +176,7 @@ public static partial class BlueskyServer
         ArgumentOutOfRangeException.ThrowIfZero(limitValue);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, Maximum.Bookmarks);
 
-        AtProtoHttpClient<GetBookmarksResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetBookmarksResponse> request = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<GetBookmarksResponse> response = await request.Get(
             service,

@@ -92,7 +92,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(generatorUri);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<FeedGeneratorDescription> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<FeedGeneratorDescription> client = new(AppViewProxy, loggerFactory);
 
         return await client.Get(
             generatorUri,
@@ -161,7 +161,7 @@ public static partial class BlueskyServer
         }
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetActorFeedsResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetActorFeedsResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetActorFeedsResponse> response = await client.Get(
             service,
             $"{GetActorFeedsEndpoint}?{queryString}",
@@ -250,7 +250,7 @@ public static partial class BlueskyServer
         }
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetActorLikesResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetActorLikesResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetActorLikesResponse> response = await client.Get(
             service,
             $"{GetActorLikesEndpoint}?{queryString}",
@@ -374,7 +374,7 @@ public static partial class BlueskyServer
         }
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetAuthorFeedResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetAuthorFeedResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetAuthorFeedResponse> response = await client.Get(
             service,
             $"{GetAuthorFeedEndpoint}?{queryString}",
@@ -439,7 +439,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<FeedGenerator> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<FeedGenerator> client = new(AppViewProxy, loggerFactory);
 
         return await client.Get(
             service,
@@ -500,7 +500,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetFeedGeneratorsResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetFeedGeneratorsResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetFeedGeneratorsResponse> response = await client.Get(
             service,
             $"{GetFeedGeneratorsEndpoint}?{queryString}",
@@ -591,7 +591,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetFeedResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetFeedResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetFeedResponse> response = await client.Get(
             service,
             $"{GetFeedEndpoint}?{queryString}",
@@ -685,7 +685,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetLikesResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetLikesResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetLikesResponse> response = await client.Get(
             service,
             $"{GetLikesEndpoint}?{queryString}",
@@ -773,7 +773,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetListFeedResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetListFeedResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetListFeedResponse> response = await client.Get(
             service,
             $"{GetListFeedEndpoint}?{queryString}",
@@ -868,7 +868,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<PostThread> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<PostThread> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<PostThread> response = await client.Get(
             service,
             $"{GetPostThreadEndpoint}?{queryString}",
@@ -927,7 +927,7 @@ public static partial class BlueskyServer
 
         string queryString = string.Join("&", uriList.Select(uri => $"uris={Uri.EscapeDataString(uri.ToString())}"));
 
-        AtProtoHttpClient<GetPostsResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetPostsResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetPostsResponse> response = await client.Get(
             service,
             $"{GetPostsEndpoint}?{queryString}",
@@ -1023,7 +1023,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetQuotesResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetQuotesResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetQuotesResponse> response = await client.Get(
             service,
             $"{GetQuotesEndpoint}?{queryString}",
@@ -1118,7 +1118,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetRepostedByResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetRepostedByResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetRepostedByResponse> response = await client.Get(
             service,
             $"{GetRepostedByEndpoint}?{queryString}",
@@ -1181,7 +1181,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<GetSuggestedFeedsResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetSuggestedFeedsResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetSuggestedFeedsResponse> response = await client.Get(
             service,
             GetSuggestedFeedsEndpoint,
@@ -1276,7 +1276,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetTimelineResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetTimelineResponse> client = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<GetTimelineResponse> response = await client.Get(
             service,
@@ -1425,7 +1425,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<SearchPostsResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<SearchPostsResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<SearchPostsResponse> response = await client.Get(
             service,
             $"{SearchPostsEndpoint}?{queryString}",

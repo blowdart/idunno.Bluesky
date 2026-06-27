@@ -73,7 +73,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<ProfileViewDetailed> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<ProfileViewDetailed> request = new(AppViewProxy, loggerFactory);
 
         return await request.Get(
             service,
@@ -133,7 +133,7 @@ public static partial class BlueskyServer
 
         string queryString = string.Join("&", actorList.Select(uri => $"actors={Uri.EscapeDataString(uri.ToString())}"));
 
-        AtProtoHttpClient<GetProfilesResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetProfilesResponse> request = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetProfilesResponse> response = await request.Get(
             service,
             $"{GetProfilesEndpoint}?{queryString}",
@@ -196,7 +196,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<GetPreferencesResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetPreferencesResponse> client = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<GetPreferencesResponse> response = await client.Get(
             service,
@@ -265,7 +265,7 @@ public static partial class BlueskyServer
         ArgumentOutOfRangeException.ThrowIfZero(limitValue);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, Maximum.SuggestedActors);
 
-        AtProtoHttpClient<GetSuggestionsResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetSuggestionsResponse> request = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<GetSuggestionsResponse> response = await request.Get(
             service,
@@ -329,7 +329,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
 
         PutPreferencesRequest request = new(preferences);
 
@@ -392,7 +392,7 @@ public static partial class BlueskyServer
         ArgumentOutOfRangeException.ThrowIfZero(limitValue);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100);
 
-        AtProtoHttpClient<SearchActorsResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<SearchActorsResponse> request = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<SearchActorsResponse> response = await request.Get(
             service,
             $"{SearchActorsEndpoint}?q={Uri.EscapeDataString(q)}&limit={limit}&cursor={cursor}",
@@ -467,7 +467,7 @@ public static partial class BlueskyServer
         ArgumentOutOfRangeException.ThrowIfZero(limitValue);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100);
 
-        AtProtoHttpClient<SearchActorsResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<SearchActorsResponse> request = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<SearchActorsResponse> response = await request.Get(
             service,
             $"{SearchActorsTypeAheadEndpoint}?q={Uri.EscapeDataString(q)}&limit={limit}",

@@ -65,7 +65,7 @@ public static partial class BlueskyServer
         string queryString = $"url={Uri.EscapeDataString(url.ToString())}&";
         queryString += string.Join("&", uris.Select(uri => $"uris={Uri.EscapeDataString(uri.ToString())}"));
 
-        AtProtoHttpClient<GetEmbedExternalResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetEmbedExternalResponse> request = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<GetEmbedExternalResponse> response = await request.Get(
             service,

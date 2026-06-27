@@ -59,6 +59,18 @@ idunno.Bluesky.BlueskyAgent.UpdateJoinRequestsRead(string! conversationId, Syste
 idunno.Bluesky.BlueskyAgent.WithdrawJoinRequest(string! conversationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 idunno.Bluesky.BlueskyError
 idunno.Bluesky.BlueskyError.BlueskyError(idunno.AtProto.AtErrorDetail! other) -> void
+idunno.Bluesky.BlueskyHttpClient<TResult>
+idunno.Bluesky.BlueskyHttpClient<TResult>.BlueskyHttpClient() -> void
+idunno.Bluesky.BlueskyHttpClient<TResult>.BlueskyHttpClient(Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory) -> void
+idunno.Bluesky.BlueskyHttpClient<TResult>.BlueskyHttpClient(string! serviceProxy, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? requestHeaders) -> void
+idunno.Bluesky.BlueskyHttpClient<TResult>.BlueskyHttpClient(string! serviceProxy, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? requestHeaders, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory) -> void
+idunno.Bluesky.BlueskyHttpClient<TResult>.BlueskyHttpClient(string! serviceProxy, System.Net.Http.Headers.NameValueHeaderValue! requestHeader) -> void
+idunno.Bluesky.BlueskyHttpClient<TResult>.BlueskyHttpClient(string! serviceProxy, System.Net.Http.Headers.NameValueHeaderValue! requestHeader, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory) -> void
+idunno.Bluesky.BlueskyHttpClient<TResult>.BlueskyHttpClient(string! serviceProxy, System.Net.Http.Headers.NameValueHeaderValue! requestHeader, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory, System.Diagnostics.Metrics.IMeterFactory? meterFactory) -> void
+idunno.Bluesky.BlueskyHttpClient<TResult>.BlueskyHttpClient(string? serviceProxy) -> void
+idunno.Bluesky.BlueskyHttpClient<TResult>.BlueskyHttpClient(string? serviceProxy, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory) -> void
+idunno.Bluesky.BlueskyHttpClient<TResult>.BlueskyHttpClient(string? serviceProxy, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory, System.Diagnostics.Metrics.IMeterFactory? meterFactory) -> void
+idunno.Bluesky.BlueskyHttpClient<TResult>.BlueskyHttpClient(string? serviceProxy, System.Collections.Generic.ICollection<System.Net.Http.Headers.NameValueHeaderValue!>? requestHeaders, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory, System.Diagnostics.Metrics.IMeterFactory? meterFactory) -> void
 idunno.Bluesky.Chat.AcceptConversation
 idunno.Bluesky.Chat.Actor.AllowGroupInvites
 idunno.Bluesky.Chat.Actor.AllowIncoming
@@ -367,6 +379,7 @@ idunno.Bluesky.UserForbidsGroups.UserForbidsGroups(idunno.AtProto.AtErrorDetail!
 idunno.Bluesky.UserKicked
 idunno.Bluesky.UserKicked.UserKicked(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
 override idunno.Bluesky.Chat.Actor.ProfileViewBasic.ToString() -> string!
+static idunno.Bluesky.BlueskyError.Map(idunno.AtProto.AtErrorDetail? atErrorDetail) -> idunno.AtProto.AtErrorDetail?
 static idunno.Bluesky.BlueskyServer.AcceptConversation(string! conversationId, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Model.AcceptConversationResponse!>!>!
 static idunno.Bluesky.BlueskyServer.AddMembers(string! conversationId, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>! members, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Group.Model.AddMembersResponse!>!>!
 static idunno.Bluesky.BlueskyServer.ApproveJoin(string! conversationId, idunno.AtProto.Did! member, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Group.Model.ApproveJoinResponse!>!>!

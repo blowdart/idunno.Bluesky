@@ -51,7 +51,7 @@ public partial class BlueskyServer
         ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, 500);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetGraphemeLength(), 50);
 
-        AtProtoHttpClient<CreateGroupResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<CreateGroupResponse> client = new(ChatProxy, loggerFactory);
 
         AtProtoHttpResult<CreateGroupResponse> response = await client.Post(
             service,
@@ -62,8 +62,6 @@ public partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        response.MapError(BlueskyError.Map);
 
         return response;
     }

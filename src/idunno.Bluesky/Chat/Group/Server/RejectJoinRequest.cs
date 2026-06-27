@@ -46,7 +46,7 @@ public partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(conversationId);
         ArgumentNullException.ThrowIfNull(member);
 
-        AtProtoHttpClient<EmptyResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<EmptyResponse> client = new(ChatProxy, loggerFactory);
 
         AtProtoHttpResult<EmptyResponse> response = await client.Post(
             service,
@@ -57,8 +57,6 @@ public partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        response.MapError(BlueskyError.Map);
 
         return response;
     }

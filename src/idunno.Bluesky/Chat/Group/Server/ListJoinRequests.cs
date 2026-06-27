@@ -57,7 +57,7 @@ public partial class BlueskyServer
             queryString += $"&cursor={Uri.EscapeDataString(cursor)}";
         }
 
-        AtProtoHttpClient<ListJoinRequestsResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<ListJoinRequestsResponse> client = new(ChatProxy, loggerFactory);
 
         AtProtoHttpResult<ListJoinRequestsResponse> response = await client.Get(
             service,
@@ -67,8 +67,6 @@ public partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        response.MapError(BlueskyError.Map);
 
         // Flatten into collection
         PagedViewReadOnlyCollection<JoinRequestView> result;

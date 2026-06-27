@@ -66,7 +66,7 @@ public partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<ListMutualGroupsResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<ListMutualGroupsResponse> client = new(ChatProxy, loggerFactory);
 
         AtProtoHttpResult<ListMutualGroupsResponse> response = await client.Get(
             service,
@@ -76,8 +76,6 @@ public partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        response.MapError(BlueskyError.Map);
 
         // Flatten into collection
         PagedViewReadOnlyCollection<ConversationView> result;

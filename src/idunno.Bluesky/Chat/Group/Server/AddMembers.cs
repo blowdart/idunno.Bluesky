@@ -48,7 +48,7 @@ public partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(members);
         ArgumentOutOfRangeException.ThrowIfZero(members.Count());
 
-        AtProtoHttpClient<AddMembersResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<AddMembersResponse> client = new(ChatProxy, loggerFactory);
 
         AtProtoHttpResult<AddMembersResponse> response = await client.Post(
             service,
@@ -59,8 +59,6 @@ public partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        response.MapError(BlueskyError.Map);
 
         return response;
     }

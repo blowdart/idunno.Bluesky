@@ -49,7 +49,7 @@ public partial class BlueskyServer
 
         string queryString = string.Join("&", codes.Select(code => $"codes={Uri.EscapeDataString(code)}"));
 
-        AtProtoHttpClient<GetJoinLinkPreviewsResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<GetJoinLinkPreviewsResponse> client = new(ChatProxy, loggerFactory);
         AtProtoHttpResult<GetJoinLinkPreviewsResponse> response = await client.Get(
             service,
             $"/xrpc/chat.bsky.group.getJoinLinkPreviews?{queryString}",
@@ -58,8 +58,6 @@ public partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        response.MapError(BlueskyError.Map);
 
         return response;
     }

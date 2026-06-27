@@ -62,7 +62,7 @@ public static partial class BlueskyServer
             queryString += "&detailed=true";
         }
 
-        AtProtoHttpClient<GetServicesResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetServicesResponse> request = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetServicesResponse> response = await request.Get(
             service,
             $"{LablerGetServicesEndpoint}?{queryString}",

@@ -46,7 +46,7 @@ public partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(conversationId);
         ArgumentNullException.ThrowIfNull(member);
 
-        AtProtoHttpClient<ApproveJoinResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<ApproveJoinResponse> client = new(ChatProxy, loggerFactory);
 
         AtProtoHttpResult<ApproveJoinResponse> response = await client.Post(
             service,

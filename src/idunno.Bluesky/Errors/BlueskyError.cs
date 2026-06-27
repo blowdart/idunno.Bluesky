@@ -25,7 +25,12 @@ public abstract class BlueskyError : AtErrorDetail
         ArgumentNullException.ThrowIfNull(other);
     }
 
-    internal static AtErrorDetail? Map(AtErrorDetail? atErrorDetail)
+    /// <summary>
+    /// Maps the <see cref="AtErrorDetail"/> to a <see cref="BlueskyError"/>, if possible.
+    /// </summary>
+    /// <param name="atErrorDetail">The <see cref="AtErrorDetail"/> instance to map.</param>
+    /// <returns>A <see cref="BlueskyError"/> instance if mapping is possible; otherwise, <see langword="null"/>.</returns>
+    public static AtErrorDetail? Map(AtErrorDetail? atErrorDetail)
     {
         if (atErrorDetail is null)
         {
@@ -57,7 +62,7 @@ public abstract class BlueskyError : AtErrorDetail
             RecipientNotFound.ErrorTitle => new RecipientNotFound(atErrorDetail),
             UserForbidsGroups.ErrorTitle => new UserForbidsGroups(atErrorDetail),
             UserKicked.ErrorTitle => new UserKicked(atErrorDetail),
-            _ => AtProtoError.Map(atErrorDetail)
+            _ => atErrorDetail
         };
     }
 }

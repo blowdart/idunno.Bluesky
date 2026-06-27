@@ -114,7 +114,7 @@ public static partial class BlueskyServer
 
         AcceptConversationRequest request = new(conversationId);
 
-        AtProtoHttpClient<AcceptConversationResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<AcceptConversationResponse> client = new(ChatProxy, loggerFactory);
 
         AtProtoHttpResult<AcceptConversationResponse> response = await client.Post(
             service,
@@ -125,8 +125,6 @@ public static partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        response.MapError(BlueskyError.Map);
 
         return response;
     }
@@ -177,7 +175,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<AddReactionResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<AddReactionResponse> client = new(ChatProxy, loggerFactory);
 
         AddReactionRequest request = new(conversationId, messageId, value);
         AtProtoHttpResult<AddReactionResponse> response = await client.Post(
@@ -189,8 +187,6 @@ public static partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        response.MapError(BlueskyError.Map);
 
         if (response.Succeeded)
         {
@@ -253,7 +249,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<DeletedMessageView> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<DeletedMessageView> client = new(ChatProxy, loggerFactory);
 
         DeleteMessageRequest request = new(conversationId, messageId);
 
@@ -266,8 +262,6 @@ public static partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        response.MapError(BlueskyError.Map);
 
         return response;
     }
@@ -311,7 +305,7 @@ public static partial class BlueskyServer
         ArgumentOutOfRangeException.ThrowIfZero(members.Count);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(members.Count, Maximum.ConversationMembers);
 
-        AtProtoHttpClient<ConversationResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<ConversationResponse> client = new(ChatProxy, loggerFactory);
 
         StringBuilder queryStringBuilder = new();
         foreach (Did did in members)
@@ -330,8 +324,6 @@ public static partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        response.MapError(BlueskyError.Map);
 
         if (response.Succeeded)
         {
@@ -387,7 +379,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<ConversationResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<ConversationResponse> client = new(ChatProxy, loggerFactory);
 
         AtProtoHttpResult<ConversationResponse> response = await client.Get(
             service,
@@ -397,8 +389,6 @@ public static partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        response.MapError(BlueskyError.Map);
 
         if (response.Succeeded)
         {
@@ -458,7 +448,7 @@ public static partial class BlueskyServer
         ArgumentOutOfRangeException.ThrowIfZero(members.Count);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(members.Count, Maximum.ConversationMembers);
 
-        AtProtoHttpClient<ConversationAvailability> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<ConversationAvailability> client = new(ChatProxy, loggerFactory);
         StringBuilder queryStringBuilder = new();
         foreach (Did did in members)
         {
@@ -475,8 +465,6 @@ public static partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        response.MapError(BlueskyError.Map);
 
         if (response.Succeeded)
         {
@@ -531,7 +519,7 @@ public static partial class BlueskyServer
             queryString = $"?cursor={Uri.EscapeDataString(cursor)}";
         }
 
-        AtProtoHttpClient<GetLogResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<GetLogResponse> client = new(ChatProxy, loggerFactory);
 
         AtProtoHttpResult<GetLogResponse> response = await client.Get(
             service,
@@ -541,8 +529,6 @@ public static partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        response.MapError(BlueskyError.Map);
 
         if (response.Succeeded)
         {
@@ -628,7 +614,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetConversationMembersResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<GetConversationMembersResponse> client = new(ChatProxy, loggerFactory);
 
         AtProtoHttpResult<GetConversationMembersResponse> response = await client.Get(
             service,
@@ -723,7 +709,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetMessagesResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<GetMessagesResponse> client = new(ChatProxy, loggerFactory);
 
         AtProtoHttpResult<GetMessagesResponse> response = await client.Get(
             service,
@@ -786,7 +772,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<UnreadConversationCounts> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<UnreadConversationCounts> client = new(ChatProxy, loggerFactory);
 
         AtProtoHttpResult<UnreadConversationCounts> response = await client.Get(
             service,
@@ -851,7 +837,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<ConversationReference> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<ConversationReference> client = new(ChatProxy, loggerFactory);
 
         ConversationIdPostRequest request = new(id);
 
@@ -934,7 +920,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<ListConversationsResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<ListConversationsResponse> client = new(ChatProxy, loggerFactory);
 
         AtProtoHttpResult<ListConversationsResponse> response = await client.Get(
             service,
@@ -1004,7 +990,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<ConversationResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<ConversationResponse> client = new(ChatProxy, loggerFactory);
 
         ConversationIdPostRequest request = new(id);
 
@@ -1083,7 +1069,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<RemoveReactionResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<RemoveReactionResponse> client = new(ChatProxy, loggerFactory);
 
         RemoveReactionRequest request = new(conversationId, messageId, value);
         AtProtoHttpResult<RemoveReactionResponse> response = await client.Post(
@@ -1155,7 +1141,7 @@ public static partial class BlueskyServer
         ArgumentOutOfRangeException.ThrowIfZero(batchedMessages.Count);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(batchedMessages.Count, Maximum.BatchedMessages);
 
-        AtProtoHttpClient<SendMessageBatchResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<SendMessageBatchResponse> client = new(ChatProxy, loggerFactory);
 
         SendMessageBatchRequest request = new(batchedMessages);
 
@@ -1231,7 +1217,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<MessageView> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<MessageView> client = new(ChatProxy, loggerFactory);
 
         SendMessageRequest request = new(id, message);
 
@@ -1299,7 +1285,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<ConversationResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<ConversationResponse> client = new(ChatProxy, loggerFactory);
 
         ConversationIdPostRequest request = new(id);
 
@@ -1367,7 +1353,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<UpdateAllReadResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<UpdateAllReadResponse> client = new(ChatProxy, loggerFactory);
 
         UpdateAllReadRequest request = new(status);
 
@@ -1447,7 +1433,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<ConversationResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<ConversationResponse> client = new(ChatProxy, loggerFactory);
 
         UpdateReadRequest request = new(conversationId, messageId);
 

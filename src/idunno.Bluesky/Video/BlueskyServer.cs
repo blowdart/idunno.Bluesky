@@ -53,7 +53,7 @@ public partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<JobStatusResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<JobStatusResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<JobStatusResponse> response = await client.Get(
             service, $"{GetJobStatusEndpoint}?jobId={Uri.EscapeDataString(jobId)}",
             httpClient: httpClient,
@@ -104,7 +104,7 @@ public partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(serviceCredential);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<UploadLimits> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<UploadLimits> client = new(AppViewProxy, loggerFactory);
 
         return await client.Get(
             service,
@@ -161,7 +161,7 @@ public partial class BlueskyServer
             new NameValueHeaderValue("Content-Type", "video/mp4")
         ];
 
-        AtProtoHttpClient<JobStatusWireFormat> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<JobStatusWireFormat> client = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<JobStatusWireFormat> response =
             await client.PostBlob(

@@ -63,7 +63,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<GetAgeAssuranceStateResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetAgeAssuranceStateResponse> request = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<GetAgeAssuranceStateResponse> response = await request.Get(
             service,
@@ -155,7 +155,7 @@ public static partial class BlueskyServer
         string queryString = queryStringBuilder.ToString();
         queryString = queryString.TrimStart('&');
 
-        AtProtoHttpClient<GetPopularFeedGeneratorsResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetPopularFeedGeneratorsResponse> request = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<GetPopularFeedGeneratorsResponse> response = await request.Get(
             service,
@@ -234,7 +234,7 @@ public static partial class BlueskyServer
             queryString += $"limit={limit}";
         }
 
-        AtProtoHttpClient<GetSuggestedStarterPacksResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetSuggestedStarterPacksResponse> request = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<GetSuggestedStarterPacksResponse> response = await request.Get(
             service,
@@ -322,7 +322,7 @@ public static partial class BlueskyServer
 
         queryString = queryString.TrimStart('&');
 
-        AtProtoHttpClient<GetSuggestedUsersResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetSuggestedUsersResponse> request = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<GetSuggestedUsersResponse> response = await request.Get(
             service,
@@ -406,7 +406,7 @@ public static partial class BlueskyServer
             queryString = queryStringBuilder.ToString();
         }
 
-        AtProtoHttpClient<GetTaggedSuggestionsResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetTaggedSuggestionsResponse> request = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<GetTaggedSuggestionsResponse> response = await request.Get(
             service,
@@ -492,7 +492,7 @@ public static partial class BlueskyServer
 
         queryString = queryString.TrimStart('&');
 
-        AtProtoHttpClient<GetTrendingTopicsResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetTrendingTopicsResponse> request = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<GetTrendingTopicsResponse> response = await request.Get(
             service,
@@ -571,7 +571,7 @@ public static partial class BlueskyServer
             queryString = $"limit={limit}";
         }
 
-        AtProtoHttpClient<GetTrendsResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetTrendsResponse> request = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<GetTrendsResponse> response = await request.Get(
             service,

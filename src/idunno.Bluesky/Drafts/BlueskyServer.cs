@@ -57,7 +57,7 @@ public partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<CreateDraftResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<CreateDraftResponse> request = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<CreateDraftResponse> result = await request.Post(
             service,
@@ -125,7 +125,7 @@ public partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<EmptyResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<EmptyResponse> request = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<EmptyResponse> result = await request.Post(
             service,
@@ -224,7 +224,7 @@ public partial class BlueskyServer
 
         string endpoint = uriBuilder.ToString();
 
-        AtProtoHttpClient<GetDraftsResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetDraftsResponse> request = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<GetDraftsResponse> response = await request.Get(
             service,
@@ -288,7 +288,7 @@ public partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<CreateDraftResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<CreateDraftResponse> request = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<CreateDraftResponse> result = await request.Post(
             service,
