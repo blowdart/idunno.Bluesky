@@ -475,8 +475,6 @@ idunno.Bluesky.BlueskyAgent.GetProfile(System.Threading.CancellationToken cancel
 idunno.Bluesky.BlueskyAgent.GetProfileRecord(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Record.Profile!>!>!>!
 idunno.Bluesky.BlueskyAgent.GetProfiles(System.Collections.Generic.IEnumerable<idunno.AtProto.AtIdentifier!>! actors, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Actor.ProfileViewDetailed!>!>!>!
 idunno.Bluesky.BlueskyAgent.GetQuotes(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid? cid = null, int? limit = null, string? cursor = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Feed.QuotesCollection!>!>!
-idunno.Bluesky.BlueskyAgent.GetRelationships(idunno.AtProto.Did! actor, System.Collections.Generic.ICollection<idunno.AtProto.Did!>! others, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Graph.ActorRelationships!>!>!
-idunno.Bluesky.BlueskyAgent.GetRelationships(System.Collections.Generic.ICollection<idunno.AtProto.Did!>! others, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Graph.ActorRelationships!>!>!
 idunno.Bluesky.BlueskyAgent.GetReplyReferences(idunno.AtProto.Repo.StrongReference! strongReference, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.ReplyReferences!>!>!
 idunno.Bluesky.BlueskyAgent.GetRepostedBy(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid? cid = null, int? limit = null, string? cursor = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Feed.RepostedBy!>!>!
 idunno.Bluesky.BlueskyAgent.GetStarterPack(idunno.AtProto.AtUri! uri, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Graph.StarterPackView!>!>!
@@ -1220,11 +1218,6 @@ idunno.Bluesky.Feed.ThreadViewPost.ThreadContext.init -> void
 idunno.Bluesky.Feed.ThreadViewPost.ThreadGate.get -> idunno.Bluesky.Feed.ThreadGateView?
 idunno.Bluesky.Feed.ThreadViewPost.ThreadGate.init -> void
 idunno.Bluesky.Feed.Timeline
-idunno.Bluesky.Graph.ActorRelationships
-idunno.Bluesky.Graph.ActorRelationships.Did.get -> idunno.AtProto.Did!
-idunno.Bluesky.Graph.ActorRelationships.Did.init -> void
-idunno.Bluesky.Graph.ActorRelationships.Relationships.get -> System.Collections.Generic.IReadOnlyDictionary<idunno.AtProto.Did!, idunno.Bluesky.Graph.Relationship!>!
-idunno.Bluesky.Graph.ActorRelationships.Relationships.init -> void
 idunno.Bluesky.Graph.Followers
 idunno.Bluesky.Graph.Followers.Followers(idunno.Bluesky.Actor.ProfileView? subject, System.Collections.Generic.IList<idunno.Bluesky.Actor.ProfileView!>! followers, string? cursor) -> void
 idunno.Bluesky.Graph.Followers.Subject.get -> idunno.Bluesky.Actor.ProfileView?
@@ -1294,22 +1287,6 @@ idunno.Bluesky.Graph.NotFoundActor.Actor.init -> void
 idunno.Bluesky.Graph.NotFoundActor.NotFound.get -> bool
 idunno.Bluesky.Graph.NotFoundActor.NotFound.init -> void
 idunno.Bluesky.Graph.NotFoundActor.NotFoundActor(idunno.AtProto.AtIdentifier! actor, bool notFound) -> void
-idunno.Bluesky.Graph.Relationship
-idunno.Bluesky.Graph.Relationship.BlockedBy.get -> idunno.AtProto.AtUri?
-idunno.Bluesky.Graph.Relationship.BlockedBy.init -> void
-idunno.Bluesky.Graph.Relationship.BlockedByList.get -> idunno.AtProto.AtUri?
-idunno.Bluesky.Graph.Relationship.BlockedByList.init -> void
-idunno.Bluesky.Graph.Relationship.Blocking.get -> idunno.AtProto.AtUri?
-idunno.Bluesky.Graph.Relationship.Blocking.init -> void
-idunno.Bluesky.Graph.Relationship.BlockingByList.get -> idunno.AtProto.AtUri?
-idunno.Bluesky.Graph.Relationship.BlockingByList.init -> void
-idunno.Bluesky.Graph.Relationship.Did.get -> idunno.AtProto.Did!
-idunno.Bluesky.Graph.Relationship.Did.init -> void
-idunno.Bluesky.Graph.Relationship.FollowedBy.get -> idunno.AtProto.AtUri?
-idunno.Bluesky.Graph.Relationship.FollowedBy.init -> void
-idunno.Bluesky.Graph.Relationship.Following.get -> idunno.AtProto.AtUri?
-idunno.Bluesky.Graph.Relationship.Following.init -> void
-idunno.Bluesky.Graph.Relationship.Relationship(idunno.AtProto.Did! did, idunno.AtProto.AtUri? following, idunno.AtProto.AtUri? followedBy, idunno.AtProto.AtUri? blocking, idunno.AtProto.AtUri? blockedBy, idunno.AtProto.AtUri? blockingByList, idunno.AtProto.AtUri? blockedByList) -> void
 idunno.Bluesky.Graph.RelationshipType
 idunno.Bluesky.Graph.RelationshipType.ExtensionData.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>?
 idunno.Bluesky.Graph.RelationshipType.ExtensionData.set -> void
@@ -2078,7 +2055,6 @@ static idunno.Bluesky.BlueskyServer.GetPreferences(bool includeBlueskyModeration
 static idunno.Bluesky.BlueskyServer.GetProfile(idunno.AtProto.AtIdentifier! actor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Actor.ProfileViewDetailed!>!>!
 static idunno.Bluesky.BlueskyServer.GetProfiles(System.Collections.Generic.IEnumerable<idunno.AtProto.AtIdentifier!>! actors, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Actor.ProfileViewDetailed!>!>!>!
 static idunno.Bluesky.BlueskyServer.GetQuotes(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid? cid, int? limit, string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Feed.QuotesCollection!>!>!
-static idunno.Bluesky.BlueskyServer.GetRelationships(idunno.AtProto.Did! actor, System.Collections.Generic.ICollection<idunno.AtProto.Did!>! others, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Graph.ActorRelationships!>!>!
 static idunno.Bluesky.BlueskyServer.GetRepostedBy(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid? cid, int? limit, string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Feed.RepostedBy!>!>!
 static idunno.Bluesky.BlueskyServer.GetStarterPack(idunno.AtProto.AtUri! uri, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Graph.StarterPackView!>!>!
 static idunno.Bluesky.BlueskyServer.GetStarterPacks(System.Collections.Generic.ICollection<idunno.AtProto.AtUri!>! uris, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Graph.StarterPackViewBasic!>!>!>!
@@ -2344,6 +2320,8 @@ const idunno.Bluesky.Chat.MessageTypeDiscriminators.MessageView = "chat.bsky.con
 const idunno.Bluesky.Chat.MessageTypeDiscriminators.SystemMessageView = "chat.bsky.convo.defs#systemMessageView" -> string!
 idunno.Bluesky.AccountSuspended
 idunno.Bluesky.AccountSuspended.AccountSuspended(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+idunno.Bluesky.ActorNotFound
+idunno.Bluesky.ActorNotFound.ActorNotFound(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
 idunno.Bluesky.BlockedActor
 idunno.Bluesky.BlockedActor.BlockedActor(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
 idunno.Bluesky.BlockedSubject
@@ -2721,3 +2699,32 @@ static idunno.Bluesky.BlueskyServer.UpdateJoinRequestsRead(string! conversationI
 static idunno.Bluesky.BlueskyServer.UpdateNotificationSeenAt(System.DateTimeOffset seenAt, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 static idunno.Bluesky.BlueskyServer.WithdrawJoinRequest(string! conversationId, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 static idunno.Bluesky.CollectionNsid.ChatDeclaration.get -> idunno.AtProto.Nsid!
+idunno.Bluesky.BadQueryString
+idunno.Bluesky.BadQueryString.BadQueryString(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+idunno.Bluesky.BlueskyAgent.GetRelationships(idunno.AtProto.AtIdentifier! actor, System.Collections.Generic.ICollection<idunno.AtProto.AtIdentifier!>! others, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Graph.RelationshipMap!>!>!
+idunno.Bluesky.BlueskyAgent.GetRelationships(System.Collections.Generic.ICollection<idunno.AtProto.AtIdentifier!>! others) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Graph.RelationshipMap!>!>!
+idunno.Bluesky.BlueskyAgent.GetRelationships(System.Collections.Generic.ICollection<idunno.AtProto.AtIdentifier!>! others, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Graph.RelationshipMap!>!>!
+idunno.Bluesky.Graph.Relationship
+idunno.Bluesky.Graph.Relationship.BlockedBy.get -> idunno.AtProto.AtUri?
+idunno.Bluesky.Graph.Relationship.BlockedBy.set -> void
+idunno.Bluesky.Graph.Relationship.BlockedByList.get -> idunno.AtProto.AtUri?
+idunno.Bluesky.Graph.Relationship.BlockedByList.set -> void
+idunno.Bluesky.Graph.Relationship.Blocking.get -> idunno.AtProto.AtUri?
+idunno.Bluesky.Graph.Relationship.Blocking.set -> void
+idunno.Bluesky.Graph.Relationship.BlockingByList.get -> idunno.AtProto.AtUri?
+idunno.Bluesky.Graph.Relationship.BlockingByList.set -> void
+idunno.Bluesky.Graph.Relationship.Did.get -> idunno.AtProto.Did!
+idunno.Bluesky.Graph.Relationship.Did.set -> void
+idunno.Bluesky.Graph.Relationship.FollowedBy.get -> idunno.AtProto.AtUri?
+idunno.Bluesky.Graph.Relationship.FollowedBy.set -> void
+idunno.Bluesky.Graph.Relationship.Following.get -> idunno.AtProto.AtUri?
+idunno.Bluesky.Graph.Relationship.Following.set -> void
+idunno.Bluesky.Graph.Relationship.Relationship(idunno.AtProto.Did! did, idunno.AtProto.AtUri? following, idunno.AtProto.AtUri? followedBy, idunno.AtProto.AtUri? blocking, idunno.AtProto.AtUri? blockedBy, idunno.AtProto.AtUri? blockingByList, idunno.AtProto.AtUri? blockedByList) -> void
+idunno.Bluesky.Graph.RelationshipMap
+idunno.Bluesky.Graph.RelationshipMap.Actor.get -> idunno.AtProto.Did?
+idunno.Bluesky.Graph.RelationshipMap.Actor.set -> void
+idunno.Bluesky.Graph.RelationshipMap.RelationshipMap(idunno.AtProto.Did? actor, System.Collections.Generic.ICollection<idunno.Bluesky.Graph.RelationshipType!>! relationships) -> void
+idunno.Bluesky.Graph.RelationshipMap.Relationships.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Graph.RelationshipType!>!
+idunno.Bluesky.Graph.RelationshipMap.Relationships.set -> void
+static idunno.Bluesky.BlueskyServer.GetRelationships(idunno.AtProto.AtIdentifier! actor, System.Collections.Generic.ICollection<idunno.AtProto.AtIdentifier!>! others, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Graph.RelationshipMap!>!>!
+

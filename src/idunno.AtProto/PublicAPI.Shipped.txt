@@ -978,8 +978,10 @@ idunno.AtProto.IncompatibleDidDoc
 idunno.AtProto.InvalidEmail
 idunno.AtProto.InvalidInviteCode
 idunno.AtProto.InvalidPasscode
+idunno.AtProto.InvalidRequest
 idunno.AtProto.InvalidSwap
 idunno.AtProto.InvalidToken
+idunno.AtProto.MethodNotImplemented
 idunno.AtProto.RecordNotFound
 idunno.AtProto.RepoDeactivated
 idunno.AtProto.RepoNotFound

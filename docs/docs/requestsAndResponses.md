@@ -76,8 +76,10 @@ Supported error types for AtProto API calls include:
 * `InvalidEmail`
 * `InvalidInviteCode`
 * `InvalidPasscode`
+* `InvalidRequest`
 * `InvalidSwap`
 * `InvalidToken`
+* `MethodNotImplemented`
 * `RecordNotFound`
 * `RepoDeactivated`
 * `RepoNotFound`
@@ -90,6 +92,7 @@ Supported error types for AtProto API calls include:
 Supported error types for Bluesky API calls include:
 
 * `AccountSuspended`
+* `ActorNotFound`
 * `BadQueryString`
 * `BlockedActor`
 * `BlockedSubject`

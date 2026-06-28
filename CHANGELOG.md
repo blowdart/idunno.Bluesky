@@ -29,8 +29,10 @@
   * `InvalidEmail`
   * `InvalidInviteCode`
   * `InvalidPasscode`
+  * `InvalidRequest`
   * `InvalidSwap`
   * `InvalidToken`
+  * `MethodNotImplemented`
   * `RecordNotFound`
   * `RepoDeactivated`
   * `RepoNotFound`
@@ -47,6 +49,7 @@
 * Added `BlueskyHttpClient` which derives from `AtProtoHttpClient` and adds the Bluesky specified error mapping.
 * Added error classes for known error messages.
   * `AccountSuspended`
+  * `ActorNotFound`
   * `BadQueryString`
   * `BlockedActor`
   * `BlockedSubject`
@@ -115,6 +118,9 @@
 ### idunno.Bluesky
 
 * Corrected case of `AllowSubscriptions` property on `ActivitySubscriptions`.
+* Changed `BlueskyAgent.GetRelationships()` to accept `AtIdentifier` instead of `Did` types for the `actor` and `others` parameters.
+  This allows for more flexibility in specifying the subject and actor, as they can now be provided as either a DID or a handle, and matches the API definition.
+* Changed return type of `BlueskyAgent.GetRelationships()` to `RelationshipMap`.
 
 ## 2.0.0 - 2026-06-02
 
