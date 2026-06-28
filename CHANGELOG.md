@@ -113,6 +113,10 @@
 
 * Added comparison operators to `TimestampIdentifier` to allow for equality comparisons and sorting.
 
+### idunno.Bluesky
+
+* `GetUnreadConversationCounts` now has an optional `includeGroupChats` parameter, which defaults to `true`, to include or exclude group conversations in the unread counts.
+
 ## Breaking Changes
 
 ### idunno.Bluesky

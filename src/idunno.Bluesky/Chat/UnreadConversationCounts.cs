@@ -22,22 +22,23 @@ public sealed record UnreadConversationCounts
     }
 
     /// <summary>
-    /// Gets the number of unread, unlocked accepted conversations. Counts conversations with unread messages and unread join requests.
+    /// Gets the number of unread, unlocked accepted conversations.
+    /// Counts conversations with unread messages and unread join requests.
     /// </summary>
     /// <remarks>
-    /// <para>Capped at 31.</para>
+    /// <para>Capped at 100.</para>
     /// </remarks>
     [JsonRequired]
     [JsonPropertyName("unreadAcceptedConvos")]
     public int UnreadAcceptedConversations { get; init; }
 
     /// <summary>
-    /// Gets the number of unread, unlocked request conversations.
-    /// Includes conversations with unread messages, but not with unread join request,
+    ///Gets the number of unread, unlocked requested conversations.
+    /// Includes conversations with unread messages, but not conversations with unread join requests,
     /// since only the owner of a group has join requests to read, and the group would necessarily be accepted.
     /// </summary>
     /// <remarks>
-    /// <para>Capped at 11.</para>
+    /// <para>Capped at 100.</para>
     /// </remarks>
     [JsonRequired]
     [JsonPropertyName("unreadRequestConvos")]
