@@ -244,7 +244,6 @@
     <File Path=".ssh-allowed-signers" />
     <File Path=".ssh-allowed-signers.md" />
     <File Path=".vsconfig" />
-    <File Path="architectureNotes.md" />
     <File Path="buildDocs.ps1" />
     <File Path="CHANGELOG.md" />
     <File Path="CODE_OF_CONDUCT.md" />
@@ -255,7 +254,6 @@
     <File Path="global.json" />
     <File Path="key.snk" />
     <File Path="LICENSE" />
-    <File Path="minisign.pub" />
     <File Path="nuget.config" />
     <File Path="purge.ps1" />
     <File Path="readme.md" />
