@@ -120,7 +120,7 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
-    /// Gets a <see cref="ConversationView">view</see> over a conversation between <paramref name="members"/>.
+    /// Get or create a 1-1 conversation for the given members. Always returns the same direct (non-group) conversation. To create a group conversation, use <see cref="CreateGroup(ICollection{Did}, string, CancellationToken)"/>.
     /// </summary>
     /// <param name="members">The <see cref="Did"/>s of the conversation members.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -233,9 +233,10 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
-    /// Gets the availability of a conversation between the authenticated user, and the user identified by <paramref name="member"/>.
-    /// If an existing conversationg is found for these members, it is returned.
+    /// Check whether the requester and <paramref name="member"/> can start a 1-1 chat. Only applicable to direct (non-group) conversations.
+    /// If an existing conversation is found for the <paramref name="member"/>, it is returned. Does not create a new conversation if it doesn't exist.
     /// </summary>
+
     /// <param name="member">The <see cref="Did"/> of the actor to check availability for.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -257,8 +258,8 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
-    /// Gets the availability of a conversation between the authenticated user, and the users identified by <paramref name="members"/>.
-    /// If an existing conversationg is found for these members, it is returned.
+    /// Check whether the requester and the other <paramref name="members"/> can start a 1-1 chat. Only applicable to direct (non-group) conversations.
+    /// If an existing conversation is found for these <paramref name="members"/>, it is returned. Does not create a new conversation if it doesn't exist.
     /// </summary>
     /// <param name="members">A collection of <see cref="Did"/> of actors to check availability for.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -282,8 +283,8 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
-    /// Gets the availability of a conversation between the authenticated user, and the users identified by <paramref name="members"/>.
-    /// If an existing conversationg is found for these members, it is returned.
+    /// Check whether the requester and the other <paramref name="members"/> can start a 1-1 chat. Only applicable to direct (non-group) conversations.
+    /// If an existing conversation is found for these <paramref name="members"/>, it is returned. Does not create a new conversation if it doesn't exist.
     /// </summary>
     /// <param name="members">A collection of <see cref="Did"/> of actors to check availability for.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>

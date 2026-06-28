@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Chat;
+using idunno.Bluesky.Chat.Model;
 
 using Microsoft.Extensions.Logging;
 
@@ -14,9 +15,9 @@ namespace idunno.Bluesky;
 public static partial class BlueskyServer
 {
     /// <summary>
-    /// Gets the count of unread conversations for the authenticated user.
+    /// Unlocks a group conversation so content (messages, reactions) can be added to it again.
     /// </summary>
-    /// <param name="includeGroupChats">Flag indicating whether to include group conversations. When <see langword="false" />, group conversations are excluded from the counts.</param>
+    /// <param name="conversationId">The ID of the conversation to unlock.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to leave the conversation on.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> to use when accessing the <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
@@ -27,6 +28,7 @@ public static partial class BlueskyServer
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
     /// </exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/> is <see langword="null"/> or empty.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -34,8 +36,8 @@ public static partial class BlueskyServer
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
-    public static async Task<AtProtoHttpResult<UnreadConversationCounts>> GetUnreadCounts(
-        bool includeGroupChats,
+    public static async Task<AtProtoHttpResult<ConversationView>> UnlockConversation(
+        string conversationId,
         Uri service,
         AccessCredentials accessCredentials,
         HttpClient httpClient,
@@ -43,33 +45,40 @@ public static partial class BlueskyServer
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(conversationId);
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        BlueskyHttpClient<UnreadConversationCounts> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<UnlockConversationResponse> client = new(ChatProxy, loggerFactory);
 
-        AtProtoHttpResult<UnreadConversationCounts> response = await client.Get(
+        AtProtoHttpResult<UnlockConversationResponse> result = await client.Post(
             service,
-            $"/xrpc/chat.bsky.convo.getUnreadCounts",
+            "/xrpc/chat.bsky.convo.unlockConvo",
+            new UnlockConversationRequest(conversationId),
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        if (response.Succeeded)
+        if (result.Succeeded)
         {
-            return response;
+            return new AtProtoHttpResult<ConversationView>(
+                result.Result.Convo,
+                result.StatusCode,
+                result.HttpResponseHeaders,
+                result.AtErrorDetail,
+                result.RateLimit);
         }
         else
         {
-            return new AtProtoHttpResult<UnreadConversationCounts>(
+            return new AtProtoHttpResult<ConversationView>(
                 null,
-                response.StatusCode,
-                response.HttpResponseHeaders,
-                response.AtErrorDetail,
-                response.RateLimit);
+                result.StatusCode,
+                result.HttpResponseHeaders,
+                result.AtErrorDetail,
+                result.RateLimit);
         }
     }
 }

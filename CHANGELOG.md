@@ -95,9 +95,11 @@
   * `GetJoinLinkPreviews`
   * `ListJoinRequests`
   * `ListMutualGroups`
+  * `LockConversation`
   * `RejectJoinRequest`
   * `RemoveMembers`
   * `RequestJoin`
+  * `UnlockConversation`
   * `UpdateJoinRequestsRead`
   * `WithdrawJoinRequest`
 
