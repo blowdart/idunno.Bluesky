@@ -66,6 +66,7 @@
   * `NewAccountCannotCreateGroup`
   * `NoJoinLink`
   * `NotFollowedBySender`
+  * `OwnerCannotLeave`
   * `ReactionInvalidValue`
   * `ReactionLimitReached`
   * `ReactionMessageDeleted`

@@ -57,6 +57,7 @@ public abstract class BlueskyError : AtErrorDetail
             NewAccountCannotCreateGroup.ErrorTitle => new NewAccountCannotCreateGroup(atErrorDetail),
             NoJoinLink.ErrorTitle => new NoJoinLink(atErrorDetail),
             NotFollowedBySender.ErrorTitle => new NotFollowedBySender(atErrorDetail),
+            OwnerCannotLeave.ErrorTitle => new OwnerCannotLeave(atErrorDetail),
             ReactionInvalidValue.ErrorTitle => new ReactionInvalidValue(atErrorDetail),
             ReactionLimitReached.ErrorTitle => new ReactionLimitReached(atErrorDetail),
             ReactionMessageDeleted.ErrorTitle => new ReactionMessageDeleted(atErrorDetail),

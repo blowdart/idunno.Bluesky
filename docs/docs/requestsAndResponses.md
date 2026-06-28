@@ -108,6 +108,7 @@ Supported error types for Bluesky API calls include:
 * `MessageDeleteNotAllowed`
 * `MessagesDisabled`
 * `NewAccountCannotCreateGroup`
+* `OwnerCannotLeave`
 * `NoJoinLink`
 * `NotFollowedBySender`
 * `ReactionInvalidValue`
