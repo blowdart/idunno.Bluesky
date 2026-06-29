@@ -1100,11 +1100,11 @@ public class ConversationTests
         Assert.Equal(new Did("did:plc:mvgsfujvam5iekxlk3howidu"), memberKind.AddedBy.Did);
 
         Assert.NotNull(conversationView.LastMessage);
-        Assert.Equal("3moh3aswtrx2h", conversationView.LastMessage.Id);
-        Assert.Equal("2222224rdcznj", conversationView.LastMessage.Revision);
 
         Assert.IsType<MessageView>(conversationView.LastMessage);
         var lastmessage = conversationView.LastMessage as MessageView;
+        Assert.Equal("3moh3aswtrx2h", lastmessage!.Id);
+        Assert.Equal("2222224rdcznj", lastmessage!.Revision);
         Assert.Equal("did:plc:mvgsfujvam5iekxlk3howidu", lastmessage!.Sender.Did);
         Assert.Equal("This is a group chat", lastmessage.Text);
         Assert.Empty(lastmessage.Reactions);

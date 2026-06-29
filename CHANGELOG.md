@@ -128,6 +128,9 @@
 * Changed `BlueskyAgent.GetRelationships()` to accept `AtIdentifier` instead of `Did` types for the `actor` and `others` parameters.
   This allows for more flexibility in specifying the subject and actor, as they can now be provided as either a DID or a handle, and matches the API definition.
 * Changed return type of `BlueskyAgent.GetRelationships()` to `RelationshipMap`.
+* `MessageViewBase` has had its properties removed, and is now an empty class.
+  The `Id`, `Revision`, and `SentAt` properties have been moved to the derived classes `MessageView`, `DeletedMessageView` and `SystemMessageView`. This was
+  necessary to support the new `MessageBeforeUserJoinedGroupView` type, which does not have these properties.
 
 ## 2.0.0 - 2026-06-02
 
