@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
+using System.Text.Json.Serialization;
+
 namespace idunno.Bluesky.Chat;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
 
@@ -24,14 +26,39 @@ public sealed record SystemMessageView : MessageViewBase
         SystemMessage data,
         string id,
         string revision,
-        DateTimeOffset sentAt) : base(id, revision, sentAt)
+        DateTimeOffset sentAt) : base()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(revision);
-
         ArgumentNullException.ThrowIfNull(data);
+
+        Id = id;
+        Revision = revision;
+        SentAt = sentAt;
         Data = data;
     }
+
+    /// <summary>
+    /// Gets the id of a message.
+    /// </summary>
+    [JsonInclude]
+    [JsonRequired]
+    public string Id { get; init; }
+
+    /// <summary>
+    /// Gets the revision of a message.
+    /// </summary>
+    [JsonInclude]
+    [JsonRequired]
+    [JsonPropertyName("rev")]
+    public string Revision { get; init; }
+
+    /// <summary>
+    /// Gets the <see cref="DateTimeOffset"/> the message was sent on.
+    /// </summary>
+    [JsonInclude]
+    [JsonRequired]
+    public DateTimeOffset SentAt { get; init; }
 
     /// <summary>
     /// Gets the system message data.

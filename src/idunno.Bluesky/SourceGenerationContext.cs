@@ -121,6 +121,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(UnreadConversationCounts))]
 [JsonSerializable(typeof(ConversationAvailability))]
 [JsonSerializable(typeof(GroupConversation))]
+[JsonSerializable(typeof(MessageBeforeUserJoinedGroupView))]
 
 [JsonSerializable(typeof(Chat.Logs), TypeInfoPropertyName = "ChatBSkyConvoLogs")]
 [JsonSerializable(typeof(Chat.LogBase), TypeInfoPropertyName = "ChatBSkyConvoLogBase")]

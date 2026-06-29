@@ -4,27 +4,6 @@
 namespace idunno.Bluesky.Chat;
 
 /// <summary>
-/// Type discriminators for message objects
-/// </summary>
-public static class MessageTypeDiscriminators
-{
-    /// <summary>
-    /// A view over a message.
-    /// </summary>
-    public const string MessageView = "chat.bsky.convo.defs#messageView";
-
-    /// <summary>
-    /// A view over a deleted message.
-    /// </summary>
-    public const string DeletedMessageView = "chat.bsky.convo.defs#deletedMessageView";
-
-    /// <summary>
-    /// A view over a system message.
-    /// </summary>
-    public const string SystemMessageView = "chat.bsky.convo.defs#systemMessageView";
-}
-
-/// <summary>
 /// Known values for conversation member roles.
 /// </summary>
 public static class MemberRole

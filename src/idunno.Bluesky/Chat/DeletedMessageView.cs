@@ -27,15 +27,40 @@ public sealed record DeletedMessageView : MessageViewBase
         string id,
         string revision,
         MessageViewSender sender,
-        DateTimeOffset sentAt) : base(id, revision, sentAt)
+        DateTimeOffset sentAt) : base()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(revision);
 
         ArgumentNullException.ThrowIfNull(sender);
 
+        Id = id;
+        Revision = revision;
+        SentAt = sentAt;
         Sender = sender;
     }
+
+    /// <summary>
+    /// Gets the id of a message.
+    /// </summary>
+    [JsonInclude]
+    [JsonRequired]
+    public string Id { get; init; }
+
+    /// <summary>
+    /// Gets the revision of a message.
+    /// </summary>
+    [JsonInclude]
+    [JsonRequired]
+    [JsonPropertyName("rev")]
+    public string Revision { get; init; }
+
+    /// <summary>
+    /// Gets the <see cref="DateTimeOffset"/> the message was sent on.
+    /// </summary>
+    [JsonInclude]
+    [JsonRequired]
+    public DateTimeOffset SentAt { get; init; }
 
     /// <summary>
     /// Gets a view over the message author.
