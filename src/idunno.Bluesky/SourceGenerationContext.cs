@@ -456,6 +456,12 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Chat.Group.Model.RequestJoinResponse))]
 [JsonSerializable(typeof(Chat.Group.Model.WithdrawJoinRequestRequest))]
 
+[JsonSerializable(typeof(Chat.Notifications.Preference), TypeInfoPropertyName = "ChatNotificationsChatPreference")]
+[JsonSerializable(typeof(Chat.Notifications.Preferences), TypeInfoPropertyName = "ChatNotificationsPreferences")]
+[JsonSerializable(typeof(Chat.Model.GetPreferencesResponse), TypeInfoPropertyName = "ChatNotificationsModelGetPreferenceResponse")]
+[JsonSerializable(typeof(Chat.Model.PutPreferencesRequest), TypeInfoPropertyName = "ChatNotificationsModelPutPrefereceRequest")]
+[JsonSerializable(typeof(Chat.Model.PutPreferencesResponse), TypeInfoPropertyName = "ChatNotificationsModelPutPreferenceResponse")]
+
 internal partial class SourceGenerationContext : JsonSerializerContext
 {
 }

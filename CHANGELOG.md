@@ -110,6 +110,10 @@
 * Added error handling inside `AtProtoAgent.ResolveHandle()` to swallow exceptions from DNS and HTTP lookup.
   Errors are logged as Debug log messages and the method will return null if errors are encountered.
 
+### idunno.Bluesky
+
+* Added missing `Like` settings to `Notification.Preferences`.
+
 ## Changed
 
 ### idunno.AtProto.Types
@@ -131,6 +135,8 @@
 * `MessageViewBase` has had its properties removed, and is now an empty class.
   The `Id`, `Revision`, and `SentAt` properties have been moved to the derived classes `MessageView`, `DeletedMessageView` and `SystemMessageView`. This was
   necessary to support the new `MessageBeforeUserJoinedGroupView` type, which does not have these properties.
+* `Notifications.PreferenceTypes.ChatPreference` has been marked obsolete.
+  Use `GetChatNotificationPreferences` and `SetChatNotificationPreferences` with `Chat.Notifications.Preferences` instead.
 
 ## 2.0.0 - 2026-06-02
 
