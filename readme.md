@@ -38,7 +38,7 @@ The [API status page](https://bluesky.idunno.dev/docs/endpointStatus.html) shows
 
 * Creating and deleting posts
   * Posting with mentions, links and hashtags
-  * Posting images and video, with alt text support.
+  * Posting images, GIFs and video, with alt text support.
   * Setting a post's language
   * Gating threads and posts
   * Liking, quoting, and reposting posts
@@ -149,7 +149,6 @@ the signing certificate chain will not match the signing chain of a release buil
 ### Major
 
 * Logging in idunno.Bluesky
-* GIF attaching
 * Wider test coverage
 * More deserialization tests with captured responses
 

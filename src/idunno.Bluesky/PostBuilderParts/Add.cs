@@ -7,10 +7,6 @@ using idunno.Bluesky.Embed;
 using idunno.Bluesky.Embed.Gallery;
 using idunno.Bluesky.RichText;
 
-using Microsoft.Extensions.Hosting;
-
-using static System.Net.Mime.MediaTypeNames;
-
 #pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky;
 #pragma warning restore IDE0130 // Namespace does not match folder structure

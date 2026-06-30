@@ -11,6 +11,9 @@ using idunno.Bluesky.Actor;
 
 namespace idunno.TrimmingTest;
 
+/// <summary>
+/// The main program class.
+/// </summary>
 public sealed class Program
 {
     static async Task<int> Main()

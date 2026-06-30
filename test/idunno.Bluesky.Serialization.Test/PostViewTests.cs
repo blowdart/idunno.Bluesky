@@ -5,7 +5,6 @@ using System.Text.Json;
 
 using idunno.AtProto;
 using idunno.Bluesky.Feed;
-using idunno.Bluesky.Feed.Gates;
 
 namespace idunno.Bluesky.Serialization.Test;
 

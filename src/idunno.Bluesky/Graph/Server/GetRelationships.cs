@@ -52,7 +52,7 @@ public partial class BlueskyServer
         {
             throw new ArgumentException("The collection of others must not be empty.", nameof(others));
         }
-        else if (others.Count > 30 )
+        else if (others.Count > 30)
         {
             throw new ArgumentException("The collection of others must not contain more than 30 AtIdentifiers.", nameof(others));
         }

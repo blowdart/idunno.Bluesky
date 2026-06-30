@@ -102,6 +102,8 @@
   * `UnlockConversation`
   * `UpdateJoinRequestsRead`
   * `WithdrawJoinRequest`
+* Added Animated GIF support with `BlueskyAgent.UploadAnimatedGif()`
+* Expanded video support with a new overload to `BlueskyAgent.UploadVideo()` which accepts a MIME type parameter to allow for more video formats.
 
 ## Fixed
 
@@ -137,6 +139,7 @@
   necessary to support the new `MessageBeforeUserJoinedGroupView` type, which does not have these properties.
 * `Notifications.PreferenceTypes.ChatPreference` has been marked obsolete.
   Use `GetChatNotificationPreferences` and `SetChatNotificationPreferences` with `Chat.Notifications.Preferences` instead.
+* Marked `BlueskyAgent.UploadVideo()` without the MIME type parameter as obsolete, as it only supports MP4 video files. Use the new overload with the MIME type parameter instead.
 
 ## 2.0.0 - 2026-06-02
 

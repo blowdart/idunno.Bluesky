@@ -5,8 +5,6 @@ using idunno.AtProto;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed;
 
-using Microsoft.Extensions.Logging;
-
 namespace idunno.Bluesky;
 
 partial class BlueskyAgent

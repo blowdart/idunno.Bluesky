@@ -17,6 +17,7 @@ namespace Samples.Video;
 
 public sealed class Program
 {
+    [Obsolete]
     static async Task<int> Main(string[] args)
     {
         // Necessary to render emojis.
@@ -30,6 +31,7 @@ public sealed class Program
         return await parser.InvokeAsync();
     }
 
+    [Obsolete]
     static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(handle);

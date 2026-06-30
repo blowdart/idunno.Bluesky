@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-using System.Net.Http.Headers;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
@@ -20,9 +19,6 @@ public partial class BlueskyServer
 
     // https://docs.bsky.app/docs/api/app.bsky.video.getUploadLimits
     private const string GetUploadLimitsEndpoint = "/xrpc/app.bsky.video.getUploadLimits";
-
-    // https://docs.bsky.app/docs/api/app-bsky-video-upload-video
-    private const string UploadVideoEndpoint = "/xrpc/app.bsky.video.uploadVideo";
 
     /// <summary>
     /// Gets the status details for the specified video processing job.
@@ -114,80 +110,5 @@ public partial class BlueskyServer
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: null,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Uploads a video to be processed and stored on the specified <paramref name="service"/>.
-    /// </summary>
-    /// <param name="did">The <see cref="AtProto.Did"/> of the account uploading the video.</param>
-    /// <param name="fileName">The filename of the video.</param>
-    /// <param name="video">The video to upload.</param>
-    /// <param name="service">The <see cref="Uri"/> of the service to upload video to.</param>
-    /// <param name="serviceCredential">AccessCredentials for service access used to authenticate against the <paramref name="service"/>.</param>
-    /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> is <see langword="null"/> or empty.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="serviceCredential"/>, <paramref name="video"/>, <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="video"/> is empty.</exception>
-    [UnconditionalSuppressMessage(
-        "Trimming",
-        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
-        Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
-    [UnconditionalSuppressMessage("AOT",
-        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
-        Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
-    public static async Task<AtProtoHttpResult<JobStatus>> UploadVideo(
-        Did did,
-        string fileName,
-        byte[] video,
-        Uri service,
-        ServiceCredential serviceCredential,
-        HttpClient httpClient,
-        ILoggerFactory? loggerFactory = default,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(fileName);
-        ArgumentNullException.ThrowIfNull(video);
-        ArgumentNullException.ThrowIfNull(service);
-        ArgumentNullException.ThrowIfNull(serviceCredential);
-        ArgumentNullException.ThrowIfNull(httpClient);
-
-        ArgumentOutOfRangeException.ThrowIfZero(video.Length);
-
-        List<NameValueHeaderValue> contentHeaders =
-        [
-            new NameValueHeaderValue("Content-Type", "video/mp4")
-        ];
-
-        BlueskyHttpClient<JobStatusWireFormat> client = new(AppViewProxy, loggerFactory);
-
-        AtProtoHttpResult<JobStatusWireFormat> response =
-            await client.PostBlob(
-                service,
-                $"{UploadVideoEndpoint}?did={Uri.EscapeDataString(did)}&name={Uri.EscapeDataString(fileName)}",
-                video,
-                requestHeaders: null,
-                contentHeaders: contentHeaders,
-                credentials: serviceCredential,
-                httpClient: httpClient,
-                jsonSerializerOptions: BlueskyJsonSerializerOptions,
-                onCredentialsUpdated: null, // Service credentials don't get updates
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        JobStatus? result = null;
-
-        if (response.Result is not null)
-        {
-            result = new JobStatus(response.Result);
-        }
-
-        return new AtProtoHttpResult<JobStatus>(
-            result,
-            response.StatusCode,
-            response.HttpResponseHeaders,
-            response.AtErrorDetail,
-            response.RateLimit);
     }
 }

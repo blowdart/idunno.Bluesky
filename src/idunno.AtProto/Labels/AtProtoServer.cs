@@ -6,7 +6,6 @@ using System.Globalization;
 using System.Text;
 
 using idunno.AtProto.Authentication;
-using idunno.AtProto.Authentication.Models;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Labels.Models;
 

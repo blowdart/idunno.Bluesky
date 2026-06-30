@@ -4,7 +4,6 @@
 using idunno.AtProto;
 using idunno.AtProto.DidPlcDirectory;
 using idunno.AtProto.Jetstream;
-using idunno.DidPlcDirectory;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace OpenTelemetry.Metrics;

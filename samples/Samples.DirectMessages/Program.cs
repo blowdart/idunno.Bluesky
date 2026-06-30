@@ -6,7 +6,6 @@ using System.Text;
 using idunno.AtProto;
 using idunno.Bluesky;
 using idunno.Bluesky.Chat;
-using idunno.Bluesky.Chat.Actor;
 using idunno.Bluesky.Embed;
 
 using Microsoft.Extensions.Logging;

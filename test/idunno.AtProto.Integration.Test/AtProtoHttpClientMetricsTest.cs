@@ -7,7 +7,6 @@ using System.Text.Json.Nodes;
 
 using Duende.IdentityModel.OidcClient.DPoP;
 
-using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;

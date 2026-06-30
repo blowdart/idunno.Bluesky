@@ -3,8 +3,6 @@
 
 using System.Text.Json.Serialization;
 
-using idunno.Bluesky.Embed.Gallery;
-
 namespace idunno.Bluesky.Embed;
 
 /// <summary>

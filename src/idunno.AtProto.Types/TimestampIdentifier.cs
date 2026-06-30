@@ -243,7 +243,7 @@ public sealed partial class TimestampIdentifier :
     /// <returns><see langword="true"/> if the string was successfully parsed; otherwise, <see langword="false"/>.</returns>
     public static bool TryParse([NotNullWhen(true)] string? s, [MaybeNullWhen(false)] out TimestampIdentifier result)
     {
-        return TryParse(s, provider: null,out result);
+        return TryParse(s, provider: null, out result);
     }
 
     /// <summary>

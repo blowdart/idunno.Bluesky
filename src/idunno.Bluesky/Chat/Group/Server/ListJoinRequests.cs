@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;

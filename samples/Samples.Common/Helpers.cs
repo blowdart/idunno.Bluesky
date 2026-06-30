@@ -71,6 +71,8 @@ public class Helpers
     /// Returns a command line parser configured with the common command line parameters,
     /// which will call <paramref name="runCode"/> when the <see cref="ParseResult"/>'s InvokeAsync is called.
     /// </summary>
+    /// <param name="args">The command line arguments to parse.</param>
+    /// <param name="commandDescription">The description of the command.</param>
     /// <param name="runCode">The function to run when InvokeAsync is called on the parser.</param>
     /// <returns>A preconfigured command line <see cref="ParseResult"/>.</returns>
     public static ParseResult ConfigureCommandLine(
@@ -112,6 +114,8 @@ public class Helpers
     /// Returns a command line parser configured with the common command line parameters,
     /// which will call <paramref name="runCode"/> when the <see cref="ParseResult"/>'s InvokeAsync is called.
     /// </summary>
+    /// <param name="args">The command line arguments to parse.</param>
+    /// <param name="commandDescription">The description of the command.</param>
     /// <param name="runCode">The function to run when InvokeAsync is called on the parser.</param>
     /// <returns>A preconfigured command line <see cref="ParseResult"/>.</returns>
     public static ParseResult ConfigureCommandLineWithMetricsDelay(
@@ -155,6 +159,8 @@ public class Helpers
     /// Returns a command line parser configured with the common command line parameters,
     /// which will call <paramref name="runCode"/> when the <see cref="ParseResult"/>'s InvokeAsync is called.
     /// </summary>
+    /// <param name="args">The command line arguments to parse.</param>
+    /// <param name="commandDescription">The description of the command.</param>
     /// <param name="runCode">The function to run when InvokeAsync is called on the parser.</param>
     /// <returns>A preconfigured command line <see cref="ParseResult"/>.</returns>
     public static ParseResult ConfigureCommandLine(

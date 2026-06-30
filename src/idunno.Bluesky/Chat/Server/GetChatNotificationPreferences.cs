@@ -5,10 +5,8 @@ using System.Diagnostics.CodeAnalysis;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
-using idunno.Bluesky.Chat;
 
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Logging;
 
 namespace idunno.Bluesky;
 
@@ -47,7 +45,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(httpClient);
 
         BlueskyHttpClient<Chat.Model.GetPreferencesResponse> client = new(ChatProxy, loggerFactory);
-        
+
         AtProtoHttpResult<Chat.Model.GetPreferencesResponse> response = await client.Get(
             service,
             $"/xrpc/chat.bsky.notification.getPreferences",

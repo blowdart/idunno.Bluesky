@@ -7,8 +7,6 @@ using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.RichText;
 
-using static System.Net.Mime.MediaTypeNames;
-
 namespace idunno.Bluesky.Test;
 
 [ExcludeFromCodeCoverage]

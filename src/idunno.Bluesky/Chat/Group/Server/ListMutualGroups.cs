@@ -8,7 +8,6 @@ using System.Text;
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Chat;
-using idunno.Bluesky.Chat.Group;
 using idunno.Bluesky.Chat.Group.Model;
 
 using Microsoft.Extensions.Logging;

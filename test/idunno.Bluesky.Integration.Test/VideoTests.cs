@@ -279,7 +279,9 @@ public class VideoTests
             agent.Credentials = expectedCredentials;
             agent.Service = TestServerBuilder.DefaultUri;
 
+#pragma warning disable CS0618 // Type or member is obsolete - Test the older method
             AtProtoHttpResult<JobStatus> uploadResult = await agent.UploadVideo(expectedFilename, expectedBlob, TestContext.Current.CancellationToken);
+#pragma warning restore CS0618 // Type or member is obsolete
 
             Assert.True(uploadResult.Succeeded);
             Assert.Equal(JobState.Created, uploadResult.Result.State);
