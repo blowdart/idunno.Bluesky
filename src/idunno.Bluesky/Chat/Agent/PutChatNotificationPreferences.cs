@@ -16,7 +16,6 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     /// <exception cref="System.ArgumentNullException">Thrown when <paramref name="preferences"/> is <see langword="null"/>.</exception>
-    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "New API, no backcompat needed")]
     public async Task<AtProtoHttpResult<Chat.Notifications.Preferences>> PutChatNotificationPreferences(
         Chat.Notifications.Preferences preferences)
     {
