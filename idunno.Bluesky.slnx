@@ -79,7 +79,9 @@
     <File Path="docs/docs/bots/scheduledPostBot.md" />
     <File Path="docs/docs/bots/watcherBot.md" />
   </Folder>
-  <Folder Name="/docs/docs/bots/code/" />
+  <Folder Name="/docs/docs/bots/code/">
+    <File Path="docs/docs/bots/code/Directory.Build.Props" />
+  </Folder>
   <Folder Name="/docs/docs/bots/code/BlueskyBot/">
     <Project Path="docs/docs/bots/code/BlueskyBot/BlueskyBot.csproj">
       <Build Solution="CodeQL|*" Project="false" />
