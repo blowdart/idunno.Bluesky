@@ -130,6 +130,7 @@ public sealed class Program
                 var videoUploadResult = await agent.UploadVideo(
                     fileName,
                     videoAsBytes,
+                    "video/mp4",
                     cancellationToken: cancellationToken);
 
                 // Quick fail - you'd want to be more graceful in handling errors.
