@@ -153,10 +153,6 @@ the signing certificate chain will not match the signing chain of a release buil
 * Wider test coverage
 * More deserialization tests with captured responses
 
-### Awaiting external
-
-* Automatic Open Graph card generation when link facets detected.
-
 ## Dependencies
 
 The .NET 8.0 version of `idunno.AtProto` takes a dependency on `System.Text.Json` v9 to support deserializing derived types
