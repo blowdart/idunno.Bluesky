@@ -35,7 +35,7 @@ public partial class BlueskyServer
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
-    public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<JoinRequestView>>> ListJoinRequests(
+    public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<JoinRequestConversationView>>> ListJoinRequests(
         ICollection<string> conversationIds,
         string? cursor,
         Uri service,
@@ -68,17 +68,17 @@ public partial class BlueskyServer
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Flatten into collection
-        PagedViewReadOnlyCollection<JoinRequestView> result;
+        PagedViewReadOnlyCollection<JoinRequestConversationView> result;
         if (response.Result is not null)
         {
-            result = new PagedViewReadOnlyCollection<JoinRequestView>(response.Result.Requests, response.Result.Cursor);
+            result = new PagedViewReadOnlyCollection<JoinRequestConversationView>(response.Result.Requests, response.Result.Cursor);
         }
         else
         {
-            result = new PagedViewReadOnlyCollection<JoinRequestView>();
+            result = new PagedViewReadOnlyCollection<JoinRequestConversationView>();
         }
 
-        return new AtProtoHttpResult<PagedViewReadOnlyCollection<JoinRequestView>>(
+        return new AtProtoHttpResult<PagedViewReadOnlyCollection<JoinRequestConversationView>>(
             result: result,
             statusCode: response.StatusCode,
             httpResponseHeaders: response.HttpResponseHeaders,

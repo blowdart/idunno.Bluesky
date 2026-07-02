@@ -41,6 +41,7 @@
   * `TokenRequired`
   * `UnresolvableDid`
   * `UnsupportedDomain`
+  * `XrpcNotSupported`
 * Added `MapError` property to `AtProtoHttpResult<TResult>` which is an `IList<Func<AtErrorDetail?, AtErrorDetail?>>`
   to allow mapping for the generic `AtErrorDetail` type to a more specific derived error type.
 
@@ -104,6 +105,7 @@
   * `WithdrawJoinRequest`
 * Added Animated GIF support with `BlueskyAgent.UploadAnimatedGif()`
 * Expanded video support with a new overload to `BlueskyAgent.UploadVideo()` which accepts a MIME type parameter to allow for more video formats.
+* Added `GetStarterPacksWithMembership` to allow the authenticated user to search their starter packs and see which ones a specified actor is a member of.
 
 ## Fixed
 

@@ -68,6 +68,7 @@ public abstract class AtProtoError : AtErrorDetail
             TokenRequired.ErrorTitle => new TokenRequired(atErrorDetail),
             UnresolvableDid.ErrorTitle => new UnresolvableDid(atErrorDetail),
             UnsupportedDomain.ErrorTitle => new UnsupportedDomain(atErrorDetail),
+            XrpcNotSupported.ErrorTitle => new XrpcNotSupported(atErrorDetail),
             _ => atErrorDetail
         };
     }

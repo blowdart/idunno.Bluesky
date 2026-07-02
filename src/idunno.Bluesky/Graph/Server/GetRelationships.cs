@@ -20,7 +20,7 @@ public partial class BlueskyServer
     /// </summary>
     /// <param name="actor">Primary account requesting relationships for.</param>
     /// <param name="others">List of 'other' accounts to be related back to the primary.</param>
-    /// <param name="service">The <see cref="Uri"/> of the service remove the mute from.</param>
+    /// <param name="service">The <see cref="Uri"/> of the service to get relationships from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
@@ -95,8 +95,8 @@ public partial class BlueskyServer
         BlueskyHttpClient<RelationshipMap> client = new(AppViewProxy, loggerFactory);
 
         return await client.Get(
-            service,
-            $"/xrpc/app.bsky.graph.getRelationships?{queryString}",
+            service: service,
+            endpoint: $"/xrpc/app.bsky.graph.getRelationships?{queryString}",
             requestHeaders: null,
             credentials: accessCredentials,
             httpClient: httpClient,

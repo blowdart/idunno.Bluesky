@@ -88,6 +88,7 @@ Supported error types for AtProto API calls include:
 * `TokenRequired`
 * `UnresolvableDid`
 * `UnsupportedDomain`
+* `XrpcNotSupported`
 
 Supported error types for Bluesky API calls include:
 

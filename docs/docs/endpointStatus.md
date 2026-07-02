@@ -14,25 +14,6 @@
 | **Bookmarks** | [app.bsky.bookmark.createBookmark](https://endpoints.bsky.app/#bluesky-app/tag/appbskybookmark/POST/xrpc/app.bsky.bookmark.createBookmark) | `BlueskyAgent.CreateBookmark()` | ✔ |
 | | [app.bsky.bookmark.deleteBookmark](https://endpoints.bsky.app/#bluesky-app/tag/appbskybookmark/POST/xrpc/app.bsky.bookmark.deleteBookmark) | `BlueskyAgent.DeleteBookmark()` | ✔ |
 | | [app.bsky.bookmark.getBookmarks](https://endpoints.bsky.app/#bluesky-app/tag/appbskybookmark/GET/xrpc/app.bsky.bookmark.getBookmarks) | `BlueskyAgent.GetBookmarks()` | ✔ |
-| **Direct Messages** | [chat.bsky.convo.acceptConvo](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/acceptConvo.json) | `BlueskyAgent.AcceptConversation()` | ✔ |
-| | [chat.bsky.convo.addReaction](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/addReaction.json) | `BlueskyAgent.AddReaction()` | ✔ |
-| | [chat.bsky.convo.deleteMessageForSelf](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/deleteMessageForSelf.json) | `BlueskyAgent.DeleteMessageForSelf()` | ✔ |
-| | [chat.bsky.convo.getConvo](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getConvo.json) | `BlueskyAgent.GetConversation()` | ✔ |
-| | [chat.bsky.convo.getConvoAvailability](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getConvoAvailability.json) | `BlueskyAgent.GetConversationAvailability()` | ✔ |
-| | [chat.bsky.convo.getConvoForMembers](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getConvoForMembers.json) | `BlueskyAgent.GetConversationForMembers()` | ✔ |
-| | [chat.bsky.convo.getConvoMembers](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getConvoMembers.json) | `BlueskyAgent.GetConversationMembers()` | ✔ |
-| | [chat.bsky.convo.getLog](https://docs.bsky.app/docs/api/chat-bsky-convo-get-log) | `BlueskyAgent.GetConversationLog()` | ✔ |
-| | [chat.bsky.convo.getMessages](https://docs.bsky.app/docs/api/chat-bsky-convo-get-messages) | `BlueskyAgent.GetMessages()` | ✔ |
-| | [chat.bsky.convo.getUnreadCounts](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getUnreadCounts.json) | `BlueskyAgent.GetUnreadCounts()` | ✔ |
-| | [chat.bsky.convo.leaveConvo](https://docs.bsky.app/docs/api/chat-bsky-convo-leave-convo) | `BlueskyAgent.LeaveConversation()` | ✔ |
-| | [chat.bsky.convo.listConvos](https://docs.bsky.app/docs/api/chat-bsky-convo-list-convos) | `BlueskyAgent.ListConversations()` | ✔ |
-| | [chat.bsky.convo.muteConvos](https://docs.bsky.app/docs/api/chat-bsky-convo-mute-convo) | `BlueskyAgent.MuteConversation()` | ✔ |
-| | [chat.bsky.convo.sendMessageBatch](https://docs.bsky.app/docs/api/chat-bsky-convo-send-message-batch) | `BlueskyAgent.SendMessageBatch()` | ✔ |
-| | [chat.bsky.convo.sendMessage](https://docs.bsky.app/docs/api/chat-bsky-convo-send-message) | `BlueskyAgent.SendMessage()` | ✔ |
-| | [chat.bsky.convo.removeReaction](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/removeReaction.json) | `BlueskyAgent.RemoveReaction()` | ✔ |
-| | [chat.bsky.convo.unmuteConvos](https://docs.bsky.app/docs/api/chat-bsky-convo-unmute-convo) | `BlueskyAgent.UnmuteConversation()` | ✔ |
-| | [chat.bsky.convo.updateAllRead](https://docs.bsky.app/docs/api/chat-bsky-convo-update-all-read) | `BlueskyAgent.UpdateRead()` | ✔ |
-| | [chat.bsky.convo.updateRead](https://docs.bsky.app/docs/api/chat-bsky-convo-update-read) | `BlueskyAgent.UpdateRead()` | ✔ |
 | **Drafts** | [app.bsky.draft.createDraft](https://endpoints.bsky.app/#bluesky-app/tag/appbskydraft/POST/xrpc/app.bsky.draft.createDraft) | `BlueskyAgent.CreateDraft()` | ✔ |
 | | [app.bsky.draft.deleteDraft](https://endpoints.bsky.app/#bluesky-app/tag/appbskydraft/POST/xrpc/app.bsky.draft.deleteDraft) | `BlueskyAgent.DeleteDraft()` | ✔ |
 | | [app.bsky.draft.getDrafts](https://endpoints.bsky.app/#bluesky-app/tag/appbskydraft/GET/xrpc/app.bsky.draft.getDrafts) | `BlueskyAgent.GetDrafts()` | ✔ |
@@ -66,16 +47,18 @@
 | | [app.bsky.graph.getLists](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/GET/xrpc/app.bsky.graph.getLists) | `BlueskyAgent.GetLists()` | ✔ |
 | | [app.bsky.graph.getListsWithMembership](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/GET/xrpc/app.bsky.graph.getListsWithMembership) | `BlueskyAgent.GetListsWithMembership()` | ✔ |
 | | [app.bsky.graph.getMutes](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/GET/xrpc/app.bsky.graph.getMutes) | `BlueskyAgent.GetMutes()` | ✔ |
-| | [app.bsky.graph.getRelationships](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/GET/xrpc/app.bsky.graph.getRelationships) | ~~`BlueskyAgent.GetRelationships()`~~ [*](https://github.com/bluesky-social/atproto/issues/2919) | ❌ |
-| | [app.bsky.graph.getStarterPack](https://docs.bsky.app/docs/api/app-bsky-graph-get-starter-pack) | `BlueskyAgent.GetStarterPack()` [*](https://github.com/bluesky-social/atproto/issues/2920) | ✔ |
-| | [app.bsky.graph.getStarterPacks](https://docs.bsky.app/docs/api/app-bsky-graph-get-starter-packs) | `BlueskyAgent.GetStarterPacks()` [*](https://github.com/bluesky-social/atproto/issues/2920) | ✔ |
-| | [app.bsky.graph.getSuggestedFollowsByActor](https://docs.bsky.app/docs/api/app-bsky-graph-get-suggested-follows-by-actor) | `BlueskyAgent.GetSuggestedFollowsByActor()` | ✔ |
-| | [app.bsky.graph.muteActorList](https://docs.bsky.app/docs/api/app-bsky-graph-mute-actor-list) | `BlueskyAgent.MuteActorList()` | ✔ |
-| | [app.bsky.graph.muteActor](https://docs.bsky.app/docs/api/app-bsky-graph-mute-actor) | `BlueskyAgent.Mute()` | ✔ |
-| | [app.bsky.graph.muteThread](https://docs.bsky.app/docs/api/app-bsky-graph-mute-thread) | `BlueskyAgent.MuteThread()` | ✔ |
-| | [app.bsky.graph.unmuteActorList](https://docs.bsky.app/docs/api/app-bsky-graph-unmute-actor-list) | `BlueskyAgent.UnmuteActorList()` | ✔ |
-| | [app.bsky.graph.unmuteActor](https://docs.bsky.app/docs/api/app-bsky-graph-unmute-actor) | `BlueskyAgent.Unmute()` | ✔ |
-| | [app.bsky.graph.unmuteThread](https://docs.bsky.app/docs/api/app-bsky-graph-unmute-thread) | `BlueskyAgent.UnmuteThread()` | ✔ |
+| | [app.bsky.graph.getRelationships](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/GET/xrpc/app.bsky.graph.getRelationships) | `BlueskyAgent.GetRelationships()` [*](https://github.com/bluesky-social/atproto/issues/2919) | ✔ |
+| | [app.bsky.graph.getStarterPack](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/GET/xrpc/app.bsky.graph.getStarterPack) | `BlueskyAgent.GetStarterPack()` [*](https://github.com/bluesky-social/atproto/issues/2920) | ✔ |
+| | [app.bsky.graph.getStarterPacks](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/GET/xrpc/app.bsky.graph.getStarterPacks) | `BlueskyAgent.GetStarterPacks()` [*](https://github.com/bluesky-social/atproto/issues/2920) | ✔ |
+| | [app.bsky.graph.getStarterPacksWithMembership](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/GET/xrpc/app.bsky.graph.getStarterPacksWithMembership) | `BlueskyAgent.GetStarterPacksWithMembership()` | ✔ |
+| | [app.bsky.graph.getSuggestedFollowsByActor](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/GET/xrpc/app.bsky.graph.getSuggestedFollowsByActor` | ✔ |
+| | [app.bsky.graph.muteActor](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/POST/xrpc/app.bsky.graph.muteActor) | `BlueskyAgent.Mute()` | ✔ |
+| | [app.bsky.graph.muteActorList](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/POST/xrpc/app.bsky.graph.muteActorList) | `BlueskyAgent.MuteActorList()` | ✔ |
+| | [app.bsky.graph.muteThread](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/POST/xrpc/app.bsky.graph.muteThread) | `BlueskyAgent.MuteThread()` | ✔ |
+[ ] [app.bsky.graph.searchStarterPacks](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/GET/xrpc/app.bsky.graph.searchStarterPacks) | `BlueskyAgent.SearchStarterPacks()` | ✔ |
+| | [app.bsky.graph.unmuteActor](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/POST/xrpc/app.bsky.graph.unmuteActor) | `BlueskyAgent.Unmute()` | ✔ |
+| | [app.bsky.graph.unmuteActorList](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/POST/xrpc/app.bsky.graph.unmuteActorList) | `BlueskyAgent.UnmuteActorList()` | ✔ |
+| | [app.bsky.graph.unmuteThread](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/POST/xrpc/app.bsky.graph.unmuteThread) | `BlueskyAgent.UnmuteThread()` | ✔ |
 | **Labelers** | [app.bsky.labeler.getServices](https://endpoints.bsky.app/#bluesky-app/tag/appbskylabeler/GET/xrpc/app.bsky.labeler.getServices) | `BlueskyAgent.GetLabelerServices()` | ✔ |
 | **Notifications** | [app.bsky.notifications.getPreferences](https://endpoints.bsky.app/#bluesky-app/tag/appbskynotification/GET/xrpc/app.bsky.notification.getPreferences) | `BlueskyAgent.GetNotificationPreferences()` | ✔ |
 | | [app.bsky.notification.getUnreadCount](https://endpoints.bsky.app/#bluesky-app/tag/appbskynotification/GET/xrpc/app.bsky.notification.getUnreadCount) | `BlueskyAgent.GetNotificationUnreadCount()` | ✔ |
@@ -107,6 +90,36 @@
 | **Video** | [app.bsky.video.GetJobStatus](https://endpoints.bsky.app/#bluesky-app/tag/appbskyvideo/GET/xrpc/app.bsky.video.getJobStatus) | `BlueskyAgent.GetVideoJobStatus()` | ✔ |
 | | [app.bsky.video.GetUploadLimits](https://endpoints.bsky.app/#bluesky-app/tag/appbskyvideo/GET/xrpc/app.bsky.video.getUploadLimits) | `BlueskyAgent.GetVideoUploadLimits()` | ✔ |
 | | [app.bsky.video.UploadVideo](https://endpoints.bsky.app/#bluesky-app/tag/appbskyvideo/POST/xrpc/app.bsky.video.uploadVideo) | `BlueskyAgent.UploadVideo()` | ✔ |
+
+## Chat Endpoints
+| Group | Endpoint | Class / Method | Status |
+| ----- | -------- | -------------- | ------ |
+| **Actor** | [chat.bsky.actor.getStatus](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/actor/getStatus.json) | `BlueskyAgent.GetActorChatStatus()` | ✔ |
+| ** Convo ** | [chat.bsky.convo.acceptConvo](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/acceptConvo.json) | `BlueskyAgent.AcceptConversation()` | ✔ |
+| | [chat.bsky.convo.addReaction](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/addReaction.json) | `BlueskyAgent.AddReaction()` | ✔ |
+| | [chat.bsky.convo.deleteMessageForSelf](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/deleteMessageForSelf.json) | `BlueskyAgent.DeleteMessageForSelf()` | ✔ |
+| | [chat.bsky.convo.getConvo](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getConvo.json) | `BlueskyAgent.GetConversation()` | ✔ |
+| | [chat.bsky.convo.getConvoAvailability](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getConvoAvailability.json) | `BlueskyAgent.GetConversationAvailability()` | ✔ |
+| | [chat.bsky.convo.getConvoForMembers](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getConvoForMembers.json) | `BlueskyAgent.GetConversationForMembers()` | ✔ |
+| | [chat.bsky.convo.getConvoMembers](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getConvoMembers.json) | `BlueskyAgent.GetConversationMembers()` | ✔ |
+| | [chat.bsky.convo.getLog](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getLog.json) | `BlueskyAgent.GetConversationLog()` | ✔ |
+| | [chat.bsky.convo.getMessages](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getMessages.json) | `BlueskyAgent.GetMessages()` | ✔ |
+| | [chat.bsky.convo.getUnreadCounts](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/getUnreadCounts.json) | `BlueskyAgent.GetUnreadCounts()` | ✔ |
+| | [chat.bsky.convo.leaveConvo](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/leaveConvo.json) | `BlueskyAgent.LeaveConversation()` | ✔ |
+| | [chat.bsky.convo.listConvoRequests](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/listConvoRequests.json) | `BlueskyAgent.ListConversationRequests()` [*](https://github.com/bluesky-social/atproto/issues/5175) | ✔ |
+| | [chat.bsky.convo.listConvos](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/listConvos.json) | `BlueskyAgent.ListConversations()` | ✔ |
+| | [chat.bsky.convo.lockConvo](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/lockConvo.json) | `BlueskyAgent.LockConversation()` | ✔ |
+| | [chat.bsky.convo.muteConvo](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/muteConvo.json) | `BlueskyAgent.MuteConversation()` | ✔ |
+| | [chat.bsky.convo.removeReaction](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/removeReaction.json) | `BlueskyAgent.RemoveReaction()` | ✔ |
+| | [chat.bsky.convo.sendMessage](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/sendMessage.json) | `BlueskyAgent.SendMessage()` | ✔ |
+| | [chat.bsky.convo.sendMessageBatch](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/sendMessageBatch.json) | `BlueskyAgent.SendMessageBatch()` | ✔ |
+| | [chat.bsky.convo.unlockConvo](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/unlockConvo.json) | `BlueskyAgent.UnlockConversation()` | ✔ |
+| | [chat.bsky.convo.unmuteConvo](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/unmuteConvo.json) | `BlueskyAgent.UnmuteConversation()` | ✔ |
+| | [chat.bsky.convo.updateAllRead](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/updateAllRead.json) | `BlueskyAgent.UpdateAllRead()` | ✔ |
+| | [chat.bsky.convo.updateRead](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/updateRead.json) | `BlueskyAgent.UpdateRead()` | ✔ |
+| ** Group ** | | | |
+| ** Notification ** | [chat.bsky.notification.getPreferences](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/notification/getPreferences.json) | `BlueskyAgent.GetChatNotificationPreferences()` | ✔ |
+| | [chat.bsky.notification.putPreferences](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/notification/putPreferences.json) | `BlueskyAgent.PutChatNotificationPreferences()` | ✔ |
 
 ## AT Protocol Endpoints
 | Group        | Endpoint                                                     | Class / Method                | Status |

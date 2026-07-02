@@ -887,6 +887,7 @@ public static partial class BlueskyServer
             onCredentialsUpdated: onCredentialsUpdated,
             subscribedLabelers: subscribedLabelers,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<ListWithMembership>>(

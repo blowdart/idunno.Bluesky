@@ -657,7 +657,6 @@ idunno.Bluesky.Chat.MessageInput.Embed.get -> idunno.Bluesky.Embed.EmbeddedBase?
 idunno.Bluesky.Chat.MessageInput.Embed.set -> void
 idunno.Bluesky.Chat.MessageInput.Facets.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.RichText.Facet!>?
 idunno.Bluesky.Chat.MessageInput.Facets.set -> void
-idunno.Bluesky.Chat.MessageInput.MessageInput(string! text, System.Collections.Generic.ICollection<idunno.Bluesky.RichText.Facet!>? facets = null, idunno.Bluesky.Embed.EmbeddedRecord? embed = null) -> void
 idunno.Bluesky.Chat.MessageInput.Text.get -> string!
 idunno.Bluesky.Chat.MessageInput.Text.init -> void
 idunno.Bluesky.Chat.MessageLogBase
@@ -2346,7 +2345,6 @@ idunno.Bluesky.BlueskyAgent.GetConversationDeclaration(System.Threading.Cancella
 idunno.Bluesky.BlueskyAgent.GetConversationMembers(string! id, int? limit = null, string? cursor = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Actor.ProfileViewBasic!>!>!>!
 idunno.Bluesky.BlueskyAgent.GetJoinLinkPreviews(System.Collections.Generic.ICollection<string!>! codes, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Group.Model.GetJoinLinkPreviewsResponse!>!>!
 idunno.Bluesky.BlueskyAgent.GetUnreadCounts(bool includeGroupChats = true, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.UnreadConversationCounts!>!>!
-idunno.Bluesky.BlueskyAgent.ListJoinRequests(System.Collections.Generic.ICollection<string!>! conversationIds, string? cursor = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Chat.Group.JoinRequestView!>!>!>!
 idunno.Bluesky.BlueskyAgent.ListMutualGroups(idunno.AtProto.Did! subject, int? limit = null, string? cursor = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Chat.ConversationView!>!>!>!
 idunno.Bluesky.BlueskyAgent.RejectJoinRequest(string! conversationId, idunno.AtProto.Did! member, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 idunno.Bluesky.BlueskyAgent.RemoveMembers(string! conversationId, System.Collections.Generic.ICollection<idunno.AtProto.Did!>! members, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Group.Model.RemoveMembersResponse!>!>!
@@ -2414,9 +2412,7 @@ idunno.Bluesky.Chat.Actor.ProfileViewBasic.Viewer.get -> idunno.Bluesky.Actor.Ac
 idunno.Bluesky.Chat.Actor.ProfileViewBasic.Viewer.init -> void
 idunno.Bluesky.Chat.AddMember
 idunno.Bluesky.Chat.AddMemberSystemMessage
-idunno.Bluesky.Chat.AddMemberSystemMessage.AddedBy.get -> idunno.Bluesky.Chat.ReferredUser!
 idunno.Bluesky.Chat.AddMemberSystemMessage.AddedBy.set -> void
-idunno.Bluesky.Chat.AddMemberSystemMessage.Member.get -> idunno.Bluesky.Chat.ReferredUser!
 idunno.Bluesky.Chat.AddMemberSystemMessage.Member.set -> void
 idunno.Bluesky.Chat.AddMemberSystemMessage.Role.get -> string!
 idunno.Bluesky.Chat.AddMemberSystemMessage.Role.set -> void
@@ -2505,13 +2501,6 @@ idunno.Bluesky.Chat.Group.JoinLinkViewerState
 idunno.Bluesky.Chat.Group.JoinLinkViewerState.JoinLinkViewerState(System.DateTimeOffset? requestedAt) -> void
 idunno.Bluesky.Chat.Group.JoinLinkViewerState.RequestedAt.get -> System.DateTimeOffset?
 idunno.Bluesky.Chat.Group.JoinLinkViewerState.RequestedAt.init -> void
-idunno.Bluesky.Chat.Group.JoinRequestView
-idunno.Bluesky.Chat.Group.JoinRequestView.ConversationId.get -> string!
-idunno.Bluesky.Chat.Group.JoinRequestView.MemberCount.get -> int
-idunno.Bluesky.Chat.Group.JoinRequestView.MemberLimit.get -> int
-idunno.Bluesky.Chat.Group.JoinRequestView.Name.get -> string!
-idunno.Bluesky.Chat.Group.JoinRequestView.Owner.get -> idunno.Bluesky.Chat.Actor.ProfileViewBasic!
-idunno.Bluesky.Chat.Group.JoinRequestView.Viewer.get -> idunno.Bluesky.Chat.Group.JoinLinkViewerState!
 idunno.Bluesky.Chat.Group.JoinRule
 idunno.Bluesky.Chat.Group.JoinStatus
 idunno.Bluesky.Chat.Group.LinkEnabledStatus
@@ -2562,10 +2551,8 @@ idunno.Bluesky.Chat.IncomingJoinRequest.Member.set -> void
 idunno.Bluesky.Chat.LockConversation
 idunno.Bluesky.Chat.LockConversationPermanently
 idunno.Bluesky.Chat.LockConversationPermanentlySystemMessage
-idunno.Bluesky.Chat.LockConversationPermanentlySystemMessage.LockedBy.get -> idunno.Bluesky.Chat.ReferredUser!
 idunno.Bluesky.Chat.LockConversationPermanentlySystemMessage.LockedBy.set -> void
 idunno.Bluesky.Chat.LockConversationSystemMessage
-idunno.Bluesky.Chat.LockConversationSystemMessage.LockedBy.get -> idunno.Bluesky.Chat.ReferredUser!
 idunno.Bluesky.Chat.LockConversationSystemMessage.LockedBy.set -> void
 idunno.Bluesky.Chat.LogBase.ConversationId.get -> string!
 idunno.Bluesky.Chat.LogBase.ConversationId.set -> void
@@ -2573,15 +2560,12 @@ idunno.Bluesky.Chat.LogBase.LogBase(string! conversationId, string! revision) ->
 idunno.Bluesky.Chat.LogBase.Revision.set -> void
 idunno.Bluesky.Chat.MemberJoin
 idunno.Bluesky.Chat.MemberJoinSystemMessage
-idunno.Bluesky.Chat.MemberJoinSystemMessage.ApprovedBy.get -> idunno.Bluesky.Chat.ReferredUser?
 idunno.Bluesky.Chat.MemberJoinSystemMessage.ApprovedBy.set -> void
-idunno.Bluesky.Chat.MemberJoinSystemMessage.Member.get -> idunno.Bluesky.Chat.ReferredUser!
 idunno.Bluesky.Chat.MemberJoinSystemMessage.Member.set -> void
 idunno.Bluesky.Chat.MemberJoinSystemMessage.Role.get -> string!
 idunno.Bluesky.Chat.MemberJoinSystemMessage.Role.set -> void
 idunno.Bluesky.Chat.MemberLeave
 idunno.Bluesky.Chat.MemberLeaveSystemMessage
-idunno.Bluesky.Chat.MemberLeaveSystemMessage.Member.get -> idunno.Bluesky.Chat.ReferredUser!
 idunno.Bluesky.Chat.MemberLeaveSystemMessage.Member.set -> void
 idunno.Bluesky.Chat.MemberRole
 idunno.Bluesky.Chat.MessageLogBase.Message.set -> void
@@ -2599,17 +2583,12 @@ idunno.Bluesky.Chat.OutgoingJoinRequest
 idunno.Bluesky.Chat.ReadConversation
 idunno.Bluesky.Chat.ReadJoinRequests
 idunno.Bluesky.Chat.ReadMessage
-idunno.Bluesky.Chat.ReferredUser
-idunno.Bluesky.Chat.ReferredUser.Did.get -> idunno.AtProto.Did!
-idunno.Bluesky.Chat.ReferredUser.Did.set -> void
 idunno.Bluesky.Chat.RejectJoinRequest
 idunno.Bluesky.Chat.RejectJoinRequest.Member.get -> idunno.Bluesky.Chat.Actor.ProfileViewBasic!
 idunno.Bluesky.Chat.RejectJoinRequest.Member.set -> void
 idunno.Bluesky.Chat.RemoveMember
 idunno.Bluesky.Chat.RemoveMemberSystemMessage
-idunno.Bluesky.Chat.RemoveMemberSystemMessage.Member.get -> idunno.Bluesky.Chat.ReferredUser!
 idunno.Bluesky.Chat.RemoveMemberSystemMessage.Member.set -> void
-idunno.Bluesky.Chat.RemoveMemberSystemMessage.RemovedBy.get -> idunno.Bluesky.Chat.ReferredUser!
 idunno.Bluesky.Chat.RemoveMemberSystemMessage.RemovedBy.set -> void
 idunno.Bluesky.Chat.RemoveReaction
 idunno.Bluesky.Chat.RemoveReaction.Reaction.get -> idunno.Bluesky.Chat.ReactionView!
@@ -2629,8 +2608,6 @@ idunno.Bluesky.Chat.SystemMessageView.SentAt.init -> void
 idunno.Bluesky.Chat.SystemMessageView.SystemMessageView(idunno.Bluesky.Chat.SystemMessage! data, string! id, string! revision, System.DateTimeOffset sentAt) -> void
 idunno.Bluesky.Chat.UnlockConversation
 idunno.Bluesky.Chat.UnlockConversationSystemMessage
-idunno.Bluesky.Chat.UnlockConversationSystemMessage.UnlockedBy.get -> idunno.Bluesky.Chat.ReferredUser!
-idunno.Bluesky.Chat.UnlockConversationSystemMessage.UnlockedBy.set -> void
 idunno.Bluesky.Chat.UnmuteConversation
 idunno.Bluesky.Chat.UnreadConversationCounts
 idunno.Bluesky.Chat.UnreadConversationCounts.UnreadAcceptedConversations.get -> int
@@ -2696,7 +2673,6 @@ static idunno.Bluesky.BlueskyServer.GetConversationAvailability(System.Collectio
 static idunno.Bluesky.BlueskyServer.GetConversationMembers(string! id, int? limit, string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Actor.ProfileViewBasic!>!>!>!
 static idunno.Bluesky.BlueskyServer.GetJoinLinkPreviews(System.Collections.Generic.ICollection<string!>! codes, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Uri! service, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Group.Model.GetJoinLinkPreviewsResponse!>!>!
 static idunno.Bluesky.BlueskyServer.GetUnreadCounts(bool includeGroupChats, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.UnreadConversationCounts!>!>!
-static idunno.Bluesky.BlueskyServer.ListJoinRequests(System.Collections.Generic.ICollection<string!>! conversationIds, string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Chat.Group.JoinRequestView!>!>!>!
 static idunno.Bluesky.BlueskyServer.ListMutualGroups(idunno.AtProto.Did! subject, int? limit, string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Chat.ConversationView!>!>!>!
 static idunno.Bluesky.BlueskyServer.RejectJoinRequest(string! conversationId, idunno.AtProto.Did! member, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 static idunno.Bluesky.BlueskyServer.RemoveMembers(string! conversationId, System.Collections.Generic.ICollection<idunno.AtProto.Did!>! members, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Group.Model.RemoveMembersResponse!>!>!
@@ -2770,3 +2746,74 @@ idunno.Bluesky.BlueskyAgent.GetAnimatedGifJobStatus(string! jobId, System.Thread
 idunno.Bluesky.BlueskyAgent.UploadAnimatedGif(string! fileName, byte[]! gif, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Video.JobStatus!>!>!
 idunno.Bluesky.BlueskyAgent.UploadVideo(string! fileName, byte[]! media, string! mimeType, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Video.JobStatus!>!>!
 static idunno.Bluesky.BlueskyServer.UploadVideo(idunno.AtProto.Did! did, string! fileName, byte[]! video, string! mimeType, System.Uri! service, idunno.AtProto.Authentication.ServiceCredential! serviceCredential, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Video.JobStatus!>!>!
+idunno.Bluesky.BlueskyAgent.GetStarterPacksWithMembership(idunno.AtProto.AtIdentifier! actor, int? limit = null, string? cursor = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Graph.StarterPackWithMembership!>!>!>!
+idunno.Bluesky.Graph.StarterPackWithMembership
+idunno.Bluesky.Graph.StarterPackWithMembership.ListItem.get -> idunno.Bluesky.Graph.ListItemView?
+idunno.Bluesky.Graph.StarterPackWithMembership.ListItem.set -> void
+idunno.Bluesky.Graph.StarterPackWithMembership.StarterPack.get -> idunno.Bluesky.Graph.StarterPackView!
+idunno.Bluesky.Graph.StarterPackWithMembership.StarterPack.set -> void
+static idunno.Bluesky.BlueskyServer.GetStarterPacksWithMembership(idunno.AtProto.AtIdentifier! actor, int? limit, string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Graph.StarterPackWithMembership!>!>!>!
+idunno.Bluesky.BlueskyAgent.GetActorChatStatus(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Actor.ChatStatus!>!>!
+idunno.Bluesky.BlueskyAgent.ListConversationRequests(int? limit = null, string? cursor = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Chat.ConversationViewBase!>!>!>!
+idunno.Bluesky.BlueskyAgent.ListJoinRequests(System.Collections.Generic.ICollection<string!>! conversationIds, string? cursor = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Chat.Group.JoinRequestConversationView!>!>!>!
+idunno.Bluesky.BlueskyAgent.SearchStarterPacks(string! q, int? limit = null, string? cursor = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Graph.StarterPackViewBasic!>!>!>!
+idunno.Bluesky.BlueskyAgent.SendMessage(string! conversationId, string! message, bool extractFacets = true, idunno.AtProto.Repo.StrongReference? embeddedPost = null, idunno.Bluesky.Chat.ReplyReference? replyTo = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.MessageView!>!>!
+idunno.Bluesky.BlueskyAgent.UnmuteConversation(string! conversationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.ConversationView!>!>!
+idunno.Bluesky.BlueskyAgent.UpdateAllRead(string! status, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<ulong>!>!
+idunno.Bluesky.Chat.Actor.ChatStatus
+idunno.Bluesky.Chat.Actor.ChatStatus.CanCreateGroups.get -> bool
+idunno.Bluesky.Chat.Actor.ChatStatus.CanCreateGroups.init -> void
+idunno.Bluesky.Chat.Actor.ChatStatus.ChatDisabled.get -> bool
+idunno.Bluesky.Chat.Actor.ChatStatus.ChatDisabled.init -> void
+idunno.Bluesky.Chat.Actor.ChatStatus.ChatStatus(bool ChatDisabled, bool CanCreateGroups, int GroupMemberLimit) -> void
+idunno.Bluesky.Chat.Actor.ChatStatus.GroupMemberLimit.get -> int
+idunno.Bluesky.Chat.Actor.ChatStatus.GroupMemberLimit.init -> void
+idunno.Bluesky.Chat.AddMemberSystemMessage.AddedBy.get -> idunno.Bluesky.Chat.SystemMessageReferredUser!
+idunno.Bluesky.Chat.AddMemberSystemMessage.Member.get -> idunno.Bluesky.Chat.SystemMessageReferredUser!
+idunno.Bluesky.Chat.ConversationViewBase
+idunno.Bluesky.Chat.Group.JoinRequestConversationView
+idunno.Bluesky.Chat.Group.JoinRequestConversationView.ConversationId.get -> string!
+idunno.Bluesky.Chat.Group.JoinRequestConversationView.ConversationId.set -> void
+idunno.Bluesky.Chat.Group.JoinRequestConversationView.MemberCount.get -> int
+idunno.Bluesky.Chat.Group.JoinRequestConversationView.MemberCount.set -> void
+idunno.Bluesky.Chat.Group.JoinRequestConversationView.MemberLimit.get -> int
+idunno.Bluesky.Chat.Group.JoinRequestConversationView.MemberLimit.set -> void
+idunno.Bluesky.Chat.Group.JoinRequestConversationView.Name.get -> string!
+idunno.Bluesky.Chat.Group.JoinRequestConversationView.Name.set -> void
+idunno.Bluesky.Chat.Group.JoinRequestConversationView.Owner.get -> idunno.Bluesky.Chat.Actor.ProfileViewBasic!
+idunno.Bluesky.Chat.Group.JoinRequestConversationView.Owner.set -> void
+idunno.Bluesky.Chat.Group.JoinRequestConversationView.Viewer.get -> idunno.Bluesky.Chat.Group.JoinLinkViewerState!
+idunno.Bluesky.Chat.Group.JoinRequestConversationView.Viewer.set -> void
+idunno.Bluesky.Chat.Group.JoinRequestView
+idunno.Bluesky.Chat.Group.JoinRequestView.ConversationId.get -> string!
+idunno.Bluesky.Chat.Group.JoinRequestView.ConversationId.set -> void
+idunno.Bluesky.Chat.Group.JoinRequestView.JoinRequestView(string! conversationId, idunno.Bluesky.Chat.Actor.ProfileViewBasic! requestedBy, System.DateTimeOffset requestedAt) -> void
+idunno.Bluesky.Chat.Group.JoinRequestView.RequestedAt.get -> System.DateTimeOffset
+idunno.Bluesky.Chat.Group.JoinRequestView.RequestedAt.set -> void
+idunno.Bluesky.Chat.Group.JoinRequestView.RequestedBy.get -> idunno.Bluesky.Chat.Actor.ProfileViewBasic!
+idunno.Bluesky.Chat.Group.JoinRequestView.RequestedBy.set -> void
+idunno.Bluesky.Chat.LockConversationPermanentlySystemMessage.LockedBy.get -> idunno.Bluesky.Chat.SystemMessageReferredUser!
+idunno.Bluesky.Chat.LockConversationSystemMessage.LockedBy.get -> idunno.Bluesky.Chat.SystemMessageReferredUser!
+idunno.Bluesky.Chat.MemberJoinSystemMessage.ApprovedBy.get -> idunno.Bluesky.Chat.SystemMessageReferredUser?
+idunno.Bluesky.Chat.MemberJoinSystemMessage.Member.get -> idunno.Bluesky.Chat.SystemMessageReferredUser!
+idunno.Bluesky.Chat.MemberLeaveSystemMessage.Member.get -> idunno.Bluesky.Chat.SystemMessageReferredUser!
+idunno.Bluesky.Chat.MessageInput.MessageInput(string! text, System.Collections.Generic.ICollection<idunno.Bluesky.RichText.Facet!>? facets = null, idunno.Bluesky.Embed.EmbeddedRecord? embed = null, idunno.Bluesky.Chat.ReplyReference? replyTo = null) -> void
+idunno.Bluesky.Chat.MessageInput.ReplyTo.get -> idunno.Bluesky.Chat.ReplyReference?
+idunno.Bluesky.Chat.MessageInput.ReplyTo.set -> void
+idunno.Bluesky.Chat.RemoveMemberSystemMessage.Member.get -> idunno.Bluesky.Chat.SystemMessageReferredUser!
+idunno.Bluesky.Chat.RemoveMemberSystemMessage.RemovedBy.get -> idunno.Bluesky.Chat.SystemMessageReferredUser!
+idunno.Bluesky.Chat.ReplyReference
+idunno.Bluesky.Chat.ReplyReference.MessageId.get -> string!
+idunno.Bluesky.Chat.ReplyReference.MessageId.init -> void
+idunno.Bluesky.Chat.ReplyReference.ReplyReference(string! MessageId) -> void
+idunno.Bluesky.Chat.SystemMessageReferredUser
+idunno.Bluesky.Chat.SystemMessageReferredUser.Did.get -> idunno.AtProto.Did!
+idunno.Bluesky.Chat.SystemMessageReferredUser.Did.set -> void
+idunno.Bluesky.Chat.UnlockConversationSystemMessage.UnlockedBy.get -> idunno.Bluesky.Chat.SystemMessageReferredUser!
+idunno.Bluesky.Chat.UnlockConversationSystemMessage.UnlockedBy.set -> void
+static idunno.Bluesky.BlueskyServer.GetActorChatStatus(System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Actor.ChatStatus!>!>!
+static idunno.Bluesky.BlueskyServer.ListConversationRequests(int? limit, string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Chat.ConversationViewBase!>!>!>!
+static idunno.Bluesky.BlueskyServer.ListJoinRequests(System.Collections.Generic.ICollection<string!>! conversationIds, string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Chat.Group.JoinRequestConversationView!>!>!>!
+static idunno.Bluesky.BlueskyServer.SearchStarterPacks(string! q, int? limit, string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Graph.StarterPackViewBasic!>!>!>!
+static idunno.Bluesky.BlueskyServer.SendMessage(string! conversationId, idunno.Bluesky.Chat.MessageInput! message, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.MessageView!>!>!
+static idunno.Bluesky.BlueskyServer.UnmuteConversation(string! conversationId, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.ConversationView!>!>!

@@ -990,4 +990,5 @@ idunno.AtProto.RepoTakenDown
 idunno.AtProto.TokenRequired
 idunno.AtProto.UnresolvableDid
 idunno.AtProto.UnsupportedDomain
+idunno.AtProto.XrpcNotSupported
 static idunno.AtProto.AtProtoError.Map(idunno.AtProto.AtErrorDetail? atErrorDetail) -> idunno.AtProto.AtErrorDetail?

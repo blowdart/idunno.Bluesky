@@ -8,61 +8,39 @@ using idunno.Bluesky.Chat.Actor;
 namespace idunno.Bluesky.Chat.Group;
 
 /// <summary>
-/// A join request from the perspective of the requester, including enough group context to render the request in a list (e.g. group name, owner, member count).
+/// A join request from the perspective of the group owner.
 /// </summary>
 public sealed record JoinRequestView : View
 {
-    [JsonConstructor]
-    internal JoinRequestView(string conversationId, string name, ProfileViewBasic owner, int memberCount, int memberLimit, JoinLinkViewerState viewer)
-        : base()
+    /// <summary>
+    /// Creates a new instance of <see cref="JoinRequestView"/>.
+    /// </summary>
+    /// <param name="conversationId">The conversation ID of the group the request is for.</param>
+    /// <param name="requestedBy">The profile of the user who requested to join the group.</param>
+    /// <param name="requestedAt">The date and time when the join request was made.</param>
+    public JoinRequestView(string conversationId, ProfileViewBasic requestedBy, DateTimeOffset requestedAt)
     {
-        ArgumentNullException.ThrowIfNull(conversationId);
-        ArgumentNullException.ThrowIfNull(name);
-        ArgumentNullException.ThrowIfNull(owner);
-        ArgumentNullException.ThrowIfNull(viewer);
-
         ConversationId = conversationId;
-        Name = name;
-        Owner = owner;
-        MemberCount = memberCount;
-        MemberLimit = memberLimit;
-        Viewer = viewer;
+        RequestedBy = requestedBy;
+        RequestedAt = requestedAt;
     }
 
     /// <summary>
-    /// Gets the conversation ID of the group.
+    /// Gets the conversation ID of the group the request is for.
     /// </summary>
     [JsonRequired]
     [JsonPropertyName("convoId")]
-    public string ConversationId { get; internal init; }
+    public string ConversationId { get; set; }
 
     /// <summary>
-    /// Gets the name of the group.
+    /// Gets the profile of the user who requested to join the group.
     /// </summary>
     [JsonRequired]
-    public string Name { get; internal init; }
+    public ProfileViewBasic RequestedBy { get; set; }
 
     /// <summary>
-    /// Gets the <see cref="ProfileViewBasic"/> of owner of the group.
+    /// Gets the date and time when the join request was made.
     /// </summary>
     [JsonRequired]
-    public ProfileViewBasic Owner { get; internal init; }
-
-    /// <summary>
-    /// Gets the number of members in the group.
-    /// </summary>
-    [JsonRequired]
-    public int MemberCount { get; internal init; }
-
-    /// <summary>
-    /// Gets the maximum number of members allowed in the group.
-    /// </summary>
-    [JsonRequired]
-    public int MemberLimit { get; internal init; }
-
-    /// <summary>
-    /// Gets the state of the viewer with respect to the join link for the group.
-    /// </summary>
-    [JsonRequired]
-    public JoinLinkViewerState Viewer { get; internal init; }
+    public DateTimeOffset RequestedAt { get; set; }
 }

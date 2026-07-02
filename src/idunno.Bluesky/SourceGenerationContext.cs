@@ -158,6 +158,10 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Chat.WithdrawIncomingJoinRequest), TypeInfoPropertyName = "ChatBSkyConvoWithdrawIncomingJoinRequest")]
 [JsonSerializable(typeof(Chat.WithdrawOutgoingJoinRequest), TypeInfoPropertyName = "ChatBSkyConvoWithdrawOutgoingJoinRequest")]
 
+[JsonSerializable(typeof(Chat.ConversationViewBase), TypeInfoPropertyName = "ChatBSkyConvoViewBase")]
+[JsonSerializable(typeof(Chat.ConversationView), TypeInfoPropertyName = "ChatBSkyConvoView")]
+[JsonSerializable(typeof(Chat.Group.JoinRequestConversationView), TypeInfoPropertyName = "ChatBSkyConvoViewWithMessages")]
+
 [JsonSerializable(typeof(Chat.Model.AcceptConversationRequest))]
 [JsonSerializable(typeof(Chat.Model.AcceptConversationResponse))]
 [JsonSerializable(typeof(Chat.Model.AddReactionRequest))]
@@ -168,16 +172,16 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Chat.Model.GetConversationMembersResponse))]
 [JsonSerializable(typeof(Chat.Model.GetLogResponse))]
 [JsonSerializable(typeof(Chat.Model.GetMessagesResponse))]
-[JsonSerializable(typeof(Chat.Model.ListConversationsResponse))]
-[JsonSerializable(typeof(Chat.Model.RemoveReactionRequest))]
-[JsonSerializable(typeof(Chat.Model.RemoveReactionResponse))]
-[JsonSerializable(typeof(Chat.Model.SendMessageBatchRequest))]
-[JsonSerializable(typeof(Chat.Model.SendMessageBatchResponse))]
-[JsonSerializable(typeof(Chat.Model.SendMessageRequest))]
-[JsonSerializable(typeof(Chat.Model.UpdateAllReadRequest))]
-[JsonSerializable(typeof(Chat.Model.UpdateAllReadResponse))]
-[JsonSerializable(typeof(Chat.Model.UpdateReadRequest))]
-
+[JsonSerializable(typeof(Chat.Convo.Model.ListConversationsResponse))]
+[JsonSerializable(typeof(Chat.Convo.Model.ListConvoRequestsResponse))]
+[JsonSerializable(typeof(Chat.Convo.Model.RemoveReactionRequest))]
+[JsonSerializable(typeof(Chat.Convo.Model.RemoveReactionResponse))]
+[JsonSerializable(typeof(Chat.Convo.Model.SendMessageBatchRequest))]
+[JsonSerializable(typeof(Chat.Convo.Model.SendMessageBatchRequest))]
+[JsonSerializable(typeof(Chat.Convo.Model.SendMessageRequest))]
+[JsonSerializable(typeof(Chat.Convo.Model.UpdateAllReadRequest))]
+[JsonSerializable(typeof(Chat.Convo.Model.UpdateAllReadResponse))]
+[JsonSerializable(typeof(Chat.Convo.Model.UpdateReadRequest))]
 
 [JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.Declaration), TypeInfoPropertyName = "ChatActorDeclaration")]
 [JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.ProfileViewBasic), TypeInfoPropertyName = "ChatActorProfileViewBasic")]
@@ -187,7 +191,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.DirectConversationMember))]
 [JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.GroupConversationMember))]
 [JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.PastGroupConversationMember))]
-[JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.Declaration), TypeInfoPropertyName = "ChatActorDeclaration")]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.Actor.ChatStatus))]
 [JsonSerializable(typeof(AtProtoRepositoryRecord<idunno.Bluesky.Chat.Actor.Declaration>), TypeInfoPropertyName = "ChatActorDeclarationRecord")]
 
 [JsonSerializable(typeof(idunno.Bluesky.Chat.AddMemberSystemMessage), TypeInfoPropertyName = "ChatBSkyConvoAddMemberSystemMessage")]
@@ -200,7 +204,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(idunno.Bluesky.Chat.LockConversationPermanentlySystemMessage), TypeInfoPropertyName = "ChatBSkyConvoLockConversationPermanentlySystemMessage")]
 [JsonSerializable(typeof(idunno.Bluesky.Chat.MemberJoinSystemMessage), TypeInfoPropertyName = "ChatBSkyConvoMemberJoinSystemMessage")]
 [JsonSerializable(typeof(idunno.Bluesky.Chat.MemberLeaveSystemMessage), TypeInfoPropertyName = "ChatBSkyConvoMemberLeaveSystemMessage")]
-[JsonSerializable(typeof(idunno.Bluesky.Chat.ReferredUser), TypeInfoPropertyName = "ChatBSkyConvoReferredUser")]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.SystemMessageReferredUser), TypeInfoPropertyName = "ChatBSkyConvoReferredUser")]
 [JsonSerializable(typeof(idunno.Bluesky.Chat.RemoveMemberSystemMessage), TypeInfoPropertyName = "ChatBSkyConvoRemoveMemberSystemMessage")]
 [JsonSerializable(typeof(idunno.Bluesky.Chat.SystemMessageView), TypeInfoPropertyName = "ChatBSkyConvoSystemMessageView")]
 [JsonSerializable(typeof(idunno.Bluesky.Chat.SystemMessage), TypeInfoPropertyName = "ChatBSkyConvoSystemMessage")]
@@ -274,7 +278,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(ReasonBase))]
 [JsonSerializable(typeof(ReasonPin))]
 [JsonSerializable(typeof(ReasonRepost))]
-[JsonSerializable(typeof(ReplyReference))]
+[JsonSerializable(typeof(idunno.Bluesky.Feed.ReplyReference), TypeInfoPropertyName = "FeedReplyReference")]
 [JsonSerializable(typeof(RepostedBy))]
 [JsonSerializable(typeof(RepostedBy))]
 [JsonSerializable(typeof(SearchOrder))]
@@ -313,6 +317,8 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(RelationshipType))]
 [JsonSerializable(typeof(StarterPackView))]
 [JsonSerializable(typeof(StarterPackViewBasic))]
+[JsonSerializable(typeof(StarterPackWithMembership))]
+[JsonSerializable(typeof(GetStarterPacksWithMembershipResponse))]
 [JsonSerializable(typeof(SuggestedActors))]
 [JsonSerializable(typeof(GetActorStarterPacksResponse))]
 [JsonSerializable(typeof(Graph.RelationshipMap))]
@@ -428,7 +434,9 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Chat.Group.JoinLinkPreviewViewBase))]
 [JsonSerializable(typeof(Chat.Group.JoinLinkView))]
 [JsonSerializable(typeof(Chat.Group.JoinLinkViewerState))]
+[JsonSerializable(typeof(Chat.Group.JoinRequestConversationView))]
 [JsonSerializable(typeof(Chat.Group.JoinRequestView))]
+[JsonSerializable(typeof(PagedViewReadOnlyCollection<Chat.Group.JoinRequestConversationView>))]
 [JsonSerializable(typeof(PagedViewReadOnlyCollection<Chat.Group.JoinRequestView>))]
 
 [JsonSerializable(typeof(Chat.Group.Model.AddMembersRequest))]
@@ -461,6 +469,10 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Chat.Model.GetPreferencesResponse), TypeInfoPropertyName = "ChatNotificationsModelGetPreferenceResponse")]
 [JsonSerializable(typeof(Chat.Model.PutPreferencesRequest), TypeInfoPropertyName = "ChatNotificationsModelPutPrefereceRequest")]
 [JsonSerializable(typeof(Chat.Model.PutPreferencesResponse), TypeInfoPropertyName = "ChatNotificationsModelPutPreferenceResponse")]
+[JsonSerializable(typeof(idunno.Bluesky.Chat.ReplyReference), TypeInfoPropertyName = "ChatReplyReference")]
+
+
+[JsonSerializable(typeof(Chat.Convo.Model.ListConvoRequestsResponse), TypeInfoPropertyName = "ChatConvoModelListConvoRequests")]
 
 internal partial class SourceGenerationContext : JsonSerializerContext
 {
