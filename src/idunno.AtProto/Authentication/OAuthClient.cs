@@ -574,6 +574,7 @@ public class OAuthClient
     /// </summary>
     /// <param name="uri">The uri to open.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Vulnerability", "S4036:OS commands should not rely on PATH resolution", Justification = "Browser opening is platform-specific and relies on system commands, which may be installed anywhere.")]
     public static void OpenBrowser(Uri uri)
     {
         ArgumentNullException.ThrowIfNull(uri);

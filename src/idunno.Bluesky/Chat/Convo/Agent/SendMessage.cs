@@ -66,9 +66,15 @@ public partial class BlueskyAgent
 
         messageInput.ReplyTo = replyTo;
 
-        return await SendMessage(
+        return await BlueskyServer.SendMessage(
             conversationId,
             messageInput,
+            service: Service,
+            accessCredentials: Credentials,
+            httpClient: HttpClient,
+            onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+            loggerFactory: LoggerFactory,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
     }
 }
