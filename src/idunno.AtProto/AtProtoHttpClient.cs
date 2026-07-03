@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
@@ -28,10 +29,15 @@ namespace idunno.AtProto;
 /// <param name="serviceProxy">Any service a PDS should proxy the request to.</param>
 /// <param name="loggerFactory">An optional logger factory to create loggers from/</param>
 /// <param name="meterFactory">An optional meter factory to create meters from.</param>
+/// <param name="errorMappers">An optional list of error mappers to map errors from the a generic error to a more specific error type.</param>
 /// <remarks>
 /// <para>Creates a new instance of <see cref="AtProtoHttpClient"/></para>
 /// </remarks>
-public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? loggerFactory = null, IMeterFactory? meterFactory = null)
+public class AtProtoHttpClient(
+    string? serviceProxy = null,
+    ILoggerFactory? loggerFactory = null,
+    IMeterFactory? meterFactory = null,
+    IList<Func<AtErrorDetail?, AtErrorDetail?>>? errorMappers = null)
 {
     readonly SocketsHttpHandler _defaultClientHandler = SsrfSocketsHttpHandlerFactory.Create(
                         automaticDecompression: DecompressionMethods.All,
@@ -41,7 +47,8 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
             serviceProxy: serviceProxy,
             requestHeaders: null,
             loggerFactory: loggerFactory,
-            meterFactory: meterFactory);
+            meterFactory: meterFactory,
+            errorMappers: errorMappers);
 
     /// <summary>
     /// Gets or sets a function called when a request is about to be sent.
@@ -91,9 +98,6 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
     {
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrEmpty(endpoint);
-
-        _internalAtProtoHttpClient.MapError.Clear();
-        _internalAtProtoHttpClient.MapError.AddRange(MapError);
 
         using (HttpClient internalHttpClient = new(
             handler: _defaultClientHandler,
@@ -149,9 +153,6 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
         ArgumentException.ThrowIfNullOrEmpty(service);
         ArgumentException.ThrowIfNullOrEmpty(endpoint);
 
-        _internalAtProtoHttpClient.MapError.Clear();
-        _internalAtProtoHttpClient.MapError.AddRange(MapError);
-
         return await Get(
             service: new Uri(service),
             endpoint: endpoint,
@@ -198,9 +199,6 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
     {
         ArgumentNullException.ThrowIfNull(service);
         ArgumentException.ThrowIfNullOrEmpty(endpoint);
-
-        _internalAtProtoHttpClient.MapError.Clear();
-        _internalAtProtoHttpClient.MapError.AddRange(MapError);
 
         using (HttpClient internalHttpClient = new(
             handler: _defaultClientHandler,
@@ -257,9 +255,6 @@ public class AtProtoHttpClient(string? serviceProxy = null, ILoggerFactory? logg
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
     {
-        _internalAtProtoHttpClient.MapError.Clear();
-        _internalAtProtoHttpClient.MapError.AddRange(MapError);
-
         return await Post(
             service: new Uri(service),
             endpoint: endpoint,
@@ -467,7 +462,29 @@ public class AtProtoHttpClient<TResult> where TResult : class
         string? serviceProxy,
         ICollection<NameValueHeaderValue>? requestHeaders,
         ILoggerFactory? loggerFactory,
-        IMeterFactory? meterFactory)
+        IMeterFactory? meterFactory) : this(
+            serviceProxy: serviceProxy,
+            requestHeaders: requestHeaders,
+            loggerFactory: loggerFactory,
+            meterFactory: meterFactory,
+            errorMappers: null)
+    {
+    }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="AtProtoHttpClient{TResult}"/>
+    /// </summary>
+    /// <param name="serviceProxy">The service a PDS should proxy the request to.</param>
+    /// <param name="requestHeaders">Optional headers to add to the requests this instance makes.</param>
+    /// <param name="loggerFactory">An optional logger factory to create loggers from.</param>
+    /// <param name="meterFactory">An optional meter factory to create meters from.</param>
+    /// <param name="errorMappers">An optional collection of error mappers to map API errors to more specific errors.</param>
+    public AtProtoHttpClient(
+        string? serviceProxy,
+        ICollection<NameValueHeaderValue>? requestHeaders,
+        ILoggerFactory? loggerFactory,
+        IMeterFactory? meterFactory,
+        IList<Func<AtErrorDetail?, AtErrorDetail?>>? errorMappers)
     {
         requestHeaders ??= [];
 
@@ -503,6 +520,23 @@ public class AtProtoHttpClient<TResult> where TResult : class
         _logger = loggerFactory.CreateLogger<AtProtoHttpClient<TResult>>();
 
         _metrics = new AtProtoHttpClientMetrics(meterFactory);
+
+        if (errorMappers is not null)
+        {
+            // Ensure the base error mapper is always present, so that it can handle any errors not handled by the other mappers.
+            if (!errorMappers.Contains(AtProtoError.Map))
+            {
+                errorMappers.Add(AtProtoError.Map);
+            }
+
+            // Copy the error mappers to a new list to ensure that the list is not modified after being passed in.
+            ErrorMapperChain = new ReadOnlyCollection<Func<AtErrorDetail?, AtErrorDetail?>>(list: [.. errorMappers]);
+        }
+        else
+        {
+            // If no error mappers are provided, use the default error mapper.
+            ErrorMapperChain = ErrorMapChain.Default;
+        }
     }
 
     /// <summary>
@@ -518,7 +552,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <summary>
     /// Gets the collections of functions called to map any error returned from an API call to a more specific error.
     /// </summary>
-    public IList<Func<AtErrorDetail?, AtErrorDetail?>> MapError { get; } = [AtProtoError.Map];
+    protected IReadOnlyCollection<Func<AtErrorDetail?, AtErrorDetail?>> ErrorMapperChain { get; init; }
 
     /// <summary>
     /// Performs an unauthenticated GET request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
@@ -1152,9 +1186,9 @@ public class AtProtoHttpClient<TResult> where TResult : class
             catch (ArgumentNullException) { }
         }
 
-        if (MapError is not null && errorDetail.Error is not null)
+        if (ErrorMapperChain is not null && errorDetail.Error is not null)
         {
-            foreach (Func<AtErrorDetail?, AtErrorDetail?> mapper in MapError)
+            foreach (Func<AtErrorDetail?, AtErrorDetail?> mapper in ErrorMapperChain)
             {
                 AtErrorDetail? mappedErrorDetail = mapper(errorDetail);
 
@@ -1657,5 +1691,10 @@ public class AtProtoHttpClient<TResult> where TResult : class
     private sealed record EmptyRequestBody
 #pragma warning restore S2094 // Classes should not be empty
     {
+    }
+
+    private static class ErrorMapChain
+    {
+        public static ReadOnlyCollection<Func<AtErrorDetail?, AtErrorDetail?>> Default => new(list: [AtProtoError.Map]);
     }
 }

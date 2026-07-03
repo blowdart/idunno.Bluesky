@@ -52,7 +52,7 @@ public partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(actor);
         if (limit.HasValue)
         {
-            ArgumentOutOfRangeException.ThrowIfZero(limit.Value);
+            ArgumentOutOfRangeException.ThrowIfLessThan(limit.Value, 1);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(limit.Value, 100);
         }
         ArgumentNullException.ThrowIfNull(service);

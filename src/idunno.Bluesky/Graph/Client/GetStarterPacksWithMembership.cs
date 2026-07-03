@@ -28,7 +28,7 @@ public partial class BlueskyAgent
         ArgumentNullException.ThrowIfNull(actor);
         if (limit.HasValue)
         {
-            ArgumentOutOfRangeException.ThrowIfZero(limit.Value);
+            ArgumentOutOfRangeException.ThrowIfLessThan(limit.Value, 1);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(limit.Value, 100);
         }
 

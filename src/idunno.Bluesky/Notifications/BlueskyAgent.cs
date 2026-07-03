@@ -319,7 +319,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        return await SetNotificationPreferences(preferences, cancellationToken).ConfigureAwait(false);
+        return await PutNotificationPreferences(preferences, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Collections.ObjectModel;
 using System.Diagnostics.Metrics;
 using System.Net.Http.Headers;
 
@@ -12,12 +13,30 @@ namespace idunno.Bluesky;
 
 /// <summary>
 /// A helper class to perform HTTP requests against an Bluesky APIs.
-/// This class only differs from <see cref="AtProtoHttpClient{TResult}"/> by inserting the <see cref="BlueskyError.Map"/> function to the
-/// <see cref="AtProtoHttpClient{TResult}.MapError"/> property.
+/// This class only differs from <see cref="AtProtoHttpClient{TResult}"/> by additionally mapping Bluesky specific API errors to more specific error types.
 /// </summary>
 /// <typeparam name="TResult">The type of class to use when deserializing results from an Bluesky API call.</typeparam>
-public class BlueskyHttpClient<TResult> : AtProtoHttpClient<TResult> where TResult : class
+/// <param name="serviceProxy">The service a PDS should proxy the request to.</param>
+/// <param name="requestHeaders">Optional headers to add to the requests this instance makes.</param>
+/// <param name="loggerFactory">An optional logger factory to create loggers from.</param>
+/// <param name="meterFactory">An optional meter factory to create meters from.</param>
+/// <remarks>
+/// <para>Creates a new instance of <see cref="BlueskyHttpClient{TResult}"/></para>
+/// </remarks>
+public class BlueskyHttpClient<TResult>(
+    string? serviceProxy,
+    ICollection<NameValueHeaderValue>? requestHeaders,
+    ILoggerFactory? loggerFactory,
+    IMeterFactory? meterFactory) : AtProtoHttpClient<TResult>(
+        serviceProxy: serviceProxy,
+        requestHeaders: requestHeaders,
+        loggerFactory: loggerFactory,
+        meterFactory: meterFactory,
+        errorMappers: s_blueskyChainedErrorMappers) where TResult : class
 {
+    private static readonly ReadOnlyCollection<Func<AtErrorDetail?, AtErrorDetail?>> s_blueskyChainedErrorMappers =
+        new(list: [BlueskyError.Map, AtProtoError.Map]);
+
     /// <summary>
     /// Creates a new instance of <see cref="BlueskyHttpClient{TResult}"/>
     /// </summary>
@@ -185,26 +204,5 @@ public class BlueskyHttpClient<TResult> : AtProtoHttpClient<TResult> where TResu
             loggerFactory: loggerFactory,
             meterFactory: meterFactory)
     {
-    }
-
-    /// <summary>
-    /// Creates a new instance of <see cref="BlueskyHttpClient{TResult}"/>
-    /// </summary>
-    /// <param name="serviceProxy">The service a PDS should proxy the request to.</param>
-    /// <param name="requestHeaders">Optional headers to add to the requests this instance makes.</param>
-    /// <param name="loggerFactory">An optional logger factory to create loggers from.</param>
-    /// <param name="meterFactory">An optional meter factory to create meters from.</param>
-    public BlueskyHttpClient(
-        string? serviceProxy,
-        ICollection<NameValueHeaderValue>? requestHeaders,
-        ILoggerFactory? loggerFactory,
-        IMeterFactory? meterFactory)
-        : base(
-            serviceProxy,
-            requestHeaders,
-            loggerFactory,
-            meterFactory)
-    {
-        MapError.Insert(0, BlueskyError.Map);
     }
 }

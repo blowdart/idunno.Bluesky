@@ -176,7 +176,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Chat.Convo.Model.RemoveReactionRequest), TypeInfoPropertyName = "ChatConvoModelRemoveReactionRequest")]
 [JsonSerializable(typeof(Chat.Convo.Model.RemoveReactionResponse), TypeInfoPropertyName = "ChatConvoModelRemoveReactionResponse")]
 [JsonSerializable(typeof(Chat.Convo.Model.SendMessageBatchRequest), TypeInfoPropertyName = "ChatConvoModelSendMessageBatchRequest")]
-[JsonSerializable(typeof(Chat.Convo.Model.SendMessageBatchRequest), TypeInfoPropertyName = "ChatConvoModelSendMessageBatchRequest")]
+[JsonSerializable(typeof(Chat.Convo.Model.SendMessageBatchResponse), TypeInfoPropertyName = "ChatConvoModelSendMessageBatchResponse")]
 [JsonSerializable(typeof(Chat.Convo.Model.SendMessageRequest), TypeInfoPropertyName = "ChatConvoModelSendMessageRequest")]
 [JsonSerializable(typeof(Chat.Convo.Model.UnlockConversationRequest), TypeInfoPropertyName = "ChatConvoModelUnlockConversationRequest")]
 [JsonSerializable(typeof(Chat.Convo.Model.UnlockConversationResponse), TypeInfoPropertyName = "ChatConvoModelUnlockConversationResponse")]
@@ -328,6 +328,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(ICollection<Graph.Relationship>))]
 [JsonSerializable(typeof(Graph.RelationshipType))]
 [JsonSerializable(typeof(Graph.NotFoundActor))]
+[JsonSerializable(typeof(Graph.Model.SearchStarterPacksResponse), TypeInfoPropertyName = "GraphModelSearchStarterPacksResponse")]
 
 [JsonSerializable(typeof(Notifications.Model.GetPreferencesResponse), TypeInfoPropertyName = "NotificationGetPreferencesResponse")]
 [JsonSerializable(typeof(Notifications.Model.ListActivitySubscriptionsResponse))]

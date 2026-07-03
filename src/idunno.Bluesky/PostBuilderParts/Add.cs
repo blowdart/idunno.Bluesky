@@ -298,46 +298,48 @@ public sealed partial class PostBuilder
                 throw new InvalidOperationException(Properties.Resources.PostCannotHaveImagesAndVideoValidationError);
             }
 
-            if (_embeddedGalleryImages.Count >= MaxGalleryItems)
+            if ((_embeddedGalleryImages.Count + images.Count) >= MaxGalleryItems)
             {
                 throw new ArgumentOutOfRangeException(nameof(images), $"Cannot add more than {MaxGalleryItems} images to a post.");
             }
-            else if (_embeddedGalleryImages.Count > 0)
+
+            if (_embeddedGalleryImages.Count > 0)
             {
-                foreach (EmbeddedImage embeddedImage in _embeddedImages)
+                // We're already in gallery mode, so just attempt to add the new images to the gallery
+                foreach (EmbeddedImage embeddedImage in images)
                 {
                     if (embeddedImage.AspectRatio is null)
                     {
                         throw new InvalidOperationException("Cannot convert images to gallery entries due to missing AspectRatio.");
                     }
+
                     _embeddedGalleryImages.Add(new(embeddedImage));
                 }
             }
             else if (_embeddedImages.Count + images.Count > MaxImages)
             {
-                // Attempt to switch to gallery mode if the new image has an aspect ratio and all existing images have aspect ratios
-
+                // Attempt to switch to gallery mode as the new images will exceed the max individual image count
                 foreach (EmbeddedImage embeddedImage in _embeddedImages)
                 {
                     if (embeddedImage.AspectRatio is null)
                     {
                         throw new InvalidOperationException("Cannot convert images to gallery entries due to missing AspectRatio.");
                     }
+
                     _embeddedGalleryImages.Add(new(embeddedImage));
                 }
 
                 _embeddedImages.Clear();
 
+                // Now add the new images to the gallery
                 foreach (EmbeddedImage image in images)
                 {
-                    if (image.AspectRatio is not null)
-                    {
-                        _embeddedGalleryImages.Add(new GalleryImage(image));
-                    }
-                    else
+                    if (image.AspectRatio is null)
                     {
                         throw new InvalidOperationException($"Cannot convert to a gallery entry without an AspectRatio.");
                     }
+
+                    _embeddedGalleryImages.Add(new GalleryImage(image));
                 }
             }
             else

@@ -5,8 +5,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 
-using Duende.IdentityModel.OidcClient;
-
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Graph;
@@ -54,7 +52,7 @@ public partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(q);
         if (limit.HasValue)
         {
-            ArgumentOutOfRangeException.ThrowIfZero(limit.Value);
+            ArgumentOutOfRangeException.ThrowIfLessThan(limit.Value, 1);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(limit.Value, 100);
         }
         ArgumentNullException.ThrowIfNull(service);

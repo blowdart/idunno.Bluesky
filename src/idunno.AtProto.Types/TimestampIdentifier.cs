@@ -336,7 +336,7 @@ public sealed partial class TimestampIdentifier :
     public int CompareTo(TimestampIdentifier? other)
     {
         // TID string values are meant for comparison, so just use the string comparison of the underlying values.
-        return _value.CompareTo(other?._value, StringComparison.OrdinalIgnoreCase);
+        return _value.CompareTo(other?._value, StringComparison.InvariantCultureIgnoreCase);
     }
 
     /// <summary>Determines whether two <see cref="TimestampIdentifier"/> objects are equal.</summary>

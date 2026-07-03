@@ -59,7 +59,7 @@ public static partial class BlueskyServer
 
         AtProtoHttpResult<ConversationReference> response = await client.Post(
             service,
-            "/xrpc/chat.bsky.convo.listConvos",
+            "/xrpc/chat.bsky.convo.leaveConvo",
             request,
             credentials: accessCredentials,
             httpClient: httpClient,
