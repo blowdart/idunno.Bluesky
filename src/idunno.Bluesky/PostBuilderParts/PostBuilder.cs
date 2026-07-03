@@ -1391,6 +1391,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
         List<EmbeddedImage>? embeddedImages = null;
         List<ThreadGateRule>? threadGateRules = null;
         List<PostGateRule>? postGateRules = null;
+        List<GalleryImage>? embeddedGalleryImages = null;
 
         lock (_syncLock)
         {
@@ -1411,13 +1412,18 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                 postGateRules = [.. _postGateRules];
             }
 
+            if (_embeddedGalleryImages is not null)
+            {
+                embeddedGalleryImages = [.. _embeddedGalleryImages];
+            }
+
             if (embeddedImages is null && threadGateRules is null && postGateRules is null)
             {
                 return postRecord.GetHashCode();
             }
             else
             {
-                return HashCode.Combine(postRecord, embeddedImages, threadGateRules, postGateRules, _embeddedVideo);
+                return HashCode.Combine(postRecord, embeddedImages, embeddedGalleryImages, threadGateRules, postGateRules, _embeddedVideo);
             }
         }
     }

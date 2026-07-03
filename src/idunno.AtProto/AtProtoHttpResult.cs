@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Http.Headers;
@@ -114,7 +115,12 @@ public class AtProtoHttpResult<TResult>
 
         if (AtErrorDetail is not null)
         {
-            AtErrorDetail = mapFunc(AtErrorDetail);
+            AtErrorDetail? mappedError = mapFunc(AtErrorDetail);
+
+            if (mappedError is not null)
+            {
+                AtErrorDetail = mappedError;
+            }
         }
     }
 }

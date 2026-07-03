@@ -296,6 +296,12 @@ public record class Post : BlueskyTimestampedRecord
             }
         }
 
+        if (!string.IsNullOrEmpty(text) && (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(text),
+                $"text cannot have be longer than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
+        }
         Text = text;
     }
 

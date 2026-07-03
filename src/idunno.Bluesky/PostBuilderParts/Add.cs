@@ -298,7 +298,7 @@ public sealed partial class PostBuilder
                 throw new InvalidOperationException(Properties.Resources.PostCannotHaveImagesAndVideoValidationError);
             }
 
-            if ((_embeddedGalleryImages.Count + images.Count) >= MaxGalleryItems)
+            if ((_embeddedGalleryImages.Count + images.Count) > MaxGalleryItems)
             {
                 throw new ArgumentOutOfRangeException(nameof(images), $"Cannot add more than {MaxGalleryItems} images to a post.");
             }
