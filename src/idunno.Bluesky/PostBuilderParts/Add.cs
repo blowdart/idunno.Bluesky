@@ -298,7 +298,7 @@ public sealed partial class PostBuilder
                 throw new InvalidOperationException(Properties.Resources.PostCannotHaveImagesAndVideoValidationError);
             }
 
-            if ((_embeddedGalleryImages.Count + images.Count) > MaxGalleryItems)
+            if ((_embeddedGalleryImages.Count + _embeddedImages.Count + images.Count) > MaxGalleryItems)
             {
                 throw new ArgumentOutOfRangeException(nameof(images), $"Cannot add more than {MaxGalleryItems} images to a post.");
             }
@@ -316,7 +316,7 @@ public sealed partial class PostBuilder
                     _embeddedGalleryImages.Add(new(embeddedImage));
                 }
             }
-            else if (_embeddedImages.Count + images.Count > MaxImages)
+            else if (_embeddedGalleryImages.Count + _embeddedImages.Count + images.Count > MaxImages)
             {
                 // Attempt to switch to gallery mode as the new images will exceed the max individual image count
                 foreach (EmbeddedImage embeddedImage in _embeddedImages)

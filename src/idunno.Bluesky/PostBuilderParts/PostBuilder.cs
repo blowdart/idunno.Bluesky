@@ -1338,6 +1338,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
         EqualityComparer<List<EmbeddedImage>>.Default.Equals(_embeddedImages, other._embeddedImages) &&
         EqualityComparer<List<ThreadGateRule>?>.Default.Equals(_threadGateRules, other._threadGateRules) &&
         EqualityComparer<List<PostGateRule>?>.Default.Equals(_postGateRules, other._postGateRules) &&
+        EqualityComparer<List<GalleryImage>>.Default.Equals(_embeddedGalleryImages, other._embeddedGalleryImages) &&
         DisableEmbedding == other.DisableEmbedding;
 
     /// <summary>
