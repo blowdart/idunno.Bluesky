@@ -51,7 +51,7 @@
 | | [app.bsky.graph.getStarterPack](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/GET/xrpc/app.bsky.graph.getStarterPack) | `BlueskyAgent.GetStarterPack()` [*](https://github.com/bluesky-social/atproto/issues/2920) | ✔ |
 | | [app.bsky.graph.getStarterPacks](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/GET/xrpc/app.bsky.graph.getStarterPacks) | `BlueskyAgent.GetStarterPacks()` [*](https://github.com/bluesky-social/atproto/issues/2920) | ✔ |
 | | [app.bsky.graph.getStarterPacksWithMembership](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/GET/xrpc/app.bsky.graph.getStarterPacksWithMembership) | `BlueskyAgent.GetStarterPacksWithMembership()` | ✔ |
-| | [app.bsky.graph.getSuggestedFollowsByActor](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/GET/xrpc/app.bsky.graph.getSuggestedFollowsByActor` | ✔ |
+| | [app.bsky.graph.getSuggestedFollowsByActor](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/GET/xrpc/app.bsky.graph.getSuggestedFollowsByActor`) | `BlueskyAgent.GetSuggestedFollowsByActor()` | ✔ |
 | | [app.bsky.graph.muteActor](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/POST/xrpc/app.bsky.graph.muteActor) | `BlueskyAgent.Mute()` | ✔ |
 | | [app.bsky.graph.muteActorList](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/POST/xrpc/app.bsky.graph.muteActorList) | `BlueskyAgent.MuteActorList()` | ✔ |
 | | [app.bsky.graph.muteThread](https://endpoints.bsky.app/#bluesky-app/tag/appbskygraph/POST/xrpc/app.bsky.graph.muteThread) | `BlueskyAgent.MuteThread()` | ✔ |
