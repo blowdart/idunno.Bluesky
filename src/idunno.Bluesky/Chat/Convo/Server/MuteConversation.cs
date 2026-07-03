@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Chat;
-using idunno.Bluesky.Chat.Model;
+using idunno.Bluesky.Chat.Convo.Model;
 
 namespace idunno.Bluesky;
 

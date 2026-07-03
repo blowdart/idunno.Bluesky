@@ -9,7 +9,7 @@ using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Chat;
-using idunno.Bluesky.Chat.Model;
+using idunno.Bluesky.Chat.Convo.Model;
 
 using Microsoft.Extensions.Logging;
 

@@ -3,11 +3,11 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Chat.Model;
+namespace idunno.Bluesky.Chat.Convo.Model;
 
-internal sealed record DeleteMessageRequest
+internal sealed record DeleteMessageForSelfRequest
 {
-    public DeleteMessageRequest(string convoId, string messageId)
+    public DeleteMessageForSelfRequest(string convoId, string messageId)
     {
         ConvoId = convoId;
         MessageId = messageId;

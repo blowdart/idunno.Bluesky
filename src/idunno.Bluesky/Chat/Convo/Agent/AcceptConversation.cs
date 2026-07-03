@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 using idunno.AtProto;
-using idunno.Bluesky.Chat.Model;
+using idunno.Bluesky.Chat.Convo.Model;
 
 namespace idunno.Bluesky;
 

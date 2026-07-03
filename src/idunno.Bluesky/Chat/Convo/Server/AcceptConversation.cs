@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
+using idunno.Bluesky.Chat.Convo.Model;
 using idunno.Bluesky.Chat.Model;
 
 using Microsoft.Extensions.Logging;

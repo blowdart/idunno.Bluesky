@@ -7,7 +7,6 @@ using idunno.AtProto;
 using idunno.Bluesky.Chat;
 using idunno.Bluesky.Chat.Actor;
 using idunno.Bluesky.Chat.Convo.Model;
-using idunno.Bluesky.Chat.Model;
 
 namespace idunno.Bluesky.Serialization.Test.Conversations;
 

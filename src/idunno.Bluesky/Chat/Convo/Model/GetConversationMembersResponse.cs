@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 
 using idunno.Bluesky.Actor;
 
-namespace idunno.Bluesky.Chat.Model;
+namespace idunno.Bluesky.Chat.Convo.Model;
 
 [SuppressMessage("Performance", "CA1812", Justification = "Used in GetMessages.")]
 [method: JsonConstructor]

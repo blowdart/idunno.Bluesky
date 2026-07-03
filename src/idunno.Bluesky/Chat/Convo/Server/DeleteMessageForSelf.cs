@@ -6,7 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Chat;
-using idunno.Bluesky.Chat.Model;
+using idunno.Bluesky.Chat.Convo.Model;
 
 using Microsoft.Extensions.Logging;
 
@@ -57,7 +57,7 @@ public static partial class BlueskyServer
 
         BlueskyHttpClient<DeletedMessageView> client = new(ChatProxy, loggerFactory);
 
-        DeleteMessageRequest request = new(conversationId, messageId);
+        DeleteMessageForSelfRequest request = new(conversationId, messageId);
 
         AtProtoHttpResult<DeletedMessageView> response = await client.Post(
             service,

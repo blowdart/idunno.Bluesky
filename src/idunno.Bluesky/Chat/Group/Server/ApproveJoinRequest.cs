@@ -33,7 +33,7 @@ public partial class BlueskyServer
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
-    public static async Task<AtProtoHttpResult<ApproveJoinResponse>> ApproveJoin(
+    public static async Task<AtProtoHttpResult<ApproveJoinResponse>> ApproveJoinRequest(
         string conversationId,
         Did member,
         Uri service,
@@ -50,7 +50,7 @@ public partial class BlueskyServer
 
         AtProtoHttpResult<ApproveJoinResponse> response = await client.Post(
             service,
-            "/xrpc/chat.bsky.group.approveJoin",
+            "/xrpc/chat.bsky.group.approveJoinRequest",
             new ApproveJoinRequest(conversationId, member),
             credentials: accessCredentials,
             httpClient: httpClient,

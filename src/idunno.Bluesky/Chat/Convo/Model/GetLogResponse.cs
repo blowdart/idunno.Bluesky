@@ -4,7 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Chat.Model;
+namespace idunno.Bluesky.Chat.Convo.Model;
 
 [SuppressMessage("Performance", "CA1812", Justification = "Used in GetLog.")]
 internal sealed record GetLogResponse

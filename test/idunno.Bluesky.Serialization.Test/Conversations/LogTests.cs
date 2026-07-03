@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 
-using idunno.Bluesky.Chat.Model;
+using idunno.Bluesky.Chat.Convo.Model;
 
 namespace idunno.Bluesky.Serialization.Test.Conversations;
 

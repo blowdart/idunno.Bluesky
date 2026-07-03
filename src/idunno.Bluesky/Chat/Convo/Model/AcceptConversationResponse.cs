@@ -3,7 +3,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace idunno.Bluesky.Chat.Model;
+namespace idunno.Bluesky.Chat.Convo.Model;
 
 /// <summary>
 /// Encapsulates the response from an accept conversation request.
