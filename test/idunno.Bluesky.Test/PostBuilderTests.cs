@@ -7,8 +7,6 @@ using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Embed.Gallery;
 
-using static System.Net.Mime.MediaTypeNames;
-
 namespace idunno.Bluesky.Test;
 
 [ExcludeFromCodeCoverage]
@@ -576,12 +574,11 @@ public class PostBuilderTests
                 aspectRatio: new AspectRatio(128, 128)));
         }
 
-
         PostBuilder postBuilder = new("Embedded Images Test");
 
         for (int i = 0; i < Maximum.ImagesInPost; i++)
         {
-            postBuilder.Add(images[i]);
+            postBuilder.Add(images);
         }
 
         Post post = postBuilder.ToPost();
@@ -721,7 +718,7 @@ public class PostBuilderTests
     }
 
     [Fact]
-    public void AddingImagesArrayUnderThePostImageLimitResultsAndGalleryImagesUnderTheGalleryLimitResultsInAnInvalidOperationException()
+    public void AddingImagesArrayUpToThePostImageLimitResultsInAnInvalidOperationException()
     {
         List<EmbeddedImage> images = [];
         for (int i = 0; i < Maximum.ImagesInPost; i++)
