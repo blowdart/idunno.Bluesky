@@ -575,11 +575,7 @@ public class PostBuilderTests
         }
 
         PostBuilder postBuilder = new("Embedded Images Test");
-
-        for (int i = 0; i < Maximum.ImagesInPost; i++)
-        {
-            postBuilder.Add(images);
-        }
+        postBuilder.Add(images);
 
         Post post = postBuilder.ToPost();
         Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
