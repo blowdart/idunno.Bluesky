@@ -7,6 +7,8 @@ using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Embed.Gallery;
 
+using static System.Net.Mime.MediaTypeNames;
+
 namespace idunno.Bluesky.Test;
 
 [ExcludeFromCodeCoverage]
@@ -563,6 +565,30 @@ public class PostBuilderTests
     }
 
     [Fact]
+    public void AddingImagesArrayUnderThePostImageLimitResultsInAnEmbeddedImagesRecord()
+    {
+        List<EmbeddedImage> images = [];
+        for (int i = 0; i < Maximum.ImagesInPost; i++)
+        {
+            images.Add(new EmbeddedImage(
+                image: new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1),
+                altText: "alt text",
+                aspectRatio: new AspectRatio(128, 128)));
+        }
+
+
+        PostBuilder postBuilder = new("Embedded Images Test");
+
+        for (int i = 0; i < Maximum.ImagesInPost; i++)
+        {
+            postBuilder.Add(images[i]);
+        }
+
+        Post post = postBuilder.ToPost();
+        Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
+    }
+
+    [Fact]
     public void AddingImagesAndGoingOverThePostImageLimitResultsInAnEmbeddedGalleryRecord()
     {
         PostBuilder postBuilder = new("Embedded Images Test");
@@ -693,4 +719,76 @@ public class PostBuilderTests
                 "bafyreidy5bwjjqxh6v3mvlnbrmpn37qce5r7ggdvbfqq7yszm5uq2qbhyu"));
         });
     }
+
+    [Fact]
+    public void AddingImagesArrayUnderThePostImageLimitResultsAndGalleryImagesUnderTheGalleryLimitResultsInAnInvalidOperationException()
+    {
+        List<EmbeddedImage> images = [];
+        for (int i = 0; i < Maximum.ImagesInPost; i++)
+        {
+            images.Add(new EmbeddedImage(
+                image: new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1),
+                altText: $"Image {i + 1}",
+                aspectRatio: new AspectRatio(128, 128)));
+        }
+        List<GalleryImage> galleryImages = [];
+        for (int i = 0; i < Maximum.GalleryItems; i++)
+        {
+            galleryImages.Add(new GalleryImage(
+                image: new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1),
+                altText: $"Gallery {i + 1}",
+                aspectRatio: new AspectRatio(128, 128)));
+        }
+
+        PostBuilder postBuilder = new("Embedded Images Test");
+        postBuilder.Add(images);
+
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => postBuilder.Add(galleryImages));
+    }
+
+    [Theory]
+    [InlineData(4, 6, false)]  // 10 -> ok
+    [InlineData(4, 7, true)]   // 11 -> throw
+    [InlineData(0, 10, false)] // 10 -> ok
+    [InlineData(0, 11, true)]  // 11 -> throw
+    [InlineData(3, 8, true)]   // 11 -> throw
+    public void AddingImageBatchThatExceedsGalleryLimitWithExistingStandaloneImagesThrows(int standalone, int batch, bool shouldThrow)
+    {
+        PostBuilder postBuilder = new("Regression #7");
+
+        List<EmbeddedImage> images = [];
+        for (int i = 0; i < standalone; i++)
+        {
+            images.Add(new EmbeddedImage(
+                image: new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1),
+                altText: $"Image {i + 1}",
+                aspectRatio: new AspectRatio(128, 128)));
+        }
+
+        foreach (EmbeddedImage image in images)
+        {
+            postBuilder.Add(image);
+        }
+
+        images.Clear();
+        for (int i = 0; i < batch; i++)
+        {
+            images.Add(new EmbeddedImage(
+                image: new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1),
+                altText: $"Image {i + 1}",
+                aspectRatio: new AspectRatio(128, 128)));
+        }
+
+        if (shouldThrow)
+        {
+            ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>(
+                "images", () => postBuilder.Add(images));
+        }
+        else
+        {
+            postBuilder.Add(images);
+            Assert.Equal(standalone + batch, Assert.IsType<EmbeddedGallery>(postBuilder.ToPost().EmbeddedRecord).Count);
+        }
+    }
+
 }

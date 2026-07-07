@@ -370,6 +370,7 @@ public sealed partial class PostBuilder
         return postBuilder.Add(images);
     }
 
+
     /// <summary>
     /// Adds a <see cref="EmbeddedVideo"/> to this instance.
     /// </summary>
@@ -517,6 +518,36 @@ public sealed partial class PostBuilder
     }
 
     /// <summary>
+    /// Adds a collection of <see cref="GalleryImage"/>s to this instance.
+    /// </summary>
+    /// <param name="images">The collection of <see cref="GalleryImage"/>s to add.</param>
+    /// <returns>A reference to this instance after the append operation has completed.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when a video is already present or there are existing images.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the maximum number of gallery items is exceeded.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="images"/> is <see langword="null"/>.</exception>
+    public PostBuilder Add(ICollection<GalleryImage> images)
+    {
+        ArgumentNullException.ThrowIfNull(images);
+        lock (_syncLock)
+        {
+            if (_embeddedVideo is not null)
+            {
+                throw new InvalidOperationException(Properties.Resources.PostBuilderCannotHaveImagesAndGalleryImages);
+            }
+            else if (_embeddedGalleryImages.Count + images.Count > MaxGalleryItems)
+            {
+                throw new ArgumentOutOfRangeException(nameof(images), $"cannot have more than {MaxGalleryItems} in a post.");
+            }
+            else if (_embeddedImages.Count != 0)
+            {
+                throw new InvalidOperationException(Properties.Resources.PostBuilderCannotHaveImagesAndGalleryImages);
+            }
+            _embeddedGalleryImages.AddRange(images);
+        }
+        return this;
+    }
+
+    /// <summary>
     /// Adds a <see cref="GalleryImage"/> to the specified <paramref name="postBuilder"/>.
     /// </summary>
     /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the image to.</param>
@@ -531,6 +562,21 @@ public sealed partial class PostBuilder
         return postBuilder.Add(image);
     }
 
+    /// <summary>
+    /// Adds a collection of <see cref="GalleryImage"/>s to the specified <paramref name="postBuilder" />.
+    /// </summary>
+    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the images to.</param>
+    /// <param name="galleryImages">The collection of <see cref="GalleryImage"/>s to add.</param>
+    /// <returns>A reference to this instance after the add operation has completed.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="galleryImages"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when adding the images in this instance is will result in an image count &gt;<see cref="MaxImages"/>.</exception>
+    public static PostBuilder Add(PostBuilder postBuilder, ICollection<GalleryImage> galleryImages)
+    {
+        ArgumentNullException.ThrowIfNull(postBuilder);
+        ArgumentNullException.ThrowIfNull(galleryImages);
+
+        return postBuilder.Add(galleryImages);
+    }
 
     /// <summary>
     /// Adds a copy of the specified string to the record text of the specified <paramref name="postBuilder" />.
@@ -636,9 +682,39 @@ public sealed partial class PostBuilder
     }
 
     /// <summary>
-    /// Adds an <see cref="EmbeddedVideo"/> to the specified <paramref name="postBuilder" />.
+    /// Adds an <see cref="GalleryImage"/> to the specified <paramref name="postBuilder" />.
     /// </summary>
     /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the image to.</param>
+    /// <param name="image">The <see cref="GalleryImage"/> to add.</param>
+    /// <returns>The <paramref name="postBuilder"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
+    public static PostBuilder operator +(PostBuilder postBuilder, GalleryImage image)
+    {
+        ArgumentNullException.ThrowIfNull(postBuilder);
+        ArgumentNullException.ThrowIfNull(image);
+
+        return Add(postBuilder, image);
+    }
+
+    /// <summary>
+    /// Adds a collection of <see cref="GalleryImage"/>s to the specified <paramref name="postBuilder" />.
+    /// </summary>
+    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the images to.</param>
+    /// <param name="images">The collection of <see cref="GalleryImage"/>s to add.</param>
+    /// <returns>The <paramref name="postBuilder"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="images"/> is <see langword="null"/>.</exception>
+    public static PostBuilder operator +(PostBuilder postBuilder, ICollection<GalleryImage> images)
+    {
+        ArgumentNullException.ThrowIfNull(postBuilder);
+        ArgumentNullException.ThrowIfNull(images);
+
+        return Add(postBuilder, images);
+    }
+
+    /// <summary>
+    /// Adds an <see cref="EmbeddedVideo"/> to the specified <paramref name="postBuilder" />.
+    /// </summary>
+    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the video to.</param>
     /// <param name="video">The <see cref="EmbeddedVideo"/> to add.</param>
     /// <returns>The <paramref name="postBuilder"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="video"/> is <see langword="null"/>.</exception>
@@ -677,19 +753,5 @@ public sealed partial class PostBuilder
         ArgumentNullException.ThrowIfNull(selfLabel);
         ArgumentNullException.ThrowIfNull(selfLabel.Value);
         return Add(postBuilder, selfLabel);
-    }
-
-    /// <summary>
-    /// Adds a <see cref="GalleryImage"/> to the specified <paramref name="postBuilder" />.
-    /// </summary>
-    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the image to.</param>
-    /// <param name="image">The <see cref="GalleryImage"/> to add.</param>
-    /// <returns>The <paramref name="postBuilder"/>.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
-    public static PostBuilder operator +(PostBuilder postBuilder, GalleryImage image)
-    {
-        ArgumentNullException.ThrowIfNull(postBuilder);
-        ArgumentNullException.ThrowIfNull(image);
-        return Add(postBuilder, image);
     }
 }

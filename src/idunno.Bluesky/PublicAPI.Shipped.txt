@@ -1551,6 +1551,7 @@ idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.RichText.HashTag! hashTag) -> idun
 idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.RichText.Link! link) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.RichText.Mention! mention) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.Add(string! s) -> idunno.Bluesky.PostBuilder!
+idunno.Bluesky.PostBuilder.Add(System.Collections.Generic.ICollection<idunno.Bluesky.Embed.Gallery.GalleryImage!>! images) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.Append(char value) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.Append(char value, int repeatCount) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilder.Append(idunno.Bluesky.RichText.HashTag! hashTag) -> idunno.Bluesky.PostBuilder!
@@ -1619,6 +1620,8 @@ static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, i
 static idunno.Bluesky.PostBuilder.operator +(idunno.Bluesky.PostBuilder! postBuilder, idunno.AtProto.Labels.SelfLabel! selfLabel) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.operator +(idunno.Bluesky.PostBuilder! postBuilder, idunno.AtProto.Repo.StrongReference! strongReference) -> idunno.Bluesky.PostBuilder!
 static idunno.Bluesky.PostBuilder.Quote(idunno.Bluesky.PostBuilder! postBuilder, idunno.AtProto.Repo.StrongReference! strongReference) -> idunno.Bluesky.PostBuilder!
+static idunno.Bluesky.PostBuilder.Add(idunno.Bluesky.PostBuilder! postBuilder, System.Collections.Generic.ICollection<idunno.Bluesky.Embed.Gallery.GalleryImage!>! galleryImages) -> idunno.Bluesky.PostBuilder!
+static idunno.Bluesky.PostBuilder.operator +(idunno.Bluesky.PostBuilder! postBuilder, System.Collections.Generic.ICollection<idunno.Bluesky.Embed.Gallery.GalleryImage!>! images) -> idunno.Bluesky.PostBuilder!
 idunno.Bluesky.PostBuilderException
 idunno.Bluesky.PostBuilderException.PostBuilderException() -> void
 idunno.Bluesky.PostBuilderException.PostBuilderException(string! message) -> void
