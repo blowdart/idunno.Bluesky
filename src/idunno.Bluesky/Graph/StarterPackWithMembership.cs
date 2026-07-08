@@ -27,7 +27,7 @@ public sealed record StarterPackWithMembership : View
     /// </summary>
     [JsonRequired]
     public StarterPackView StarterPack { get; set; }
-    
+
     /// <summary>
     /// Gets the list item indicating membership of a target user to the starter pack.
     /// </summary>

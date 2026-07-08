@@ -29,7 +29,7 @@ public partial class BlueskyAgent
         string message,
         bool extractFacets = true,
         StrongReference? embeddedPost = null,
-        ReplyReference? replyTo= null,
+        ReplyReference? replyTo = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);

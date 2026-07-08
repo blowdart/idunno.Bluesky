@@ -58,10 +58,10 @@ public partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        StringBuilder queryStringBuilder = new ();
+        StringBuilder queryStringBuilder = new();
         if (limit.HasValue)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture,$"limit={limit.Value}");
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"limit={limit.Value}");
         }
 
         string queryString = queryStringBuilder.ToString();

@@ -5,6 +5,6 @@ using System.Text.Json.Serialization;
 
 namespace idunno.Bluesky.Graph.Model;
 
-internal sealed record SearchStarterPacksResponse([field: JsonRequired]ICollection<StarterPackViewBasic> StarterPacks, string? Cursor)
+internal sealed record SearchStarterPacksResponse([field: JsonRequired] ICollection<StarterPackViewBasic> StarterPacks, string? Cursor)
 {
 }
