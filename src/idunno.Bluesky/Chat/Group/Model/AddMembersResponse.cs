@@ -34,8 +34,7 @@ public sealed record AddMembersResponse
     public ConversationView Conversation { get; init; }
 
     /// <summary>
-    /// Gets the read-only collection of <see cref="ProfileViewBasic"/> of members that were added to the group conversation.
+    /// Gets the read-only collection of <see cref="ProfileViewBasic"/> of members that were added to the group conversation, if any.
     /// </summary>
-    [NotNull]
     public IReadOnlyCollection<ProfileViewBasic>? AddedMembers { get; init; }
 }
