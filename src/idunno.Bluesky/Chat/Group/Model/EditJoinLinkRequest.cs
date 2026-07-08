@@ -7,10 +7,9 @@ namespace idunno.Bluesky.Chat.Group.Model;
 
 internal sealed record EditJoinLinkRequest
 {
-    internal EditJoinLinkRequest(string conversationId, bool requireApproval, string joinRule)
+    internal EditJoinLinkRequest(string conversationId, bool? requireApproval, string? joinRule)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(joinRule);
 
         ConversationId = conversationId;
         RequireApproval = requireApproval;
@@ -23,9 +22,10 @@ internal sealed record EditJoinLinkRequest
     public string ConversationId { get; set; }
 
     [JsonInclude]
-    public bool RequireApproval { get; set; } = false;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? RequireApproval { get; set; } = false;
 
     [JsonInclude]
-    [JsonRequired]
-    public string JoinRule { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? JoinRule { get; set; }
 }

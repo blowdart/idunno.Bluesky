@@ -17,15 +17,14 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/> or <paramref name="joinRule"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/> is <see langword="null"/>.</exception>
     public async Task<AtProtoHttpResult<EditJoinLinkResponse>> EditJoinLink(
         string conversationId,
-        bool requireApproval,
-        string joinRule,
+        bool? requireApproval = null,
+        string? joinRule = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(conversationId);
-        ArgumentNullException.ThrowIfNull(joinRule);
 
         if (!IsAuthenticated)
         {

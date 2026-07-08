@@ -16,7 +16,7 @@ internal sealed record ListJoinRequestsResponse
         Requests = requests;
     }
 
-    public string? Cursor { get; internal init; }
+    public string? Cursor { get; init; }
 
-    public ICollection<JoinRequestConversationView> Requests { get; internal init; }
+    public ICollection<JoinRequestConversationView> Requests { get; init; }
 }

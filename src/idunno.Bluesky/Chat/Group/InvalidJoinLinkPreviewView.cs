@@ -10,6 +10,7 @@ namespace idunno.Bluesky.Chat.Group;
 /// </summary>
 public sealed record InvalidJoinLinkPreviewView : JoinLinkPreviewViewBase
 {
+    [JsonConstructor]
     internal InvalidJoinLinkPreviewView(string code)
     {
         Code = code;

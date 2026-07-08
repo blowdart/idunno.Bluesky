@@ -21,5 +21,5 @@ public sealed record EditGroupResponse
     /// </summary>
     [JsonRequired]
     [JsonPropertyName("convo")]
-    public ConversationView Conversation { get; internal init; } = default!;
+    public ConversationView Conversation { get; init; }
 }

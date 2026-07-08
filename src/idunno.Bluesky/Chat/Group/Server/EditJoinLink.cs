@@ -36,8 +36,8 @@ public partial class BlueskyServer
         Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
     public static async Task<AtProtoHttpResult<EditJoinLinkResponse>> EditJoinLink(
         string conversationId,
-        bool requireApproval,
-        string joinRule,
+        bool? requireApproval,
+        string? joinRule,
         Uri service,
         AccessCredentials accessCredentials,
         HttpClient httpClient,
@@ -46,7 +46,6 @@ public partial class BlueskyServer
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(conversationId);
-        ArgumentNullException.ThrowIfNull(joinRule);
 
         BlueskyHttpClient<EditJoinLinkResponse> client = new(ChatProxy, loggerFactory);
 

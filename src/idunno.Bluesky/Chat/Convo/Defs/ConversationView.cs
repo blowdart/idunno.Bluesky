@@ -76,6 +76,9 @@ public sealed record ConversationView : ConversationViewBase
 
     /// <summary>
     /// Gets the <see cref="ProfileViewBasic"/> of the members of the conversation.
+    /// For group convos, it will be a collection of important members (the first few members, the viewer,
+    /// the member who added the viewer, the member who sent the last message, the member who sent the last reaction),
+    /// but will not contain the full list of members. Use <see cref="BlueskyAgent.GetConversationMembers(string, int?, string?, CancellationToken)"/> to list all members.
     /// </summary>
     [JsonInclude]
     [JsonRequired]

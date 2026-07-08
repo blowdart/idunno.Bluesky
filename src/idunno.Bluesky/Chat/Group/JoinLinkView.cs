@@ -8,7 +8,9 @@ namespace idunno.Bluesky.Chat.Group;
 /// <summary>
 /// Join link view to be used within a group view, so the conversation is surrounding, not specified inside this view.
 /// </summary>
-public sealed record JoinLinkView : View
+[JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]
+[JsonDerivedType(typeof(JoinLinkView), typeDiscriminator: "chat.bsky.group.defs#joinLinkView")]
+public record JoinLinkView : View
 {
     [JsonConstructor]
     internal JoinLinkView(string code, string enabledStatus, bool requireApproval, string joinRule, DateTimeOffset createdAt)

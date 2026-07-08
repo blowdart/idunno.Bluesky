@@ -10,8 +10,9 @@ namespace idunno.Bluesky.Chat.Group;
 /// <summary>
 /// A group conversation preview that can be shown in feeds, including to unauthenticated viewers.
 /// </summary>
-public sealed record JoinLinkPreviewView : View
+public sealed record JoinLinkPreviewView : JoinLinkPreviewViewBase
 {
+    [JsonConstructor]
     internal JoinLinkPreviewView(
         string conversationId,
         string code,

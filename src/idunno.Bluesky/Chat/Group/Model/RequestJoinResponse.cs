@@ -18,16 +18,16 @@ public sealed record RequestJoinResponse
     }
 
     /// <summary>
-    /// Gets the conversation view after the join request has been made. Known values are in <see cref="JoinStatus"/>.
+    /// Gets the status of the join request. Known values are in <see cref="JoinStatus"/>.
     /// </summary>
     [JsonInclude]
     [JsonRequired]
-    public string Status { get; internal init; }
+    public string Status { get; init; }
 
     /// <summary>
-    /// Gets the group conversation joined. This is only present in the case of status=joined
+    /// Gets the group conversation joined. This is only present in the case of <see cref="Status"/> is "joined".
     /// </summary>
     [JsonInclude]
     [JsonPropertyName("convo")]
-    public ConversationView? Conversation { get; internal init; }
+    public ConversationView? Conversation { get; init; }
 }

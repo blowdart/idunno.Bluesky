@@ -22,5 +22,5 @@ public sealed record RemoveMembersResponse
     [JsonInclude]
     [JsonRequired]
     [JsonPropertyName("convo")]
-    public ConversationView Conversation { get; internal init; }
+    public ConversationView Conversation { get; init; }
 }

@@ -16,7 +16,7 @@ namespace idunno.Bluesky.Chat.Group.Model;
 public sealed record AddMembersResponse
 {
     [JsonConstructor]
-    internal AddMembersResponse(ConversationView conversation, ICollection<ProfileViewBasic>? addedMembers)
+    internal AddMembersResponse(ConversationView conversation, IReadOnlyCollection<ProfileViewBasic>? addedMembers)
     {
         Conversation = conversation;
 
@@ -31,11 +31,11 @@ public sealed record AddMembersResponse
     /// </summary>
     [JsonRequired]
     [JsonPropertyName("convo")]
-    public ConversationView Conversation { get; internal init; }
+    public ConversationView Conversation { get; init; }
 
     /// <summary>
-    /// Gets the collection of <see cref="ProfileViewBasic"/> of members that were added to the group conversation.
+    /// Gets the read-only collection of <see cref="ProfileViewBasic"/> of members that were added to the group conversation.
     /// </summary>
     [NotNull]
-    public ICollection<ProfileViewBasic>? AddedMembers { get; internal init; } = [];
+    public IReadOnlyCollection<ProfileViewBasic>? AddedMembers { get; init; }
 }

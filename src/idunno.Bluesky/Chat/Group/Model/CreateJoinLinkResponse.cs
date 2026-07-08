@@ -20,5 +20,5 @@ public sealed record CreateJoinLinkResponse
     /// Gets a view of the join link.
     /// </summary>
     [JsonRequired]
-    public JoinLinkView JoinLink { get; internal init; }
+    public JoinLinkView JoinLink { get; init; }
 }

@@ -21,5 +21,5 @@ public sealed record ApproveJoinResponse
     /// </summary>
     [JsonRequired]
     [JsonPropertyName("convo")]
-    public ConversationView Conversation { get; internal init; }
+    public ConversationView Conversation { get; init; }
 }

@@ -11,7 +11,7 @@ namespace idunno.Bluesky.Chat.Group.Model;
 public sealed record GetJoinLinkPreviewsResponse
 {
     [JsonConstructor]
-    internal GetJoinLinkPreviewsResponse(ICollection<JoinLinkPreviewViewBase> joinLinkPreviews)
+    internal GetJoinLinkPreviewsResponse(IReadOnlyCollection<JoinLinkPreviewViewBase> joinLinkPreviews)
     {
         ArgumentNullException.ThrowIfNull(joinLinkPreviews);
         JoinLinkPreviews = joinLinkPreviews;
@@ -21,5 +21,5 @@ public sealed record GetJoinLinkPreviewsResponse
     /// Gets the requested join link previews.
     /// </summary>
     [JsonRequired]
-    public ICollection<JoinLinkPreviewViewBase> JoinLinkPreviews { get; internal init; }
+    public IReadOnlyCollection<JoinLinkPreviewViewBase> JoinLinkPreviews { get; init; }
 }

@@ -20,5 +20,5 @@ public record DisableJoinLinkResponse
     /// Gets the <see cref="JoinLinkView"/> of the updated join link.
     /// </summary>
     [JsonRequired]
-    public JoinLinkView JoinLink { get; internal init; }
+    public JoinLinkView JoinLink { get; init; }
 }
