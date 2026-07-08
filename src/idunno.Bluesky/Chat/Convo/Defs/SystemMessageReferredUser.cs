@@ -29,5 +29,5 @@ public sealed record SystemMessageReferredUser
     /// Gets the <see cref="AtProto.Did"/> of the user.
     /// </summary>
     [JsonRequired]
-    public Did Did { get; set; }
+    public Did Did { get; init; }
 }

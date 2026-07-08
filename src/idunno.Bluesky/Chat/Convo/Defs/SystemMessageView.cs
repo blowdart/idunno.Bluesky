@@ -63,5 +63,7 @@ public sealed record SystemMessageView : MessageViewBase
     /// <summary>
     /// Gets the system message data.
     /// </summary>
-    public SystemMessage Data { get; set; }
+    [JsonInclude]
+    [JsonRequired]
+    public SystemMessage Data { get; init; }
 }

@@ -23,11 +23,11 @@ public sealed record EditGroupSystemMessage : SystemMessage
     /// Gets the old name of the group conversation.
     /// </summary>
     [JsonRequired]
-    public string OldName { get; set; }
+    public string OldName { get; init; }
 
     /// <summary>
     /// Gets the new name of the group conversation.
     /// </summary>
     [JsonRequired]
-    public string NewName { get; set; }
+    public string NewName { get; init; }
 }

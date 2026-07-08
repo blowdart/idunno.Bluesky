@@ -22,5 +22,5 @@ public sealed record UnlockConversationSystemMessage : SystemMessage
     /// Gets a current view of the user who unlocked the group.
     /// </summary>
     [JsonRequired]
-    public SystemMessageReferredUser UnlockedBy { get; set; }
+    public SystemMessageReferredUser UnlockedBy { get; init; }
 }

@@ -23,11 +23,11 @@ public sealed record RemoveMemberSystemMessage : SystemMessage
     /// Gets a current view of the member who was removed.
     /// </summary>
     [JsonRequired]
-    public SystemMessageReferredUser Member { get; set; }
+    public SystemMessageReferredUser Member { get; init; }
 
     /// <summary>
     /// Gets a reference to the actor who removed <see cref="Member"/>
     /// </summary>
     [JsonRequired]
-    public SystemMessageReferredUser RemovedBy { get; set; }
+    public SystemMessageReferredUser RemovedBy { get; init; }
 }
