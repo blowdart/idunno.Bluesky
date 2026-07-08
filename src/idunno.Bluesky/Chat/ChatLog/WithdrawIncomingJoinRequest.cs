@@ -30,5 +30,5 @@ public sealed record WithdrawIncomingJoinRequest : LogBase
     /// Gets the orospective member who requested to join.
     /// </summary>
     [JsonRequired]
-    public ProfileViewBasic Member { get; set; }
+    public ProfileViewBasic Member { get; init; }
 }

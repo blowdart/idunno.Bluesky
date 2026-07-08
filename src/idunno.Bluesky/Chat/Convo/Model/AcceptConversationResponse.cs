@@ -24,5 +24,5 @@ public record AcceptConversationResponse
     /// Revision of when the conversation was accepted. If <see langword="null"/>, the conversation was already accepted.
     /// </summary>
     [JsonPropertyName("rev")]
-    public string? Revision { get; set; }
+    public string? Revision { get; init; }
 }

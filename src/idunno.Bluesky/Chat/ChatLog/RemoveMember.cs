@@ -16,7 +16,7 @@ namespace idunno.Bluesky.Chat;
 public sealed record RemoveMember : MessageRelatedProfilesLogBase
 {
     [JsonConstructor]
-    internal RemoveMember(string conversationId, string revision, MessageViewBase message, ICollection<ProfileViewBasic> relatedProfiles)
+    internal RemoveMember(string conversationId, string revision, MessageViewBase message, IReadOnlyCollection<ProfileViewBasic> relatedProfiles)
         : base(conversationId, revision, message, relatedProfiles)
     {
     }

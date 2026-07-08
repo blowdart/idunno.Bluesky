@@ -17,7 +17,7 @@ namespace idunno.Bluesky.Chat;
 public sealed record MemberJoin : MessageRelatedProfilesLogBase
 {
     [JsonConstructor]
-    internal MemberJoin(string conversationId, string revision, MessageViewBase message, ICollection<ProfileViewBasic> relatedProfiles)
+    internal MemberJoin(string conversationId, string revision, MessageViewBase message, IReadOnlyCollection<ProfileViewBasic> relatedProfiles)
         : base(conversationId, revision, message, relatedProfiles)
     {
     }

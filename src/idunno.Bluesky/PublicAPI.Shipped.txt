@@ -2413,10 +2413,8 @@ idunno.Bluesky.Chat.AddMemberSystemMessage.Role.get -> string!
 idunno.Bluesky.Chat.AddMemberSystemMessage.Role.set -> void
 idunno.Bluesky.Chat.AddReaction
 idunno.Bluesky.Chat.AddReaction.Reaction.get -> idunno.Bluesky.Chat.ReactionView!
-idunno.Bluesky.Chat.AddReaction.Reaction.set -> void
 idunno.Bluesky.Chat.ApproveJoinRequest
 idunno.Bluesky.Chat.ApproveJoinRequest.Member.get -> idunno.Bluesky.Chat.Actor.ProfileViewBasic!
-idunno.Bluesky.Chat.ApproveJoinRequest.Member.set -> void
 idunno.Bluesky.Chat.ConversationAvailability
 idunno.Bluesky.Chat.ConversationAvailability.CanChat.get -> bool?
 idunno.Bluesky.Chat.ConversationAvailability.CanChat.init -> void
@@ -2542,7 +2540,6 @@ idunno.Bluesky.Chat.GroupConversation.UnreadJoinRequestCount.get -> int?
 idunno.Bluesky.Chat.GroupConversation.UnreadJoinRequestCount.init -> void
 idunno.Bluesky.Chat.IncomingJoinRequest
 idunno.Bluesky.Chat.IncomingJoinRequest.Member.get -> idunno.Bluesky.Chat.Actor.ProfileViewBasic!
-idunno.Bluesky.Chat.IncomingJoinRequest.Member.set -> void
 idunno.Bluesky.Chat.LockConversation
 idunno.Bluesky.Chat.LockConversationPermanently
 idunno.Bluesky.Chat.LockConversationPermanentlySystemMessage
@@ -2550,9 +2547,7 @@ idunno.Bluesky.Chat.LockConversationPermanentlySystemMessage.LockedBy.set -> voi
 idunno.Bluesky.Chat.LockConversationSystemMessage
 idunno.Bluesky.Chat.LockConversationSystemMessage.LockedBy.set -> void
 idunno.Bluesky.Chat.LogBase.ConversationId.get -> string!
-idunno.Bluesky.Chat.LogBase.ConversationId.set -> void
 idunno.Bluesky.Chat.LogBase.LogBase(string! conversationId, string! revision) -> void
-idunno.Bluesky.Chat.LogBase.Revision.set -> void
 idunno.Bluesky.Chat.MemberJoin
 idunno.Bluesky.Chat.MemberJoinSystemMessage
 idunno.Bluesky.Chat.MemberJoinSystemMessage.ApprovedBy.set -> void
@@ -2563,10 +2558,9 @@ idunno.Bluesky.Chat.MemberLeave
 idunno.Bluesky.Chat.MemberLeaveSystemMessage
 idunno.Bluesky.Chat.MemberLeaveSystemMessage.Member.set -> void
 idunno.Bluesky.Chat.MemberRole
-idunno.Bluesky.Chat.MessageLogBase.Message.set -> void
 idunno.Bluesky.Chat.MessageRelatedProfilesLogBase
-idunno.Bluesky.Chat.MessageRelatedProfilesLogBase.RelatedProfiles.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Chat.Actor.ProfileViewBasic!>!
-idunno.Bluesky.Chat.MessageRelatedProfilesLogBase.RelatedProfiles.set -> void
+idunno.Bluesky.Chat.MessageRelatedProfilesLogBase.RelatedProfiles.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Chat.Actor.ProfileViewBasic!>!
+idunno.Bluesky.Chat.MessageRelatedProfilesLogBase.RelatedProfiles.init -> void
 idunno.Bluesky.Chat.MessageView.Sender.get -> idunno.Bluesky.Chat.MessageViewSender!
 idunno.Bluesky.Chat.MessageView.Sender.init -> void
 idunno.Bluesky.Chat.MuteConversation
@@ -2576,14 +2570,12 @@ idunno.Bluesky.Chat.ReadJoinRequests
 idunno.Bluesky.Chat.ReadMessage
 idunno.Bluesky.Chat.RejectJoinRequest
 idunno.Bluesky.Chat.RejectJoinRequest.Member.get -> idunno.Bluesky.Chat.Actor.ProfileViewBasic!
-idunno.Bluesky.Chat.RejectJoinRequest.Member.set -> void
 idunno.Bluesky.Chat.RemoveMember
 idunno.Bluesky.Chat.RemoveMemberSystemMessage
 idunno.Bluesky.Chat.RemoveMemberSystemMessage.Member.set -> void
 idunno.Bluesky.Chat.RemoveMemberSystemMessage.RemovedBy.set -> void
 idunno.Bluesky.Chat.RemoveReaction
 idunno.Bluesky.Chat.RemoveReaction.Reaction.get -> idunno.Bluesky.Chat.ReactionView!
-idunno.Bluesky.Chat.RemoveReaction.Reaction.set -> void
 idunno.Bluesky.Chat.SystemMessage
 idunno.Bluesky.Chat.SystemMessage.ExtensionData.get -> System.Collections.Generic.IDictionary<string!, System.Text.Json.JsonElement>?
 idunno.Bluesky.Chat.SystemMessage.ExtensionData.set -> void
@@ -2608,7 +2600,6 @@ idunno.Bluesky.Chat.UnreadConversationCounts.UnreadRequestedConversations.get ->
 idunno.Bluesky.Chat.UnreadConversationCounts.UnreadRequestedConversations.init -> void
 idunno.Bluesky.Chat.WithdrawIncomingJoinRequest
 idunno.Bluesky.Chat.WithdrawIncomingJoinRequest.Member.get -> idunno.Bluesky.Chat.Actor.ProfileViewBasic!
-idunno.Bluesky.Chat.WithdrawIncomingJoinRequest.Member.set -> void
 idunno.Bluesky.Chat.WithdrawOutgoingJoinRequest
 idunno.Bluesky.ConversationLocked
 idunno.Bluesky.ConversationLocked.ConversationLocked(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
@@ -2811,7 +2802,6 @@ idunno.Bluesky.BlueskyAgent.ApproveJoinRequest(string! conversationId, idunno.At
 idunno.Bluesky.Chat.Convo.Model.AcceptConversationResponse
 idunno.Bluesky.Chat.Convo.Model.AcceptConversationResponse.AcceptConversationResponse(string? revision) -> void
 idunno.Bluesky.Chat.Convo.Model.AcceptConversationResponse.Revision.get -> string?
-idunno.Bluesky.Chat.Convo.Model.AcceptConversationResponse.Revision.set -> void
 static idunno.Bluesky.BlueskyServer.AcceptConversation(string! conversationId, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Convo.Model.AcceptConversationResponse!>!>!
 static idunno.Bluesky.BlueskyServer.ApproveJoinRequest(string! conversationId, idunno.AtProto.Did! member, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Group.Model.ApproveJoinResponse!>!>!
 idunno.Bluesky.BlueskyAgent.EditJoinLink(string! conversationId, bool? requireApproval = null, string? joinRule = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Group.Model.EditJoinLinkResponse!>!>!
@@ -2827,3 +2817,13 @@ idunno.Bluesky.Chat.Group.Model.GetJoinLinkPreviewsResponse.JoinLinkPreviews.ini
 idunno.Bluesky.Chat.Group.Model.RemoveMembersResponse.Conversation.init -> void
 idunno.Bluesky.Chat.Group.Model.RequestJoinResponse.Conversation.init -> void
 idunno.Bluesky.Chat.Group.Model.RequestJoinResponse.Status.init -> void
+idunno.Bluesky.Chat.AddReaction.Reaction.init -> void
+idunno.Bluesky.Chat.ApproveJoinRequest.Member.init -> void
+idunno.Bluesky.Chat.Convo.Model.AcceptConversationResponse.Revision.init -> void
+idunno.Bluesky.Chat.IncomingJoinRequest.Member.init -> void
+idunno.Bluesky.Chat.LogBase.ConversationId.init -> void
+idunno.Bluesky.Chat.LogBase.Revision.init -> void
+idunno.Bluesky.Chat.MessageLogBase.Message.init -> void
+idunno.Bluesky.Chat.RejectJoinRequest.Member.init -> void
+idunno.Bluesky.Chat.RemoveReaction.Reaction.init -> void
+idunno.Bluesky.Chat.WithdrawIncomingJoinRequest.Member.init -> void

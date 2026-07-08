@@ -22,7 +22,7 @@ public abstract record MessageRelatedProfilesLogBase : MessageLogBase
     /// <param name="revision">The conversation revision.</param>
     /// <param name="message">A <see cref="MessageViewBase">view</see> over the message the log entry refers to.</param>
     /// <param name="relatedProfiles"></param>
-    private protected MessageRelatedProfilesLogBase(string conversationId, string revision, MessageViewBase message, ICollection<ProfileViewBasic> relatedProfiles)
+    private protected MessageRelatedProfilesLogBase(string conversationId, string revision, MessageViewBase message, IReadOnlyCollection<ProfileViewBasic> relatedProfiles)
         : base(conversationId, revision, message)
     {
         RelatedProfiles = relatedProfiles;
@@ -32,6 +32,5 @@ public abstract record MessageRelatedProfilesLogBase : MessageLogBase
     /// Gets Profiles referred to in the system message.
     /// </summary>
     [JsonRequired]
-    [SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Setter needed for deserialization.")]
-    public ICollection<ProfileViewBasic> RelatedProfiles { get; set; }
+    public IReadOnlyCollection<ProfileViewBasic> RelatedProfiles { get; init; }
 }

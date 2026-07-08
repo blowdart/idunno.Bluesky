@@ -15,7 +15,7 @@ namespace idunno.Bluesky.Chat;
 public sealed record RemoveReaction : MessageRelatedProfilesLogBase
 {
     [JsonConstructor]
-    internal RemoveReaction(string conversationId, string revision, MessageViewBase message, ReactionView reaction, ICollection<ProfileViewBasic> relatedProfiles)
+    internal RemoveReaction(string conversationId, string revision, MessageViewBase message, ReactionView reaction, IReadOnlyCollection<ProfileViewBasic> relatedProfiles)
         : base(conversationId, revision, message, relatedProfiles)
     {
         Reaction = reaction;
@@ -26,5 +26,5 @@ public sealed record RemoveReaction : MessageRelatedProfilesLogBase
     /// </summary>
     [JsonInclude]
     [JsonRequired]
-    public ReactionView Reaction { get; set; }
+    public ReactionView Reaction { get; init; }
 }
