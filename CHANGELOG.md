@@ -106,6 +106,7 @@
 * Added Animated GIF support with `BlueskyAgent.UploadAnimatedGif()`
 * Expanded video support with a new overload to `BlueskyAgent.UploadVideo()` which accepts a MIME type parameter to allow for more video formats.
 * Added `GetStarterPacksWithMembership` to allow the authenticated user to search their starter packs and see which ones a specified actor is a member of.
+* Added `SearchPostsV2` to allow searching for posts with more advanced filtering options.
 
 ## Fixed
 

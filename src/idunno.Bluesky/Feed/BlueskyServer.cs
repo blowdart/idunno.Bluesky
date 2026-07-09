@@ -1323,7 +1323,7 @@ public static partial class BlueskyServer
     /// <param name="tags">Filter to posts with the given tag (hashtag), based on rich-text facet or tag field. Do not include the hash (#) prefix.</param>
     /// <param name="limit">The maximum number of post views to return</param>
     /// <param name="cursor">An optional cursor for pagination.</param>
-    /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
+    /// <param name="service">The <see cref="Uri"/> of the service to retrieve search information from.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>

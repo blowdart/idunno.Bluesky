@@ -262,6 +262,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(GetSuggestedFeedsResponse))]
 [JsonSerializable(typeof(GetTimelineResponse))]
 [JsonSerializable(typeof(SearchPostsResponse))]
+[JsonSerializable(typeof(SearchPostsV2Response))]
 [JsonSerializable(typeof(BlockedAuthor))]
 [JsonSerializable(typeof(BlockedPost))]
 [JsonSerializable(typeof(FeedGenerator))]
