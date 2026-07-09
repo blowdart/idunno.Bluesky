@@ -1,8 +1,12 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
+using System.Text.RegularExpressions;
+
 using idunno.AtProto;
 using idunno.Bluesky;
+using idunno.Bluesky.Chat;
 
 using Microsoft.Extensions.Logging;
 
@@ -31,7 +35,7 @@ public sealed class Program
         ArgumentException.ThrowIfNullOrEmpty(password);
 
         // Uncomment the next line to route all requests through Fiddler Everywhere
-        // proxyUri = new Uri("http://localhost:8866");
+        proxyUri = new Uri("http://localhost:8866");
 
         // Uncomment the next line to route all requests  through Fiddler Classic
         // proxyUri = new Uri("http://localhost:8888");
@@ -90,6 +94,30 @@ public sealed class Program
             // END-AUTHENTICATION
 
             // Your code goes here.
+
+            var listConversationsResult = await agent.ListConversations(cancellationToken: cancellationToken);
+
+            listConversationsResult.EnsureSucceeded();
+
+            IEnumerable<string> groupConversations = from convo in listConversationsResult.Result
+                                                     where convo is not null &&
+                                                          convo.Kind is GroupConversation groupConversation
+                                                     select convo.Id;
+
+            Debug.Assert(groupConversations != null);
+            Debug.Assert(groupConversations.Any());
+
+            string conversationId = groupConversations.First();
+
+            var conversationMembersResult = await agent.GetConversationMembers(conversationId, cancellationToken: cancellationToken);
+
+            var getJoinLinkPreviewsResult = await agent.GetJoinLinkPreviews(["OyiHQqB"], cancellationToken: cancellationToken);
+
+            var getConversationLogsResult = await agent.GetConversationLog("2222222222222", cancellationToken: cancellationToken);
+
+            var getMessagesResult = await agent.GetMessages(conversationId, cancellationToken: cancellationToken);
+
+            var getRelationships = await agent.GetRelationships(["blowdart.me", "beans.monster", "anotherbot.idunno.blue"], cancellationToken: cancellationToken);
         }
     }
 }

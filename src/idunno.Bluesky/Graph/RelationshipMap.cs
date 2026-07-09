@@ -19,7 +19,7 @@ public sealed record RelationshipMap
     /// <param name="actor">The <see cref="AtProto.Did"/> of the actor whose relationships are being described.</param>
     /// <param name="relationships">A collection of <see cref="RelationshipType"/> objects representing the relationships of the actor.</param>
     [JsonConstructor]
-    public RelationshipMap(Did? actor, ICollection<RelationshipType> relationships)
+    public RelationshipMap(Did? actor, IReadOnlyCollection<RelationshipType> relationships)
     {
         Actor = actor;
         Relationships = relationships;
@@ -28,12 +28,11 @@ public sealed record RelationshipMap
     /// <summary>
     /// Gets the <see cref="AtProto.Did"/> of the actor whose relationships are being described.
     /// </summary>
-    public Did? Actor { get; set; }
+    public Did? Actor { get; init; }
 
     /// <summary>
     /// Gets a collection of <see cref="RelationshipType"/> objects representing the relationships of the actor <see cref="Actor"/> and other actors.
     /// </summary>
     [JsonRequired]
-    [SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Needs to be settable for json deserialization")]
-    public ICollection<RelationshipType> Relationships { get; set; }
+    public IReadOnlyCollection<RelationshipType> Relationships { get; init; }
 }
