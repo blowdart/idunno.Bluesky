@@ -117,22 +117,22 @@
 | | [chat.bsky.convo.unmuteConvo](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/unmuteConvo.json) | `BlueskyAgent.UnmuteConversation()` | ✔ |
 | | [chat.bsky.convo.updateAllRead](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/updateAllRead.json) | `BlueskyAgent.UpdateAllRead()` | ✔ |
 | | [chat.bsky.convo.updateRead](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/convo/updateRead.json) | `BlueskyAgent.UpdateRead()` | ✔ |
-| **Group** | [chat.bsky.group.addMembers](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/addMembers.json) | `BlueskyAgent.AddMembers()` | ✔ |
-| | [chat.bsky.group.approveJoinRequest](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/approveJoinRequest.json) | `BlueskyAgent.ApproveJoinRequest()` | ✔ |
+| **Group** | [chat.bsky.group.addMembers](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/addMembers.json) | `BlueskyAgent.AddMembersToGroup()` | ✔ |
+| | [chat.bsky.group.approveJoinRequest](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/approveJoinRequest.json) | `BlueskyAgent.ApproveJoinGroupRequest()` | ✔ |
 | | [chat.bsky.group.createGroup](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/createGroup.json) | `BlueskyAgent.CreateGroup()` | ✔ |
-| | [chat.bsky.group.createJoinLink](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/createJoinLink.json) | `BlueskyAgent.CreateJoinLink()` | ✔ |
-| | [chat.bsky.group.disableJoinLink](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/disableJoinLink.json) | `BlueskyAgent.DisableJoinLink()` | ✔ |
+| | [chat.bsky.group.createJoinLink](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/createJoinLink.json) | `BlueskyAgent.CreateJoinGroupLink()` | ✔ |
+| | [chat.bsky.group.disableJoinLink](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/disableJoinLink.json) | `BlueskyAgent.DisableJoinGroupLink()` | ✔ |
 | | [chat.bsky.group.editGroup](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/createGroup.json) | `BlueskyAgent.EditGroup()` | ✔ |
-| | [chat.bsky.group.editJoinLink](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/editJoinLink.json) | `BlueskyAgent.EditJoinLink()` | ✔ |
-| | [chat.bsky.group.enableJoinLink](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/enableJoinLink.json) | `BlueskyAgent.EnableJoinLink()` | ✔ |
-| | [chat.bsky.group.getJoinLinkPreviews](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/getJoinLinkPreviews.json) | `BlueskyAgent.GetJoinLinkPreviews()` | ✔ |
-| | [chat.bsky.group.listJoinRequests](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/listJoinRequests.json) | `BlueskyAgent.ListJoinRequests()` | ✔ |
+| | [chat.bsky.group.editJoinLink](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/editJoinLink.json) | `BlueskyAgent.EditJoinGroupLink()` | ✔ |
+| | [chat.bsky.group.enableJoinLink](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/enableJoinLink.json) | `BlueskyAgent.EnableJoinGroupLink()` | ✔ |
+| | [chat.bsky.group.getJoinLinkPreviews](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/getJoinLinkPreviews.json) | `BlueskyAgent.GetJoinGroupLinkPreviews()` | ✔ |
+| | [chat.bsky.group.listJoinRequests](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/listJoinRequests.json) | `BlueskyAgent.ListJoinGroupRequests()` | ✔ |
 | | [chat.bsky.group.listMutualGroups](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/listMutualGroups.json) | `BlueskyAgent.ListMutualGroups()` | ✔ |
-| | [chat.bsky.group.rejectJoinRequest](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/rejectJoinRequest.json) | `BlueskyAgent.RejectJoinRequest()` | ✔ |
-| | [chat.bsky.group.removeMembers](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/removeMembers.json) | `BlueskyAgent.RemoveMembers()` | ✔ |
-| | [chat.bsky.group.requestJoin](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/requestJoin.json) | `BlueskyAgent.RequestJoin()` | ✔ |
-| | [chat.bsky.group.updateJoinRequestsRead](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/updateJoinRequestsRead.json) | `BlueskyAgent.UpdateJoinRequestsRead()` | ✔ |
-| | [chat.bsky.group.withdrawJoinRequest](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/withdrawJoinRequest.json) | `BlueskyAgent.WithdrawJoinRequest()` | ✔ |
+| | [chat.bsky.group.rejectJoinRequest](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/rejectJoinRequest.json) | `BlueskyAgent.RejectJoinGroupRequest()` | ✔ |
+| | [chat.bsky.group.removeMembers](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/removeMembers.json) | `BlueskyAgent.RemoveGroupMembers()` | ✔ |
+| | [chat.bsky.group.requestJoin](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/requestJoin.json) | `BlueskyAgent.RequestJoinGroup()` | ✔ |
+| | [chat.bsky.group.updateJoinRequestsRead](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/updateJoinRequestsRead.json) | `BlueskyAgent.UpdateJoinGroupRequestsRead()` | ✔ |
+| | [chat.bsky.group.withdrawJoinRequest](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/group/withdrawJoinRequest.json) | `BlueskyAgent.WithdrawJoinGroupRequest()` | ✔ |
 | **Notification** | [chat.bsky.notification.getPreferences](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/notification/getPreferences.json) | `BlueskyAgent.GetChatNotificationPreferences()` | ✔ |
 | | [chat.bsky.notification.putPreferences](https://github.com/bluesky-social/atproto/blob/main/lexicons/chat/bsky/notification/putPreferences.json) | `BlueskyAgent.PutChatNotificationPreferences()` | ✔ |
 

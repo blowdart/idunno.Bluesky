@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
+using idunno.Bluesky.Chat.Group;
 using idunno.Bluesky.Chat.Group.Model;
 
 using Microsoft.Extensions.Logging;
@@ -14,10 +15,10 @@ namespace idunno.Bluesky;
 public partial class BlueskyServer
 {
     /// <summary>
-    /// Rejects a request to join a group (via join link) the user owns. 
+    /// Lists a page of request as a <see cref="PagedViewReadOnlyCollection{JoinRequestView}"/> to join a group (via join link) the user owns. Shows the data from the owner's point of view.
     /// </summary>
-    /// <param name="conversationId">The id of the group to reject the join request for.</param>
-    /// <param name="member">The <see cref="Did"/> of the user to reject the join request for.</param>
+    /// <param name="conversationIds">The ids of the conversations to list join requests for.</param>
+    /// <param name="cursor">An optional cursor used for pagination.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
@@ -25,7 +26,8 @@ public partial class BlueskyServer
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/> or <paramref name="member"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationIds"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="conversationIds"/> is empty or contains more than 100 items.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -33,9 +35,9 @@ public partial class BlueskyServer
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
-    public static async Task<AtProtoHttpResult<EmptyResponse>> RejectJoinRequest(
-        string conversationId,
-        Did member,
+    public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<JoinRequestConversationView>>> ListJoinGroupRequests(
+        ICollection<string> conversationIds,
+        string? cursor,
         Uri service,
         AccessCredentials accessCredentials,
         HttpClient httpClient,
@@ -43,21 +45,44 @@ public partial class BlueskyServer
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(conversationId);
-        ArgumentNullException.ThrowIfNull(member);
+        ArgumentNullException.ThrowIfNull(conversationIds);
+        ArgumentOutOfRangeException.ThrowIfZero(conversationIds.Count);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(conversationIds.Count, 100);
 
-        BlueskyHttpClient<EmptyResponse> client = new(ChatProxy, loggerFactory);
+        string queryString = string.Join("&", conversationIds.Select(id => $"convoId={Uri.EscapeDataString(id)}"));
 
-        AtProtoHttpResult<EmptyResponse> response = await client.Post(
+        if (cursor is not null)
+        {
+            queryString += $"&cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        BlueskyHttpClient<ListJoinRequestsResponse> client = new(ChatProxy, loggerFactory);
+
+        AtProtoHttpResult<ListJoinRequestsResponse> response = await client.Get(
             service,
-            $"/xrpc/chat.bsky.group.rejectJoinRequest",
-            new RejectJoinRequestRequest(conversationId, member),
+            $"/xrpc/chat.bsky.group.listJoinRequests?{queryString}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        return response;
+        // Flatten into collection
+        PagedViewReadOnlyCollection<JoinRequestConversationView> result;
+        if (response.Result is not null)
+        {
+            result = new PagedViewReadOnlyCollection<JoinRequestConversationView>(response.Result.Requests, response.Result.Cursor);
+        }
+        else
+        {
+            result = new PagedViewReadOnlyCollection<JoinRequestConversationView>();
+        }
+
+        return new AtProtoHttpResult<PagedViewReadOnlyCollection<JoinRequestConversationView>>(
+            result: result,
+            statusCode: response.StatusCode,
+            httpResponseHeaders: response.HttpResponseHeaders,
+            atErrorDetail: response.AtErrorDetail,
+            rateLimit: response.RateLimit);
     }
 }

@@ -18,7 +18,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationIds"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="conversationIds"/> is empty or contains more than 100 items.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the user is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<JoinRequestConversationView>>> ListJoinRequests(
+    public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<JoinRequestConversationView>>> ListJoinGroupRequests(
         ICollection<string> conversationIds,
         string? cursor = null,
         CancellationToken cancellationToken = default)
@@ -32,7 +32,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        return await BlueskyServer.ListJoinRequests(
+        return await BlueskyServer.ListJoinGroupRequests(
             conversationIds,
             cursor,
             service: Service,

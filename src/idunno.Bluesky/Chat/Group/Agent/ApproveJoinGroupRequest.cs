@@ -18,7 +18,7 @@ public partial class BlueskyAgent
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     /// <exception cref="ArgumentException">Thrown when the conversation ID is <see langword="null" /> or whitespace.</exception>
     /// <exception cref="ArgumentNullException">Thrown when the member is <see langword="null" />.</exception>
-    public async Task<AtProtoHttpResult<ApproveJoinResponse>> ApproveJoinRequest(
+    public async Task<AtProtoHttpResult<ApproveJoinResponse>> ApproveJoinGroupRequest(
         string conversationId,
         Did member,
         CancellationToken cancellationToken = default)
@@ -31,7 +31,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        return await BlueskyServer.ApproveJoinRequest(
+        return await BlueskyServer.ApproveJoinGroupRequest(
             conversationId: conversationId,
             member: member,
             service: Service,

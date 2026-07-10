@@ -19,7 +19,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentException">Thrown when the conversation ID is <see langword="null" /> or whitespace.</exception>
     /// <exception cref="ArgumentNullException">Thrown when the members collection is <see langword="null" />.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the members collection is empty.</exception>
-    public async Task<AtProtoHttpResult<AddMembersResponse>> AddMembers(
+    public async Task<AtProtoHttpResult<AddMembersResponse>> AddMembersToGroup(
         string conversationId,
         IEnumerable<Did> members,
         CancellationToken cancellationToken = default)
@@ -33,7 +33,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        return await BlueskyServer.AddMembers(
+        return await BlueskyServer.AddMembersToGroup(
             conversationId: conversationId,
             members: members,
             service: Service,

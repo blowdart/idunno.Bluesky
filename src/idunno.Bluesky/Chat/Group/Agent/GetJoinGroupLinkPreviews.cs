@@ -17,7 +17,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="codes"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="codes"/> is empty.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="codes"/> contains more than 50 items.</exception>
-    public async Task<AtProtoHttpResult<GetJoinLinkPreviewsResponse>> GetJoinLinkPreviews(
+    public async Task<AtProtoHttpResult<GetJoinLinkPreviewsResponse>> GetJoinGroupLinkPreviews(
         ICollection<string> codes,
         CancellationToken cancellationToken = default)
     {
@@ -25,7 +25,7 @@ public partial class BlueskyAgent
         ArgumentOutOfRangeException.ThrowIfZero(codes.Count);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(codes.Count, 50);
 
-        return await BlueskyServer.GetJoinLinkPreviews(
+        return await BlueskyServer.GetJoinGroupLinkPreviews(
             codes,
             service: Service,
             accessCredentials: Credentials,

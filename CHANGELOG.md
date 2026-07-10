@@ -86,23 +86,23 @@
   instances must have an aspect ratio for this to work, otherwise an exception will be thrown.
   You can use [Magick.NET](https://github.com/dlemstra/Magick.NET), [ImageSharp](https://github.com/SixLabors/ImageSharp) or other image processing libraries to calculate the aspect ratio of your images if needed.
 * Added support for group conversation APIs, including
-  * `AddMembers`
-  * `ApproveJoin`
+  * `AddMembersToGroup`
+  * `ApproveJoinGroupRequest`
   * `CreateGroup`
-  * `CreateJoinLink`
-  * `DisableJoinLink`
+  * `CreateJoinGroupLink`
+  * `DisableJoinGroupLink`
   * `EditGroup`
-  * `EditJoinLink`
-  * `GetJoinLinkPreviews`
-  * `ListJoinRequests`
+  * `EditJoinGroupLink`
+  * `EnableJoinGroupLink`
+  * `GetJoinGroupLinkPreviews`
+  * `ListJoinGroupRequests`
   * `ListMutualGroups`
-  * `LockConversation`
-  * `RejectJoinRequest`
-  * `RemoveMembers`
-  * `RequestJoin`
-  * `UnlockConversation`
-  * `UpdateJoinRequestsRead`
-  * `WithdrawJoinRequest`
+  * `RejectJoinGroupRequest`
+  * `RemoveGroupMembers`
+  * `RequestJoinGroup`
+  * `UpdateJoinGroupRequestsRead`
+  * `WithdrawJoinGroupRequest`
+* Added support for locking conversations with `LockConversation` and unlocking conversations with `UnlockConversation`.
 * Added Animated GIF support with `BlueskyAgent.UploadAnimatedGif()`
 * Expanded video support with a new overload to `BlueskyAgent.UploadVideo()` which accepts a MIME type parameter to allow for more video formats.
 * Added `GetStarterPacksWithMembership` to allow the authenticated user to search their starter packs and see which ones a specified actor is a member of.

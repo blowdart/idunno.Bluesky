@@ -9,31 +9,29 @@ namespace idunno.Bluesky;
 public partial class BlueskyAgent
 {
     /// <summary>
-    /// Creates a join link for a group conversation.
+    /// Edits the join link properties for a conversation
     /// </summary>
-    /// <param name="conversationId">The id of the conversation to create the link for.</param>
-    /// <param name="requireApproval">Indicates whether approval is required to join the conversation.</param>
-    /// <param name="joinRule">The rule for joining the conversation. Known values are in <see cref="Chat.Group.JoinRule"/></param>
+    /// <param name="conversationId">The id of the conversation to edit.</param>
+    /// <param name="requireApproval">Flag indicating whether the conversation owner needs to approve joins.</param>
+    /// <param name="joinRule">The join rule for the conversation. Known values are in <see cref="Chat.Group.JoinRule"/></param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/> or <paramref name="joinRule"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/> or <paramref name="joinRule"/> is empty.</exception>
-    public async Task<AtProtoHttpResult<CreateJoinLinkResponse>> CreateJoinLink(
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/> is <see langword="null"/>.</exception>
+    public async Task<AtProtoHttpResult<EditJoinLinkResponse>> EditJoinGroupLink(
         string conversationId,
-        bool requireApproval,
-        string joinRule,
+        bool? requireApproval = null,
+        string? joinRule = null,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(conversationId);
-        ArgumentException.ThrowIfNullOrEmpty(joinRule);
+        ArgumentNullException.ThrowIfNull(conversationId);
 
         if (!IsAuthenticated)
         {
             throw new AuthenticationRequiredException();
         }
 
-        return await BlueskyServer.CreateJoinLink(
+        return await BlueskyServer.EditJoinGroupLink(
             conversationId,
             requireApproval,
             joinRule,

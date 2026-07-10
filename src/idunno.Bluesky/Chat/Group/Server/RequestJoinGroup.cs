@@ -14,11 +14,9 @@ namespace idunno.Bluesky;
 public partial class BlueskyServer
 {
     /// <summary>
-    /// Edits the join link properties for a conversation
+    /// Request to join a group via a group link.
     /// </summary>
-    /// <param name="conversationId">The id of the conversation to edit.</param>
-    /// <param name="requireApproval">Flag indicating whether the conversation owner needs to approve joins.</param>
-    /// <param name="joinRule">The join rule for the conversation. Known values are in <see cref="Chat.Group.JoinRule"/></param>
+    /// <param name="code">The code from the group link.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
@@ -26,7 +24,7 @@ public partial class BlueskyServer
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/> or <paramref name="joinRule"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="code"/> is <see langword="null"/> or whitespace.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -34,10 +32,8 @@ public partial class BlueskyServer
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
-    public static async Task<AtProtoHttpResult<EditJoinLinkResponse>> EditJoinLink(
-        string conversationId,
-        bool? requireApproval,
-        string? joinRule,
+    public static async Task<AtProtoHttpResult<RequestJoinResponse>> RequestJoinGroup(
+        string code,
         Uri service,
         AccessCredentials accessCredentials,
         HttpClient httpClient,
@@ -45,14 +41,14 @@ public partial class BlueskyServer
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(conversationId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
 
-        BlueskyHttpClient<EditJoinLinkResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<RequestJoinResponse> client = new(ChatProxy, loggerFactory);
 
-        AtProtoHttpResult<EditJoinLinkResponse> response = await client.Post(
+        AtProtoHttpResult<RequestJoinResponse> response = await client.Post(
             service,
-            "/xrpc/chat.bsky.group.editJoinLink",
-            new EditJoinLinkRequest(conversationId, requireApproval, joinRule),
+            $"/xrpc/chat.bsky.group.requestJoin",
+            new RequestJoinRequest(code),
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,

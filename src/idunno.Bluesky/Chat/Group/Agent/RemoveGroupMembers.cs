@@ -9,32 +9,30 @@ namespace idunno.Bluesky;
 public partial class BlueskyAgent
 {
     /// <summary>
-    /// Edits the join link properties for a conversation
+    /// Removes the specified <paramref name="members"/> from the conversation identified by <paramref name="conversationId"/>.
     /// </summary>
-    /// <param name="conversationId">The id of the conversation to edit.</param>
-    /// <param name="requireApproval">Flag indicating whether the conversation owner needs to approve joins.</param>
-    /// <param name="joinRule">The join rule for the conversation. Known values are in <see cref="Chat.Group.JoinRule"/></param>
+    /// <param name="conversationId">The id of the group to remove members from.</param>
+    /// <param name="members">The <see cref="ICollection{Did}"/> of users to remove from the group.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/> is <see langword="null"/>.</exception>
-    public async Task<AtProtoHttpResult<EditJoinLinkResponse>> EditJoinLink(
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/> or <paramref name="members"/> is <see langword="null"/>.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    public async Task<AtProtoHttpResult<RemoveMembersResponse>> RemoveGroupMembers(
         string conversationId,
-        bool? requireApproval = null,
-        string? joinRule = null,
+        ICollection<Did> members,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(conversationId);
+        ArgumentNullException.ThrowIfNull(members);
 
         if (!IsAuthenticated)
         {
             throw new AuthenticationRequiredException();
         }
 
-        return await BlueskyServer.EditJoinLink(
+        return await BlueskyServer.RemoveGroupMembers(
             conversationId,
-            requireApproval,
-            joinRule,
+            members,
             service: Service,
             accessCredentials: Credentials,
             httpClient: HttpClient,

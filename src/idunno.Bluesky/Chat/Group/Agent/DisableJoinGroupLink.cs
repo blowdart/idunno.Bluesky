@@ -9,26 +9,27 @@ namespace idunno.Bluesky;
 public partial class BlueskyAgent
 {
     /// <summary>
-    /// Sends a request to join a group (via join link) to the group owner.
+    /// Disables the join link for a group.
     /// </summary>
-    /// <param name="code">The code from a join link.</param>
+    /// <param name="conversationId">The id of the conversation to disable the join link for</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="code" /> is <see langword="null"/> or whitespace.</exception>
-    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<RequestJoinResponse>> RequestJoin(
-        string code,
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/> is <see langword="null"/>.</exception>
+
+    public async Task<AtProtoHttpResult<DisableJoinLinkResponse>> DisableJoinGroupLink(
+        string conversationId,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+        ArgumentNullException.ThrowIfNull(conversationId);
 
         if (!IsAuthenticated)
         {
             throw new AuthenticationRequiredException();
         }
 
-        return await BlueskyServer.RequestJoin(
-            code,
+        return await BlueskyServer.DisableJoinGroupLink(
+            conversationId,
             service: Service,
             accessCredentials: Credentials,
             httpClient: HttpClient,

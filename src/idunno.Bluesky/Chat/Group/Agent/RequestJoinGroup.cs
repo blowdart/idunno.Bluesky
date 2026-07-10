@@ -2,36 +2,33 @@
 // Licensed under the MIT License.
 
 using idunno.AtProto;
+using idunno.Bluesky.Chat.Group.Model;
 
 namespace idunno.Bluesky;
 
 public partial class BlueskyAgent
 {
     /// <summary>
-    /// Rejects a request to join a group (via join link) the user owns. 
+    /// Sends a request to join a group (via join link) to the group owner.
     /// </summary>
-    /// <param name="conversationId">The id of the group to reject the join request for.</param>
-    /// <param name="member">The <see cref="Did"/> of the user to reject the join request for.</param>
+    /// <param name="code">The code from a join link.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/> or <paramref name="member"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="code" /> is <see langword="null"/> or whitespace.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<EmptyResponse>> RejectJoinRequest(
-        string conversationId,
-        Did member,
+    public async Task<AtProtoHttpResult<RequestJoinResponse>> RequestJoinGroup(
+        string code,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(conversationId);
-        ArgumentNullException.ThrowIfNull(member);
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
 
         if (!IsAuthenticated)
         {
             throw new AuthenticationRequiredException();
         }
 
-        return await BlueskyServer.RejectJoinRequest(
-            conversationId,
-            member,
+        return await BlueskyServer.RequestJoinGroup(
+            code,
             service: Service,
             accessCredentials: Credentials,
             httpClient: HttpClient,
