@@ -259,6 +259,7 @@
     <File Path="nuget.config" />
     <File Path="purge.ps1" />
     <File Path="readme.md" />
+    <File Path="regeneratePublicApiFiles.ps1" />
     <File Path="SECURITY.md" />
     <File Path="sleet.json" />
     <File Path="THIRD-PARTY-NOTICES.txt" />
