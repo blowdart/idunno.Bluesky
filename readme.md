@@ -32,13 +32,14 @@ if (loginResult.Succeeded)
 
 Please see the [documentation](https://bluesky.idunno.dev/) for much more useful documentation and samples.
 
-The [API status page](https://bluesky.idunno.dev/docs/endpointStatus.html) shows what APIs are currently implemented.
+The [API status page](https://bluesky.idunno.dev/docs/endpointStatus.html) shows what APIs are currently implemented and how the Bluesky API names map to the
+the idunno.Bluesky SDK methods, which follow a more .NET idiomatic style.
 
 ## Key Features
 
 * Creating and deleting posts
   * Posting with mentions, links and hashtags
-  * Posting images and video, with alt text support.
+  * Posting images, GIFs and video, with alt text support.
   * Setting a post's language
   * Gating threads and posts
   * Liking, quoting, and reposting posts
@@ -53,6 +54,7 @@ The [API status page](https://bluesky.idunno.dev/docs/endpointStatus.html) shows
 * Following and unfollowing users
 * Muting and blocking users
 * Sending, receiving, and deleting direct messages
+* Creating, joining and leaving group conversations
 * Create, deleting and listing a user's bookmarks
 * Handle / password and OAuth authentication
 * Jetstream support for simple firehose consumption
@@ -149,13 +151,8 @@ the signing certificate chain will not match the signing chain of a release buil
 ### Major
 
 * Logging in idunno.Bluesky
-* GIF attaching
 * Wider test coverage
 * More deserialization tests with captured responses
-
-### Awaiting external
-
-* Automatic Open Graph card generation when link facets detected.
 
 ## Dependencies
 

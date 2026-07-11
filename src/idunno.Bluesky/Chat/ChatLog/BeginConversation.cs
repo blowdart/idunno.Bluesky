@@ -1,5 +1,7 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
+
+using System.Text.Json.Serialization;
 
 #pragma warning disable IDE0130
 namespace idunno.Bluesky.Chat;
@@ -13,9 +15,10 @@ public sealed record BeginConversation : LogBase
     /// <summary>
     /// Constructs a new instance of <see cref="BeginConversation"/>.
     /// </summary>
-    /// <param name="id">The conversation identifier.</param>
+    /// <param name="conversationId">The conversation identifier.</param>
     /// <param name="revision">The conversation revision.</param>
-    internal BeginConversation(string id, string revision) : base(id, revision)
+    [JsonConstructor]
+    internal BeginConversation(string conversationId, string revision) : base(conversationId, revision)
     {
     }
 }

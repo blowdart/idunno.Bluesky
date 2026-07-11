@@ -1,10 +1,10 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
+
+using idunno.AtProto.Authentication;
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-
-using idunno.AtProto.Authentication;
 
 namespace idunno.AtProto;
 
@@ -36,7 +36,7 @@ public class AtProtoAgentBuilder
     /// <summary>
     /// Gets or sets the <see cref="ILoggerFactory"/> to use when creating loggers.
     /// </summary>
-    public ILoggerFactory LoggerFactory { get; set;} = NullLoggerFactory.Instance;
+    public ILoggerFactory LoggerFactory { get; set; } = NullLoggerFactory.Instance;
 
     /// <summary>
     /// Gets or sets the <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.
@@ -70,7 +70,7 @@ public class AtProtoAgentBuilder
     /// Creates a new <see cref="AtProtoAgentBuilder"/>.
     /// </summary>
     /// <returns>A new <see cref="AtProtoAgentBuilder"/></returns>
-    public static AtProtoAgentBuilder Create() => new ();
+    public static AtProtoAgentBuilder Create() => new();
 
     /// <summary>
     /// Sets the service the agent will initially connect to.
@@ -150,7 +150,7 @@ public class AtProtoAgentBuilder
     {
         ArgumentNullException.ThrowIfNull(configure);
 
-        OAuthOptions configuredOptions = new ();
+        OAuthOptions configuredOptions = new();
         configure(configuredOptions);
         configuredOptions.Validate();
 

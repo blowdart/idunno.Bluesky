@@ -1,13 +1,13 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Security.Cryptography;
 using System.Text.Json;
 
+using idunno.AtProto;
+
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
-
-using idunno.AtProto;
 
 namespace idunno.Bluesky.Integration.Test;
 
@@ -30,7 +30,8 @@ internal class JwtBuilder
         if (did is not null)
         {
             claims.Add(JwtRegisteredClaimNames.Sub, did.ToString());
-        };
+        }
+        ;
 
         if (lxm is not null)
         {

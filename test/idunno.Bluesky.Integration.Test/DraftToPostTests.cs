@@ -4,9 +4,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.TestHost;
-
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Repo;
@@ -14,6 +11,9 @@ using idunno.AtProto.Repo.Models;
 using idunno.AtProto.Server.Models;
 using idunno.Bluesky.Drafts;
 using idunno.Bluesky.Embed;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.TestHost;
 
 namespace idunno.Bluesky.Integration.Test;
 
@@ -86,7 +86,7 @@ public class DraftToPostTests
             deleteCalled = true;
 
             if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0] == expectedDraftId)
+                context.Request.Query["id"][0]! == expectedDraftId)
             {
                 context.Response.StatusCode = 500;
                 return;
@@ -204,7 +204,7 @@ public class DraftToPostTests
             deleteCalled = true;
 
             if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0] == expectedDraftId)
+                context.Request.Query["id"][0]! == expectedDraftId)
             {
                 context.Response.StatusCode = 500;
                 return;
@@ -339,7 +339,7 @@ public class DraftToPostTests
             deleteCalled = true;
 
             if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0] == expectedDraftId)
+                context.Request.Query["id"][0]! == expectedDraftId)
             {
                 context.Response.StatusCode = 500;
                 return;
@@ -530,7 +530,7 @@ public class DraftToPostTests
             deleteCalled = true;
 
             if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0] == expectedDraftId)
+                context.Request.Query["id"][0]! == expectedDraftId)
             {
                 context.Response.StatusCode = 500;
                 return;
@@ -676,7 +676,7 @@ public class DraftToPostTests
             deleteCalled = true;
 
             if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0] == expectedDraftId)
+                context.Request.Query["id"][0]! == expectedDraftId)
             {
                 context.Response.StatusCode = 500;
                 return;
@@ -793,7 +793,7 @@ public class DraftToPostTests
             deleteCalled = true;
 
             if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0] == expectedDraftId)
+                context.Request.Query["id"][0]! == expectedDraftId)
             {
                 context.Response.StatusCode = 500;
                 return;
@@ -912,7 +912,7 @@ public class DraftToPostTests
             deleteCalled = true;
 
             if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0] == expectedDraftId)
+                context.Request.Query["id"][0]! == expectedDraftId)
             {
                 context.Response.StatusCode = 500;
                 return;
@@ -1034,7 +1034,7 @@ public class DraftToPostTests
             deleteCalled = true;
 
             if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0] == expectedDraftId)
+                context.Request.Query["id"][0]! == expectedDraftId)
             {
                 context.Response.StatusCode = 500;
                 return;
@@ -1156,7 +1156,7 @@ public class DraftToPostTests
             deleteCalled = true;
 
             if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0] == expectedDraftId)
+                context.Request.Query["id"][0]! == expectedDraftId)
             {
                 context.Response.StatusCode = 500;
                 return;
@@ -1193,7 +1193,7 @@ public class DraftToPostTests
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsync("{");
             await context.Response.WriteAsync("\"canUpload\":true,");
-            await context.Response.WriteAsync($"\"remainingDailyBytes\":{videoSize*2 - 1}");
+            await context.Response.WriteAsync($"\"remainingDailyBytes\":{videoSize * 2 - 1}");
             await context.Response.WriteAsync("}");
             return;
         }
@@ -1274,7 +1274,7 @@ public class DraftToPostTests
             deleteCalled = true;
 
             if (context.Request.Query["id"].Count != 1 ||
-                context.Request.Query["id"][0] == expectedDraftId)
+                context.Request.Query["id"][0]! == expectedDraftId)
             {
                 context.Response.StatusCode = 500;
                 return;
@@ -1306,7 +1306,7 @@ public class DraftToPostTests
             agent.Credentials = expectedCredentials;
             agent.Service = TestServerBuilder.DefaultUri;
 
-            string draftText = new ('-', Maximum.PostLengthInGraphemes + 1);
+            string draftText = new('-', Maximum.PostLengthInGraphemes + 1);
 
             DraftPost expectedDraftPost = new(draftText);
             Draft expectedDraft = new(

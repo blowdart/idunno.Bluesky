@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json;
@@ -14,7 +14,7 @@ public class SelfLabelsTests
     [Fact]
     public void SelfLabelsSerializesProperlyWithSourceGeneratedJsonContext()
     {
-        List<SelfLabel> labels = [new ("selfLabel")];
+        List<SelfLabel> labels = [new("selfLabel")];
 
         SelfLabels selfLabels = new(labels);
 

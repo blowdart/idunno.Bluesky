@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 namespace idunno.AtProto.Types.Test;
@@ -108,8 +108,8 @@ public class NsidTests
     [Fact]
     public void EqualityReturnsTrueWhenContentsAreTheSame()
     {
-        Nsid lhs = new ("com.example.fooBar");
-        Nsid rhs = new ("com.example.fooBar");
+        Nsid lhs = new("com.example.fooBar");
+        Nsid rhs = new("com.example.fooBar");
 
         Assert.Equal(lhs, rhs);
     }

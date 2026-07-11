@@ -1,17 +1,17 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto;
-using idunno.Bluesky.Notifications;
-using idunno.Bluesky.Notifications.Model;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Actor;
+using idunno.Bluesky.Notifications;
+using idunno.Bluesky.Notifications.Model;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky;
 
@@ -76,7 +76,7 @@ public static partial class BlueskyServer
             queryString = $"{seenAt.Value.UtcDateTime.ToString("o", CultureInfo.InvariantCulture)}";
         }
 
-        AtProtoHttpClient<UnreadCountResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<UnreadCountResponse> request = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<UnreadCountResponse> response = await request.Get(
             service,
             $"{GetUnreadEndpoint}?{queryString}",
@@ -159,8 +159,8 @@ public static partial class BlueskyServer
         {
             queryString.Remove(queryString.Length - 1, 1);
         }
-        
-        AtProtoHttpClient<ListActivitySubscriptionsResponse> request = new(AppViewProxy, loggerFactory);
+
+        BlueskyHttpClient<ListActivitySubscriptionsResponse> request = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<ListActivitySubscriptionsResponse> response = await request.Get(
             service: service,
             endpoint: $"{ListActivitySubscriptionsEndpoint}?{queryString}",
@@ -175,7 +175,7 @@ public static partial class BlueskyServer
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>(
-                new (response.Result.Subscriptions, response.Result.Cursor),
+                new(response.Result.Subscriptions, response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -237,7 +237,7 @@ public static partial class BlueskyServer
             ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
         }
 
-        StringBuilder queryString = new ();
+        StringBuilder queryString = new();
         if (limit is not null)
         {
             queryString.Append(CultureInfo.InvariantCulture, $"limit={limit}&");
@@ -258,7 +258,7 @@ public static partial class BlueskyServer
             queryString.Remove(queryString.Length - 1, 1);
         }
 
-        AtProtoHttpClient<ListNotificationsResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<ListNotificationsResponse> request = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<ListNotificationsResponse> response = await request.Get(
             service: service,
             endpoint: $"{ListNotificationsEndpoint}?{queryString}",
@@ -329,7 +329,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<SubjectActivitySubscription> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<SubjectActivitySubscription> request = new(AppViewProxy, loggerFactory);
         return await request.Post(
             service,
             PutActivitySubscriptionEndpoint,
@@ -375,7 +375,7 @@ public static partial class BlueskyServer
 
         UpdateSeenRequest body = new() { SeenAt = seenAt };
 
-        AtProtoHttpClient<EmptyResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<EmptyResponse> request = new(AppViewProxy, loggerFactory);
         return await request.Post(
             service,
             $"{UpdateSeenEndpoint}",
@@ -417,7 +417,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<Notifications.Model.GetPreferencesResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<Notifications.Model.GetPreferencesResponse> request = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<GetPreferencesResponse> response = await request.Get(
             service: service,
@@ -484,9 +484,9 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<Notifications.Model.GetPreferencesResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<Notifications.Model.GetPreferencesResponse> request = new(AppViewProxy, loggerFactory);
 
-        PutPreferencesV2Request body = new (preferences);
+        PutPreferencesV2Request body = new(preferences);
 
         AtProtoHttpResult<GetPreferencesResponse> response = await request.Post(
             service: service,

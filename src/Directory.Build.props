@@ -1,4 +1,4 @@
-﻿<Project>
+<Project>
   <Import Project="..\Directory.Build.props" />
 
   <PropertyGroup>
@@ -27,9 +27,10 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisMode>All</AnalysisMode>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- Always treat "S1133 Deprecated code should be removed" as a warning -->
     <!-- Always treat "S1135 Complete the task associated to this 'TODO'" as a warning -->
     <!-- Always treat "S125 Remove this commented out code" as a warning -->

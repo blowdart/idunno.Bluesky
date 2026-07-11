@@ -1,4 +1,7 @@
-# Adding videos to your posts
+# Adding videos and animated GIFsto your posts
+
+## Uploading videos
+
 Like images, videos need to be uploaded as a blob before they can be used in a post. However, unlike images, videos undergo processing after you upload them,
 and you cannot use them until processing is complete.
 
@@ -13,10 +16,11 @@ using (MemoryStream ms = new())
     videoAsBytes = memoryStream.ToArray();
 }
 
-// Upload the video - only mp4 videos are supported by Bluesky.
+// Upload the video
 var videoUploadResult = await agent.UploadVideo(
-    Path.GetFileName(pathToImage),
-    videoAsBytes);
+    fileName:Path.GetFileName(pathToImage),
+    video:videoAsBytes,
+    mimeType: "video/mp4");
 
 // Quick fail - you'd want to be more graceful in handling errors.
 videoUploadResult.EnsureSucceeded();
@@ -80,7 +84,6 @@ var postResult = await agent.Post("With video and captions", video: video);
 
 The [Video sample](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Video) demonstrates how to put it all together.
 
-
 ## Using videos with PostBuilder
 If you are using a `PostBuilder` you can use `PostBuilder.Add()` to add an instance of `EmbeddedVideo`.
 
@@ -107,3 +110,11 @@ if (!videoUploadLimitsResult.Result.CanUpload ||
          // You can't upload the video stream in videoAsBytes, react accordingly.
     }
 ```
+
+## Animated GIFs
+
+Bluesky treats animated GIFs as videos, so you can upload them in the same way as videos. To make animated GIF support more discoverable,
+the `BlueskyAgent` has a convenience method `UploadAnimatedGif()`. Alternatively, you can use `UploadVideo()` and specify the mime type as `image/gif`.
+The same processing rules apply to animated GIFs as they do to videos.
+
+Bluesky treats animated GIFs as videos, so you must create an instance of `EmbeddedVideo` to use them in a post. You cannot use `EmbeddedImage` for animated GIFs.

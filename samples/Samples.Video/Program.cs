@@ -1,15 +1,15 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics;
 using System.Reflection;
 
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto;
 using idunno.Bluesky;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Video;
+
+using Microsoft.Extensions.Logging;
 
 using Samples.Common;
 
@@ -17,6 +17,7 @@ namespace Samples.Video;
 
 public sealed class Program
 {
+    [Obsolete]
     static async Task<int> Main(string[] args)
     {
         // Necessary to render emojis.
@@ -30,6 +31,7 @@ public sealed class Program
         return await parser.InvokeAsync();
     }
 
+    [Obsolete]
     static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(handle);
@@ -128,6 +130,7 @@ public sealed class Program
                 var videoUploadResult = await agent.UploadVideo(
                     fileName,
                     videoAsBytes,
+                    "video/mp4",
                     cancellationToken: cancellationToken);
 
                 // Quick fail - you'd want to be more graceful in handling errors.

@@ -1,7 +1,8 @@
-﻿// Copyright(c) Barry Dorrans. All rights reserved.
+// Copyright(c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System.Text.Json;
+
 using idunno.AtProto.Authentication.Models;
 
 namespace idunno.AtProto.Serialization.Test;

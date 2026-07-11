@@ -6,14 +6,14 @@ using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
 
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Server.Models;
 using idunno.DidPlcDirectory;
+
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.AtProto;
 
@@ -1459,7 +1459,7 @@ public partial class AtProtoAgent : Agent
 
         service ??= await ResolvePdsUriFromRepo(uri.Repo).ConfigureAwait(false);
 
-        return await GetRawRecord(uri.Repo, uri.Collection, uri.RecordKey, cid: null, service: service, serviceProxy : null).ConfigureAwait(false);
+        return await GetRawRecord(uri.Repo, uri.Collection, uri.RecordKey, cid: null, service: service, serviceProxy: null).ConfigureAwait(false);
     }
 
     /// <summary>

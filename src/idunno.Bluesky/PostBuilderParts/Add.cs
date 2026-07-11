@@ -1,11 +1,11 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using idunno.AtProto.Repo;
-
-using idunno.Bluesky.Embed;
-using idunno.Bluesky.RichText;
 using idunno.AtProto.Labels;
+using idunno.AtProto.Repo;
+using idunno.Bluesky.Embed;
+using idunno.Bluesky.Embed.Gallery;
+using idunno.Bluesky.RichText;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky;
@@ -177,22 +177,74 @@ public sealed partial class PostBuilder
     /// <summary>
     /// Adds a <see cref="EmbeddedImage"/> to this instance.
     /// </summary>
-    /// <param name="image">The <see cref="EmbeddedImage"/> to embed.</param>
-    /// <returns>A reference to this instance after the append operation has completed.</returns>
+    /// <param name="image">The <see cref="EmbeddedImage"/> to add.</param>
+    /// <returns>A reference to this instance after the add operation has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the number of images in this instance is already equal to <see cref="MaxImages"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when attempting to convert an image without an aspect ratio to a gallery entry.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the existing images cannot be converted to a gallery due to missing aspect ratios.</exception>
+    /// <remarks>
+    /// <para>
+    /// If the number of images in this instance are equal to <see cref="MaxImages"/>, the image collection will be converted to a gallery entry
+    /// they have aspect ratios, and <paramref name="image"/> added to the gallery. If the conversion is not possible, an exception will be thrown.
+    /// </para>
+    /// </remarks>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S3267:Loops should be simplified with \"LINQ\" expressions", Justification = "No LINQ on hot paths")]
     public PostBuilder Add(EmbeddedImage image)
     {
         ArgumentNullException.ThrowIfNull(image);
 
         lock (_syncLock)
         {
-            if (_embeddedImages.Count == MaxImages)
+            if (_embeddedVideo is not null)
             {
-                throw new ArgumentOutOfRangeException(nameof(image), $"cannot have more than {MaxImages} in a post.");
+                throw new InvalidOperationException(Properties.Resources.PostCannotHaveImagesAndVideoValidationError);
             }
 
-            _embeddedImages.Add(image);
+            if (_embeddedGalleryImages.Count >= MaxGalleryItems)
+            {
+                throw new ArgumentOutOfRangeException(nameof(image), $"Cannot add more than {MaxGalleryItems} images to a post.");
+            }
+            else if (_embeddedImages.Count == MaxImages)
+            {
+                // Attempt to switch to gallery mode if the new image has an aspect ratio and all existing images have aspect ratios
+
+                foreach (EmbeddedImage embeddedImage in _embeddedImages)
+                {
+                    if (embeddedImage.AspectRatio is null)
+                    {
+                        throw new ArgumentException("Cannot convert images to gallery entries due to missing AspectRatio.", nameof(image));
+                    }
+
+                    _embeddedGalleryImages.Add(new(embeddedImage));
+                }
+
+                if (image.AspectRatio is not null)
+                {
+                    _embeddedGalleryImages.Add(new GalleryImage(image));
+                    _embeddedImages.Clear();
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Cannot convert existing images to a gallery as one or more do not contain an AspectRatio.");
+                }
+            }
+            else if (_embeddedGalleryImages.Count > 0)
+            {
+                if (image.AspectRatio is not null)
+                {
+                    _embeddedGalleryImages.Add(new GalleryImage(image));
+                }
+                else
+                {
+                    throw new ArgumentException($"Cannot add an image without an AspectRatio to a gallery.", nameof(image));
+                }
+            }
+            else
+            {
+                _embeddedImages.Add(image);
+            }
+
             _embeddedVideo = null;
             return this;
         }
@@ -206,23 +258,18 @@ public sealed partial class PostBuilder
     /// <returns>A reference to this instance after the add operation has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the number of images in this instance is already equal to <see cref="MaxImages"/>.</exception>
+    /// <remarks>
+    /// <para>
+    /// If the number of images in this instance are equal to <see cref="MaxImages"/>, the image collection will be converted to a gallery entry
+    /// they have aspect ratios, and <paramref name="image"/> added to the gallery. If the conversion is not possible, an exception will be thrown.
+    /// </para>
+    /// </remarks>
     public static PostBuilder Add(PostBuilder postBuilder, EmbeddedImage image)
     {
         ArgumentNullException.ThrowIfNull(postBuilder);
         ArgumentNullException.ThrowIfNull(image);
 
-        lock (postBuilder._syncLock)
-        {
-            if (postBuilder._embeddedImages.Count == postBuilder.MaxImages)
-            {
-                throw new ArgumentOutOfRangeException(nameof(image), $"cannot have more than {postBuilder.MaxImages} in a post.");
-            }
-
-            postBuilder._embeddedImages.Add(image);
-            postBuilder._embeddedVideo = null;
-
-            return postBuilder;
-        }
+        return postBuilder.Add(image);
     }
 
     /// <summary>
@@ -232,18 +279,76 @@ public sealed partial class PostBuilder
     /// <returns>A reference to this instance after the append operation has completed.</returns>
     /// <exception cref="ArgumentNullException">if <paramref name="images"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when adding the images in this instance is will result in an image count &gt;<see cref="MaxImages"/>.</exception>
+    /// <exception cref="System.InvalidOperationException">Thrown when the images cannot be converted to gallery entries due to missing AspectRatio, or the number
+    /// of images in this instance coupled with the new images necessitates a conversion to a gallery and one or more existing images lack an AspectRatio.</exception>
+    /// <remarks>
+    /// <para>
+    /// If the number of images in this instance are equal to <see cref="MaxImages"/>, the image collection will be converted to a gallery entry
+    /// they have aspect ratios, and <paramref name="images"/> added to the gallery. If the conversion is not possible, an exception will be thrown.
+    /// </para>
+    /// </remarks>
     public PostBuilder Add(ICollection<EmbeddedImage> images)
     {
         ArgumentNullException.ThrowIfNull(images);
 
         lock (_syncLock)
         {
-            if ((_embeddedImages.Count + images.Count) > MaxImages)
+            if (_embeddedVideo is not null)
             {
-                throw new ArgumentOutOfRangeException(nameof(images), $"cannot have more than {MaxImages} in a post.");
+                throw new InvalidOperationException(Properties.Resources.PostCannotHaveImagesAndVideoValidationError);
             }
 
-            _embeddedImages.AddRange(images);
+            if ((_embeddedGalleryImages.Count + _embeddedImages.Count + images.Count) > MaxGalleryItems)
+            {
+                throw new ArgumentOutOfRangeException(nameof(images), $"Cannot add more than {MaxGalleryItems} images to a post.");
+            }
+
+            if (_embeddedGalleryImages.Count > 0)
+            {
+                // We're already in gallery mode, so just attempt to add the new images to the gallery
+                foreach (EmbeddedImage embeddedImage in images)
+                {
+                    if (embeddedImage.AspectRatio is null)
+                    {
+                        throw new InvalidOperationException("Cannot convert images to gallery entries due to missing AspectRatio.");
+                    }
+
+                    _embeddedGalleryImages.Add(new(embeddedImage));
+                }
+            }
+            else if (_embeddedGalleryImages.Count + _embeddedImages.Count + images.Count > MaxImages)
+            {
+                // Attempt to switch to gallery mode as the new images will exceed the max individual image count
+                foreach (EmbeddedImage embeddedImage in _embeddedImages)
+                {
+                    if (embeddedImage.AspectRatio is null)
+                    {
+                        throw new InvalidOperationException("Cannot convert images to gallery entries due to missing AspectRatio.");
+                    }
+
+                    _embeddedGalleryImages.Add(new(embeddedImage));
+                }
+
+                _embeddedImages.Clear();
+
+                // Now add the new images to the gallery
+                foreach (EmbeddedImage image in images)
+                {
+                    if (image.AspectRatio is null)
+                    {
+                        throw new InvalidOperationException($"Cannot convert to a gallery entry without an AspectRatio.");
+                    }
+
+                    _embeddedGalleryImages.Add(new GalleryImage(image));
+                }
+            }
+            else
+            {
+                _embeddedImages.AddRange(images);
+
+                _embeddedGalleryImages.Clear();
+            }
+
             _embeddedVideo = null;
             return this;
         }
@@ -262,18 +367,9 @@ public sealed partial class PostBuilder
         ArgumentNullException.ThrowIfNull(postBuilder);
         ArgumentNullException.ThrowIfNull(images);
 
-        lock (postBuilder._syncLock)
-        {
-            if ((postBuilder._embeddedImages.Count + images.Count) > postBuilder.MaxImages)
-            {
-                throw new ArgumentOutOfRangeException(nameof(images), $"cannot have more than {postBuilder.MaxImages} in a post.");
-            }
-
-            postBuilder._embeddedImages.AddRange(images);
-            postBuilder._embeddedVideo = null;
-            return postBuilder;
-        }
+        return postBuilder.Add(images);
     }
+
 
     /// <summary>
     /// Adds a <see cref="EmbeddedVideo"/> to this instance.
@@ -288,13 +384,14 @@ public sealed partial class PostBuilder
 
         lock (_syncLock)
         {
-            if (_embeddedImages.Count > 0)
+            if (_embeddedImages.Count > 0 || _embeddedGalleryImages.Count > 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(video), Properties.Resources.CannotAddVideoToPostWithImages);
             }
 
             Video = video;
             _embeddedImages.Clear();
+            _embeddedGalleryImages.Clear();
             return this;
         }
     }
@@ -312,17 +409,7 @@ public sealed partial class PostBuilder
         ArgumentNullException.ThrowIfNull(postBuilder);
         ArgumentNullException.ThrowIfNull(video);
 
-        lock (postBuilder._syncLock)
-        {
-            if (postBuilder._embeddedImages.Count > 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(video), Properties.Resources.CannotAddVideoToPostWithImages);
-            }
-
-            postBuilder.Video = video;
-            postBuilder._embeddedImages.Clear();
-            return postBuilder;
-        }
+        return postBuilder.Add(video);
     }
 
     /// <summary>
@@ -331,10 +418,19 @@ public sealed partial class PostBuilder
     /// <param name="strongReference">The <see cref="StrongReference"/> to embed.</param>
     /// <returns>A reference to this instance after the append operation has completed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="strongReference"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when this instance already has a quote post.</exception>
     public PostBuilder Add(StrongReference strongReference)
     {
         ArgumentNullException.ThrowIfNull(strongReference);
-        QuotePost = strongReference;
+
+        lock (_syncLock)
+        {
+            if (QuotePost is not null)
+            {
+                throw new InvalidOperationException("Cannot add a quote post that already has a quote post.");
+            }
+            QuotePost = strongReference;
+        }
         return this;
     }
 
@@ -389,6 +485,97 @@ public sealed partial class PostBuilder
         postBuilder.Add(selfLabel);
 
         return postBuilder;
+    }
+
+    /// <summary>
+    /// Adds a <see cref="GalleryImage"/> to this instance.
+    /// </summary>
+    /// <param name="image">The <see cref="GalleryImage"/> to add.</param>
+    /// <returns>A reference to this instance after the append operation has completed.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the maximum number of gallery items is exceeded.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="image"/> is <see langword="null"/>.</exception>
+    /// <exception cref="System.InvalidOperationException">Thrown when a video is already present or there are existing images.</exception>
+    public PostBuilder Add(GalleryImage image)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+        lock (_syncLock)
+        {
+            if (_embeddedVideo is not null)
+            {
+                throw new InvalidOperationException(Properties.Resources.PostBuilderCannotHaveImagesAndGalleryImages);
+            }
+            else if (_embeddedGalleryImages.Count >= MaxGalleryItems)
+            {
+                throw new ArgumentOutOfRangeException(nameof(image), $"cannot have more than {MaxGalleryItems} in a post.");
+            }
+            else if (_embeddedImages.Count != 0)
+            {
+                throw new InvalidOperationException(Properties.Resources.PostBuilderCannotHaveImagesAndGalleryImages);
+            }
+            _embeddedGalleryImages.Add(image);
+        }
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a collection of <see cref="GalleryImage"/>s to this instance.
+    /// </summary>
+    /// <param name="images">The collection of <see cref="GalleryImage"/>s to add.</param>
+    /// <returns>A reference to this instance after the append operation has completed.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when a video is already present or there are existing images.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the maximum number of gallery items is exceeded.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="images"/> is <see langword="null"/>.</exception>
+    public PostBuilder Add(ICollection<GalleryImage> images)
+    {
+        ArgumentNullException.ThrowIfNull(images);
+        lock (_syncLock)
+        {
+            if (_embeddedVideo is not null)
+            {
+                throw new InvalidOperationException(Properties.Resources.PostBuilderCannotHaveImagesAndGalleryImages);
+            }
+            else if (_embeddedGalleryImages.Count + images.Count > MaxGalleryItems)
+            {
+                throw new ArgumentOutOfRangeException(nameof(images), $"cannot have more than {MaxGalleryItems} in a post.");
+            }
+            else if (_embeddedImages.Count != 0)
+            {
+                throw new InvalidOperationException(Properties.Resources.PostBuilderCannotHaveImagesAndGalleryImages);
+            }
+            _embeddedGalleryImages.AddRange(images);
+        }
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a <see cref="GalleryImage"/> to the specified <paramref name="postBuilder"/>.
+    /// </summary>
+    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the image to.</param>
+    /// <param name="image">The <see cref="GalleryImage"/> to add.</param>
+    /// <returns>The <paramref name="postBuilder"/> after the append operation has completed.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the maximum number of gallery items is exceeded or a video is already present.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
+    public static PostBuilder Add(PostBuilder postBuilder, GalleryImage image)
+    {
+        ArgumentNullException.ThrowIfNull(postBuilder);
+        ArgumentNullException.ThrowIfNull(image);
+        return postBuilder.Add(image);
+    }
+
+    /// <summary>
+    /// Adds a collection of <see cref="GalleryImage"/>s to the specified <paramref name="postBuilder" />.
+    /// </summary>
+    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the images to.</param>
+    /// <param name="galleryImages">The collection of <see cref="GalleryImage"/>s to add.</param>
+    /// <returns>A reference to this instance after the add operation has completed.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="galleryImages"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when adding the images in this instance is will result in an image count &gt;<see cref="MaxImages"/>.</exception>
+    public static PostBuilder Add(PostBuilder postBuilder, ICollection<GalleryImage> galleryImages)
+    {
+        ArgumentNullException.ThrowIfNull(postBuilder);
+        ArgumentNullException.ThrowIfNull(galleryImages);
+
+        return postBuilder.Add(galleryImages);
     }
 
     /// <summary>
@@ -495,9 +682,39 @@ public sealed partial class PostBuilder
     }
 
     /// <summary>
-    /// Adds an <see cref="EmbeddedVideo"/> to the specified <paramref name="postBuilder" />.
+    /// Adds an <see cref="GalleryImage"/> to the specified <paramref name="postBuilder" />.
     /// </summary>
     /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the image to.</param>
+    /// <param name="image">The <see cref="GalleryImage"/> to add.</param>
+    /// <returns>The <paramref name="postBuilder"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="image"/> is <see langword="null"/>.</exception>
+    public static PostBuilder operator +(PostBuilder postBuilder, GalleryImage image)
+    {
+        ArgumentNullException.ThrowIfNull(postBuilder);
+        ArgumentNullException.ThrowIfNull(image);
+
+        return Add(postBuilder, image);
+    }
+
+    /// <summary>
+    /// Adds a collection of <see cref="GalleryImage"/>s to the specified <paramref name="postBuilder" />.
+    /// </summary>
+    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the images to.</param>
+    /// <param name="images">The collection of <see cref="GalleryImage"/>s to add.</param>
+    /// <returns>The <paramref name="postBuilder"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="images"/> is <see langword="null"/>.</exception>
+    public static PostBuilder operator +(PostBuilder postBuilder, ICollection<GalleryImage> images)
+    {
+        ArgumentNullException.ThrowIfNull(postBuilder);
+        ArgumentNullException.ThrowIfNull(images);
+
+        return Add(postBuilder, images);
+    }
+
+    /// <summary>
+    /// Adds an <see cref="EmbeddedVideo"/> to the specified <paramref name="postBuilder" />.
+    /// </summary>
+    /// <param name="postBuilder">The <see cref="PostBuilder"/> to add the video to.</param>
     /// <param name="video">The <see cref="EmbeddedVideo"/> to add.</param>
     /// <returns>The <paramref name="postBuilder"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> or <paramref name="video"/> is <see langword="null"/>.</exception>

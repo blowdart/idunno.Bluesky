@@ -4,10 +4,10 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 
+using idunno.AtProto;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-
-using idunno.AtProto;
 
 namespace idunno.Bluesky.Embed;
 
@@ -180,7 +180,7 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
             thumb = await DownloadAndUploadImageBlob(
                 imageUri,
                 openGraphProperties.TryGetValue("image:type", out string? imageMimeType) ? imageMimeType : null,
-                cancellationToken : cancellationToken).ConfigureAwait(false);
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         return new EmbeddedExternal(

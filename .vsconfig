@@ -1,4 +1,4 @@
-﻿{
+{
   "version": "1.0",
     "components": [
         "Microsoft.NetCore.Component.Runtime.8.0",

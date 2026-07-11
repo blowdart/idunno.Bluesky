@@ -6,7 +6,6 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 using idunno.AtProto.Labels;
-using idunno.AtProto.Repo;
 
 using idunno.Bluesky.Graph;
 using idunno.Bluesky.RichText;

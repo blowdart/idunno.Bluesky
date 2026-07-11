@@ -1,14 +1,14 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Reflection;
-using System.Text;
 using System.Security.Cryptography;
-
-using Microsoft.Extensions.Logging;
+using System.Text;
 
 using idunno.AtProto;
 using idunno.Bluesky;
+
+using Microsoft.Extensions.Logging;
 
 using Samples.Common;
 
@@ -121,7 +121,7 @@ public sealed class Program
                     }
                 }
             }
-            
+
             if (agent.IsAuthenticated)
             {
                 // First let's go manually

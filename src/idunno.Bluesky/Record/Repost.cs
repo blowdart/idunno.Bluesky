@@ -1,7 +1,8 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
+
 using idunno.AtProto.Repo;
 
 namespace idunno.Bluesky.Record;
@@ -30,7 +31,7 @@ public record Repost : BlueskyTimestampedRecord
     /// <param name="createdAt">The <see cref="DateTimeOffset"/> for the repost creation date.</param>
     /// <param name="via">An optional <see cref="StrongReference"/> to a repost record, if the repost is of a repost.</param>
     [JsonConstructor]
-    public Repost(StrongReference subject, DateTimeOffset createdAt, StrongReference? via =null ) : base(createdAt)
+    public Repost(StrongReference subject, DateTimeOffset createdAt, StrongReference? via = null) : base(createdAt)
     {
         Subject = subject;
         Via = via;

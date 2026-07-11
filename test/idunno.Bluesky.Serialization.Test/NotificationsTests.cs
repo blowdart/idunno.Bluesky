@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json;
@@ -260,7 +260,7 @@ public class NotificationsTests
     [Fact]
     public void MutualsDeclarationSerializesCorrectly()
     {
-        Declaration declaration = new (NotificationAllowedFrom.Mutuals);
+        Declaration declaration = new(NotificationAllowedFrom.Mutuals);
 
         string actual = JsonSerializer.Serialize<BlueskyRecord>(declaration, BlueskyServer.BlueskyJsonSerializerOptions);
 

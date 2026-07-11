@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 namespace idunno.AtProto.Types.Test;
@@ -56,7 +56,7 @@ public class AtCidTests
     {
         Cid atCidFromString = ValidCid;
 
-        Cid atCidFromProperties = new (atCidFromString.Version, atCidFromString.Codec, [.. atCidFromString.Hash]);
+        Cid atCidFromProperties = new(atCidFromString.Version, atCidFromString.Codec, [.. atCidFromString.Hash]);
 
         Assert.NotNull(atCidFromString);
         Assert.NotNull(atCidFromProperties);

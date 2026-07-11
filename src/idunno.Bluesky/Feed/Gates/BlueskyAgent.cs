@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -66,7 +66,7 @@ public partial class BlueskyAgent
             ArgumentOutOfRangeException.ThrowIfGreaterThan(hiddenReplies.Count, Maximum.ThreadGateHiddenReplies);
         }
 
-        ThreadGate threadGate = new (post, rules, hiddenReplies);
+        ThreadGate threadGate = new(post, rules, hiddenReplies);
 
         return await AddThreadGate(threadGate, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
@@ -138,7 +138,7 @@ public partial class BlueskyAgent
 
         if (post.Collection != CollectionNsid.Post)
         {
-            throw new ArgumentException("does not point to a Post record", nameof (post));
+            throw new ArgumentException("does not point to a Post record", nameof(post));
         }
 
         if (!await IsRecordOwnedBy(post, Did, cancellationToken: cancellationToken).ConfigureAwait(false))

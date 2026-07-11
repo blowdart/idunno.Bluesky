@@ -1,12 +1,12 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Net.Http.Headers;
 
+using idunno.AtProto.Authentication;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-
-using idunno.AtProto.Authentication;
 
 namespace idunno.AtProto.Test;
 
@@ -181,7 +181,7 @@ public class BuilderTests
 
         const string clientId = "clientId";
         IEnumerable<string> scopes = ["atproto"];
-        Uri returnUri = new ("https://return.invalid");
+        Uri returnUri = new("https://return.invalid");
 
         AtProtoAgentBuilder builder = AtProtoAgent.CreateBuilder()
             .ForService(service)
@@ -191,7 +191,7 @@ public class BuilderTests
                 options.Scopes = scopes;
                 options.ReturnUri = returnUri;
             });
-        
+
         AtProtoAgent agent = builder.Build();
 
         Assert.NotNull(agent);

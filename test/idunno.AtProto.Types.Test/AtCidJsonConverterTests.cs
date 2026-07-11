@@ -8,7 +8,7 @@ namespace idunno.AtProto.Types.Test;
 [ExcludeFromCodeCoverage]
 public class AtCidJsonConverterTests
 {
-    private readonly JsonSerializerOptions _jsonSerializerOptions = new (JsonSerializerDefaults.Web);
+    private readonly JsonSerializerOptions _jsonSerializerOptions = new(JsonSerializerDefaults.Web);
 
     [Fact]
     public void ValidAtCidSerializesCorrectly()
@@ -29,7 +29,7 @@ public class AtCidJsonConverterTests
         const string cidAsString = "bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4";
         const string cidAsJson = $"{{\"cid\":\"{cidAsString}\"}}";
 
-        Cid expected = new (cidAsString);
+        Cid expected = new(cidAsString);
 
         AtCidExample? actual = JsonSerializer.Deserialize<AtCidExample>(cidAsJson, options: _jsonSerializerOptions);
 

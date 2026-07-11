@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json;
@@ -19,7 +19,7 @@ public class OAuthStateTests
     {
         Guid correlationKey = Guid.NewGuid();
 
-        OAuthLoginState oAuthLoginState = new (
+        OAuthLoginState oAuthLoginState = new(
             new AuthorizeState()
             {
                 CodeVerifier = "codeVerifier",

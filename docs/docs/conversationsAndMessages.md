@@ -14,8 +14,10 @@ To get a list of conversations for the authenticated user use the `ListConversat
 var listConversationsResult = await agent.ListConversations();
 ```
 
-This returns a [pageable list](cursorsAndPagination.md) of `ConversationView` which supplies the conversation ID, members,
-a flag indicating whether the user has opened the conversation,the number of unread messages and a view of the last message in the conversation.
+This returns a [pageable list](cursorsAndPagination.md) of all your conversations, direct and group conversations.
+The type of conversation is indicated by the `Kind` property, which will either be a instance of `DirectConversation` or `GroupConversation`.
+The `ConversationView` also supplies the conversation ID, members, a flag indicating whether the user has opened the conversation,the number of unread messages and
+a view of the last message in the conversation.
 
 If you already have a conversation ID you can use `GetConversation` to retrieve the individual `ConversationView` for that identifier.
 
@@ -138,10 +140,10 @@ foreach (MessageViewBase message in getMessages.Result)
 To add a reaction to a message call `AddReaction()`. This requires the conversation id and the message id, and the reaction you want to add. A reaction is an single emoji grapheme.
 To delete a reaction call `RemoveReaction()` with the same parameters with which you added a reaction.
 
-## <a name="creating">Starting a conversation</a>
+## <a name="creating">Starting a direct conversation</a>
 
-To start a conversation you will need the DIDs of the conversation members, which you pass a collection to `GetConversationForMembers()`. If the user has left a conversation with these DIDs
-it will be restored in the direct message list.
+To start a direct conversation you will need the DIDs of the conversation members, yourself and the other party, which you pass a collection to `GetConversationForMembers()`.
+If the user has left a conversation with these DIDs it will be restored in the direct message list.
 
 ```c#
 var memberDid = await agent.ResolveHandle("example.invalid.handle");
@@ -152,6 +154,23 @@ var startConversationResult = await agent.GetConversationForMembers(conversation
 
 `StartConversation()` returns a `ConversationView` which includes the conversation ID, which you can then use to send messages to the chat.
 
+To start a group conversation you will need the DIDs of the conversation members, yourself and the other parties, which you pass a collection to `CreateGroup()`.
+
+## Group Conversations
+
+Group conversations have additional APIs, adding members, appoving or rejecting join requests to a group conversation, requesting to join a group conversation,
+creating, generating and disabling join links, changing group metadata.
+
+To start a group conversation you will need the DIDs of the conversation members, yourself and the other parties, which you pass a collection to `CreateGroup()`.
+To add new members to a group conversation you own use `AddMembersToGroup()`. To change group metadata, like the group name, use `EditGroup()`.
+
+You can make a group conversation joinable through a group link. To create a group link use `CreateJoinGroupLink()`. You can set a group link so approval is required to
+join the conversation, and, using the `joinRule` parameter, set conditions on who can join, anyone or only users followed by the group owner. You can edit
+the link configuration with `EditJoinGroupLink()` and disable the link with `DisableJoinGroupLink()`. To renable the join link use `EnableJoinGroupLink()`. Join requests
+can be approved or rejected with `ApproveJoinGroupRequest()` and `RejectJoinGroupRequest()`. Finally, to mark join requests as read use `UpdateJoinGroupRequestsRead()`.
+
+To request to join a group conversation use `RequestJoinGroup()` with the link code, to withdraw a request use `WithdrawJoinGroupRequest()`.
+
 ## <a name="accepting">Accepting a conversation</a>
 
 A conversation has two states, `Requested` and `Accepted`, indicated by the `Status` field in the `ConversationView`.
@@ -159,4 +178,4 @@ To accept a requested conversation use the `AcceptConversation` method and pass 
 
 ## <a name="leaving">Leaving a conversation</a>
 
-To leave a conversation call `LeaveConversation()` with the conversation identifier.
+To leave a conversation, both direct and group, call `LeaveConversation()` with the conversation identifier.

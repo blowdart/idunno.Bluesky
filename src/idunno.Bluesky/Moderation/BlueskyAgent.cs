@@ -1,10 +1,10 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using idunno.AtProto;
 using idunno.AtProto.Admin;
 using idunno.AtProto.Moderation;
 using idunno.AtProto.Repo;
-using idunno.AtProto;
 using idunno.Bluesky.Moderation;
 
 namespace idunno.Bluesky;
@@ -54,7 +54,7 @@ public partial class BlueskyAgent
         return await CreateModerationReport(
             labelerDid: labelerDid,
             reportSubject: subject,
-            reasonType : WellKnown.ReportType[reportType],
+            reasonType: WellKnown.ReportType[reportType],
             reason: reason,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 

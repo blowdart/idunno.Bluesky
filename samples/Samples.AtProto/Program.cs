@@ -1,13 +1,13 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
-
-using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
+using idunno.AtProto.Server.Models;
+
+using Microsoft.Extensions.Logging;
 
 using Samples.Common;
-using idunno.AtProto.Server.Models;
 
 namespace Samples.AtProto;
 
@@ -91,11 +91,11 @@ public sealed class Program
 
             string? cursor = null;
 
-            var listRecordsResult = await agent.ListRecords<AtProtoRecord> (
+            var listRecordsResult = await agent.ListRecords<AtProtoRecord>(
                 did,
                 collection: "app.bsky.feed.post",
                 cursor: cursor,
-                service : pds,
+                service: pds,
                 cancellationToken: cancellationToken);
 
             if (listRecordsResult.Succeeded)

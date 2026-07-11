@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -85,7 +85,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
-            cancellationToken:cancellationToken).ConfigureAwait(false);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
 
@@ -284,7 +284,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<Notifications.Preferences>> GetNotificationPreferences(CancellationToken cancellationToken=default)
+    public async Task<AtProtoHttpResult<Notifications.Preferences>> GetNotificationPreferences(CancellationToken cancellationToken = default)
     {
         if (!IsAuthenticated)
         {
@@ -319,6 +319,28 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
+        return await PutNotificationPreferences(preferences, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Sets the current user's notification preferences.
+    /// </summary>
+    /// <param name="preferences">The notification preferences to set.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="preferences"/> is <see langword="null"/>.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    public async Task<AtProtoHttpResult<Notifications.Preferences>> PutNotificationPreferences(
+        Notifications.Preferences preferences,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(preferences);
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
         return await BlueskyServer.PutNotificationPreferences(
             preferences: preferences,
             service: Service,
@@ -328,4 +350,5 @@ public partial class BlueskyAgent
             loggerFactory: LoggerFactory,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
+
 }

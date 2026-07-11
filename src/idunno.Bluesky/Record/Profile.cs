@@ -15,7 +15,7 @@ namespace idunno.Bluesky.Record;
 /// </summary>
 [SuppressMessage("Naming", "CA1724", Justification = "The System.Web Profile class is part of ASP.NET and has not been carried over to .NET")]
 [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
-                 UnknownDerivedTypeHandling =JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+                 UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
 [JsonDerivedType(typeof(Profile), typeDiscriminator: RecordType.Profile)]
 public record Profile : BlueskyRecord
 {

@@ -13,7 +13,7 @@ public class BlobTests
     [Fact]
     public void BlobSerializesProperlyWithSourceGeneratedJsonContext()
     {
-        Blob blob = new (new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), mimeType: "mime/type", size: 1024);
+        Blob blob = new(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), mimeType: "mime/type", size: 1024);
 
         string blobAsJson = JsonSerializer.Serialize(blob, SourceGenerationContext.Default.Blob);
 

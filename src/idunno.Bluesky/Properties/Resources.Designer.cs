@@ -88,6 +88,42 @@ namespace idunno.Bluesky.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Post cannot contain both images and gallery images..
+        /// </summary>
+        internal static string PostBuilderCannotHaveImagesAndGalleryImages {
+            get {
+                return ResourceManager.GetString("PostBuilderCannotHaveImagesAndGalleryImages", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cannot have more than {0} gallery images..
+        /// </summary>
+        internal static string PostBuilderHasTooManyGalleryImages {
+            get {
+                return ResourceManager.GetString("PostBuilderHasTooManyGalleryImages", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cannot have more than {0} images..
+        /// </summary>
+        internal static string PostBuilderHasTooManyImages {
+            get {
+                return ResourceManager.GetString("PostBuilderHasTooManyImages", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Post cannot have more than {0} images with a null AspectRatio..
+        /// </summary>
+        internal static string PostBuilderTooManyImagesWithoutAspectRatio {
+            get {
+                return ResourceManager.GetString("PostBuilderTooManyImagesWithoutAspectRatio", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Post cannot have both images and video..
         /// </summary>
         internal static string PostCannotHaveImagesAndVideoValidationError {
@@ -97,7 +133,7 @@ namespace idunno.Bluesky.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Post contains self labels but no media.
+        ///   Looks up a localized string similar to Post contains self labels but no media..
         /// </summary>
         internal static string PostHasLabelsButNoMediaValidationError {
             get {

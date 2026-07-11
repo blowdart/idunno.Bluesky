@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 namespace idunno.AtProto.Types.Test;
@@ -122,6 +122,6 @@ public class AtIdentifierTests
     [InlineData("blah")]
     public void IImplicitStringConvertWithValidAtIdentifiersShouldThrow(string input)
     {
-        Assert.Throws<ArgumentException>( () => { AtIdentifier atIdentifier = (AtIdentifier)input; });
+        Assert.Throws<ArgumentException>(() => { AtIdentifier atIdentifier = (AtIdentifier)input; });
     }
 }

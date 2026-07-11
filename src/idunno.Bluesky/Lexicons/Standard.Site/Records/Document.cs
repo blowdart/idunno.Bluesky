@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+
 using idunno.AtProto;
 using idunno.AtProto.Repo;
 
@@ -55,7 +56,7 @@ public record Document : Document<JsonNode>
         string? textContent = null,
         StrongReference? bskyPostRef = null,
         IEnumerable<string>? tags = null,
-        DateTimeOffset? updatedAt = null) : base (
+        DateTimeOffset? updatedAt = null) : base(
             site: site,
             path: path,
             publishedAt: publishedAt,
@@ -211,7 +212,7 @@ public record Document<T> : AtProtoRecord where T : class
         string? textContent = null,
         StrongReference? bskyPostRef = null,
         IEnumerable<string>? tags = null,
-        DateTimeOffset? updatedAt = null) 
+        DateTimeOffset? updatedAt = null)
     {
         ArgumentNullException.ThrowIfNull(site);
         ArgumentNullException.ThrowIfNull(title);
@@ -386,7 +387,7 @@ public record Document<T> : AtProtoRecord where T : class
             }
 
             if (siteUri is null &&
-                !AtUri.TryParse(value , out _))
+                !AtUri.TryParse(value, out _))
             {
                 throw new ArgumentException("Site must be an Uri or AtUri", nameof(Site));
             }
@@ -444,7 +445,8 @@ public record Document<T> : AtProtoRecord where T : class
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the description exceeds the maximum length.</exception>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Description {
+    public string? Description
+    {
         get;
 
         set

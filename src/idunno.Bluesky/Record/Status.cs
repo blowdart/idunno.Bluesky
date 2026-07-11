@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
@@ -54,7 +54,7 @@ public record Status : BlueskyTimestampedRecord
     public Status(
         string accountStatus,
         EmbeddedBase? embed,
-        int? durationMinutes) : this (
+        int? durationMinutes) : this(
             accountStatus: accountStatus,
             embed: embed,
             durationMinutes: durationMinutes,

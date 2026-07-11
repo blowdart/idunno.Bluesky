@@ -1,6 +1,10 @@
 root = false
 
 [.cs]
+# Enabled detection of unused usings
+dotnet_diagnostic.IDE0005.severity = error
+
+# Missing XML comment for publicly visible type or member 'Type_or_Member'
 dotnet_diagnostic.CS1591.severity = warning
 
 [*.designer.cs]

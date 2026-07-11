@@ -1,15 +1,15 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Labels.Models;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.AtProto;
 
@@ -74,7 +74,7 @@ public static partial class AtProtoServer
             sourcesList.AddRange(sources);
         }
 
-        StringBuilder queryStringBuilder = new (@"?");
+        StringBuilder queryStringBuilder = new(@"?");
         queryStringBuilder.Append(string.Join("&", uriPatternList.Select(pattern => $"uriPatterns={Uri.EscapeDataString(pattern)}")));
         if (sourcesList.Count > 0)
         {

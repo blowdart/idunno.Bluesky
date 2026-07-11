@@ -1,6 +1,7 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace idunno.Bluesky.Notifications.PreferenceTypes;
@@ -8,6 +9,8 @@ namespace idunno.Bluesky.Notifications.PreferenceTypes;
 /// <summary>
 /// Encapsulates notification preferences for chats
 /// </summary>
+[Obsolete("Deprecated, use ChatNotificationPreferences instead.")]
+[SuppressMessage("Info Code Smell", "S1133:Deprecated code should be removed", Justification = "Kept for compatibility")]
 public sealed record ChatPreference
 {
     /// <summary>
