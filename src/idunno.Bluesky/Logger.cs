@@ -3,10 +3,10 @@
 
 using System.Net;
 
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto;
 using idunno.Bluesky.Video;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky;
 
@@ -120,6 +120,18 @@ internal static partial class Logger
 
     [LoggerMessage(103, LogLevel.Error, "DeleteDraft failed for {draftId} with status code {statusCode} error {error} message {message}")]
     internal static partial void DeleteDraftFailed(ILogger logger, TimestampIdentifier draftId, HttpStatusCode statusCode, string? error, string? message);
+
+    [LoggerMessage(105, LogLevel.Information, "UploadMedia succeeded for {did} with job #{jobId}.")]
+    internal static partial void UploadMediaSucceeded(ILogger logger, string jobId, Did did);
+
+    [LoggerMessage(106, LogLevel.Error, "UploadMedia failed with {statusCode} when uploading media for {did}, error {error} message {message}")]
+    internal static partial void UploadMediaFailed(ILogger logger, HttpStatusCode statusCode, Did did, string? error, string? message);
+
+    [LoggerMessage(107, LogLevel.Information, "UploadMedia started for {did} on {server}, filename: {fileName} length: {length} mimeType: {mimeType}")]
+    internal static partial void UploadMediaStarted(ILogger logger, Did did, Uri server, string fileName, long length, string mimeType);
+
+    [LoggerMessage(108, LogLevel.Error, "GetServerDescription in UploadMedia for user {did}, service {service} failed with {statusCode} error {error} message {message}")]
+    internal static partial void UploadMediaGetServerDescriptionFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
 
     // Card Generator errors
     [LoggerMessage(110, LogLevel.Error, "Failed to upload embedded card image for {url} with status code {statusCode}, error {error} message {message}")]

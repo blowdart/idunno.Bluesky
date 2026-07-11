@@ -1,4 +1,4 @@
-﻿idunno.Bluesky uses third-party libraries or other resources that may be
+idunno.Bluesky uses third-party libraries or other resources that may be
 distributed under licenses different than the idunno.Bluesky, idunno.AtProto
 idunno.AtProto.Types or idunno.AtProto.OAuthCallback libraries.
 

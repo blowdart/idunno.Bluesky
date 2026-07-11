@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.CommandLine;
@@ -6,11 +6,11 @@ using System.CommandLine.Help;
 using System.CommandLine.Invocation;
 using System.Text.Json;
 
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto;
 using idunno.AtProto.Repo;
 using idunno.Bluesky;
+
+using Microsoft.Extensions.Logging;
 
 namespace Samples.BulkDelete;
 
@@ -163,16 +163,16 @@ public sealed class Program
             if (!loginResult.Succeeded &&
                 loginResult.AtErrorDetail is not null &&
                 string.Equals(loginResult.AtErrorDetail.Error!, "AuthFactorTokenRequired", StringComparison.OrdinalIgnoreCase))
-                {
-                    ConsoleColor oldColor = Console.ForegroundColor;
+            {
+                ConsoleColor oldColor = Console.ForegroundColor;
 
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Login requires an authentication code.");
-                    Console.WriteLine("Check your email and use --authCode to specify the authentication code.");
-                    Console.ForegroundColor = oldColor;
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Login requires an authentication code.");
+                Console.WriteLine("Check your email and use --authCode to specify the authentication code.");
+                Console.ForegroundColor = oldColor;
 
-                    return 1;
-                }
+                return 1;
+            }
 
             if (!loginResult.Succeeded)
             {

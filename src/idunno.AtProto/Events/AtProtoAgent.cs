@@ -4,6 +4,7 @@
 using idunno.AtProto.Events;
 
 namespace idunno.AtProto;
+
 public partial class AtProtoAgent
 {
     /// <summary>

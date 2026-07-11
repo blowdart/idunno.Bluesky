@@ -42,7 +42,7 @@ This parameter is how Bluesky APIs implement paging.
 
 The response from the `ListNotifications()` API, or any API that supports paging, includes a cursor every time more things are available.
 Passing the cursor from a previous API response to a new request gets the next page of data.
-The AT Proto documentation has a section on [Cursors and Pagination](https://atproto.com/specs/xrpc).
+The AT Proto documentation has a section on [Cursors and Pagination](https://atproto.com/specs/xrpc#cursors-and-pagination).
 
 APIs that support pagination include `ListNotifications()`, `SearchActors()`, `GetTimeline()`, `GetFeed()` and `GetSuggestions()`.
 

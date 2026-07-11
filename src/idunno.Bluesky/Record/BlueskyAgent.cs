@@ -821,7 +821,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        Status status = new (
+        Status status = new(
             KnownStatusValues.Live,
             embed: new EmbeddedExternal(
                 uri: uri,
@@ -896,7 +896,7 @@ public partial class BlueskyAgent
         {
             throw new AuthenticationRequiredException();
         }
-        
+
         AtUri statusUri = new($"at://{Did}/{CollectionNsid.Status}/self");
         AtProtoHttpResult<AtProtoRepositoryRecord<Status>> getResult = await GetBlueskyRecord<Status>(
             uri: statusUri,

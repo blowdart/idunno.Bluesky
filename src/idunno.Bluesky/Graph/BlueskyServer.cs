@@ -5,13 +5,13 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto;
+using idunno.AtProto.Authentication;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Graph;
 using idunno.Bluesky.Graph.Model;
-using idunno.AtProto.Authentication;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky;
 
@@ -46,9 +46,6 @@ public static partial class BlueskyServer
 
     // https://docs.bsky.app/docs/api/app-bsky-graph-get-mutes
     private const string GetMutesEndpoint = "/xrpc/app.bsky.graph.getMutes";
-
-    // https://docs.bsky.app/docs/api/app-bsky-graph-get-relationships
-    private const string GetRelationshipsEndpoint = "/xrpc/app.bsky.graph.getRelationships";
 
     // https://docs.bsky.app/docs/api/app-bsky-graph-get-starter-pack
     private const string GetStarterPackEndpoint = "/xrpc/app.bsky.graph.getStarterPack";
@@ -136,7 +133,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetBlocksResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetBlocksResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetBlocksResponse> response = await client.Get(
             service: service,
             endpoint: $"{GetBlocksEndpoint}?{queryString}",
@@ -230,7 +227,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetFollowersResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetFollowersResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetFollowersResponse> response = await client.Get(
             service: service,
             endpoint: $"{GetFollowersEndpoint}?{queryString}",
@@ -324,7 +321,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetFollowsResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetFollowsResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetFollowsResponse> response = await client.Get(
             service,
             $"{GetFollowsEndpoint}?{queryString}",
@@ -419,7 +416,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetFollowersResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetFollowersResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetFollowersResponse> response = await client.Get(
             service,
             $"{GetKnownFollowersEndpoint}?{queryString}",
@@ -509,7 +506,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetListBlocksResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetListBlocksResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetListBlocksResponse> response = await client.Get(
             service,
             $"{GetListBlocksEndpoint}?{queryString}",
@@ -596,7 +593,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetListBlocksResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetListBlocksResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetListBlocksResponse> response = await client.Get(
             service,
             $"{GetListMutesEndpoint}?{queryString}",
@@ -688,7 +685,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetListResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetListResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetListResponse> response = await client.Get(
             service,
             $"{GetListEndpoint}?{queryString}",
@@ -779,7 +776,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetListsResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetListsResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetListsResponse> response = await client.Get(
             service,
             $"{GetListsEndpoint}?{queryString}",
@@ -880,7 +877,7 @@ public static partial class BlueskyServer
         }
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetListsWithMembershipResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetListsWithMembershipResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetListsWithMembershipResponse> response = await client.Get(
             service,
             $"{GetListsWithMembershipEndpoint}?{queryString}",
@@ -890,6 +887,7 @@ public static partial class BlueskyServer
             onCredentialsUpdated: onCredentialsUpdated,
             subscribedLabelers: subscribedLabelers,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<ListWithMembership>>(
@@ -973,7 +971,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetMutesResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetMutesResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetMutesResponse> response = await client.Get(
             service,
             $"{GetMutesEndpoint}?{queryString}",
@@ -996,97 +994,6 @@ public static partial class BlueskyServer
         else
         {
             return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>(
-                null,
-                response.StatusCode,
-                response.HttpResponseHeaders,
-                response.AtErrorDetail,
-                response.RateLimit);
-        }
-    }
-
-    // Mismatches lexicon definition - https://github.com/bluesky-social/atproto/issues/2919
-
-    /// <summary>
-    /// Enumerates public relationships between one account, and a list of other accounts.
-    /// </summary>
-    /// <param name="actor">The <see cref="Did"/> of the actor whose follows should be enumerated.</param>
-    /// <param name="others">A list of other accounts to be related back to <paramref name="actor"/>.</param>
-    /// <param name="service">The <see cref="Uri"/> of the service to retrieve the profile from.</param>
-    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
-    /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
-    /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/>, <paramref name="others"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="others"/> is empty, or has &gt; 30 entries.</exception>
-    [UnconditionalSuppressMessage(
-        "Trimming",
-        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
-        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-    [UnconditionalSuppressMessage("AOT",
-        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
-        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-    public static async Task<AtProtoHttpResult<ActorRelationships>> GetRelationships(
-        Did actor,
-        ICollection<Did> others,
-        Uri service,
-        AccessCredentials? accessCredentials,
-        HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
-        ILoggerFactory? loggerFactory = default,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(actor);
-        ArgumentNullException.ThrowIfNull(others);
-        ArgumentNullException.ThrowIfNull(service);
-        ArgumentNullException.ThrowIfNull(httpClient);
-
-        ArgumentOutOfRangeException.ThrowIfLessThan(others.Count, 1);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(others.Count, 30);
-
-        StringBuilder queryStringBuilder = new();
-        queryStringBuilder.Append(CultureInfo.InvariantCulture, $"actor={Uri.EscapeDataString(actor.ToString())}");
-
-        foreach (AtIdentifier other in others)
-        {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&others={Uri.EscapeDataString(other.ToString())}");
-        }
-
-        string queryString = queryStringBuilder.ToString();
-
-        AtProtoHttpClient<GetRelationshipsResponse> client = new(AppViewProxy, loggerFactory);
-        AtProtoHttpResult<GetRelationshipsResponse> response = await client.Get(
-            service,
-            $"{GetRelationshipsEndpoint}?{queryString}",
-            credentials: accessCredentials,
-            httpClient: httpClient,
-            jsonSerializerOptions: BlueskyJsonSerializerOptions,
-            onCredentialsUpdated: onCredentialsUpdated,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        if (response.Succeeded)
-        {
-            Dictionary<Did, Relationship> returnValue = [];
-
-            foreach (RelationshipType relationshipType in response.Result.Relationships)
-            {
-                if (relationshipType is Relationship relationship)
-                {
-                    returnValue.Add(relationship.Did, relationship);
-                }
-            }
-
-            return new AtProtoHttpResult<ActorRelationships>(
-                new ActorRelationships(response.Result.Actor, returnValue),
-                response.StatusCode,
-                response.HttpResponseHeaders,
-                response.AtErrorDetail,
-                response.RateLimit);
-        }
-        else
-        {
-            return new AtProtoHttpResult<ActorRelationships>(
                 null,
                 response.StatusCode,
                 response.HttpResponseHeaders,
@@ -1129,7 +1036,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<GetStarterPackResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetStarterPackResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetStarterPackResponse> response = await client.Get(
             service,
             $"{GetStarterPackEndpoint}?starterPack={Uri.EscapeDataString(uri.ToString())}",
@@ -1207,7 +1114,7 @@ public static partial class BlueskyServer
 
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetStarterPacksResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetStarterPacksResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetStarterPacksResponse> response = await client.Get(
             service,
             $"{GetStarterPacksEndpoint}?{queryString}",
@@ -1272,7 +1179,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<SuggestedActors> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<SuggestedActors> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<SuggestedActors> response = await client.Get(
             service,
             $"{GetSuggestedFollowsByActorEndpoint}?actor={Uri.EscapeDataString(actor.ToString())}",
@@ -1319,7 +1226,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<EmptyResponse> response = await client.Post(
             service,
             $"{MuteActorListEndpoint}",
@@ -1366,7 +1273,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<EmptyResponse> response = await client.Post(
             service,
             $"{MuteActorEndpoint}",
@@ -1413,7 +1320,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<EmptyResponse> response = await client.Post(
             service,
             $"{MuteThreadEndpoint}",
@@ -1460,7 +1367,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<EmptyResponse> response = await client.Post(
             service,
             $"{UnmuteActorListEndpoint}",
@@ -1507,7 +1414,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<EmptyResponse> response = await client.Post(
             service,
             $"{UnmuteActorEndpoint}",
@@ -1554,7 +1461,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<EmptyResponse> response = await client.Post(
             service,
             $"{UnmuteThreadEndpoint}",
@@ -1616,7 +1523,7 @@ public static partial class BlueskyServer
         }
         string queryString = queryStringBuilder.ToString();
 
-        AtProtoHttpClient<GetActorStarterPacksResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetActorStarterPacksResponse> client = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetActorStarterPacksResponse> response = await client.Get(
             service,
             $"{GetActorStarterPacksEndpoint}?{queryString}",

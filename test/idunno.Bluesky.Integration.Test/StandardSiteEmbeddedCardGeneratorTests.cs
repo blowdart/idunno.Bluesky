@@ -2,10 +2,12 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Embed;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 
@@ -107,7 +109,7 @@ public class StandardSiteEmbeddedCardGeneratorTests
         RecordKey expectedDocumentRKey = new("3mn4upg7a4z2h");
         RecordKey expectedPublicationRKey = new("3meddhkrg5z2p");
 
-        AtUri expectedStandardSiteDocument = new ($"at://{expectedDid}/site.standard.document/{expectedDocumentRKey}");
+        AtUri expectedStandardSiteDocument = new($"at://{expectedDid}/site.standard.document/{expectedDocumentRKey}");
         AtUri expectedStandardSitePublication = new($"at://{expectedDid}/site.standard.publication/{expectedPublicationRKey}");
 
         const string expectedCardUrl = "https://example.com/test-page";
@@ -165,7 +167,7 @@ public class StandardSiteEmbeddedCardGeneratorTests
                     return;
                 }
 
-                if (request.Path == "/xrpc/com.atproto.repo.getRecord" )
+                if (request.Path == "/xrpc/com.atproto.repo.getRecord")
                 {
                     if (request.Query["repo"].FirstOrDefault()!.Equals(expectedDid))
                     {

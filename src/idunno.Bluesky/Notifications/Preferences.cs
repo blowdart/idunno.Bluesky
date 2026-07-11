@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -27,7 +27,9 @@ namespace idunno.Bluesky.Notifications;
 /// <param name="Verified">Undocumented</param>
 [SuppressMessage("Documentation", "CSENSE020:Potential ghost parameter reference in documentation", Justification = "Repost reference in RepostViaRepost is not a ghost parameter reference.")]
 public sealed record Preferences(
+#pragma warning disable CS0618 // Type or member is obsolete - kept for compatibility with older log entries.
     ChatPreference Chat,
+#pragma warning restore CS0618 // Type or member is obsolete
     FilterablePreference Follow,
     FilterablePreference LikeViaRepost,
     FilterablePreference Mention,

@@ -1,16 +1,16 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Globalization;
 using System.Text;
-
-using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.Bluesky;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Feed;
+
+using Microsoft.Extensions.Logging;
 
 using Samples.Common;
 
@@ -49,7 +49,7 @@ public sealed class Program
         using (var agent = new BlueskyAgent(
             new BlueskyAgentOptions(
                 loggerFactory,
-                httpClientOptions : new HttpClientOptions(proxyUri: proxyUri))))
+                httpClientOptions: new HttpClientOptions(proxyUri: proxyUri))))
         {
             // Test code goes here.
 

@@ -121,7 +121,7 @@ public record ProfileViewBasic : View
     /// <summary>
     /// Gets the <see cref="ProfileAssociated">Associated properties</see> for the subject.
     /// </summary>
-    public ProfileAssociated? Associated {get; init;}
+    public ProfileAssociated? Associated { get; init; }
 
     /// <summary>
     /// Gets metadata about the requesting account's relationship with the subject account. Only has meaningful content for authenticated requests.

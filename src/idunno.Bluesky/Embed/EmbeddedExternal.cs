@@ -81,7 +81,7 @@ public sealed record EmbeddedExternal : EmbeddedBase
     /// <param name="description">The description of the external link, if any.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="title"/>, or <paramref name="description"/> is <see langword="null"/>.</exception>
     public EmbeddedExternal(string uri, string title, string description) :
-        this(new External.Properties(new Uri(uri), title, description, thumbnail : null))
+        this(new External.Properties(new Uri(uri), title, description, thumbnail: null))
     {
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(title);
@@ -128,4 +128,3 @@ public sealed record EmbeddedExternal : EmbeddedBase
     [JsonRequired]
     public External.Properties External { get; init; }
 }
-

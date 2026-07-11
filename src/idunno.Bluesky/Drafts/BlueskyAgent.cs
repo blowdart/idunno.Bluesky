@@ -360,6 +360,7 @@ public partial class BlueskyAgent
                         AtProtoHttpResult<JobStatus> uploadResult = await UploadVideo(
                             Path.GetFileName(path),
                             fileBytes,
+                            "video/mp4",
                             cancellationToken: cancellationToken).ConfigureAwait(false);
                         if (!uploadResult.Succeeded)
                         {

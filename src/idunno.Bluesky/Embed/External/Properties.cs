@@ -120,4 +120,3 @@ public record Properties
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyCollection<StrongReference>? AssociatedRefs { get; set; }
 }
-

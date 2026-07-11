@@ -576,7 +576,7 @@ public partial class BlueskyAgent
 
         if (image is not null)
         {
-            images = [ image ];
+            images = [image];
         }
 
         return await Post(
@@ -676,7 +676,7 @@ public partial class BlueskyAgent
         Post post = new(
             text,
             createdAt: creationDateTime,
-            langs : langs,
+            langs: langs,
             embeddedRecord: embeddedImages,
             tags: tags);
 
@@ -699,7 +699,7 @@ public partial class BlueskyAgent
             post,
             threadGateRules: threadGateRules,
             postGateRules: postGateRules,
-            interactionPreferences : interactionPreferences,
+            interactionPreferences: interactionPreferences,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -895,7 +895,7 @@ public partial class BlueskyAgent
             facets = await FacetExtractor.ExtractFacets(text, cancellationToken).ConfigureAwait(false);
         }
 
-        var postBuilder = new PostBuilder(text, createdAt : createdAt, langs: langs, facets: facets, tags: tags);
+        var postBuilder = new PostBuilder(text, createdAt: createdAt, langs: langs, facets: facets, tags: tags);
 
         postBuilder.EmbedRecord(externalCard);
 
@@ -1054,7 +1054,7 @@ public partial class BlueskyAgent
             post,
             threadGateRules: threadGateRules,
             postGateRules: postGateRules,
-            interactionPreferences: null, 
+            interactionPreferences: null,
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -1086,7 +1086,7 @@ public partial class BlueskyAgent
             throw new ArgumentException("uri RecordKey is null", nameof(uri));
         }
 
-        return await DeleteRecord(uri.Collection, uri.RecordKey, cancellationToken:cancellationToken).ConfigureAwait(false);
+        return await DeleteRecord(uri.Collection, uri.RecordKey, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1141,8 +1141,8 @@ public partial class BlueskyAgent
 
         return await InternalReplyTo(
             parent: parent,
-            text:text,
-            images:null,
+            text: text,
+            images: null,
             tags: tags,
             extractFacets: extractFacets,
             cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1197,7 +1197,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        List<EmbeddedImage> images = [ image ];
+        List<EmbeddedImage> images = [image];
 
         return await InternalReplyTo(
             parent: parent,

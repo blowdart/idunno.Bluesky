@@ -43,3 +43,79 @@ Let's add some basic error checking to the Hello World code you wrote in [gettin
 > [!TIP]
 > `AtProtoHttpResult<T>` has an `EnsureSucceeded()` method which will throw an `AtProtoHttpRequestException` if the `Succeeded` property is false.
 > This can be used while testing code, or even during development before you implement error handling.
+
+## Handling errors
+
+The `AtProtoHttpResult<T>` class provides a way to handle errors returned by the API. You can use the `AtErrorDetail` property to access detailed error information,
+if an error occured at the API layer.
+
+`AtErrorDetail` is a base class for errors, and the API may return a more specific error type, such as `AuthenticationRequired` or `RecordNotFound`.
+You can check for these types using [pattern matching](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/patterns).
+
+Supported error types for AtProto API calls include:
+
+* `AccountNotFound`
+* `AccountTakedown`
+* `AuthenticationRequired`
+* `AuthFactorTokenRequired`
+* `BadExpiration`
+* `BlobNotFound`
+* `BlockNotFound`
+* `ConsumerTooSlow`
+* `DidDeactivated`
+* `DidNotFound`
+* `DuplicateCreate`
+* `ExpiredToken`
+* `FutureCursor`
+* `HandleNotAvailable`
+* `HandleNotFound`
+* `HeadNotFound`
+* `HostBanned`
+* `HostNotFound`
+* `IncompatibleDidDoc`
+* `InvalidEmail`
+* `InvalidInviteCode`
+* `InvalidPasscode`
+* `InvalidRequest`
+* `InvalidSwap`
+* `InvalidToken`
+* `MethodNotImplemented`
+* `RecordNotFound`
+* `RepoDeactivated`
+* `RepoNotFound`
+* `RepoSuspended`
+* `RepoTakenDown`
+* `TokenRequired`
+* `UnresolvableDid`
+* `UnsupportedDomain`
+* `XrpcNotSupported`
+
+Supported error types for Bluesky API calls include:
+
+* `AccountSuspended`
+* `ActorNotFound`
+* `BadQueryString`
+* `BlockedActor`
+* `BlockedSubject`
+* `BlueskyError`
+* `ConversationLocked`
+* `EnabledJoinLinkAlreadyExists`
+* `FollowRequired`
+* `InsufficientRole`
+* `InvalidCode`
+* `InvalidConversation`
+* `LinkDisabled`
+* `MemberLimitReached`
+* `MessageDeleteNotAllowed`
+* `MessagesDisabled`
+* `NewAccountCannotCreateGroup`
+* `OwnerCannotLeave`
+* `NoJoinLink`
+* `NotFollowedBySender`
+* `ReactionInvalidValue`
+* `ReactionLimitReached`
+* `ReactionMessageDeleted`
+* `ReactionNotAllowed`
+* `RecipientNotFound`
+* `UserForbidsGroups`
+* `UserKicked`

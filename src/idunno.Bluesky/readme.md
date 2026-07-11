@@ -21,8 +21,11 @@
 * Following and unfollowing users
 * Muting and blocking users
 * Sending, receiving, and deleting messages
+* Creating, joining and leaving group conversations
+* Create, deleting and listing a user's bookmarks
+* Handle / password and OAuth authentication
 
-* Trimming is supported for applications targeting .NET 9.0 or later.
+Trimming is supported for applications targeting .NET 9.0 or later.
 
 ## Version History
 
@@ -47,4 +50,5 @@ if (loginResult.Succeeded)
 ## Documentation
 [Documentation](https://bluesky.idunno.dev/) is available, including API references.
 
-The [API status page](https://bluesky.idunno.dev/docs/endpointStatus.html) shows the current state of API support.
+The [API status page](https://bluesky.idunno.dev/docs/endpointStatus.html) shows what APIs are currently implemented and how the Bluesky API names map to the
+the idunno.Bluesky SDK methods, which follow a more .NET idiomatic style.

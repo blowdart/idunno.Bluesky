@@ -5,18 +5,17 @@ using System.Diagnostics.Metrics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
+using Duende.IdentityModel.OidcClient.DPoP;
+
+using idunno.AtProto.Authentication;
+using idunno.AtProto.Repo;
+using idunno.AtProto.Repo.Models;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Primitives;
-
-using Duende.IdentityModel.OidcClient.DPoP;
-
-using idunno.AtProto;
-using idunno.AtProto.Authentication;
-using idunno.AtProto.Repo;
-using idunno.AtProto.Repo.Models;
 
 namespace idunno.AtProto.Integration.Test;
 

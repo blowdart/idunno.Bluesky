@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text;
@@ -11,6 +11,9 @@ using idunno.Bluesky.Actor;
 
 namespace idunno.TrimmingTest;
 
+/// <summary>
+/// The main program class.
+/// </summary>
 public sealed class Program
 {
     static async Task<int> Main()
@@ -58,4 +61,3 @@ public sealed class Program
         return 0;
     }
 }
-

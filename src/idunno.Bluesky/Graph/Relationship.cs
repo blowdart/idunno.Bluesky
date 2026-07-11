@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
@@ -25,7 +25,7 @@ public sealed record Relationship : RelationshipType
     /// <param name="blockingByList">If the actor is blocked by this <see cref="Did" /> via a block list, contains the <see cref="AtUri"/> of the ListBlock record.</param>
     /// <param name="blockedByList">If the actor blocks this <see cref="Did" /> by a block list, this is the <see cref="AtUri"/> of the ListBlock record.</param>
     [JsonConstructor]
-    public Relationship(Did did, AtUri?following, AtUri? followedBy, AtUri? blocking, AtUri? blockedBy, AtUri? blockingByList, AtUri? blockedByList)
+    public Relationship(Did did, AtUri? following, AtUri? followedBy, AtUri? blocking, AtUri? blockedBy, AtUri? blockingByList, AtUri? blockedByList)
     {
         Did = did;
         Following = following;
@@ -41,41 +41,41 @@ public sealed record Relationship : RelationshipType
     /// </summary>
     [JsonInclude]
     [JsonRequired]
-    public Did Did { get; init; }
+    public Did Did { get; set; }
 
     /// <summary>
     /// If the actor follows this <see cref="Did"/>, this is the <see cref="AtUri"/> of the follow record, otherwise <see langword="null"/>.
     /// </summary>
     [JsonInclude]
-    public AtUri? Following { get; init; }
+    public AtUri? Following { get; set; }
 
     /// <summary>
     /// If the actor is followed by this <see cref="Did"/>, contains the <see cref="AtUri"/> of the follow record.
     /// </summary>
     [JsonInclude]
-    public AtUri? FollowedBy { get; init; }
+    public AtUri? FollowedBy { get; set; }
 
     /// <summary>
     /// If the actor blocks this <see cref="Did" />, this is the <see cref="AtUri"/> of the block record.
     /// </summary>
     [JsonInclude]
-    public AtUri? Blocking { get; init; }
+    public AtUri? Blocking { get; set; }
 
     /// <summary>
     /// If the actor is blocked by this <see cref="Did" />, contains the <see cref="AtUri"/> of the block record.
     /// </summary>
     [JsonInclude]
-    public AtUri? BlockedBy { get; init; }
+    public AtUri? BlockedBy { get; set; }
 
     /// <summary>
     /// If the actor blocks this <see cref="Did" /> by a block list, this is the <see cref="AtUri"/> of the ListBlock record.
     /// </summary>
     [JsonInclude]
-    public AtUri? BlockingByList { get; init; }
+    public AtUri? BlockingByList { get; set; }
 
     /// <summary>
     /// If the actor is blocked by this <see cref="Did" /> via a block list, contains the <see cref="AtUri"/> of the ListBlock record.
     /// </summary>
     [JsonInclude]
-    public AtUri? BlockedByList { get; init; }
+    public AtUri? BlockedByList { get; set; }
 }

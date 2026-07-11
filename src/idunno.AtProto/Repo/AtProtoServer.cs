@@ -6,11 +6,11 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-using Microsoft.Extensions.Logging;
-
+using idunno.AtProto.Authentication;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
-using idunno.AtProto.Authentication;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.AtProto;
 
@@ -507,6 +507,14 @@ public static partial class AtProtoServer
             jsonSerializerOptions: jsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
+        if (!response.Succeeded &&
+            response.AtErrorDetail is not null &&
+            response.AtErrorDetail.Error is not null &&
+            string.Equals(InvalidSwap.ErrorTitle, response.AtErrorDetail.Error, StringComparison.Ordinal))
+        {
+            response.AtErrorDetail = new InvalidSwap(response.AtErrorDetail);
+        }
+
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<CreateRecordResult>(
@@ -595,14 +603,14 @@ public static partial class AtProtoServer
             client = new(serviceProxy, loggerFactory);
         }
 
-        AtProtoHttpResult<DeleteRecordResponse> response =  await client.Post(
+        AtProtoHttpResult<DeleteRecordResponse> response = await client.Post(
             service,
             DeleteRecordEndpoint,
             deleteRecordRequest,
             accessCredentials,
             httpClient,
             onCredentialsUpdated: onCredentialsUpdated,
-            jsonSerializerOptions : AtProtoJsonSerializerOptions,
+            jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (response.Succeeded)
@@ -776,7 +784,7 @@ public static partial class AtProtoServer
             client = new(serviceProxy, loggerFactory);
         }
 
-        AtProtoHttpResult<PutRecordResponse> response =await client.Post(
+        AtProtoHttpResult<PutRecordResponse> response = await client.Post(
             service,
             PutRecordEndpoint,
             request,
@@ -927,7 +935,7 @@ public static partial class AtProtoServer
         string? serviceProxy = null,
         Action<AtProtoCredential>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
-        CancellationToken cancellationToken = default) where TRecord: AtProtoRecord
+        CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(collection);
@@ -1054,13 +1062,15 @@ public static partial class AtProtoServer
             queryString += $"&cid={Uri.EscapeDataString(cid.ToString())}";
         }
 
-        return await client.Get(
+        AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>> result = await client.Get(
             service,
             $"{GetRecordEndpoint}?{queryString}",
             accessCredentials,
             httpClient,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        return result;
     }
 
     /// <summary>
@@ -1098,7 +1108,7 @@ public static partial class AtProtoServer
         string? serviceProxy = null,
         Action<AtProtoCredential>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
-        CancellationToken cancellationToken = default) where TRecord: AtProtoRecord
+        CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
         ArgumentNullException.ThrowIfNull(repo);
         ArgumentNullException.ThrowIfNull(collection);
@@ -1129,7 +1139,7 @@ public static partial class AtProtoServer
             queryString += $"&cid={Uri.EscapeDataString(cid.ToString())}";
         }
 
-        return await client.Get(
+        AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>> result = await client.Get(
             service,
             $"{GetRecordEndpoint}?{queryString}",
             accessCredentials,
@@ -1137,6 +1147,8 @@ public static partial class AtProtoServer
             onCredentialsUpdated: onCredentialsUpdated,
             jsonSerializerOptions: jsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        return result;
     }
 
     /// <summary>
@@ -1175,7 +1187,7 @@ public static partial class AtProtoServer
         string? serviceProxy = null,
         Action<AtProtoCredential>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
-        CancellationToken cancellationToken = default) 
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(repo);
         ArgumentNullException.ThrowIfNull(collection);
@@ -1206,7 +1218,7 @@ public static partial class AtProtoServer
             queryString += $"&cid={Uri.EscapeDataString(cid.ToString())}";
         }
 
-        return await client.Get(
+        AtProtoHttpResult<AtProtoRepositoryRecord> result = await client.Get(
             service,
             $"{GetRecordEndpoint}?{queryString}",
             accessCredentials,
@@ -1214,6 +1226,8 @@ public static partial class AtProtoServer
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        return result;
     }
 
     /// <summary>
@@ -1465,7 +1479,7 @@ public static partial class AtProtoServer
                 }
             }
 
-            result = new (records, response.Result.Cursor);
+            result = new(records, response.Result.Cursor);
         }
         else
         {
@@ -1572,7 +1586,7 @@ public static partial class AtProtoServer
                 credentials: accessCredentials,
                 httpClient: httpClient,
                 onCredentialsUpdated: onCredentialsUpdated,
-                jsonSerializerOptions : SourceGenerationContext.Default.Options,
+                jsonSerializerOptions: SourceGenerationContext.Default.Options,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (response.Succeeded)
@@ -1592,7 +1606,7 @@ public static partial class AtProtoServer
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
                 response.RateLimit);
-         }
+        }
     }
 
     /// <summary>
@@ -1627,11 +1641,13 @@ public static partial class AtProtoServer
 
         AtProtoHttpClient<RepoDescription> request = new(loggerFactory);
 
-        return await request.Get(
+        AtProtoHttpResult<RepoDescription> result = await request.Get(
             service: service,
             endpoint: $"{DescribeRepoEndpoint}?repo={Uri.EscapeDataString(repo.ToString())}",
             httpClient: httpClient,
             jsonSerializerOptions: SourceGenerationContext.Default.Options,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        return result;
     }
 }

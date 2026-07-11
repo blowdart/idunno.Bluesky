@@ -1,15 +1,15 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto;
+using idunno.AtProto.Authentication;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Actor.Model;
-using idunno.AtProto.Authentication;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky;
 
@@ -73,7 +73,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<ProfileViewDetailed> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<ProfileViewDetailed> request = new(AppViewProxy, loggerFactory);
 
         return await request.Get(
             service,
@@ -82,7 +82,7 @@ public static partial class BlueskyServer
             onCredentialsUpdated: onCredentialsUpdated,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
-            subscribedLabelers : subscribedLabelers,
+            subscribedLabelers: subscribedLabelers,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -133,21 +133,21 @@ public static partial class BlueskyServer
 
         string queryString = string.Join("&", actorList.Select(uri => $"actors={Uri.EscapeDataString(uri.ToString())}"));
 
-        AtProtoHttpClient<GetProfilesResponse> request = new(AppViewProxy, loggerFactory);
-        AtProtoHttpResult<GetProfilesResponse> response =  await request.Get(
+        BlueskyHttpClient<GetProfilesResponse> request = new(AppViewProxy, loggerFactory);
+        AtProtoHttpResult<GetProfilesResponse> response = await request.Get(
             service,
             $"{GetProfilesEndpoint}?{queryString}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
-            subscribedLabelers : subscribedLabelers,
+            subscribedLabelers: subscribedLabelers,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (response.Succeeded)
         {
             return new AtProtoHttpResult<IReadOnlyCollection<ProfileViewDetailed>>(
-                new Collection<ProfileViewDetailed>(response.Result.Profiles).AsReadOnly(), 
+                new Collection<ProfileViewDetailed>(response.Result.Profiles).AsReadOnly(),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -196,7 +196,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<GetPreferencesResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetPreferencesResponse> client = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<GetPreferencesResponse> response = await client.Get(
             service,
@@ -218,7 +218,7 @@ public static partial class BlueskyServer
         }
         else
         {
-            return new AtProtoHttpResult<Preferences>(new Preferences(), response.StatusCode, response.HttpResponseHeaders, response.AtErrorDetail,response.RateLimit);
+            return new AtProtoHttpResult<Preferences>(new Preferences(), response.StatusCode, response.HttpResponseHeaders, response.AtErrorDetail, response.RateLimit);
         }
     }
 
@@ -265,7 +265,7 @@ public static partial class BlueskyServer
         ArgumentOutOfRangeException.ThrowIfZero(limitValue);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, Maximum.SuggestedActors);
 
-        AtProtoHttpClient<GetSuggestionsResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetSuggestionsResponse> request = new(AppViewProxy, loggerFactory);
 
         AtProtoHttpResult<GetSuggestionsResponse> response = await request.Get(
             service,
@@ -274,7 +274,7 @@ public static partial class BlueskyServer
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
-            subscribedLabelers : subscribedLabelers,
+            subscribedLabelers: subscribedLabelers,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (response.Succeeded)
@@ -329,7 +329,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
 
         PutPreferencesRequest request = new(preferences);
 
@@ -339,7 +339,7 @@ public static partial class BlueskyServer
             request,
             credentials: accessCredentials,
             httpClient: httpClient,
-            jsonSerializerOptions : BlueskyJsonSerializerOptions,
+            jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -392,7 +392,7 @@ public static partial class BlueskyServer
         ArgumentOutOfRangeException.ThrowIfZero(limitValue);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100);
 
-        AtProtoHttpClient<SearchActorsResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<SearchActorsResponse> request = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<SearchActorsResponse> response = await request.Get(
             service,
             $"{SearchActorsEndpoint}?q={Uri.EscapeDataString(q)}&limit={limit}&cursor={cursor}",
@@ -467,13 +467,13 @@ public static partial class BlueskyServer
         ArgumentOutOfRangeException.ThrowIfZero(limitValue);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(limitValue, 100);
 
-        AtProtoHttpClient<SearchActorsResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<SearchActorsResponse> request = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<SearchActorsResponse> response = await request.Get(
             service,
             $"{SearchActorsTypeAheadEndpoint}?q={Uri.EscapeDataString(q)}&limit={limit}",
             credentials: accessCredentials,
             httpClient: httpClient,
-            jsonSerializerOptions : BlueskyJsonSerializerOptions,
+            jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             subscribedLabelers: subscribedLabelers,
             cancellationToken: cancellationToken).ConfigureAwait(false);

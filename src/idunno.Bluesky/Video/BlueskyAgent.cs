@@ -1,13 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Net;
-using System.Text.Json;
-
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
-using idunno.AtProto.Repo;
-using idunno.AtProto.Server.Models;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.Video;
 
@@ -16,8 +11,6 @@ namespace idunno.Bluesky;
 public partial class BlueskyAgent
 {
     private readonly Uri _videoServer = new("https://video.bsky.app/");
-
-    private const string GetUploadLimitsLxm = "app.bsky.video.getUploadLimits";
 
     private const string UploadBlobLxm = "com.atproto.repo.uploadBlob";
 
@@ -82,7 +75,7 @@ public partial class BlueskyAgent
             AtProtoHttpResult<ServiceCredential> getServiceAuthResult = await GetServiceAuth(
                 service: Service,
                 audience: WellKnownDistributedIdentifiers.Video,
-                lxm: GetUploadLimitsLxm,
+                lxm: "app.bsky.video.getUploadLimits",
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (!getServiceAuthResult.Succeeded)
@@ -120,117 +113,6 @@ public partial class BlueskyAgent
             }
 
             return result;
-        }
-    }
-
-    /// <summary>
-    /// Uploads a video to be processed and stored.
-    /// </summary>
-    /// <param name="fileName">The filename of the video.</param>
-    /// <param name="video">The video to upload as bytes.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> is <see langword="null"/> or empty.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="video"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="video"/> is empty.</exception>
-    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<JobStatus>> UploadVideo(
-        string fileName,
-        byte[] video,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(fileName);
-        ArgumentNullException.ThrowIfNull(video);
-        ArgumentOutOfRangeException.ThrowIfZero(video.Length);
-
-        using (_logger.BeginScope($"Uploading video for {Did}"))
-        {
-            if (!IsAuthenticated)
-            {
-                throw new AuthenticationRequiredException();
-            }
-
-            // Get the server description so we can get the DID of the server.
-            AtProtoHttpResult<ServerDescription> serverDescriptionResult = await DescribeServer(Service, cancellationToken).ConfigureAwait(false);
-
-            if (serverDescriptionResult.Succeeded)
-            {
-                AtProtoHttpResult<ServiceCredential> getServiceAuthResult = await GetServiceAuth(
-                    Service,
-                    audience: serverDescriptionResult.Result.Did,
-                    lxm: UploadBlobLxm,
-                    expiry: new TimeSpan(0, 30, 0),
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                if (!getServiceAuthResult.Succeeded)
-                {
-                    return new AtProtoHttpResult<JobStatus>(
-                        null,
-                        getServiceAuthResult.StatusCode,
-                        getServiceAuthResult.HttpResponseHeaders,
-                        getServiceAuthResult.AtErrorDetail,
-                        getServiceAuthResult.RateLimit);
-                }
-
-                Logger.UploadVideoStarted(_logger, Did, _videoServer, fileName, video.Length);
-
-                AtProtoHttpResult<JobStatus> result = await BlueskyServer.UploadVideo(
-                    serverDescriptionResult.Result.Did,
-                    fileName,
-                    video,
-                    service: _videoServer,
-                    serviceCredential: getServiceAuthResult.Result,
-                    httpClient: HttpClient,
-                    loggerFactory: LoggerFactory,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                if (result.Succeeded)
-                {
-                    Logger.UploadVideoSucceeded(_logger, result.Result.JobId, Did);
-                }
-                else
-                {
-                    if (result.StatusCode == HttpStatusCode.Conflict &&
-                        result.AtErrorDetail is not null &&
-                        string.Equals("already_exists", result.AtErrorDetail.Error, StringComparison.Ordinal) &&
-                        result.AtErrorDetail.ExtensionData is not null &&
-                        result.AtErrorDetail.ExtensionData.TryGetValue("jobId", out JsonElement jobIdElement))
-                    {
-                        string jobId = jobIdElement.GetString()!;
-
-                        return await GetVideoJobStatus(jobId, cancellationToken).ConfigureAwait(false);
-                    }
-
-                    string? error = null;
-                    string? message = null;
-                    if (result.AtErrorDetail is not null)
-                    {
-                        error = result.AtErrorDetail.Error;
-                        message = result.AtErrorDetail.Message;
-                    }
-
-                    Logger.UploadVideoFailed(_logger, result.StatusCode, Did, error, message);
-                }
-
-                return result;
-            }
-            else
-            {
-                Logger.UploadVideoGetServerDescriptionFailed(
-                    _logger,
-                    Did,
-                    Service,
-                    serverDescriptionResult.StatusCode,
-                    serverDescriptionResult.AtErrorDetail?.Error,
-                    serverDescriptionResult.AtErrorDetail?.Message);
-
-                return new AtProtoHttpResult<JobStatus>(
-                    null,
-                    serverDescriptionResult.StatusCode,
-                    serverDescriptionResult.HttpResponseHeaders,
-                    serverDescriptionResult.AtErrorDetail,
-                    serverDescriptionResult.RateLimit);
-            }
         }
     }
 

@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -16,7 +16,7 @@ public class AtProtoHttpClientMetrics
     private static readonly IReadOnlyList<double> s_shortSecondsBucketBoundaries = [0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10];
 
     // For non-DI scenarios, see https://learn.microsoft.com/en-us/dotnet/core/diagnostics/metrics-instrumentation#best-practices
-    private static readonly Meter s_meter = new (MeterName, MeterVersion);
+    private static readonly Meter s_meter = new(MeterName, MeterVersion);
 
     /// <summary>
     /// Creates a new instance of <see cref="AtProtoHttpClientMetrics"/> using the provided <see cref="IMeterFactory"/> to create the underlying <see cref="Meter"/>.
@@ -70,7 +70,7 @@ public class AtProtoHttpClientMetrics
             description: "Total failed requests",
             unit: "{requests}");
 
-        DPoPRetries =  meter.CreateCounter<long>(
+        DPoPRetries = meter.CreateCounter<long>(
             name: $"{MeterName.ToLowerInvariant()}.requests.total.dpop_retry",
             description: "Total request retries due to DPoP nonce rotation",
             unit: "{requests}");

@@ -34,6 +34,16 @@ public sealed partial class PostBuilder
             yield return Properties.Resources.PostCannotHaveImagesAndVideoValidationError;
         }
 
+        if (HasImages && Images.Count > Maximum.GalleryItems)
+        {
+            yield return string.Format(null, s_postHasTooManyImages, Maximum.GalleryItems);
+        }
+
+        if (HasImages && HasGalleryImages)
+        {
+            yield return Properties.Resources.PostBuilderCannotHaveImagesAndGalleryImages;
+        }
+
         if (HasText && Length > MaxCapacity)
         {
             yield return string.Format(null, s_postTextExceedsMaxLengthValidationError, MaxCapacity);

@@ -1,4 +1,4 @@
-﻿items:
+items:
   - name: Getting started
     items:
       - name: Getting Started
@@ -28,7 +28,7 @@
         href: threadGatesAndPostGates.md
       - name: Adding videos to your posts
         href: video.md
-      - name: Working with Dafts
+      - name: Working with Drafts
         href: drafts.md
 
   - name: Notifications

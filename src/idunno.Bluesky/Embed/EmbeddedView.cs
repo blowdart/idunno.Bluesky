@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
@@ -14,6 +14,7 @@ namespace idunno.Bluesky.Embed;
 [JsonDerivedType(typeof(EmbeddedVideoView), typeDiscriminator: "app.bsky.embed.video#view")]
 [JsonDerivedType(typeof(EmbeddedRecordView), typeDiscriminator: "app.bsky.embed.record#view")]
 [JsonDerivedType(typeof(EmbeddedRecordWithMediaView), typeDiscriminator: "app.bsky.embed.recordWithMedia#view")]
+[JsonDerivedType(typeof(Gallery.View), typeDiscriminator: "app.bsky.embed.gallery#view")]
 public record EmbeddedView : View
 {
 }

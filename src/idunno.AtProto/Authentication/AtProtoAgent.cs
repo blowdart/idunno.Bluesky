@@ -10,14 +10,14 @@ using System.Text;
 using System.Text.Json;
 using System.Timers;
 
+using idunno.AtProto.Authentication;
+using idunno.AtProto.Events;
+using idunno.Security;
+
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
-
-using idunno.AtProto.Authentication;
-using idunno.AtProto.Events;
-using idunno.Security;
 
 namespace idunno.AtProto;
 
@@ -315,7 +315,7 @@ public partial class AtProtoAgent
         Uri? pds = await ResolvePds(did, cancellationToken).ConfigureAwait(false) ?? throw new OAuthException($"Could not resolve PDS for {did}.");
 
         if (validatePds is not null &&
-            !await validatePds.Invoke(pds,allowInsecureProtocols, allowLoopback, LoggerFactory, cancellationToken).ConfigureAwait(false))
+            !await validatePds.Invoke(pds, allowInsecureProtocols, allowLoopback, LoggerFactory, cancellationToken).ConfigureAwait(false))
         {
             throw new OAuthException($"The discovered PDS {pds} did not pass validation.");
         }

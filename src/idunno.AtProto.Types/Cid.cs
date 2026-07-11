@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Runtime.CompilerServices;
@@ -247,7 +247,7 @@ public sealed class Cid : IEquatable<Cid>
         }
 
         // Return true if the fields match.
-        return  Version == other.Version &&
+        return Version == other.Version &&
             Codec == other.Codec &&
             Hash.SequenceEqual(other.Hash);
     }
@@ -284,7 +284,7 @@ public sealed class Cid : IEquatable<Cid>
 
     private static (byte Version, ulong Codec, IReadOnlyList<byte> Hash) ParseBytes(byte[] bytes)
     {
-        Span<byte> span = new (bytes);
+        Span<byte> span = new(bytes);
 
         byte version = span[0];
 

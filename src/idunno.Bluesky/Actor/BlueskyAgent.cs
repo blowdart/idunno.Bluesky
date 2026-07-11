@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using idunno.AtProto;
@@ -189,7 +189,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        return await PutPreferences(preference, cancellationToken:cancellationToken).ConfigureAwait(false);
+        return await PutPreferences(preference, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

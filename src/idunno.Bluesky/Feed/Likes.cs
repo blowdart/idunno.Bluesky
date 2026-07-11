@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using idunno.AtProto;
@@ -17,7 +17,7 @@ public sealed class Likes : PagedReadOnlyCollection<Like>
         Cid = cid;
     }
 
-    internal Likes(AtUri uri, Cid? cid,IEnumerable<Like> collection, string? cursor = null) : this(uri, cid, [.. collection], cursor)
+    internal Likes(AtUri uri, Cid? cid, IEnumerable<Like> collection, string? cursor = null) : this(uri, cid, [.. collection], cursor)
     {
     }
 

@@ -1,13 +1,8 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.IdentityModel.JsonWebTokens;
 
 using Duende.IdentityModel.Client;
 using Duende.IdentityModel.OidcClient;
@@ -15,6 +10,11 @@ using Duende.IdentityModel.OidcClient.DPoP;
 using Duende.IdentityModel.OidcClient.Results;
 
 using idunno.AtProto.Server.Models;
+
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace idunno.AtProto.Authentication;
 
@@ -574,6 +574,7 @@ public class OAuthClient
     /// </summary>
     /// <param name="uri">The uri to open.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Vulnerability", "S4036:OS commands should not rely on PATH resolution", Justification = "Browser opening is platform-specific and relies on system commands, which may be installed anywhere.")]
     public static void OpenBrowser(Uri uri)
     {
         ArgumentNullException.ThrowIfNull(uri);

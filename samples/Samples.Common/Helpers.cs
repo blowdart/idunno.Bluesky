@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.CommandLine;
@@ -71,12 +71,14 @@ public class Helpers
     /// Returns a command line parser configured with the common command line parameters,
     /// which will call <paramref name="runCode"/> when the <see cref="ParseResult"/>'s InvokeAsync is called.
     /// </summary>
+    /// <param name="args">The command line arguments to parse.</param>
+    /// <param name="commandDescription">The description of the command.</param>
     /// <param name="runCode">The function to run when InvokeAsync is called on the parser.</param>
     /// <returns>A preconfigured command line <see cref="ParseResult"/>.</returns>
     public static ParseResult ConfigureCommandLine(
         string[] args,
         string commandDescription,
-        Func<string?, string?, string?,Uri?, CancellationToken, Task> runCode)
+        Func<string?, string?, string?, Uri?, CancellationToken, Task> runCode)
     {
         var rootCommand = new RootCommand(commandDescription)
         {
@@ -97,12 +99,12 @@ public class Helpers
 
         rootCommand.SetAction((parseResult, cancellationToken) =>
         {
-             return runCode(
-                parseResult.GetValue(s_handleOption),
-                parseResult.GetValue(s_passwordOption),
-                parseResult.GetValue(s_authCodeOption),
-                parseResult.GetValue(s_proxyOption),
-                cancellationToken);
+            return runCode(
+               parseResult.GetValue(s_handleOption),
+               parseResult.GetValue(s_passwordOption),
+               parseResult.GetValue(s_authCodeOption),
+               parseResult.GetValue(s_proxyOption),
+               cancellationToken);
         });
 
         return rootCommand.Parse(args);
@@ -112,6 +114,8 @@ public class Helpers
     /// Returns a command line parser configured with the common command line parameters,
     /// which will call <paramref name="runCode"/> when the <see cref="ParseResult"/>'s InvokeAsync is called.
     /// </summary>
+    /// <param name="args">The command line arguments to parse.</param>
+    /// <param name="commandDescription">The description of the command.</param>
     /// <param name="runCode">The function to run when InvokeAsync is called on the parser.</param>
     /// <returns>A preconfigured command line <see cref="ParseResult"/>.</returns>
     public static ParseResult ConfigureCommandLineWithMetricsDelay(
@@ -155,6 +159,8 @@ public class Helpers
     /// Returns a command line parser configured with the common command line parameters,
     /// which will call <paramref name="runCode"/> when the <see cref="ParseResult"/>'s InvokeAsync is called.
     /// </summary>
+    /// <param name="args">The command line arguments to parse.</param>
+    /// <param name="commandDescription">The description of the command.</param>
     /// <param name="runCode">The function to run when InvokeAsync is called on the parser.</param>
     /// <returns>A preconfigured command line <see cref="ParseResult"/>.</returns>
     public static ParseResult ConfigureCommandLine(

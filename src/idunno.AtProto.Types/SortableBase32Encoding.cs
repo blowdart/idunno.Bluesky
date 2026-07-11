@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text;
@@ -11,7 +11,7 @@ internal static class SortableBase32Encoding
 
     public static string ToString(double i)
     {
-        StringBuilder result = new ();
+        StringBuilder result = new();
 
         while (i > 0)
         {

@@ -1,14 +1,14 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Authentication.Models;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.AtProto;
 
@@ -127,7 +127,7 @@ public static partial class AtProtoServer
 
         AtProtoHttpClient<EmptyResponse> request = new(loggerFactory);
 
-        AtProtoHttpResult<EmptyResponse> result = await request.Post(
+        AtProtoHttpResult<EmptyResponse> response = await request.Post(
             service: refreshCredential.Service,
             endpoint: DeleteSessionEndpoint,
             credentials: refreshCredential,
@@ -135,7 +135,7 @@ public static partial class AtProtoServer
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        return result;
+        return response;
     }
 
     /// <summary>

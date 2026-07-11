@@ -1,16 +1,16 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Globalization;
 using System.Text;
 
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.Bluesky;
-using idunno.Bluesky.Feed;
 using idunno.Bluesky.Actor;
+using idunno.Bluesky.Feed;
+
+using Microsoft.Extensions.Logging;
 
 using Samples.Common;
 
@@ -101,7 +101,7 @@ public sealed class Program
             // This is the AT Uri for the Discover feed.
             AtUri feedUri = new("at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot");
 
-            AtProtoHttpResult<FeedGenerator> feedGenerator = await agent.GetFeedGenerator(feedUri, cancellationToken : cancellationToken);
+            AtProtoHttpResult<FeedGenerator> feedGenerator = await agent.GetFeedGenerator(feedUri, cancellationToken: cancellationToken);
 
             Console.WriteLine($"{feedGenerator.Result!.View.DisplayName} - {feedGenerator.Result.View.Description}");
             Console.WriteLine($"By {feedGenerator.Result.View.Creator.DisplayName} @{feedGenerator.Result.View.Creator.Handle}");
@@ -153,7 +153,7 @@ public sealed class Program
                 } while (!cancellationToken.IsCancellationRequested &&
                          getFeedResult.Succeeded &&
                          !string.IsNullOrEmpty(getFeedResult.Result.Cursor) &&
-                         page < maxPagesToIterate) ;
+                         page < maxPagesToIterate);
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
@@ -13,7 +13,7 @@ namespace idunno.Bluesky.Feed;
 public sealed record ReplyReference
 {
     [JsonConstructor]
-    internal ReplyReference (PostViewBase root, PostViewBase parent, ProfileViewBasic? grandparentAuthor)
+    internal ReplyReference(PostViewBase root, PostViewBase parent, ProfileViewBasic? grandparentAuthor)
     {
         Root = root;
         Parent = parent;

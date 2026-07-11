@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -11,13 +11,16 @@ namespace idunno.AtProto;
 /// Represents a detailed error response from an atproto endpoint.
 /// </summary>
 [Serializable]
-public sealed class AtErrorDetail
+public class AtErrorDetail
 {
+    /// <summary>
+    /// Creates a new instance of the <see cref="AtErrorDetail"/>.
+    /// </summary>
     [JsonConstructor]
-    internal AtErrorDetail()
+    public AtErrorDetail()
     {
     }
-    
+
     /// <summary>
     /// Creates an new instance of <see cref="AtErrorDetail"/>
     /// </summary>
@@ -27,6 +30,23 @@ public sealed class AtErrorDetail
     {
         Error = error;
         Message = message;
+    }
+
+    /// <summary>
+    /// Creates a new instance of the <see cref="AtErrorDetail"/> from another instance.
+    /// </summary>
+    /// <param name="other">The <see cref="AtErrorDetail"/> instance to copy.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="other"/> is <see langword="null"/>.</exception>
+    protected AtErrorDetail(AtErrorDetail other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+
+        Error = other.Error;
+        Message = other.Message;
+        RawContent = other.RawContent;
+        ExtensionData = other.ExtensionData;
+        Instance = other.Instance;
+        HttpMethod = other.HttpMethod;
     }
 
     /// <summary>
