@@ -32,7 +32,8 @@ if (loginResult.Succeeded)
 
 Please see the [documentation](https://bluesky.idunno.dev/) for much more useful documentation and samples.
 
-The [API status page](https://bluesky.idunno.dev/docs/endpointStatus.html) shows what APIs are currently implemented.
+The [API status page](https://bluesky.idunno.dev/docs/endpointStatus.html) shows what APIs are currently implemented and how the Bluesky API names map to the
+the idunno.Bluesky SDK methods, which follow a more .NET idiomatic style.
 
 ## Key Features
 
@@ -53,6 +54,7 @@ The [API status page](https://bluesky.idunno.dev/docs/endpointStatus.html) shows
 * Following and unfollowing users
 * Muting and blocking users
 * Sending, receiving, and deleting direct messages
+* Creating, joining and leaving group conversations
 * Create, deleting and listing a user's bookmarks
 * Handle / password and OAuth authentication
 * Jetstream support for simple firehose consumption
