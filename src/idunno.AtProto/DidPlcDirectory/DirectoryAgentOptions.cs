@@ -1,11 +1,11 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.Metrics;
 
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.DidPlcDirectory;
 
@@ -53,5 +53,5 @@ public sealed class DirectoryAgentOptions
     /// <summary>
     /// Gets or sets the <see cref="IMeterFactory"/>, if any, to use when creating meters.
     /// </summary>
-    public IMeterFactory? MeterFactory { get; set; } 
+    public IMeterFactory? MeterFactory { get; set; }
 }

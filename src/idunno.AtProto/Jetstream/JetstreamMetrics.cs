@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -53,7 +53,7 @@ public sealed class JetstreamMetrics
     /// <summary>
     /// Gets the meter name publishing metrics.
     /// </summary>
-    public static string MeterName  => "idunno.AtProto.Jetstream";
+    public static string MeterName => "idunno.AtProto.Jetstream";
 
     /// <summary>
     /// Gets the current version of the meter.

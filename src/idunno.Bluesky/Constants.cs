@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using idunno.AtProto;
@@ -194,6 +194,11 @@ public static class Maximum
     /// The maximum length of text in an individual draft, in graphemes.
     /// </summary>
     public static readonly int DraftTextLengthInGraphemes = 1000;
+
+    /// <summary>
+    /// The maximum number of items in a gallery.
+    /// </summary>
+    public static readonly int GalleryItems = 10;
 }
 
 /// <summary>
@@ -284,6 +289,11 @@ public static class CollectionNsid
     /// The NSID for an actor's notification declaration record.
     /// </summary>
     public static Nsid NotificationDeclaration => new("app.bsky.notification.declaration");
+
+    /// <summary>
+    /// The NSID for an actor's chat declaration record.
+    /// </summary>
+    public static Nsid ChatDeclaration => new("chat.bsky.actor.declaration");
 }
 
 /// <summary>
@@ -427,6 +437,11 @@ public static class EmbeddedRecordTypeDiscriminators
     /// The json type discriminator for embedded video.
     /// </summary>
     public const string Video = "app.bsky.embed.video";
+
+    /// <summary>
+    /// The json discriminator for an embedded image gallery.
+    /// </summary>
+    public const string Gallery = "app.bsky.embed.gallery";
 }
 
 /// <summary>
@@ -500,88 +515,6 @@ public static class ThreadGateTypeDiscriminators
     /// Allow list members to reply.
     /// </summary>
     public const string ListMembers = "app.bsky.feed.threadgate#listRule";
-}
-
-/// <summary>
-/// Type discriminators for message objects
-/// </summary>
-public static class MessageTypeDiscriminators
-{
-    /// <summary>
-    /// A view over a message.
-    /// </summary>
-    public const string MessageView = "chat.bsky.convo.defs#messageView";
-
-    /// <summary>
-    /// A view over a deleted message.
-    /// </summary>
-    public const string DeletedMessageView = "chat.bsky.convo.defs#deletedMessageView";
-}
-
-/// <summary>
-/// Type discriminators for conversation logging.
-/// </summary>
-public static class ConversationLogTypeDiscriminators
-{
-    /// <summary>
-    /// A log entry indicating the beginning of a conversation.
-    /// </summary>
-    public const string BeginConversation = "chat.bsky.convo.defs#logBeginConvo";
-
-    /// <summary>
-    /// A log entry indicating leaving a conversation.
-    /// </summary>
-    public const string LeaveConversation = "chat.bsky.convo.defs#logLeaveConvo";
-
-    /// <summary>
-    /// A log entry indicating a message was created in a conversation.
-    /// </summary>
-    public const string CreateMessage = "chat.bsky.convo.defs#logCreateMessage";
-
-    /// <summary>
-    /// A log entry indicating a message was deleted in a conversation.
-    /// </summary>
-    public const string DeleteMessage = "chat.bsky.convo.defs#logDeleteMessage";
-}
-
-/// <summary>
-/// Names for labels that can be self applied to posts.
-/// </summary>
-[Obsolete("Use SelfLabelValues instead.")]
-public static class SelfLabelNames
-{
-    /// <summary>
-    /// A self label indicating that the content of a post contains porn.
-    /// </summary>
-    public const string Porn = "porn";
-
-    /// <summary>
-    /// A self label indicating that the content of a post contains sexual content.
-    /// </summary>
-    public const string Sexual = "sexual";
-
-    /// <summary>
-    /// A self label indicating that the content of a post contains nudity.
-    /// </summary>
-    public const string Nudity = "nudity";
-
-    /// <summary>
-    /// A self label indicating that the content of a post contains graphic media content.
-    /// </summary>
-    public const string GraphicMedia = "graphic-media";
-
-    /// <summary>
-    /// A label that indicates that the content should not be shown to logged out users.
-    /// </summary>
-    /// <remarks>
-    /// <para>This setting only limits the visibility of your content on the Bluesky app and website, and other apps may not respect this setting.</para>
-    /// </remarks>
-    public const string DiscourageShowingToLoggedOutUser = "!no-unauthenticated";
-
-    /// <summary>
-    /// A label that indicates the profile self identifies as a bot account.
-    /// </summary>
-    public const string Bot = "bot";
 }
 
 /// <summary>

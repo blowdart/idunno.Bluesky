@@ -8,10 +8,10 @@ using System.Net.Security;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 
+using idunno.Security;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-
-using idunno.Security;
 
 
 namespace idunno.AtProto;
@@ -42,7 +42,7 @@ public abstract class Agent : IDisposable
     /// <see langword="false"/> if you are using a debugging proxy which does not support CRLs.
     /// </para>
     /// </remarks>
-    protected Agent(HttpClientOptions? httpClientOptions, JsonOptions? jsonOptions): this(httpClientOptions, jsonOptions, null)
+    protected Agent(HttpClientOptions? httpClientOptions, JsonOptions? jsonOptions) : this(httpClientOptions, jsonOptions, null)
     {
     }
 
@@ -73,7 +73,7 @@ public abstract class Agent : IDisposable
             .AddHttpClient(HttpClientName, client => InternalConfigureHttpClient(client, _httpClientOptions?.HttpUserAgent, _httpClientOptions?.Timeout))
             .ConfigurePrimaryHttpMessageHandler(ProxyHttpMessageHandlerBuilder);
         _serviceProvider = services.BuildServiceProvider();
-      
+
         HttpClientFactory = _serviceProvider.GetService<IHttpClientFactory>()!;
     }
 

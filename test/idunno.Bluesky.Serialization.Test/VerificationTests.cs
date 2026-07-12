@@ -1,8 +1,9 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json;
 
+using idunno.AtProto;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Record;
 
@@ -58,6 +59,59 @@ public class VerificationTests
         Assert.True(actual.IsValid);
         Assert.Equal(DateTimeOffset.Parse("2025-04-21T10:49:31.969Z"), actual.CreatedAt);
     }
+
+    [Fact]
+    public void VerificationViewDeserializesCorrectlyWithSourceGeneratedJsonContextAndNewProperties()
+    {
+        string json = """
+            {
+                "issuer": "did:plc:z72i7hdynmk6r22z27h6tvur",
+                "uri": "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.graph.verification/3lndpysuow22f",
+                "isValid": true,
+                "issuerDisplayName": "Test Issuer",
+                "issuerHandle": "jerification.bot",
+                "createdAt": "2025-04-21T10:49:31.969Z"
+            }
+            """;
+
+        VerificationView? actual = JsonSerializer.Deserialize<VerificationView>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+
+        Assert.NotNull(actual);
+
+        Assert.Equal("did:plc:z72i7hdynmk6r22z27h6tvur", actual.Issuer);
+        Assert.Equal("at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.graph.verification/3lndpysuow22f", actual.Uri);
+        Assert.True(actual.IsValid);
+        Assert.Equal(DateTimeOffset.Parse("2025-04-21T10:49:31.969Z"), actual.CreatedAt);
+        Assert.Equal("Test Issuer", actual.IssuerDisplayName!);
+        Assert.Equal(new Handle("jerification.bot"), actual.IssuerHandle!);
+    }
+
+    [Fact]
+    public void VerificationViewDeserializesCorrectlyWithoutSourceGeneratedJsonContextAndNewProperties()
+    {
+        string json = """
+            {
+                "issuer": "did:plc:z72i7hdynmk6r22z27h6tvur",
+                "uri": "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.graph.verification/3lndpysuow22f",
+                "isValid": true,
+                "issuerDisplayName": "Test Issuer",
+                "issuerHandle": "jerification.bot",
+                 "createdAt": "2025-04-21T10:49:31.969Z"
+            }
+            """;
+
+        VerificationView? actual = JsonSerializer.Deserialize<VerificationView>(json, _jsonSerializerOptions);
+
+        Assert.NotNull(actual);
+
+        Assert.Equal("did:plc:z72i7hdynmk6r22z27h6tvur", actual.Issuer);
+        Assert.Equal("at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.graph.verification/3lndpysuow22f", actual.Uri);
+        Assert.True(actual.IsValid);
+        Assert.Equal(DateTimeOffset.Parse("2025-04-21T10:49:31.969Z"), actual.CreatedAt);
+        Assert.Equal("Test Issuer", actual.IssuerDisplayName!);
+        Assert.Equal(new Handle("jerification.bot"), actual.IssuerHandle!);
+    }
+
 
     [Fact]
     public void VerificationStateDeserializesCorrectlyWithSourceGeneratedJsonContext()

@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -6,13 +6,12 @@ using System.Net;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
-
-using idunno.Bluesky.Embed;
-using idunno.Bluesky.Feed.Gates;
-using idunno.Bluesky.RichText;
 using idunno.Bluesky.Actor;
-using idunno.Bluesky.Record;
+using idunno.Bluesky.Embed;
 using idunno.Bluesky.Feed;
+using idunno.Bluesky.Feed.Gates;
+using idunno.Bluesky.Record;
+using idunno.Bluesky.RichText;
 
 namespace idunno.Bluesky;
 
@@ -577,7 +576,7 @@ public partial class BlueskyAgent
 
         if (image is not null)
         {
-            images = [ image ];
+            images = [image];
         }
 
         return await Post(
@@ -677,7 +676,7 @@ public partial class BlueskyAgent
         Post post = new(
             text,
             createdAt: creationDateTime,
-            langs : langs,
+            langs: langs,
             embeddedRecord: embeddedImages,
             tags: tags);
 
@@ -700,7 +699,7 @@ public partial class BlueskyAgent
             post,
             threadGateRules: threadGateRules,
             postGateRules: postGateRules,
-            interactionPreferences : interactionPreferences,
+            interactionPreferences: interactionPreferences,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -877,7 +876,7 @@ public partial class BlueskyAgent
         ArgumentNullException.ThrowIfNull(text);
         ArgumentNullException.ThrowIfNull(externalCard);
 
-        if ((text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
+        if (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(text),
@@ -896,7 +895,7 @@ public partial class BlueskyAgent
             facets = await FacetExtractor.ExtractFacets(text, cancellationToken).ConfigureAwait(false);
         }
 
-        var postBuilder = new PostBuilder(text, createdAt : createdAt, langs: langs, facets: facets, tags: tags);
+        var postBuilder = new PostBuilder(text, createdAt: createdAt, langs: langs, facets: facets, tags: tags);
 
         postBuilder.EmbedRecord(externalCard);
 
@@ -931,15 +930,18 @@ public partial class BlueskyAgent
     /// <param name="threadGateRules">Thread gating rules to apply to the post, if any. Only valid if the post is a thread root.</param>
     /// <param name="postGateRules">Gating rules to apply to the <paramref name="post"/>, if any.</param>
     /// <param name="interactionPreferences">The user's default interaction preferences. This will take effect if <paramref name="threadGateRules"/> and/or <paramref name="postGateRules"/> is <see langword="null"/>.</param>
+    /// <param name="extractFacets">Flag indicating whether facets should be extracted from the post text.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("Minor Code Smell", "S3267:Loops should be simplified with \"LINQ\" expressions", Justification = "Remove linq for clarity")]
     public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
         Post post,
         ICollection<ThreadGateRule>? threadGateRules = null,
         ICollection<PostGateRule>? postGateRules = null,
         InteractionPreferences? interactionPreferences = null,
+        bool extractFacets = true,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(post);
@@ -947,6 +949,48 @@ public partial class BlueskyAgent
         if (!IsAuthenticated)
         {
             throw new AuthenticationRequiredException();
+        }
+
+        if (!string.IsNullOrEmpty(post.Text) && extractFacets)
+        {
+            IList<Facet>? facets = await FacetExtractor.ExtractFacets(post.Text, cancellationToken).ConfigureAwait(false);
+            if (facets is not null && facets.Count > 0)
+            {
+                if (post.Facets == null || post.Facets.Count == 0)
+                {
+                    post.Facets = facets;
+                }
+                else
+                {
+                    if (post.Facets.IsReadOnly)
+                    {
+                        post.Facets = [.. post.Facets];
+                    }
+
+                    foreach (Facet? facet in facets)
+                    {
+                        if (facet is not null)
+                        {
+                            bool matchingFacetLocationFound = false;
+                            foreach (Facet? existingFacet in post.Facets)
+                            {
+                                if (existingFacet is not null &&
+                                    existingFacet.Index.ByteStart == facet.Index.ByteStart &&
+                                    existingFacet.Index.ByteEnd == facet.Index.ByteEnd &&
+                                    existingFacet.Features.SequenceEqual(facet.Features))
+                                {
+                                    matchingFacetLocationFound = true;
+                                }
+                            }
+
+                            if (!matchingFacetLocationFound)
+                            {
+                                post.Facets.Add(facet);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         AtProtoHttpResult<CreateRecordResult> result = await CreatePost(
@@ -1010,7 +1054,7 @@ public partial class BlueskyAgent
             post,
             threadGateRules: threadGateRules,
             postGateRules: postGateRules,
-            interactionPreferences: null, 
+            interactionPreferences: null,
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -1042,7 +1086,7 @@ public partial class BlueskyAgent
             throw new ArgumentException("uri RecordKey is null", nameof(uri));
         }
 
-        return await DeleteRecord(uri.Collection, uri.RecordKey, cancellationToken:cancellationToken).ConfigureAwait(false);
+        return await DeleteRecord(uri.Collection, uri.RecordKey, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1097,8 +1141,8 @@ public partial class BlueskyAgent
 
         return await InternalReplyTo(
             parent: parent,
-            text:text,
-            images:null,
+            text: text,
+            images: null,
             tags: tags,
             extractFacets: extractFacets,
             cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -1153,7 +1197,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        List<EmbeddedImage> images = [ image ];
+        List<EmbeddedImage> images = [image];
 
         return await InternalReplyTo(
             parent: parent,

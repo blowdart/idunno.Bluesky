@@ -1,14 +1,14 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.Extensions.Logging;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
-
 using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Model;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky;
 
@@ -62,7 +62,7 @@ public static partial class BlueskyServer
             queryString += "&detailed=true";
         }
 
-        AtProtoHttpClient<GetServicesResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetServicesResponse> request = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetServicesResponse> response = await request.Get(
             service,
             $"{LablerGetServicesEndpoint}?{queryString}",

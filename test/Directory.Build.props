@@ -11,6 +11,9 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <Configurations>Debug;Release;CodeQL</Configurations>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <NoError>$(NoError);CS1591</NoError>
+    <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>
   </PropertyGroup>
 
   <ItemGroup>

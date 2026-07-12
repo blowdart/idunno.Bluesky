@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -23,7 +23,7 @@ public sealed class CallbackServer : IAsyncDisposable
     private const int DefaultTimeout = 60 * 5; // 5 minutes
 
     private readonly ILogger<CallbackServer> _logger;
-    private readonly TaskCompletionSource<string> _source = new ();
+    private readonly TaskCompletionSource<string> _source = new();
 
     private WebApplication? _listener;
 
@@ -33,6 +33,7 @@ public sealed class CallbackServer : IAsyncDisposable
     /// <param name="port">The port to listen on</param>
     /// <param name="path">An optional path the host should respond on.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use when creating loggers.</param>
+    [SuppressMessage("Minor Vulnerability", "S5332:Clear-text protocols should not be used", Justification = "Has to be clear text, as local machines may not have a trusted localhost certificate and we shouldn't create one.")]
     public CallbackServer(int port, string? path = null, ILoggerFactory? loggerFactory = default)
     {
         ResponseStyleSheet = Resources.StyleSheet;

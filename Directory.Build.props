@@ -1,4 +1,4 @@
-﻿<Project>
+<Project>
   <PropertyGroup>
     <Product>idunno.Bluesky : AT Proto and Bluesky client libraries.</Product>
     <MaintainerEmail>github.com@idunno.org</MaintainerEmail>

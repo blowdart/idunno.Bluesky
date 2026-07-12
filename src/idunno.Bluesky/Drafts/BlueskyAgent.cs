@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
@@ -302,7 +302,8 @@ public partial class BlueskyAgent
                 {
                     EmbeddedExternal embeddedExternal = new(
                         uri: draftPost.EmbedExternals[0].Uri,
-                        title: draftPost.EmbedExternals[0].Uri.ToString());
+                        title: draftPost.EmbedExternals[0].Uri.ToString(),
+                        description: draftPost.EmbedExternals[0].Uri.ToString());
                     postBuilder.Embed = embeddedExternal;
                 }
 
@@ -359,6 +360,7 @@ public partial class BlueskyAgent
                         AtProtoHttpResult<JobStatus> uploadResult = await UploadVideo(
                             Path.GetFileName(path),
                             fileBytes,
+                            "video/mp4",
                             cancellationToken: cancellationToken).ConfigureAwait(false);
                         if (!uploadResult.Succeeded)
                         {

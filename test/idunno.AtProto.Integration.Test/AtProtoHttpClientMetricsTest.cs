@@ -1,21 +1,21 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.Metrics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.Metrics.Testing;
-using Microsoft.Extensions.Primitives;
-
 using Duende.IdentityModel.OidcClient.DPoP;
 
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
+using Microsoft.Extensions.Primitives;
 
 namespace idunno.AtProto.Integration.Test;
 
@@ -1588,7 +1588,7 @@ public class AtProtoHttpClientMetricsTest
                 response.StatusCode = 200;
 
                 var blob = new Blob(
-                    reference: new BlobReference(expectedCid),
+                    reference: new CidLink(expectedCid),
                     mimeType: "text/plain",
                     size: 1234);
 

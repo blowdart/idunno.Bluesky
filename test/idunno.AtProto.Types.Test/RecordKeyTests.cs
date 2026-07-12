@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 namespace idunno.AtProto.Types.Test;
@@ -26,7 +26,7 @@ public class RecordKeyTests
     [InlineData("oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo")]
     public void ValidRecordKeysShouldConstructWithoutError(string value)
     {
-        RecordKey recordKey = new (value);
+        RecordKey recordKey = new(value);
         Assert.NotNull(recordKey);
         Assert.Equal(value, recordKey.Value);
     }

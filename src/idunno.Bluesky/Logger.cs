@@ -1,12 +1,12 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Net;
 
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto;
 using idunno.Bluesky.Video;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky;
 
@@ -120,4 +120,65 @@ internal static partial class Logger
 
     [LoggerMessage(103, LogLevel.Error, "DeleteDraft failed for {draftId} with status code {statusCode} error {error} message {message}")]
     internal static partial void DeleteDraftFailed(ILogger logger, TimestampIdentifier draftId, HttpStatusCode statusCode, string? error, string? message);
+
+    [LoggerMessage(105, LogLevel.Information, "UploadMedia succeeded for {did} with job #{jobId}.")]
+    internal static partial void UploadMediaSucceeded(ILogger logger, string jobId, Did did);
+
+    [LoggerMessage(106, LogLevel.Error, "UploadMedia failed with {statusCode} when uploading media for {did}, error {error} message {message}")]
+    internal static partial void UploadMediaFailed(ILogger logger, HttpStatusCode statusCode, Did did, string? error, string? message);
+
+    [LoggerMessage(107, LogLevel.Information, "UploadMedia started for {did} on {server}, filename: {fileName} length: {length} mimeType: {mimeType}")]
+    internal static partial void UploadMediaStarted(ILogger logger, Did did, Uri server, string fileName, long length, string mimeType);
+
+    [LoggerMessage(108, LogLevel.Error, "GetServerDescription in UploadMedia for user {did}, service {service} failed with {statusCode} error {error} message {message}")]
+    internal static partial void UploadMediaGetServerDescriptionFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
+
+    // Card Generator errors
+    [LoggerMessage(110, LogLevel.Error, "Failed to upload embedded card image for {url} with status code {statusCode}, error {error} message {message}")]
+    internal static partial void EmbeddedCardImageUploadFailed(ILogger logger, Uri url, HttpStatusCode statusCode, string? error, string? message);
+
+    [LoggerMessage(111, LogLevel.Error, "Exception thrown when uploading embedded card image for {url}")]
+    internal static partial void EmbeddedCardImageUploadThrew(ILogger logger, Uri url, Exception ex);
+
+    [LoggerMessage(112, LogLevel.Error, "Failed to get OpenGraph data for {url} with status code {statusCode}")]
+    internal static partial void GetOpenGraphDataFailed(ILogger logger, Uri url, HttpStatusCode statusCode);
+
+    [LoggerMessage(113, LogLevel.Information, "Retrieval of {url} failed with {statusCode}")]
+    internal static partial void EmbeddedCardGetRequestFailedWithStatusCode(ILogger logger, Uri url, HttpStatusCode statusCode);
+
+    [LoggerMessage(114, LogLevel.Error, "Exception thrown when getting web page {url}")]
+    internal static partial void EmbeddedCardGetRequestThrew(ILogger logger, Uri url, Exception ex);
+
+    [LoggerMessage(115, LogLevel.Error, "Failed to find or parse site.standard.document link for {url}")]
+    internal static partial void FailedToFindOrParseSiteStandardDocumentLink(ILogger logger, Uri url);
+
+    [LoggerMessage(116, LogLevel.Error, "Author DID/repo is not present in the site.standard.document link {atUri} for {url}")]
+    internal static partial void AuthorDidRepoNotPresentInSiteStandardDocumentLink(ILogger logger, AtUri atUri, Uri url);
+
+    [LoggerMessage(117, LogLevel.Error, "PDS for author DID {did} not found for {url}")]
+    internal static partial void PdsForAuthorDidNotFound(ILogger logger, Did did, Uri url);
+
+    [LoggerMessage(118, LogLevel.Error, "Publication DID/repo is not present in the site.standard.publication link {atUri} for {url} nor in well-known location")]
+    internal static partial void PublicationDidRepoNotPresent(ILogger logger, AtUri atUri, Uri url);
+
+    [LoggerMessage(119, LogLevel.Error, "PDS for publication DID {did} not found for {url}")]
+    internal static partial void PdsForPublicationDidNotFound(ILogger logger, Did did, Uri url);
+
+    [LoggerMessage(120, LogLevel.Error, "Exception thrown when getting image from {url}")]
+    internal static partial void EmbeddedCardImageGetRequestThrew(ILogger logger, Uri url, Exception ex);
+
+    [LoggerMessage(121, LogLevel.Error, "Author DID resolution failed for {atUri} when processing {uri}")]
+    internal static partial void AuthorDidResolutionFailed(ILogger logger, Uri uri, AtUri atUri);
+
+    [LoggerMessage(122, LogLevel.Debug, "{uri} returned a file too small to be an image")]
+    internal static partial void EmbeddedCardImageTooSmall(ILogger logger, Uri uri);
+
+    [LoggerMessage(123, LogLevel.Debug, "Content for {uri} is not recognized as an image")]
+    internal static partial void EmbeddedCardImageTypeNotRecognized(ILogger logger, Uri uri);
+
+    [LoggerMessage(124, LogLevel.Error, "Image from {url} is too large, {contentLength} bytes. Maximum allowed size is {maxSize} bytes.")]
+    internal static partial void EmbeddedCardImageTooLarge(ILogger logger, Uri url, long contentLength, long maxSize);
+
+    [LoggerMessage(125, LogLevel.Error, "Could not delete temporary file {fileName}")]
+    internal static partial void CouldNotDeleteTemporaryFile(ILogger logger, string fileName, Exception ex);
 }

@@ -6,6 +6,7 @@ on:
     branches:
       - 'main'
       - 'version/*'
+      - 'dependabot/nuget/*'
     paths-ignore:
       - 'docs/**'
       - '.github/**'
@@ -13,6 +14,7 @@ on:
     branches:
       - 'main'
       - 'version/*'
+      - 'dependabot/nuget/*'
 
 permissions:
   contents: read
@@ -34,18 +36,18 @@ jobs:
       checks: write
     steps:
     - name: 'Harden Runner'
-      uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
 
     - name: 'Checkout'
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
         persist-credentials: false
  
     - name: 'Setup .NET SDK'
-      uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+      uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
       with:
         dotnet-version: | 
           8.0.x
@@ -75,7 +77,7 @@ jobs:
       run: dotnet test --no-build --restore --collect:"XPlat Code Coverage" --logger junit --settings .runsettings
 
     - name: Publish Test Results
-      uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040 # v2.23.0
+      uses: EnricoMi/publish-unit-test-result-action@d0a4676d0e0b938bc201470d88276b7c74c712b3 # v2.24.0
       if: always()
       with:
         files: "test/**/TestResults.xml"
@@ -88,7 +90,7 @@ jobs:
         retention-days: 5
 
     - name: 'Generate Full Code Coverage Reports'
-      uses: danielpalme/ReportGenerator-GitHub-Action@c31aa4ed4f12f147061186cf2a029f307b5c3636 # 5.5.9
+      uses: danielpalme/ReportGenerator-GitHub-Action@049f7ec958c672fd31d5cc1cb01622dc8d2e23ab # 5.5.10
       with:
         reports: "test/**/coverage.cobertura.xml"
         targetdir: "${{ env.COVERAGE_REPORT }}"

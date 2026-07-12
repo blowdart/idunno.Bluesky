@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 namespace idunno.AtProto.Repo;
@@ -10,7 +10,7 @@ namespace idunno.AtProto.Repo;
 /// Encapsulates a record put operation, performed in a transaction through the <see href="https://docs.bsky.app/docs/api/com-atproto-repo-apply-writes">ApplyWrites</see> AtProto API.
 /// If a record with the specified <see cref="RecordKey"/> exists its value will be updated to the specified value, otherwise it will be created.
 /// </summary>
-public sealed record UpdateOperation: WriteOperation
+public sealed record UpdateOperation : WriteOperation
 {
     /// <summary>
     /// Creates a new instance of <see cref="UpdateOperation"/>
@@ -33,4 +33,3 @@ public sealed record UpdateOperation: WriteOperation
     /// </summary>
     public object RecordValue { get; init; }
 }
-

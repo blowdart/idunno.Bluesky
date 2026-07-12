@@ -1,14 +1,13 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
 
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
-
 using idunno.AtProto.Repo;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky;
 
@@ -52,7 +51,7 @@ public static partial class BlueskyServer
             collection: CollectionNsid.Post,
             rKey: uri.RecordKey,
             cid: cid,
-            service : service,
+            service: service,
             accessCredentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,

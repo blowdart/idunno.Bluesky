@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics;
@@ -28,6 +28,17 @@ public class SelfLabels
     public SelfLabels()
     {
         _values = [];
+    }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="SelfLabels"/>.
+    /// </summary>
+    /// <param name="value">The label to be applied to the record.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is <see langword="null"/>.</exception>
+    public SelfLabels(SelfLabel value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        _values = [value];
     }
 
     /// <summary>
@@ -82,6 +93,19 @@ public class SelfLabels
     }
 
     /// <summary>
+    /// Returns a flag indicating whether the specified <paramref name="label"/> is present.
+    /// </summary>
+    /// <param name="label">The label to search for.</param>
+    /// <returns>A flag indicating whether the label is present.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="label"/> is <see langword="null"/>, or the label's value is <see langword="null"/>.</exception>
+    public bool Contains(SelfLabel label)
+    {
+        ArgumentNullException.ThrowIfNull(label);
+        ArgumentNullException.ThrowIfNull(label.Value);
+        return Contains(label.Value);
+    }
+
+    /// <summary>
     /// Adds a <see cref="SelfLabel"/> with the specified <paramref name="name"/> if one does not already exist.
     /// </summary>
     /// <param name="name">The name of the <see cref="SelfLabel"/> to add.</param>
@@ -102,6 +126,19 @@ public class SelfLabels
                 _values = updatedLabels;
             }
         }
+    }
+
+    /// <summary>
+    /// Adds a <see cref="SelfLabel"/> if one does not already exist.
+    /// </summary>
+    /// <param name="label">The <see cref="SelfLabel"/> to add.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="label"/> or the label's value is <see langword="null"/>.</exception>
+    public void AddLabel(SelfLabel label)
+    {
+        ArgumentNullException.ThrowIfNull(label);
+        ArgumentNullException.ThrowIfNull(label.Value);
+
+        AddLabel(label.Value);
     }
 
     /// <summary>

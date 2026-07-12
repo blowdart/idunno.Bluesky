@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="idunno.Bluesky" Version="1.8.1" />
+    <PackageReference Include="idunno.Bluesky" Version="3.0.0" />
   </ItemGroup>
 
   <PropertyGroup>

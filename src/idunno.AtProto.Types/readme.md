@@ -1,8 +1,9 @@
-﻿# idunno.AtProto.Types
+# idunno.AtProto.Types
 
 ## About
 
-Common .NET types for [AT Protocol](https://docs.bsky.app/docs/api/at-protocol-xrpc-api).
+Common .NET types for [AT Protocol](https://docs.bsky.app/docs/api/at-protocol-xrpc-api),
+[Data Model](https://atproto.com/specs/data-model).
 
 ## Version History
 

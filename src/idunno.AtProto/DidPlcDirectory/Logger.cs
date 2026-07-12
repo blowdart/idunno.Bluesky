@@ -1,8 +1,10 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Net;
+
 using idunno.AtProto;
+
 using Microsoft.Extensions.Logging;
 
 namespace idunno.DidPlcDirectory;

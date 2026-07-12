@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 idunno.AtProto.OAuthCallback.CallbackServer
 idunno.AtProto.OAuthCallback.CallbackServer.CallbackServer(int port, string? path = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null) -> void
 idunno.AtProto.OAuthCallback.CallbackServer.DisposeAsync() -> System.Threading.Tasks.ValueTask

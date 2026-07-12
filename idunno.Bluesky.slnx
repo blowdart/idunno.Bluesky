@@ -32,6 +32,9 @@
     <File Path=".github/workflows/prerelease.yml" />
     <File Path=".github/workflows/release.yml" />
   </Folder>
+  <Folder Name="/.vscode/">
+    <File Path=".vscode/settings.json" />
+  </Folder>
   <Folder Name="/docs/">
     <File Path="docs/.editorconfig" />
     <File Path="docs/docfx.json" />
@@ -76,7 +79,9 @@
     <File Path="docs/docs/bots/scheduledPostBot.md" />
     <File Path="docs/docs/bots/watcherBot.md" />
   </Folder>
-  <Folder Name="/docs/docs/bots/code/" />
+  <Folder Name="/docs/docs/bots/code/">
+    <File Path="docs/docs/bots/code/Directory.Build.Props" />
+  </Folder>
   <Folder Name="/docs/docs/bots/code/BlueskyBot/">
     <Project Path="docs/docs/bots/code/BlueskyBot/BlueskyBot.csproj">
       <Build Solution="CodeQL|*" Project="false" />
@@ -112,6 +117,7 @@
   </Folder>
   <Folder Name="/docs/docs/media/">
     <File Path="docs/docs/images/embeddedCard.png" />
+    <File Path="docs/docs/media/standardSiteEmbeddedCard.png" />
     <File Path="docs/docs/media/vs-AdditionalInformation.png" />
     <File Path="docs/docs/media/vs-CreateNewConsoleApp.png" />
   </Folder>
@@ -119,6 +125,7 @@
     <File Path="docs/docs/tutorials/blockingUsers.md" />
     <File Path="docs/docs/tutorials/creatingAPost.md" />
     <File Path="docs/docs/tutorials/editingProfiles.md" />
+    <File Path="docs/docs/tutorials/embeddingCards.md" />
     <File Path="docs/docs/tutorials/followingAndUnfollowing.md" />
     <File Path="docs/docs/tutorials/likingAndReposting.md" />
     <File Path="docs/docs/tutorials/muteAndUnmute.md" />
@@ -130,6 +137,7 @@
     <File Path="docs/docs/tutorials/viewingThreads.md" />
   </Folder>
   <Folder Name="/docs/docs/tutorials/code/">
+    <File Path="docs/docs/tutorials/code/embeddedCard.cs" />
     <File Path="docs/docs/tutorials/code/feed.cs" />
     <File Path="docs/docs/tutorials/code/helloWorld.cs" />
     <File Path="docs/docs/tutorials/code/lists.cs" />
@@ -242,7 +250,6 @@
     <File Path=".ssh-allowed-signers" />
     <File Path=".ssh-allowed-signers.md" />
     <File Path=".vsconfig" />
-    <File Path="architectureNotes.md" />
     <File Path="buildDocs.ps1" />
     <File Path="CHANGELOG.md" />
     <File Path="CODE_OF_CONDUCT.md" />
@@ -253,10 +260,10 @@
     <File Path="global.json" />
     <File Path="key.snk" />
     <File Path="LICENSE" />
-    <File Path="minisign.pub" />
     <File Path="nuget.config" />
     <File Path="purge.ps1" />
     <File Path="readme.md" />
+    <File Path="regeneratePublicApiFiles.ps1" />
     <File Path="SECURITY.md" />
     <File Path="sleet.json" />
     <File Path="THIRD-PARTY-NOTICES.txt" />

@@ -1,14 +1,14 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
-
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 using Coravel;
 using Coravel.Invocable;
 
 using idunno.Bluesky;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
@@ -46,6 +46,6 @@ sealed class Post(ILoggerFactory loggerFactory) : IInvocable
             await agent.Post("Beep beep, boop boop. 🤖");
         }
 
-        return ;
+        return;
     }
 }

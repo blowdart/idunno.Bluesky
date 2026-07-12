@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 abstract idunno.AtProto.AtIdentifier.Value.get -> string!
 const idunno.AtProto.Did.ValidationRegex = "^did:[a-z0-9]+(?::(?:%[A-F0-9]{2}|[a-zA-Z0-9._-]+)*)+(?<!:)$" -> string!
 const idunno.AtProto.Handle.ValidationRegex = "^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$" -> string!
@@ -23,6 +23,22 @@ idunno.AtProto.AtUriFormatException.AtUriFormatException() -> void
 idunno.AtProto.AtUriFormatException.AtUriFormatException(string! message) -> void
 idunno.AtProto.AtUriFormatException.AtUriFormatException(string! message, System.Exception! inner) -> void
 idunno.AtProto.AtUriFormatException.AtUriFormatException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
+idunno.AtProto.Blob
+idunno.AtProto.Blob.Blob(idunno.AtProto.Blob! original) -> void
+idunno.AtProto.Blob.Blob(idunno.AtProto.CidLink! reference, string! mimeType, int size) -> void
+idunno.AtProto.Blob.MimeType.get -> string!
+idunno.AtProto.Blob.MimeType.init -> void
+idunno.AtProto.Blob.Reference.get -> idunno.AtProto.CidLink!
+idunno.AtProto.Blob.Reference.init -> void
+idunno.AtProto.Blob.Size.get -> int
+idunno.AtProto.Blob.Size.init -> void
+idunno.AtProto.Bytes
+idunno.AtProto.Bytes.Base64EncodedValue.get -> string!
+idunno.AtProto.Bytes.Bytes(byte[]! bytes) -> void
+idunno.AtProto.Bytes.Bytes(string! s) -> void
+idunno.AtProto.Bytes.Equals(idunno.AtProto.Bytes? other) -> bool
+idunno.AtProto.Bytes.ToBytes() -> byte[]!
+idunno.AtProto.Bytes.Value.get -> System.Collections.Generic.ICollection<byte>!
 idunno.AtProto.Cid
 idunno.AtProto.Cid.Cid(byte version, ulong codec, byte[]! hash) -> void
 idunno.AtProto.Cid.Cid(byte[]! bytes) -> void
@@ -34,6 +50,12 @@ idunno.AtProto.Cid.Hash.get -> System.Collections.Generic.IReadOnlyList<byte>!
 idunno.AtProto.Cid.ToBytes() -> byte[]!
 idunno.AtProto.Cid.Value.get -> string!
 idunno.AtProto.Cid.Version.get -> byte
+idunno.AtProto.CidLink
+idunno.AtProto.CidLink.<Clone>$() -> idunno.AtProto.CidLink!
+idunno.AtProto.CidLink.CidLink(idunno.AtProto.Cid! link) -> void
+idunno.AtProto.CidLink.Equals(idunno.AtProto.CidLink? other) -> bool
+idunno.AtProto.CidLink.Link.get -> idunno.AtProto.Cid!
+idunno.AtProto.CidLink.Link.init -> void
 idunno.AtProto.Did
 idunno.AtProto.Did.Did(string! s) -> void
 idunno.AtProto.Did.Equals(idunno.AtProto.Did? other) -> bool
@@ -46,6 +68,8 @@ idunno.AtProto.Json.AtIdentifierConverter
 idunno.AtProto.Json.AtIdentifierConverter.AtIdentifierConverter() -> void
 idunno.AtProto.Json.AtUriConverter
 idunno.AtProto.Json.AtUriConverter.AtUriConverter() -> void
+idunno.AtProto.Json.ByteConverter
+idunno.AtProto.Json.ByteConverter.ByteConverter() -> void
 idunno.AtProto.Json.CidConverter
 idunno.AtProto.Json.CidConverter.CidConverter() -> void
 idunno.AtProto.Json.DidConverter
@@ -56,6 +80,8 @@ idunno.AtProto.Json.NsidConverter
 idunno.AtProto.Json.NsidConverter.NsidConverter() -> void
 idunno.AtProto.Json.RecordKeyConverter
 idunno.AtProto.Json.RecordKeyConverter.RecordKeyConverter() -> void
+idunno.AtProto.Json.TimestampIdentifierConverter
+idunno.AtProto.Json.TimestampIdentifierConverter.TimestampIdentifierConverter() -> void
 idunno.AtProto.Nsid
 idunno.AtProto.Nsid.Authority.get -> string!
 idunno.AtProto.Nsid.Equals(idunno.AtProto.Nsid? other) -> bool
@@ -71,7 +97,6 @@ idunno.AtProto.RecordKey.Equals(idunno.AtProto.RecordKey? other) -> bool
 idunno.AtProto.RecordKey.RecordKey(string! s) -> void
 idunno.AtProto.RecordKey.Value.get -> string!
 idunno.AtProto.RecordKey.Value.init -> void
-static idunno.AtProto.RecordKey.Self.get -> idunno.AtProto.RecordKey!
 idunno.AtProto.RecordKeyFormatException
 idunno.AtProto.RecordKeyFormatException.RecordKeyFormatException() -> void
 idunno.AtProto.RecordKeyFormatException.RecordKeyFormatException(string! message) -> void
@@ -79,27 +104,34 @@ idunno.AtProto.RecordKeyFormatException.RecordKeyFormatException(string! message
 idunno.AtProto.RecordKeyFormatException.RecordKeyFormatException(System.Runtime.Serialization.SerializationInfo! info, System.Runtime.Serialization.StreamingContext context) -> void
 idunno.AtProto.TimestampIdentifier
 idunno.AtProto.TimestampIdentifier.ClockId.get -> double
+idunno.AtProto.TimestampIdentifier.CompareTo(idunno.AtProto.TimestampIdentifier? other) -> int
+idunno.AtProto.TimestampIdentifier.Equals(idunno.AtProto.TimestampIdentifier? other) -> bool
+idunno.AtProto.TimestampIdentifier.Equals(idunno.AtProto.TimestampIdentifier? x, idunno.AtProto.TimestampIdentifier? y) -> bool
+idunno.AtProto.TimestampIdentifier.GetHashCode(idunno.AtProto.TimestampIdentifier! obj) -> int
 idunno.AtProto.TimestampIdentifier.TimeStamp.get -> double
-idunno.AtProto.TimestampIdentifier.TimestampIdentifier(string! s) -> void
-idunno.AtProto.TimestampIdentifier.Value.get -> string!
 idunno.AtProto.TimestampIdentifier.TimestampIdentifier() -> void
+idunno.AtProto.TimestampIdentifier.TimestampIdentifier(idunno.AtProto.RecordKey! recordKey) -> void
+idunno.AtProto.TimestampIdentifier.TimestampIdentifier(string! s) -> void
 idunno.AtProto.TimestampIdentifier.ToRecordKey() -> idunno.AtProto.RecordKey!
-override idunno.AtProto.Json.TimestampIdentifierConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> idunno.AtProto.TimestampIdentifier?
-override idunno.AtProto.Json.TimestampIdentifierConverter.Write(System.Text.Json.Utf8JsonWriter! writer, idunno.AtProto.TimestampIdentifier! value, System.Text.Json.JsonSerializerOptions! options) -> void
-static idunno.AtProto.TimestampIdentifier.FromRecordKey(idunno.AtProto.RecordKey! rKey) -> idunno.AtProto.TimestampIdentifier!
-static idunno.AtProto.TimestampIdentifier.implicit operator idunno.AtProto.RecordKey!(idunno.AtProto.TimestampIdentifier! tid) -> idunno.AtProto.RecordKey!
-static idunno.AtProto.TimestampIdentifier.implicit operator idunno.AtProto.TimestampIdentifier!(idunno.AtProto.RecordKey! rKey) -> idunno.AtProto.TimestampIdentifier!
-idunno.AtProto.Json.TimestampIdentifierConverter
-idunno.AtProto.Json.TimestampIdentifierConverter.TimestampIdentifierConverter() -> void
+idunno.AtProto.TimestampIdentifier.Value.get -> string!
 override idunno.AtProto.AtIdentifier.Equals(object? obj) -> bool
 override idunno.AtProto.AtIdentifier.GetHashCode() -> int
 override idunno.AtProto.AtIdentifier.ToString() -> string!
 override idunno.AtProto.AtUri.Equals(object? obj) -> bool
 override idunno.AtProto.AtUri.GetHashCode() -> int
 override idunno.AtProto.AtUri.ToString() -> string!
+override idunno.AtProto.Blob.Equals(object? obj) -> bool
+override idunno.AtProto.Blob.GetHashCode() -> int
+override idunno.AtProto.Blob.ToString() -> string!
+override idunno.AtProto.Bytes.Equals(object? obj) -> bool
+override idunno.AtProto.Bytes.GetHashCode() -> int
+override idunno.AtProto.Bytes.ToString() -> string!
 override idunno.AtProto.Cid.Equals(object? obj) -> bool
 override idunno.AtProto.Cid.GetHashCode() -> int
 override idunno.AtProto.Cid.ToString() -> string!
+override idunno.AtProto.CidLink.Equals(object? obj) -> bool
+override idunno.AtProto.CidLink.GetHashCode() -> int
+override idunno.AtProto.CidLink.ToString() -> string!
 override idunno.AtProto.Did.Equals(object? obj) -> bool
 override idunno.AtProto.Did.GetHashCode() -> int
 override idunno.AtProto.Did.ToString() -> string!
@@ -112,6 +144,8 @@ override idunno.AtProto.Json.AtIdentifierConverter.Read(ref System.Text.Json.Utf
 override idunno.AtProto.Json.AtIdentifierConverter.Write(System.Text.Json.Utf8JsonWriter! writer, idunno.AtProto.AtIdentifier! value, System.Text.Json.JsonSerializerOptions! options) -> void
 override idunno.AtProto.Json.AtUriConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> idunno.AtProto.AtUri?
 override idunno.AtProto.Json.AtUriConverter.Write(System.Text.Json.Utf8JsonWriter! writer, idunno.AtProto.AtUri! value, System.Text.Json.JsonSerializerOptions! options) -> void
+override idunno.AtProto.Json.ByteConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> idunno.AtProto.Bytes?
+override idunno.AtProto.Json.ByteConverter.Write(System.Text.Json.Utf8JsonWriter! writer, idunno.AtProto.Bytes! value, System.Text.Json.JsonSerializerOptions! options) -> void
 override idunno.AtProto.Json.CidConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> idunno.AtProto.Cid?
 override idunno.AtProto.Json.CidConverter.Write(System.Text.Json.Utf8JsonWriter! writer, idunno.AtProto.Cid! value, System.Text.Json.JsonSerializerOptions! options) -> void
 override idunno.AtProto.Json.DidConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> idunno.AtProto.Did?
@@ -122,12 +156,16 @@ override idunno.AtProto.Json.NsidConverter.Read(ref System.Text.Json.Utf8JsonRea
 override idunno.AtProto.Json.NsidConverter.Write(System.Text.Json.Utf8JsonWriter! writer, idunno.AtProto.Nsid! value, System.Text.Json.JsonSerializerOptions! options) -> void
 override idunno.AtProto.Json.RecordKeyConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> idunno.AtProto.RecordKey?
 override idunno.AtProto.Json.RecordKeyConverter.Write(System.Text.Json.Utf8JsonWriter! writer, idunno.AtProto.RecordKey! value, System.Text.Json.JsonSerializerOptions! options) -> void
+override idunno.AtProto.Json.TimestampIdentifierConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> idunno.AtProto.TimestampIdentifier?
+override idunno.AtProto.Json.TimestampIdentifierConverter.Write(System.Text.Json.Utf8JsonWriter! writer, idunno.AtProto.TimestampIdentifier! value, System.Text.Json.JsonSerializerOptions! options) -> void
 override idunno.AtProto.Nsid.Equals(object? obj) -> bool
 override idunno.AtProto.Nsid.GetHashCode() -> int
 override idunno.AtProto.Nsid.ToString() -> string!
 override idunno.AtProto.RecordKey.Equals(object? obj) -> bool
 override idunno.AtProto.RecordKey.GetHashCode() -> int
 override idunno.AtProto.RecordKey.ToString() -> string!
+override idunno.AtProto.TimestampIdentifier.Equals(object? obj) -> bool
+override idunno.AtProto.TimestampIdentifier.GetHashCode() -> int
 override idunno.AtProto.TimestampIdentifier.ToString() -> string!
 static idunno.AtProto.AtIdentifier.Create(string! s) -> idunno.AtProto.AtIdentifier!
 static idunno.AtProto.AtIdentifier.FromString(string! s) -> idunno.AtProto.AtIdentifier!
@@ -139,10 +177,16 @@ static idunno.AtProto.AtUri.implicit operator idunno.AtProto.AtUri!(string! s) -
 static idunno.AtProto.AtUri.operator !=(idunno.AtProto.AtUri? lhs, idunno.AtProto.AtUri? rhs) -> bool
 static idunno.AtProto.AtUri.operator ==(idunno.AtProto.AtUri? lhs, idunno.AtProto.AtUri? rhs) -> bool
 static idunno.AtProto.AtUri.TryParse(string! s, out idunno.AtProto.AtUri? result) -> bool
+static idunno.AtProto.Blob.operator !=(idunno.AtProto.Blob? left, idunno.AtProto.Blob? right) -> bool
+static idunno.AtProto.Blob.operator ==(idunno.AtProto.Blob? left, idunno.AtProto.Blob? right) -> bool
+static idunno.AtProto.Bytes.implicit operator idunno.AtProto.Bytes!(byte[]! bytes) -> idunno.AtProto.Bytes!
+static idunno.AtProto.Bytes.implicit operator idunno.AtProto.Bytes!(string! s) -> idunno.AtProto.Bytes!
 static idunno.AtProto.Cid.FromString(string! s) -> idunno.AtProto.Cid!
 static idunno.AtProto.Cid.implicit operator idunno.AtProto.Cid!(string! s) -> idunno.AtProto.Cid!
 static idunno.AtProto.Cid.operator !=(idunno.AtProto.Cid? lhs, idunno.AtProto.Cid? rhs) -> bool
 static idunno.AtProto.Cid.operator ==(idunno.AtProto.Cid? lhs, idunno.AtProto.Cid? rhs) -> bool
+static idunno.AtProto.CidLink.operator !=(idunno.AtProto.CidLink? left, idunno.AtProto.CidLink? right) -> bool
+static idunno.AtProto.CidLink.operator ==(idunno.AtProto.CidLink? left, idunno.AtProto.CidLink? right) -> bool
 static idunno.AtProto.Did.FromString(string! s) -> idunno.AtProto.Did!
 static idunno.AtProto.Did.implicit operator idunno.AtProto.Did!(string! s) -> idunno.AtProto.Did!
 static idunno.AtProto.Did.implicit operator string!(idunno.AtProto.Did! d) -> string!
@@ -164,9 +208,27 @@ static idunno.AtProto.RecordKey.FromString(string! s) -> idunno.AtProto.RecordKe
 static idunno.AtProto.RecordKey.implicit operator idunno.AtProto.RecordKey!(string! s) -> idunno.AtProto.RecordKey!
 static idunno.AtProto.RecordKey.operator !=(idunno.AtProto.RecordKey? lhs, idunno.AtProto.RecordKey? rhs) -> bool
 static idunno.AtProto.RecordKey.operator ==(idunno.AtProto.RecordKey? lhs, idunno.AtProto.RecordKey? rhs) -> bool
+static idunno.AtProto.RecordKey.Self.get -> idunno.AtProto.RecordKey!
 static idunno.AtProto.RecordKey.TryParse(string! s, out idunno.AtProto.RecordKey? result) -> bool
+static idunno.AtProto.TimestampIdentifier.Comparer.get -> System.Collections.Generic.IEqualityComparer<idunno.AtProto.TimestampIdentifier!>!
+static idunno.AtProto.TimestampIdentifier.FromRecordKey(idunno.AtProto.RecordKey! rKey) -> idunno.AtProto.TimestampIdentifier!
 static idunno.AtProto.TimestampIdentifier.FromString(string! s) -> idunno.AtProto.TimestampIdentifier!
+static idunno.AtProto.TimestampIdentifier.implicit operator idunno.AtProto.RecordKey!(idunno.AtProto.TimestampIdentifier! tid) -> idunno.AtProto.RecordKey!
+static idunno.AtProto.TimestampIdentifier.implicit operator idunno.AtProto.TimestampIdentifier!(idunno.AtProto.RecordKey! rKey) -> idunno.AtProto.TimestampIdentifier!
 static idunno.AtProto.TimestampIdentifier.implicit operator idunno.AtProto.TimestampIdentifier!(string! s) -> idunno.AtProto.TimestampIdentifier!
 static idunno.AtProto.TimestampIdentifier.implicit operator string!(idunno.AtProto.TimestampIdentifier! tid) -> string!
-static idunno.AtProto.TimestampIdentifier.Next() -> idunno.AtProto.RecordKey!
-idunno.AtProto.TimestampIdentifier.TimestampIdentifier(idunno.AtProto.RecordKey! recordKey) -> void
+static idunno.AtProto.TimestampIdentifier.Next() -> idunno.AtProto.TimestampIdentifier!
+static idunno.AtProto.TimestampIdentifier.operator !=(idunno.AtProto.TimestampIdentifier! left, idunno.AtProto.TimestampIdentifier! right) -> bool
+static idunno.AtProto.TimestampIdentifier.operator <(idunno.AtProto.TimestampIdentifier! left, idunno.AtProto.TimestampIdentifier! right) -> bool
+static idunno.AtProto.TimestampIdentifier.operator <=(idunno.AtProto.TimestampIdentifier! left, idunno.AtProto.TimestampIdentifier! right) -> bool
+static idunno.AtProto.TimestampIdentifier.operator ==(idunno.AtProto.TimestampIdentifier! left, idunno.AtProto.TimestampIdentifier! right) -> bool
+static idunno.AtProto.TimestampIdentifier.operator >(idunno.AtProto.TimestampIdentifier! left, idunno.AtProto.TimestampIdentifier! right) -> bool
+static idunno.AtProto.TimestampIdentifier.operator >=(idunno.AtProto.TimestampIdentifier! left, idunno.AtProto.TimestampIdentifier! right) -> bool
+static idunno.AtProto.TimestampIdentifier.Parse(string! s) -> idunno.AtProto.TimestampIdentifier!
+static idunno.AtProto.TimestampIdentifier.Parse(string! s, System.IFormatProvider? provider) -> idunno.AtProto.TimestampIdentifier!
+static idunno.AtProto.TimestampIdentifier.TryParse(string? s, out idunno.AtProto.TimestampIdentifier! result) -> bool
+static idunno.AtProto.TimestampIdentifier.TryParse(string? s, System.IFormatProvider? provider, out idunno.AtProto.TimestampIdentifier! result) -> bool
+virtual idunno.AtProto.Blob.<Clone>$() -> idunno.AtProto.Blob!
+virtual idunno.AtProto.Blob.EqualityContract.get -> System.Type!
+virtual idunno.AtProto.Blob.Equals(idunno.AtProto.Blob? other) -> bool
+virtual idunno.AtProto.Blob.PrintMembers(System.Text.StringBuilder! builder) -> bool

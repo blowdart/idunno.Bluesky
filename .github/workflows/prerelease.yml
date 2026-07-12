@@ -35,18 +35,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
 
     - name: 'Checkout repository'
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         fetch-depth: 0 # avoid shallow clone so nbgv can do its work.
         persist-credentials: false
  
     - name: 'Setup .NET SDK'
-      uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+      uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
       with:
         dotnet-version: | 
           8.0.x
@@ -97,7 +97,7 @@ jobs:
 
     steps:
     - name: 'Setup .NET SDK'
-      uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+      uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
 
     - name: 'Install Sign CLI'
       run: dotnet tool install --tool-path ./sign sign --version 0.9.1-beta.25379.1
@@ -155,7 +155,7 @@ jobs:
         Get-ChildItem -Path ${env:ATTESTATION_INPUT} -Recurse -Force
 
     - name: 'Attest artifacts'
-      uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+      uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
       with:
         subject-path: ${{env.ATTESTATION_INPUT}}
 
@@ -179,12 +179,12 @@ jobs:
       id-token: write
     steps:
     - name: 'Harden Runner'
-      uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
+      uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
       with:
         egress-policy: audit
 
     - name: 'Checkout latest sleet.json'
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         sparse-checkout: |
           sleet.json
@@ -192,7 +192,7 @@ jobs:
         persist-credentials: false
 
     - name: 'Setup .NET SDK'
-      uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
+      uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
 
     - name: 'Gather nupkgs from signing artifacts'
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1

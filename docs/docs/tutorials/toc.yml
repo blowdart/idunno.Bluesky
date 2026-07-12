@@ -21,3 +21,5 @@ items:
   href: userLists.md
 - name: Thread gates
   href: threadGates.md
+- name: Embedding cards in posts
+  href: embeddingCards.md

@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 namespace idunno.Bluesky.Actor;
@@ -16,14 +16,16 @@ public record ProfileAssociated
     /// <param name="starterPacks">The number of starter packs the actor currently has.</param>
     /// <param name="labeler">A flag indicating whether the actor is a labeler.</param>
     /// <param name="chat">The chat configuration for the actor.</param>
+    /// <param name="germ">The Germ configuration for the actor.</param>
     /// <param name="activitySubscription">The actor's activity subscription preferences.</param>
-    public ProfileAssociated(int lists, int feedGens, int starterPacks, bool labeler, ProfileAssociatedChat? chat, ActivitySubscriptions? activitySubscription)
+    public ProfileAssociated(int lists, int feedGens, int starterPacks, bool labeler, ProfileAssociatedChat? chat, ProfileAssociatedGerm? germ, ActivitySubscriptions? activitySubscription)
     {
         Lists = lists;
         FeedGens = feedGens;
         StarterPacks = starterPacks;
         Labeler = labeler;
         Chat = chat;
+        Germ = germ;
         ActivitySubscription = activitySubscription;
     }
 
@@ -53,6 +55,11 @@ public record ProfileAssociated
     /// Gets the chat configuration for the actor.
     /// </summary>
     public ProfileAssociatedChat? Chat { get; init; }
+
+    /// <summary>
+    /// Gets the Germ configuration for the actor.
+    /// </summary>
+    public ProfileAssociatedGerm? Germ { get; init; }
 
     /// <summary>
     /// Gets the actor's activity subscription preferences.

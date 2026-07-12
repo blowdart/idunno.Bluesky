@@ -1,18 +1,18 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 using idunno.AtProto;
-using idunno.AtProto.Repo;
 using idunno.Bluesky;
 using idunno.Bluesky.Embed;
 
-using Samples.Common;
+using Microsoft.Extensions.Logging;
 
 using OpenGraphNet;
 using OpenGraphNet.Metadata;
-using System.Diagnostics;
+
+using Samples.Common;
 
 namespace Samples.EmbeddedCard;
 
@@ -92,7 +92,7 @@ public sealed class Program
                 }
             }
 
-            Uri pageUri = new ("https://en.wikipedia.org/wiki/Baked_beans");
+            Uri pageUri = new("https://en.wikipedia.org/wiki/Baked_beans");
 
             OpenGraph graph = await OpenGraph.ParseUrlAsync(pageUri, cancellationToken: cancellationToken);
 

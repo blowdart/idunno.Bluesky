@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json;
@@ -40,5 +40,5 @@ public sealed record AtJetstreamCommit
     /// <summary>
     /// Gets the content identifier for the commit event.
     /// </summary>
-    public Cid? Cid { get; init; } 
+    public Cid? Cid { get; init; }
 }

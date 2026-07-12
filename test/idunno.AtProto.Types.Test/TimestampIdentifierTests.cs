@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json.Serialization;
@@ -180,6 +180,50 @@ public class TimestampIdentifierTests
         Assert.Equal(actual!.Tid.Value, expected.Value);
     }
 
+    [Fact]
+    public void TimestampIdentifierEqualityWorks()
+    {
+        var tid1 = new TimestampIdentifier("3lwjaurx2d22c");
+        var tid2 = new TimestampIdentifier("3lwjaurx2d22c");
+        var tid3 = new TimestampIdentifier("3lwjayz7wqc2q");
+        Assert.Equal(tid1, tid2);
+        Assert.NotEqual(tid1, tid3);
+    }
+
+    [Fact]
+    public void TimestampIdentifierEqualityOperatorsWork()
+    {
+        var tid1 = new TimestampIdentifier("3lwjaurx2d22c");
+        var tid2 = new TimestampIdentifier("3lwjaurx2d22c");
+        var tid3 = new TimestampIdentifier("3lwjayz7wqc2q");
+
+        Assert.True(tid1 == tid2);
+        Assert.True(tid1 != tid3);
+    }
+
+    [Fact]
+    public void RecordKeyConversionEqualityWorks()
+    {
+        var tid1 = new TimestampIdentifier("3lwjaurx2d22c");
+
+        RecordKey rk1 = tid1.ToRecordKey();
+        RecordKey rk2 = new("3lwjaurx2d22c");
+        RecordKey rk3 = new("3lwjayz7wqc2q");
+        Assert.Equal(rk1, rk2);
+        Assert.NotEqual(rk1, rk3);
+    }
+
+    [Fact]
+    public void TimeStampComparatorsWorks()
+    {
+        TimestampIdentifier beforeTid = TimestampIdentifier.Next();
+        TimestampIdentifier now = TimestampIdentifier.Next();
+        TimestampIdentifier afterTid = TimestampIdentifier.Next();
+
+        Assert.True(beforeTid < now);
+        Assert.True(now < afterTid);
+        Assert.True(afterTid > now);
+    }
 }
 
 internal record TimestampIdentifierRecord

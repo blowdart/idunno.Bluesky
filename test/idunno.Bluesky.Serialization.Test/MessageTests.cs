@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json;
@@ -32,13 +32,13 @@ public class MessageTests
     [Fact]
     public void MessageInputWithEmbeddedRecordSerializesCorrectly()
     {
-        StrongReference strongReference = new (
+        StrongReference strongReference = new(
             "at://did:plc:7xkc5gsqnj33qs3fsa2mewzj/app.bsky.feed.post/3lqvtxtvtfc2q",
             "bafyreihdfqqjhjwctdcf6kxnpk47kr6cc7u2jtxntnb54ibhb43bbbfw54");
 
         MessageInput messageInput = new(
             "text",
-            embed : new Embed.EmbeddedRecord(strongReference));
+            embed: new Embed.EmbeddedRecord(strongReference));
 
         string actual = JsonSerializer.Serialize(messageInput, options: BlueskyServer.BlueskyJsonSerializerOptions);
 

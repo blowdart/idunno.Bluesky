@@ -1,10 +1,8 @@
-﻿using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
-
 using idunno.AtProto.Jetstream;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 Console.OutputEncoding = Encoding.UTF8;
 

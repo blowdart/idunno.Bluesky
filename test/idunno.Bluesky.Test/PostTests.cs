@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using idunno.AtProto;
@@ -233,7 +233,7 @@ public class PostTests
         StrongReference strongReference = new(new AtUri("at://foo.com/com.example.foo/123"), new Cid("bafyreievgu2ty7qbiaaom5zhmkznsnajuzideek3lo7e65dwqlrvrxnmo4"));
         EmbeddedBase expectedEmbedded = new EmbeddedRecord(strongReference);
 
-        var post = new Post(null, embeddedRecord : expectedEmbedded);
+        var post = new Post(null, embeddedRecord: expectedEmbedded);
 
         Assert.Null(post.Text);
         Assert.Equal(expectedEmbedded, post.EmbeddedRecord);
@@ -254,7 +254,7 @@ public class PostTests
     [Fact]
     public void ConstructorThrowsWhenTextIsTooLongInCharacters()
     {
-        string text = new ('a', Maximum.PostLengthInCharacters + 1);
+        string text = new('a', Maximum.PostLengthInCharacters + 1);
         ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post(text));
 
         Assert.Equal("text", caughtException.ParamName);
@@ -286,7 +286,7 @@ public class PostTests
     {
         List<string> tags = [];
 
-        for (int i=0; i<= Maximum.ExternalTagsInPost; i++)
+        for (int i = 0; i <= Maximum.ExternalTagsInPost; i++)
         {
             tags.Add(i.ToString());
         }
@@ -339,7 +339,7 @@ public class PostTests
     [Fact]
     public void ConstructorDoesNotThrowWhenImageAndTextIsProvided()
     {
-        var image = new EmbeddedImage(new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text");
+        var image = new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text");
 
         var post = new Post("text", image);
 
@@ -364,7 +364,7 @@ public class PostTests
     [Fact]
     public void ConstructorDoesNotThrowWhenImageAndTextAndCreatedAtIsProvided()
     {
-        var image = new EmbeddedImage(new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text");
+        var image = new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text");
 
         var post = new Post("text", DateTimeOffset.UtcNow, image);
 
@@ -421,9 +421,9 @@ public class PostTests
     {
         List<EmbeddedImage> images = [];
 
-        for (int i = 0; i <= Maximum.ImagesInPost; i++)
+        for (int i = 0; i <= Maximum.GalleryItems; i++)
         {
-            images.Add(new EmbeddedImage(new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text"));
+            images.Add(new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text"));
         }
 
         ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("text", images: images));
@@ -438,7 +438,7 @@ public class PostTests
 
         for (int i = 0; i < Maximum.ImagesInPost; i++)
         {
-            images.Add(new EmbeddedImage(new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text"));
+            images.Add(new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text"));
         }
 
         var post = new Post("text", images);
@@ -458,7 +458,7 @@ public class PostTests
 
         for (int i = 0; i <= Maximum.ImagesInPost; i++)
         {
-            images.Add(new EmbeddedImage(new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text"));
+            images.Add(new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text"));
         }
 
         ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("text", createdAt: DateTimeOffset.UtcNow, images: images));
@@ -473,7 +473,7 @@ public class PostTests
 
         for (int i = 0; i < Maximum.ImagesInPost; i++)
         {
-            images.Add(new EmbeddedImage(new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text"));
+            images.Add(new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text"));
         }
 
         var post = new Post("text", DateTimeOffset.UtcNow, images);
@@ -489,7 +489,7 @@ public class PostTests
     [Fact]
     public void ConstructorDoesNotThrowWhenTextAndLangAreProvided()
     {
-        Post post = new ("text", "en-gb");
+        Post post = new("text", "en-gb");
 
         Assert.Equal("text", post.Text);
         Assert.NotNull(post.Langs);
@@ -582,9 +582,9 @@ public class PostTests
     [Fact]
     public void SettingSelfLabelsViaSetPostSelfLabelsSetsTheUnderlyingEntry()
     {
-        PostSelfLabels selfLabels = new() { Porn = true, GraphicMedia = true, Nudity= true, SexualContent = true };
+        PostSelfLabels selfLabels = new() { Porn = true, GraphicMedia = true, Nudity = true, SexualContent = true };
 
-        Post post = new ("text");
+        Post post = new("text");
 
         post.SetSelfLabels(selfLabels);
 
@@ -628,14 +628,14 @@ public class PostTests
 
         for (int i = 0; i < Maximum.ImagesInPost; i++)
         {
-            images.Add(new EmbeddedImage(new Blob(new BlobReference("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text"));
+            images.Add(new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text"));
         }
 
-        Post post = new (null, images: images);
+        Post post = new(null, images: images);
 
         Assert.Equal(0, post.Length);
         Assert.Equal(0, post.GraphemeLength);
-        Assert.Equal(0, post.Utf8Length); ;
+        Assert.Equal(0, post.Utf8Length);
     }
 
     [Fact]
@@ -684,5 +684,84 @@ public class PostTests
         ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new Post("test", tags: [tag]));
 
         Assert.Equal("tags", caughtException.ParamName);
+    }
+
+    [Fact]
+    public void ConstructorThrowsWhenImagesIsUnderTheMaxGalleryCountButImagesPassedHaveNoAspectRatio()
+    {
+        List<EmbeddedImage> images = [];
+
+        for (int i = 0; i < Maximum.GalleryItems; i++)
+        {
+            images.Add(new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text"));
+        }
+
+        ArgumentException caughtException = Assert.Throws<ArgumentException>(() => new Post("text", images: images));
+
+        Assert.Equal("images", caughtException.ParamName);
+    }
+
+    [Fact]
+    public void WhenPassingMoreImagesThanPostImageCountPostEmbedsThemAsAGallery()
+    {
+        List<EmbeddedImage> images = [];
+
+        for (int i = 0; i <= Maximum.ImagesInPost; i++)
+        {
+            images.Add(new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text", new AspectRatio(100, 100)));
+        }
+
+        Post post = new("text", images: images);
+
+        Assert.IsType<EmbeddedGallery>(post.EmbeddedRecord);
+        Assert.Equal("text", post.Text);
+    }
+
+    [Fact]
+    public void WhenPassingExactlyMaximumImagesInPostPostDoesNotConvertFromEmbeddedImagesToGallery()
+    {
+        List<EmbeddedImage> images = [];
+
+        for (int i = 0; i < Maximum.ImagesInPost; i++)
+        {
+            images.Add(new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text", new AspectRatio(100, 100)));
+        }
+
+        Post post = new("text", images: images);
+
+        Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
+        Assert.Equal("text", post.Text);
+    }
+
+    [Fact]
+    public void WhenPassingMoreImagesThanPostImageCountAndNoTextPostEmbedsThemAsAGallery()
+    {
+        List<EmbeddedImage> images = [];
+
+        for (int i = 0; i <= Maximum.ImagesInPost; i++)
+        {
+            images.Add(new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text", new AspectRatio(100, 100)));
+        }
+
+        Post post = new(text: null, images: images);
+
+        Assert.IsType<EmbeddedGallery>(post.EmbeddedRecord);
+        Assert.Null(post.Text);
+    }
+
+    [Fact]
+    public void WhenPassingExactlyMaximumImagesInPostAndNoTextPostDoesNotConvertFromEmbeddedImagesToGallery()
+    {
+        List<EmbeddedImage> images = [];
+
+        for (int i = 0; i < Maximum.ImagesInPost; i++)
+        {
+            images.Add(new EmbeddedImage(new Blob(new CidLink("bafkreia3ww67kqsgkxy6bfgu4dxxyp52b3e2ghqbpoj7qt4iuupfx6c45a"), "image/jpg", 1024), "alt text", new AspectRatio(100, 100)));
+        }
+
+        Post post = new(text: null, images: images);
+
+        Assert.IsType<EmbeddedImages>(post.EmbeddedRecord);
+        Assert.Null(post.Text);
     }
 }

@@ -1,15 +1,15 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-
-using Microsoft.Extensions.Logging;
 
 using idunno.AtProto.Admin;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Moderation;
 using idunno.AtProto.Moderation.Model;
 using idunno.AtProto.Repo;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.AtProto;
 
@@ -86,7 +86,7 @@ public static partial class AtProtoServer
 
         AtProtoHttpClient<ModerationReport> client = new(atProtoProxy, loggerFactory);
 
-        return await client.Post(
+        AtProtoHttpResult<ModerationReport> result = await client.Post(
             service: service,
             endpoint: ModerationCreateReportEndpoint,
             record: request,
@@ -95,5 +95,7 @@ public static partial class AtProtoServer
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        return result;
     }
 }

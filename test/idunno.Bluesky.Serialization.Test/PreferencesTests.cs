@@ -1,4 +1,4 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Text.Json;
@@ -24,6 +24,16 @@ public class PreferencesTests
     }
 
     [Fact]
+    public void ThreadViewPreferenceSerializesToJsonWithBlueskyOptions()
+    {
+        var threadViewPreference = new ThreadViewPreference(prioritizeFollowedUsers: true);
+
+        string threadViewPreferenceAsJson = JsonSerializer.Serialize(threadViewPreference, BlueskyJsonSerializerOptions.Options);
+
+        Assert.NotNull(threadViewPreferenceAsJson);
+    }
+
+    [Fact]
     public void PutPreferencesRequestSerializesToJson()
     {
         var threadViewPreference = new ThreadViewPreference(prioritizeFollowedUsers: true);
@@ -31,6 +41,18 @@ public class PreferencesTests
         var putPreferencesRequest = new PutPreferencesRequest(new Preferences([threadViewPreference]));
 
         string putPreferencesRequestAsJson = JsonSerializer.Serialize(putPreferencesRequest, _jsonSerializerOptions);
+
+        Assert.NotNull(putPreferencesRequestAsJson);
+    }
+
+    [Fact]
+    public void PutPreferencesRequestSerializesToJsonWithBlueskyOptions()
+    {
+        var threadViewPreference = new ThreadViewPreference(prioritizeFollowedUsers: true);
+
+        var putPreferencesRequest = new PutPreferencesRequest(new Preferences([threadViewPreference]));
+
+        string putPreferencesRequestAsJson = JsonSerializer.Serialize(putPreferencesRequest, BlueskyJsonSerializerOptions.Options);
 
         Assert.NotNull(putPreferencesRequestAsJson);
     }

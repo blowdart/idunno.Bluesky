@@ -1,13 +1,10 @@
 ﻿using System.Globalization;
 using System.Text;
-
+using idunno.AtProto.Jetstream;
+using idunno.AtProto.Jetstream.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-
-using idunno.AtProto.Jetstream;
-using idunno.AtProto.Jetstream.Events;
-
 using WatcherBot;
 
 Console.OutputEncoding = Encoding.UTF8;
@@ -30,7 +27,7 @@ return 0;
 
 internal sealed class Worker : BackgroundService, IDisposable
 {
-    internal readonly AtProtoJetstream _jetStream = new ();
+    internal readonly AtProtoJetstream _jetStream = new();
 
     private volatile bool _disposed = false;
 

@@ -1,7 +1,8 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
+// Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+
 using idunno.AtProto;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
@@ -87,7 +88,7 @@ public partial class BlueskyAgent
     {
         ArgumentNullException.ThrowIfNull(did);
 
-        AtProtoHttpResult<AtProtoRepositoryRecord<LabelerDeclaration>> getRecordResult =  await GetRecord<LabelerDeclaration>(
+        AtProtoHttpResult<AtProtoRepositoryRecord<LabelerDeclaration>> getRecordResult = await GetRecord<LabelerDeclaration>(
             new AtUri($"at://{did}/app.bsky.labeler.service/self"),
             jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);

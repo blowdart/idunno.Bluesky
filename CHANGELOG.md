@@ -1,5 +1,213 @@
 # Version History
 
+## 3.0.0 - 2026-07-11
+
+## Added
+
+### idunno.AtProto
+
+* Added error classes for known error messages.
+  * `AccountNotFound`
+  * `AccountTakedown`
+  * `AuthenticationRequired`
+  * `AuthFactorTokenRequired`
+  * `BadExpiration`
+  * `BlobNotFound`
+  * `BlockNotFound`
+  * `ConsumerTooSlow`
+  * `DidDeactivated`
+  * `DidNotFound`
+  * `DuplicateCreate`
+  * `ExpiredToken`
+  * `FutureCursor`
+  * `HandleNotAvailable`
+  * `HandleNotFound`
+  * `HeadNotFound`
+  * `HostBanned`
+  * `HostNotFound`
+  * `IncompatibleDidDoc`
+  * `InvalidEmail`
+  * `InvalidInviteCode`
+  * `InvalidPasscode`
+  * `InvalidRequest`
+  * `InvalidSwap`
+  * `InvalidToken`
+  * `MethodNotImplemented`
+  * `RecordNotFound`
+  * `RepoDeactivated`
+  * `RepoNotFound`
+  * `RepoSuspended`
+  * `RepoTakenDown`
+  * `TokenRequired`
+  * `UnresolvableDid`
+  * `UnsupportedDomain`
+  * `XrpcNotSupported`
+* Added `MapError` property to `AtProtoHttpResult<TResult>` which is an `IList<Func<AtErrorDetail?, AtErrorDetail?>>`
+  to allow mapping for the generic `AtErrorDetail` type to a more specific derived error type.
+
+### idunno.Bluesky
+
+* Added `BlueskyHttpClient` which derives from `AtProtoHttpClient` and adds the Bluesky specified error mapping.
+* Added error classes for known error messages.
+  * `AccountSuspended`
+  * `ActorNotFound`
+  * `BadQueryString`
+  * `BlockedActor`
+  * `BlockedSubject`
+  * `ConversationLocked`
+  * `EnabledJoinLinkAlreadyExists`
+  * `FollowRequired`
+  * `InsufficientRole`
+  * `InvalidCode`
+  * `InvalidConversation`
+  * `LinkDisabled`
+  * `MemberLimitReached`
+  * `MessageDeleteNotAllowed`
+  * `MessagesDisabled`
+  * `NewAccountCannotCreateGroup`
+  * `NoJoinLink`
+  * `NotFollowedBySender`
+  * `OwnerCannotLeave`
+  * `ReactionInvalidValue`
+  * `ReactionLimitReached`
+  * `ReactionMessageDeleted`
+  * `ReactionNotAllowed`
+  * `RecipientNotFound`
+  * `UserForbidsGroups`
+  * `UserKicked`
+* Added `Embed.EmbeddedGallery` and `Embed.Gallery.GalleryImage` types to support the new [image gallery format](https://github.com/bluesky-social/atproto/pull/4827).
+  Note that `GalleryImage` requires an aspect ratio, unlike the `EmbeddedImage` type.
+* Added new overloads to `BlueskyAgent.Post` to support `EmbeddedGallery` content.
+  If you pass more than 4 `EmbeddedImage` items to `Post()`, it will attempt to convert them an `EmbeddedGallery`. Your `EmbeddedImage`
+  instances must have an aspect ratio for this to work, otherwise an exception will be thrown.
+  You can use [Magick.NET](https://github.com/dlemstra/Magick.NET), [ImageSharp](https://github.com/SixLabors/ImageSharp) or other image processing libraries to calculate the aspect ratio of your images if needed.
+* Added new overloads to `PostBuilder` to support `EmbeddedGallery` content.
+  If you use the `+` operator to add more than 4 `EmbeddedImage` items to a `PostBuilder`, it will attempt to convert them to `EmbeddedGallery` format. Your `EmbeddedImage`
+  instances must have an aspect ratio for this to work, otherwise an exception will be thrown.
+  You can use [Magick.NET](https://github.com/dlemstra/Magick.NET), [ImageSharp](https://github.com/SixLabors/ImageSharp) or other image processing libraries to calculate the aspect ratio of your images if needed.
+* Added support for group conversation APIs, including
+  * `AddMembersToGroup`
+  * `ApproveJoinGroupRequest`
+  * `CreateGroup`
+  * `CreateJoinGroupLink`
+  * `DisableJoinGroupLink`
+  * `EditGroup`
+  * `EditJoinGroupLink`
+  * `EnableJoinGroupLink`
+  * `GetJoinGroupLinkPreviews`
+  * `ListJoinGroupRequests`
+  * `ListMutualGroups`
+  * `RejectJoinGroupRequest`
+  * `RemoveGroupMembers`
+  * `RequestJoinGroup`
+  * `UpdateJoinGroupRequestsRead`
+  * `WithdrawJoinGroupRequest`
+* Added support for locking conversations with `LockConversation` and unlocking conversations with `UnlockConversation`.
+* Added Animated GIF support with `BlueskyAgent.UploadAnimatedGif()`
+* Expanded video support with a new overload to `BlueskyAgent.UploadVideo()` which accepts a MIME type parameter to allow for more video formats.
+* Added `GetStarterPacksWithMembership` to allow the authenticated user to search their starter packs and see which ones a specified actor is a member of.
+* Added `SearchPostsV2` to allow searching for posts with more advanced filtering options.
+
+## Fixed
+
+### idunno.AtProto
+
+* Added error handling inside `AtProtoAgent.ResolveHandle()` to swallow exceptions from DNS and HTTP lookup.
+  Errors are logged as Debug log messages and the method will return null if errors are encountered.
+
+### idunno.Bluesky
+
+* Added missing `Like` settings to `Notification.Preferences`.
+
+## Changed
+
+### idunno.AtProto.Types
+
+* Added comparison operators to `TimestampIdentifier` to allow for equality comparisons and sorting.
+
+### idunno.Bluesky
+
+* `GetUnreadConversationCounts` now has an optional `includeGroupChats` parameter, which defaults to `true`, to include or exclude group conversations in the unread counts.
+
+## Breaking Changes
+
+### idunno.Bluesky
+
+* Corrected case of `AllowSubscriptions` property on `ActivitySubscriptions`.
+* Changed `BlueskyAgent.GetRelationships()` to accept `AtIdentifier` instead of `Did` types for the `actor` and `others` parameters.
+  This allows for more flexibility in specifying the subject and actor, as they can now be provided as either a DID or a handle, and matches the API definition.
+* Changed return type of `BlueskyAgent.GetRelationships()` to `RelationshipMap`.
+* `MessageViewBase` has had its properties removed, and is now an empty class.
+  The `Id`, `Revision`, and `SentAt` properties have been moved to the derived classes `MessageView`, `DeletedMessageView` and `SystemMessageView`. This was
+  necessary to support the new `MessageBeforeUserJoinedGroupView` type, which does not have these properties.
+* `Notifications.PreferenceTypes.ChatPreference` has been marked obsolete.
+  Use `GetChatNotificationPreferences` and `SetChatNotificationPreferences` with `Chat.Notifications.Preferences` instead.
+* Marked `BlueskyAgent.UploadVideo()` without the MIME type parameter as obsolete, as it only supports MP4 video files. Use the new overload with the MIME type parameter instead.
+
+## 2.0.0 - 2026-06-02
+
+## Added
+
+### idunno.AtProto.Types
+
+* Moved the atproto `Blob` type from idunno.AtProto.
+* Added the atproto `CidLink` type.
+* Added the atproto `Bytes` type and associated JSON converter.
+
+### idunno.Bluesky
+
+* Added classes for Germ Network lexicon.
+* Added classes for Standard.Site lexicon.
+* Added `Labels` property to `StatusView` to represent labels associated with a status. See [[APP-1775] Hydrate labels for actor statuses](https://github.com/bluesky-social/atproto/pull/4555)
+* Added `OpenGraphEmbeddedCardGenerator` to generate embedded records from Open Graph metadata, and documented its use.
+* Added `StandardSiteEmbeddedCardGenerator` to generate embedded records from [standard.site](https://standard.site), and documented its use.
+
+## Changed
+
+### idunno.Bluesky
+
+* `BlueskyAgent.Post(Post post)` now extracts facets from the post text by default, as promised in documentation. You can use the `extractFacets` parameter to control this behavior.
+* Updated `EmbeddedExternalView` to support the new [Standard Site integration](https://github.com/bluesky-social/atproto/discussions/4978).
+* Updated `EmbeddedExternal` to support the new [Standard Site integration](https://github.com/bluesky-social/atproto/discussions/4978).
+* Updated `ProfileViewBasic` to add properties for [Germ integration](https://github.com/bluesky-social/atproto/pull/4415).
+* Updated `VerificationView` to add properties for [Fix app.bsky.actor.getProfile verifier data](https://github.com/bluesky-social/atproto/pull/5016)
+
+## Breaking Changes
+
+### idunno.AtProto
+
+* Moved `Blob` type to `idunno.AtProto.Types`.
+* Moved `BlobReference` type and renamed to `CidLink` in `idunno.AtProto.Types`.
+
+### idunno.Bluesky
+
+* Moved various external Embedded content classes to their own files and namespaces. This is a breaking change if you are using these classes directly, rather than through the utility methods on `BlueskyAgent`.
+* Removed previously marked obsolete `BlueskyAgent.SetLiveStatus` method. Update your code to use `BlueskyAgent.CreateLiveStatus` instead.
+* Removed previously marked obsolete `BlueskyAgent.SetStatus` method. Update your code to use `BlueskyAgent.CreateStatus` instead.
+* Removed previously marked obsolete `SelfLabelNames` class. Update your code to use `SelfLabelValues` instead.
+* `CreateLiveStatus` now requires a description.
+
+## 1.8.3 - 2026-05-16
+
+## Added
+
+### idunno.Bluesky
+
+* Added validation to `PostBuilder` to check its internal state before converting to a post.
+  You can call `IsValid()` to check if the `PostBuilder` is coherent and enumerate through `ValidationErrors()` to
+  see the errors that are present.
+* Added some more helpers to `PostBuilder`, including `Add` overloads for self labels,
+  `ContainsGraphicMedia`, `ContainsNudity`, `ContainsPorn` and `ContainsSexualContent` for setting individual self labels.
+* Added `.ReplyTo()` to `PostBuilder` for replying to a post or a thread.
+* Added `.Quote()` to `PostBuilder` for adding a quote of another post to the post content.
+* Added various `Add` overloads to `PostBuilder` for adding content to the post body, including hash tags, links and mentions.
+
+## Changed
+
+### idunno.Bluesky
+
+* Updated `PostBuilder` to allow for replies to quote other posts. Fixes [#343](https://github.com/blowdart/idunno.Bluesky/issues/343), thank you [OatmealDome](https://github.com/OatmealDome).
+
 ## 1.8.2 - 2026-05-11
 
 ## Added
