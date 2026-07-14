@@ -1,8 +1,10 @@
 #nullable enable
 idunno.AtProto.FireHose.AccountPayload
+idunno.AtProto.FireHose.AccountPayload.AccountPayload(idunno.AtProto.FireHose.AccountPayload! original) -> void
 idunno.AtProto.FireHose.AccountPayload.AccountPayload(long Seq, idunno.AtProto.Did! Did, System.DateTimeOffset Time, bool Active, string? Status) -> void
 idunno.AtProto.FireHose.AccountPayload.Active.get -> bool
 idunno.AtProto.FireHose.AccountPayload.Active.init -> void
+idunno.AtProto.FireHose.AccountPayload.Deconstruct(out long Seq, out idunno.AtProto.Did! Did, out System.DateTimeOffset Time, out bool Active, out string? Status) -> void
 idunno.AtProto.FireHose.AccountPayload.Did.get -> idunno.AtProto.Did!
 idunno.AtProto.FireHose.AccountPayload.Did.init -> void
 idunno.AtProto.FireHose.AccountPayload.Seq.get -> long
@@ -44,6 +46,7 @@ idunno.AtProto.FireHose.CommitPayload.Blobs.get -> System.Collections.Generic.IE
 idunno.AtProto.FireHose.CommitPayload.Blocks.get -> System.ReadOnlyMemory<byte>?
 idunno.AtProto.FireHose.CommitPayload.CarFile.get -> idunno.AtProto.FireHose.AtContentAddressableArchive?
 idunno.AtProto.FireHose.CommitPayload.Commit.get -> idunno.AtProto.Cid!
+idunno.AtProto.FireHose.CommitPayload.CommitPayload(idunno.AtProto.FireHose.CommitPayload! original) -> void
 idunno.AtProto.FireHose.CommitPayload.CommitPayload(long seq, bool rebase, bool tooBig, idunno.AtProto.Did! repo, idunno.AtProto.Cid! commit, idunno.AtProto.RecordKey? rev, idunno.AtProto.RecordKey? since, System.ReadOnlyMemory<byte>? blocks, System.Collections.Generic.IEnumerable<idunno.AtProto.FireHose.RepoOp!>! ops, System.Collections.Generic.IEnumerable<idunno.AtProto.Cid!>! blobs, idunno.AtProto.Cid? prevData, System.DateTimeOffset time) -> void
 idunno.AtProto.FireHose.CommitPayload.Ops.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.FireHose.RepoOp!>!
 idunno.AtProto.FireHose.CommitPayload.PrevData.get -> idunno.AtProto.Cid?
@@ -74,6 +77,8 @@ idunno.AtProto.FireHose.Events.RepoMessageReceivedEventArgs.RepoMessageReceivedE
 idunno.AtProto.FireHose.FireHoseOptions
 idunno.AtProto.FireHose.FireHoseOptions.BufferSize.get -> int
 idunno.AtProto.FireHose.FireHoseOptions.BufferSize.init -> void
+idunno.AtProto.FireHose.FireHoseOptions.FireHoseOptions() -> void
+idunno.AtProto.FireHose.FireHoseOptions.FireHoseOptions(idunno.AtProto.FireHose.FireHoseOptions! original) -> void
 idunno.AtProto.FireHose.FireHoseOptions.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory?
 idunno.AtProto.FireHose.FireHoseOptions.LoggerFactory.set -> void
 idunno.AtProto.FireHose.FireHoseOptions.MaxMessageSize.get -> int
@@ -83,24 +88,34 @@ idunno.AtProto.FireHose.FireHoseOptions.MeterFactory.set -> void
 idunno.AtProto.FireHose.FireHoseOptions.TaskFactory.get -> System.Threading.Tasks.TaskFactory!
 idunno.AtProto.FireHose.FireHoseOptions.TaskFactory.init -> void
 idunno.AtProto.FireHose.FrameBody<T>
+idunno.AtProto.FireHose.FrameBody<T>.Deconstruct(out T Value) -> void
+idunno.AtProto.FireHose.FrameBody<T>.FrameBody(idunno.AtProto.FireHose.FrameBody<T>! original) -> void
 idunno.AtProto.FireHose.FrameBody<T>.FrameBody(T Value) -> void
 idunno.AtProto.FireHose.FrameBody<T>.Value.get -> T
 idunno.AtProto.FireHose.FrameBody<T>.Value.init -> void
 idunno.AtProto.FireHose.FrameError
+idunno.AtProto.FireHose.FrameError.<Clone>$() -> idunno.AtProto.FireHose.FrameError!
+idunno.AtProto.FireHose.FrameError.Deconstruct(out string? Error, out string? Message) -> void
+idunno.AtProto.FireHose.FrameError.Equals(idunno.AtProto.FireHose.FrameError? other) -> bool
 idunno.AtProto.FireHose.FrameError.Error.get -> string?
 idunno.AtProto.FireHose.FrameError.Error.init -> void
 idunno.AtProto.FireHose.FrameError.FrameError(string? Error, string? Message) -> void
 idunno.AtProto.FireHose.FrameError.Message.get -> string?
 idunno.AtProto.FireHose.FrameError.Message.init -> void
 idunno.AtProto.FireHose.FrameHeader
+idunno.AtProto.FireHose.FrameHeader.<Clone>$() -> idunno.AtProto.FireHose.FrameHeader!
+idunno.AtProto.FireHose.FrameHeader.Equals(idunno.AtProto.FireHose.FrameHeader? other) -> bool
 idunno.AtProto.FireHose.FrameHeader.FrameHeader(PeterO.Cbor.CBORObject! cborObject) -> void
 idunno.AtProto.FireHose.FrameHeader.Operation.get -> idunno.AtProto.FireHose.HeaderOperation
 idunno.AtProto.FireHose.FrameHeader.Operation.init -> void
 idunno.AtProto.FireHose.FrameHeader.Type.get -> string?
 idunno.AtProto.FireHose.FrameHeader.Type.init -> void
 idunno.AtProto.FireHose.HandlePayload
+idunno.AtProto.FireHose.HandlePayload.<Clone>$() -> idunno.AtProto.FireHose.HandlePayload!
+idunno.AtProto.FireHose.HandlePayload.Deconstruct(out idunno.AtProto.Did? Did, out long Seq, out idunno.AtProto.Handle? Handle, out System.DateTimeOffset Time) -> void
 idunno.AtProto.FireHose.HandlePayload.Did.get -> idunno.AtProto.Did?
 idunno.AtProto.FireHose.HandlePayload.Did.init -> void
+idunno.AtProto.FireHose.HandlePayload.Equals(idunno.AtProto.FireHose.HandlePayload? other) -> bool
 idunno.AtProto.FireHose.HandlePayload.Handle.get -> idunno.AtProto.Handle?
 idunno.AtProto.FireHose.HandlePayload.Handle.init -> void
 idunno.AtProto.FireHose.HandlePayload.HandlePayload(idunno.AtProto.Did? Did, long Seq, idunno.AtProto.Handle? Handle, System.DateTimeOffset Time) -> void
@@ -115,10 +130,12 @@ idunno.AtProto.FireHose.HeaderOperation.Unknown = 0 -> idunno.AtProto.FireHose.H
 idunno.AtProto.FireHose.ICborConvertor<T>
 idunno.AtProto.FireHose.ICborConvertor<T>.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> T!
 idunno.AtProto.FireHose.IdentityPayload
+idunno.AtProto.FireHose.IdentityPayload.Deconstruct(out long Seq, out idunno.AtProto.Did! Did, out System.DateTimeOffset Time, out idunno.AtProto.Handle? Handle) -> void
 idunno.AtProto.FireHose.IdentityPayload.Did.get -> idunno.AtProto.Did!
 idunno.AtProto.FireHose.IdentityPayload.Did.init -> void
 idunno.AtProto.FireHose.IdentityPayload.Handle.get -> idunno.AtProto.Handle?
 idunno.AtProto.FireHose.IdentityPayload.Handle.init -> void
+idunno.AtProto.FireHose.IdentityPayload.IdentityPayload(idunno.AtProto.FireHose.IdentityPayload! original) -> void
 idunno.AtProto.FireHose.IdentityPayload.IdentityPayload(long Seq, idunno.AtProto.Did! Did, System.DateTimeOffset Time, idunno.AtProto.Handle? Handle) -> void
 idunno.AtProto.FireHose.IdentityPayload.Seq.get -> long
 idunno.AtProto.FireHose.IdentityPayload.Seq.init -> void
@@ -126,15 +143,19 @@ idunno.AtProto.FireHose.IdentityPayload.Time.get -> System.DateTimeOffset
 idunno.AtProto.FireHose.IdentityPayload.Time.init -> void
 idunno.AtProto.FireHose.IFramePayload
 idunno.AtProto.FireHose.InfoPayload
+idunno.AtProto.FireHose.InfoPayload.Deconstruct(out string! Name, out string? Message) -> void
+idunno.AtProto.FireHose.InfoPayload.InfoPayload(idunno.AtProto.FireHose.InfoPayload! original) -> void
 idunno.AtProto.FireHose.InfoPayload.InfoPayload(string! Name, string? Message) -> void
 idunno.AtProto.FireHose.InfoPayload.Message.get -> string?
 idunno.AtProto.FireHose.InfoPayload.Message.init -> void
 idunno.AtProto.FireHose.InfoPayload.Name.get -> string!
 idunno.AtProto.FireHose.InfoPayload.Name.init -> void
 idunno.AtProto.FireHose.MigratePayload
+idunno.AtProto.FireHose.MigratePayload.Deconstruct(out idunno.AtProto.Did? Did, out long Seq, out string? MigrateTo, out System.DateTimeOffset Time) -> void
 idunno.AtProto.FireHose.MigratePayload.Did.get -> idunno.AtProto.Did?
 idunno.AtProto.FireHose.MigratePayload.Did.init -> void
 idunno.AtProto.FireHose.MigratePayload.MigratePayload(idunno.AtProto.Did? Did, long Seq, string? MigrateTo, System.DateTimeOffset Time) -> void
+idunno.AtProto.FireHose.MigratePayload.MigratePayload(idunno.AtProto.FireHose.MigratePayload! original) -> void
 idunno.AtProto.FireHose.MigratePayload.MigrateTo.get -> string?
 idunno.AtProto.FireHose.MigratePayload.MigrateTo.init -> void
 idunno.AtProto.FireHose.MigratePayload.Seq.get -> long
@@ -142,19 +163,24 @@ idunno.AtProto.FireHose.MigratePayload.Seq.init -> void
 idunno.AtProto.FireHose.MigratePayload.Time.get -> System.DateTimeOffset
 idunno.AtProto.FireHose.MigratePayload.Time.init -> void
 idunno.AtProto.FireHose.RepoOp
+idunno.AtProto.FireHose.RepoOp.<Clone>$() -> idunno.AtProto.FireHose.RepoOp!
 idunno.AtProto.FireHose.RepoOp.Action.get -> string?
 idunno.AtProto.FireHose.RepoOp.Cid.get -> idunno.AtProto.Cid?
+idunno.AtProto.FireHose.RepoOp.Equals(idunno.AtProto.FireHose.RepoOp? other) -> bool
 idunno.AtProto.FireHose.RepoOp.Path.get -> string?
 idunno.AtProto.FireHose.RepoOp.Prev.get -> idunno.AtProto.Cid?
 idunno.AtProto.FireHose.RepoOp.RepoOp(idunno.AtProto.Cid? cid, string! path, string! action, idunno.AtProto.Cid? prev) -> void
 idunno.AtProto.FireHose.SyncPayload
+idunno.AtProto.FireHose.SyncPayload.<Clone>$() -> idunno.AtProto.FireHose.SyncPayload!
 idunno.AtProto.FireHose.SyncPayload.Blocks.get -> System.ReadOnlyMemory<byte>?
 idunno.AtProto.FireHose.SyncPayload.Did.get -> idunno.AtProto.Did!
+idunno.AtProto.FireHose.SyncPayload.Equals(idunno.AtProto.FireHose.SyncPayload? other) -> bool
 idunno.AtProto.FireHose.SyncPayload.Rev.get -> string!
 idunno.AtProto.FireHose.SyncPayload.Seq.get -> long
 idunno.AtProto.FireHose.SyncPayload.SyncPayload(long seq, idunno.AtProto.Did! did, System.ReadOnlyMemory<byte>? blocks, string! rev, System.DateTimeOffset time) -> void
 idunno.AtProto.FireHose.SyncPayload.Time.get -> System.DateTimeOffset
 idunno.AtProto.FireHose.TombstonePayload
+idunno.AtProto.FireHose.TombstonePayload.Deconstruct(out idunno.AtProto.Did! Did, out long Seq, out System.DateTimeOffset Time) -> void
 idunno.AtProto.FireHose.TombstonePayload.Did.get -> idunno.AtProto.Did!
 idunno.AtProto.FireHose.TombstonePayload.Did.init -> void
 idunno.AtProto.FireHose.TombstonePayload.Seq.get -> long
@@ -162,25 +188,133 @@ idunno.AtProto.FireHose.TombstonePayload.Seq.init -> void
 idunno.AtProto.FireHose.TombstonePayload.Time.get -> System.DateTimeOffset
 idunno.AtProto.FireHose.TombstonePayload.Time.init -> void
 idunno.AtProto.FireHose.TombstonePayload.TombstonePayload(idunno.AtProto.Did! Did, long Seq, System.DateTimeOffset Time) -> void
+idunno.AtProto.FireHose.TombstonePayload.TombstonePayload(idunno.AtProto.FireHose.TombstonePayload! original) -> void
 idunno.AtProto.FireHose.UnknownPayload
 idunno.AtProto.FireHose.UnknownPayload.RawMessage.get -> System.Collections.Generic.IReadOnlyList<byte>!
 idunno.AtProto.FireHose.UnknownPayload.UnknownPayload(byte[]! rawMessage) -> void
+idunno.AtProto.FireHose.UnknownPayload.UnknownPayload(idunno.AtProto.FireHose.UnknownPayload! original) -> void
+override idunno.AtProto.FireHose.AccountPayload.Equals(object? obj) -> bool
+override idunno.AtProto.FireHose.AccountPayload.GetHashCode() -> int
+override idunno.AtProto.FireHose.AccountPayload.ToString() -> string!
+override idunno.AtProto.FireHose.CommitPayload.Equals(object? obj) -> bool
+override idunno.AtProto.FireHose.CommitPayload.GetHashCode() -> int
+override idunno.AtProto.FireHose.CommitPayload.ToString() -> string!
+override idunno.AtProto.FireHose.FireHoseOptions.Equals(object? obj) -> bool
+override idunno.AtProto.FireHose.FireHoseOptions.GetHashCode() -> int
+override idunno.AtProto.FireHose.FireHoseOptions.ToString() -> string!
+override idunno.AtProto.FireHose.FrameBody<T>.Equals(object? obj) -> bool
+override idunno.AtProto.FireHose.FrameBody<T>.GetHashCode() -> int
+override idunno.AtProto.FireHose.FrameBody<T>.ToString() -> string!
+override idunno.AtProto.FireHose.FrameError.Equals(object? obj) -> bool
+override idunno.AtProto.FireHose.FrameError.GetHashCode() -> int
+override idunno.AtProto.FireHose.FrameError.ToString() -> string!
+override idunno.AtProto.FireHose.FrameHeader.Equals(object? obj) -> bool
+override idunno.AtProto.FireHose.FrameHeader.GetHashCode() -> int
+override idunno.AtProto.FireHose.FrameHeader.ToString() -> string!
+override idunno.AtProto.FireHose.HandlePayload.Equals(object? obj) -> bool
+override idunno.AtProto.FireHose.HandlePayload.GetHashCode() -> int
+override idunno.AtProto.FireHose.HandlePayload.ToString() -> string!
+override idunno.AtProto.FireHose.IdentityPayload.Equals(object? obj) -> bool
+override idunno.AtProto.FireHose.IdentityPayload.GetHashCode() -> int
+override idunno.AtProto.FireHose.IdentityPayload.ToString() -> string!
+override idunno.AtProto.FireHose.InfoPayload.Equals(object? obj) -> bool
+override idunno.AtProto.FireHose.InfoPayload.GetHashCode() -> int
+override idunno.AtProto.FireHose.InfoPayload.ToString() -> string!
+override idunno.AtProto.FireHose.MigratePayload.Equals(object? obj) -> bool
+override idunno.AtProto.FireHose.MigratePayload.GetHashCode() -> int
+override idunno.AtProto.FireHose.MigratePayload.ToString() -> string!
+override idunno.AtProto.FireHose.RepoOp.Equals(object? obj) -> bool
+override idunno.AtProto.FireHose.RepoOp.GetHashCode() -> int
+override idunno.AtProto.FireHose.RepoOp.ToString() -> string!
+override idunno.AtProto.FireHose.SyncPayload.Equals(object? obj) -> bool
+override idunno.AtProto.FireHose.SyncPayload.GetHashCode() -> int
+override idunno.AtProto.FireHose.SyncPayload.ToString() -> string!
+override idunno.AtProto.FireHose.TombstonePayload.Equals(object? obj) -> bool
+override idunno.AtProto.FireHose.TombstonePayload.GetHashCode() -> int
+override idunno.AtProto.FireHose.TombstonePayload.ToString() -> string!
+override idunno.AtProto.FireHose.UnknownPayload.Equals(object? obj) -> bool
+override idunno.AtProto.FireHose.UnknownPayload.GetHashCode() -> int
+override idunno.AtProto.FireHose.UnknownPayload.ToString() -> string!
 static idunno.AtProto.FireHose.AccountPayload.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.AccountPayload!
+static idunno.AtProto.FireHose.AccountPayload.operator !=(idunno.AtProto.FireHose.AccountPayload? left, idunno.AtProto.FireHose.AccountPayload? right) -> bool
+static idunno.AtProto.FireHose.AccountPayload.operator ==(idunno.AtProto.FireHose.AccountPayload? left, idunno.AtProto.FireHose.AccountPayload? right) -> bool
 static idunno.AtProto.FireHose.AtContentAddressableArchive.DecodeAsync(System.ReadOnlyMemory<byte> rawData, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.FireHose.AtContentAddressableArchive?>!
 static idunno.AtProto.FireHose.CborObjectExtensions.ToCid(this PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.Cid?
 static idunno.AtProto.FireHose.CborObjectExtensions.ToDateTimeOffset(this PeterO.Cbor.CBORObject! cborObject) -> System.DateTimeOffset
 static idunno.AtProto.FireHose.CborObjectExtensions.ToRecordKey(this PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.RecordKey?
 static idunno.AtProto.FireHose.CommitPayload.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.CommitPayload!
+static idunno.AtProto.FireHose.CommitPayload.operator !=(idunno.AtProto.FireHose.CommitPayload? left, idunno.AtProto.FireHose.CommitPayload? right) -> bool
+static idunno.AtProto.FireHose.CommitPayload.operator ==(idunno.AtProto.FireHose.CommitPayload? left, idunno.AtProto.FireHose.CommitPayload? right) -> bool
+static idunno.AtProto.FireHose.FireHoseOptions.operator !=(idunno.AtProto.FireHose.FireHoseOptions? left, idunno.AtProto.FireHose.FireHoseOptions? right) -> bool
+static idunno.AtProto.FireHose.FireHoseOptions.operator ==(idunno.AtProto.FireHose.FireHoseOptions? left, idunno.AtProto.FireHose.FireHoseOptions? right) -> bool
+static idunno.AtProto.FireHose.FrameBody<T>.operator !=(idunno.AtProto.FireHose.FrameBody<T>? left, idunno.AtProto.FireHose.FrameBody<T>? right) -> bool
+static idunno.AtProto.FireHose.FrameBody<T>.operator ==(idunno.AtProto.FireHose.FrameBody<T>? left, idunno.AtProto.FireHose.FrameBody<T>? right) -> bool
 static idunno.AtProto.FireHose.FrameError.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.FrameError!
+static idunno.AtProto.FireHose.FrameError.operator !=(idunno.AtProto.FireHose.FrameError? left, idunno.AtProto.FireHose.FrameError? right) -> bool
+static idunno.AtProto.FireHose.FrameError.operator ==(idunno.AtProto.FireHose.FrameError? left, idunno.AtProto.FireHose.FrameError? right) -> bool
+static idunno.AtProto.FireHose.FrameHeader.operator !=(idunno.AtProto.FireHose.FrameHeader? left, idunno.AtProto.FireHose.FrameHeader? right) -> bool
+static idunno.AtProto.FireHose.FrameHeader.operator ==(idunno.AtProto.FireHose.FrameHeader? left, idunno.AtProto.FireHose.FrameHeader? right) -> bool
 static idunno.AtProto.FireHose.HandlePayload.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.HandlePayload!
+static idunno.AtProto.FireHose.HandlePayload.operator !=(idunno.AtProto.FireHose.HandlePayload? left, idunno.AtProto.FireHose.HandlePayload? right) -> bool
+static idunno.AtProto.FireHose.HandlePayload.operator ==(idunno.AtProto.FireHose.HandlePayload? left, idunno.AtProto.FireHose.HandlePayload? right) -> bool
 static idunno.AtProto.FireHose.IdentityPayload.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.IdentityPayload!
+static idunno.AtProto.FireHose.IdentityPayload.operator !=(idunno.AtProto.FireHose.IdentityPayload? left, idunno.AtProto.FireHose.IdentityPayload? right) -> bool
+static idunno.AtProto.FireHose.IdentityPayload.operator ==(idunno.AtProto.FireHose.IdentityPayload? left, idunno.AtProto.FireHose.IdentityPayload? right) -> bool
 static idunno.AtProto.FireHose.InfoPayload.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.InfoPayload!
+static idunno.AtProto.FireHose.InfoPayload.operator !=(idunno.AtProto.FireHose.InfoPayload? left, idunno.AtProto.FireHose.InfoPayload? right) -> bool
+static idunno.AtProto.FireHose.InfoPayload.operator ==(idunno.AtProto.FireHose.InfoPayload? left, idunno.AtProto.FireHose.InfoPayload? right) -> bool
 static idunno.AtProto.FireHose.MigratePayload.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.MigratePayload!
+static idunno.AtProto.FireHose.MigratePayload.operator !=(idunno.AtProto.FireHose.MigratePayload? left, idunno.AtProto.FireHose.MigratePayload? right) -> bool
+static idunno.AtProto.FireHose.MigratePayload.operator ==(idunno.AtProto.FireHose.MigratePayload? left, idunno.AtProto.FireHose.MigratePayload? right) -> bool
 static idunno.AtProto.FireHose.RepoOp.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.RepoOp!
+static idunno.AtProto.FireHose.RepoOp.operator !=(idunno.AtProto.FireHose.RepoOp? left, idunno.AtProto.FireHose.RepoOp? right) -> bool
+static idunno.AtProto.FireHose.RepoOp.operator ==(idunno.AtProto.FireHose.RepoOp? left, idunno.AtProto.FireHose.RepoOp? right) -> bool
 static idunno.AtProto.FireHose.SyncPayload.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.SyncPayload!
+static idunno.AtProto.FireHose.SyncPayload.operator !=(idunno.AtProto.FireHose.SyncPayload? left, idunno.AtProto.FireHose.SyncPayload? right) -> bool
+static idunno.AtProto.FireHose.SyncPayload.operator ==(idunno.AtProto.FireHose.SyncPayload? left, idunno.AtProto.FireHose.SyncPayload? right) -> bool
 static idunno.AtProto.FireHose.TombstonePayload.FromCBORObject(PeterO.Cbor.CBORObject! cborObject) -> idunno.AtProto.FireHose.TombstonePayload!
+static idunno.AtProto.FireHose.TombstonePayload.operator !=(idunno.AtProto.FireHose.TombstonePayload? left, idunno.AtProto.FireHose.TombstonePayload? right) -> bool
+static idunno.AtProto.FireHose.TombstonePayload.operator ==(idunno.AtProto.FireHose.TombstonePayload? left, idunno.AtProto.FireHose.TombstonePayload? right) -> bool
+static idunno.AtProto.FireHose.UnknownPayload.operator !=(idunno.AtProto.FireHose.UnknownPayload? left, idunno.AtProto.FireHose.UnknownPayload? right) -> bool
+static idunno.AtProto.FireHose.UnknownPayload.operator ==(idunno.AtProto.FireHose.UnknownPayload? left, idunno.AtProto.FireHose.UnknownPayload? right) -> bool
+virtual idunno.AtProto.FireHose.AccountPayload.<Clone>$() -> idunno.AtProto.FireHose.AccountPayload!
+virtual idunno.AtProto.FireHose.AccountPayload.EqualityContract.get -> System.Type!
+virtual idunno.AtProto.FireHose.AccountPayload.Equals(idunno.AtProto.FireHose.AccountPayload? other) -> bool
+virtual idunno.AtProto.FireHose.AccountPayload.PrintMembers(System.Text.StringBuilder! builder) -> bool
 virtual idunno.AtProto.FireHose.AtProtoFireHose.Dispose(bool disposing) -> void
 virtual idunno.AtProto.FireHose.AtProtoFireHose.OnConnectionStateChanged(idunno.AtProto.FireHose.Events.ConnectionStateChangedEventArgs! e) -> void
 virtual idunno.AtProto.FireHose.AtProtoFireHose.OnFaultRaised(idunno.AtProto.FireHose.Events.FaultRaisedEventArgs! e) -> void
 virtual idunno.AtProto.FireHose.AtProtoFireHose.OnMessageReceived(idunno.AtProto.FireHose.Events.MessageReceivedEventArgs! e) -> void
 virtual idunno.AtProto.FireHose.AtProtoFireHose.OnRepoMessageReceived(idunno.AtProto.FireHose.Events.RepoMessageReceivedEventArgs! e) -> void
+virtual idunno.AtProto.FireHose.CommitPayload.<Clone>$() -> idunno.AtProto.FireHose.CommitPayload!
+virtual idunno.AtProto.FireHose.CommitPayload.EqualityContract.get -> System.Type!
+virtual idunno.AtProto.FireHose.CommitPayload.Equals(idunno.AtProto.FireHose.CommitPayload? other) -> bool
+virtual idunno.AtProto.FireHose.CommitPayload.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual idunno.AtProto.FireHose.FireHoseOptions.<Clone>$() -> idunno.AtProto.FireHose.FireHoseOptions!
+virtual idunno.AtProto.FireHose.FireHoseOptions.EqualityContract.get -> System.Type!
+virtual idunno.AtProto.FireHose.FireHoseOptions.Equals(idunno.AtProto.FireHose.FireHoseOptions? other) -> bool
+virtual idunno.AtProto.FireHose.FireHoseOptions.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual idunno.AtProto.FireHose.FrameBody<T>.<Clone>$() -> idunno.AtProto.FireHose.FrameBody<T>!
+virtual idunno.AtProto.FireHose.FrameBody<T>.EqualityContract.get -> System.Type!
+virtual idunno.AtProto.FireHose.FrameBody<T>.Equals(idunno.AtProto.FireHose.FrameBody<T>? other) -> bool
+virtual idunno.AtProto.FireHose.FrameBody<T>.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual idunno.AtProto.FireHose.IdentityPayload.<Clone>$() -> idunno.AtProto.FireHose.IdentityPayload!
+virtual idunno.AtProto.FireHose.IdentityPayload.EqualityContract.get -> System.Type!
+virtual idunno.AtProto.FireHose.IdentityPayload.Equals(idunno.AtProto.FireHose.IdentityPayload? other) -> bool
+virtual idunno.AtProto.FireHose.IdentityPayload.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual idunno.AtProto.FireHose.InfoPayload.<Clone>$() -> idunno.AtProto.FireHose.InfoPayload!
+virtual idunno.AtProto.FireHose.InfoPayload.EqualityContract.get -> System.Type!
+virtual idunno.AtProto.FireHose.InfoPayload.Equals(idunno.AtProto.FireHose.InfoPayload? other) -> bool
+virtual idunno.AtProto.FireHose.InfoPayload.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual idunno.AtProto.FireHose.MigratePayload.<Clone>$() -> idunno.AtProto.FireHose.MigratePayload!
+virtual idunno.AtProto.FireHose.MigratePayload.EqualityContract.get -> System.Type!
+virtual idunno.AtProto.FireHose.MigratePayload.Equals(idunno.AtProto.FireHose.MigratePayload? other) -> bool
+virtual idunno.AtProto.FireHose.MigratePayload.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual idunno.AtProto.FireHose.TombstonePayload.<Clone>$() -> idunno.AtProto.FireHose.TombstonePayload!
+virtual idunno.AtProto.FireHose.TombstonePayload.EqualityContract.get -> System.Type!
+virtual idunno.AtProto.FireHose.TombstonePayload.Equals(idunno.AtProto.FireHose.TombstonePayload? other) -> bool
+virtual idunno.AtProto.FireHose.TombstonePayload.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual idunno.AtProto.FireHose.UnknownPayload.<Clone>$() -> idunno.AtProto.FireHose.UnknownPayload!
+virtual idunno.AtProto.FireHose.UnknownPayload.EqualityContract.get -> System.Type!
+virtual idunno.AtProto.FireHose.UnknownPayload.Equals(idunno.AtProto.FireHose.UnknownPayload? other) -> bool
+virtual idunno.AtProto.FireHose.UnknownPayload.PrintMembers(System.Text.StringBuilder! builder) -> bool
