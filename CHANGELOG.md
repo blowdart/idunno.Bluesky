@@ -2,9 +2,9 @@
 
 ## 3.0.0 - 2026-07-11
 
-## Added
+### Added
 
-### idunno.AtProto
+#### idunno.AtProto
 
 * Added error classes for known error messages.
   * `AccountNotFound`
@@ -45,7 +45,7 @@
 * Added `MapError` property to `AtProtoHttpResult<TResult>` which is an `IList<Func<AtErrorDetail?, AtErrorDetail?>>`
   to allow mapping for the generic `AtErrorDetail` type to a more specific derived error type.
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * Added `BlueskyHttpClient` which derives from `AtProtoHttpClient` and adds the Bluesky specified error mapping.
 * Added error classes for known error messages.
@@ -108,30 +108,30 @@
 * Added `GetStarterPacksWithMembership` to allow the authenticated user to search their starter packs and see which ones a specified actor is a member of.
 * Added `SearchPostsV2` to allow searching for posts with more advanced filtering options.
 
-## Fixed
+### Fixed
 
-### idunno.AtProto
+#### idunno.AtProto
 
 * Added error handling inside `AtProtoAgent.ResolveHandle()` to swallow exceptions from DNS and HTTP lookup.
   Errors are logged as Debug log messages and the method will return null if errors are encountered.
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * Added missing `Like` settings to `Notification.Preferences`.
 
-## Changed
+### Changed
 
-### idunno.AtProto.Types
+#### idunno.AtProto.Types
 
 * Added comparison operators to `TimestampIdentifier` to allow for equality comparisons and sorting.
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * `GetUnreadConversationCounts` now has an optional `includeGroupChats` parameter, which defaults to `true`, to include or exclude group conversations in the unread counts.
 
 ## Breaking Changes
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * Corrected case of `AllowSubscriptions` property on `ActivitySubscriptions`.
 * Changed `BlueskyAgent.GetRelationships()` to accept `AtIdentifier` instead of `Did` types for the `actor` and `others` parameters.
@@ -146,15 +146,15 @@
 
 ## 2.0.0 - 2026-06-02
 
-## Added
+### Added
 
-### idunno.AtProto.Types
+#### idunno.AtProto.Types
 
 * Moved the atproto `Blob` type from idunno.AtProto.
 * Added the atproto `CidLink` type.
 * Added the atproto `Bytes` type and associated JSON converter.
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * Added classes for Germ Network lexicon.
 * Added classes for Standard.Site lexicon.
@@ -162,9 +162,9 @@
 * Added `OpenGraphEmbeddedCardGenerator` to generate embedded records from Open Graph metadata, and documented its use.
 * Added `StandardSiteEmbeddedCardGenerator` to generate embedded records from [standard.site](https://standard.site), and documented its use.
 
-## Changed
+### Changed
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * `BlueskyAgent.Post(Post post)` now extracts facets from the post text by default, as promised in documentation. You can use the `extractFacets` parameter to control this behavior.
 * Updated `EmbeddedExternalView` to support the new [Standard Site integration](https://github.com/bluesky-social/atproto/discussions/4978).
@@ -172,14 +172,14 @@
 * Updated `ProfileViewBasic` to add properties for [Germ integration](https://github.com/bluesky-social/atproto/pull/4415).
 * Updated `VerificationView` to add properties for [Fix app.bsky.actor.getProfile verifier data](https://github.com/bluesky-social/atproto/pull/5016)
 
-## Breaking Changes
+### Breaking Changes
 
-### idunno.AtProto
+#### idunno.AtProto
 
 * Moved `Blob` type to `idunno.AtProto.Types`.
 * Moved `BlobReference` type and renamed to `CidLink` in `idunno.AtProto.Types`.
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * Moved various external Embedded content classes to their own files and namespaces. This is a breaking change if you are using these classes directly, rather than through the utility methods on `BlueskyAgent`.
 * Removed previously marked obsolete `BlueskyAgent.SetLiveStatus` method. Update your code to use `BlueskyAgent.CreateLiveStatus` instead.
@@ -189,9 +189,9 @@
 
 ## 1.8.3 - 2026-05-16
 
-## Added
+### Added
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * Added validation to `PostBuilder` to check its internal state before converting to a post.
   You can call `IsValid()` to check if the `PostBuilder` is coherent and enumerate through `ValidationErrors()` to
@@ -202,23 +202,23 @@
 * Added `.Quote()` to `PostBuilder` for adding a quote of another post to the post content.
 * Added various `Add` overloads to `PostBuilder` for adding content to the post body, including hash tags, links and mentions.
 
-## Changed
+### Changed
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * Updated `PostBuilder` to allow for replies to quote other posts. Fixes [#343](https://github.com/blowdart/idunno.Bluesky/issues/343), thank you [OatmealDome](https://github.com/OatmealDome).
 
 ## 1.8.2 - 2026-05-11
 
-## Added
+### Added
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * Added support for `GetListsWithMembership()`, which enumerates the lists created by the authenticated user, and includes membership information about the specified actor in those lists.
 
-## Changed
+### Changed
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * Updated `EmbeddedExternal` to include option `AssociatedRecord` property. See [Add associatedRecord to external embed record](https://github.com/bluesky-social/atproto/pull/4915)
 
