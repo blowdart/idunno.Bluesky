@@ -1,5 +1,13 @@
 # Version History
 
+## 3.1.0 - **Unreleased**
+
+### Added
+
+#### idunno.Bluesky
+
+* Added support for the new `SearchStarterPacksV2` API endpoint.
+
 ## 3.0.0 - 2026-07-11
 
 ### Added

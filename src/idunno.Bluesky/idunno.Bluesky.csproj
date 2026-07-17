@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <None Include="..\..\exclusion.dic" Link="exclusion.dic" />
+    <None Include="Graph\Server\SearchStarterPacksV2.cs" />
   </ItemGroup>
 
   <!-- Nuget package properties -->
