@@ -3,6 +3,6 @@
 
 namespace idunno.Bluesky.Unspecced.Model;
 
-internal sealed record GetTrendingTopicsResponse(ICollection<TrendingTopic> Topics, ICollection<TrendingTopic> Suggested)
+internal sealed record GetTrendingTopicsResponse(IReadOnlyCollection<TrendingTopic> Topics, IReadOnlyCollection<TrendingTopic> Suggested)
 {
 }

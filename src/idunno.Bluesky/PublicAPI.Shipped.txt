@@ -2812,19 +2812,21 @@ idunno.Bluesky.Unspecced.TrendingTopic.Topic.init -> void
 idunno.Bluesky.Unspecced.TrendingTopic.TrendingTopic(string! Topic, string! DisplayName, string! Description, string! Link) -> void
 idunno.Bluesky.Unspecced.TrendingTopics
 idunno.Bluesky.Unspecced.TrendingTopics.<Clone>$() -> idunno.Bluesky.Unspecced.TrendingTopics!
-idunno.Bluesky.Unspecced.TrendingTopics.Deconstruct(out System.Collections.Generic.ICollection<idunno.Bluesky.Unspecced.TrendingTopic!>! Topics, out System.Collections.Generic.ICollection<idunno.Bluesky.Unspecced.TrendingTopic!>! Suggested) -> void
+idunno.Bluesky.Unspecced.TrendingTopics.Deconstruct(out System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Unspecced.TrendingTopic!>! Topics, out System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Unspecced.TrendingTopic!>! Suggested) -> void
 idunno.Bluesky.Unspecced.TrendingTopics.Equals(idunno.Bluesky.Unspecced.TrendingTopics? other) -> bool
-idunno.Bluesky.Unspecced.TrendingTopics.Suggested.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Unspecced.TrendingTopic!>!
+idunno.Bluesky.Unspecced.TrendingTopics.Suggested.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Unspecced.TrendingTopic!>!
 idunno.Bluesky.Unspecced.TrendingTopics.Suggested.init -> void
-idunno.Bluesky.Unspecced.TrendingTopics.Topics.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Unspecced.TrendingTopic!>!
+idunno.Bluesky.Unspecced.TrendingTopics.Topics.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Unspecced.TrendingTopic!>!
 idunno.Bluesky.Unspecced.TrendingTopics.Topics.init -> void
-idunno.Bluesky.Unspecced.TrendingTopics.TrendingTopics(System.Collections.Generic.ICollection<idunno.Bluesky.Unspecced.TrendingTopic!>! Topics, System.Collections.Generic.ICollection<idunno.Bluesky.Unspecced.TrendingTopic!>! Suggested) -> void
+idunno.Bluesky.Unspecced.TrendingTopics.TrendingTopics(System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Unspecced.TrendingTopic!>! Topics, System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Unspecced.TrendingTopic!>! Suggested) -> void
 idunno.Bluesky.Unspecced.TrendView
-idunno.Bluesky.Unspecced.TrendView.Actors.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Actor.ProfileViewBasic!>!
+idunno.Bluesky.Unspecced.TrendView.Actors.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Actor.ProfileViewBasic!>!
 idunno.Bluesky.Unspecced.TrendView.Actors.init -> void
-idunno.Bluesky.Unspecced.TrendView.Category.get -> string!
+idunno.Bluesky.Unspecced.TrendView.Category.get -> string?
 idunno.Bluesky.Unspecced.TrendView.Category.init -> void
-idunno.Bluesky.Unspecced.TrendView.Deconstruct(out string! Topic, out string! DisplayName, out string! Link, out System.DateTimeOffset StartedAt, out int PostCount, out string? Status, out string! Category, out System.Collections.Generic.ICollection<idunno.Bluesky.Actor.ProfileViewBasic!>! Actors) -> void
+idunno.Bluesky.Unspecced.TrendView.Deconstruct(out string! Topic, out string! DisplayName, out string! Link, out System.DateTimeOffset StartedAt, out int PostCount, out string? Status, out string? Category, out System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Actor.ProfileViewBasic!>! Actors, out string? Description) -> void
+idunno.Bluesky.Unspecced.TrendView.Description.get -> string?
+idunno.Bluesky.Unspecced.TrendView.Description.init -> void
 idunno.Bluesky.Unspecced.TrendView.DisplayName.get -> string!
 idunno.Bluesky.Unspecced.TrendView.DisplayName.init -> void
 idunno.Bluesky.Unspecced.TrendView.Equals(idunno.Bluesky.Unspecced.TrendView? other) -> bool
@@ -2838,7 +2840,7 @@ idunno.Bluesky.Unspecced.TrendView.Status.get -> string?
 idunno.Bluesky.Unspecced.TrendView.Status.init -> void
 idunno.Bluesky.Unspecced.TrendView.Topic.get -> string!
 idunno.Bluesky.Unspecced.TrendView.Topic.init -> void
-idunno.Bluesky.Unspecced.TrendView.TrendView(string! Topic, string! DisplayName, string! Link, System.DateTimeOffset StartedAt, int PostCount, string? Status, string! Category, System.Collections.Generic.ICollection<idunno.Bluesky.Actor.ProfileViewBasic!>! Actors) -> void
+idunno.Bluesky.Unspecced.TrendView.TrendView(string! Topic, string! DisplayName, string! Link, System.DateTimeOffset StartedAt, int PostCount, string? Status, string? Category, System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Actor.ProfileViewBasic!>! Actors, string? Description) -> void
 idunno.Bluesky.UserForbidsGroups
 idunno.Bluesky.UserForbidsGroups.UserForbidsGroups(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
 idunno.Bluesky.UserKicked

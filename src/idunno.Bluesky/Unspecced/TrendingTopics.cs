@@ -11,12 +11,12 @@ namespace idunno.Bluesky.Unspecced;
 /// <param name="Topics">A collection of trending topics.</param>
 /// <param name="Suggested">A collection of suggested feeds.</param>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Documentation", "CSENSE020:Potential ghost parameter reference in documentation", Justification = "Not a ghost reference at the end of summary.")]
-public sealed record TrendingTopics(ICollection<TrendingTopic> Topics, ICollection<TrendingTopic> Suggested)
+public sealed record TrendingTopics(IReadOnlyCollection<TrendingTopic> Topics, IReadOnlyCollection<TrendingTopic> Suggested)
 {
     internal TrendingTopics(GetTrendingTopicsResponse getTrendingTopicsResponse)
         : this(
-            getTrendingTopicsResponse is not null ? getTrendingTopicsResponse.Topics : throw new ArgumentNullException(nameof(getTrendingTopicsResponse)),
-            getTrendingTopicsResponse.Suggested)
+            getTrendingTopicsResponse is not null && getTrendingTopicsResponse.Topics is not null ? getTrendingTopicsResponse.Topics : throw new ArgumentNullException(nameof(getTrendingTopicsResponse)),
+            getTrendingTopicsResponse.Suggested is not null ? getTrendingTopicsResponse.Suggested : throw new ArgumentNullException(nameof(getTrendingTopicsResponse)))
     {
     }
 }
