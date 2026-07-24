@@ -213,7 +213,7 @@ public static partial class BlueskyServer
         }
 
         StringBuilder queryStringBuilder = new();
-        queryStringBuilder.Append(CultureInfo.InvariantCulture, $"actor={Uri.EscapeDataString(actor!)}");
+        queryStringBuilder.Append(CultureInfo.InvariantCulture, $"actor={Uri.EscapeDataString(actor.ToString())}");
 
         if (limit is not null)
         {
@@ -307,7 +307,7 @@ public static partial class BlueskyServer
         }
 
         StringBuilder queryStringBuilder = new();
-        queryStringBuilder.Append(CultureInfo.InvariantCulture, $"actor={Uri.EscapeDataString(actor!)}");
+        queryStringBuilder.Append(CultureInfo.InvariantCulture, $"actor={Uri.EscapeDataString(actor.ToString())}");
 
         if (limit is not null)
         {
@@ -402,7 +402,7 @@ public static partial class BlueskyServer
         }
 
         StringBuilder queryStringBuilder = new();
-        queryStringBuilder.Append(CultureInfo.InvariantCulture, $"actor={Uri.EscapeDataString(actor!)}");
+        queryStringBuilder.Append(CultureInfo.InvariantCulture, $"actor={Uri.EscapeDataString(actor.ToString())}");
 
         if (limit is not null)
         {
@@ -762,7 +762,7 @@ public static partial class BlueskyServer
         }
 
         StringBuilder queryStringBuilder = new();
-        queryStringBuilder.Append(CultureInfo.InvariantCulture, $"actor={Uri.EscapeDataString(actor!)}");
+        queryStringBuilder.Append(CultureInfo.InvariantCulture, $"actor={Uri.EscapeDataString(actor.ToString())}");
 
         if (limit is not null)
         {
@@ -846,7 +846,7 @@ public static partial class BlueskyServer
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(actor);
+        ArgumentNullException.ThrowIfNull(actor);
 
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(accessCredentials);
@@ -858,7 +858,7 @@ public static partial class BlueskyServer
         }
 
         StringBuilder queryStringBuilder = new();
-        queryStringBuilder.Append(CultureInfo.InvariantCulture, $"actor={Uri.EscapeDataString(actor!)}");
+        queryStringBuilder.Append(CultureInfo.InvariantCulture, $"actor={Uri.EscapeDataString(actor.ToString())}");
         if (limit is not null)
         {
             queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&limit={limit}");

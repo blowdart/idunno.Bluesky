@@ -12,8 +12,8 @@ namespace idunno.AtProto;
 internal static partial class Logger
 {
     // Create session logging
-    [LoggerMessage(1, LogLevel.Debug, "CreateSession called for {did} on {service}")]
-    internal static partial void CreateSessionCalled(ILogger logger, string did, Uri service);
+    [LoggerMessage(1, LogLevel.Debug, "CreateSession called for {identifier} on {service}")]
+    internal static partial void CreateSessionCalled(ILogger logger, string identifier, Uri service);
 
     [LoggerMessage(2, LogLevel.Debug, "CreateSession API returned {statusCode}")]
     internal static partial void CreateSessionReturned(ILogger logger, HttpStatusCode statusCode);
