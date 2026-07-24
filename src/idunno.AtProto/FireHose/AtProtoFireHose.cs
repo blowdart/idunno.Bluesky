@@ -578,6 +578,11 @@ public class AtProtoFireHose : IDisposable
     {
         CBORObject[]? decodedFrame;
 
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
         try
         {
             decodedFrame = CBORObject.DecodeSequenceFromBytes(frame, s_cborEncodeOptions);
@@ -614,12 +619,12 @@ public class AtProtoFireHose : IDisposable
                                     CommitPayload payload = CommitPayload.FromCBORObject(decodedFrame[1]);
 
                                     // Now for the hard part.
-                                    //if (payload.RawBlocks is not null &&
-                                    //    payload.RawBlocks.HasValue &&
-                                    //    payload.RawBlocks.Value.Length != 0)
+                                    //if (payload.Blocks is not null &&
+                                    //    payload.Blocks.HasValue &&
+                                    //    payload.Blocks.Value.Length != 0)
                                     //{
                                     //    await AtContentAddressableArchive.DecodeAsync(
-                                    //        payload.RawBlocks.Value,
+                                    //        payload.Blocks.Value,
                                     //        cancellationToken: cancellationToken).ConfigureAwait(false);
                                     //}
 

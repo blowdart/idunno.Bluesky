@@ -52,17 +52,17 @@ public sealed class Program
             {
                 switch (e.Payload)
                 {
-                    //case CommitPayload commitPayload:
-                    //    {
-                    //        string timeStamp = commitPayload.Time.ToLocalTime().ToString("G", CultureInfo.DefaultThreadCurrentUICulture);
+                    case CommitPayload commitPayload:
+                        {
+                            string timeStamp = commitPayload.Time.ToLocalTime().ToString("G", CultureInfo.DefaultThreadCurrentUICulture);
 
-                    //        foreach (var op in commitPayload.Ops)
-                    //        {
-                    //            Console.WriteLine($"REPO MESSAGE: {e.Header.Operation} / {e.Header.Type} \n  COMMIT: {commitPayload.Repo} => {op.Action} in {op.Path} @ {timeStamp}");
-                    //        }
+                            foreach (var op in commitPayload.Ops)
+                            {
+                                Console.WriteLine($"REPO MESSAGE: {e.Header.Operation} / {e.Header.Type} \n  COMMIT: {commitPayload.Repo} {commitPayload.Commit} {commitPayload.Rev }=> {op.Action} in {op.Path} @ {timeStamp}");
+                            }
 
-                    //        break;
-                    //    }
+                            break;
+                        }
 
                     case AccountPayload accountPayload:
                         {
