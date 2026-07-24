@@ -137,7 +137,7 @@ public partial class BlueskyAgent
                 _logger,
                 userPreferencesResult.StatusCode,
                 userPreferencesResult.AtErrorDetail!.Error,
-                userPreferencesResult.AtErrorDetail!.Message);
+                userPreferencesResult.AtErrorDetail.Message);
 
             return new AtProtoHttpResult<ICollection<LabelerView>>(
                 result: null,
@@ -215,7 +215,7 @@ public partial class BlueskyAgent
                 _logger,
                 userPreferencesResult.StatusCode,
                 userPreferencesResult.AtErrorDetail!.Error,
-                userPreferencesResult.AtErrorDetail!.Message);
+                userPreferencesResult.AtErrorDetail.Message);
 
             return new AtProtoHttpResult<ICollection<LabelerViewDetailed>>(
                 result: null,

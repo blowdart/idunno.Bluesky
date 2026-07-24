@@ -630,7 +630,8 @@ public partial class AtProtoAgent
     /// <param name="service">The service to authenticate to.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="handle" /> or <paramref name="password"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle" /> or <paramref name="password"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="password"/> is empty.</exception>
     /// <exception cref="SecurityTokenValidationException">Thrown when the token returned from the server is invalid.</exception>
     public async Task<AtProtoHttpResult<bool>> Login(
         Handle handle,
@@ -639,7 +640,7 @@ public partial class AtProtoAgent
         Uri? service = null,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(handle);
+        ArgumentNullException.ThrowIfNull(handle);
         ArgumentException.ThrowIfNullOrWhiteSpace(password);
 
         using (_logger.BeginScope($"Handle/Password login for {handle}"))
@@ -678,11 +679,11 @@ public partial class AtProtoAgent
                 service = pds;
             }
 
-            Logger.CreateSessionCalled(_logger, handle!, service);
+            Logger.CreateSessionCalled(_logger, handle.ToString(), service);
 
             AtProtoHttpResult<Session> createSessionResult =
                 await AtProtoServer.CreateSession(
-                    handle!,
+                    handle.ToString(),
                     password,
                     authFactorToken,
                     service,
@@ -785,7 +786,7 @@ public partial class AtProtoAgent
                 service = pds;
             }
 
-            Logger.CreateSessionCalled(_logger, did, service);
+            Logger.CreateSessionCalled(_logger, did.ToString(), service);
 
             AtProtoHttpResult<Session> createSessionResult =
                 await AtProtoServer.CreateSession(

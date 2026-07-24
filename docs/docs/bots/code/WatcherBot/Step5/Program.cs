@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using idunno.AtProto.Jetstream;
@@ -96,7 +96,7 @@ internal sealed class Worker(IOptionsMonitor<BotOptions> optionsDelegate) : Back
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        await _jetStream.CloseAsync();
+        await _jetStream.CloseAsync(cancellationToken: cancellationToken);
 
         await base.StopAsync(cancellationToken);
     }

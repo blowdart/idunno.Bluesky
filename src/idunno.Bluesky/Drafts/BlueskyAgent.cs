@@ -256,7 +256,7 @@ public partial class BlueskyAgent
                 PostBuilder postBuilder = new()
                 {
                     Text = draftPost.Text,
-                    Langs = draftWithId.Draft!.Langs,
+                    Langs = draftWithId.Draft.Langs,
                 };
 
                 if (extractFacets)

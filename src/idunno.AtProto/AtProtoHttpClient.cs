@@ -1350,7 +1350,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
         if (requestHeaders is not null && _extraRequestHeaders is not null)
         {
-            foreach (NameValueHeaderValue header in _extraRequestHeaders!)
+            foreach (NameValueHeaderValue header in _extraRequestHeaders)
             {
                 if (requestHeaders.Any(h => h.Name.Equals(header.Name, StringComparison.OrdinalIgnoreCase)) && header.Value != null)
                 {

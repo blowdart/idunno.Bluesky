@@ -443,7 +443,7 @@ public partial class AtProtoAgent : Agent
 
             if (didDocument is not null && didDocument.Services is not null)
             {
-                pds = didDocument.Services!.FirstOrDefault(s => s.Id == @"#atproto_pds")!.ServiceEndpoint;
+                pds = didDocument.Services.FirstOrDefault(s => s.Id == @"#atproto_pds")!.ServiceEndpoint;
             }
         }
 
