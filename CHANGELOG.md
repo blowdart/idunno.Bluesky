@@ -7,6 +7,7 @@
 #### idunno.Bluesky
 
 * Added support for the new `SearchStarterPacksV2` API endpoint.
+* Added a Starter Packproperty to the `Notification` class, which is present when the notification is for a follow originating from a starter pack.
 
 ## 3.0.0 - 2026-07-11
 

@@ -4,6 +4,7 @@
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.Bluesky.Actor;
+using idunno.Bluesky.Graph;
 using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky.Notifications.Model;
@@ -14,6 +15,7 @@ internal sealed record NotificationResponse(
     ProfileViewBasic Author,
     string Reason,
     BlueskyRecord Record,
+    StarterPackViewBasic StarterPack,
     bool IsRead,
     DateTimeOffset IndexedAt,
     IReadOnlyCollection<Label>? Labels);

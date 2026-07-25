@@ -2307,6 +2307,8 @@ idunno.Bluesky.Notifications.Notification.ReasonSubject.get -> idunno.AtProto.At
 idunno.Bluesky.Notifications.Notification.ReasonSubject.init -> void
 idunno.Bluesky.Notifications.Notification.Record.get -> idunno.Bluesky.Record.BlueskyRecord!
 idunno.Bluesky.Notifications.Notification.Record.init -> void
+idunno.Bluesky.Notifications.Notification.StarterPack.get -> idunno.Bluesky.Graph.StarterPackViewBasic?
+idunno.Bluesky.Notifications.Notification.StarterPack.init -> void
 idunno.Bluesky.Notifications.NotificationAllowedFrom
 idunno.Bluesky.Notifications.NotificationAllowedFrom.Followers = 1 -> idunno.Bluesky.Notifications.NotificationAllowedFrom
 idunno.Bluesky.Notifications.NotificationAllowedFrom.Mutuals = 2 -> idunno.Bluesky.Notifications.NotificationAllowedFrom
