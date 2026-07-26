@@ -207,6 +207,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: release
     permissions:
+      contents: write
       id-token: write
     steps:
     - name: 'Harden Runner'
@@ -265,5 +266,6 @@ jobs:
       with:
         body_path: ${{ env.BUILD_OUTPUT }}/release-notes.md
         working_directory: ${{ env.BUILD_OUTPUT }}
-        files: *.nupkg
+        files: |
+          *.nupkg
         draft: true
