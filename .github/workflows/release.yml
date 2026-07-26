@@ -55,7 +55,7 @@ jobs:
           10.0.x
 
     - name: 'Check coherence'
-      run : dotnet run .\.build\CoherenceChecks.cs
+      run : dotnet run .build/CoherenceChecks.cs
 
     - name: 'Build'
       run: dotnet build --configuration Release --property:PublicRelease=true
