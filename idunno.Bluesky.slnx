@@ -4,6 +4,10 @@
     <BuildType Name="Debug" />
     <BuildType Name="Release" />
   </Configurations>
+  <Folder Name="/.build/">
+    <File Path=".build/CoherenceChecks.cs" />
+    <File Path=".build/Directory.Build.Props" />
+  </Folder>
   <Folder Name="/.devcontainer/">
     <File Path=".devcontainer/devcontainer.json" />
   </Folder>
