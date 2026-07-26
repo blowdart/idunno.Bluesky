@@ -51,6 +51,7 @@ jobs:
 
     name: Build release
     needs: coherency
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-latest
     steps:
     - name: Harden Runner
@@ -120,6 +121,7 @@ jobs:
   sign:
     name: Sign
     needs: build
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
     runs-on: windows-latest
     environment: release
     permissions:
