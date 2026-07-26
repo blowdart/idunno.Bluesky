@@ -18,19 +18,18 @@ Option<string> directoryOption = new("--directory", "-d")
 };
 directoryOption.Validators.Add(result =>
 {
-    string? directory = result.GetValueOrDefault<string>();
+    string? directory = result.GetValue(directoryOption);
     if (string.IsNullOrEmpty(directory))
     {
         result.AddError("Directory cannot be null or empty.");
     }
-
-    if (!Directory.Exists(directory))
+    else if (!Directory.Exists(directory))
     {
         result.AddError($"Directory '{directory}' does not exist.");
     }
 });
 
-RootCommand rootCommand = new("Checks the coherence of the repository in prparation for a release or pre-release.")
+RootCommand rootCommand = new("Checks the coherence of the repository in preparation for a release or pre-release.")
 {
     Options = { directoryOption },
 };

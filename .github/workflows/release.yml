@@ -90,11 +90,6 @@ jobs:
     - name: 'Pack release'
       run: dotnet pack --configuration Release --no-restore --no-build --output ${BUILD_OUTPUT} --property:PublicRelease=true
 
-    - name: 'List artifact directory'
-      shell: pwsh
-      run: >
-        Get-ChildItem -Path ${env:BUILD_OUTPUT} -Recurse -Force
-
     - name: 'Extract SBOMs'
       shell: pwsh
       run: > 
@@ -103,6 +98,16 @@ jobs:
           Copy-Item "$($_.DirectoryName)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json" -Destination "${env:BUILD_OUTPUT}/$($_.Basename).spdx.json"
           Copy-Item "$($_.DirectoryName)/$($_.Basename)/_manifest/spdx_2.2/manifest.spdx.json.sha256" -Destination "${env:BUILD_OUTPUT}/$($_.Basename).spdx.json.sha256"
           Remove-Item "$($_.DirectoryName)/$($_.Basename)" -Force -Recurse }
+
+    - name: 'Generate release notes'
+      shell: pwsh
+      run: >
+        dotnet run .build/ExtractReleaseNotes.cs --output-file ${env:BUILD_OUTPUT}/release-notes.md
+
+    - name: 'List artifact directory'
+      shell: pwsh
+      run: >
+        Get-ChildItem -Path ${env:BUILD_OUTPUT} -Recurse -Force
 
     - name: Upload unsigned nupkgs to artifacts
       id: upload
@@ -253,3 +258,10 @@ jobs:
           dotnet nuget push $file --api-key "${{ secrets.MYGET_APIKEY }}" --source "https://www.myget.org/F/blowdart/api/v2/package" --skip-duplicate
         }
 
+    - name: Draft release
+      uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+      with:
+        body_path: ${{ env.BUILD_OUTPUT }}/release-notes.md
+        working_directory: ${{ env.BUILD_OUTPUT }}
+        files: *.nupkg
+        draft: true
