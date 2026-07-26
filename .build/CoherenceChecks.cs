@@ -159,7 +159,7 @@ static async Task<int> CheckCoherenceAsync(string directory)
                 }
                 Console.WriteLine($"✔️ CHANGELOG.md has an entry for version {branchVersion}");
 
-                Console.WriteLine("🎉 version branch coherency checks passed.");
+                Console.WriteLine("🎉 Version branch coherency checks passed.");
                 return (int)ExitCode.Success;
             }
             else
