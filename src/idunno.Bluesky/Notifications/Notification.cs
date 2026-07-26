@@ -48,6 +48,7 @@ public sealed record Notification : AtProtoRepositoryObject
         Record = record;
         IsRead = isRead;
         IndexedAt = indexedAt;
+        StarterPack = starterPack;
 
         if (labels is not null)
         {
