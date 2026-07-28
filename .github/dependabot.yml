@@ -37,6 +37,10 @@ updates:
       patterns:
         - Microsoft.NET.Test.Sdk
         - Microsoft.CodeCoverage
+    AspNetCoreTesting:
+        patterns:
+          - Microsoft.AspNetCore.Mvc.Testing
+          - Microsoft.AspNetCore.TestHost
     Xunit:
       patterns:
         - xunit.v3
