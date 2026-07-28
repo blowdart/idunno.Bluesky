@@ -30,6 +30,19 @@ updates:
       update-types: ["version-update:semver-major"]
     - dependency-name: "System.Runtime.Caching"
       update-types: ["version-update:semver-major"]
+  groups:
+    TestSdk:
+      patterns:
+        - Microsoft.NET.Test.Sdk
+        - Microsoft.CodeCoverage
+    Xunit:
+      patterns:
+        - xunit.v3
+        - xunit.runner.visualstudio
+    IdentityJwt:
+      patterns:
+        - System.IdentityModel.Tokens.Jwt
+        - Microsoft.IdentityModel.JsonWebTokens
 
 - package-ecosystem: "github-actions"
   directory: "/"
