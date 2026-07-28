@@ -1,4 +1,4 @@
-﻿version: 2
+version: 2
 updates:
 - package-ecosystem: nuget
   directory: "/"
@@ -31,10 +31,15 @@ updates:
     - dependency-name: "System.Runtime.Caching"
       update-types: ["version-update:semver-major"]
 
-
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:
     interval: "daily"
   cooldown:
     default-days: 7
+  groups:
+    github/codeql-action:
+      patterns:
+        - github/codeql-action/analyze
+        - github/codeql-action/init
+        - github/codeql-action/upload-sarif
