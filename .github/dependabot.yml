@@ -30,6 +30,8 @@ updates:
       update-types: ["version-update:semver-major"]
     - dependency-name: "System.Runtime.Caching"
       update-types: ["version-update:semver-major"]
+    - dependency-name: "JunitXml.TestLogger"
+      update-types: ["version-update:semver-major"]
   groups:
     TestSdk:
       patterns:
