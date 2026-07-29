@@ -7,8 +7,9 @@
 #### idunno.Bluesky
 
 * Added support for the new `SearchStarterPacksV2` API endpoint. This endpoint is currently feature gated.
-* Added a Starter Pack property to the `Notification` class, which is present when the notification is for a follow originating from a starter pack.
-* Added an optional `Sort` parameter to the `GetFollowers` and `GetFollowing` methods, which allows sorting by "latest" or "top".
+* Added a Starter Pack property to the `Notification` class, which is present when the notification is for a follow originating from a starter pack. See [Hydrate starter pack info for follow notifications](https://github.com/bluesky-social/atproto/pull/5263).
+* Added an optional `Sort` parameter to the `GetFollowers` and `GetFollowing` methods, which allows sorting by "latest" or "top". See [Add sort order to follows endpoints](https://github.com/bluesky-social/atproto/pull/5257).
+* Added description field to trending topics. See [Add description field to trending topics](https://github.com/bluesky-social/atproto/pull/5254).
 
 ## 3.0.0 - 2026-07-11
 
