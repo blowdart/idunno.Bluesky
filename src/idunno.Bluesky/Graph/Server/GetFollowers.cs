@@ -20,8 +20,8 @@ public static partial class BlueskyServer
     /// <summary>
     /// Enumerates accounts which follow a specified account (actor).
     /// </summary>
-    /// <param name="actor">The <see cref="AtIdentifier"/> of the actor whose follows should be enumerated.</param>
-    /// <param name="limit">The maximum number of followers that should be return in a page.</param>
+    /// <param name="actor">The <see cref="AtIdentifier"/> of the actor whose followers should be enumerated.</param>
+    /// <param name="limit">The maximum number of followers that should be returned in a page.</param>
     /// <param name="cursor">An optional cursor for pagination.</param>
     /// <param name="sort">An optional sort order. Known values are "latest" and "top".</param>
     /// <param name="service">The <see cref="Uri"/> of the service to retrieve the followers from.</param>
