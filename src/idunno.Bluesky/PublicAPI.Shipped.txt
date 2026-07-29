@@ -2801,17 +2801,17 @@ idunno.Bluesky.Unspecced.Suggestion.Tag.get -> string!
 idunno.Bluesky.Unspecced.Suggestion.Tag.init -> void
 idunno.Bluesky.Unspecced.TrendingTopic
 idunno.Bluesky.Unspecced.TrendingTopic.<Clone>$() -> idunno.Bluesky.Unspecced.TrendingTopic!
-idunno.Bluesky.Unspecced.TrendingTopic.Deconstruct(out string! Topic, out string! DisplayName, out string! Description, out string! Link) -> void
-idunno.Bluesky.Unspecced.TrendingTopic.Description.get -> string!
+idunno.Bluesky.Unspecced.TrendingTopic.Deconstruct(out string! Topic, out string? DisplayName, out string? Description, out string! Link) -> void
+idunno.Bluesky.Unspecced.TrendingTopic.Description.get -> string?
 idunno.Bluesky.Unspecced.TrendingTopic.Description.init -> void
-idunno.Bluesky.Unspecced.TrendingTopic.DisplayName.get -> string!
+idunno.Bluesky.Unspecced.TrendingTopic.DisplayName.get -> string?
 idunno.Bluesky.Unspecced.TrendingTopic.DisplayName.init -> void
 idunno.Bluesky.Unspecced.TrendingTopic.Equals(idunno.Bluesky.Unspecced.TrendingTopic? other) -> bool
 idunno.Bluesky.Unspecced.TrendingTopic.Link.get -> string!
 idunno.Bluesky.Unspecced.TrendingTopic.Link.init -> void
 idunno.Bluesky.Unspecced.TrendingTopic.Topic.get -> string!
 idunno.Bluesky.Unspecced.TrendingTopic.Topic.init -> void
-idunno.Bluesky.Unspecced.TrendingTopic.TrendingTopic(string! Topic, string! DisplayName, string! Description, string! Link) -> void
+idunno.Bluesky.Unspecced.TrendingTopic.TrendingTopic(string! Topic, string? DisplayName, string? Description, string! Link) -> void
 idunno.Bluesky.Unspecced.TrendingTopics
 idunno.Bluesky.Unspecced.TrendingTopics.<Clone>$() -> idunno.Bluesky.Unspecced.TrendingTopics!
 idunno.Bluesky.Unspecced.TrendingTopics.Deconstruct(out System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Unspecced.TrendingTopic!>! Topics, out System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Unspecced.TrendingTopic!>! Suggested) -> void
