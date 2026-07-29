@@ -6,8 +6,9 @@
 
 #### idunno.Bluesky
 
-* Added support for the new `SearchStarterPacksV2` API endpoint.
-* Added a Starter Packproperty to the `Notification` class, which is present when the notification is for a follow originating from a starter pack.
+* Added support for the new `SearchStarterPacksV2` API endpoint. This endpoint is currently feature gated.
+* Added a Starter Pack property to the `Notification` class, which is present when the notification is for a follow originating from a starter pack.
+* Added an optional `Sort` parameter to the `GetFollowers` and `GetFollowing` methods, which allows sorting by "latest" or "top".
 
 ## 3.0.0 - 2026-07-11
 
