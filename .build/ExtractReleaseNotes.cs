@@ -218,7 +218,7 @@ static string? GetGitTag()
     }
     else
     {
-        Console.WriteLine($"❌ GITHUB_REF_TYPE is not a branch or tag: {gitHubRefType}");
+        Console.WriteLine($"❌ GITHUB_REF_TYPE is not a tag: {gitHubRefType}");
     }
 
     return tag;

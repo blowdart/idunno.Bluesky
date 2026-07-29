@@ -121,19 +121,19 @@ static async Task<int> CheckCoherenceAsync(string directory)
             SemVersion? version = await GetReleaseJsonVersionAsync(dirInfo);
             if (version is null)
             {
-                Console.WriteLine("❌ Failed to get version from release.json");
+                Console.WriteLine("❌ Failed to get version from version.json");
                 return (int)ExitCode.MissingVersionJson;
             }
-            Console.WriteLine($"➡️ release.json version is {version}");
+            Console.WriteLine($"➡️ version.json version is {version}");
 
             if (version.Prerelease == null)
             {
-                Console.WriteLine($"❌ {version} in release.json version has no prerelease tag.");
+                Console.WriteLine($"❌ {version} in version.json version has no prerelease tag.");
                 return (int)ExitCode.NotPrereleaseVersion;
             }
             else if (!version.Prerelease.Equals("prerelease", StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine($"❌ {version} in release.json version has incorrect prerelease tag.");
+                Console.WriteLine($"❌ {version} in version.json version has incorrect prerelease tag.");
                 return (int)ExitCode.NotPrereleaseTag;
             }
             Console.WriteLine($"✔️ Prerelease version");
@@ -148,10 +148,10 @@ static async Task<int> CheckCoherenceAsync(string directory)
                 SemVersion? branchVersion = SemVersion.Parse(branchName.Substring("version/v".Length), SemVersionStyles.Strict);
                 if (!branchVersion.Major.Equals(version.Major) || !branchVersion.Minor.Equals(version.Minor) || !branchVersion.Patch.Equals(version.Patch))
                 {
-                    Console.WriteLine($"release.json version {version} does not match version from branch {branchVersion}");
+                    Console.WriteLine($"version.json version {version} does not match version from branch {branchVersion}");
                     return (int)ExitCode.VersionBranchMismatch;
                 }
-                Console.WriteLine($"✔️ release.json version {version} matches version from branch {branchVersion}");
+                Console.WriteLine($"✔️ version.json version {version} matches version from branch {branchVersion}");
                 if (!await CheckChangelogForVersionAsync(dirInfo,branchVersion))
                 {
                     return (int)ExitCode.ChangelogMissingVersion;
@@ -197,17 +197,17 @@ static async Task<int> CheckCoherenceAsync(string directory)
         SemVersion? releaseJsonVersion = await GetReleaseJsonVersionAsync(dirInfo);
         if (releaseJsonVersion is null)
         {
-            Console.WriteLine("Failed to get version from release.json");
+            Console.WriteLine("❌ Failed to get version from version.json");
             return (int)ExitCode.MissingVersionJson;
         }
 
         if (!tagVersion.Equals(releaseJsonVersion))
         {
-            Console.WriteLine($"❌ Tag version {tagVersion} does not match release.json version {releaseJsonVersion}");
+            Console.WriteLine($"❌ Tag version {tagVersion} does not match version.json version {releaseJsonVersion}");
             return (int)ExitCode.VersionTagMismatch;
         }
 
-        Console.WriteLine($"✔️ Tag version matches release.json");
+        Console.WriteLine($"✔️ Tag version matches version.json");
 
         // Check the CHANGELOG.md has an entry for the tag version
         if (!await CheckChangelogForVersionAsync(dirInfo, tagVersion))
