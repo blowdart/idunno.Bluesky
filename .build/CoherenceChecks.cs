@@ -79,11 +79,11 @@ static async Task<int> CheckCoherenceAsync(string directory)
         {
             Console.WriteLine("➡️ Checking release branch coherence...");
 
-            // Check release.json version is a release semantic version
+            // Check version.json version is a release semantic version
             SemVersion? version = await GetReleaseJsonVersionAsync(dirInfo);
             if (version is null)
             {
-                Console.WriteLine("❌ Failed to get version from release.json");
+                Console.WriteLine("❌ Failed to get version from version.json");
                 return (int)ExitCode.MissingVersionJson;
             }
 
@@ -117,7 +117,7 @@ static async Task<int> CheckCoherenceAsync(string directory)
 
             Console.WriteLine($"➡️ Checking dev branch coherence on {branchName}...");
 
-            // Check release.json version is a non-release version
+            // Check version.json version is a non-release version
             SemVersion? version = await GetReleaseJsonVersionAsync(dirInfo);
             if (version is null)
             {

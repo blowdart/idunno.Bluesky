@@ -10,7 +10,7 @@ using Semver;
 
 Option<string> directoryOption = new("--directory", "-d")
 {
-    Description = "The directory to check coherence in. Defaults to the current working directory.",
+    Description = "The directory to check for CHANGELOG.md. Defaults to the current working directory.",
     DefaultValueFactory = _ => Directory.GetCurrentDirectory(),
     Required = false
 };
