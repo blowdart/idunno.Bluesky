@@ -12,7 +12,7 @@ public partial class BlueskyAgent
     /// Find starter packs matching search criteria.
     /// </summary>
     /// <param name="q">Search query string. Syntax, phrase, boolean, and faceting is unspecified, but Lucene query syntax is recommended</param>
-    /// <param name="limit">The maximum number of lists that should be return in a page.</param>
+    /// <param name="limit">The maximum number of lists that should be returned in a page.</param>
     /// <param name="cursor">An optional cursor for pagination.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>

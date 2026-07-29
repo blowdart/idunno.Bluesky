@@ -2,10 +2,7 @@
 // Licensed under the MIT License.
 
 using idunno.AtProto;
-using idunno.AtProto.Repo;
-using idunno.Bluesky.Actor;
 using idunno.Bluesky.Graph;
-using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky;
 
@@ -18,7 +15,7 @@ public partial class BlueskyAgent
     /// <param name="limit">The maximum number of follows that will be included in the paged results.</param>
     /// <param name="cursor">An optional cursor for pagination.</param>
     /// <param name="sort">An optional sort order for the results. Known values are "latest" and "top".</param>
-    /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
+    /// <param name="subscribedLabelers">An optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="actor"/> is <see langword="null"/>.</exception>
