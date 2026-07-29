@@ -9,8 +9,8 @@ namespace idunno.Bluesky.Unspecced;
 /// Encapsulates a trending topic.
 /// </summary>
 /// <param name="Topic">Gets the topic.</param>
-/// <param name="DisplayName">Gets the display name for the <paramref name="Topic" />.</param>
-/// <param name="Description">Gets a description of the <paramref name="Topic" />.</param>
+/// <param name="DisplayName">Gets an optional display name for the <paramref name="Topic" />.</param>
+/// <param name="Description">Gets an optional description of the <paramref name="Topic" />.</param>
 /// <param name="Link">Gets a link for the <paramref name="Topic" />.</param>
 /// <remarks>
 /// <para>Functions and classes in the unspecced namespace are subject to change and may break without notice.</para>

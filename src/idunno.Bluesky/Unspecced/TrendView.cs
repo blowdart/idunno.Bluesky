@@ -27,7 +27,7 @@ public sealed record TrendView(
     [field: JsonRequired] int PostCount,
     string? Status,
     string? Category,
-    IReadOnlyCollection<ProfileViewBasic> Actors,
+    [field: JsonRequired] IReadOnlyCollection<ProfileViewBasic> Actors,
     string? Description) : View
 {
 }
