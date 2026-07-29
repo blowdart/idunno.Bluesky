@@ -60,7 +60,7 @@ if (Test-Path docs\_site) {
   Remove-Item -Path docs\_site -recurse -Force
 }
 
-if (Test-Path release-notes.md {
+if (Test-Path release-notes.md) {
     Write-Host "Deleting generated release-notes.md"
     Remove-Item -Path release-notes.md -Force
 }

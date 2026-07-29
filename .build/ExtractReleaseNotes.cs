@@ -12,7 +12,7 @@ Option<string> directoryOption = new("--directory", "-d")
 {
     Description = "The directory to check coherence in. Defaults to the current working directory.",
     DefaultValueFactory = _ => Directory.GetCurrentDirectory(),
-    Required = true
+    Required = false
 };
 directoryOption.Validators.Add(result =>
 {

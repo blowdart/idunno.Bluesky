@@ -14,7 +14,7 @@ Option<string> directoryOption = new("--directory", "-d")
 {
     Description = "The directory to check coherence in. Defaults to the current working directory.",
     DefaultValueFactory = _ => Directory.GetCurrentDirectory(),
-    Required = true
+    Required = false
 };
 directoryOption.Validators.Add(result =>
 {
@@ -335,14 +335,14 @@ static async Task<bool> CheckChangelogForVersionAndReleaseDateAsync(DirectoryInf
 
 static async Task<bool> CheckPublicAPIUnshippedAsync(DirectoryInfo directory)
 {
-    const string EmptyUnshippedContent = "#nullable enable\r\n";
+    const string EmptyUnshippedContent = "#nullable enable;
     List<string> nonEmptyFiles = [];
 
     string[] files = Directory.GetFiles(directory.FullName, "PublicAPI.Unshipped.txt", SearchOption.AllDirectories);
     foreach (string file in files)
     {
         string content = await File.ReadAllTextAsync(file);
-        if (content != EmptyUnshippedContent)
+        if (!string.Equals(content.Trim(), EmptyUnshippedContent, StringComparison.Ordinal))
         {
             nonEmptyFiles.Add(file.Replace(Directory.GetCurrentDirectory(), "").TrimStart(Path.DirectorySeparatorChar));
         }

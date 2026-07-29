@@ -15,7 +15,7 @@ internal sealed record NotificationResponse(
     ProfileViewBasic Author,
     string Reason,
     BlueskyRecord Record,
-    StarterPackViewBasic StarterPack,
+    StarterPackViewBasic? StarterPack,
     bool IsRead,
     DateTimeOffset IndexedAt,
     IReadOnlyCollection<Label>? Labels);

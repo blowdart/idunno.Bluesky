@@ -16,9 +16,9 @@ namespace idunno.Bluesky.Unspecced;
 /// <param name="StartedAt">The <see cref="DateTimeOffset"/> the trend started at.</param>
 /// <param name="PostCount">The post count for the <paramref name="Topic" />.</param>
 /// <param name="Status">The status of <paramref name="Topic" />.</param>
-/// <param name="Category">An optional category for the <paramref name="Topic" /></param>
+/// <param name="Category">An optional category for the <paramref name="Topic" />.</param>
 /// <param name="Actors">A collection of actors contributing to the <paramref name="Topic" />.</param>
-/// <param name="Description">An optional description of the trend.</param>`
+/// <param name="Description">An optional description of the trend.</param>
 public sealed record TrendView(
     [field: JsonRequired] string Topic,
     [field: JsonRequired] string DisplayName,
