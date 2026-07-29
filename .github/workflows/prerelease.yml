@@ -8,7 +8,7 @@ on:
         required: true
         default: true
       perform_publish:
-        description: 'Publish Pre-release'
+        description: 'Publish Prerelease'
         type: boolean
         required: true
         default: true
@@ -25,13 +25,40 @@ permissions:
   contents: read
 
 jobs:
+  coherency:
+    permissions:
+      contents: read
+
+    name: Check coherency
+    runs-on: ubuntu-latest
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+      with:
+        egress-policy: audit
+
+    - name: 'Checkout repository'
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+ 
+    - name: 'Setup .NET SDK'
+      uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      with:
+        dotnet-version: | 
+          10.0.x
+
+    - name: 'Check coherence'
+      run: dotnet run .build/CoherenceChecks.cs
+
   build:
     permissions:
       attestations: write
       contents: read
       id-token: write
 
-    name: Build pre-release
+    name: Build prerelease
+    needs: coherency
     runs-on: ubuntu-latest
     steps:
     - name: Harden Runner

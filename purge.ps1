@@ -35,6 +35,11 @@ if (Test-Path sign) {
   Remove-Item -Path sign -recurse -Force
 }
 
+if (Test-Path sleet) {
+  Write-Host "Deleting sleet"
+  Remove-Item -Path sleet -recurse -Force
+}
+
 if (Test-Path *.binlog) {
   Write-Host "Deleting binlogs"
   Remove-Item -Path *.binlog -recurse -Force
@@ -53,6 +58,11 @@ if (Test-Path docs\api) {
 if (Test-Path docs\_site) {
   Write-Host "Deleting docfx generated site"
   Remove-Item -Path docs\_site -recurse -Force
+}
+
+if (Test-Path release-notes.md) {
+    Write-Host "Deleting generated release-notes.md"
+    Remove-Item -Path release-notes.md -Force
 }
 
 Write-Host 'Done'
