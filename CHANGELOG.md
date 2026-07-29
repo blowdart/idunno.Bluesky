@@ -1,6 +1,6 @@
 # Version History
 
-## 3.1.0 - **Unreleased**
+## 3.1.0 - 2026-07-29
 
 ### Added
 
