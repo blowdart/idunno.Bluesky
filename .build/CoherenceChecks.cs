@@ -335,7 +335,7 @@ static async Task<bool> CheckChangelogForVersionAndReleaseDateAsync(DirectoryInf
 
 static async Task<bool> CheckPublicAPIUnshippedAsync(DirectoryInfo directory)
 {
-    const string EmptyUnshippedContent = "#nullable enable;
+    const string EmptyUnshippedContent = "#nullable enable";
     List<string> nonEmptyFiles = [];
 
     string[] files = Directory.GetFiles(directory.FullName, "PublicAPI.Unshipped.txt", SearchOption.AllDirectories);
