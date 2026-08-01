@@ -290,7 +290,8 @@ public class VideoTests
 
             // Wait for processing to finish.
             while (uploadResult.Succeeded &&
-                   (uploadResult.Result.State == JobState.Created || uploadResult.Result.State == JobState.InProgress) &&
+                   uploadResult.Result.State != JobState.Completed &&
+                   uploadResult.Result.State != JobState.Failed &&
                    statusRetryCount < maxStatusRetries)
             {
                 statusRetryCount++;
@@ -587,7 +588,8 @@ public class VideoTests
 
             // Wait for processing to finish.
             while (uploadResult.Succeeded &&
-                   (uploadResult.Result.State == JobState.Created || uploadResult.Result.State == JobState.InProgress) &&
+                   uploadResult.Result.State != JobState.Completed &&
+                   uploadResult.Result.State != JobState.Failed &&
                    statusRetryCount < maxStatusRetries)
             {
                 statusRetryCount++;
