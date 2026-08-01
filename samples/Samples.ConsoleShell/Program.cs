@@ -1,12 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics;
-using System.Text.RegularExpressions;
-
 using idunno.AtProto;
 using idunno.Bluesky;
-using idunno.Bluesky.Chat;
 
 using Microsoft.Extensions.Logging;
 
