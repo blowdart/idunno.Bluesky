@@ -38,7 +38,7 @@ public sealed class Program
         ArgumentException.ThrowIfNullOrEmpty(password);
 
         // Uncomment the next line to route all requests through Fiddler Everywhere
-        // proxyUri = new Uri("http://localhost:8866");
+        proxyUri = new Uri("http://localhost:8866");
 
         // Uncomment the next line to route all requests  through Fiddler Classic
         // proxyUri = new Uri("http://localhost:8888");
@@ -137,7 +137,7 @@ public sealed class Program
                 videoUploadResult.EnsureSucceeded();
 
                 while (videoUploadResult.Succeeded &&
-                    (videoUploadResult.Result.State == JobState.Created || videoUploadResult.Result.State == JobState.InProgress) &&
+                      (videoUploadResult.Result.State != JobState.Completed && videoUploadResult.Result.State != JobState.Failed) &&
                     !cancellationToken.IsCancellationRequested)
                 {
                     Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} processing, progress {videoUploadResult.Result.Progress}");
@@ -198,12 +198,14 @@ public sealed class Program
                 var videoUploadResult = await agent.UploadVideo(
                     Path.GetRandomFileName() + ".mp4",
                     videoAsBytes,
+                    "video/mp4",
                     cancellationToken: cancellationToken);
 
                 videoUploadResult.EnsureSucceeded();
 
                 while (videoUploadResult.Succeeded &&
-                    (videoUploadResult.Result.State == JobState.Created || videoUploadResult.Result.State == JobState.InProgress) &&
+                    videoUploadResult.Result.State != JobState.Completed &&
+                    videoUploadResult.Result.State != JobState.Failed &&
                     !cancellationToken.IsCancellationRequested)
                 {
                     Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} processing, progress {videoUploadResult.Result.Progress}");

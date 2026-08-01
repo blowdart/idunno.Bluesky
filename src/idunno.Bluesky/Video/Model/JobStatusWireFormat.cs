@@ -8,24 +8,28 @@ using idunno.AtProto;
 
 namespace idunno.Bluesky.Video.Model;
 
-internal sealed record JobStatusWireFormat
+[JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true, UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization)]
+[JsonDerivedType(typeof(JobStatusWireFormat), "app.bsky.video.defs#jobStatus")]
+internal record JobStatusWireFormat
 {
     [JsonConstructor]
     internal JobStatusWireFormat(
         string jobId,
         Did did,
-        string? stateAsString,
+        string? state,
         int? progress,
         Blob? blob,
         string? error,
-        string? message)
+        string? message,
+        string? failureCode)
     {
         JobId = jobId;
         Did = did;
-        StateAsString = stateAsString;
+        State = state;
         Blob = blob;
         Error = error;
         Message = message;
+        FailureCode = failureCode;
 
         if (progress is not null)
         {
@@ -56,6 +60,8 @@ internal sealed record JobStatusWireFormat
 
     [JsonInclude]
     [JsonRequired]
-    [JsonPropertyName("state")]
-    public string? StateAsString { get; set; }
+    public string? State { get; set; }
+
+    [JsonInclude]
+    public string? FailureCode { get; set; }
 }

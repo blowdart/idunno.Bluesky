@@ -79,6 +79,11 @@ const idunno.Bluesky.SelfLabelValues.Sexual = "sexual" -> string!
 const idunno.Bluesky.ThreadGateTypeDiscriminators.FollowedUsers = "app.bsky.feed.threadgate#followingRule" -> string!
 const idunno.Bluesky.ThreadGateTypeDiscriminators.ListMembers = "app.bsky.feed.threadgate#listRule" -> string!
 const idunno.Bluesky.ThreadGateTypeDiscriminators.MentionedUsers = "app.bsky.feed.threadgate#mentionRule" -> string!
+const idunno.Bluesky.Video.FailureCodes.EncodingFailure = "encoding_failure" -> string!
+const idunno.Bluesky.Video.FailureCodes.GenericFailure = "generic_failure" -> string!
+const idunno.Bluesky.Video.FailureCodes.PdsUploadFailure = "pds_upload_failure" -> string!
+const idunno.Bluesky.Video.FailureCodes.PdsUploadUnsupportedBlobSize = "pds_upload_unsupported_blob_size" -> string!
+const idunno.Bluesky.Video.FailureCodes.ValidationFailure = "validation_failure" -> string!
 GermNetwork.Com.Declaration
 GermNetwork.Com.Declaration.ContinuityProofs.get -> System.Collections.Generic.ICollection<idunno.AtProto.Bytes!>?
 GermNetwork.Com.Declaration.ContinuityProofs.set -> void
@@ -2847,27 +2852,33 @@ idunno.Bluesky.UserForbidsGroups
 idunno.Bluesky.UserForbidsGroups.UserForbidsGroups(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
 idunno.Bluesky.UserKicked
 idunno.Bluesky.UserKicked.UserKicked(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+idunno.Bluesky.Video.FailureCodes
 idunno.Bluesky.Video.JobState
 idunno.Bluesky.Video.JobState.Completed = 3 -> idunno.Bluesky.Video.JobState
 idunno.Bluesky.Video.JobState.Created = 1 -> idunno.Bluesky.Video.JobState
+idunno.Bluesky.Video.JobState.Encoding = 6 -> idunno.Bluesky.Video.JobState
 idunno.Bluesky.Video.JobState.Failed = 4 -> idunno.Bluesky.Video.JobState
 idunno.Bluesky.Video.JobState.InProgress = 2 -> idunno.Bluesky.Video.JobState
 idunno.Bluesky.Video.JobState.Unknown = 0 -> idunno.Bluesky.Video.JobState
+idunno.Bluesky.Video.JobState.Uploading = 5 -> idunno.Bluesky.Video.JobState
 idunno.Bluesky.Video.JobStatus
-idunno.Bluesky.Video.JobStatus.<Clone>$() -> idunno.Bluesky.Video.JobStatus!
 idunno.Bluesky.Video.JobStatus.Blob.get -> idunno.AtProto.Blob?
 idunno.Bluesky.Video.JobStatus.Blob.init -> void
 idunno.Bluesky.Video.JobStatus.Did.get -> idunno.AtProto.Did!
 idunno.Bluesky.Video.JobStatus.Did.init -> void
-idunno.Bluesky.Video.JobStatus.Equals(idunno.Bluesky.Video.JobStatus? other) -> bool
 idunno.Bluesky.Video.JobStatus.Error.get -> string?
 idunno.Bluesky.Video.JobStatus.Error.init -> void
+idunno.Bluesky.Video.JobStatus.FailureCode.get -> string?
+idunno.Bluesky.Video.JobStatus.FailureCode.init -> void
 idunno.Bluesky.Video.JobStatus.JobId.get -> string!
 idunno.Bluesky.Video.JobStatus.JobId.init -> void
+idunno.Bluesky.Video.JobStatus.JobStatus(idunno.Bluesky.Video.JobStatus! original) -> void
 idunno.Bluesky.Video.JobStatus.Message.get -> string?
 idunno.Bluesky.Video.JobStatus.Message.init -> void
 idunno.Bluesky.Video.JobStatus.Progress.get -> int
 idunno.Bluesky.Video.JobStatus.Progress.init -> void
+idunno.Bluesky.Video.JobStatus.RawState.get -> string?
+idunno.Bluesky.Video.JobStatus.RawState.init -> void
 idunno.Bluesky.Video.JobStatus.State.get -> idunno.Bluesky.Video.JobState
 idunno.Bluesky.Video.JobStatus.State.init -> void
 idunno.Bluesky.Video.UploadLimits
@@ -5270,6 +5281,10 @@ virtual idunno.Bluesky.RichText.Link.Equals(idunno.Bluesky.RichText.Link? other)
 virtual idunno.Bluesky.RichText.PostBuilderFacetFeature.EqualityContract.get -> System.Type!
 virtual idunno.Bluesky.RichText.PostBuilderFacetFeature.Equals(idunno.Bluesky.RichText.PostBuilderFacetFeature? other) -> bool
 virtual idunno.Bluesky.RichText.PostBuilderFacetFeature.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual idunno.Bluesky.Video.JobStatus.<Clone>$() -> idunno.Bluesky.Video.JobStatus!
+virtual idunno.Bluesky.Video.JobStatus.EqualityContract.get -> System.Type!
+virtual idunno.Bluesky.Video.JobStatus.Equals(idunno.Bluesky.Video.JobStatus? other) -> bool
+virtual idunno.Bluesky.Video.JobStatus.PrintMembers(System.Text.StringBuilder! builder) -> bool
 virtual idunno.Bluesky.Video.UploadLimits.<Clone>$() -> idunno.Bluesky.Video.UploadLimits!
 virtual idunno.Bluesky.Video.UploadLimits.EqualityContract.get -> System.Type!
 virtual idunno.Bluesky.Video.UploadLimits.Equals(idunno.Bluesky.Video.UploadLimits? other) -> bool

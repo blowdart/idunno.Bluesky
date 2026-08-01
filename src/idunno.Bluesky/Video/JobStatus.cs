@@ -1,7 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 using idunno.Bluesky.Video.Model;
@@ -11,38 +11,73 @@ namespace idunno.Bluesky.Video;
 /// <summary>
 /// Provides the status of a video upload.
 /// </summary>
-public sealed record JobStatus
+
+// This class is used to flatten the wire format into a more usable form for consumers of the library.
+// It is not suitable for json deserialization due to the conversation of the state string into an enum.
+public record JobStatus
 {
-    internal JobStatus(JobStatusWireFormat jobStatusWireFormat)
+    internal JobStatus(
+        string jobId,
+        Did did,
+        string? state,
+        int? progress,
+        Blob? blob,
+        string? error,
+        string? message,
+        string? failureCode)
     {
-        JobId = jobStatusWireFormat.JobId;
-        Did = jobStatusWireFormat.Did;
-        Blob = jobStatusWireFormat.Blob;
-        Error = jobStatusWireFormat.Error;
-        Message = jobStatusWireFormat.Message;
+        JobId = jobId;
+        Did = did;
+        Blob = blob;
+        Error = error;
+        Message = message;
+        FailureCode = failureCode;
+        RawState = state;
 
-        if (jobStatusWireFormat.StateAsString is not null)
+        if (state is not null)
         {
-            switch (jobStatusWireFormat.StateAsString.ToUpperInvariant())
+            State = state.ToUpperInvariant() switch
             {
-                case "JOB_STATE_COMPLETED":
-                    State = JobState.Completed;
-                    break;
-
-                case "JOB_STATE_FAILED":
-                    State = JobState.Failed;
-                    break;
-
-                case "JOB_STATE_CREATED":
-                    State = JobState.Created;
-                    break;
-            }
+                "JOB_STATE_CREATED" => JobState.Created,
+                "JOB_STATE_ENCODING" => JobState.Encoding,
+                "JOB_STATE_UPLOADING" => JobState.Uploading,
+                "JOB_STATE_IN_PROGRESS" => JobState.InProgress,
+                "JOB_STATE_COMPLETED" => JobState.Completed,
+                "JOB_STATE_FAILED" => JobState.Failed,
+                _ => JobState.Unknown,
+            };
         }
 
-        if (jobStatusWireFormat.Progress is not null)
+        if (progress is not null)
         {
-            Progress = (int)jobStatusWireFormat.Progress;
+            Progress = (int)progress;
         }
+    }
+
+    internal JobStatus(JobStatusResponse jobStatusResponse)
+        : this(
+            jobId: jobStatusResponse.JobStatus.JobId,
+            did: jobStatusResponse.JobStatus.Did,
+            state: jobStatusResponse.JobStatus.State,
+            progress: jobStatusResponse.JobStatus.Progress,
+            blob: jobStatusResponse.JobStatus.Blob,
+            error: jobStatusResponse.JobStatus.Error,
+            message: jobStatusResponse.JobStatus.Message,
+            failureCode: jobStatusResponse.JobStatus.FailureCode)
+    {
+    }
+
+    internal JobStatus(JobStatusWireFormat jobStatusWireFormat)
+        : this(
+            jobId: jobStatusWireFormat.JobId,
+            did: jobStatusWireFormat.Did,
+            state: jobStatusWireFormat.State,
+            progress: jobStatusWireFormat.Progress,
+            blob: jobStatusWireFormat.Blob,
+            error: jobStatusWireFormat.Error,
+            message: jobStatusWireFormat.Message,
+            failureCode: jobStatusWireFormat.FailureCode)
+    {
     }
 
     /// <summary>
@@ -58,13 +93,18 @@ public sealed record JobStatus
     /// <summary>
     /// Gets the current <see cref="JobState"/>.
     /// </summary>
+    [JsonIgnore]
     public JobState State { get; init; } = JobState.InProgress;
+
+    /// <summary>
+    /// Gets the state of the job, as the string returned from the API.
+    /// </summary>
+    public string? RawState { get; init; }
 
     /// <summary>
     /// Gets the progress of the job.
     /// </summary>
-    [NotNull]
-    public int Progress { get; init; } = 0;
+    public int Progress { get; init; }
 
     /// <summary>
     /// Gets a reference to the <see cref="Blob"/> containing the video if <see cref="State"/> is <see cref="JobState.Completed"/>.
@@ -75,6 +115,11 @@ public sealed record JobStatus
     /// Gets a description of any error that happened during processing.
     /// </summary>
     public string? Error { get; init; }
+
+    /// <summary>
+    /// An optional machine-readable code for why the video processing job failed. Known values are defined in <see cref="FailureCodes"/>.
+    /// </summary>
+    public string? FailureCode { get; init; }
 
     /// <summary>
     /// Gets a description of any error that happened during processing.

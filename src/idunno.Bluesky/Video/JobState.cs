@@ -16,20 +16,30 @@ public enum JobState
     /// <summary>
     /// The video processing job was created
     /// </summary>
-    Created,
+    Created = 1,
 
     /// <summary>
-    /// The video upload is in progress.
+    /// The video is being processed.
     /// </summary>
-    InProgress,
+    InProgress = 2,
 
     /// <summary>
     /// The video upload has completed successfully.
     /// </summary>
-    Completed,
+    Completed = 3,
 
     /// <summary>
     /// The video upload failed.
     /// </summary>
-    Failed
+    Failed = 4,
+
+    /// <summary>
+    /// The video upload is being uploaded.
+    /// </summary>
+    Uploading = 5,
+
+    /// <summary>
+    /// The video is being encoded.
+    /// </summary>
+    Encoding = 6
 }

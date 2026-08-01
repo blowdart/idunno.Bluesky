@@ -2,6 +2,13 @@
 
 ## 3.2.0 - **Unreleased**
 
+### Added
+
+#### idunno.Bluesky
+
+* Added optional `FailureCode` property to JobStatus class to provide machine-readable failure codes for video processing jobs. Known values are defined in the `FailureCodes` class. See [https://github.com/bluesky-social/atproto/pull/5283](Add video job failure codes).
+* Added new, undocumented, `Uploading` and `Encoding` states to the `JobState` enum to reflect the discoved video processing states.
+
 ## 3.1.0 - 2026-07-29
 
 ### Added
