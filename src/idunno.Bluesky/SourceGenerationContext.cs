@@ -72,7 +72,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Actor.Model.PutPreferencesRequest), TypeInfoPropertyName = "ActorPutPreferencesRequest")]
 [JsonSerializable(typeof(Actor.Model.SearchActorsResponse), TypeInfoPropertyName = "ActorSearchActorsResponse")]
 [JsonSerializable(typeof(Actor.Model.SearchActorsTypeAheadResponse), TypeInfoPropertyName = "ActorSearchActorsTypeAheadResponse")]
-[JsonSerializable(typeof(ActorViewerState), TypeInfoPropertyName = "ActorViewerState")]
+[JsonSerializable(typeof(ViewerState), TypeInfoPropertyName = "ActorViewerState")]
 [JsonSerializable(typeof(AdultContentPreference))]
 [JsonSerializable(typeof(BlueskyAppStatePreference))]
 [JsonSerializable(typeof(ContentLabelPreference))]
