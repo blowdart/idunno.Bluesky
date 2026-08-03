@@ -48,7 +48,7 @@ public sealed record ThreadItemPost : ThreadItemValue
     public bool MoreParents { get; init; }
 
     /// <summary>
-    /// Gets the numer of more replies the post has that were not present in the response. This is best-effort and might not be accurate.
+    /// Gets the number of more replies the post has that were not present in the response. This is best-effort and might not be accurate.
     /// </summary>
     [JsonRequired]
     public int MoreReplies { get; init; }

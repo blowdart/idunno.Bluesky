@@ -8,7 +8,7 @@ namespace idunno.Bluesky;
 public partial class BlueskyAgent
 {
     /// <summary>
-    /// Completly mutes the specified account.
+    /// Completely mutes the specified account.
     /// If a mute already exists for the account, it is updated in place: the stored scope is replaced with the scope in this request.
     /// Requires authentication.
     /// </summary>

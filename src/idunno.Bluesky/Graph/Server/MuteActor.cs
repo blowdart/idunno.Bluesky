@@ -21,7 +21,7 @@ public partial class BlueskyServer
     /// <param name="actor">The <see cref="AtIdentifier"/> of the actor to mute</param>
     /// <param name="onlyReposts">Flag indicating whether to restrict the mute to the account's reposts. When <see langword="true"/>, just the scoped content is muted; when no scoped mutes are set the account is fully muted.</param>
     /// <param name="onlyQuotePosts">Flag indicating whether to restrict the mute to the account's quotes. When <see langword="true"/>, just the scoped content is muted; when no scoped mutes are set the account is fully muted.</param>
-    /// <param name="service">The <see cref="Uri"/> of the service cerate the mute on.</param>
+    /// <param name="service">The <see cref="Uri"/> of the service to create the mute on.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
