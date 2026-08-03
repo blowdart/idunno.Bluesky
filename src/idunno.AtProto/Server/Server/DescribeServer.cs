@@ -3,7 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 
-using idunno.AtProto.Server.Models;
+using idunno.AtProto.Server;
 
 using Microsoft.Extensions.Logging;
 
@@ -11,9 +11,6 @@ namespace idunno.AtProto;
 
 public static partial class AtProtoServer
 {
-    // https://docs.bsky.app/docs/api/com-atproto-server-describe-server
-    internal const string DescribeServerEndpoint = "/xrpc/com.atproto.server.describeServer";
-
     /// <summary>
     /// Describes the server's account creation requirements and capabilities.
     /// </summary>
@@ -44,7 +41,7 @@ public static partial class AtProtoServer
 
         AtProtoHttpResult<ServerDescription> result = await request.Get(
             service: service,
-            endpoint: DescribeServerEndpoint,
+            endpoint: "/xrpc/com.atproto.server.describeServer",
             httpClient: httpClient,
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);

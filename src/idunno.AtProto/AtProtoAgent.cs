@@ -472,19 +472,6 @@ public partial class AtProtoAgent : Agent
     }
 
     /// <summary>
-    /// Describes the <paramref name="server"/>'s account creation requirements and capabilities.
-    /// </summary>
-    /// <param name="server">The service whose account description is to be retrieved.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    /// <returns>The task object representing the asynchronous operation.</returns>
-    public async Task<AtProtoHttpResult<ServerDescription>> DescribeServer(Uri? server, CancellationToken cancellationToken = default)
-    {
-        server ??= Service;
-
-        return await AtProtoServer.DescribeServer(server, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
     /// Apply a batch transaction of repository creates, updates, and deletes. Requires authentication.
     /// </summary>
     /// <param name="operations"><para>A collection of write requests to apply.</para></param>

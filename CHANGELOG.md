@@ -4,6 +4,10 @@
 
 ### Added
 
+#### idunno.AtProto
+
+* Added `BlobUploadLimit` to `ServerDescription`, which indicatest the maximum size of a blob that a server will accept via uploadBlob. See [pds: expose blobUploadLimit through describeServer](https://github.com/bluesky-social/atproto/pull/5277).
+
 #### idunno.Bluesky
 
 * Added support for muting actors reposts and quoteposts, with the addition of scopes to the `MuteActor` method to specify the type of mute. See [Add repost and quotepost-only mutes](https://github.com/bluesky-social/atproto/pull/5118).
@@ -12,6 +16,11 @@
 * Added implementation of the unspecced `GetPostThreadV2` and `GetPostThreadV2Other` apis.
 
 ## Breaking Changes
+
+#### idunno.AtProto
+
+* `ServerDescription`, `Links` and `Contact` are now part of the `idunno.AtProto.Server` namespace.
+* `InviteCodeRequired` and `PhoneVerificationRequired` properties of `ServerDescription` are now nullable, as they're defined as optional in the ATProto lexicon.
 
 #### idunno.Bluesky
 
