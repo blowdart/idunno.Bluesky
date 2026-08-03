@@ -21,8 +21,6 @@ using idunno.Bluesky.Labeler.Model;
 using idunno.Bluesky.Notifications;
 using idunno.Bluesky.Record;
 using idunno.Bluesky.RichText;
-using idunno.Bluesky.Unspecced;
-using idunno.Bluesky.Unspecced.Model;
 using idunno.Bluesky.Video;
 using idunno.Bluesky.Video.Model;
 
@@ -43,8 +41,8 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(BlueskyTimestampedRecord))]
 [JsonSerializable(typeof(Profile))]
 [JsonSerializable(typeof(AtProtoRepositoryRecord<Profile>))]
-[JsonSerializable(typeof(idunno.AtProto.Labels.SelfLabels), TypeInfoPropertyName = "AtProtoLabelsSelfLabels")]
-[JsonSerializable(typeof(idunno.AtProto.Labels.SelfLabel), TypeInfoPropertyName = "AtProtoLabelsSelfLabel")]
+[JsonSerializable(typeof(AtProto.Labels.SelfLabels), TypeInfoPropertyName = "AtProtoLabelsSelfLabels")]
+[JsonSerializable(typeof(AtProto.Labels.SelfLabel), TypeInfoPropertyName = "AtProtoLabelsSelfLabel")]
 [JsonSerializable(typeof(StarterPack))]
 [JsonSerializable(typeof(AtProtoRepositoryRecord<StarterPack>))]
 [JsonSerializable(typeof(Verification))]
@@ -382,18 +380,6 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(DeleteBookmarkRequest))]
 [JsonSerializable(typeof(GetBookmarksResponse))]
 
-[JsonSerializable(typeof(TrendingTopic))]
-[JsonSerializable(typeof(GetPopularFeedGeneratorsResponse))]
-[JsonSerializable(typeof(GetSuggestedStarterPacksResponse))]
-[JsonSerializable(typeof(GetSuggestedUsersResponse))]
-[JsonSerializable(typeof(Suggestion))]
-[JsonSerializable(typeof(GetTaggedSuggestionsResponse))]
-[JsonSerializable(typeof(GetTrendingTopicsResponse))]
-[JsonSerializable(typeof(TrendView))]
-[JsonSerializable(typeof(GetTrendsResponse))]
-[JsonSerializable(typeof(AgeAssuranceStatus))]
-[JsonSerializable(typeof(GetAgeAssuranceStateResponse))]
-
 [JsonSerializable(typeof(Draft))]
 [JsonSerializable(typeof(DraftEmbedCaption))]
 [JsonSerializable(typeof(DraftEmbedExternal))]
@@ -475,6 +461,25 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Chat.Model.PutPreferencesRequest), TypeInfoPropertyName = "ChatNotificationsModelPutPrefereceRequest")]
 [JsonSerializable(typeof(Chat.Model.PutPreferencesResponse), TypeInfoPropertyName = "ChatNotificationsModelPutPreferenceResponse")]
 [JsonSerializable(typeof(Chat.ReplyReference), TypeInfoPropertyName = "ChatReplyReference")]
+
+[JsonSerializable(typeof(Unspecced.TrendingTopic), TypeInfoPropertyName = "UnspeccedTrendingTopic")]
+[JsonSerializable(typeof(Unspecced.Model.GetPopularFeedGeneratorsResponse), TypeInfoPropertyName = "UnspeccedModelGetPopularFeedGeneratorsResponse")]
+[JsonSerializable(typeof(Unspecced.Model.GetSuggestedStarterPacksResponse), TypeInfoPropertyName = "UnspeccedModelGetSuggestedStarterPacksResponse")]
+[JsonSerializable(typeof(Unspecced.Model.GetSuggestedUsersResponse), TypeInfoPropertyName = "UnspeccedModelGetSuggestedUsersResponse")]
+[JsonSerializable(typeof(Unspecced.Suggestion), TypeInfoPropertyName = "UnspeccedSuggestion")]
+[JsonSerializable(typeof(Unspecced.Model.GetTaggedSuggestionsResponse), TypeInfoPropertyName = "UnspeccedModelGetTaggedSuggestionsResponse")]
+[JsonSerializable(typeof(Unspecced.Model.GetTrendingTopicsResponse), TypeInfoPropertyName = "UnspeccedModelGetTrendingTopicsResponse")]
+[JsonSerializable(typeof(Unspecced.TrendView), TypeInfoPropertyName = "UnspeccedTrendView")]
+[JsonSerializable(typeof(Unspecced.Model.GetTrendsResponse), TypeInfoPropertyName = "UnspeccedModelGetTrendsResponse")]
+[JsonSerializable(typeof(Unspecced.AgeAssuranceStatus), TypeInfoPropertyName = "UnspeccedAgeAssuranceStatus")]
+[JsonSerializable(typeof(Unspecced.Model.GetAgeAssuranceStateResponse), TypeInfoPropertyName = "UnspeccedModelGetAgeAssuranceStateResponse")]
+[JsonSerializable(typeof(Unspecced.ThreadItemValue), TypeInfoPropertyName = "UnspeccedThreadItem")]
+[JsonSerializable(typeof(Unspecced.ThreadItemPost), TypeInfoPropertyName = "UnspeccedThreadItemPost")]
+[JsonSerializable(typeof(Unspecced.ThreadItemNoUnauthenticated), TypeInfoPropertyName = "UnspeccedThreadItemNoUnauthenticated")]
+[JsonSerializable(typeof(Unspecced.ThreadItemNotFound), TypeInfoPropertyName = "UnspeccedThreadItemNotFound")]
+[JsonSerializable(typeof(Unspecced.ThreadItemBlocked), TypeInfoPropertyName = "UnspeccedThreadItemBlocked")]
+[JsonSerializable(typeof(Unspecced.Model.GetPostThreadV2Response), TypeInfoPropertyName = "UnspeccedModelGetPostThreadV2Response")]
+[JsonSerializable(typeof(Unspecced.Model.GetPostThreadOtherV2Response), TypeInfoPropertyName = "UnspeccedModelGetPostThreadOtherV2Response")]
 
 internal partial class SourceGenerationContext : JsonSerializerContext
 {
