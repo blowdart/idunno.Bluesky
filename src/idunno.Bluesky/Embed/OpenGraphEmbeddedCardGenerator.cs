@@ -20,6 +20,10 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
     [GeneratedRegex("<meta property=\"og:([^\"]+)\" content=\"([^\"]+)\"", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex s_OpenGraphPropertyRegex();
 
+    [GeneratedRegex("<meta name=\"og:([^\"]+)\" content=\"([^\"]+)\"", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex s_OpenGraphNameRegex();
+
+
     /// <summary>
     /// Creates a new instance of <see cref="OpenGraphEmbeddedCardGenerator"/>.
     /// </summary>
@@ -142,7 +146,6 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
         }
 
         Dictionary<string, string> openGraphProperties = [];
-
         foreach (Match match in s_OpenGraphPropertyRegex().Matches(pageContent))
         {
             string property = match.Groups[1].Value;
@@ -153,6 +156,18 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
                 openGraphProperties.Add(property, content);
             }
         }
+
+       foreach (Match match in s_OpenGraphNameRegex().Matches(pageContent))
+        {
+            string property = match.Groups[1].Value;
+            string content = match.Groups[2].Value;
+
+            if (!string.IsNullOrEmpty(property) && !openGraphProperties.ContainsKey(property))
+            {
+                openGraphProperties.Add(property, content);
+            }
+        }
+
 
         // Look for the basic OpenGraph properties that are required for an OpenCard embed.
         string? title = openGraphProperties.TryGetValue("title", out string? titleValue) ? titleValue : null;

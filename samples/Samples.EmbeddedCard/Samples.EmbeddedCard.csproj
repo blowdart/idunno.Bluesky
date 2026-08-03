@@ -6,10 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="OpenGraph-Net"/>
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\src\idunno.Bluesky\idunno.Bluesky.csproj" />
     <ProjectReference Include="..\Samples.Common\Samples.Common.csproj" />
   </ItemGroup>
