@@ -93,7 +93,7 @@ public sealed class Program
             // Embed with a PostBuilder
             var postBuilder = new PostBuilder("PostBuilder OpenCard Test");
             var openGraphCard = await openGraphCardGenerator.Generate(pageUri, cancellationToken);
-            if (openGraphCard != null)
+            if (openGraphCard is not null)
             {
                 postBuilder.EmbedRecord(openGraphCard);
             }

@@ -23,7 +23,6 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
     [GeneratedRegex("<meta name=\"og:([^\"]+)\" content=\"([^\"]+)\"", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex s_OpenGraphNameRegex();
 
-
     /// <summary>
     /// Creates a new instance of <see cref="OpenGraphEmbeddedCardGenerator"/>.
     /// </summary>
@@ -157,7 +156,7 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
             }
         }
 
-       foreach (Match match in s_OpenGraphNameRegex().Matches(pageContent))
+        foreach (Match match in s_OpenGraphNameRegex().Matches(pageContent))
         {
             string property = match.Groups[1].Value;
             string content = match.Groups[2].Value;
