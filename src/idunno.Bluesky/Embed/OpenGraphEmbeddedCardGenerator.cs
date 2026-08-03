@@ -167,7 +167,6 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
             }
         }
 
-
         // Look for the basic OpenGraph properties that are required for an OpenCard embed.
         string? title = openGraphProperties.TryGetValue("title", out string? titleValue) ? titleValue : null;
 
