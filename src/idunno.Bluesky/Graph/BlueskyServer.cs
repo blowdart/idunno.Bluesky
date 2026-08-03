@@ -949,7 +949,7 @@ public static partial class BlueskyServer
     /// Mutes a thread preventing notifications from the thread and any of its children. Requires authentication.
     /// </summary>
     /// <param name="rootUri">The <see cref="AtUri"/> of the thread to mute</param>
-    /// <param name="service">The <see cref="Uri"/> of the service cerate the mute on.</param>
+    /// <param name="service">The <see cref="Uri"/> of the service to mute the thread on.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
