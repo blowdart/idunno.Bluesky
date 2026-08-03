@@ -90,13 +90,6 @@ public sealed class Program
             // END-AUTHENTICATION
 
             // Your code goes here.
-
-            var serverDesciptionResult = await agent.DescribeServer(new Uri("https://porcini.us-east.host.bsky.network"), cancellationToken);
-
-#pragma warning disable BSKYUnspecced // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-            var getPostThreadV2Result = await agent.GetPostThreadV2("at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3ms2foehqt22h", cancellationToken: cancellationToken);
-            var getPostThreadOtherV2Result = await agent.GetPostThreadOtherV2("at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3ms3tzqhmec2e", cancellationToken: cancellationToken);
-#pragma warning restore BSKYUnspecced // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
         }
     }
 }
