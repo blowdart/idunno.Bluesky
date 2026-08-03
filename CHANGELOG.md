@@ -1,6 +1,6 @@
 # Version History
 
-## 3.2.0 - **Unreleased**
+## 4.0.0 - **Unreleased**
 
 ### Added
 
