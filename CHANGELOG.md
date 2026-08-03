@@ -14,6 +14,7 @@
 * Added optional `FailureCode` property to JobStatus class to provide machine-readable failure codes for video processing jobs. Known values are defined in the `FailureCodes` class. See [https://github.com/bluesky-social/atproto/pull/5283](Add video job failure codes).
 * Added new, undocumented, `Uploading` and `Encoding` states to the `JobState` enum to reflect the discoved video processing states.
 * Added implementation of the unspecced `GetPostThreadV2` and `GetPostThreadV2Other` apis.
+* Updated `CreateGroup` to allow up to 10000 members in a group. See [update chat lexicons](https://github.com/bluesky-social/atproto/pull/5303).
 
 ## Breaking Changes
 
