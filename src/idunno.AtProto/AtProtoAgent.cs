@@ -9,7 +9,6 @@ using System.Text.Json;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
-using idunno.AtProto.Server.Models;
 using idunno.DidPlcDirectory;
 
 using Microsoft.Extensions.Logging;

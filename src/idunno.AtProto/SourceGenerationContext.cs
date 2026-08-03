@@ -15,7 +15,6 @@ using idunno.AtProto.Moderation;
 using idunno.AtProto.Moderation.Model;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
-using idunno.AtProto.Server.Models;
 
 namespace idunno.AtProto;
 
@@ -60,9 +59,9 @@ namespace idunno.AtProto;
 [JsonSerializable(typeof(SelfLabels))]
 [JsonSerializable(typeof(QueryLabelsResponse))]
 
-[JsonSerializable(typeof(ServerDescription))]
-[JsonSerializable(typeof(Links))]
-[JsonSerializable(typeof(Contact))]
+[JsonSerializable(typeof(Server.ServerDescription))]
+[JsonSerializable(typeof(Server.Links))]
+[JsonSerializable(typeof(Server.Contact))]
 
 [JsonSerializable(typeof(RepoDescription))]
 

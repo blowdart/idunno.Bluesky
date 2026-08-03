@@ -3,7 +3,9 @@
 
 using System.Text.Json.Serialization;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.AtProto.Server;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// Contact information a server may provide as part of its description.
