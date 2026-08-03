@@ -2905,17 +2905,18 @@ idunno.Bluesky.Video.JobState.InProgress = 2 -> idunno.Bluesky.Video.JobState
 idunno.Bluesky.Video.JobState.Unknown = 0 -> idunno.Bluesky.Video.JobState
 idunno.Bluesky.Video.JobState.Uploading = 5 -> idunno.Bluesky.Video.JobState
 idunno.Bluesky.Video.JobStatus
+idunno.Bluesky.Video.JobStatus.<Clone>$() -> idunno.Bluesky.Video.JobStatus!
 idunno.Bluesky.Video.JobStatus.Blob.get -> idunno.AtProto.Blob?
 idunno.Bluesky.Video.JobStatus.Blob.init -> void
 idunno.Bluesky.Video.JobStatus.Did.get -> idunno.AtProto.Did!
 idunno.Bluesky.Video.JobStatus.Did.init -> void
+idunno.Bluesky.Video.JobStatus.Equals(idunno.Bluesky.Video.JobStatus? other) -> bool
 idunno.Bluesky.Video.JobStatus.Error.get -> string?
 idunno.Bluesky.Video.JobStatus.Error.init -> void
 idunno.Bluesky.Video.JobStatus.FailureCode.get -> string?
 idunno.Bluesky.Video.JobStatus.FailureCode.init -> void
 idunno.Bluesky.Video.JobStatus.JobId.get -> string!
 idunno.Bluesky.Video.JobStatus.JobId.init -> void
-idunno.Bluesky.Video.JobStatus.JobStatus(idunno.Bluesky.Video.JobStatus! original) -> void
 idunno.Bluesky.Video.JobStatus.Message.get -> string?
 idunno.Bluesky.Video.JobStatus.Message.init -> void
 idunno.Bluesky.Video.JobStatus.Progress.get -> int
@@ -5368,10 +5369,6 @@ virtual idunno.Bluesky.Unspecced.ThreadItemValue.<Clone>$() -> idunno.Bluesky.Un
 virtual idunno.Bluesky.Unspecced.ThreadItemValue.EqualityContract.get -> System.Type!
 virtual idunno.Bluesky.Unspecced.ThreadItemValue.Equals(idunno.Bluesky.Unspecced.ThreadItemValue? other) -> bool
 virtual idunno.Bluesky.Unspecced.ThreadItemValue.PrintMembers(System.Text.StringBuilder! builder) -> bool
-virtual idunno.Bluesky.Video.JobStatus.<Clone>$() -> idunno.Bluesky.Video.JobStatus!
-virtual idunno.Bluesky.Video.JobStatus.EqualityContract.get -> System.Type!
-virtual idunno.Bluesky.Video.JobStatus.Equals(idunno.Bluesky.Video.JobStatus? other) -> bool
-virtual idunno.Bluesky.Video.JobStatus.PrintMembers(System.Text.StringBuilder! builder) -> bool
 virtual idunno.Bluesky.Video.UploadLimits.<Clone>$() -> idunno.Bluesky.Video.UploadLimits!
 virtual idunno.Bluesky.Video.UploadLimits.EqualityContract.get -> System.Type!
 virtual idunno.Bluesky.Video.UploadLimits.Equals(idunno.Bluesky.Video.UploadLimits? other) -> bool
@@ -5407,8 +5404,8 @@ virtual Standard.Site.ThemeColorRgba.Equals(Standard.Site.ThemeColorRgba? other)
 [BSKYUnspecced]idunno.Bluesky.BlueskyAgent.GetTrendingTopics(int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Unspecced.TrendingTopics!>!>!
 [BSKYUnspecced]idunno.Bluesky.BlueskyAgent.GetTrends(int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.Collections.Generic.ICollection<idunno.Bluesky.Unspecced.TrendView!>!>!>!
 [BSKYUnspecced]idunno.Bluesky.Unspecced.PostThreadV2
-[BSKYUnspecced]idunno.Bluesky.Unspecced.PostThreadV2.HasOtherRelies.get -> bool
-[BSKYUnspecced]idunno.Bluesky.Unspecced.PostThreadV2.HasOtherRelies.init -> void
+[BSKYUnspecced]idunno.Bluesky.Unspecced.PostThreadV2.HasOtherReplies.get -> bool
+[BSKYUnspecced]idunno.Bluesky.Unspecced.PostThreadV2.HasOtherReplies.init -> void
 [BSKYUnspecced]idunno.Bluesky.Unspecced.PostThreadV2.Thread.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Unspecced.ThreadItem!>!
 [BSKYUnspecced]idunno.Bluesky.Unspecced.PostThreadV2.Thread.init -> void
 [BSKYUnspecced]idunno.Bluesky.Unspecced.PostThreadV2.ThreadGate.get -> idunno.Bluesky.Feed.ThreadGateView?

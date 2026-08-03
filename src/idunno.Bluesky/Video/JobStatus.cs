@@ -14,7 +14,7 @@ namespace idunno.Bluesky.Video;
 
 // This class is used to flatten the wire format into a more usable form for consumers of the library.
 // It is not suitable for json deserialization due to the conversation of the state string into an enum.
-public record JobStatus
+public sealed record JobStatus
 {
     internal JobStatus(
         string jobId,

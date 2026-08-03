@@ -91,6 +91,7 @@ public static partial class BlueskyServer
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             onCredentialsUpdated: onCredentialsUpdated,
+            subscribedLabelers: subscribedLabelers,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (result.Succeeded)

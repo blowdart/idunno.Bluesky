@@ -15,11 +15,11 @@ namespace idunno.Bluesky.Unspecced;
 [Experimental("BSKYUnspecced", UrlFormat = "https://bluesky.idunno.dev/docs/unspecced.html")]
 public class PostThreadV2
 {
-    internal PostThreadV2(ICollection<ThreadItem> items, ThreadGateView? threadGate, bool hasOtherRelies)
+    internal PostThreadV2(ICollection<ThreadItem> items, ThreadGateView? threadGate, bool hasOtherReplies)
     {
         Thread = new ReadOnlyCollection<ThreadItem>([.. items]);
         ThreadGate = threadGate;
-        HasOtherRelies = hasOtherRelies;
+        HasOtherReplies = hasOtherReplies;
     }
 
     internal PostThreadV2(GetPostThreadV2Response response) : this(response.Thread, response.Threadgate, response.HasOtherReplies)
@@ -39,5 +39,5 @@ public class PostThreadV2
     /// <summary>
     /// Flag indicating if there are other replies to the thread that are not included in this response.
     /// </summary>
-    public bool HasOtherRelies { get; init; }
+    public bool HasOtherReplies { get; init; }
 }
