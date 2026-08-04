@@ -16,6 +16,7 @@
 * Added implementation of the unspecced `GetPostThreadV2` and `GetPostThreadOtherV2` apis.
 * Updated `CreateGroup` to allow up to 10000 members in a group. See [update chat lexicons](https://github.com/bluesky-social/atproto/pull/5303).
 * Added fallback in `OpenGraphEmbeddedCardGenerator` to also look for `<meta name="og:([^\"]+)" content="([^\"]+)"` tags, not just `<meta property="og:([^\"]+)" content="([^\"]+)"` tags.
+* Added `SubscribedLabelers` parameter to `ListActivitySubscriptions`, `ListNotifications` and `GetSuggestedUsers` to allow labels to be applied to the returned results.
 
 ### Fixed
 
