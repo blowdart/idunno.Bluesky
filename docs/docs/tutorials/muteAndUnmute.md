@@ -1,27 +1,39 @@
 # Muting users
 
-Muting a user hides their posts from your feeds. Mutes are *private*. Muting a user is as easy following a user.
+Muting a user hides their posts from your feeds. Mutes are *private*. Muting a user is as easy asfollowing a user.
 
-`Mute(did)`
+`Mute(identifier)`
 
 | Parameter    | Type | Description                    | Required   |
 |--------------|------|--------------------------------|:----------:|
-| actor        | Did  | The DID of the user to mute .  | Yes        |
+| actor        | AtIdentifier | The Handle or DID of the user to mute . | Yes |
+
+You can also narrow the scope of a mute state,
+by using the overload with the `onlyReposts` and `onlyQuotePosts` parameters.
 
 ```c#
-await agent.Mute(did);
+await agent.Mute(identifier, bool, bool);
 ```
 
-> [!TIP]
-> If you only know the [handle](../commonTerms.md#handles) of a user you can get their DID with `agent.ResolveHandle()`.
+`Mute(identifier)`
+
+| Parameter    | Type | Description                    | Required   |
+|--------------|------|--------------------------------|:----------:|
+| actor        | AtIdentifier | The Handle or DID of the user to mute . | Yes |
+| onlyReposts  | bool | If true, only mutes reposts from the user. | Yes |
+| onlyQuotePosts | bool | If true, only mutes quote posts from the user. | Yes |
+
+```c#
+await agent.Mute(identifier, onlyReposts : true, onlyQuotePosts: false);
+```
 
 ## Unmuting a user
 
-`Unmute(did)`
+`Unmute(identifier)`
 
 | Parameter    | Type | Description                      | Required   |
 |--------------|------|----------------------------------|:----------:|
-| actor        | Did  | The DID of the user to un-mute . | Yes        |
+| actor        | AtIdentifier  | The Handle or DID of the user to un-mute . | Yes        |
 
 ```c#
 await agent.Unmute(did);
