@@ -94,7 +94,7 @@ public sealed record JobStatus
     /// Gets the current <see cref="JobState"/>.
     /// </summary>
     [JsonIgnore]
-    public JobState State { get; init; } = JobState.InProgress;
+    public JobState State { get; init; } = JobState.Unknown;
 
     /// <summary>
     /// Gets the state of the job, as the string returned from the API.
