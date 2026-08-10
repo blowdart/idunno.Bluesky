@@ -20,8 +20,8 @@ public sealed record ThreadItemPost : ThreadItemValue
         bool moreParents,
         int moreReplies,
         bool opThread,
-        int? opThreadIndex,
-        int? opThreadCount,
+        int? opThreadPostIndex,
+        int? opThreadPostCount,
         bool hiddenByThreadGate,
         bool mutedByViewer)
     {
@@ -29,8 +29,8 @@ public sealed record ThreadItemPost : ThreadItemValue
         MoreParents = moreParents;
         MoreReplies = moreReplies;
         OpThread = opThread;
-        OpThreadIndex = opThreadIndex;
-        OpThreadCount = opThreadCount;
+        OpThreadPostIndex = opThreadPostIndex;
+        OpThreadPostCount = opThreadPostCount;
         HiddenByThreadGate = hiddenByThreadGate;
         MutedByViewer = mutedByViewer;
     }
@@ -63,12 +63,12 @@ public sealed record ThreadItemPost : ThreadItemValue
     /// <summary>
     /// Gets the 1-indexed position of this post within the contiguous OP thread. Only present when this post is part of the OP thread (see <see cref="OpThread"/>).
     /// </summary>
-    public int? OpThreadIndex { get; init; }
+    public int? OpThreadPostIndex { get; init; }
 
     /// <summary>
     /// Gets the total number of posts in the contiguous OP thread that this post belongs to. Only present when this post is part of the OP thread (see <see cref="OpThread"/>).
     /// </summary>
-    public int? OpThreadCount { get; init; }
+    public int? OpThreadPostCount { get; init; }
 
     /// <summary>
     /// Flag indicating whether the threadgate created by the author indicates this post as a reply to be hidden for everyone consuming the thread.

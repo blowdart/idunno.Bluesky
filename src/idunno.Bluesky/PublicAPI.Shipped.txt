@@ -2837,10 +2837,10 @@ idunno.Bluesky.Unspecced.ThreadItemPost.MutedByViewer.get -> bool
 idunno.Bluesky.Unspecced.ThreadItemPost.MutedByViewer.init -> void
 idunno.Bluesky.Unspecced.ThreadItemPost.OpThread.get -> bool
 idunno.Bluesky.Unspecced.ThreadItemPost.OpThread.init -> void
-idunno.Bluesky.Unspecced.ThreadItemPost.OpThreadCount.get -> int?
-idunno.Bluesky.Unspecced.ThreadItemPost.OpThreadCount.init -> void
-idunno.Bluesky.Unspecced.ThreadItemPost.OpThreadIndex.get -> int?
-idunno.Bluesky.Unspecced.ThreadItemPost.OpThreadIndex.init -> void
+idunno.Bluesky.Unspecced.ThreadItemPost.OpThreadPostCount.get -> int?
+idunno.Bluesky.Unspecced.ThreadItemPost.OpThreadPostCount.init -> void
+idunno.Bluesky.Unspecced.ThreadItemPost.OpThreadPostIndex.get -> int?
+idunno.Bluesky.Unspecced.ThreadItemPost.OpThreadPostIndex.init -> void
 idunno.Bluesky.Unspecced.ThreadItemPost.Post.get -> idunno.Bluesky.Feed.PostView!
 idunno.Bluesky.Unspecced.ThreadItemPost.Post.init -> void
 idunno.Bluesky.Unspecced.ThreadItemValue
