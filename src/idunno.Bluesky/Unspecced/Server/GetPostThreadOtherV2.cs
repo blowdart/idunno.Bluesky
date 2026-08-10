@@ -64,7 +64,7 @@ public static partial class BlueskyServer
 
         AtProtoHttpResult<GetPostThreadOtherV2Response> result = await request.Get(
             service,
-            $"xrpc/app.bsky.unspecced.getPostThreadOtherV2?{queryString}",
+            $"/xrpc/app.bsky.unspecced.getPostThreadOtherV2?{queryString}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
