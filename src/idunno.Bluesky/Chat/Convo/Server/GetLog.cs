@@ -59,7 +59,7 @@ public static partial class BlueskyServer
 
         AtProtoHttpResult<GetLogResponse> response = await client.Get(
             service,
-            $"xrpc/chat.bsky.convo.getLog{queryString}",
+            $"/xrpc/chat.bsky.convo.getLog{queryString}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,

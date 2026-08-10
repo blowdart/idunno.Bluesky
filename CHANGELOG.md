@@ -23,7 +23,6 @@
 #### idunno.Bluesky
 
 * Fixed a bug in `GetMutes` where the cursor query string parameter was being generated incorrectly.
-* Removed the ambiguous `ListNotifications` method.
 
 ### Breaking Changes
 
@@ -36,6 +35,8 @@
 
 * `ActorViewerState` has been renamed to `ViewerState` to match the lexicon definition. Its constructors have updated to be `internal`,
   and the `Muted` and `BlockedBy` properties are now nullable, as they're defined as optional in the ATProto lexicon.
+* Removed the ambiguous `ListNotifications` method.
+* Removed the ambiguous `GetSuggestedUsers` method.
 
 ## 3.1.0 - 2026-07-29
 
