@@ -930,7 +930,7 @@ idunno.AtProto.Server.ServerDescription
 idunno.AtProto.Server.ServerDescription.<Clone>$() -> idunno.AtProto.Server.ServerDescription!
 idunno.AtProto.Server.ServerDescription.AvailableUserDomains.get -> System.Collections.Generic.IReadOnlyList<string!>!
 idunno.AtProto.Server.ServerDescription.AvailableUserDomains.init -> void
-idunno.AtProto.Server.ServerDescription.BlobUploadLimit.get -> int?
+idunno.AtProto.Server.ServerDescription.BlobUploadLimit.get -> long?
 idunno.AtProto.Server.ServerDescription.BlobUploadLimit.init -> void
 idunno.AtProto.Server.ServerDescription.Contact.get -> idunno.AtProto.Server.Contact?
 idunno.AtProto.Server.ServerDescription.Contact.init -> void

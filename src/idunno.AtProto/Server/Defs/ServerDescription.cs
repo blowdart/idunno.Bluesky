@@ -17,7 +17,7 @@ public sealed record ServerDescription
         Did did,
         bool? inviteCodeRequired,
         bool? phoneVerificationRequired,
-        int? blobUploadLimit,
+        long? blobUploadLimit,
         IReadOnlyList<string> availableUserDomains,
         Links? links,
         Contact? contact)
@@ -61,7 +61,7 @@ public sealed record ServerDescription
     /// <summary>
     /// Gets the maximum size of a blob that can be uploaded via <see cref="AtProtoAgent.UploadBlob(byte[], string, Uri?, string?, CancellationToken)"/>, in bytes.
     /// </summary>
-    public int? BlobUploadLimit { get; init; }
+    public long? BlobUploadLimit { get; init; }
 
     /// <summary>
     /// Gets a list of one or more domains that users can create handles with on this server.

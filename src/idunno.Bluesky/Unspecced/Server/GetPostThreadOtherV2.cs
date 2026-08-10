@@ -56,9 +56,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        StringBuilder queryStringBuilder = new($"anchor={Uri.EscapeDataString(anchor.ToString())}");
-
-        string queryString = queryStringBuilder.ToString();
+        string queryString = $"anchor={Uri.EscapeDataString(anchor.ToString())}";
 
         BlueskyHttpClient<GetPostThreadOtherV2Response> request = new(AppViewProxy, loggerFactory);
 

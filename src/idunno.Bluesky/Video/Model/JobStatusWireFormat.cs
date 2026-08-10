@@ -60,8 +60,8 @@ internal record JobStatusWireFormat
 
     [JsonInclude]
     [JsonRequired]
-    public string? State { get; set; }
+    public string? State { get; init; }
 
     [JsonInclude]
-    public string? FailureCode { get; set; }
+    public string? FailureCode { get; init; }
 }
