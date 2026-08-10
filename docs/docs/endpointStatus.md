@@ -71,7 +71,7 @@
 | | app.bsky.unspecced.getConfig | | ❌ |
 | | app.bsky.unspecced.getPopularFeedGenerators | `BlueskyAgent.GetPopularFeedGenerators()` | ✔ |
 | | app.bsky.unspecced.getPostThreadOtherV2 | `BlueskyAgent.GetPostThreadOtherV2()` | ✔ |
-| | app.bsky.unspecced.getPostThreadV2 | `BlueskyAgent.GetPostThreadV2() | ✔  |
+| | app.bsky.unspecced.getPostThreadV2 | `BlueskyAgent.GetPostThreadV2()` | ✔ |
 | | ~~app.bsky.unspecced.getSuggestedFeeds~~<br />[Promoted to a feed API](https://docs.bsky.app/docs/api/app-bsky-feed-get-suggested-feeds) | `BlueskyAgent.GetSuggestedFeeds()` | ❌ |
 | | app.bsky.unspecced.getSuggestedFeedsSkeleton | | ❌ |
 | | app.bsky.unspecced.getSuggestedStarterPacks | `BlueskyAgent.GetSuggestedStarterPacks()` | ✔ |
