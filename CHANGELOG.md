@@ -1,5 +1,51 @@
 # Version History
 
+## 4.0.0 - **Unreleased**
+
+### Added
+
+#### idunno.AtProto
+
+* Added `BlobUploadLimit` to `ServerDescription`, which indicates the maximum size of a blob that a server will accept via uploadBlob. See [pds: expose blobUploadLimit through describeServer](https://github.com/bluesky-social/atproto/pull/5277).
+
+#### idunno.Bluesky
+
+* Added support for muting actors reposts and quote posts, with the addition of scopes to the `MuteActor` method to specify the type of mute. See [Add repost and quotepost-only mutes](https://github.com/bluesky-social/atproto/pull/5118).
+   For example, to mute only reposts from an actor, you can use the following code:
+   ```c#
+   await agent.MuteActor(
+     new Handle("jcsalterego.bsky.social"),
+     onlyReposts: true,
+     onlyQuotePosts: null);
+   ```
+* Added optional `FailureCode` property to `JobStatus` class to provide machine-readable failure codes for video processing jobs. Known values are defined in the `FailureCodes` class. See [Add video job failure codes](https://github.com/bluesky-social/atproto/pull/5283).
+* Added new, undocumented, `Uploading` and `Encoding` states to the `JobState` enum to reflect the discovered video processing states.
+* Added implementation of the unspecced `GetPostThreadV2` and `GetPostThreadOtherV2` apis.
+* Updated `CreateGroup` to allow up to 10000 members in a group. See [update chat lexicons](https://github.com/bluesky-social/atproto/pull/5303).
+* Added fallback in `OpenGraphEmbeddedCardGenerator` to also look for `<meta name="og:([^\"]+)" content="([^\"]+)"` tags, not just `<meta property="og:([^\"]+)" content="([^\"]+)"` tags.
+* Added `SubscribedLabelers` optional parameter to `ListActivitySubscriptions`, `ListNotifications` and `GetSuggestedUsers` to allow labels to be applied to the returned results.
+
+### Fixed
+
+#### idunno.Bluesky
+
+* Fixed a bug in `GetMutes` where the cursor query string parameter was being generated incorrectly.
+
+### Breaking Changes
+
+#### idunno.AtProto
+
+* `ServerDescription`, `Links` and `Contact` are now part of the `idunno.AtProto.Server` namespace.
+* `InviteCodeRequired` and `PhoneVerificationRequired` properties of `ServerDescription` are now nullable, as they're defined as optional in the ATProto lexicon.
+
+#### idunno.Bluesky
+
+* `ActorViewerState` has been renamed to `ViewerState` to match the lexicon definition. Its constructors have updated to be `internal`,
+  and the `Muted` and `BlockedBy` properties are now nullable, as they're defined as optional in the ATProto lexicon.
+  Two new properties, `MutedOnlyReposts` and `MutedOnlyQuotePosts`, have been added to reflect the new mute scopes.
+* Removed the ambiguous `ListNotifications` method.
+* Removed the ambiguous `GetSuggestedUsers` method.
+
 ## 3.1.0 - 2026-07-29
 
 ### Added

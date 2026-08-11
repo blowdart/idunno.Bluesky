@@ -9,7 +9,6 @@ using System.Text.Json;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
-using idunno.AtProto.Server.Models;
 using idunno.DidPlcDirectory;
 
 using Microsoft.Extensions.Logging;
@@ -469,19 +468,6 @@ public partial class AtProtoAgent : Agent
         Did? did = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false) ?? throw new ArgumentException($"{handle} cannot be resolved to a DID", nameof(handle));
 
         return await ResolvePds(did, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Describes the <paramref name="server"/>'s account creation requirements and capabilities.
-    /// </summary>
-    /// <param name="server">The service whose account description is to be retrieved.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    /// <returns>The task object representing the asynchronous operation.</returns>
-    public async Task<AtProtoHttpResult<ServerDescription>> DescribeServer(Uri? server, CancellationToken cancellationToken = default)
-    {
-        server ??= Service;
-
-        return await AtProtoServer.DescribeServer(server, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

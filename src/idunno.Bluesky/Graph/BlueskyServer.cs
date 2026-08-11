@@ -38,9 +38,6 @@ public static partial class BlueskyServer
     // https://docs.bsky.app/docs/api/app-bsky-graph-get-lists-with-membership
     private const string GetListsWithMembershipEndpoint = "/xrpc/app.bsky.graph.getListsWithMembership";
 
-    // https://docs.bsky.app/docs/api/app-bsky-graph-get-mutes
-    private const string GetMutesEndpoint = "/xrpc/app.bsky.graph.getMutes";
-
     // https://docs.bsky.app/docs/api/app-bsky-graph-get-starter-pack
     private const string GetStarterPackEndpoint = "/xrpc/app.bsky.graph.getStarterPack";
 
@@ -52,9 +49,6 @@ public static partial class BlueskyServer
 
     // https://docs.bsky.app/docs/api/app-bsky-graph-mute-actor-list
     private const string MuteActorListEndpoint = "/xrpc/app.bsky.graph.muteActorList";
-
-    // https://docs.bsky.app/docs/api/app-bsky-graph-mute-actor
-    private const string MuteActorEndpoint = "/xrpc/app.bsky.graph.muteActor";
 
     // https://docs.bsky.app/docs/api/app-bsky-graph-mute-thread
     private const string MuteThreadEndpoint = "/xrpc/app.bsky.graph.muteThread";
@@ -714,100 +708,6 @@ public static partial class BlueskyServer
     }
 
     /// <summary>
-    /// Get a paged list of muted profiles for the current user. Requires authentication.
-    /// </summary>
-    /// <param name="limit">The maximum number of lists that should be return in a page.</param>
-    /// <param name="cursor">An optional cursor for pagination.</param>
-    /// <param name="service">The <see cref="Uri"/> of the service to retrieve the mutes from.</param>
-    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
-    /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
-    /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
-    /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the post view.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="accessCredentials"/>, <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is &lt; 1 or &gt; 100.</exception>
-    [UnconditionalSuppressMessage(
-        "Trimming",
-        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
-        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-    [UnconditionalSuppressMessage(
-        "AOT",
-        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
-        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-    public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>> GetMutes(
-        int? limit,
-        string? cursor,
-        Uri service,
-        AccessCredentials accessCredentials,
-        HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
-        ILoggerFactory? loggerFactory = default,
-        IEnumerable<Did>? subscribedLabelers = null,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(accessCredentials);
-        ArgumentNullException.ThrowIfNull(service);
-        ArgumentNullException.ThrowIfNull(httpClient);
-
-        if (limit is not null)
-        {
-            ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, 100);
-        }
-
-        StringBuilder queryStringBuilder = new();
-
-        if (limit is not null)
-        {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"limit={limit}");
-
-            if (cursor is not null)
-            {
-                queryStringBuilder.Append('&');
-            }
-        }
-
-        if (cursor is not null)
-        {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"cursor = {Uri.EscapeDataString(cursor)}");
-        }
-
-        string queryString = queryStringBuilder.ToString();
-
-        BlueskyHttpClient<GetMutesResponse> client = new(AppViewProxy, loggerFactory);
-        AtProtoHttpResult<GetMutesResponse> response = await client.Get(
-            service,
-            $"{GetMutesEndpoint}?{queryString}",
-            credentials: accessCredentials,
-            httpClient: httpClient,
-            jsonSerializerOptions: BlueskyJsonSerializerOptions,
-            onCredentialsUpdated: onCredentialsUpdated,
-            subscribedLabelers: subscribedLabelers,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        if (response.Succeeded)
-        {
-            return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>(
-                new PagedViewReadOnlyCollection<ProfileView>(response.Result.Mutes, response.Result.Cursor),
-                response.StatusCode,
-                response.HttpResponseHeaders,
-                response.AtErrorDetail,
-                response.RateLimit);
-        }
-        else
-        {
-            return new AtProtoHttpResult<PagedViewReadOnlyCollection<ProfileView>>(
-                null,
-                response.StatusCode,
-                response.HttpResponseHeaders,
-                response.AtErrorDetail,
-                response.RateLimit);
-        }
-    }
-
-    /// <summary>
     /// Gets a view of a starter pack.
     /// </summary>
     /// <param name="uri">The <see cref="AtUri"/> of the starter pack to view.</param>
@@ -1046,57 +946,10 @@ public static partial class BlueskyServer
     }
 
     /// <summary>
-    /// Creates a mute relationship for the specified account. Requires authentication.
-    /// </summary>
-    /// <param name="actor">The <see cref="AtIdentifier"/> of the actor to mute</param>
-    /// <param name="service">The <see cref="Uri"/> of the service cerate the mute on.</param>
-    /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
-    /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
-    /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="actor"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
-    [UnconditionalSuppressMessage(
-        "Trimming",
-        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
-        Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
-    [UnconditionalSuppressMessage("AOT",
-        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
-        Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
-    public static async Task<AtProtoHttpResult<EmptyResponse>> MuteActor(
-        AtIdentifier actor,
-        Uri service,
-        AccessCredentials accessCredentials,
-        HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
-        ILoggerFactory? loggerFactory = default,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(actor);
-        ArgumentNullException.ThrowIfNull(service);
-        ArgumentNullException.ThrowIfNull(accessCredentials);
-        ArgumentNullException.ThrowIfNull(httpClient);
-
-        BlueskyHttpClient<EmptyResponse> client = new(AppViewProxy, loggerFactory);
-        AtProtoHttpResult<EmptyResponse> response = await client.Post(
-            service,
-            $"{MuteActorEndpoint}",
-            new MuteActorRequest(actor),
-            credentials: accessCredentials,
-            httpClient: httpClient,
-            jsonSerializerOptions: BlueskyJsonSerializerOptions,
-            onCredentialsUpdated: onCredentialsUpdated,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        return response;
-    }
-
-    /// <summary>
     /// Mutes a thread preventing notifications from the thread and any of its children. Requires authentication.
     /// </summary>
     /// <param name="rootUri">The <see cref="AtUri"/> of the thread to mute</param>
-    /// <param name="service">The <see cref="Uri"/> of the service cerate the mute on.</param>
+    /// <param name="service">The <see cref="Uri"/> of the service to mute the thread on.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>

@@ -137,7 +137,7 @@ public sealed class Program
                 videoUploadResult.EnsureSucceeded();
 
                 while (videoUploadResult.Succeeded &&
-                    (videoUploadResult.Result.State == JobState.Created || videoUploadResult.Result.State == JobState.InProgress) &&
+                      (videoUploadResult.Result.State != JobState.Completed && videoUploadResult.Result.State != JobState.Failed) &&
                     !cancellationToken.IsCancellationRequested)
                 {
                     Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} processing, progress {videoUploadResult.Result.Progress}");
@@ -198,12 +198,14 @@ public sealed class Program
                 var videoUploadResult = await agent.UploadVideo(
                     Path.GetRandomFileName() + ".mp4",
                     videoAsBytes,
+                    "video/mp4",
                     cancellationToken: cancellationToken);
 
                 videoUploadResult.EnsureSucceeded();
 
                 while (videoUploadResult.Succeeded &&
-                    (videoUploadResult.Result.State == JobState.Created || videoUploadResult.Result.State == JobState.InProgress) &&
+                    videoUploadResult.Result.State != JobState.Completed &&
+                    videoUploadResult.Result.State != JobState.Failed &&
                     !cancellationToken.IsCancellationRequested)
                 {
                     Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} processing, progress {videoUploadResult.Result.Progress}");

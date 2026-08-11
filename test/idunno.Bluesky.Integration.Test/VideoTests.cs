@@ -5,7 +5,7 @@ using System.Text;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
-using idunno.AtProto.Server.Models;
+using idunno.AtProto.Server;
 using idunno.Bluesky.Video;
 
 using Microsoft.AspNetCore.Http;
@@ -63,7 +63,8 @@ public class VideoTests
                         },
                         availableUserDomains: [request.Host.Host],
                         inviteCodeRequired: false,
-                        phoneVerificationRequired: false);
+                        phoneVerificationRequired: false,
+                        blobUploadLimit: 10000000);
                     await response.WriteAsJsonAsync(serverDescription);
                     return;
                 }
@@ -290,7 +291,8 @@ public class VideoTests
 
             // Wait for processing to finish.
             while (uploadResult.Succeeded &&
-                   (uploadResult.Result.State == JobState.Created || uploadResult.Result.State == JobState.InProgress) &&
+                   uploadResult.Result.State != JobState.Completed &&
+                   uploadResult.Result.State != JobState.Failed &&
                    statusRetryCount < maxStatusRetries)
             {
                 statusRetryCount++;
@@ -361,7 +363,8 @@ public class VideoTests
                         },
                         availableUserDomains: [request.Host.Host],
                         inviteCodeRequired: false,
-                        phoneVerificationRequired: false);
+                        phoneVerificationRequired: false,
+                        blobUploadLimit: 10000000);
                     await response.WriteAsJsonAsync(serverDescription);
                     return;
                 }
@@ -587,7 +590,8 @@ public class VideoTests
 
             // Wait for processing to finish.
             while (uploadResult.Succeeded &&
-                   (uploadResult.Result.State == JobState.Created || uploadResult.Result.State == JobState.InProgress) &&
+                   uploadResult.Result.State != JobState.Completed &&
+                   uploadResult.Result.State != JobState.Failed &&
                    statusRetryCount < maxStatusRetries)
             {
                 statusRetryCount++;

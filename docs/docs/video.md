@@ -27,7 +27,8 @@ videoUploadResult.EnsureSucceeded();
 
 // Wait for processing to finish.
 while (videoUploadResult.Succeeded &&
-       (videoUploadResult.Result.State == idunno.Bluesky.Video.JobState.Created || videoUploadResult.Result.State == idunno.Bluesky.Video.JobState.InProgress))
+       videoUploadResult.Result.State != JobState.Completed &&
+       videoUploadResult.Result.State != JobState.Failed)
 {
     // Give the user some feedback
     Console.WriteLine(

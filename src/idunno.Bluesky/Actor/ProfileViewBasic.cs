@@ -47,7 +47,7 @@ public record ProfileViewBasic : View
         Uri? website,
         Uri? avatar,
         ProfileAssociated? associated,
-        ActorViewerState? viewer,
+        ViewerState? viewer,
         IReadOnlyCollection<Label>? labels,
         DateTimeOffset? createdAt,
         VerificationState? verification,
@@ -126,7 +126,7 @@ public record ProfileViewBasic : View
     /// <summary>
     /// Gets metadata about the requesting account's relationship with the subject account. Only has meaningful content for authenticated requests.
     /// </summary>
-    public ActorViewerState? Viewer { get; init; }
+    public ViewerState? Viewer { get; init; }
 
     /// <summary>
     /// Gets any labels applied to the actor.

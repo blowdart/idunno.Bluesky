@@ -3,7 +3,7 @@
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
-using idunno.AtProto.Server.Models;
+using idunno.AtProto.Server;
 
 using Microsoft.Extensions.Logging;
 
@@ -189,14 +189,19 @@ public sealed class Program
             Console.WriteLine($"Contact      : {serverDescription.Contact}");
         }
 
-        if (serverDescription.InviteCodeRequired)
+        if (serverDescription.InviteCodeRequired.HasValue && serverDescription.InviteCodeRequired.Value)
         {
             Console.WriteLine("Invite code required for registration.");
         }
 
-        if (serverDescription.PhoneVerificationRequired)
+        if (serverDescription.PhoneVerificationRequired.HasValue && serverDescription.PhoneVerificationRequired.Value)
         {
             Console.WriteLine("Phone verification required for registration.");
+        }
+
+        if (serverDescription.BlobUploadLimit.HasValue)
+        {
+            Console.WriteLine($"Blob upload limit : {serverDescription.BlobUploadLimit.Value} bytes");
         }
 
         Console.WriteLine();

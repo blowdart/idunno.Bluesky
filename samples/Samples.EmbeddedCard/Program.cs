@@ -1,16 +1,11 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics;
-
 using idunno.AtProto;
 using idunno.Bluesky;
 using idunno.Bluesky.Embed;
 
 using Microsoft.Extensions.Logging;
-
-using OpenGraphNet;
-using OpenGraphNet.Metadata;
 
 using Samples.Common;
 
@@ -93,76 +88,30 @@ public sealed class Program
             }
 
             Uri pageUri = new("https://en.wikipedia.org/wiki/Baked_beans");
+            OpenGraphEmbeddedCardGenerator openGraphCardGenerator = agent.CreateOpenGraphEmbeddedCardGenerator();
 
-            OpenGraph graph = await OpenGraph.ParseUrlAsync(pageUri, cancellationToken: cancellationToken);
-
-            // Check to see if there's a different URI specified in the graph metadata.
-            if (graph.Url is not null)
+            // Embed with a PostBuilder
+            var postBuilder = new PostBuilder("PostBuilder OpenCard Test");
+            var openGraphCard = await openGraphCardGenerator.Generate(pageUri, cancellationToken);
+            if (openGraphCard is not null)
             {
-                pageUri = graph.Url;
+                postBuilder.EmbedRecord(openGraphCard);
             }
 
-            if (!string.IsNullOrEmpty(graph.Title) && pageUri is not null)
+            var postBuilderResult = await agent.Post(postBuilder, cancellationToken: cancellationToken);
+
+            // Post an embedded card directly. Embedded card posts don't require post text.
+            var post = new Post("Post OpenCard Test", embeddedRecord: openGraphCard);
+            var postResult = await agent.Post(post, cancellationToken: cancellationToken);
+
+            if (postBuilderResult.Succeeded)
             {
-                string? description = graph.Metadata["og:description"].Value();
+                await agent.DeletePost(postBuilderResult.Result.StrongReference, cancellationToken: cancellationToken);
+            }
 
-                Blob? thumbnailBlob = null;
-
-                // Now see if there's a thumbnail
-                if (graph.Image is not null)
-                {
-                    // Try to grab the image, then upload it as a blob.
-                    try
-                    {
-                        var downloadHttpClient = agent.HttpClient;
-
-                        using (HttpResponseMessage response = await downloadHttpClient.GetAsync(graph.Image, cancellationToken: cancellationToken))
-                        {
-                            response.EnsureSuccessStatusCode();
-
-                            var responseBody = await response.Content.ReadAsByteArrayAsync(cancellationToken: cancellationToken);
-
-                            if (responseBody is not null &&
-                                response.Content is not null &&
-                                response.Content.Headers is not null &&
-                                response.Content.Headers.ContentType is not null &&
-                                response.Content.Headers.ContentType.MediaType is not null)
-                            {
-                                AtProtoHttpResult<Blob> uploadResult = await
-                                    agent.UploadBlob(responseBody, response.Content.Headers.ContentType.MediaType, cancellationToken: cancellationToken);
-
-                                if (uploadResult.Succeeded)
-                                {
-                                    thumbnailBlob = uploadResult.Result;
-                                }
-                            }
-                        }
-                    }
-                    catch (HttpRequestException) { } // Ignore any exceptions from trying to get the thumbnail and upload the image.
-
-                    EmbeddedExternal embeddedExternal = new(pageUri, graph.Title, description, thumbnailBlob);
-
-                    // Embed with a PostBuilder
-                    var postBuilder = new PostBuilder("Embedded record test");
-                    postBuilder.EmbedRecord(embeddedExternal);
-
-                    var postBuilderResult = await agent.Post(postBuilder, cancellationToken: cancellationToken);
-
-                    // Post an embedded card directly. Embedded card posts don't require post text.
-                    var postResult = await agent.Post(externalCard: embeddedExternal, cancellationToken: cancellationToken);
-
-                    Debugger.Break();
-
-                    if (postBuilderResult.Succeeded)
-                    {
-                        await agent.DeletePost(postBuilderResult.Result.StrongReference, cancellationToken: cancellationToken);
-                    }
-
-                    if (postResult.Succeeded)
-                    {
-                        await agent.DeletePost(postResult.Result.StrongReference, cancellationToken: cancellationToken);
-                    }
-                }
+            if (postResult.Succeeded)
+            {
+                await agent.DeletePost(postResult.Result.StrongReference, cancellationToken: cancellationToken);
             }
         }
         return;

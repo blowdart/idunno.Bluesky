@@ -44,7 +44,7 @@ public record ProfileView : ProfileViewBasic
         Uri? website,
         Uri? avatar,
         ProfileAssociated? associated,
-        ActorViewerState? viewer,
+        ViewerState? viewer,
         IReadOnlyCollection<Label>? labels,
         DateTimeOffset? indexedAt,
         DateTimeOffset? createdAt,

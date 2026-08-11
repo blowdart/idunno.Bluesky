@@ -56,7 +56,7 @@ public sealed record ProfileViewDetailed : ProfileView
         Uri? avatar,
         Uri? banner,
         ProfileAssociated? associated,
-        ActorViewerState? viewer,
+        ViewerState? viewer,
         IReadOnlyCollection<Label>? labels,
         DateTimeOffset? indexedAt,
         DateTimeOffset? createdAt,

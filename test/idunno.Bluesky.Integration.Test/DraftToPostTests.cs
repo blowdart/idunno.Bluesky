@@ -8,7 +8,7 @@ using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Repo;
 using idunno.AtProto.Repo.Models;
-using idunno.AtProto.Server.Models;
+using idunno.AtProto.Server;
 using idunno.Bluesky.Drafts;
 using idunno.Bluesky.Embed;
 
@@ -1350,7 +1350,8 @@ public class DraftToPostTests
                         },
                         availableUserDomains: [request.Host.Host],
                         inviteCodeRequired: false,
-                        phoneVerificationRequired: false);
+                        phoneVerificationRequired: false,
+                        blobUploadLimit: 10000000);
                     await response.WriteAsJsonAsync(serverDescription);
                     return;
                 }
