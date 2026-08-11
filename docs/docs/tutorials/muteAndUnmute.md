@@ -6,7 +6,7 @@ Muting a user hides their posts from your feeds. Mutes are *private*. Muting a u
 
 | Parameter    | Type | Description                    | Required   |
 |--------------|------|--------------------------------|:----------:|
-| actor        | AtIdentifier | The Handle or DID of the user to mute . | Yes |
+| actor        | AtIdentifier | The Handle or DID of the user to mute. | Yes |
 
 You can also narrow the scope of a mute, by using the overload with the `onlyReposts` and `onlyQuotePosts` parameters.
 
@@ -18,7 +18,7 @@ await agent.Mute(actor);
 
 | Parameter    | Type | Description                    | Required   |
 |--------------|------|--------------------------------|:----------:|
-| actor        | AtIdentifier | The Handle or DID of the user to mute . | Yes |
+| actor        | AtIdentifier | The Handle or DID of the user to mute. | Yes |
 | onlyReposts  | bool? | If true, only mutes reposts from the user. | Yes |
 | onlyQuotePosts | bool? | If true, only mutes quote posts from the user. | Yes |
 
@@ -26,16 +26,15 @@ await agent.Mute(actor);
 await agent.Mute(actor, onlyReposts : true, onlyQuotePosts: null);
 ```
 
-Setting either of the `onlyReposts` or `onlyQuotePosts` to `null` leaves the existing mute setting for that scope unchanged.
-
+When any 'only' scope is set, just the scoped content is muted; when none are set, the account is fully muted. Repeat calls replace the stored scope rather than adding to it.
 
 ## Unmuting a user
 
-`Unmute(identifier)`
+`Unmute(actor)`
 
 | Parameter    | Type | Description                      | Required   |
 |--------------|------|----------------------------------|:----------:|
-| actor        | AtIdentifier  | The Handle or DID of the user to unmute . | Yes        |
+| actor        | AtIdentifier  | The Handle or DID of the user to unmute. | Yes        |
 
 ```c#
 await agent.Unmute(actor);
