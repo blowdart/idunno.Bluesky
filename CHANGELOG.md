@@ -16,7 +16,7 @@
    await agent.MuteActor(
      new Handle("jcsalterego.bsky.social"),
      onlyReposts: true,
-     onlyQuoteposts: null);
+     onlyQuotePosts: null);
    ```
 * Added optional `FailureCode` property to `JobStatus` class to provide machine-readable failure codes for video processing jobs. Known values are defined in the `FailureCodes` class. See [Add video job failure codes](https://github.com/bluesky-social/atproto/pull/5283).
 * Added new, undocumented, `Uploading` and `Encoding` states to the `JobState` enum to reflect the discovered video processing states.

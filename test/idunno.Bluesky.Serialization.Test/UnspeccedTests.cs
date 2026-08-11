@@ -376,6 +376,8 @@ public class UnspeccedTests
                             "moreParents": false,
                             "moreReplies": 0,
                             "opThread": true,
+                            "opThreadPostIndex" : 1,
+                            "opThreadPostCount" : 2,
                             "hiddenByThreadgate": false,
                             "mutedByViewer": false,
                             "$type": "app.bsky.unspecced.defs#threadItemPost"
@@ -797,6 +799,7 @@ public class UnspeccedTests
         Assert.True(post0.OpThread);
         Assert.False(post0.HiddenByThreadGate);
         Assert.False(post0.MutedByViewer);
-
+        Assert.Equal(1, post0.OpThreadPostIndex);
+        Assert.Equal(2, post0.OpThreadPostCount);
     }
 }
