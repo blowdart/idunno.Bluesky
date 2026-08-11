@@ -8,14 +8,13 @@ using System.Text;
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Actor;
-using idunno.Bluesky.Graph;
 using idunno.Bluesky.Graph.Model;
 
 using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky;
 
-public partial class BlueskyServer
+public static partial class BlueskyServer
 {
     /// <summary>
     /// Enumerates accounts that the requesting account (actor) currently has fully muted.

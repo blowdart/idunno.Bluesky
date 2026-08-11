@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky;
 
-public partial class BlueskyServer
+public static partial class BlueskyServer
 {
     /// <summary>
     /// Creates or updates a mute relationship for the specified account.

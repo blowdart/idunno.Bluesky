@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky;
 
-public partial class BlueskyServer
+public static partial class BlueskyServer
 {
     /// <summary>
     /// Enumerates public relationships between one account, and a list of other accounts.

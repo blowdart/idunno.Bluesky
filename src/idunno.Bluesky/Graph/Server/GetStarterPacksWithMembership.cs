@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky;
 
-public partial class BlueskyServer
+public static partial class BlueskyServer
 {
     /// <summary>
     /// Enumerates the starter packs created by the authenticated user, and includes membership information about <paramref name="actor"/> in those starter packs. Requires auth.
