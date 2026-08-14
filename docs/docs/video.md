@@ -28,7 +28,8 @@ videoUploadResult.EnsureSucceeded();
 // Wait for processing to finish.
 while (videoUploadResult.Succeeded &&
        videoUploadResult.Result.State != JobState.Completed &&
-       videoUploadResult.Result.State != JobState.Failed)
+       videoUploadResult.Result.State != JobState.Failed && 
+       videoUploadResult.Result.State != JobState.Unknown)
 {
     // Give the user some feedback
     Console.WriteLine(
@@ -37,6 +38,12 @@ while (videoUploadResult.Succeeded &&
     await Task.Delay(1000);
     videoUploadResult = await agent.GetVideoJobStatus(videoUploadResult.Result.JobId);
     videoUploadResult.EnsureSucceeded();
+}
+
+if (videoUploadResult.Result.State == JobState.Unknown)
+{
+    // Bluesky returned a status that's not part of the published lexicon. This should be treated as an error.
+    return;
 }
 
 if (!videoUploadResult.Succeeded ||

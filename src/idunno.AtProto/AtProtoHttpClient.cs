@@ -1147,6 +1147,70 @@ public class AtProtoHttpClient<TResult> where TResult : class
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Creates a blob record on the supplied <paramref name="service"/> against the specified <paramref name="endpoint"/>.
+    /// </summary>
+    /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
+    /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
+    /// <param name="blob">The blob to send as the request body.</param>
+    /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
+    /// <param name="contentHeaders">A collection of HTTP content headers to send with the request content.</param>
+    /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
+    /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
+    /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="blob"/> is an empty array.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClient"/> or <paramref name="credentials"/> is <see langword="null"/>.</exception>
+    [RequiresUnreferencedCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
+    [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Only difference is the blob parameter type")]
+    public async Task<AtProtoHttpResult<TResult>> PostBlob(
+        Uri service,
+        string endpoint,
+        ReadOnlyMemory<byte> blob,
+        ICollection<NameValueHeaderValue>? requestHeaders,
+        ICollection<NameValueHeaderValue>? contentHeaders,
+        AtProtoCredential credentials,
+        HttpClient httpClient,
+        JsonSerializerOptions jsonSerializerOptions,
+        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentException.ThrowIfNullOrEmpty(endpoint);
+
+        if (blob.Length == 0)
+        {
+            throw new ArgumentException("Blob cannot be empty.", nameof(blob));
+        }
+
+        ArgumentNullException.ThrowIfNull(credentials);
+        ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(jsonSerializerOptions);
+
+        if (credentials is not IAccessCredential)
+        {
+            throw new ArgumentException("credentials must have access credential", nameof(credentials));
+        }
+
+        return await MakeRequest(
+            service: service,
+            endpoint: endpoint,
+            record: blob,
+            httpMethod: HttpMethod.Post,
+            requestHeaders: MergeRequestHeaders(requestHeaders),
+            contentHeaders: contentHeaders,
+            credentials: credentials,
+            httpClient: httpClient,
+            retry: true,
+            onCredentialsUpdated: onCredentialsUpdated,
+            subscribedLabelers: null,
+            jsonSerializerOptions: jsonSerializerOptions,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
     [SuppressMessage("Major Code Smell", "S108:Nested blocks of code should not be left empty", Justification = "Catching unexpected exceptions in error handling, so as to return as much as can be returned.")]
     private async Task<AtErrorDetail> ExtractErrorDetailFromResponse(
         HttpRequestMessage request,

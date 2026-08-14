@@ -1,5 +1,30 @@
 # Version History
 
+## 5.0.0 - **Unreleased**
+
+### Added
+
+#### idunno.Bluesky
+
+* Added support for the new multi-part video upload API, via `StartUpload`, `UploadPart`, `FinishUpload`, `GetUploadStatus` and `AbortUpload`.
+* Added new error classes for error from the multi-part video upload APIs.
+  * `BadAspectRatio`
+  * `DailyLimitExceeded`
+  * `InvalidPartNumber`
+  * `PartSizeMismatch`
+  * `TooManyOpenUploads`
+  * `ServiceOverloaded`
+  * `UnsupportedContentType`
+  * `UploadAborted`
+  * `UploadAlreadyCompleted`
+  * `UploadExpired`
+  * `UploadFailed`
+  * `UploadForbidden`
+  * `UploadNotFound`
+  * `UploadNotReady`
+  * `VideoTooLarge`
+  * `VideoTooLong`
+
 ## 4.0.0 - 2026-08-10
 
 ### Added

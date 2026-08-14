@@ -10,8 +10,7 @@ using idunno.Bluesky.Video;
 using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky;
-
-public partial class BlueskyServer
+public static partial class BlueskyServer
 {
     /// <summary>
     /// Uploads a video to be processed and stored on the specified <paramref name="service"/>.

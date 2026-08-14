@@ -21,8 +21,6 @@ using idunno.Bluesky.Labeler.Model;
 using idunno.Bluesky.Notifications;
 using idunno.Bluesky.Record;
 using idunno.Bluesky.RichText;
-using idunno.Bluesky.Video;
-using idunno.Bluesky.Video.Model;
 
 namespace idunno.Bluesky;
 
@@ -355,10 +353,6 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(MentionFacetFeature))]
 [JsonSerializable(typeof(TagFacetFeature))]
 
-[JsonSerializable(typeof(JobStatusResponse))]
-[JsonSerializable(typeof(JobStatusWireFormat))]
-[JsonSerializable(typeof(UploadLimits))]
-
 [JsonSerializable(typeof(Post))]
 [JsonSerializable(typeof(AtProtoRepositoryRecord<Post>))]
 [JsonSerializable(typeof(Bluesky.View), TypeInfoPropertyName = "BaseView")]
@@ -455,12 +449,12 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Chat.Group.Model.RequestJoinResponse))]
 [JsonSerializable(typeof(Chat.Group.Model.WithdrawJoinRequestRequest))]
 
-[JsonSerializable(typeof(Chat.Notifications.Preference), TypeInfoPropertyName = "ChatNotificationsPreference")]
-[JsonSerializable(typeof(Chat.Notifications.Preferences), TypeInfoPropertyName = "ChatNotificationsPreferences")]
+[JsonSerializable(typeof(Chat.ReplyReference), TypeInfoPropertyName = "ChatReplyReference")]
 [JsonSerializable(typeof(Chat.Model.GetPreferencesResponse), TypeInfoPropertyName = "ChatNotificationsModelGetPreferenceResponse")]
 [JsonSerializable(typeof(Chat.Model.PutPreferencesRequest), TypeInfoPropertyName = "ChatNotificationsModelPutPrefereceRequest")]
 [JsonSerializable(typeof(Chat.Model.PutPreferencesResponse), TypeInfoPropertyName = "ChatNotificationsModelPutPreferenceResponse")]
-[JsonSerializable(typeof(Chat.ReplyReference), TypeInfoPropertyName = "ChatReplyReference")]
+[JsonSerializable(typeof(Chat.Notifications.Preference), TypeInfoPropertyName = "ChatNotificationsPreference")]
+[JsonSerializable(typeof(Chat.Notifications.Preferences), TypeInfoPropertyName = "ChatNotificationsPreferences")]
 
 [JsonSerializable(typeof(Unspecced.TrendingTopic), TypeInfoPropertyName = "UnspeccedTrendingTopic")]
 [JsonSerializable(typeof(Unspecced.Model.GetPopularFeedGeneratorsResponse), TypeInfoPropertyName = "UnspeccedModelGetPopularFeedGeneratorsResponse")]
@@ -480,6 +474,17 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Unspecced.ThreadItemBlocked), TypeInfoPropertyName = "UnspeccedThreadItemBlocked")]
 [JsonSerializable(typeof(Unspecced.Model.GetPostThreadV2Response), TypeInfoPropertyName = "UnspeccedModelGetPostThreadV2Response")]
 [JsonSerializable(typeof(Unspecced.Model.GetPostThreadOtherV2Response), TypeInfoPropertyName = "UnspeccedModelGetPostThreadOtherV2Response")]
+
+[JsonSerializable(typeof(Video.StartUploadResponse), TypeInfoPropertyName = "VideoStartUploadResponse")]
+[JsonSerializable(typeof(Video.UploadLimits), TypeInfoPropertyName = "VideoUploadLimits")]
+[JsonSerializable(typeof(Video.Model.AbortUploadRequest), TypeInfoPropertyName = "VideoModelAbortUploadRequest")]
+[JsonSerializable(typeof(Video.Model.AbortUploadWireResponse), TypeInfoPropertyName = "VideoModelAbortUploadWireResponse")]
+[JsonSerializable(typeof(Video.Model.FinishUploadRequest), TypeInfoPropertyName = "VideoModelFinishUploadRequest")]
+[JsonSerializable(typeof(Video.Model.FinishUploadResponse), TypeInfoPropertyName = "VideoModelFinishUploadResponse")]
+[JsonSerializable(typeof(Video.Model.GetUploadStatusResponse), TypeInfoPropertyName = "VideoModelGetUploadStatusResponse")]
+[JsonSerializable(typeof(Video.Model.JobStatusResponse), TypeInfoPropertyName = "VideoModelJobStatusResponse")]
+[JsonSerializable(typeof(Video.Model.JobStatusWireFormat), TypeInfoPropertyName = "VideoModelJobStatusWireFormat")]
+[JsonSerializable(typeof(Video.Model.StartUploadRequest), TypeInfoPropertyName = "VideoModelStartUploadRequest")]
 
 internal partial class SourceGenerationContext : JsonSerializerContext
 {

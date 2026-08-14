@@ -31,7 +31,7 @@ public sealed class Program
         ArgumentException.ThrowIfNullOrEmpty(password);
 
         // Uncomment the next line to route all requests through Fiddler Everywhere
-        // proxyUri = new Uri("http://localhost:8866");
+        proxyUri = new Uri("http://localhost:8866");
 
         // Uncomment the next line to route all requests  through Fiddler Classic
         // proxyUri = new Uri("http://localhost:8888");
@@ -90,6 +90,31 @@ public sealed class Program
             // END-AUTHENTICATION
 
             // Your code goes here.
+
+            byte[] video = await File.ReadAllBytesAsync("C:\\Users\\BarryDorrans\\Downloads\\14981378_2160_3840_30fps.mp4", cancellationToken);
+
+            var startUploadResult = await agent.StartUpload(
+                size: video.Length,
+                mimeType: "video/mp4",
+                name: "14981378_2160_3840_30fps.mp4",
+                cancellationToken: cancellationToken);
+
+            if (!startUploadResult.Succeeded)
+            {
+                Console.WriteLine($"StartUpload failed: {startUploadResult.AtErrorDetail?.Error} / {startUploadResult.AtErrorDetail?.Message}");
+                return;
+            };
+
+            string jobId = startUploadResult.Result.JobId;
+
+            var abortUploadResult = await agent.AbortUpload(
+                jobId: jobId,
+                cancellationToken: cancellationToken);
+
+            if (!abortUploadResult.Succeeded)
+            {
+                Console.WriteLine($"AbortUpload failed: {abortUploadResult.AtErrorDetail?.Error} / {abortUploadResult.AtErrorDetail?.Message}");
+            }
         }
     }
 }

@@ -1,0 +1,98 @@
+// Copyright (c) Barry Dorrans. All rights reserved.
+// Licensed under the MIT License.
+
+using System.Diagnostics.CodeAnalysis;
+
+using idunno.AtProto;
+using idunno.AtProto.Authentication;
+using idunno.AtProto.Server;
+using idunno.Bluesky.Video;
+
+namespace idunno.Bluesky;
+
+public partial class BlueskyAgent
+{
+    /// <summary>
+    /// Upload one part of a multi-part upload started with <see cref="StartUpload"/>. Parts are idempotent and may be retried or re-sent while the session is created.
+    /// Each expected length is derived from the upload size and part size, and Content-Length must match exactly.
+    /// ETags are never exposed to clients.
+    /// </summary>
+    /// <param name="jobId">The job id of the upload to which this part belongs.</param>
+    /// <param name="part">The part number of the part being uploaded.</param>
+    /// <param name="bytes">The bytes of the part being uploaded.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when a provided argument is out of the allowable range.</exception>
+    /// <exception cref="ArgumentException">Thrown when a provided argument is invalid.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    public async Task<AtProtoHttpResult<UploadPartResponse>> UploadPart(
+        string jobId,
+        long part,
+        byte[] bytes,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(jobId);
+        ArgumentOutOfRangeException.ThrowIfNegative(part);
+        ArgumentNullException.ThrowIfNull(bytes);
+        ArgumentOutOfRangeException.ThrowIfZero(bytes.Length);
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        using (_logger.BeginScope($"Uploading part {part} for {jobId}"))
+        {
+            // Get the server description so we can get the DID of the server.
+            AtProtoHttpResult<ServerDescription> serverDescriptionResult = await DescribeServer(Service, cancellationToken).ConfigureAwait(false);
+
+            if (serverDescriptionResult.Succeeded)
+            {
+
+                AtProtoHttpResult<ServiceCredential> getServiceAuthResult = await GetServiceAuth(
+                    Service,
+                    audience: serverDescriptionResult.Result.Did,
+                    lxm: UploadBlobLxm,
+                    expiry: new TimeSpan(0, 30, 0),
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                if (!getServiceAuthResult.Succeeded)
+                {
+                    return new AtProtoHttpResult<UploadPartResponse>(
+                        null,
+                        getServiceAuthResult.StatusCode,
+                        getServiceAuthResult.HttpResponseHeaders,
+                        getServiceAuthResult.AtErrorDetail,
+                        getServiceAuthResult.RateLimit);
+                }
+
+                return await BlueskyServer.UploadPart(
+                    jobId,
+                    part,
+                    bytes,
+                    service: _videoServer,
+                    serviceCredential: getServiceAuthResult.Result,
+                    httpClient: HttpClient,
+                    loggerFactory: LoggerFactory,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                Logger.UploadPartGetServerDescriptionFailed(
+                    _logger,
+                    Did,
+                    Service,
+                    serverDescriptionResult.StatusCode,
+                    serverDescriptionResult.AtErrorDetail?.Error,
+                    serverDescriptionResult.AtErrorDetail?.Message);
+
+                return new AtProtoHttpResult<UploadPartResponse>(
+                    null,
+                    serverDescriptionResult.StatusCode,
+                    serverDescriptionResult.HttpResponseHeaders,
+                    serverDescriptionResult.AtErrorDetail,
+                    serverDescriptionResult.RateLimit);
+            }
+        }
+    }
+}

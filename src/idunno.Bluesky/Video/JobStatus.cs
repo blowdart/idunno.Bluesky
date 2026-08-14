@@ -36,16 +36,7 @@ public sealed record JobStatus
 
         if (state is not null)
         {
-            State = state.ToUpperInvariant() switch
-            {
-                "JOB_STATE_CREATED" => JobState.Created,
-                "JOB_STATE_ENCODING" => JobState.Encoding,
-                "JOB_STATE_UPLOADING" => JobState.Uploading,
-                "JOB_STATE_IN_PROGRESS" => JobState.InProgress,
-                "JOB_STATE_COMPLETED" => JobState.Completed,
-                "JOB_STATE_FAILED" => JobState.Failed,
-                _ => JobState.Unknown,
-            };
+            State = state.ToJobState();
         }
 
         if (progress is not null)
