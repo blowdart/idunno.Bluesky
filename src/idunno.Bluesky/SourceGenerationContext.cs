@@ -480,7 +480,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Video.Model.AbortUploadRequest), TypeInfoPropertyName = "VideoModelAbortUploadRequest")]
 [JsonSerializable(typeof(Video.Model.AbortUploadWireResponse), TypeInfoPropertyName = "VideoModelAbortUploadWireResponse")]
 [JsonSerializable(typeof(Video.Model.FinishUploadRequest), TypeInfoPropertyName = "VideoModelFinishUploadRequest")]
-[JsonSerializable(typeof(Video.Model.FinishUploadResponse), TypeInfoPropertyName = "VideoModelFinishUploadResponse")]
+[JsonSerializable(typeof(Video.Model.FinishUploadWireResponse), TypeInfoPropertyName = "VideoModelFinishUploadResponse")]
 [JsonSerializable(typeof(Video.Model.GetUploadStatusResponse), TypeInfoPropertyName = "VideoModelGetUploadStatusResponse")]
 [JsonSerializable(typeof(Video.Model.JobStatusResponse), TypeInfoPropertyName = "VideoModelJobStatusResponse")]
 [JsonSerializable(typeof(Video.Model.JobStatusWireFormat), TypeInfoPropertyName = "VideoModelJobStatusWireFormat")]

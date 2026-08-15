@@ -3,7 +3,6 @@
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
-using idunno.AtProto.Server;
 using idunno.Bluesky.Video;
 
 namespace idunno.Bluesky;
@@ -11,15 +10,18 @@ namespace idunno.Bluesky;
 public partial class BlueskyAgent
 {
     /// <summary>
-    /// Abort an upload only while it is created, releasing its quota reservation immediately. Terminal sessions are unchanged and return their terminal outcome.
-    /// A finishing session returns UploadNotReady.
+    /// Finish an upload. This call is idempotent and safe to retry.
+    /// On deduplication the returned completedJobId may differ from the <paramref name="jobId"/>;
+    /// Poll <see cref="GetJobStatus(string, CancellationToken)"/> with <see cref="FinishUploadResponse.CompletedJobId"/>.
+    /// Probe-based validation failures surface later as <see cref="JobState.Failed"/> from <see cref="GetJobStatus(string, CancellationToken)"/>,
+    /// not as errors from this call.
     /// </summary>
-    /// <param name="jobId">The job id of the upload to abort.</param>
+    /// <param name="jobId">The job id of the upload to finish.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="jobId"/> is <see langword="null"/> or whitespace.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<AbortUploadResponse>> AbortUpload(
+    public async Task<AtProtoHttpResult<FinishUploadResponse>> FinishUpload(
         string jobId,
         CancellationToken cancellationToken = default)
     {
@@ -30,7 +32,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        using (_logger.BeginScope($"Aborting upload for {jobId}"))
+        using (_logger.BeginScope($"Finishing upload for {jobId}"))
         {
             AtProtoHttpResult<ServiceCredential> getServiceAuthResult = await GetServiceAuth(
                 Service,
@@ -40,8 +42,8 @@ public partial class BlueskyAgent
 
             if (!getServiceAuthResult.Succeeded)
             {
-                Logger.AbortUploadServiceAuthFailed(_logger, Did, Service, getServiceAuthResult.StatusCode, getServiceAuthResult.AtErrorDetail?.Error, getServiceAuthResult.AtErrorDetail?.Message);
-                return new AtProtoHttpResult<AbortUploadResponse>(
+                Logger.FinishUploadServiceAuthFailed(_logger, Did, Service, getServiceAuthResult.StatusCode, getServiceAuthResult.AtErrorDetail?.Error, getServiceAuthResult.AtErrorDetail?.Message);
+                return new AtProtoHttpResult<FinishUploadResponse>(
                     null,
                     getServiceAuthResult.StatusCode,
                     getServiceAuthResult.HttpResponseHeaders,
@@ -49,17 +51,17 @@ public partial class BlueskyAgent
                     getServiceAuthResult.RateLimit);
             }
 
-            AtProtoHttpResult<AbortUploadResponse> result = await BlueskyServer.AbortUpload(
-            jobId,
-            service: _videoServer,
-            serviceCredential: getServiceAuthResult.Result,
-            httpClient: HttpClient,
-            loggerFactory: LoggerFactory,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+            AtProtoHttpResult<FinishUploadResponse> result = await BlueskyServer.FinishUpload(
+                jobId,
+                service: _videoServer,
+                serviceCredential: getServiceAuthResult.Result,
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (!result.Succeeded)
             {
-                Logger.AbortUploadFailed(_logger, jobId, result.StatusCode, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message);
+                Logger.FinishUploadFailed(_logger, jobId, result.StatusCode, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message);
             }
 
             return result;

@@ -11,6 +11,7 @@
   * `BadAspectRatio`
   * `DailyLimitExceeded`
   * `InvalidPartNumber`
+  * `MissingParts`
   * `PartSizeMismatch`
   * `TooManyOpenUploads`
   * `ServiceOverloaded`
@@ -24,6 +25,12 @@
   * `UploadNotReady`
   * `VideoTooLarge`
   * `VideoTooLong`
+
+### Breaking Changes
+
+* `BlueskyServer.GetVideoJobStatus` has been renamed to `BlueskyServer.GetJobStatus` to reflect the new multi-part video upload API. `GetVideoJobStatus` is still available, but is marked as obsolete and will be removed in a future release.
+* `BlueskyAgent.GetVideoJobStatus` has been renamed to `BlueskyAgent.GetJobStatus` to reflect the new multi-part video upload API. `GetVideoJobStatus` is still available, but is marked as obsolete and will be removed in a future release.
+
 
 ## 4.0.0 - 2026-08-10
 

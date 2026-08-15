@@ -182,60 +182,27 @@ internal static partial class Logger
     [LoggerMessage(125, LogLevel.Error, "Could not delete temporary file {fileName}")]
     internal static partial void CouldNotDeleteTemporaryFile(ILogger logger, string fileName, Exception ex);
 
-    // Multipart upload
-//    [LoggerMessage(70, LogLevel.Information, "UploadVideo succeeded for {did} with job #{jobId}.")]
-//    internal static partial void UploadVideoSucceeded(ILogger logger, string jobId, Did did);
+    [LoggerMessage(135, LogLevel.Error, "StartUpload getServiceAuthFailed for user {did}, service {service} with {statusCode} error {error} message {message}")]
+    internal static partial void StartUploadServiceAuthFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
 
-//    [LoggerMessage(71, LogLevel.Error, "UploadVideo failed with {statusCode} when uploading video for {did}, error {error} message {message}")]
-//    internal static partial void UploadVideoFailed(ILogger logger, HttpStatusCode statusCode, Did did, string? error, string? message);
-
-    //[LoggerMessage(72, LogLevel.Information, "UploadVideo started for {did} on {server}, filename: {fileName} length: {length}")]
-//    internal static partial void UploadVideoStarted(ILogger logger, Did did, Uri server, string fileName, long length);
-
-    [LoggerMessage(134, LogLevel.Error, "GetServerDescription in StartUpload for user {did}, service {service} failed with {statusCode} error {error} message {message}")]
-    internal static partial void StartUploadGetServerDescriptionFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
-
-    [LoggerMessage(135, LogLevel.Information, "GetUploadStatus for jobId {jobId} succeeded, upload state is {state}, received parts count {receivedParts}")]
+    [LoggerMessage(136, LogLevel.Information, "GetUploadStatus for jobId {jobId} succeeded, upload state is {state}, received parts count {receivedParts}")]
     internal static partial void GetUploadStatusSucceeded(ILogger logger, string jobId, UploadState state, int receivedParts);
 
-    [LoggerMessage(136, LogLevel.Error, "GetUploadStatus failed with {statusCode} error {error} message {message}")]
+    [LoggerMessage(137, LogLevel.Error, "GetUploadStatus failed with {statusCode} error {error} message {message}")]
     internal static partial void GetUploadStatusFailed(ILogger logger, HttpStatusCode statusCode, string? error, string? message);
 
-    [LoggerMessage(137, LogLevel.Error, "AbortUpload failed for {jobId} with {statusCode} error {error} message {message}")]
+    [LoggerMessage(138, LogLevel.Error, "AbortUpload failed for {jobId} with {statusCode} error {error} message {message}")]
     internal static partial void AbortUploadFailed(ILogger logger, string jobId, HttpStatusCode statusCode, string? error, string? message);
 
-    [LoggerMessage(138, LogLevel.Error, "GetServerDescription in AbortUpload for user {did}, service {service} failed with {statusCode} error {error} message {message}")]
-    internal static partial void AbortUploadGetServerDescriptionFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
+    [LoggerMessage(139, LogLevel.Error, "AbortUpload getServiceAuth failed for user {did}, service {service} failed with {statusCode} error {error} message {message}")]
+    internal static partial void AbortUploadServiceAuthFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
 
-    [LoggerMessage(139, LogLevel.Error, "GetServerDescription in UploadPartfor user {did}, service {service} failed with {statusCode} error {error} message {message}")]
-    internal static partial void UploadPartGetServerDescriptionFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
+    [LoggerMessage(140, LogLevel.Error, "UploadPart getServiceAuthFailed for user {did}, service {service} failed with {statusCode} error {error} message {message}")]
+    internal static partial void UploadPartGetServiceAuthFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
 
+    [LoggerMessage(141, LogLevel.Error, "FinishUpload getServiceAuthFailed for user {did}, service {service} failed with {statusCode} error {error} message {message}")]
+    internal static partial void FinishUploadServiceAuthFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
 
-    //[LoggerMessage(90, LogLevel.Error, "GetLabelerServices failed because GetUserPreferencesFailed with {statusCode} error {error} message {message}")]
-    //internal static partial void GetUserPreferencesFailedInGetLabelerServices(ILogger logger, HttpStatusCode statusCode, string? error, string? message);
-
-    //[LoggerMessage(100, LogLevel.Information, "Uploading image {fileName} from draft {draftId}")]
-    //internal static partial void UploadingImageFromDraft(ILogger logger, string fileName, TimestampIdentifier draftId);
-
-    //[LoggerMessage(101, LogLevel.Information, "Uploading video {fileName} from draft {draftId}")]
-    //internal static partial void UploadingVideoFromDraft(ILogger logger, string fileName, TimestampIdentifier draftId);
-
-    //[LoggerMessage(102, LogLevel.Information, "Uploading caption {fileName} from draft {draftId}")]
-    //internal static partial void UploadingCaptionFromDraft(ILogger logger, string fileName, TimestampIdentifier draftId);
-
-    //[LoggerMessage(103, LogLevel.Error, "DeleteDraft failed for {draftId} with status code {statusCode} error {error} message {message}")]
-    //internal static partial void DeleteDraftFailed(ILogger logger, TimestampIdentifier draftId, HttpStatusCode statusCode, string? error, string? message);
-
-    //[LoggerMessage(105, LogLevel.Information, "UploadMedia succeeded for {did} with job #{jobId}.")]
-    //internal static partial void UploadMediaSucceeded(ILogger logger, string jobId, Did did);
-
-    //[LoggerMessage(106, LogLevel.Error, "UploadMedia failed with {statusCode} when uploading media for {did}, error {error} message {message}")]
-    //internal static partial void UploadMediaFailed(ILogger logger, HttpStatusCode statusCode, Did did, string? error, string? message);
-
-    //[LoggerMessage(107, LogLevel.Information, "UploadMedia started for {did} on {server}, filename: {fileName} length: {length} mimeType: {mimeType}")]
-    //internal static partial void UploadMediaStarted(ILogger logger, Did did, Uri server, string fileName, long length, string mimeType);
-
-    //[LoggerMessage(108, LogLevel.Error, "GetServerDescription in UploadMedia for user {did}, service {service} failed with {statusCode} error {error} message {message}")]
-    //internal static partial void UploadMediaGetServerDescriptionFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
+    [LoggerMessage(142, LogLevel.Error, "FinishUpload failed for {jobId} with {statusCode} error {error} message {message}")]
+    internal static partial void FinishUploadFailed(ILogger logger, string jobId, HttpStatusCode statusCode, string? error, string? message);
 }
-

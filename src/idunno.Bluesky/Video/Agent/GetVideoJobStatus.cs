@@ -15,39 +15,13 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="jobId"/> is <see langword="null"/> or whitespace.</exception>
+    [Obsolete("Use GetJobStatus instead.")]
     public async Task<AtProtoHttpResult<JobStatus>> GetVideoJobStatus(
         string jobId,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(jobId);
 
-        using (_logger.BeginScope($"Getting jobStatus for {jobId}"))
-        {
-            AtProtoHttpResult<JobStatus> result = await BlueskyServer.GetVideoJobStatus(
-                jobId,
-                _videoServer,
-                HttpClient,
-                LoggerFactory,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            if (result.Succeeded)
-            {
-                Logger.GetJobStatusSucceeded(_logger, jobId, result.Result.State, result.Result.Progress);
-            }
-            else
-            {
-                string? error = null;
-                string? message = null;
-                if (result.AtErrorDetail is not null)
-                {
-                    error = result.AtErrorDetail.Error;
-                    message = result.AtErrorDetail.Message;
-                }
-
-                Logger.GetJobStatusFailed(_logger, result.StatusCode, error, message);
-            }
-
-            return result;
-        }
+        return await GetJobStatus(jobId, cancellationToken);
     }
 }

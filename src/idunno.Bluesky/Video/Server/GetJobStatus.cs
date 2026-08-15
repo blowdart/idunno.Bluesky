@@ -24,8 +24,14 @@ public static partial class BlueskyServer
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="jobId"/> is <see langword="null"/> or whitespace.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
-    [Obsolete("Use GetJobStatus instead.")]
-    public static async Task<AtProtoHttpResult<JobStatus>> GetVideoJobStatus(
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    [UnconditionalSuppressMessage("AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
+    public static async Task<AtProtoHttpResult<JobStatus>> GetJobStatus(
         string jobId,
         Uri service,
         HttpClient httpClient,
@@ -36,5 +42,27 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        return await GetJobStatus(jobId, service, httpClient, loggerFactory, cancellationToken).ConfigureAwait(false);
+        BlueskyHttpClient<JobStatusResponse> client = new(AppViewProxy, loggerFactory);
+        AtProtoHttpResult<JobStatusResponse> response = await client.Get(
+            service,
+            $"/xrpc/app.bsky.video.getJobStatus?jobId={Uri.EscapeDataString(jobId)}",
+            httpClient: httpClient,
+            jsonSerializerOptions: BlueskyJsonSerializerOptions,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        JobStatus? result = null;
+
+        if (response.Result is not null && response.Result.JobStatus is not null)
+        {
+            result = new JobStatus(response.Result.JobStatus);
+        }
+
+        // Flatten
+        return new AtProtoHttpResult<JobStatus>(
+            result,
+            response.StatusCode,
+            response.HttpResponseHeaders,
+            response.AtErrorDetail,
+            response.RateLimit);
     }
+}

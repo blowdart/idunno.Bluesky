@@ -3,7 +3,6 @@
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
-using idunno.AtProto.Server;
 using idunno.Bluesky.Video;
 
 namespace idunno.Bluesky;
@@ -68,57 +67,36 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        // Get the server description so we can get the DID of the server.
-        AtProtoHttpResult<ServerDescription> serverDescriptionResult = await DescribeServer(Service, cancellationToken).ConfigureAwait(false);
+        AtProtoHttpResult<ServiceCredential> getServiceAuthResult = await GetServiceAuth(
+            Service,
+            lxm: UploadBlobLxm,
+            expiry: new TimeSpan(0, 30, 0),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        if (serverDescriptionResult.Succeeded)
+        if (!getServiceAuthResult.Succeeded)
         {
-            AtProtoHttpResult<ServiceCredential> getServiceAuthResult = await GetServiceAuth(
-                Service,
-                audience: serverDescriptionResult.Result.Did,
-                lxm: UploadBlobLxm,
-                expiry: new TimeSpan(0, 30, 0),
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            if (!getServiceAuthResult.Succeeded)
-            {
-                return new AtProtoHttpResult<StartUploadResponse>(
-                    null,
-                    getServiceAuthResult.StatusCode,
-                    getServiceAuthResult.HttpResponseHeaders,
-                    getServiceAuthResult.AtErrorDetail,
-                    getServiceAuthResult.RateLimit);
-            }
-
-            return await BlueskyServer.StartUpload(
-                size,
-                mimeType,
-                name,
-                duration,
-                width,
-                height,
-                service: _videoServer,
-                serviceCredential: getServiceAuthResult.Result,
-                httpClient: HttpClient,
-                loggerFactory: LoggerFactory,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-        }
-        else
-        {
-            Logger.StartUploadGetServerDescriptionFailed(
-                _logger,
-                Did,
-                Service,
-                serverDescriptionResult.StatusCode,
-                serverDescriptionResult.AtErrorDetail?.Error,
-                serverDescriptionResult.AtErrorDetail?.Message);
+            Logger.StartUploadServiceAuthFailed(_logger, Did, Service, getServiceAuthResult.StatusCode, getServiceAuthResult.AtErrorDetail?.Error, getServiceAuthResult.AtErrorDetail?.Message);
 
             return new AtProtoHttpResult<StartUploadResponse>(
                 null,
-                serverDescriptionResult.StatusCode,
-                serverDescriptionResult.HttpResponseHeaders,
-                serverDescriptionResult.AtErrorDetail,
-                serverDescriptionResult.RateLimit);
+                getServiceAuthResult.StatusCode,
+                getServiceAuthResult.HttpResponseHeaders,
+                getServiceAuthResult.AtErrorDetail,
+                getServiceAuthResult.RateLimit);
         }
+
+        return await BlueskyServer.StartUpload(
+            size,
+            mimeType,
+            name,
+            duration,
+            width,
+            height,
+            service: _videoServer,
+            serviceCredential: getServiceAuthResult.Result,
+            httpClient: HttpClient,
+            loggerFactory: LoggerFactory,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }
+

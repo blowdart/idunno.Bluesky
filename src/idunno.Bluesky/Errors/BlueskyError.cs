@@ -57,6 +57,7 @@ public abstract class BlueskyError : AtErrorDetail
             MemberLimitReached.ErrorTitle => new MemberLimitReached(atErrorDetail),
             MessageDeleteNotAllowed.ErrorTitle => new MessageDeleteNotAllowed(atErrorDetail),
             MessagesDisabled.ErrorTitle => new MessagesDisabled(atErrorDetail),
+            MissingParts.ErrorTitle => new MissingParts(atErrorDetail),
             NewAccountCannotCreateGroup.ErrorTitle => new NewAccountCannotCreateGroup(atErrorDetail),
             NoJoinLink.ErrorTitle => new NoJoinLink(atErrorDetail),
             NotFollowedBySender.ErrorTitle => new NotFollowedBySender(atErrorDetail),

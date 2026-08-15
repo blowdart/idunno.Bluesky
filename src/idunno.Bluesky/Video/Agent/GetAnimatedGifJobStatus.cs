@@ -15,13 +15,14 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="jobId"/> is <see langword="null"/> or whitespace.</exception>
+    [Obsolete("Use GetJobStatus instead.")]
     public async Task<AtProtoHttpResult<JobStatus>> GetAnimatedGifJobStatus(
         string jobId,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(jobId);
 
-        return await GetVideoJobStatus(
+        return await GetJobStatus(
             jobId,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
