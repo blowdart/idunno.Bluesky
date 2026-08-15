@@ -38,3 +38,4 @@ public static partial class BlueskyServer
 
         return await GetJobStatus(jobId, service, httpClient, loggerFactory, cancellationToken).ConfigureAwait(false);
     }
+}

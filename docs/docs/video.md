@@ -36,7 +36,7 @@ while (videoUploadResult.Succeeded &&
       $"Video job # {videoUploadResult.Result.JobId} processing, progress {videoUploadResult.Result.Progress}");
 
     await Task.Delay(1000);
-    videoUploadResult = await agent.GetVideoJobStatus(videoUploadResult.Result.JobId);
+    videoUploadResult = await agent.GetJobStatus(videoUploadResult.Result.JobId);
     videoUploadResult.EnsureSucceeded();
 }
 

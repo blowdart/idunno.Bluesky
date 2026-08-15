@@ -92,7 +92,7 @@ public partial class BlueskyAgent
                     {
                         string jobId = jobIdElement.GetString()!;
 
-                        return await GetVideoJobStatus(jobId, cancellationToken).ConfigureAwait(false);
+                        return await GetJobStatus(jobId, cancellationToken).ConfigureAwait(false);
                     }
 
                     string? error = null;

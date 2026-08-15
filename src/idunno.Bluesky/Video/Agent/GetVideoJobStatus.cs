@@ -22,6 +22,6 @@ public partial class BlueskyAgent
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(jobId);
 
-        return await GetJobStatus(jobId, cancellationToken);
+        return await GetJobStatus(jobId, cancellationToken).ConfigureAwait(false);
     }
 }

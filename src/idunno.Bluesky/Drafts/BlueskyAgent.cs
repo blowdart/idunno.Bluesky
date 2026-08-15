@@ -372,7 +372,7 @@ public partial class BlueskyAgent
                             !cancellationToken.IsCancellationRequested)
                         {
                             await Task.Delay(1000, cancellationToken: cancellationToken).ConfigureAwait(false);
-                            uploadResult = await GetVideoJobStatus(uploadResult.Result.JobId, cancellationToken: cancellationToken).ConfigureAwait(false);
+                            uploadResult = await GetJobStatus(uploadResult.Result.JobId, cancellationToken: cancellationToken).ConfigureAwait(false);
                         }
 
                         if (!uploadResult.Succeeded || uploadResult.Result.Blob is null || uploadResult.Result.State != JobState.Completed)
