@@ -285,31 +285,24 @@
     <File Path="test/Directory.Build.props" />
     <Project Path="test/idunno.AtProto.Integration.Test/idunno.AtProto.Integration.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/idunno.AtProto.Serialization.Test/idunno.AtProto.Serialization.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/idunno.AtProto.Test/idunno.AtProto.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/idunno.AtProto.Types.Test/idunno.AtProto.Types.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/idunno.Bluesky.Integration.Test/idunno.Bluesky.Integration.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/idunno.Bluesky.Serialization.Test/idunno.Bluesky.Serialization.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/idunno.Bluesky.Test/idunno.Bluesky.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
   </Folder>
   <Folder Name="/trimming/">
