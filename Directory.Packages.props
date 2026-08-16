@@ -12,7 +12,6 @@
     <PackageVersion Include="Duende.IdentityModel.OidcClient" Version="7.1.0" />
     <PackageVersion Include="Duende.IdentityModel.OidcClient.Extensions" Version="7.1.0" />
     <PackageVersion Include="idunno.Security.Ssrf" Version="5.4.0" />
-    <PackageVersion Include="JunitXml.TestLogger" Version="8.0.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" />
     <PackageVersion Include="Microsoft.CodeCoverage" Version="18.9.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />

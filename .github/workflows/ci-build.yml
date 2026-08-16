@@ -23,7 +23,7 @@ env:
   DOTNET_GENERATE_ASPNET_CERTIFICATE: false
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   TEST_RESULTS: ${{ github.workspace }}/TestResults
-  COVERAGE_REPORT: ${{ github.workspace}}/coveragereport
+  COVERAGE_REPORT: ${{ github.workspace }}/coveragereport
 
 jobs:
   build:
@@ -76,7 +76,7 @@ jobs:
     - name: 'Test'
       id: test
       shell: bash
-      run:  dotnet test --no-build --no-restore --results-directory {$TEST_RESULTS} --coverlet --report-xunit-junit
+      run: dotnet test --no-build --no-restore --results-directory {$TEST_RESULTS} --coverlet --report-xunit-junit
 
     - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action@d0a4676d0e0b938bc201470d88276b7c74c712b3 # v2.24.0

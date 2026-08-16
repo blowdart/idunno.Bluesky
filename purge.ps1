@@ -26,15 +26,18 @@ foreach ($folderName in $folderNames) {
     }
 }
 
-# Delete docs generated directories
-$folderNames = 'api', '_site'
-foreach ($folderName in $folderNames) {
-    $folders = Get-ChildItem -Path docs -Directory -Filter $folderName
-    foreach ($folder in $folders) {
-        if (Test-Path $folder.FullName)
-        {
-          Write-Host '📂 Deleting ' $folder.FullName;
-          Remove-Item -Path $folder.FullName -recurse -Force
+if (Test-Path 'docs')
+{
+    # Delete docs generated directories
+    $folderNames = 'api', '_site'
+    foreach ($folderName in $folderNames) {
+        $folders = Get-ChildItem -Path docs -Directory -Filter $folderName
+        foreach ($folder in $folders) {
+            if (Test-Path $folder.FullName)
+            {
+              Write-Host '📂 Deleting ' $folder.FullName;
+              Remove-Item -Path $folder.FullName -recurse -Force
+            }
         }
     }
 }
