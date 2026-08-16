@@ -296,7 +296,7 @@ public class VideoTests
                    statusRetryCount < maxStatusRetries)
             {
                 statusRetryCount++;
-                uploadResult = await agent.GetVideoJobStatus(uploadResult.Result.JobId, TestContext.Current.CancellationToken);
+                uploadResult = await agent.GetJobStatus(uploadResult.Result.JobId, TestContext.Current.CancellationToken);
             }
 
             Assert.True(uploadResult.Succeeded);
@@ -595,7 +595,7 @@ public class VideoTests
                    statusRetryCount < maxStatusRetries)
             {
                 statusRetryCount++;
-                uploadResult = await agent.GetVideoJobStatus(uploadResult.Result.JobId, TestContext.Current.CancellationToken);
+                uploadResult = await agent.GetJobStatus(uploadResult.Result.JobId, TestContext.Current.CancellationToken);
             }
 
             Assert.True(uploadResult.Succeeded);

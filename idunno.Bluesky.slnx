@@ -247,7 +247,6 @@
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path=".gitignore" />
-    <File Path=".runsettings" />
     <File Path=".ssh-allowed-signers" />
     <File Path=".ssh-allowed-signers.md" />
     <File Path=".vsconfig" />
@@ -267,6 +266,7 @@
     <File Path="regeneratePublicApiFiles.ps1" />
     <File Path="SECURITY.md" />
     <File Path="sleet.json" />
+    <File Path="testconfig.json" />
     <File Path="THIRD-PARTY-NOTICES.txt" />
     <File Path="ToDo.md" />
     <File Path="trimTest.ps1" />

@@ -373,8 +373,9 @@ MigrationBackup/
 FodyWeavers.xsd
 
 # Test and Code Coverage output folders
-CoverageResults
-TestResults
+CoverageReport/
+CoverageResults/
+TestResults/
 
 # .NET SDK templating engine
 TemplateEngineHost

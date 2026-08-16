@@ -22,6 +22,7 @@ permissions:
 env:
   DOTNET_GENERATE_ASPNET_CERTIFICATE: false
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  TEST_RESULTS: ${{ github.workspace }}/TestResults
   COVERAGE_REPORT: ${{ github.workspace}}/coveragereport
 
 jobs:
@@ -74,25 +75,25 @@ jobs:
 
     - name: 'Test'
       id: test
-      run: dotnet test --no-build --restore --collect:"XPlat Code Coverage" --logger junit --settings .runsettings
+      run:  dotnet test --no-build --no-restore --results-directory ${{ env.TEST_RESULTS }} --coverlet --report-xunit-junit
 
     - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action@d0a4676d0e0b938bc201470d88276b7c74c712b3 # v2.24.0
       if: always()
       with:
-        files: "test/**/TestResults.xml"
+        files: "{{env.TEST_RESULTS}}/*.junit.xml"
 
     - name: Upload Test Artifacts
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: test-results
-        path: "test/**/TestResults.xml"
+        path: "{{env.TEST_RESULTS}}/*.junit.xml"
         retention-days: 5
 
     - name: 'Generate Full Code Coverage Reports'
       uses: danielpalme/ReportGenerator-GitHub-Action@d3ebf1f760f7d8ab92cc44d9bcfee7ad73722a31 # 5.5.11
       with:
-        reports: "test/**/coverage.cobertura.xml"
+        reports: "{{env.TEST_RESULTS}}/coverage.cobertura.*.xml"
         targetdir: "${{ env.COVERAGE_REPORT }}"
         reporttypes: "Cobertura,MarkdownSummaryGithub" 
         verbosity: "Info" 
@@ -111,6 +112,6 @@ jobs:
         name: coverage-results
         path: | 
           ${{ env.COVERAGE_REPORT }}
-          test/**/coverage.cobertura.xml
+          ${{ env.TEST_RESULTS }}/coverage.cobertura.*.xml
         retention-days: 5
 
