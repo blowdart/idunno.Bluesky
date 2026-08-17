@@ -1,1 +1,24 @@
 #nullable enable
+idunno.Bluesky.Actor.ContentVisibilityDeclaration
+idunno.Bluesky.Actor.ContentVisibilityDeclaration.ContentVisibilityDeclaration(bool HideFromAlgorithmicRecommendations) -> void
+idunno.Bluesky.Actor.ContentVisibilityDeclaration.ContentVisibilityDeclaration(idunno.Bluesky.Actor.ContentVisibilityDeclaration! original) -> void
+idunno.Bluesky.Actor.ContentVisibilityDeclaration.Deconstruct(out bool HideFromAlgorithmicRecommendations) -> void
+idunno.Bluesky.Actor.ContentVisibilityDeclaration.HideFromAlgorithmicRecommendations.get -> bool
+idunno.Bluesky.Actor.ContentVisibilityDeclaration.HideFromAlgorithmicRecommendations.init -> void
+idunno.Bluesky.BlueskyAgent.GetContentVisibility(idunno.AtProto.AtIdentifier! identifier, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<bool>!>!
+idunno.Bluesky.BlueskyAgent.GetContentVisibility(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<bool>!>!
+idunno.Bluesky.BlueskyAgent.SetContentVisibility(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Actor.ContentVisibilityDeclaration!>! declaration, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.SetContentVisibilityDeclaration(bool hideFromAlgorithmicRecommendations, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.HandleResolutionException.Handle.get -> idunno.AtProto.Handle?
+idunno.Bluesky.HandleResolutionException.HandleResolutionException(string! message, idunno.AtProto.Handle? handle) -> void
+idunno.Bluesky.HandleResolutionException.HandleResolutionException(string! message, idunno.AtProto.Handle? handle, System.Exception! inner) -> void
+override idunno.Bluesky.Actor.ContentVisibilityDeclaration.<Clone>$() -> idunno.Bluesky.Actor.ContentVisibilityDeclaration!
+override idunno.Bluesky.Actor.ContentVisibilityDeclaration.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Actor.ContentVisibilityDeclaration.Equals(object? obj) -> bool
+override idunno.Bluesky.Actor.ContentVisibilityDeclaration.GetHashCode() -> int
+override idunno.Bluesky.Actor.ContentVisibilityDeclaration.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.Bluesky.Actor.ContentVisibilityDeclaration.ToString() -> string!
+override sealed idunno.Bluesky.Actor.ContentVisibilityDeclaration.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
+static idunno.Bluesky.Actor.ContentVisibilityDeclaration.operator !=(idunno.Bluesky.Actor.ContentVisibilityDeclaration? left, idunno.Bluesky.Actor.ContentVisibilityDeclaration? right) -> bool
+static idunno.Bluesky.Actor.ContentVisibilityDeclaration.operator ==(idunno.Bluesky.Actor.ContentVisibilityDeclaration? left, idunno.Bluesky.Actor.ContentVisibilityDeclaration? right) -> bool
+virtual idunno.Bluesky.Actor.ContentVisibilityDeclaration.Equals(idunno.Bluesky.Actor.ContentVisibilityDeclaration? other) -> bool

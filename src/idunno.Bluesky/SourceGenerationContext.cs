@@ -486,6 +486,8 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Video.Model.JobStatusWireFormat), TypeInfoPropertyName = "VideoModelJobStatusWireFormat")]
 [JsonSerializable(typeof(Video.Model.StartUploadRequest), TypeInfoPropertyName = "VideoModelStartUploadRequest")]
 
+[JsonSerializable(typeof(Actor.ContentVisibilityDeclaration), TypeInfoPropertyName = "ActorContentVisibilityDeclaration")]
+
 internal partial class SourceGenerationContext : JsonSerializerContext
 {
 }

@@ -366,7 +366,7 @@ public partial class BlueskyAgent : AtProtoAgent
             throw new ArgumentException($"{pathComponents[2]} is not a valid handle.");
         }
 
-        Did? did = await ResolveHandle(handle.ToString(), cancellationToken).ConfigureAwait(false) ?? throw new HandleResolutionException($"Handle resolution did not succeed.");
+        Did? did = await ResolveHandle(handle, cancellationToken).ConfigureAwait(false) ?? throw new HandleResolutionException($"Handle resolution did not succeed.", handle: handle);
         string rkey = pathComponents[4];
 
         string rebuiltAtUri = $"at://{did}/app.bsky.feed.post/{rkey}";
