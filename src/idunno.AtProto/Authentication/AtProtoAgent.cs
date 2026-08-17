@@ -488,6 +488,7 @@ public partial class AtProtoAgent
                 accessCredentials: Credentials,
                 httpClient: HttpClient,
                 loggerFactory: LoggerFactory,
+                credentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (serviceCredentialResult.Succeeded && serviceCredentialResult.Result.AccessJwt is not null)

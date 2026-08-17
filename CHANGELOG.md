@@ -62,6 +62,10 @@
 
 ### Fixed
 
+#### idunno.AtProto
+
+* Fixed a bug in `AtProtoAgent.GetServiceAuth` where if OAuth credentials were used DPoP nonce updates were not respected.
+
 #### idunno.Bluesky
 
 * Fixed a bug in `GetMutes` where the cursor query string parameter was being generated incorrectly.
@@ -72,6 +76,7 @@
 
 * `ServerDescription`, `Links` and `Contact` are now part of the `idunno.AtProto.Server` namespace.
 * `InviteCodeRequired` and `PhoneVerificationRequired` properties of `ServerDescription` are now nullable, as they're defined as optional in the ATProto lexicon.
+* `accessCredentialsUpdated` parameter on `AtProtoServer.GetServiceAuth` has been renamed to `credentialsUpdated` to match other methods.
 
 #### idunno.Bluesky
 
