@@ -25,6 +25,9 @@
   * `UploadNotReady`
   * `VideoTooLarge`
   * `VideoTooLong`
+* Added support for `ContentVisibilityDeclaration`, with
+  `BlueskyAgent.GetContentVisibilityDeclaration`, `BlueskyAgent.SetContentVisibilityDeclaration` and `BlueskyAgent.DeleteContentVisibilityDeclaration`.
+  See [Add content visibility lexicon](https://github.com/bluesky-social/atproto/pull/5372).
 
 ### Breaking Changes
 

@@ -12,6 +12,29 @@ namespace idunno.Bluesky;
 public partial class BlueskyAgent
 {
     /// <summary>
+    /// Deletes a the current authenticated user's content visibility record.
+    /// </summary>
+    /// <param name="swapCommit">Specified if the operation should compare and swap with the previous commit by cid.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    public async Task<AtProtoHttpResult<Commit>> DeleteContentVisibilityDeclaration(Cid? swapCommit = null, CancellationToken cancellationToken = default)
+    {
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        return await DeleteRecord(
+            repo: Did,
+            collection: "app.bsky.actor.contentVisibilityDeclaration",
+            rKey: "self",
+            swapCommit: swapCommit,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+
+    /// <summary>
     /// Gets an actor's preference for appearing in content discovery surfaces.
     /// Missing records must be treated as <see langword="false"/>.
     /// </summary>
@@ -27,7 +50,7 @@ public partial class BlueskyAgent
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
-    public async Task<AtProtoHttpResult<bool>> GetContentVisibility(AtIdentifier identifier, CancellationToken cancellationToken)
+    public async Task<AtProtoHttpResult<bool>> GetContentVisibilityDeclaration(AtIdentifier identifier, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(identifier);
 
@@ -81,14 +104,14 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<bool>> GetContentVisibility(CancellationToken cancellationToken)
+    public async Task<AtProtoHttpResult<bool>> GetContentVisibilityDeclaration(CancellationToken cancellationToken)
     {
         if (!IsAuthenticated)
         {
             throw new AuthenticationRequiredException();
         }
 
-        return await GetContentVisibility(Did, cancellationToken).ConfigureAwait (false);
+        return await GetContentVisibilityDeclaration(Did, cancellationToken).ConfigureAwait (false);
     }
 
     /// <summary>
@@ -140,7 +163,7 @@ public partial class BlueskyAgent
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
-    public async Task<AtProtoHttpResult<PutRecordResult>> SetContentVisibility(
+    public async Task<AtProtoHttpResult<PutRecordResult>> SetContentVisibilityDeclaration(
         AtProtoRepositoryRecord<ContentVisibilityDeclaration> declaration,
         CancellationToken cancellationToken)
     {

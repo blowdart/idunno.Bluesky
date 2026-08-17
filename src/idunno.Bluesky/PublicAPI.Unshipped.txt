@@ -5,10 +5,11 @@ idunno.Bluesky.Actor.ContentVisibilityDeclaration.ContentVisibilityDeclaration(i
 idunno.Bluesky.Actor.ContentVisibilityDeclaration.Deconstruct(out bool HideFromAlgorithmicRecommendations) -> void
 idunno.Bluesky.Actor.ContentVisibilityDeclaration.HideFromAlgorithmicRecommendations.get -> bool
 idunno.Bluesky.Actor.ContentVisibilityDeclaration.HideFromAlgorithmicRecommendations.init -> void
-idunno.Bluesky.BlueskyAgent.GetContentVisibility(idunno.AtProto.AtIdentifier! identifier, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<bool>!>!
-idunno.Bluesky.BlueskyAgent.GetContentVisibility(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<bool>!>!
-idunno.Bluesky.BlueskyAgent.SetContentVisibility(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Actor.ContentVisibilityDeclaration!>! declaration, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.DeleteContentVisibilityDeclaration(idunno.AtProto.Cid? swapCommit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Commit!>!>!
+idunno.Bluesky.BlueskyAgent.GetContentVisibilityDeclaration(idunno.AtProto.AtIdentifier! identifier, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<bool>!>!
+idunno.Bluesky.BlueskyAgent.GetContentVisibilityDeclaration(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<bool>!>!
 idunno.Bluesky.BlueskyAgent.SetContentVisibilityDeclaration(bool hideFromAlgorithmicRecommendations, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.SetContentVisibilityDeclaration(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Actor.ContentVisibilityDeclaration!>! declaration, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
 idunno.Bluesky.HandleResolutionException.Handle.get -> idunno.AtProto.Handle?
 idunno.Bluesky.HandleResolutionException.HandleResolutionException(string! message, idunno.AtProto.Handle? handle) -> void
 idunno.Bluesky.HandleResolutionException.HandleResolutionException(string! message, idunno.AtProto.Handle? handle, System.Exception! inner) -> void
