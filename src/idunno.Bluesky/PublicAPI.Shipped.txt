@@ -2943,10 +2943,6 @@ idunno.Bluesky.Video.FinishUploadResponse
 idunno.Bluesky.Video.FinishUploadResponse.<Clone>$() -> idunno.Bluesky.Video.FinishUploadResponse!
 idunno.Bluesky.Video.FinishUploadResponse.CompletedJobId.get -> string!
 idunno.Bluesky.Video.FinishUploadResponse.CompletedJobId.init -> void
-idunno.Bluesky.Video.FinishUploadResponse.Deconstruct(out string! CompletedJobId, out idunno.Bluesky.Video.JobState? JobStatus) -> void
-idunno.Bluesky.Video.FinishUploadResponse.Equals(idunno.Bluesky.Video.FinishUploadResponse? other) -> bool
-idunno.Bluesky.Video.FinishUploadResponse.FinishUploadResponse(string! CompletedJobId, idunno.Bluesky.Video.JobState? JobStatus) -> void
-idunno.Bluesky.Video.FinishUploadResponse.JobStatus.get -> idunno.Bluesky.Video.JobState?
 idunno.Bluesky.Video.FinishUploadResponse.JobStatus.init -> void
 idunno.Bluesky.Video.JobState
 idunno.Bluesky.Video.JobState.Completed = 3 -> idunno.Bluesky.Video.JobState

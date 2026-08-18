@@ -201,5 +201,23 @@ public class VideoTests
         Assert.Equal(new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk"), finishUploadWireResponse.JobStatus.Did);
         Assert.Equal("da26cttf373s73aa5pug", finishUploadWireResponse.JobStatus.JobId);
         Assert.Equal(0, finishUploadWireResponse.JobStatus.Progress);
+        Assert.Null(finishUploadWireResponse.JobStatus.Error);
+        Assert.Null(finishUploadWireResponse.JobStatus.Message);
+        Assert.Null(finishUploadWireResponse.JobStatus.FailureCode);
+        Assert.Null(finishUploadWireResponse.JobStatus.Blob);
+
+        var finishUploadResponse = new FinishUploadResponse(finishUploadWireResponse.CompletedJobId, new JobStatus(finishUploadWireResponse.JobStatus));
+
+        Assert.NotNull(finishUploadResponse);
+        Assert.Equal("da26cttf373s73aa5pug", finishUploadResponse.CompletedJobId);
+        Assert.NotNull(finishUploadResponse.JobStatus);
+        Assert.Equal(JobState.Created, finishUploadResponse.JobStatus?.State);
+        Assert.Equal(new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk"), finishUploadResponse.JobStatus?.Did);
+        Assert.Equal("da26cttf373s73aa5pug", finishUploadResponse.JobStatus?.JobId);
+        Assert.Equal(0, finishUploadResponse.JobStatus?.Progress);
+        Assert.Null(finishUploadResponse.JobStatus?.Error);
+        Assert.Null(finishUploadResponse.JobStatus?.Message);
+        Assert.Null(finishUploadResponse.JobStatus?.FailureCode);
+        Assert.Null(finishUploadResponse.JobStatus?.Blob);
     }
 }

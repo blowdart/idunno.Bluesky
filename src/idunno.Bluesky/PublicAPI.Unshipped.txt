@@ -14,6 +14,10 @@ idunno.Bluesky.BlueskyAgent.UploadPart(string! jobId, long part, byte[]! bytes, 
 idunno.Bluesky.HandleResolutionException.Handle.get -> idunno.AtProto.Handle?
 idunno.Bluesky.HandleResolutionException.HandleResolutionException(string! message, idunno.AtProto.Handle? handle) -> void
 idunno.Bluesky.HandleResolutionException.HandleResolutionException(string! message, idunno.AtProto.Handle? handle, System.Exception! inner) -> void
+idunno.Bluesky.Video.FinishUploadResponse.Deconstruct(out string! CompletedJobId, out idunno.Bluesky.Video.JobStatus? JobStatus) -> void
+idunno.Bluesky.Video.FinishUploadResponse.Equals(idunno.Bluesky.Video.FinishUploadResponse? other) -> bool
+idunno.Bluesky.Video.FinishUploadResponse.FinishUploadResponse(string! CompletedJobId, idunno.Bluesky.Video.JobStatus? JobStatus) -> void
+idunno.Bluesky.Video.FinishUploadResponse.JobStatus.get -> idunno.Bluesky.Video.JobStatus?
 override idunno.Bluesky.Actor.ContentVisibilityDeclaration.<Clone>$() -> idunno.Bluesky.Actor.ContentVisibilityDeclaration!
 override idunno.Bluesky.Actor.ContentVisibilityDeclaration.EqualityContract.get -> System.Type!
 override idunno.Bluesky.Actor.ContentVisibilityDeclaration.Equals(object? obj) -> bool
