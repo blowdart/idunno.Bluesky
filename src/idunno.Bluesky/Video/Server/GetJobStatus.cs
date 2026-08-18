@@ -47,6 +47,7 @@ public static partial class BlueskyServer
             service,
             $"/xrpc/app.bsky.video.getJobStatus?jobId={Uri.EscapeDataString(jobId)}",
             httpClient: httpClient,
+            timeout: null,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 

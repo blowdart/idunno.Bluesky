@@ -85,7 +85,7 @@ public partial class BlueskyAgent
                 getServiceAuthResult.RateLimit);
         }
 
-        return await BlueskyServer.StartUpload(
+        AtProtoHttpResult<StartUploadResponse> result = await BlueskyServer.StartUpload(
             size,
             mimeType,
             name,
@@ -97,6 +97,13 @@ public partial class BlueskyAgent
             httpClient: HttpClient,
             loggerFactory: LoggerFactory,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (result.Succeeded)
+        {
+            Logger.StartUploadSucceeded(_logger, _videoServer, result.Result.JobId, Did, result.Result.PartCount, result.Result.PartSize);
+        }
+
+        return result;
     }
 }
 

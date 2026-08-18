@@ -205,4 +205,13 @@ internal static partial class Logger
 
     [LoggerMessage(142, LogLevel.Error, "FinishUpload failed for {jobId} with {statusCode} error {error} message {message}")]
     internal static partial void FinishUploadFailed(ILogger logger, string jobId, HttpStatusCode statusCode, string? error, string? message);
+
+    [LoggerMessage(143, LogLevel.Error, "UploadPart {part} failed for {jobId} on {service} failed with {statusCode} error {error} message {message}")]
+    internal static partial void UploadPartFailed(ILogger logger, long part, string jobId, Uri service, HttpStatusCode statusCode, string? error, string? message);
+
+    [LoggerMessage(144, LogLevel.Error, "UploadPart {part} failed for {jobId} on {service}, underlying HttpClient threw an exception")]
+    internal static partial void UploadPartThrew(ILogger logger, long part, string jobId, Uri service, Exception ex);
+
+    [LoggerMessage(145, LogLevel.Debug, "StartUpload succeeded on {service} for {did} with job #{jobId}, part count {partCount}, part size {partSize}.")]
+    internal static partial void StartUploadSucceeded(ILogger logger, Uri service, string jobId, Did did, long partCount, long partSize);
 }

@@ -90,7 +90,7 @@ public static partial class BlueskyServer
 
         AtProtoHttpResult<StartUploadResponse> response = await client.Post(
             service: service,
-            endpoint: "/xprc/app.bsky.video.startUpload",
+            endpoint: "/xrpc/app.bsky.video.startUpload",
             record: new StartUploadRequest(size, mimeType, name, duration, width, height),
             credentials: serviceCredential,
             httpClient: httpClient,

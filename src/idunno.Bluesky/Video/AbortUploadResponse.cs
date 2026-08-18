@@ -12,7 +12,7 @@ public sealed record AbortUploadResponse
 {
     internal AbortUploadResponse(AbortUploadWireResponse response)
     {
-        State = response.UploadState.ToUploadState();
+        State = response.State.ToUploadState();
         CompletedJobId = response.CompletedJobId;
         FailureReason = response.FailureReason;
     }

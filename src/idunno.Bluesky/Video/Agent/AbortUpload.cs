@@ -50,12 +50,12 @@ public partial class BlueskyAgent
             }
 
             AtProtoHttpResult<AbortUploadResponse> result = await BlueskyServer.AbortUpload(
-            jobId,
-            service: _videoServer,
-            serviceCredential: getServiceAuthResult.Result,
-            httpClient: HttpClient,
-            loggerFactory: LoggerFactory,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+                jobId,
+                service: _videoServer,
+                serviceCredential: getServiceAuthResult.Result,
+                httpClient: HttpClient,
+                loggerFactory: LoggerFactory,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (!result.Succeeded)
             {

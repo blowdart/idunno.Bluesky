@@ -31,9 +31,14 @@
 
 ### Breaking Changes
 
+#### idunno.AtProto
+
+* `AtProtoHttpClient` now has an optional `timeout` parameter on its `Get`, `Post`, `PostBlob` methods, which allows for specifying a request timeout for the HTTP request. If not specified, the default timeout of the underlying `HttpClient` will be used.
+
+#### idunno.Bluesky
+
 * `BlueskyServer.GetVideoJobStatus` has been renamed to `BlueskyServer.GetJobStatus` to reflect the new multi-part video upload API. `GetVideoJobStatus` is still available, but is marked as obsolete and will be removed in a future release.
 * `BlueskyAgent.GetVideoJobStatus` has been renamed to `BlueskyAgent.GetJobStatus` to reflect the new multi-part video upload API. `GetVideoJobStatus` is still available, but is marked as obsolete and will be removed in a future release.
-
 
 ## 4.0.0 - 2026-08-10
 

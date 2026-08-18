@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Net;
+
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Video;
@@ -17,15 +19,19 @@ public partial class BlueskyAgent
     /// <param name="jobId">The job id of the upload to which this part belongs.</param>
     /// <param name="part">The part number of the part being uploaded.</param>
     /// <param name="bytes">The bytes of the part being uploaded.</param>
+    /// <param name="timeout">An optional timeout for the request.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when a provided argument is out of the allowable range.</exception>
     /// <exception cref="ArgumentException">Thrown when a provided argument is invalid.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    /// <exception cref="HttpRequestException">Thrown when the request fails due to an underlying issue such as network connectivity, DNS failure, server certificate validation or timeout.</exception>"
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Catch all exception logging")]
     public async Task<AtProtoHttpResult<UploadPartResponse>> UploadPart(
         string jobId,
         long part,
         byte[] bytes,
+        TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(jobId);
@@ -58,15 +64,37 @@ public partial class BlueskyAgent
                     getServiceAuthResult.RateLimit);
             }
 
-            return await BlueskyServer.UploadPart(
-                jobId,
-                part,
-                bytes,
-                service: _videoServer,
-                serviceCredential: getServiceAuthResult.Result,
-                httpClient: HttpClient,
-                loggerFactory: LoggerFactory,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+            using (HttpClient httpClient = HttpClient)
+            {
+                //TODO: Investigate why this is needed, and if it is, make it configurable.
+                httpClient.DefaultRequestVersion = HttpVersion.Version11;
+
+                try
+                {
+                    AtProtoHttpResult<UploadPartResponse> result = await BlueskyServer.UploadPart(
+                        jobId,
+                        part,
+                        bytes,
+                        service: _videoServer,
+                        serviceCredential: getServiceAuthResult.Result,
+                        httpClient: httpClient,
+                        timeout: timeout,
+                        loggerFactory: LoggerFactory,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                    if (!result.Succeeded)
+                    {
+                        Logger.UploadPartFailed(_logger, part, jobId, Service, result.StatusCode, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message);
+                    }
+
+                    return result;
+                }
+                catch (HttpRequestException ex)
+                {
+                    Logger.UploadPartThrew(_logger, part, jobId, Service, ex);
+                    throw;
+                }
+            }
         }
     }
 }
