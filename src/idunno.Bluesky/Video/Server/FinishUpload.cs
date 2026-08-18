@@ -70,7 +70,7 @@ public static partial class BlueskyServer
         {
             result = new FinishUploadResponse(
                 response.Result.CompletedJobId,
-                response.Result.JobStatus.ToJobState());
+                new JobStatus(response.Result.JobStatus));
         }
 
         return new AtProtoHttpResult<FinishUploadResponse>(

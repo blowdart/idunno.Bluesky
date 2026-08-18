@@ -12,6 +12,6 @@ namespace idunno.Bluesky.Video;
 /// <param name="Size">The size of the uploaded video part in bytes.</param>
 public sealed record UploadPartResponse(
     [property: JsonRequired] long PartNumber,
-    [property: JsonRequired, JsonPropertyName("sizeBtyes")] long Size)
+    [property: JsonRequired, JsonPropertyName("sizeBytes")] long Size)
 {
 }

@@ -7,6 +7,6 @@ namespace idunno.Bluesky.Video.Model;
 
 internal record FinishUploadWireResponse(
     [property: JsonRequired] string CompletedJobId,
-    [property: JsonRequired] string JobStatus)
+    [property: JsonRequired] JobStatusWireFormat JobStatus)
 {
 }

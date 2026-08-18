@@ -69,7 +69,7 @@ public static partial class BlueskyServer
         BlueskyHttpClient<UploadPartResponse> client = new(AppViewProxy, loggerFactory);
         return await client.PostBlob(
                 service: service,
-                endpoint: $"/xrpc/app.bsky.video.uploadPart?jobId={Uri.EscapeDataString(jobId)}&part={part}",
+                endpoint: $"/xrpc/app.bsky.video.uploadPart?jobId={Uri.EscapeDataString(jobId)}&partNumber={part}",
                 blob: bytes,
                 requestHeaders: null,
                 contentHeaders: contentHeaders,

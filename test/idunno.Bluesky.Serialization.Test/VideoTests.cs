@@ -176,4 +176,30 @@ public class VideoTests
 
         Assert.Equal(JobState.Failed, jobStatus.State);
     }
+
+    [Fact]
+    public void FinishUploadWireResponseDeserializesCorrectly()
+    {
+        string jsonString = """
+            {
+                "completedJobId": "da26cttf373s73aa5pug",
+                "jobStatus": {
+                    "did": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
+                    "jobId": "da26cttf373s73aa5pug",
+                    "progress": 0,
+                    "state": "JOB_STATE_CREATED"
+                }
+            }
+            """;
+
+        FinishUploadWireResponse? finishUploadWireResponse = JsonSerializer.Deserialize<FinishUploadWireResponse>(jsonString, BlueskyJsonSerializerOptions.Options);
+
+        Assert.NotNull(finishUploadWireResponse);
+        Assert.Equal("da26cttf373s73aa5pug", finishUploadWireResponse.CompletedJobId);
+        Assert.NotNull(finishUploadWireResponse.JobStatus);
+        Assert.Equal("JOB_STATE_CREATED", finishUploadWireResponse.JobStatus.State);
+        Assert.Equal(new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk"), finishUploadWireResponse.JobStatus.Did);
+        Assert.Equal("da26cttf373s73aa5pug", finishUploadWireResponse.JobStatus.JobId);
+        Assert.Equal(0, finishUploadWireResponse.JobStatus.Progress);
+    }
 }

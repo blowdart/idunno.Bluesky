@@ -10,6 +10,6 @@ namespace idunno.Bluesky.Video;
 /// <param name="JobStatus">The status of the completed job.</param>
 public sealed record FinishUploadResponse(
     string CompletedJobId,
-    JobState? JobStatus)
+    JobStatus? JobStatus)
 {
 }

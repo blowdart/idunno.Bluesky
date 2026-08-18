@@ -477,6 +477,7 @@ namespace idunno.Bluesky;
 
 [JsonSerializable(typeof(Video.StartUploadResponse), TypeInfoPropertyName = "VideoStartUploadResponse")]
 [JsonSerializable(typeof(Video.UploadLimits), TypeInfoPropertyName = "VideoUploadLimits")]
+[JsonSerializable(typeof(Video.UploadPartResponse), TypeInfoPropertyName = "VideoUploadPartResponse")]
 [JsonSerializable(typeof(Video.Model.AbortUploadRequest), TypeInfoPropertyName = "VideoModelAbortUploadRequest")]
 [JsonSerializable(typeof(Video.Model.AbortUploadWireResponse), TypeInfoPropertyName = "VideoModelAbortUploadWireResponse")]
 [JsonSerializable(typeof(Video.Model.FinishUploadRequest), TypeInfoPropertyName = "VideoModelFinishUploadRequest")]
