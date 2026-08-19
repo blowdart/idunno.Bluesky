@@ -194,19 +194,19 @@ internal static partial class Logger
     [LoggerMessage(138, LogLevel.Error, "AbortUpload failed for {jobId} with {statusCode} error {error} message {message}")]
     internal static partial void AbortUploadFailed(ILogger logger, string jobId, HttpStatusCode statusCode, string? error, string? message);
 
-    [LoggerMessage(139, LogLevel.Error, "AbortUpload getServiceAuth failed for user {did}, service {service} failed with {statusCode} error {error} message {message}")]
+    [LoggerMessage(139, LogLevel.Error, "AbortUpload getServiceAuth failed for user {did}, service {service} with {statusCode} error {error} message {message}")]
     internal static partial void AbortUploadServiceAuthFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
 
-    [LoggerMessage(140, LogLevel.Error, "UploadPart getServiceAuthFailed for user {did}, service {service} failed with {statusCode} error {error} message {message}")]
+    [LoggerMessage(140, LogLevel.Error, "UploadPart getServiceAuthFailed for user {did}, service {service} with {statusCode} error {error} message {message}")]
     internal static partial void UploadPartGetServiceAuthFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
 
-    [LoggerMessage(141, LogLevel.Error, "FinishUpload getServiceAuthFailed for user {did}, service {service} failed with {statusCode} error {error} message {message}")]
+    [LoggerMessage(141, LogLevel.Error, "FinishUpload getServiceAuthFailed for user {did}, service {service} with {statusCode} error {error} message {message}")]
     internal static partial void FinishUploadServiceAuthFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
 
     [LoggerMessage(142, LogLevel.Error, "FinishUpload failed for {jobId} with {statusCode} error {error} message {message}")]
     internal static partial void FinishUploadFailed(ILogger logger, string jobId, HttpStatusCode statusCode, string? error, string? message);
 
-    [LoggerMessage(143, LogLevel.Error, "UploadPart {part} failed for {jobId} on {service} failed with {statusCode} error {error} message {message}")]
+    [LoggerMessage(143, LogLevel.Error, "UploadPart {part} failed for {jobId} on {service} with {statusCode} error {error} message {message}")]
     internal static partial void UploadPartFailed(ILogger logger, long part, string jobId, Uri service, HttpStatusCode statusCode, string? error, string? message);
 
     [LoggerMessage(144, LogLevel.Error, "UploadPart {part} failed for {jobId} on {service}, underlying HttpClient threw an exception")]
@@ -214,4 +214,17 @@ internal static partial class Logger
 
     [LoggerMessage(145, LogLevel.Debug, "StartUpload succeeded on {service} for {did} with job #{jobId}, part count {partCount}, part size {partSize}.")]
     internal static partial void StartUploadSucceeded(ILogger logger, Uri service, string jobId, Did did, long partCount, long partSize);
+
+    [LoggerMessage(146, LogLevel.Information, "UploadPart {part} succeeded for {jobId}")]
+    internal static partial void UploadPartSucceeded(ILogger logger, long part, string jobId);
+
+    [LoggerMessage(147, LogLevel.Error, "AbortUpload succeeded for {jobId}")]
+    internal static partial void AbortUploadSucceeded(ILogger logger, string jobId);
+
+    [LoggerMessage(148, LogLevel.Debug, "FinishUpload succeeded for {jobId}, returned jobId {returnedJobId} as {state}")]
+    internal static partial void FinishUploadSucceeded(ILogger logger, string jobId, string returnedJobId, JobState? state);
+
+    [LoggerMessage(149, LogLevel.Error, "StartUpload failed on {service} for {did} with {statusCode} error {error} message {message}")]
+    internal static partial void StartUploadFailed(ILogger logger, Uri service, Did did, HttpStatusCode statusCode, string? error, string? message);
+
 }

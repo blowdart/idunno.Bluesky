@@ -59,7 +59,12 @@ public partial class BlueskyAgent
                 loggerFactory: LoggerFactory,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            if (!result.Succeeded)
+            if (result.Succeeded)
+            {
+                Logger.FinishUploadSucceeded(_logger, jobId, result.Result.CompletedJobId, result.Result.JobStatus?.State);
+
+            }
+            else
             {
                 Logger.FinishUploadFailed(_logger, jobId, result.StatusCode, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message);
             }

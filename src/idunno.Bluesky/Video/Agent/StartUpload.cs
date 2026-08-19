@@ -102,6 +102,10 @@ public partial class BlueskyAgent
         {
             Logger.StartUploadSucceeded(_logger, _videoServer, result.Result.JobId, Did, result.Result.PartCount, result.Result.PartSize);
         }
+        else
+        {
+            Logger.StartUploadFailed(_logger, _videoServer, Did, result.StatusCode, result.AtErrorDetail?.Error, result.AtErrorDetail?.Message);
+        }
 
         return result;
     }

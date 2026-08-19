@@ -178,6 +178,40 @@ public class VideoTests
     }
 
     [Fact]
+    public void StartUploadResponseDeserializesCorrectly()
+    {
+        string jsonString = """
+            {
+                "jobId": "da26a5b74lec73akn0b0",
+                "partSizeBytes": 5242880,
+                "partCount": 1,
+                "expiresAt": "2026-08-18T14:58:45.544456319Z"
+            }
+            """;
+        StartUploadResponse? startUploadResponse = JsonSerializer.Deserialize<StartUploadResponse>(jsonString, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(startUploadResponse);
+        Assert.Equal("da26a5b74lec73akn0b0", startUploadResponse.JobId);
+        Assert.Equal(5242880, startUploadResponse.PartSize);
+        Assert.Equal(1, startUploadResponse.PartCount);
+        Assert.Equal(DateTime.Parse("2026-08-18T14:58:45.544456319Z"), startUploadResponse.ExpiresAt);
+    }
+
+    [Fact]
+    public void UploadPartResponseDeserializesCorrectly()
+    {
+        string jsonString = """
+            {
+                "partNumber": 1,
+                "sizeBytes": 2848208
+            }
+            """;
+        UploadPartResponse? uploadPartResponse = JsonSerializer.Deserialize<UploadPartResponse>(jsonString, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(uploadPartResponse);
+        Assert.Equal(1, uploadPartResponse.PartNumber);
+        Assert.Equal(2848208, uploadPartResponse.Size);
+    }
+
+    [Fact]
     public void FinishUploadWireResponseDeserializesCorrectly()
     {
         string jsonString = """

@@ -218,6 +218,7 @@ public sealed class Program
 
             Post post = new("Test multipart video upload");
             post.Embed(new EmbeddedVideo(getJobStatusResult.Result.Blob!, altText: "Alt Text"));
+            await agent.Post(post, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
     }
 }
