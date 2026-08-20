@@ -98,6 +98,26 @@ public sealed class Program
             // Read the entire video file into memory. This is not recommended for large files, but is done here for simplicity.
             byte[] video = await File.ReadAllBytesAsync(filePath, cancellationToken);
 
+            // Check the authenticated user has the ability to upload a video of this size.
+            var getVideoUploadLimitsResult = await agent.GetVideoUploadLimits(cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (!getVideoUploadLimitsResult.Succeeded)
+            {
+                Console.WriteLine($"Failed to get video upload limits. Server returned {getVideoUploadLimitsResult.StatusCode} / {getVideoUploadLimitsResult.AtErrorDetail?.Error} / {getVideoUploadLimitsResult.AtErrorDetail?.Message}");
+                return;
+            }
+
+            if (getVideoUploadLimitsResult.Result.RemainingDailyVideos == 0)
+            {
+                Console.WriteLine($"No remaining daily video uploads.");
+                return;
+            }
+
+            if (getVideoUploadLimitsResult.Result.RemainingDailyBytes < video.Length)
+            {
+                Console.WriteLine($"Video file is too large to upload. Max size is {getVideoUploadLimitsResult.Result.RemainingDailyBytes} bytes, but the video file is {video.Length} bytes.");
+                return;
+            }
+
             // Start the multipart upload process.
             // This will return a jobId, the number of parts to upload, and the size for each part.
             var startUploadResult = await agent.StartUpload(
@@ -113,7 +133,7 @@ public sealed class Program
             var uploadPartTasks = new Task[startUploadResult.Result.PartCount];
             var uploadPartResponses = new AtProtoHttpResult<UploadPartResponse>?[startUploadResult.Result.PartCount];
 
-            // Local function to upload a part. This is defined here so it can access the uploadPartResponses array.
+            // Local function to upload a part. This is defined here it can access the uploadPartResponses array.
             async Task UploadPart(string jobId, int partNumber, byte[] bytes, CancellationToken cancellationToken)
             {
                 Console.WriteLine($"Uploading part {partNumber} for jobID {jobId} with size {bytes.Length} bytes.");
