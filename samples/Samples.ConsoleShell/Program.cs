@@ -3,8 +3,6 @@
 
 using idunno.AtProto;
 using idunno.Bluesky;
-using idunno.Bluesky.Embed;
-using idunno.Bluesky.Video;
 
 using Microsoft.Extensions.Logging;
 
