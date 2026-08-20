@@ -105,4 +105,14 @@ public class AtProtoAgentOptions
     /// <see langword="false"/> if you are using a debugging proxy which does not support CRLs.
     /// </para>
     public HttpClientOptions? HttpClientOptions { get; set; }
+
+    /// <summary>
+    /// Gets or sets an option to cache server descriptions for a period of time to reduce the number of requests made to the server.
+    /// </summary>
+    public bool? CacheServerDescriptions { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the number of server descriptions to cache. The default is 25.
+    /// </summary>
+    public int? ServerDescriptionCacheSize { get; set; } = 25;
 }

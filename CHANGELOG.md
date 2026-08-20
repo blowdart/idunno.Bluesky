@@ -47,6 +47,7 @@
 #### idunno.AtProto
 
 * Added `BlobUploadLimit` to `ServerDescription`, which indicates the maximum size of a blob that a server will accept via uploadBlob. See [pds: expose blobUploadLimit through describeServer](https://github.com/bluesky-social/atproto/pull/5277).
+* ServerDescriptions are now cached by default, with a default cache size of 25 entries and a sliding expiration of 5 minutes. This can be disabled by passing `CacheServerDescriptions = false` in `AtProtoAgentOptions`, and the cache size can be changed with `ServerDescriptionCacheSize`.
 
 #### idunno.Bluesky
 

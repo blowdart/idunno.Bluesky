@@ -9,8 +9,6 @@ namespace idunno.AtProto;
 
 public partial class AtProtoAgent : Agent
 {
-    private readonly MemoryCache _serverDescriptionCache = new(new MemoryCacheOptions() { SizeLimit = 25 });
-
     private readonly MemoryCacheEntryOptions _serverDescriptionCacheEntryOptions = new()
     {
         SlidingExpiration = TimeSpan.FromMinutes(5),
@@ -23,18 +21,19 @@ public partial class AtProtoAgent : Agent
     /// <param name="server">The service whose account description is to be retrieved.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <remarks><para>Caching descriptions can be controlled by <see cref="AtProtoAgentOptions.CacheServerDescriptions"/> and <see cref="AtProtoAgentOptions.ServerDescriptionCacheSize"/>.</para></remarks>
     public async Task<AtProtoHttpResult<ServerDescription>> DescribeServer(Uri? server, CancellationToken cancellationToken = default)
     {
         server ??= Service;
 
-        if (_serverDescriptionCache.TryGetValue(server.Host, out AtProtoHttpResult<ServerDescription>? cachedDescription) && cachedDescription is not null)
+        if (_serverDescriptionCache is not null && _serverDescriptionCache.TryGetValue(server.Host, out AtProtoHttpResult<ServerDescription>? cachedDescription) && cachedDescription is not null)
         {
             return cachedDescription;
         }
 
         AtProtoHttpResult<ServerDescription> result = await AtProtoServer.DescribeServer(server, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
 
-        if (result.Succeeded)
+        if (result.Succeeded && _serverDescriptionCache is not null)
         {
             _serverDescriptionCache.Set(server.Host, result, _serverDescriptionCacheEntryOptions);
         }
