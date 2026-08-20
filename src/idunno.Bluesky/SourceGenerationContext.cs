@@ -488,6 +488,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Video.Model.StartUploadRequest), TypeInfoPropertyName = "VideoModelStartUploadRequest")]
 
 [JsonSerializable(typeof(Actor.ContentVisibilityDeclaration), TypeInfoPropertyName = "ActorContentVisibilityDeclaration")]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<ContentVisibilityDeclaration>), TypeInfoPropertyName = "AtProtoRepositoryRecordContentVisibilityDeclaration")]
 
 internal partial class SourceGenerationContext : JsonSerializerContext
 {
