@@ -70,6 +70,7 @@
 #### idunno.AtProto
 
 * Fixed a bug in `AtProtoAgent.GetServiceAuth` where if OAuth credentials were used DPoP nonce updates were not respected.
+* Fixed `BlueskyServer.GetVideoUploadStatus` to correctly use the correct service credentials.
 
 #### idunno.Bluesky
 

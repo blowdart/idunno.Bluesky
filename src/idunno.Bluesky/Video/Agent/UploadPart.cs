@@ -66,9 +66,6 @@ public partial class BlueskyAgent
 
             using (HttpClient httpClient = HttpClient)
             {
-                //TODO: Investigate why this is needed, and if it is, make it configurable.
-                httpClient.DefaultRequestVersion = HttpVersion.Version11;
-
                 try
                 {
                     AtProtoHttpResult<UploadPartResponse> result = await BlueskyServer.UploadPart(
