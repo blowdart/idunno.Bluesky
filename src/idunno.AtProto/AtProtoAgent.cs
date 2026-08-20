@@ -328,9 +328,11 @@ public partial class AtProtoAgent : Agent
                 _credentialRefreshTimer = null;
             }
 
-            _directoryAgent.Dispose();
+            _directoryAgent?.Dispose();
 
-            _credentialReaderWriterLockSlim.Dispose();
+            _credentialReaderWriterLockSlim?.Dispose();
+
+            _serverDescriptionCache?.Dispose();
         }
 
         base.Dispose(disposing);

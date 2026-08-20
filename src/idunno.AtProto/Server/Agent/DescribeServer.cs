@@ -3,10 +3,20 @@
 
 using idunno.AtProto.Server;
 
+using Microsoft.Extensions.Caching.Memory;
+
 namespace idunno.AtProto;
 
 public partial class AtProtoAgent : Agent
 {
+    private readonly MemoryCache _serverDescriptionCache = new(new MemoryCacheOptions() { SizeLimit = 25 });
+
+    private readonly MemoryCacheEntryOptions _serverDescriptionCacheEntryOptions = new()
+    {
+        SlidingExpiration = TimeSpan.FromMinutes(5),
+        Size = 1
+    };
+
     /// <summary>
     /// Describes the <paramref name="server"/>'s account creation requirements and capabilities.
     /// </summary>
@@ -17,6 +27,18 @@ public partial class AtProtoAgent : Agent
     {
         server ??= Service;
 
-        return await AtProtoServer.DescribeServer(server, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
+        if (_serverDescriptionCache.TryGetValue(server.Host, out AtProtoHttpResult<ServerDescription>? cachedDescription) && cachedDescription is not null)
+        {
+            return cachedDescription;
+        }
+
+        AtProtoHttpResult<ServerDescription> result = await AtProtoServer.DescribeServer(server, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
+
+        if (result.Succeeded)
+        {
+            _serverDescriptionCache.Set(server.Host, result, _serverDescriptionCacheEntryOptions);
+        }
+
+        return result;
     }
 }

@@ -1,11 +1,6 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics;
-using System.Net;
-using System.Net.Http.Json;
-using System.Runtime.CompilerServices;
-
 using idunno.AtProto;
 using idunno.Bluesky;
 using idunno.Bluesky.Embed;
@@ -38,13 +33,14 @@ public sealed class Program
         ArgumentException.ThrowIfNullOrEmpty(password);
 
         // Uncomment the next line to route all requests through Fiddler Everywhere
-        proxyUri = new Uri("http://localhost:8866");
+        // proxyUri = new Uri("http://localhost:8866");
 
         // Uncomment the next line to route all requests  through Fiddler Classic
         // proxyUri = new Uri("http://localhost:8888");
 
         // Change the log level in the ConfigureConsoleLogging() to enable logging
-        using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
+        // TODO put back to debug
+        using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Error))
 
         // Create a new BlueSkyAgent
         using (var agent = new BlueskyAgent(
@@ -95,130 +91,6 @@ public sealed class Program
                 }
             }
             // END-AUTHENTICATION
-          
-            byte[] video = await File.ReadAllBytesAsync("C:\\Users\\BarryDorrans\\Downloads\\sample-5s.mp4", cancellationToken);
-
-            var startUploadResult = await agent.StartUpload(
-                size: video.Length,
-                mimeType: "video/mp4",
-                name: "sample-5s.mp4",
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            startUploadResult.EnsureSucceeded();
-            Console.WriteLine($"Started upload for jobID {startUploadResult.Result.JobId} with {startUploadResult.Result.PartCount} parts.");
-            Console.WriteLine(agent.Credentials!.AccessJwt);
-
-            bool partUploadFailed = false;
-
-            try
-            {
-                var uploadPartTasks = new Task[startUploadResult.Result.PartCount];
-                AtProtoHttpResult<UploadPartResponse>[] uploadPartResults = new AtProtoHttpResult<UploadPartResponse>[startUploadResult.Result.PartCount];
-
-                for (int i = 0; i < startUploadResult.Result.PartCount; i++)
-                {
-                    byte[] part;
-                    int offset = (i * startUploadResult.Result.PartSize);
-
-                    if (i != startUploadResult.Result.PartCount - 1)
-                    {
-                        part = video[offset..(offset + startUploadResult.Result.PartSize)];
-                    }
-                    else
-                    {
-                        part = video[offset..];
-                    }
-
-                    //uploadPartTasks[i] = Task.Run(async () =>
-                    //{
-                    //    uploadPartResults[i] = await agent.UploadPart(
-                    //        jobId: startUploadResult.Result.JobId,
-                    //        part: i + 1,
-                    //        bytes: part,
-                    //        timeout: TimeSpan.FromMinutes(60),
-                    //        cancellationToken: cancellationToken).ConfigureAwait(false);
-                    //}, cancellationToken: cancellationToken);
-
-                    uploadPartResults[i] = await agent.UploadPart(
-                        jobId: startUploadResult.Result.JobId,
-                        part: i + 1,
-                        bytes: part,
-                        timeout: TimeSpan.FromMinutes(60),
-                        cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                    if (!uploadPartResults[i].Succeeded)
-                    {
-                        var abortUploadResult = await agent.AbortUpload(
-                            jobId: startUploadResult.Result.JobId,
-                            cancellationToken: cancellationToken);
-                        partUploadFailed = true;
-                        abortUploadResult.EnsureSucceeded();
-                        break;
-                    }
-                }
-
-                //await Task.WhenAll(uploadPartTasks).ConfigureAwait(false);
-            }
-            catch
-            {
-                partUploadFailed = true;
-                var abortUploadResult = await agent.AbortUpload(
-                    jobId: startUploadResult.Result.JobId,
-                    cancellationToken: cancellationToken);
-                abortUploadResult.EnsureSucceeded();
-            }
-
-            if (partUploadFailed)
-            {
-                Console.WriteLine($"Part upload failed for jobID {startUploadResult.Result.JobId}, job aborted.");
-                return;
-            }
-
-            var finishUploadResult = await agent.FinishUpload(
-                jobId: startUploadResult.Result.JobId,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-            finishUploadResult.EnsureSucceeded();
-
-            AtProtoHttpResult<JobStatus> getJobStatusResult;
-            bool finished = false;
-            do
-            {
-                getJobStatusResult = await agent.GetJobStatus(
-                    jobId: finishUploadResult.Result.CompletedJobId,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                if (getJobStatusResult.Succeeded)
-                {
-                    switch (getJobStatusResult.Result.State)
-                    {
-                        case JobState.Completed:
-                            finished = true;
-                            break;
-                        case JobState.Failed:
-                            finished = true;
-                            break;
-                        case JobState.Unknown:
-                            finished = true;
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            } while (getJobStatusResult.Succeeded && !finished);
-
-            getJobStatusResult.EnsureSucceeded();
-
-            if (getJobStatusResult.Result.State != JobState.Completed)
-            {
-                var abortUploadResult = await agent.AbortUpload(
-                    jobId: startUploadResult.Result.JobId,
-                    cancellationToken: cancellationToken);
-                abortUploadResult.EnsureSucceeded();
-            }
-
-            Post post = new("Test multipart video upload");
-            post.Embed(new EmbeddedVideo(getJobStatusResult.Result.Blob!, altText: "Alt Text"));
-            await agent.Post(post, cancellationToken: cancellationToken).ConfigureAwait(false);
-        }
+       }
     }
 }

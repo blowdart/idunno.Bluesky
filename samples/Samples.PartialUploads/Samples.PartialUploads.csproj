@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\idunno.Bluesky\idunno.Bluesky.csproj" />
+    <ProjectReference Include="..\Samples.Common\Samples.Common.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="mp4-99mb-sample.mp4">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>
