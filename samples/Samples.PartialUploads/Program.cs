@@ -194,7 +194,7 @@ public sealed class Program
                     }
                     else
                     {
-                        Console.WriteLine($"❌ Part upload failed for jobID {startUploadResult.Result.JobId}, job abort failed.{Environment.NewLine}    Server returned {abortUploadResult.StatusCode} / {abortUploadResult.AtErrorDetail?.Error} / {abortUploadResult.AtErrorDetail?.Message}"); "
+                        Console.WriteLine($"❌ Part upload failed for jobID {startUploadResult.Result.JobId}, job abort failed.{Environment.NewLine}    Server returned {abortUploadResult.StatusCode} / {abortUploadResult.AtErrorDetail?.Error} / {abortUploadResult.AtErrorDetail?.Message}");
                     }
                     return;
                 }
