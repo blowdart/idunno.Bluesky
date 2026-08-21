@@ -157,10 +157,10 @@ public sealed class Program
                     {
                         sourceStream.Position = offset;
 
-                        Console.WriteLine($"💾 Reading {partSize} bytes from offset {offset} for part {partNumber}.");
+                        Console.WriteLine($"📃 Reading {partSize} bytes from offset {offset} for part {partNumber}.");
                         await sourceStream.ReadAsync(partBytes.AsMemory(0, partSize), ct).ConfigureAwait(false);
 
-                        Console.WriteLine($"⬆️ Uploading part {partNumber} for jobID {jobId} with size {partBytes.Length} bytes.");
+                        Console.WriteLine($"💾 Uploading part {partNumber} for jobID {jobId} with size {partBytes.Length} bytes.");
                         uploadPartResponses[uploadPart] = await agent.UploadPart(
                             jobId: jobId,
                             part: partNumber,
