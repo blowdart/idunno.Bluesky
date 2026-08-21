@@ -23,7 +23,7 @@ public sealed class Program
 
         var parser = Helpers.ConfigureCommandLine(
             args,
-            "BlueskyAgent Console Demonstration Template",
+            "BlueskyAgent Partial Uploads Sample",
             PerformOperations);
 
         return await parser.InvokeAsync();
@@ -135,10 +135,14 @@ public sealed class Program
             var uploadPartResponses = new AtProtoHttpResult<UploadPartResponse>?[startUploadResult.Result.PartCount];
             var pool = ArrayPool<byte>.Shared;
 
-            for (int uploadPart = 0; uploadPart < startUploadResult.Result.PartCount; uploadPart++)
+            ParallelOptions parallelOptions = new()
             {
-                uploadPartResponses[uploadPart] = null;
+                MaxDegreeOfParallelism = 3,
+                CancellationToken = cancellationToken
+            };
 
+            await Parallel.ForAsync(0, startUploadResult.Result.PartCount, parallelOptions, async (uploadPart, ct) =>
+            {
                 string jobId = startUploadResult.Result.JobId;
                 int partNumber = uploadPart + 1; // Part numbers are 1-based, not 0-based.
                 int offset = uploadPart * startUploadResult.Result.PartSize;
@@ -149,22 +153,23 @@ public sealed class Program
 
                 try
                 {
-                    Console.WriteLine($"⬆️ Uploading part {partNumber} for jobID {jobId} with size {partBytes.Length} bytes.");
-
-                    using (var sourceStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+                    using (var sourceStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
                         sourceStream.Position = offset;
-                        await sourceStream.ReadAsync(partBytes.AsMemory(0, partSize), cancellationToken).ConfigureAwait(false);
+
+                        Console.WriteLine($"💾 Reading {partSize} bytes from offset {offset} for part {partNumber}.");
+                        await sourceStream.ReadAsync(partBytes.AsMemory(0, partSize), ct).ConfigureAwait(false);
+
+                        Console.WriteLine($"⬆️ Uploading part {partNumber} for jobID {jobId} with size {partBytes.Length} bytes.");
                         uploadPartResponses[uploadPart] = await agent.UploadPart(
                             jobId: jobId,
                             part: partNumber,
                             bytes: partBytes[0..partSize],
                             timeout: TimeSpan.FromMinutes(60),
-                            cancellationToken: cancellationToken).ConfigureAwait(false);
+                            cancellationToken: ct).ConfigureAwait(false);
                     }
 
                     Console.WriteLine($"✅ Finished uploading part {partNumber} for jobID {jobId}.");
-
                 }
                 catch (Exception ex)
                 {
@@ -174,7 +179,7 @@ public sealed class Program
                 {
                     pool.Return(partBytes);
                 }
-            }
+            }).ConfigureAwait(false);
 
             // Check if any part upload failed. If any part upload failed, abort the upload and exit the sample.
             foreach (var uploadPartResult in uploadPartResponses)
@@ -215,7 +220,14 @@ public sealed class Program
                     jobId: startUploadResult.Result.JobId,
                     cancellationToken: cancellationToken);
 
-                Console.WriteLine($"❌ FinishUpload failed for jobID {startUploadResult.Result.JobId}, job aborted.");
+                if (abortUploadResult.Succeeded)
+                {
+                    Console.WriteLine($"🗑️ FinishUpload failed for jobID {startUploadResult.Result.JobId}, job aborted successfully.");
+                }
+                else
+                {
+                    Console.WriteLine($"❌ FinishUpload failed for jobID {startUploadResult.Result.JobId}, job abort failed.{Environment.NewLine}    Server returned {abortUploadResult.StatusCode} / {abortUploadResult.AtErrorDetail?.Error} / {abortUploadResult.AtErrorDetail?.Message}");
+                }
                 return;
             }
 
@@ -249,8 +261,11 @@ public sealed class Program
                             break;
                     }
 
-                    Console.WriteLine("⌛ Waiting for job to complete. Current state: " + getJobStatusResult.Result.State);
-                    Thread.Sleep(pollingInterval);
+                    if (!finished)
+                    {
+                        Console.WriteLine("⌛ Waiting for job to complete. Current state: " + getJobStatusResult.Result.State);
+                        Thread.Sleep(pollingInterval);
+                    }
                 }
             } while (getJobStatusResult.Succeeded && !finished);
 
