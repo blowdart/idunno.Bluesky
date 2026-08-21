@@ -57,6 +57,7 @@ the idunno.Bluesky SDK methods, which follow a more .NET idiomatic style.
 * Creating, joining and leaving group conversations
 * Create, deleting and listing a user's bookmarks
 * Handle / password and OAuth authentication
+* Multipart uploads for videos
 * Jetstream support for simple firehose consumption
 * Automatic session management with background token refreshes
 
