@@ -94,12 +94,9 @@ public sealed class Program
             }
             // END-AUTHENTICATION
 
-            // Read a sample video file. You can change this to any video file you want to upload.
+            // Get information about the file to upload.
             string filePath = "mp4-99mb-sample.mp4";
             int fileSize = (int)new FileInfo(filePath).Length;
-
-            // Read the entire video file into memory. This is not recommended for large files, but is done here for simplicity.
-            //byte[] video = await File.ReadAllBytesAsync(filePath, cancellationToken);
 
             // Check the authenticated user has the ability to upload a video of this size.
             var getVideoUploadLimitsResult = await agent.GetVideoUploadLimits(cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -135,6 +132,7 @@ public sealed class Program
             var uploadPartResponses = new AtProtoHttpResult<UploadPartResponse>?[startUploadResult.Result.PartCount];
             var pool = ArrayPool<byte>.Shared;
 
+            // https://alex-bsky.leaflet.pub/3mthoelgvrs2h suggests "a concurrency of 3 [as] ideal in most environments for parallelizing video uploads."
             ParallelOptions parallelOptions = new()
             {
                 MaxDegreeOfParallelism = 3,

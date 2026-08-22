@@ -75,97 +75,90 @@ Next call `UploadPart()` for each part using the jobID from `StartUpload()`. If 
 > and clear the upload reservations on the server. Failing to do so will result in the user's upload limits being lowered by the full size of the failed upload.
 
 ```c#
-// Read a sample video file. You can change this to any video file you want to upload.
+// Get information about the file to upload.
 string filePath = "mp4-99mb-sample.mp4";
-
-// Read the entire video file into memory. This is not recommended for large files, but is done here for simplicity.
-byte[] video = await File.ReadAllBytesAsync(filePath, cancellationToken);
+int fileSize = (int)new FileInfo(filePath).Length;
 
 // Check the authenticated user has the ability to upload a video of this size.
 var getVideoUploadLimitsResult = await agent.GetVideoUploadLimits(cancellationToken: cancellationToken).ConfigureAwait(false);
 if (!getVideoUploadLimitsResult.Succeeded)
 {
-    Console.WriteLine($"Failed to get video upload limits. Server returned {getVideoUploadLimitsResult.StatusCode} / {getVideoUploadLimitsResult.AtErrorDetail?.Error} / {getVideoUploadLimitsResult.AtErrorDetail?.Message}");
+    Console.WriteLine($"❌ Failed to get video upload limits.{Environment.NewLine}    Server returned {getVideoUploadLimitsResult.StatusCode} / {getVideoUploadLimitsResult.AtErrorDetail?.Error} / {getVideoUploadLimitsResult.AtErrorDetail?.Message}");
     return;
 }
 
 if (getVideoUploadLimitsResult.Result.RemainingDailyVideos == 0)
 {
-    Console.WriteLine($"No remaining daily video uploads.");
+    Console.WriteLine($"❌ No remaining daily video uploads.");
     return;
 }
 
-if (getVideoUploadLimitsResult.Result.RemainingDailyBytes < video.Length)
+if (getVideoUploadLimitsResult.Result.RemainingDailyBytes < fileSize)
 {
-    Console.WriteLine($"Video file is too large to upload. Max size is {getVideoUploadLimitsResult.Result.RemainingDailyBytes} bytes, but the video file is {video.Length} bytes.");
+    Console.WriteLine($"❌ Video file is too large to upload. Max size is {getVideoUploadLimitsResult.Result.RemainingDailyBytes} bytes, but the video file is {fileSize} bytes.");
     return;
 }
 
 // Start the multipart upload process.
 // This will return a jobId, the number of parts to upload, and the size for each part.
 var startUploadResult = await agent.StartUpload(
-    size: video.Length,
+    size: fileSize,
     mimeType: "video/mp4",
     name: Path.GetFileName(filePath),
     cancellationToken: cancellationToken).ConfigureAwait(false);
 startUploadResult.EnsureSucceeded();
 
-Console.WriteLine($"Started upload for jobID {startUploadResult.Result.JobId} requiring {startUploadResult.Result.PartCount} partial uploads.");
+Console.WriteLine($"🚀 Starting upload for jobID {startUploadResult.Result.JobId} with {startUploadResult.Result.PartCount} partial uploads.");
 
-// Quick and dirty parallel upload of the parts. You may want to use Parallel.ForEach or some other method to control the degree of parallelism, but this is a simple example.
-var uploadPartTasks = new Task[startUploadResult.Result.PartCount];
 var uploadPartResponses = new AtProtoHttpResult<UploadPartResponse>?[startUploadResult.Result.PartCount];
+var pool = ArrayPool<byte>.Shared;
 
-// Local function to upload a part. This is defined here it can access the uploadPartResponses array.
-async Task UploadPart(string jobId, int partNumber, byte[] bytes, CancellationToken cancellationToken)
+// https://alex-bsky.leaflet.pub/3mthoelgvrs2h suggests "a concurrency of 3 [as] ideal in most environments for parallelizing video uploads."
+ParallelOptions parallelOptions = new()
 {
-    Console.WriteLine($"Uploading part {partNumber} for jobID {jobId} with size {bytes.Length} bytes.");
+    MaxDegreeOfParallelism = 3,
+    CancellationToken = cancellationToken
+};
+
+await Parallel.ForAsync(0, startUploadResult.Result.PartCount, parallelOptions, async (uploadPart, ct) =>
+{
+    string jobId = startUploadResult.Result.JobId;
+    int partNumber = uploadPart + 1; // Part numbers are 1-based, not 0-based.
+    int offset = uploadPart * startUploadResult.Result.PartSize;
+    int partSize = uploadPart == startUploadResult.Result.PartCount - 1
+        ? fileSize - offset
+        : startUploadResult.Result.PartSize;
+    byte[] partBytes = pool.Rent(startUploadResult.Result.PartSize);
 
     try
     {
-        AtProtoHttpResult<UploadPartResponse> uploadPartResult = await agent.UploadPart(
-        jobId: jobId,
-        part: partNumber,
-        bytes: bytes,
-        timeout: TimeSpan.FromMinutes(60),
-        cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        if (!uploadPartResult.Succeeded)
+        using (var sourceStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
-            Console.WriteLine($"** Failed to upload part {partNumber} for jobID {jobId}.{Environment.NewLine}    Server returned {uploadPartResult.StatusCode} / {uploadPartResult.AtErrorDetail?.Error} / {uploadPartResult.AtErrorDetail?.Message}");
+            sourceStream.Position = offset;
+
+            Console.WriteLine($"📃 Reading {partSize} bytes from offset {offset} for part {partNumber}.");
+            await sourceStream.ReadAsync(partBytes.AsMemory(0, partSize), ct).ConfigureAwait(false);
+
+            Console.WriteLine($"💾 Uploading part {partNumber} for jobID {jobId} with size {partBytes.Length} bytes.");
+            uploadPartResponses[uploadPart] = await agent.UploadPart(
+                jobId: jobId,
+                part: partNumber,
+                bytes: partBytes[0..partSize],
+                timeout: TimeSpan.FromMinutes(60),
+                cancellationToken: ct).ConfigureAwait(false);
         }
 
-        uploadPartResponses[partNumber - 1] = uploadPartResult;
-
+        Console.WriteLine($"✅ Finished uploading part {partNumber} for jobID {jobId}.");
     }
     catch (Exception ex)
     {
-        // If any exception occurs during the part upload ensure the results are null
-        Console.WriteLine($"** Exception occurred while uploading part {partNumber} for jobID {jobId}.{Environment.NewLine}    Exception: {ex}");
+        Console.WriteLine($"❌ Exception occurred while uploading part {partNumber} for jobID {jobId}.{Environment.NewLine}    Exception: {ex}");
     }
-}
-
-for (int i = 0; i < startUploadResult.Result.PartCount; i++)
-{
-    // Capture the variables for UploadPart to avoid closure issues in the loop.
-    string jobId = startUploadResult.Result.JobId;
-    int partNumber = i + 1; // Part numbers are 1-based, not 0-based.
-    byte[] part;
-
-    int offset = (i * startUploadResult.Result.PartSize);
-    if (i != startUploadResult.Result.PartCount - 1)
+    finally
     {
-        part = video[offset..(offset + startUploadResult.Result.PartSize)];
+        pool.Return(partBytes);
     }
-    else
-    {
-        part = video[offset..];
-    }
-    uploadPartTasks[i] = Task.Run(async () => await UploadPart(jobId, partNumber, part, cancellationToken), cancellationToken);
-}
-
-// Wait for all part uploads to complete
-await Task.WhenAll(uploadPartTasks).ConfigureAwait(false);
+}).ConfigureAwait(false);
 
 // Check if any part upload failed. If any part upload failed, abort the upload and exit the sample.
 foreach (var uploadPartResult in uploadPartResponses)
@@ -173,13 +166,20 @@ foreach (var uploadPartResult in uploadPartResponses)
     if (uploadPartResult is null || !uploadPartResult.Succeeded)
     {
         // If any part upload failed, abort the upload, to free the reserved resources from our upload allowance, and then exit the sample.
-
         // You could also retry an individual part upload if you wanted to.
+
         var abortUploadResult = await agent.AbortUpload(
             jobId: startUploadResult.Result.JobId,
             cancellationToken: cancellationToken);
 
-        Console.WriteLine($"Part upload failed for jobID {startUploadResult.Result.JobId}, job aborted.");
+        if (abortUploadResult.Succeeded)
+        {
+            Console.WriteLine($"❌ Part upload failed for jobID {startUploadResult.Result.JobId}, job aborted successfully.");
+        }
+        else
+        {
+            Console.WriteLine($"❌ Part upload failed for jobID {startUploadResult.Result.JobId}, job abort failed.{Environment.NewLine}    Server returned {abortUploadResult.StatusCode} / {abortUploadResult.AtErrorDetail?.Error} / {abortUploadResult.AtErrorDetail?.Message}");
+        }
         return;
     }
 }
@@ -188,7 +188,6 @@ foreach (var uploadPartResult in uploadPartResponses)
 var finishUploadResult = await agent.FinishUpload(
     jobId: startUploadResult.Result.JobId,
     cancellationToken: cancellationToken).ConfigureAwait(false);
-finishUploadResult.EnsureSucceeded();
 
 // If the finish upload call failed, or if the job status is failed or unknown, abort the upload and exit the sample.
 if (!finishUploadResult.Succeeded ||
@@ -200,9 +199,18 @@ if (!finishUploadResult.Succeeded ||
         jobId: startUploadResult.Result.JobId,
         cancellationToken: cancellationToken);
 
-    Console.WriteLine($"FinishUpload failed for jobID {startUploadResult.Result.JobId}, job aborted.");
+    if (abortUploadResult.Succeeded)
+    {
+        Console.WriteLine($"🗑️ FinishUpload failed for jobID {startUploadResult.Result.JobId}, job aborted successfully.");
+    }
+    else
+    {
+        Console.WriteLine($"❌ FinishUpload failed for jobID {startUploadResult.Result.JobId}, job abort failed.{Environment.NewLine}    Server returned {abortUploadResult.StatusCode} / {abortUploadResult.AtErrorDetail?.Error} / {abortUploadResult.AtErrorDetail?.Message}");
+    }
     return;
 }
+
+Console.WriteLine($"✅ Finished upload for jobID {startUploadResult.Result.JobId}");
 
 // Poll the job status until it is completed, failed, or unknown.
 // This is a long running operation and may take several minutes to complete, depending on the size of the video and the current load on the server.
@@ -232,16 +240,27 @@ do
                 break;
         }
 
-        Console.WriteLine("Waiting for job to complete. Current state: " + getJobStatusResult.Result.State);
-        Thread.Sleep(pollingInterval);
+        if (!finished)
+        {
+            Console.WriteLine("⌛ Waiting for job to complete. Current state: " + getJobStatusResult.Result.State);
+            Thread.Sleep(pollingInterval);
+        }
     }
 } while (getJobStatusResult.Succeeded && !finished);
 
-getJobStatusResult.EnsureSucceeded();
+if (getJobStatusResult.Succeeded)
+{
+    Console.WriteLine($"✅ Job completed with state: {getJobStatusResult.Result.State}");
 
-Post post = new("Test parallel multipart video upload");
-post.Embed(new EmbeddedVideo(getJobStatusResult.Result.Blob!, altText: "Alt Text"));
-await agent.Post(post, cancellationToken: cancellationToken).ConfigureAwait(false);
+    Post post = new("Test parallel multipart video upload");
+    post.Embed(new EmbeddedVideo(getJobStatusResult.Result.Blob!, altText: "Alt Text"));
+    await agent.Post(post, cancellationToken: cancellationToken).ConfigureAwait(false);
+}
+else
+{
+    Console.WriteLine($"❌ Failed to get job status for jobID {finishUploadResult.Result.CompletedJobId}.{Environment.NewLine}    Server returned {getJobStatusResult.StatusCode} / {getJobStatusResult.AtErrorDetail?.Error} / {getJobStatusResult.AtErrorDetail?.Message}");
+}
+
 ```
 
 The [Samples.PartialUploads](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.PartialUploads) project shows the above code in action.
