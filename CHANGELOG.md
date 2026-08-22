@@ -39,6 +39,8 @@
 
 * `BlueskyServer.GetVideoJobStatus` has been renamed to `BlueskyServer.GetJobStatus` to reflect the new multi-part video upload API. `GetVideoJobStatus` is still available, but is marked as obsolete and will be removed in a future release.
 * `BlueskyAgent.GetVideoJobStatus` has been renamed to `BlueskyAgent.GetJobStatus` to reflect the new multi-part video upload API. `GetVideoJobStatus` is still available, but is marked as obsolete and will be removed in a future release.
+* `FeedViewerState` has been renamed to `ViewerState` to match the lexicon definition. All properties in `ViewerState` are now nullable, as they're defined as optional in the ATProto lexicon
+  A `KnownLikers` property has been added to provide a list of likers of a post who the authenticated user also follows. See [Add knownLikers to viewer state](https://github.com/bluesky-social/atproto/pull/5427).
 
 ## 4.0.0 - 2026-08-10
 
@@ -65,6 +67,7 @@
 * Updated `CreateGroup` to allow up to 10000 members in a group. See [update chat lexicons](https://github.com/bluesky-social/atproto/pull/5303).
 * Added fallback in `OpenGraphEmbeddedCardGenerator` to also look for `<meta name="og:([^\"]+)" content="([^\"]+)"` tags, not just `<meta property="og:([^\"]+)" content="([^\"]+)"` tags.
 * Added `SubscribedLabelers` optional parameter to `ListActivitySubscriptions`, `ListNotifications` and `GetSuggestedUsers` to allow labels to be applied to the returned results.
+* Added `KnownLikers` record. See [Add knownLikers to viewer state](https://github.com/bluesky-social/atproto/pull/5427).
 
 ### Fixed
 
