@@ -62,6 +62,8 @@ EmbeddedVideo video = new(videoUploadResult.Result.Blob!, altText: "Alt Text");
 The [Samples.Video](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.Video) project shows the above code in action,
 and demonstrates how to use the resulting `EmbeddedVideo` in a post.
 
+## Large video uploads with partial uploads
+
 For larger video uploads you must use the partial upload functionality, using `StartUpload()`, `UploadPart()` and `FinishUpload()`.
 This set of APIs allows you to upload a video in multiple parts, which is useful for large videos, and the uploading of individual parts
 can be done in parallel. Alex from the Bluesky team discusses this in an [implementation guide](https://alex-bsky.leaflet.pub/3mthoelgvrs2h).
@@ -260,7 +262,6 @@ else
 {
     Console.WriteLine($"❌ Failed to get job status for jobID {finishUploadResult.Result.CompletedJobId}.{Environment.NewLine}    Server returned {getJobStatusResult.StatusCode} / {getJobStatusResult.AtErrorDetail?.Error} / {getJobStatusResult.AtErrorDetail?.Message}");
 }
-
 ```
 
 The [Samples.PartialUploads](https://github.com/blowdart/idunno.Bluesky/tree/main/samples/Samples.PartialUploads) project shows the above code in action.
