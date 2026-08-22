@@ -86,7 +86,7 @@ jobs:
       run: dotnet build --configuration Release --property:PublicRelease=true
 
     - name: 'Test'
-      run: dotnet test --no-restore --no-build dotnet build --configuration Release --property:PublicRelease=false
+      run: dotnet test --no-restore --no-build --configuration Release --property:PublicRelease=false
 
     - name: 'Pack release'
       run: dotnet pack --configuration Release --no-restore --no-build --output ${BUILD_OUTPUT} --property:PublicRelease=true
