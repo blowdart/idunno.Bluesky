@@ -13,6 +13,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
+using Duende.IdentityModel.Client;
 using Duende.IdentityModel.OidcClient.DPoP;
 
 using idunno.AtProto.Authentication;
@@ -1538,6 +1539,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
             // at some future point, so log a warning if a request is made to any API endpoint not that is not a PDS endpoint (com.atproto.*).
             // https://docs.bsky.app/blog/2025-protocol-roadmap-spring
             if (!_suppressProxyHeaderCheck &&
+                !service.Host.Equals("video.bsky.app", StringComparison.OrdinalIgnoreCase) &&
                 !endpoint.StartsWith("/xrpc/com.atproto", StringComparison.Ordinal) &&
                 !endpoint.StartsWith("/oauth/", StringComparison.Ordinal) &&
                 (requestHeaders is null ||
