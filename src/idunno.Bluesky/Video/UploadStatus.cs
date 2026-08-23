@@ -24,7 +24,6 @@ public sealed record UploadStatus
         JobStatus? jobStatus,
         string? failureReason)
     {
-
         JobId = jobId;
         PartSize = partSize;
         PartCount = partCount;
@@ -37,17 +36,25 @@ public sealed record UploadStatus
     }
 
     internal UploadStatus(GetUploadStatusResponse getUploadStatusResponse)
-        : this(
-            jobId: getUploadStatusResponse.JobId,
-            partSize: getUploadStatusResponse.PartSize,
-            partCount: getUploadStatusResponse.PartCount,
-            receivedParts: getUploadStatusResponse.ReceivedParts,
-            expiresAt: getUploadStatusResponse.ExpiresAt,
-            state: getUploadStatusResponse.State,
-            completedJobId: getUploadStatusResponse.CompletedJobId,
-            jobStatus: getUploadStatusResponse.JobStatus,
-            failureReason: getUploadStatusResponse.FailureReason)
     {
+        JobId = getUploadStatusResponse.JobId;
+        PartSize = getUploadStatusResponse.PartSize;
+        PartCount = getUploadStatusResponse.PartCount;
+        ReceivedParts = getUploadStatusResponse.ReceivedParts;
+        ExpiresAt = getUploadStatusResponse.ExpiresAt;
+        State = getUploadStatusResponse.State.ToUploadState();
+        CompletedJobId = getUploadStatusResponse.CompletedJobId;
+
+        if (getUploadStatusResponse.JobStatus is not null)
+        {
+            JobStatus = new JobStatus(getUploadStatusResponse.JobStatus);
+        }
+        else
+        {
+            JobStatus = null;
+        }
+
+        FailureReason = getUploadStatusResponse.FailureReason;
     }
 
     /// <summary>

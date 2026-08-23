@@ -41,7 +41,8 @@
 * `BlueskyAgent.GetVideoJobStatus` has been renamed to `BlueskyAgent.GetJobStatus` to reflect the new multi-part video upload API.
 * `FeedViewerState` has been renamed to `ViewerState` to match the lexicon definition. All properties in `ViewerState` are now nullable, as they're defined as optional in the ATProto lexicon
   A `KnownLikers` property has been added to provide a list of likers of a post who the authenticated user also follows. See [Add knownLikers to viewer state](https://github.com/bluesky-social/atproto/pull/5427).
-* `UploadVideo` now requires a MIME type parameter to allow for more video formats. The previous overload without a MIME type parameter was removed.
+* `UploadVideo` now requires a MIME type parameter to allow for more video formats. The previous method which assumed a MIME type of `video/mp4` has been marked obsolete.
+* `UploadAnimatedGif` has been marked obsolete. Use `UploadVideo` with a MIME type of `image/gif` instead.
 * `GetVideoUploadLimits` has been renamed to `GetUploadLimits` to more accurately reflect the lexicon.
 
 #### idunno.AtProto

@@ -13,7 +13,7 @@ internal record GetUploadStatusResponse(
     [property: JsonRequired] DateTimeOffset ExpiresAt,
     [property: JsonRequired] string State,
     string? CompletedJobId,
-    JobStatus? JobStatus,
+    JobStatusWireFormat? JobStatus,
     string? FailureReason)
 {
 }
