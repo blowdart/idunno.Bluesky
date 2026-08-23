@@ -99,7 +99,7 @@ public sealed class Program
             int fileSize = (int)new FileInfo(filePath).Length;
 
             // Check the authenticated user has the ability to upload a video of this size.
-            var getVideoUploadLimitsResult = await agent.GetVideoUploadLimits(cancellationToken: cancellationToken).ConfigureAwait(false);
+            var getVideoUploadLimitsResult = await agent.GetUploadLimits(cancellationToken: cancellationToken).ConfigureAwait(false);
             if (!getVideoUploadLimitsResult.Succeeded)
             {
                 Console.WriteLine($"❌ Failed to get video upload limits.{Environment.NewLine}    Server returned {getVideoUploadLimitsResult.StatusCode} / {getVideoUploadLimitsResult.AtErrorDetail?.Error} / {getVideoUploadLimitsResult.AtErrorDetail?.Message}");

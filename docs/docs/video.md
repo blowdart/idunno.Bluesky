@@ -82,7 +82,7 @@ string filePath = "mp4-99mb-sample.mp4";
 int fileSize = (int)new FileInfo(filePath).Length;
 
 // Check the authenticated user has the ability to upload a video of this size.
-var getVideoUploadLimitsResult = await agent.GetVideoUploadLimits(cancellationToken: cancellationToken).ConfigureAwait(false);
+var getVideoUploadLimitsResult = await agent.GetUploadLimits(cancellationToken: cancellationToken).ConfigureAwait(false);
 if (!getVideoUploadLimitsResult.Succeeded)
 {
     Console.WriteLine($"❌ Failed to get video upload limits.{Environment.NewLine}    Server returned {getVideoUploadLimitsResult.StatusCode} / {getVideoUploadLimitsResult.AtErrorDetail?.Error} / {getVideoUploadLimitsResult.AtErrorDetail?.Message}");
@@ -146,7 +146,6 @@ await Parallel.ForAsync(0, startUploadResult.Result.PartCount, parallelOptions, 
                 jobId: jobId,
                 part: partNumber,
                 bytes: partBytes[0..partSize],
-                timeout: TimeSpan.FromMinutes(60),
                 cancellationToken: ct).ConfigureAwait(false);
         }
 
@@ -330,8 +329,7 @@ if (!videoUploadLimitsResult.Result.CanUpload ||
 
 ## Animated GIFs
 
-Bluesky treats animated GIFs as videos, so you can upload them in the same way as videos. To make animated GIF support more discoverable,
-the `BlueskyAgent` has a convenience method `UploadAnimatedGif()`. Alternatively, you can use `UploadVideo()` and specify the mime type as `image/gif`.
-The same processing rules apply to animated GIFs as they do to videos.
+Bluesky treats animated GIFs as videos, so you can upload them in the same way as videos. To upload an animated GIF using
+the `BlueskyAgent` use `UploadVideo()` and specify the mime type as `image/gif`. The same status polling process applies to animated GIFs as they do to videos.
 
-Bluesky treats animated GIFs as videos, so you must create an instance of `EmbeddedVideo` to use them in a post. You cannot use `EmbeddedImage` for animated GIFs.
+Bluesky treats animated GIFs as videos, so you must create an instance of `EmbeddedVideo` to use them in a post. Do not use `EmbeddedImage` for animated GIFs.

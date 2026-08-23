@@ -108,7 +108,7 @@ public sealed class Program
                     videoAsBytes = memoryStream.ToArray();
                 }
 
-                var videoUploadLimitsResult = await agent.GetVideoUploadLimits(cancellationToken: cancellationToken);
+                var videoUploadLimitsResult = await agent.GetUploadLimits(cancellationToken: cancellationToken);
                 videoUploadLimitsResult.EnsureSucceeded();
 
                 if (!videoUploadLimitsResult.Result.CanUpload ||
