@@ -67,7 +67,7 @@ public partial class BlueskyAgent
 
                 Logger.UploadMediaStarted(_logger, Did, _videoServer, fileName, media.Length, mimeType);
 
-                AtProtoHttpResult<JobStatus> result = await BlueskyServer.UploadMedia(
+                AtProtoHttpResult<JobStatus> result = await BlueskyServer.UploadVideo(
                     serverDescriptionResult.Result.Did,
                     fileName,
                     mimeType,
