@@ -374,8 +374,11 @@ FodyWeavers.xsd
 
 # Test and Code Coverage output folders
 CoverageReport/
+coveragereport/
 CoverageResults/
+coverageresults/
 TestResults/
+testresults/
 
 # .NET SDK templating engine
 TemplateEngineHost
