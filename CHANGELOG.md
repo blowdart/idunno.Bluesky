@@ -45,10 +45,11 @@
 * `UploadAnimatedGif` has been marked obsolete. Use `UploadVideo` with a MIME type of `image/gif` instead.
 * `GetVideoUploadLimits` has been renamed to `GetUploadLimits` to more accurately reflect the lexicon.
 
+### Fixed
+
 #### idunno.AtProto
 
 * Fixed a bug in `AtProtoAgent.GetServiceAuth` where if OAuth credentials were used DPoP nonce updates were not respected.
-
 
 ## 4.0.0 - 2026-08-10
 
