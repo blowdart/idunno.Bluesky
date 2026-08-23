@@ -24,7 +24,6 @@ public partial class AtProtoAgent : Agent
 {
     private volatile bool _disposed;
     private readonly ILogger<AtProtoAgent> _logger;
-
     internal readonly DirectoryAgent _directoryAgent;
 
     /// <summary>
@@ -66,11 +65,6 @@ public partial class AtProtoAgent : Agent
                     LoggerFactory = LoggerFactory,
                     HttpClientOptions = options?.HttpClientOptions
                 });
-
-        if (options is not null && options.CacheServerDescriptions == true)
-        {
-            _serverDescriptionCache = new MemoryCache(new MemoryCacheOptions() { SizeLimit = options.ServerDescriptionCacheSize });
-        }
     }
 
     /// <summary>
@@ -110,11 +104,6 @@ public partial class AtProtoAgent : Agent
                 PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
                 LoggerFactory = LoggerFactory,
             });
-
-        if (options is not null && options.CacheServerDescriptions == true)
-        {
-            _serverDescriptionCache = new MemoryCache(new MemoryCacheOptions() { SizeLimit = options.ServerDescriptionCacheSize });
-        }
     }
 
     /// <summary>
@@ -159,11 +148,6 @@ public partial class AtProtoAgent : Agent
                     LoggerFactory = LoggerFactory,
                     HttpClientOptions = options?.HttpClientOptions
                 });
-
-        if (options is not null && options.CacheServerDescriptions == true)
-        {
-            _serverDescriptionCache = new MemoryCache(new MemoryCacheOptions() { SizeLimit = options.ServerDescriptionCacheSize });
-        }
     }
 
     /// <summary>
@@ -206,11 +190,6 @@ public partial class AtProtoAgent : Agent
                 PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
                 LoggerFactory = LoggerFactory,
             });
-
-        if (options is not null && options.CacheServerDescriptions == true)
-        {
-            _serverDescriptionCache = new MemoryCache(new MemoryCacheOptions() { SizeLimit = options.ServerDescriptionCacheSize });
-        }
     }
 
     /// <summary>
@@ -255,11 +234,6 @@ public partial class AtProtoAgent : Agent
                     LoggerFactory = LoggerFactory,
                     HttpClientOptions = options?.HttpClientOptions
                 });
-
-        if (options is not null && options.CacheServerDescriptions == true)
-        {
-            _serverDescriptionCache = new MemoryCache(new MemoryCacheOptions() { SizeLimit = options.ServerDescriptionCacheSize });
-        }
     }
 
     /// <summary>
@@ -306,11 +280,6 @@ public partial class AtProtoAgent : Agent
                     PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
                     LoggerFactory = LoggerFactory
                 });
-
-        if (options is not null && options.CacheServerDescriptions == true)
-        {
-            _serverDescriptionCache = new MemoryCache(new MemoryCacheOptions() { SizeLimit = options.ServerDescriptionCacheSize });
-        }
     }
 
     /// <summary>
@@ -332,8 +301,6 @@ public partial class AtProtoAgent : Agent
     /// Gets the <see cref="Uri"/> for the service originally supplied during the construction of this instance.
     /// </summary>
     protected internal Uri OriginalService { get; set; }
-
-    private readonly MemoryCache? _serverDescriptionCache;
 
     /// <summary>
     /// Releases the unmanaged resources used by the <see cref="AtProtoAgent"/> and optionally disposes of the managed resources.
@@ -364,8 +331,6 @@ public partial class AtProtoAgent : Agent
             _directoryAgent?.Dispose();
 
             _credentialReaderWriterLockSlim?.Dispose();
-
-            _serverDescriptionCache?.Dispose();
         }
 
         base.Dispose(disposing);

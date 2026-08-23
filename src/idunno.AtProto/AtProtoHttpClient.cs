@@ -560,7 +560,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
     /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="timeout">An optional <see cref="TimeSpan"/> to apply as the request timeout.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     [RequiresDynamicCode("Use a Get overload which takes JsonSerializerOptions instead.")]
@@ -569,7 +568,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
         Uri service,
         string endpoint,
         HttpClient httpClient,
-        TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
         return await Get(
@@ -577,7 +575,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
             endpoint: endpoint,
             credentials: null,
             httpClient: httpClient,
-            timeout: timeout,
             onCredentialsUpdated: null,
             subscribedLabelers: null,
             cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -608,39 +605,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
             onCredentialsUpdated: null,
             httpClient: httpClient,
             subscribedLabelers: null,
-            timeout: null,
-            jsonSerializerOptions: jsonSerializerOptions,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Performs an unauthenticated GET request against the supplied <paramref name="service"/> and <paramref name="endpoint"/>.
-    /// </summary>
-    /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
-    /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
-    /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="timeout">An optional <see cref="TimeSpan"/> to apply as the request timeout.</param>
-    /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
-    /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    /// <returns>The task object representing the asynchronous operation.</returns>
-    [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
-    [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
-    public async Task<AtProtoHttpResult<TResult>> Get(
-        Uri service,
-        string endpoint,
-        HttpClient httpClient,
-        TimeSpan? timeout,
-        JsonSerializerOptions jsonSerializerOptions,
-        CancellationToken cancellationToken = default)
-    {
-        return await Get(
-            service: service,
-            endpoint: endpoint,
-            credentials: null,
-            onCredentialsUpdated: null,
-            httpClient: httpClient,
-            subscribedLabelers: null,
-            timeout: timeout,
             jsonSerializerOptions: jsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
@@ -652,7 +616,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="timeout">An optional <see cref="TimeSpan"/> to apply as the request timeout.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
     /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
@@ -667,7 +630,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
         string endpoint,
         AtProtoCredential? credentials,
         HttpClient httpClient,
-        TimeSpan? timeout = null,
         Action<AtProtoCredential>? onCredentialsUpdated = null,
         ICollection<NameValueHeaderValue>? requestHeaders = null,
         IEnumerable<Did>? subscribedLabelers = null,
@@ -687,7 +649,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
             credentials: credentials,
             httpClient: httpClient,
             retry: true,
-            timeout: timeout,
             onCredentialsUpdated: onCredentialsUpdated,
             subscribedLabelers: subscribedLabelers,
             jsonSerializerOptions: _jsonSerializationOptionsDefault,
@@ -702,7 +663,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
-    /// <param name="timeout">An optional <see cref="TimeSpan"/> to apply as the request timeout.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
     /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
@@ -718,7 +678,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
         AtProtoCredential? credentials,
         HttpClient httpClient,
         JsonSerializerOptions jsonSerializerOptions,
-        TimeSpan? timeout = null,
         Action<AtProtoCredential>? onCredentialsUpdated = null,
         ICollection<NameValueHeaderValue>? requestHeaders = null,
         IEnumerable<Did>? subscribedLabelers = null,
@@ -739,7 +698,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
             credentials: credentials,
             httpClient: httpClient,
             retry: true,
-            timeout: timeout,
             onCredentialsUpdated: onCredentialsUpdated,
             subscribedLabelers: subscribedLabelers,
             jsonSerializerOptions: jsonSerializerOptions,
@@ -753,7 +711,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="timeout">An optional <see cref="TimeSpan"/> to apply as the request timeout.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the provided have been updated during the HTTP POST.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -765,7 +722,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
         string endpoint,
         AtProtoCredential? credentials,
         HttpClient httpClient,
-        TimeSpan? timeout = null,
         Action<AtProtoCredential>? onCredentialsUpdated = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
@@ -777,7 +733,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
             requestHeaders: _extraRequestHeaders,
             credentials: credentials,
             httpClient: httpClient,
-            timeout: timeout,
             onCredentialsUpdated: onCredentialsUpdated,
             subscribedLabelers: subscribedLabelers,
             cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -791,7 +746,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
-    /// <param name="timeout">An optional <see cref="TimeSpan"/> to apply as the request timeout.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the provided have been updated during the HTTP POST.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -804,7 +758,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
         AtProtoCredential? credentials,
         HttpClient httpClient,
         JsonSerializerOptions jsonSerializerOptions,
-        TimeSpan? timeout = null,
         Action<AtProtoCredential>? onCredentialsUpdated = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
@@ -816,7 +769,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
             requestHeaders: _extraRequestHeaders,
             credentials: credentials,
             httpClient: httpClient,
-            timeout: timeout,
             onCredentialsUpdated: onCredentialsUpdated,
             subscribedLabelers: subscribedLabelers,
             jsonSerializerOptions: jsonSerializerOptions,
@@ -831,7 +783,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="endpoint">The endpoint on the <paramref name="service"/> to call.</param>
     /// <param name="record">An optional object to serialize to JSON and send as the request body.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="timeout">An optional <see cref="TimeSpan"/> to apply as the request timeout.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -842,7 +793,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
         string endpoint,
         TRecord? record,
         HttpClient httpClient,
-        TimeSpan? timeout = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
     {
@@ -853,7 +803,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
             requestHeaders: null,
             credentials: null,
             httpClient: httpClient,
-            timeout: timeout,
             onCredentialsUpdated: null,
             subscribedLabelers: subscribedLabelers,
             cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -868,7 +817,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="record">An optional object to serialize to JSON and send as the request body.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
-    /// <param name="timeout">An optional <see cref="TimeSpan"/> to apply as the request timeout.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -880,7 +828,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
         TRecord? record,
         HttpClient httpClient,
         JsonSerializerOptions jsonSerializerOptions,
-        TimeSpan? timeout = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
     {
@@ -891,7 +838,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
             requestHeaders: null,
             credentials: null,
             httpClient: httpClient,
-            timeout: timeout,
             onCredentialsUpdated: null,
             subscribedLabelers: subscribedLabelers,
             jsonSerializerOptions: jsonSerializerOptions,
@@ -907,7 +853,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="record">An optional object to serialize to JSON and send as the request body.</param>
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="timeout">An optional <see cref="TimeSpan"/> to apply as the request timeout.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the provided have been updated during the HTTP POST.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -920,7 +865,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
         TRecord? record,
         AtProtoCredential credentials,
         HttpClient httpClient,
-        TimeSpan? timeout = null,
         Action<AtProtoCredential>? onCredentialsUpdated = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
@@ -932,7 +876,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
             requestHeaders: null,
             credentials: credentials,
             httpClient: httpClient,
-            timeout: timeout,
             onCredentialsUpdated: onCredentialsUpdated,
             subscribedLabelers: subscribedLabelers,
             cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -948,7 +891,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
-    /// <param name="timeout">An optional <see cref="TimeSpan"/> to apply as the request timeout.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the provided have been updated during the HTTP POST.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -962,7 +904,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
         AtProtoCredential credentials,
         HttpClient httpClient,
         JsonSerializerOptions jsonSerializerOptions,
-        TimeSpan? timeout = null,
         Action<AtProtoCredential>? onCredentialsUpdated = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
@@ -974,7 +915,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
             requestHeaders: null,
             credentials: credentials,
             httpClient: httpClient,
-            timeout: timeout,
             onCredentialsUpdated: onCredentialsUpdated,
             subscribedLabelers: subscribedLabelers,
             jsonSerializerOptions: jsonSerializerOptions,
@@ -991,7 +931,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="requestHeaders">A collection of HTTP headers to send with the request.</param>
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="timeout">An optional <see cref="TimeSpan"/> to apply as the request timeout.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the provided have been updated during the HTTP POST.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -1007,7 +946,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
         ICollection<NameValueHeaderValue>? requestHeaders,
         AtProtoCredential? credentials,
         HttpClient httpClient,
-        TimeSpan? timeout = null,
         Action<AtProtoCredential>? onCredentialsUpdated = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
@@ -1026,7 +964,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
             credentials: credentials,
             httpClient: httpClient,
             retry: true,
-            timeout: timeout,
             onCredentialsUpdated: onCredentialsUpdated,
             subscribedLabelers: subscribedLabelers,
             jsonSerializerOptions: _jsonSerializationOptionsDefault,
@@ -1044,7 +981,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
-    /// <param name="timeout">An optional <see cref="TimeSpan"/> to apply as the request timeout.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the provided have been updated during the HTTP POST.</param>
     /// <param name="subscribedLabelers">A optional list of labeler <see cref="Did"/>s to accept labels from.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -1061,7 +997,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
         AtProtoCredential? credentials,
         HttpClient httpClient,
         JsonSerializerOptions jsonSerializerOptions,
-        TimeSpan? timeout = null,
         Action<AtProtoCredential>? onCredentialsUpdated = null,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)
@@ -1081,7 +1016,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
             credentials: credentials,
             httpClient: httpClient,
             retry: true,
-            timeout: timeout,
             onCredentialsUpdated: onCredentialsUpdated,
             subscribedLabelers: subscribedLabelers,
             jsonSerializerOptions: jsonSerializerOptions,
@@ -1098,7 +1032,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="contentHeaders">A collection of HTTP content headers to send with the request content.</param>
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="timeout">An optional <see cref="TimeSpan"/> to apply as the request timeout.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -1114,7 +1047,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
         ICollection<NameValueHeaderValue>? contentHeaders,
         AtProtoCredential credentials,
         HttpClient httpClient,
-        TimeSpan? timeout = null,
         Action<AtProtoCredential>? onCredentialsUpdated = null,
         CancellationToken cancellationToken = default)
     {
@@ -1145,7 +1077,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
             credentials: credentials,
             httpClient: httpClient,
             retry: true,
-            timeout: timeout,
             onCredentialsUpdated: onCredentialsUpdated,
             subscribedLabelers: null,
             jsonSerializerOptions: _jsonSerializationOptionsDefault,
@@ -1163,7 +1094,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
-    /// <param name="timeout">An optional <see cref="TimeSpan"/> to apply as the request timeout.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -1180,7 +1110,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
         AtProtoCredential credentials,
         HttpClient httpClient,
         JsonSerializerOptions jsonSerializerOptions,
-        TimeSpan? timeout = null,
         Action<AtProtoCredential>? onCredentialsUpdated = null,
         CancellationToken cancellationToken = default)
     {
@@ -1212,7 +1141,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
             credentials: credentials,
             httpClient: httpClient,
             retry: true,
-            timeout: timeout,
             onCredentialsUpdated: onCredentialsUpdated,
             subscribedLabelers: null,
             jsonSerializerOptions: jsonSerializerOptions,
@@ -1230,7 +1158,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
     /// <param name="credentials">The <see cref="AtProtoCredential"/> to use when calling <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
-    /// <param name="timeout">An optional <see cref="TimeSpan"/> to apply as the request timeout.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
     /// <param name="cancellationToken">An optional cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -1248,7 +1175,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
         AtProtoCredential credentials,
         HttpClient httpClient,
         JsonSerializerOptions jsonSerializerOptions,
-        TimeSpan? timeout = null,
         Action<AtProtoCredential>? onCredentialsUpdated = null,
         CancellationToken cancellationToken = default)
     {
@@ -1281,7 +1207,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
             retry: true,
             onCredentialsUpdated: onCredentialsUpdated,
             subscribedLabelers: null,
-            timeout: timeout,
             jsonSerializerOptions: jsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
@@ -1524,7 +1449,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
         ICollection<NameValueHeaderValue>? contentHeaders,
         AtProtoCredential? credentials,
         HttpClient httpClient,
-        TimeSpan? timeout,
         bool retry = false,
         Action<AtProtoCredential>? onCredentialsUpdated = null,
         IEnumerable<Did>? subscribedLabelers = null,
@@ -1590,11 +1514,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
                 if (OnSendingRequest is not null)
                 {
                     await OnSendingRequest(httpRequestMessage, cancellationToken).ConfigureAwait(false);
-                }
-
-                if (timeout.HasValue)
-                {
-                    httpClient.Timeout = timeout.Value;
                 }
 
                 try
@@ -1772,7 +1691,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
                                             credentials: credentials,
                                             httpClient: httpClient,
                                             retry: false,
-                                            timeout: timeout,
                                             onCredentialsUpdated: onCredentialsUpdated,
                                             subscribedLabelers: subscribedLabelers,
                                             jsonSerializerOptions: jsonSerializerOptions,

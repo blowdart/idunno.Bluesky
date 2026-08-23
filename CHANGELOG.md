@@ -28,19 +28,26 @@
 * Added support for `ContentVisibilityDeclaration`, with
   `BlueskyAgent.GetContentVisibilityDeclaration`, `BlueskyAgent.SetContentVisibilityDeclaration` and `BlueskyAgent.DeleteContentVisibilityDeclaration`.
   See [Add content visibility lexicon](https://github.com/bluesky-social/atproto/pull/5372).
+* Added `KnownLikers` view. See [Add knownLikers to viewer state](https://github.com/bluesky-social/atproto/pull/5427).
 
 ### Breaking Changes
 
-#### idunno.AtProto
-
-* `AtProtoHttpClient` now has an optional `timeout` parameter on its `Get`, `Post`, `PostBlob` methods, which allows for specifying a request timeout for the HTTP request. If not specified, the default timeout of the underlying `HttpClient` will be used.
+### idunno.AtProto
+* `accessCredentialsUpdated` parameter on `AtProtoServer.GetServiceAuth` has been renamed to `credentialsUpdated` to match other methods.
 
 #### idunno.Bluesky
 
-* `BlueskyServer.GetVideoJobStatus` has been renamed to `BlueskyServer.GetJobStatus` to reflect the new multi-part video upload API. `GetVideoJobStatus` is still available, but is marked as obsolete and will be removed in a future release.
-* `BlueskyAgent.GetVideoJobStatus` has been renamed to `BlueskyAgent.GetJobStatus` to reflect the new multi-part video upload API. `GetVideoJobStatus` is still available, but is marked as obsolete and will be removed in a future release.
+* `BlueskyServer.GetVideoJobStatus` has been renamed to `BlueskyServer.GetJobStatus` to reflect the new multi-part video upload API.
+* `BlueskyAgent.GetVideoJobStatus` has been renamed to `BlueskyAgent.GetJobStatus` to reflect the new multi-part video upload API.
 * `FeedViewerState` has been renamed to `ViewerState` to match the lexicon definition. All properties in `ViewerState` are now nullable, as they're defined as optional in the ATProto lexicon
   A `KnownLikers` property has been added to provide a list of likers of a post who the authenticated user also follows. See [Add knownLikers to viewer state](https://github.com/bluesky-social/atproto/pull/5427).
+* `UploadVideo` now requires a MIME type parameter to allow for more video formats. The previous overload without a MIME type parameter was removed.
+* `GetVideoUploadLimits` has been renamed to `GetUploadLimits` to more accurately reflect the lexicon.
+
+#### idunno.AtProto
+
+* Fixed a bug in `AtProtoAgent.GetServiceAuth` where if OAuth credentials were used DPoP nonce updates were not respected.
+
 
 ## 4.0.0 - 2026-08-10
 
@@ -49,7 +56,6 @@
 #### idunno.AtProto
 
 * Added `BlobUploadLimit` to `ServerDescription`, which indicates the maximum size of a blob that a server will accept via uploadBlob. See [pds: expose blobUploadLimit through describeServer](https://github.com/bluesky-social/atproto/pull/5277).
-* ServerDescriptions are now cached by default, with a default cache size of 25 entries and a sliding expiration of 5 minutes. This can be disabled by passing `CacheServerDescriptions = false` in `AtProtoAgentOptions`, and the cache size can be changed with `ServerDescriptionCacheSize`.
 
 #### idunno.Bluesky
 
@@ -67,13 +73,11 @@
 * Updated `CreateGroup` to allow up to 10000 members in a group. See [update chat lexicons](https://github.com/bluesky-social/atproto/pull/5303).
 * Added fallback in `OpenGraphEmbeddedCardGenerator` to also look for `<meta name="og:([^\"]+)" content="([^\"]+)"` tags, not just `<meta property="og:([^\"]+)" content="([^\"]+)"` tags.
 * Added `SubscribedLabelers` optional parameter to `ListActivitySubscriptions`, `ListNotifications` and `GetSuggestedUsers` to allow labels to be applied to the returned results.
-* Added `KnownLikers` record. See [Add knownLikers to viewer state](https://github.com/bluesky-social/atproto/pull/5427).
 
 ### Fixed
 
 #### idunno.AtProto
 
-* Fixed a bug in `AtProtoAgent.GetServiceAuth` where if OAuth credentials were used DPoP nonce updates were not respected.
 * Fixed `BlueskyServer.GetVideoUploadStatus` to correctly use the correct service credentials.
 
 #### idunno.Bluesky
@@ -86,7 +90,6 @@
 
 * `ServerDescription`, `Links` and `Contact` are now part of the `idunno.AtProto.Server` namespace.
 * `InviteCodeRequired` and `PhoneVerificationRequired` properties of `ServerDescription` are now nullable, as they're defined as optional in the ATProto lexicon.
-* `accessCredentialsUpdated` parameter on `AtProtoServer.GetServiceAuth` has been renamed to `credentialsUpdated` to match other methods.
 
 #### idunno.Bluesky
 
