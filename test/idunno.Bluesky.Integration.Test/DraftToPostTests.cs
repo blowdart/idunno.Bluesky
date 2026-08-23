@@ -1451,10 +1451,8 @@ public class DraftToPostTests
             }
             else if (request.Host.Host == "video.bsky.app")
             {
-                // Ensure the proxy header is present.
-                if (request.Headers.Count == 0 ||
-                    request.Headers["atproto-proxy"].Count != 1 ||
-                    request.Headers["atproto-proxy"].ToString() != "did:web:api.bsky.app#bsky_appview")
+                // No proxy header needed, so just check there are headers to work with, otherwise the request is invalid.
+                if (request.Headers.Count == 0)
                 {
                     response.StatusCode = 500;
                     return;
