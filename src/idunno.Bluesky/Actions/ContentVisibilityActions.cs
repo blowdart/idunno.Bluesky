@@ -90,7 +90,7 @@ public partial class BlueskyAgent
         else
         {
             return new AtProtoHttpResult<bool>(
-                true,
+                false,
                 getRecordResult.StatusCode,
                 getRecordResult.HttpResponseHeaders,
                 getRecordResult.AtErrorDetail,
