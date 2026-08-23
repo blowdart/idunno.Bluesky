@@ -32,7 +32,7 @@
 
 ### Breaking Changes
 
-### idunno.AtProto
+#### idunno.AtProto
 * `accessCredentialsUpdated` parameter on `AtProtoServer.GetServiceAuth` has been renamed to `credentialsUpdated` to match other methods.
 
 #### idunno.Bluesky
