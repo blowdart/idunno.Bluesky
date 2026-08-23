@@ -40,7 +40,7 @@ public static partial class BlueskyServer
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
     public static async Task<AtProtoHttpResult<StartUploadResponse>> StartUpload(
-        long size,
+        int size,
         string mimeType,
         string? name,
         long? duration,

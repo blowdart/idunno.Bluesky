@@ -25,7 +25,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentException">Thrown when a provided argument is invalid.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<StartUploadResponse>> StartUpload(
-        long size,
+        int size,
         string mimeType,
         string? name = null,
         long? duration = null,

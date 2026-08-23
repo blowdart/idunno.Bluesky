@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 namespace idunno.Bluesky.Video.Model;
 
 internal sealed record StartUploadRequest(
-    [property:JsonRequired] long SizeBytes,
+    [property:JsonRequired] int SizeBytes,
     [property:JsonRequired] string MimeType,
     [property:JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Name,
     [property:JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] long? DurationMs,
