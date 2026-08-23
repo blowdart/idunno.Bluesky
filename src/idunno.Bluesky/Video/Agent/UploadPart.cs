@@ -35,7 +35,7 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(jobId);
-        ArgumentOutOfRangeException.ThrowIfNegative(part);
+        ArgumentOutOfRangeException.ThrowIfLessThan(part, 1);
         ArgumentNullException.ThrowIfNull(bytes);
         ArgumentOutOfRangeException.ThrowIfZero(bytes.Length);
 
