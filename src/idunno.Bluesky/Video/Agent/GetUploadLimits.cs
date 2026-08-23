@@ -25,7 +25,7 @@ public partial class BlueskyAgent
 
         AtProtoHttpResult<ServiceCredential> getServiceAuthResult = await GetServiceAuth(
             Service,
-            audience: _videoAudience,
+            audience: WellKnownDistributedIdentifiers.Video,
             lxm: "app.bsky.video.getUploadLimits",
             cancellationToken: cancellationToken).ConfigureAwait(false);
 

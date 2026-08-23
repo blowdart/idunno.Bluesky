@@ -11,8 +11,6 @@ public partial class BlueskyAgent
 {
     private readonly Uri _videoServer = new("https://video.bsky.app/");
 
-    private readonly Did _videoAudience = new("did:web:video.bsky.app");
-
     private const string UploadBlobLxm = "com.atproto.repo.uploadBlob";
 
     /// <summary>
