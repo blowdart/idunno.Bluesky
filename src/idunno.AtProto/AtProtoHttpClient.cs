@@ -13,7 +13,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
-using Duende.IdentityModel.Client;
 using Duende.IdentityModel.OidcClient.DPoP;
 
 using idunno.AtProto.Authentication;
