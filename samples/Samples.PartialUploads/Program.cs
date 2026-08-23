@@ -96,7 +96,21 @@ public sealed class Program
 
             // Get information about the file to upload.
             string filePath = "sample.mp4";
-            int fileSize = (int)new FileInfo(filePath).Length;
+
+            if (!File.Exists(filePath))
+            {
+                Console.WriteLine($"❌ File {filePath} does not exist.");
+                return;
+            }
+
+            var fileInfo = new FileInfo(filePath);
+            if (fileInfo.Length > int.MaxValue)
+            {
+                Console.WriteLine($"❌ File {filePath} is too large to upload. Max size is {int.MaxValue} bytes.");
+                return;
+            }
+
+            int fileSize = (int)fileInfo.Length;
 
             // Check the authenticated user has the ability to upload a video of this size.
             var getVideoUploadLimitsResult = await agent.GetUploadLimits(cancellationToken: cancellationToken).ConfigureAwait(false);
