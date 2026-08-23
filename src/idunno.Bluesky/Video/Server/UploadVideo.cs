@@ -37,7 +37,7 @@ public static partial class BlueskyServer
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
-    internal static async Task<AtProtoHttpResult<JobStatus>> UploadVideo(
+    public static async Task<AtProtoHttpResult<JobStatus>> UploadVideo(
         Did did,
         string fileName,
         string mimeType,

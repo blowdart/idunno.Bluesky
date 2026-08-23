@@ -75,7 +75,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="gif"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="gif"/> is empty.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    [Obsolete("Use UploadVideo(string fileName, byte[] media, string mimeType, CancellationToken cancellationToken) with a mimeType of video/gif instead.")]
+    [Obsolete("Use UploadVideo(string fileName, byte[] media, string mimeType, CancellationToken cancellationToken) with a mimeType of image/gif instead.")]
     public async Task<AtProtoHttpResult<JobStatus>> UploadAnimatedGif(
         string fileName,
         byte[] gif,

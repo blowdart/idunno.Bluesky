@@ -27,7 +27,7 @@ public partial class BlueskyAgent
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Catch all exception logging")]
     public async Task<AtProtoHttpResult<UploadPartResponse>> UploadPart(
         string jobId,
-        long part,
+        int part,
         byte[] bytes,
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)

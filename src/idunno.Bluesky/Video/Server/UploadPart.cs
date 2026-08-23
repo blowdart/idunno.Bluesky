@@ -41,7 +41,7 @@ public static partial class BlueskyServer
     [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Only difference between methods is the type of the bytes parameter")]
     public static async Task<AtProtoHttpResult<UploadPartResponse>> UploadPart(
         string jobId,
-        long part,
+        int part,
         byte[] bytes,
         Uri service,
         ServiceCredential serviceCredential,

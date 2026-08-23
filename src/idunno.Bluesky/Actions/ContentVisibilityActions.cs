@@ -49,7 +49,7 @@ public partial class BlueskyAgent
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
-    public async Task<AtProtoHttpResult<bool>> GetContentVisibilityDeclaration(AtIdentifier identifier, CancellationToken cancellationToken)
+    public async Task<AtProtoHttpResult<bool>> GetContentVisibilityDeclaration(AtIdentifier identifier, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(identifier);
 
@@ -64,12 +64,7 @@ public partial class BlueskyAgent
             did = (Did)identifier;
         }
 
-        if (did is null)
-        {
-            throw new HandleResolutionException($"The handle {identifier} could not be resolved.");
-        }
-
-        AtProtoHttpResult<AtProtoRepositoryRecord<ContentVisibilityDeclaration>> getRecordResult = await GetBlueskyRecord<Actor.ContentVisibilityDeclaration>(
+        AtProtoHttpResult<AtProtoRepositoryRecord<ContentVisibilityDeclaration>> getRecordResult = await GetBlueskyRecord<ContentVisibilityDeclaration>(
             repo: did.Value,
             collection: "app.bsky.actor.contentVisibilityDeclaration",
             rKey: "self",
@@ -103,7 +98,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<bool>> GetContentVisibilityDeclaration(CancellationToken cancellationToken)
+    public async Task<AtProtoHttpResult<bool>> GetContentVisibilityDeclaration(CancellationToken cancellationToken = default)
     {
         if (!IsAuthenticated)
         {
@@ -164,7 +159,7 @@ public partial class BlueskyAgent
         Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
     public async Task<AtProtoHttpResult<PutRecordResult>> SetContentVisibilityDeclaration(
         AtProtoRepositoryRecord<ContentVisibilityDeclaration> declaration,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(declaration);
 
