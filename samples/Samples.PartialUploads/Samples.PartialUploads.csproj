@@ -4,7 +4,7 @@
     <ProjectReference Include="..\Samples.Common\Samples.Common.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="mp4-99mb-sample.mp4">
+    <None Update="sample.mp4">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

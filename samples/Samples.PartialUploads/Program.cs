@@ -95,7 +95,7 @@ public sealed class Program
             // END-AUTHENTICATION
 
             // Get information about the file to upload.
-            string filePath = "mp4-99mb-sample.mp4";
+            string filePath = "sample.mp4";
             int fileSize = (int)new FileInfo(filePath).Length;
 
             // Check the authenticated user has the ability to upload a video of this size.
