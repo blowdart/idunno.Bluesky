@@ -8,6 +8,7 @@ using System.Net.Http.Headers;
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Video;
+using idunno.Bluesky.Video.Model;
 
 using Microsoft.Extensions.Logging;
 
@@ -64,7 +65,9 @@ public static partial class BlueskyServer
             new NameValueHeaderValue("Content-Length", bytes.Length.ToString(CultureInfo.InvariantCulture))
         ];
 
-        BlueskyHttpClient<UploadPartResponse> client = new(AppViewProxy, loggerFactory);
+        // AppView proxy is not needed as we're hitting the video service directly.
+        BlueskyHttpClient<UploadPartResponse> client = new(loggerFactory);
+
         return await client.PostBlob(
                 service: service,
                 endpoint: $"/xrpc/app.bsky.video.uploadPart?jobId={Uri.EscapeDataString(jobId)}&partNumber={part}",

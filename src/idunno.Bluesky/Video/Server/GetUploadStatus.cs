@@ -42,7 +42,9 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        BlueskyHttpClient<GetUploadStatusResponse> client = new(AppViewProxy, loggerFactory);
+        // AppView proxy is not needed as we're hitting the video service directly.
+        BlueskyHttpClient<GetUploadStatusResponse> client = new(loggerFactory);
+
         AtProtoHttpResult<GetUploadStatusResponse> response = await client.Get(
             service,
             $"/xrpc/app.bsky.video.getUploadStatus?jobId={Uri.EscapeDataString(jobId)}",
