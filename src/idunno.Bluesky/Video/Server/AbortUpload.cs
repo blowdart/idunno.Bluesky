@@ -62,7 +62,8 @@ public static partial class BlueskyServer
 
         AbortUploadResponse? result = null;
 
-        if (response.Succeeded) {
+        if (response.Succeeded)
+        {
             result = new AbortUploadResponse(response.Result);
         }
 
