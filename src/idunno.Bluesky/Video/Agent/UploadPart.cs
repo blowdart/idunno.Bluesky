@@ -66,6 +66,7 @@ public partial class BlueskyAgent
 
             using (HttpClient httpClient = HttpClient)
             {
+                httpClient.Timeout = timeout ?? httpClient.Timeout;
                 try
                 {
                     AtProtoHttpResult<UploadPartResponse> result = await BlueskyServer.UploadPart(
@@ -75,7 +76,6 @@ public partial class BlueskyAgent
                         service: _videoServer,
                         serviceCredential: getServiceAuthResult.Result,
                         httpClient: httpClient,
-                        timeout: timeout,
                         loggerFactory: LoggerFactory,
                         cancellationToken: cancellationToken).ConfigureAwait(false);
 

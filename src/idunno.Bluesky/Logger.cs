@@ -227,4 +227,8 @@ internal static partial class Logger
     [LoggerMessage(149, LogLevel.Error, "StartUpload failed on {service} for {did} with {statusCode} error {error} message {message}")]
     internal static partial void StartUploadFailed(ILogger logger, Uri service, Did did, HttpStatusCode statusCode, string? error, string? message);
 
+    [LoggerMessage(150, LogLevel.Error, "GetUploadLimits getServiceAuth failed for user {did}, service {service} with {statusCode} error {error} message {message}")]
+    internal static partial void GetUploadLimitsServiceAuthFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
+
+
 }

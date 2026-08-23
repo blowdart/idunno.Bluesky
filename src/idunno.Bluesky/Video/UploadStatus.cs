@@ -21,7 +21,7 @@ public sealed record UploadStatus
         DateTimeOffset expiresAt,
         string state,
         string? completedJobId,
-        string? jobStatus,
+        JobStatus? jobStatus,
         string? failureReason)
     {
 
@@ -32,7 +32,7 @@ public sealed record UploadStatus
         ExpiresAt = expiresAt;
         State = state.ToUploadState();
         CompletedJobId = completedJobId;
-        JobStatus = jobStatus?.ToJobState();
+        JobStatus = jobStatus;
         FailureReason = failureReason;
     }
 
@@ -88,7 +88,7 @@ public sealed record UploadStatus
     /// <summary>
     /// Gets the job status if the upload has completed successfully.
     /// </summary>
-    public JobState? JobStatus { get; init; }
+    public JobStatus? JobStatus { get; init; }
 
     /// <summary>
     /// Gets the failure reason if the upload session has failed.

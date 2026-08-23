@@ -26,7 +26,6 @@ public static partial class BlueskyServer
     /// <param name="service">The URI of the service to which the video will be uploaded.</param>
     /// <param name="serviceCredential">The credentials used to authenticate with the service.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="timeout">An optional timeout for the request.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -47,7 +46,6 @@ public static partial class BlueskyServer
         Uri service,
         ServiceCredential serviceCredential,
         HttpClient httpClient,
-        TimeSpan? timeout = null,
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default)
     {
@@ -75,7 +73,6 @@ public static partial class BlueskyServer
                 contentHeaders: contentHeaders,
                 credentials: serviceCredential,
                 httpClient: httpClient,
-                timeout: timeout,
                 jsonSerializerOptions: BlueskyJsonSerializerOptions,
                 onCredentialsUpdated: null, // Service credentials don't get updates
                 cancellationToken: cancellationToken).ConfigureAwait(false);

@@ -2,9 +2,7 @@
 // Licensed under the MIT License.
 
 using idunno.AtProto;
-using idunno.AtProto.Authentication;
 using idunno.Bluesky.Embed;
-using idunno.Bluesky.Video;
 
 namespace idunno.Bluesky;
 
@@ -12,69 +10,12 @@ public partial class BlueskyAgent
 {
     private readonly Uri _videoServer = new("https://video.bsky.app/");
 
+    private readonly Did _videoAudience = new("did:web:video.bsky.app");
+
     private const string UploadBlobLxm = "com.atproto.repo.uploadBlob";
 
     /// <summary>
-    /// Gets any video upload restrictions placed on the current user 
-    /// </summary>
-    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<UploadLimits>> GetVideoUploadLimits(CancellationToken cancellationToken = default)
-    {
-        if (!IsAuthenticated)
-        {
-            throw new AuthenticationRequiredException();
-        }
-
-        using (_logger.BeginScope($"Getting video upload limits for {Did}"))
-        {
-            AtProtoHttpResult<ServiceCredential> getServiceAuthResult = await GetServiceAuth(
-                service: Service,
-                audience: WellKnownDistributedIdentifiers.Video,
-                lxm: "app.bsky.video.getUploadLimits",
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            if (!getServiceAuthResult.Succeeded)
-            {
-                return new AtProtoHttpResult<UploadLimits>(
-                    null,
-                    getServiceAuthResult.StatusCode,
-                    getServiceAuthResult.HttpResponseHeaders,
-                    getServiceAuthResult.AtErrorDetail,
-                    getServiceAuthResult.RateLimit);
-            }
-
-            AtProtoHttpResult<UploadLimits> result = await BlueskyServer.GetVideoUploadStatus(
-                _videoServer,
-                serviceCredential: getServiceAuthResult.Result,
-                httpClient: HttpClient,
-                loggerFactory: LoggerFactory,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            if (result.Succeeded)
-            {
-                Logger.GetUploadLimitsSucceeded(_logger, Did, result.Result.CanUpload, result.Result.RemainingDailyVideos, result.Result.RemainingDailyBytes);
-            }
-            else
-            {
-                string? error = null;
-                string? message = null;
-                if (result.AtErrorDetail is not null)
-                {
-                    error = result.AtErrorDetail.Error;
-                    message = result.AtErrorDetail.Message;
-                }
-
-                Logger.GetUploadLimitsFailed(_logger, result.StatusCode, Did, error, message);
-            }
-
-            return result;
-        }
-    }
-
-    /// <summary>
-    /// Uploads an caption file to be referenced in an embedded video.
+    /// Uploads a caption file to be referenced in an embedded video.
     /// </summary>
     /// <param name="captionsAsBytes">The captions, as a byte array.</param>
     /// <param name="captionLanguage">The language the captions are in.</param>

@@ -254,4 +254,227 @@ public class VideoTests
         Assert.Null(finishUploadResponse.JobStatus?.FailureCode);
         Assert.Null(finishUploadResponse.JobStatus?.Blob);
     }
+
+    [Fact]
+    public void AllGetJobStatusReponsesDeserializeCorrectlyAndConvertToJobStatusCorrectly()
+    {
+        string jsonString = """
+            {
+                "jobStatus": {
+                    "did": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
+                    "jobId": "da26cttf373s73aa5pug",
+                    "progress": 0,
+                    "state": "JOB_STATE_CREATED"
+                }
+            }
+            """;
+
+        JobStatusResponse? jobStatusResponse = JsonSerializer.Deserialize<JobStatusResponse>(jsonString, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(jobStatusResponse);
+        Assert.Equal("JOB_STATE_CREATED", jobStatusResponse.JobStatus.State);
+        Assert.Equal(new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk"), jobStatusResponse.JobStatus.Did);
+        Assert.Equal("da26cttf373s73aa5pug", jobStatusResponse.JobStatus.JobId);
+        Assert.Equal(0, jobStatusResponse.JobStatus.Progress);
+        Assert.Null(jobStatusResponse.JobStatus.Blob);
+        Assert.Null(jobStatusResponse.JobStatus.Error);
+        Assert.Null(jobStatusResponse.JobStatus.FailureCode);
+        Assert.Null(jobStatusResponse.JobStatus.Message);
+
+        JobStatus jobStatus = new(jobStatusResponse.JobStatus);
+        Assert.Equal(JobState.Created, jobStatus.State);
+        Assert.Equal(new Did("did:plc:ec72yg6n2sydzjvtovvdlxrk"), jobStatus.Did);
+        Assert.Equal("da26cttf373s73aa5pug", jobStatus.JobId);
+        Assert.Equal(0, jobStatus.Progress);
+        Assert.Null(jobStatus.Blob);
+        Assert.Null(jobStatus.Error);
+        Assert.Null(jobStatus.FailureCode);
+        Assert.Null(jobStatus.Message);
+
+        jsonString = """
+            {
+                "jobStatus": {
+                    "did": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
+                    "jobId": "d9v2htkbckrc738jq6ng",
+                    "progress": 0,
+                    "state": "JOB_STATE_ENCODING"
+                }
+            }
+            """;
+
+        jobStatusResponse = JsonSerializer.Deserialize<JobStatusResponse>(jsonString, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(jobStatusResponse);
+        Assert.Equal("JOB_STATE_ENCODING", jobStatusResponse.JobStatus.State);
+
+        jobStatus = new(jobStatusResponse.JobStatus);
+        Assert.Equal(JobState.Encoding, jobStatus.State);
+
+        jsonString = """
+            {
+                "jobStatus": {
+                    "did": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
+                    "jobId": "d9v2htkbckrc738jq6ng",
+                    "progress": 10,
+                    "state": "JOB_STATE_ENCODED"
+                }
+            }
+            """;
+
+        jobStatusResponse = JsonSerializer.Deserialize<JobStatusResponse>(jsonString, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(jobStatusResponse);
+        Assert.Equal("JOB_STATE_ENCODED", jobStatusResponse.JobStatus.State);
+        Assert.Equal(10, jobStatusResponse.JobStatus.Progress);
+
+        jobStatus = new(jobStatusResponse.JobStatus);
+        Assert.Equal(JobState.Encoded, jobStatus.State);
+        Assert.Equal(10, jobStatus.Progress);
+
+        jsonString = """
+            {
+                "jobStatus": {
+                    "did": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
+                    "jobId": "d9v2htkbckrc738jq6ng",
+                    "progress": 20,
+                    "state": "JOB_STATE_SCANNING"
+                }
+            }
+            """;
+
+        jobStatusResponse = JsonSerializer.Deserialize<JobStatusResponse>(jsonString, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(jobStatusResponse);
+        Assert.Equal("JOB_STATE_SCANNING", jobStatusResponse.JobStatus.State);
+        Assert.Equal(20, jobStatusResponse.JobStatus.Progress);
+
+        jobStatus = new(jobStatusResponse.JobStatus);
+        Assert.Equal(JobState.Scanning, jobStatus.State);
+        Assert.Equal(20, jobStatus.Progress);
+
+        jsonString = """
+            {
+                "jobStatus": {
+                    "did": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
+                    "jobId": "d9v2htkbckrc738jq6ng",
+                    "progress": 30,
+                    "state": "JOB_STATE_SCANNED"
+                }
+            }
+            """;
+
+        jobStatusResponse = JsonSerializer.Deserialize<JobStatusResponse>(jsonString, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(jobStatusResponse);
+        Assert.Equal("JOB_STATE_SCANNED", jobStatusResponse.JobStatus.State);
+        Assert.Equal(30, jobStatusResponse.JobStatus.Progress);
+
+        jobStatus = new(jobStatusResponse.JobStatus);
+        Assert.Equal(JobState.Scanned, jobStatus.State);
+        Assert.Equal(30, jobStatus.Progress);
+
+        jsonString = """
+            {
+                "jobStatus": {
+                    "did": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
+                    "jobId": "d9v2htkbckrc738jq6ng",
+                    "progress": 70,
+                    "state": "JOB_STATE_UPLOADING"
+                }
+            }
+            """;
+
+        jobStatusResponse = JsonSerializer.Deserialize<JobStatusResponse>(jsonString, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(jobStatusResponse);
+        Assert.Equal("JOB_STATE_UPLOADING", jobStatusResponse.JobStatus.State);
+        Assert.Equal(70, jobStatusResponse.JobStatus.Progress);
+
+        jobStatus = new(jobStatusResponse.JobStatus);
+        Assert.Equal(JobState.Uploading, jobStatus.State);
+        Assert.Equal(70, jobStatus.Progress);
+
+        jsonString = """
+            {
+                "jobStatus": {
+                    "did": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
+                    "jobId": "d9v2htkbckrc738jq6ng",
+                    "progress": 80,
+                    "state": "JOB_STATE_UPLOADED"
+                }
+            }
+            """;
+
+        jobStatusResponse = JsonSerializer.Deserialize<JobStatusResponse>(jsonString, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(jobStatusResponse);
+        Assert.Equal("JOB_STATE_UPLOADED", jobStatusResponse.JobStatus.State);
+        Assert.Equal(80, jobStatusResponse.JobStatus.Progress);
+
+        jobStatus = new(jobStatusResponse.JobStatus);
+        Assert.Equal(JobState.Uploaded, jobStatus.State);
+        Assert.Equal(80, jobStatus.Progress);
+
+        jsonString = """
+            {
+                "jobStatus": {
+                    "blob": {
+                        "$type": "blob",
+                        "ref": {
+                            "$link": "bafkreieveslldimbkmgbp6slaxssu5wq6hnri7cbzwdjv5zknr4e5c376a"
+                        },
+                        "mimeType": "video/mp4",
+                        "size": 4457717
+                    },
+                    "did": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
+                    "jobId": "d9v2htkbckrc738jq6ng",
+                    "message": "Video processed successfully",
+                    "progress": 100,
+                    "state": "JOB_STATE_COMPLETED"
+                }
+            }
+            """;
+
+        jobStatusResponse = JsonSerializer.Deserialize<JobStatusResponse>(jsonString, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(jobStatusResponse);
+        Assert.Equal("JOB_STATE_COMPLETED", jobStatusResponse.JobStatus.State);
+        Assert.Equal(100, jobStatusResponse.JobStatus.Progress);
+        Assert.Equal("Video processed successfully", jobStatusResponse.JobStatus.Message);
+        Assert.NotNull(jobStatusResponse.JobStatus.Blob);
+        Assert.Equal(new CidLink("bafkreieveslldimbkmgbp6slaxssu5wq6hnri7cbzwdjv5zknr4e5c376a"), jobStatusResponse.JobStatus.Blob.Reference);
+        Assert.Equal("video/mp4", jobStatusResponse.JobStatus.Blob.MimeType);
+        Assert.Equal(4457717, jobStatusResponse.JobStatus.Blob.Size);
+
+        jobStatus = new(jobStatusResponse.JobStatus);
+        Assert.Equal(JobState.Completed, jobStatus.State);
+        Assert.Equal(100, jobStatus.Progress);
+        Assert.Equal("Video processed successfully", jobStatus.Message);
+        Assert.NotNull(jobStatus.Blob);
+        Assert.Equal(new CidLink("bafkreieveslldimbkmgbp6slaxssu5wq6hnri7cbzwdjv5zknr4e5c376a"), jobStatus.Blob.Reference);
+        Assert.Equal("video/mp4", jobStatus.Blob.MimeType);
+        Assert.Equal(4457717, jobStatus.Blob.Size);
+
+        jsonString = """
+            {
+                "jobStatus": {
+                    "did": "did:plc:ec72yg6n2sydzjvtovvdlxrk",
+                    "jobId": "d9v2htkbckrc738jq6ng",
+                    "progress": 0,
+                    "state": "JOB_STATE_FAILED",
+                    "failureCode": "encoding_failure",
+                    "error": "notbeans",
+                    "message": "really not beans"
+                }
+            }
+            """;
+
+        jobStatusResponse = JsonSerializer.Deserialize<JobStatusResponse>(jsonString, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(jobStatusResponse);
+        Assert.Equal("JOB_STATE_FAILED", jobStatusResponse.JobStatus.State);
+        Assert.Equal(0, jobStatusResponse.JobStatus.Progress);
+        Assert.Equal("encoding_failure", jobStatusResponse.JobStatus.FailureCode);
+        Assert.Equal("notbeans", jobStatusResponse.JobStatus.Error);
+        Assert.Equal("really not beans", jobStatusResponse.JobStatus.Message);
+
+        jobStatus = new(jobStatusResponse.JobStatus);
+        Assert.Equal(JobState.Failed, jobStatus.State);
+        Assert.Equal(0, jobStatus.Progress);
+        Assert.Null(jobStatus.Blob);
+        Assert.Equal("notbeans", jobStatus.Error);
+        Assert.Equal("encoding_failure", jobStatus.FailureCode);
+        Assert.Equal("really not beans", jobStatus.Message);
+    }
 }
