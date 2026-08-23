@@ -1470,12 +1470,13 @@ public class AtProtoHttpClient<TResult> where TResult : class
                 if (needsProxyHeader)
                 {
                     bool hasProxyHeader = requestHeaders?.Any(h => h.Name.Equals("atproto-proxy", StringComparison.OrdinalIgnoreCase)) ?? false;
-                    Debug.Assert(hasProxyHeader, "Request is missing an atproto-proxy header.");
-
                     if (!hasProxyHeader)
                     {
                         Logger.AtProtoHttpClientMakingCallToNoneComAtProtoEndpointWithoutProxyHeader(_logger, endpoint);
                     }
+
+                    // If the request needs an at-proto proxy header, but is missing one, break in debug builds to make sure the developer is aware of the issue.
+                    Debug.Assert(hasProxyHeader, "Request is missing an atproto-proxy header.");
                 }
             }
 

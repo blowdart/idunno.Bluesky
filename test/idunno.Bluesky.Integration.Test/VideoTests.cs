@@ -100,12 +100,6 @@ public class VideoTests
 
             if (request.Host.Host == "video.bsky.app")
             {
-                if (request.Headers.Count == 0)
-                {
-                    response.StatusCode = 500;
-                    return;
-                }
-
                 if (request.Path == "/xrpc/app.bsky.video.uploadVideo" &&
                     request.Query.Count != 0 &&
                     request.Query["name"].Count == 1 &&

@@ -44,6 +44,7 @@
 * `UploadVideo` now requires a MIME type parameter to allow for more video formats. The previous method which assumed a MIME type of `video/mp4` has been marked obsolete.
 * `UploadAnimatedGif` has been marked obsolete. Use `UploadVideo` with a MIME type of `image/gif` instead.
 * `GetVideoUploadLimits` has been renamed to `GetUploadLimits` to more accurately reflect the lexicon.
+* `GetAnimatedGifJobStatus` has been removed, use `GetJobStatus` instead.Which 
 
 ### Fixed
 

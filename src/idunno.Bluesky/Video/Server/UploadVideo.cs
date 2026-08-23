@@ -62,7 +62,8 @@ public static partial class BlueskyServer
             new NameValueHeaderValue("Content-Type", mimeType)
         ];
 
-        BlueskyHttpClient<JobStatusWireFormat> client = new(AppViewProxy, loggerFactory);
+        // AppView proxy is not needed as we're hitting the video service directly.
+        BlueskyHttpClient<JobStatusWireFormat> client = new(loggerFactory);
 
         AtProtoHttpResult<JobStatusWireFormat> response =
             await client.PostBlob(

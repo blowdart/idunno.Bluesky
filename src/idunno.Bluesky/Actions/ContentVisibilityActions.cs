@@ -122,7 +122,7 @@ public partial class BlueskyAgent
     [UnconditionalSuppressMessage("AOT",
     "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
     Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
-    public async Task<AtProtoHttpResult<PutRecordResult>> SetContentVisibilityDeclaration(bool hideFromAlgorithmicRecommendations, CancellationToken cancellationToken)
+    public async Task<AtProtoHttpResult<PutRecordResult>> SetContentVisibilityDeclaration(bool hideFromAlgorithmicRecommendations, CancellationToken cancellationToken=default)
     {
         if (!IsAuthenticated)
         {
