@@ -235,7 +235,10 @@ public sealed class Program
             // This is a long running operation and may take several minutes to complete, depending on the size of the video and the current load on the server.
             AtProtoHttpResult<JobStatus> getJobStatusResult;
             bool finished = false;
-            TimeSpan pollingInterval = new(0, 0, 15);
+
+            // Polling interval of 1 second is an unreasonably high frequency for a production application,
+            // but is useful for a sample to demonstrate the job status changing from processing to completed.
+            TimeSpan pollingInterval = new(0, 0, 1);
             do
             {
                 getJobStatusResult = await agent.GetJobStatus(
