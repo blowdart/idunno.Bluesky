@@ -1461,14 +1461,22 @@ public class AtProtoHttpClient<TResult> where TResult : class
             // The Bluesky 2025 Protocol roadmap announced that the default PDS implementation would stop forwarding app.bsky.* endpoints to the the Bluesky API server
             // at some future point, so log a warning if a request is made to any API endpoint not that is not a PDS endpoint (com.atproto.*).
             // https://docs.bsky.app/blog/2025-protocol-roadmap-spring
-            if (!_suppressProxyHeaderCheck &&
-                !service.Host.Equals("video.bsky.app", StringComparison.OrdinalIgnoreCase) &&
-                !endpoint.StartsWith("/xrpc/com.atproto", StringComparison.Ordinal) &&
-                !endpoint.StartsWith("/oauth/", StringComparison.Ordinal) &&
-                (requestHeaders is null ||
-                !requestHeaders.Any(nameValueHeaderValue => nameValueHeaderValue.Name.Equals("atproto-proxy", StringComparison.Ordinal))))
+            if (!_suppressProxyHeaderCheck)
             {
-                Logger.AtProtoHttpClientMakingCallToNoneComAtProtoEndpointWithoutProxyHeader(_logger, endpoint);
+                bool needsProxyHeader = (!service.Host.Equals("video.bsky.app", StringComparison.OrdinalIgnoreCase) &&
+                    !endpoint.StartsWith("/xrpc/com.atproto", StringComparison.Ordinal) &&
+                    !endpoint.StartsWith("/oauth/", StringComparison.Ordinal));
+
+                if (needsProxyHeader)
+                {
+                    bool hasProxyHeader = requestHeaders?.Any(h => h.Name.Equals("atproto-proxy", StringComparison.OrdinalIgnoreCase)) ?? false;
+                    Debug.Assert(hasProxyHeader, "Request is missing an atproto-proxy header.");
+
+                    if (!hasProxyHeader)
+                    {
+                        Logger.AtProtoHttpClientMakingCallToNoneComAtProtoEndpointWithoutProxyHeader(_logger, endpoint);
+                    }
+                }
             }
 
             using (var httpRequestMessage = new HttpRequestMessage(httpMethod, new Uri(service, endpoint)))
