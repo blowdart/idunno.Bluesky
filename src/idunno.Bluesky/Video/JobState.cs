@@ -49,7 +49,7 @@ public enum JobState
     Encoded = 7,
 
     /// <summary>
-    /// The video is being scanned.
+    /// The video has been uploaded.
     /// </summary>
     Uploaded = 8,
 
@@ -59,7 +59,7 @@ public enum JobState
     Scanned = 9,
 
     /// <summary>
-    /// The video is been uploaded.
+    /// The video is being scanned.
     /// </summary>
     Scanning = 10,
 }
