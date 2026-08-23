@@ -3006,7 +3006,9 @@ idunno.Bluesky.Video.JobStatus.RawState.init -> void
 idunno.Bluesky.Video.JobStatus.State.get -> idunno.Bluesky.Video.JobState
 idunno.Bluesky.Video.JobStatus.State.init -> void
 idunno.Bluesky.Video.StartUploadResponse
+idunno.Bluesky.Video.StartUploadResponse.<Clone>$() -> idunno.Bluesky.Video.StartUploadResponse!
 idunno.Bluesky.Video.StartUploadResponse.Deconstruct(out string! JobId, out int PartSize, out int PartCount, out System.DateTimeOffset ExpiresAt) -> void
+idunno.Bluesky.Video.StartUploadResponse.Equals(idunno.Bluesky.Video.StartUploadResponse? other) -> bool
 idunno.Bluesky.Video.StartUploadResponse.ExpiresAt.get -> System.DateTimeOffset
 idunno.Bluesky.Video.StartUploadResponse.ExpiresAt.init -> void
 idunno.Bluesky.Video.StartUploadResponse.JobId.get -> string!
@@ -3015,7 +3017,6 @@ idunno.Bluesky.Video.StartUploadResponse.PartCount.get -> int
 idunno.Bluesky.Video.StartUploadResponse.PartCount.init -> void
 idunno.Bluesky.Video.StartUploadResponse.PartSize.get -> int
 idunno.Bluesky.Video.StartUploadResponse.PartSize.init -> void
-idunno.Bluesky.Video.StartUploadResponse.StartUploadResponse(idunno.Bluesky.Video.StartUploadResponse! original) -> void
 idunno.Bluesky.Video.StartUploadResponse.StartUploadResponse(string! JobId, int PartSize, int PartCount, System.DateTimeOffset ExpiresAt) -> void
 idunno.Bluesky.Video.UploadLimits
 idunno.Bluesky.Video.UploadLimits.CanUpload.get -> bool
@@ -4697,7 +4698,6 @@ static idunno.Bluesky.BlueskyServer.UpdateJoinGroupRequestsRead(string! conversa
 static idunno.Bluesky.BlueskyServer.UpdateNotificationSeenAt(System.DateTimeOffset seenAt, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 static idunno.Bluesky.BlueskyServer.UpdateRead(string! conversationId, string? messageId, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.ConversationView!>!>!
 static idunno.Bluesky.BlueskyServer.UploadPart(string! jobId, long part, byte[]! bytes, System.Uri! service, idunno.AtProto.Authentication.ServiceCredential! serviceCredential, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Video.UploadPartResponse!>!>!
-static idunno.Bluesky.BlueskyServer.UploadVideo(idunno.AtProto.Did! did, string! fileName, byte[]! video, string! mimeType, System.Uri! service, idunno.AtProto.Authentication.ServiceCredential! serviceCredential, System.Net.Http.HttpClient! httpClient, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Video.JobStatus!>!>!
 static idunno.Bluesky.BlueskyServer.WithdrawJoinGroupRequest(string! conversationId, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 static idunno.Bluesky.Bookmarks.BookmarkView.operator !=(idunno.Bluesky.Bookmarks.BookmarkView? left, idunno.Bluesky.Bookmarks.BookmarkView? right) -> bool
 static idunno.Bluesky.Bookmarks.BookmarkView.operator ==(idunno.Bluesky.Bookmarks.BookmarkView? left, idunno.Bluesky.Bookmarks.BookmarkView? right) -> bool
@@ -5547,10 +5547,6 @@ virtual idunno.Bluesky.Unspecced.ThreadItemValue.<Clone>$() -> idunno.Bluesky.Un
 virtual idunno.Bluesky.Unspecced.ThreadItemValue.EqualityContract.get -> System.Type!
 virtual idunno.Bluesky.Unspecced.ThreadItemValue.Equals(idunno.Bluesky.Unspecced.ThreadItemValue? other) -> bool
 virtual idunno.Bluesky.Unspecced.ThreadItemValue.PrintMembers(System.Text.StringBuilder! builder) -> bool
-virtual idunno.Bluesky.Video.StartUploadResponse.<Clone>$() -> idunno.Bluesky.Video.StartUploadResponse!
-virtual idunno.Bluesky.Video.StartUploadResponse.EqualityContract.get -> System.Type!
-virtual idunno.Bluesky.Video.StartUploadResponse.Equals(idunno.Bluesky.Video.StartUploadResponse? other) -> bool
-virtual idunno.Bluesky.Video.StartUploadResponse.PrintMembers(System.Text.StringBuilder! builder) -> bool
 virtual idunno.Bluesky.Video.UploadLimits.<Clone>$() -> idunno.Bluesky.Video.UploadLimits!
 virtual idunno.Bluesky.Video.UploadLimits.EqualityContract.get -> System.Type!
 virtual idunno.Bluesky.Video.UploadLimits.Equals(idunno.Bluesky.Video.UploadLimits? other) -> bool

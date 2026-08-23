@@ -6,14 +6,13 @@ using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
 
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.DidPlcDirectory;
-
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.AtProto;
 
@@ -328,9 +327,8 @@ public partial class AtProtoAgent : Agent
                 _credentialRefreshTimer = null;
             }
 
-            _directoryAgent?.Dispose();
-
-            _credentialReaderWriterLockSlim?.Dispose();
+            _directoryAgent.Dispose();
+            _credentialReaderWriterLockSlim.Dispose();
         }
 
         base.Dispose(disposing);

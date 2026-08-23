@@ -8,7 +8,6 @@ namespace idunno.Bluesky.Video;
 /// <summary>
 /// The upload status of a multi-part video upload.
 /// </summary>
-
 // This class is used to flatten the wire format into a more usable form for consumers of the library.
 // It is not suitable for json deserialization due to the conversion of the state string into an enum.
 public sealed record UploadStatus

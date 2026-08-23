@@ -12,7 +12,7 @@ namespace idunno.Bluesky.Video;
 /// <param name="PartSize">The size of each part should be in bytes.</param>
 /// <param name="PartCount">The total number of parts.</param>
 /// <param name="ExpiresAt">The expiration date and time when the upload job expires and no longer accepts new parts.</param>
-public record StartUploadResponse(
+public sealed record StartUploadResponse(
     [property: JsonRequired] string JobId,
     [property: JsonRequired, JsonPropertyName("partSizeBytes")] int PartSize,
     [property: JsonRequired] int PartCount,

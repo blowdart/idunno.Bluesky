@@ -3,7 +3,6 @@
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
-using idunno.AtProto.Server;
 using idunno.Bluesky.Video;
 
 namespace idunno.Bluesky;

@@ -1,8 +1,6 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Net;
-
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Video;
@@ -81,7 +79,7 @@ public partial class BlueskyAgent
 
                     if (result.Succeeded)
                     {
-                         Logger.UploadPartSucceeded(_logger, part, jobId);
+                        Logger.UploadPartSucceeded(_logger, part, jobId);
                     }
                     else
                     {
