@@ -10,15 +10,15 @@ using System.Text;
 using System.Text.Json;
 using System.Timers;
 
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.IdentityModel.Tokens;
-
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Events;
 using idunno.AtProto.Server;
 using idunno.Security;
+
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
 
 namespace idunno.AtProto;
 

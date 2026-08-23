@@ -3,11 +3,11 @@
 
 using System.Diagnostics.CodeAnalysis;
 
-using Microsoft.Extensions.Logging;
-
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Video;
+
+using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky;
 

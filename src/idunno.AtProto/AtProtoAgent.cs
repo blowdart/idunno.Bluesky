@@ -6,13 +6,13 @@ using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
 
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.DidPlcDirectory;
+
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace idunno.AtProto;
 
