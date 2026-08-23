@@ -12,7 +12,7 @@ namespace idunno.Bluesky;
 public partial class BlueskyAgent
 {
     /// <summary>
-    /// Deletes a the current authenticated user's content visibility record.
+    /// Deletes the current authenticated user's content visibility record.
     /// </summary>
     /// <param name="swapCommit">Specified if the operation should compare and swap with the previous commit by cid.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -32,7 +32,6 @@ public partial class BlueskyAgent
             swapCommit: swapCommit,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
-
 
     /// <summary>
     /// Gets an actor's preference for appearing in content discovery surfaces.
@@ -99,7 +98,7 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
-    /// Gets an current authenticated user's preference for appearing in content discovery surfaces.
+    /// Gets the current authenticated user's preference for appearing in content discovery surfaces.
     /// </summary>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -111,13 +110,13 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        return await GetContentVisibilityDeclaration(Did, cancellationToken).ConfigureAwait (false);
+        return await GetContentVisibilityDeclaration(Did, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Sets the content visibility record for the authenticated user.
     /// </summary>
-    /// <param name="hideFromAlgorithmicRecommendations">Flag indicating Whether the account requests that its posts be hidden from algorithmic recommendations.</param>
+    /// <param name="hideFromAlgorithmicRecommendations">Flag indicating whether the account requests that its posts be hidden from algorithmic recommendations.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
