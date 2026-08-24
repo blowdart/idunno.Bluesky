@@ -27,4 +27,4 @@ jobs:
       - name: 'Dependency Review'
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
-          allow-licenses: Apache-2.0, MIT, BSD-3-Clause, CC-BY-SA-4.0
+          allow-licenses: Apache-2.0, MIT, BSD-3-Clause, CC-BY-SA-4.0, LicenseRef-scancode-sonar-sal-1.0
