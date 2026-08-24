@@ -23,7 +23,6 @@ public partial class AtProtoAgent : Agent
 {
     private volatile bool _disposed;
     private readonly ILogger<AtProtoAgent> _logger;
-
     internal readonly DirectoryAgent _directoryAgent;
 
     /// <summary>
@@ -329,7 +328,6 @@ public partial class AtProtoAgent : Agent
             }
 
             _directoryAgent.Dispose();
-
             _credentialReaderWriterLockSlim.Dispose();
         }
 

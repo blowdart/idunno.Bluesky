@@ -31,7 +31,6 @@ public sealed class Program
         return await parser.InvokeAsync();
     }
 
-    [Obsolete]
     static async Task PerformOperations(string? handle, string? password, string? authCode, Uri? proxyUri, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(handle);
@@ -109,7 +108,7 @@ public sealed class Program
                     videoAsBytes = memoryStream.ToArray();
                 }
 
-                var videoUploadLimitsResult = await agent.GetVideoUploadLimits(cancellationToken: cancellationToken);
+                var videoUploadLimitsResult = await agent.GetUploadLimits(cancellationToken: cancellationToken);
                 videoUploadLimitsResult.EnsureSucceeded();
 
                 if (!videoUploadLimitsResult.Result.CanUpload ||
@@ -119,9 +118,9 @@ public sealed class Program
                     ConsoleColor oldColor = Console.ForegroundColor;
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine("Account has hit its video limits");
-                    Console.WriteLine("Can upload: {videoUploadLimitsResult.Result.CanUpload}");
-                    Console.WriteLine("Daily videos remaining: {videoUploadLimitsResult.Result.RemainingDailyVideos}");
-                    Console.WriteLine("Daily bytes remaining: {videoUploadLimitsResult.Result.RemainingBytesVideos}");
+                    Console.WriteLine($"Can upload: {videoUploadLimitsResult.Result.CanUpload}");
+                    Console.WriteLine($"Daily videos remaining: {videoUploadLimitsResult.Result.RemainingDailyVideos}");
+                    Console.WriteLine($"Daily bytes remaining: {videoUploadLimitsResult.Result.RemainingDailyBytes}");
                     Console.ForegroundColor = oldColor;
                     return;
                 }
@@ -137,12 +136,14 @@ public sealed class Program
                 videoUploadResult.EnsureSucceeded();
 
                 while (videoUploadResult.Succeeded &&
-                      (videoUploadResult.Result.State != JobState.Completed && videoUploadResult.Result.State != JobState.Failed) &&
-                    !cancellationToken.IsCancellationRequested)
+                      videoUploadResult.Result.State != JobState.Completed &&
+                      videoUploadResult.Result.State != JobState.Failed &&
+                      videoUploadResult.Result.State != JobState.Unknown &&
+                      !cancellationToken.IsCancellationRequested)
                 {
                     Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} processing, progress {videoUploadResult.Result.Progress}");
                     await Task.Delay(1000, cancellationToken: cancellationToken);
-                    videoUploadResult = await agent.GetVideoJobStatus(videoUploadResult.Result.JobId, cancellationToken: cancellationToken);
+                    videoUploadResult = await agent.GetJobStatus(videoUploadResult.Result.JobId, cancellationToken: cancellationToken);
                     videoUploadResult.EnsureSucceeded();
                 }
 
@@ -152,7 +153,7 @@ public sealed class Program
                 {
                     ConsoleColor oldColor = Console.ForegroundColor;
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} failed. {videoUploadResult.Result.Error} {videoUploadResult.Result.Message}.");
+                    Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} failed, {videoUploadResult.Result.State}. {videoUploadResult.Result.Error} {videoUploadResult.Result.Message}.");
                     Console.ForegroundColor = oldColor;
                     return;
                 }
@@ -206,11 +207,12 @@ public sealed class Program
                 while (videoUploadResult.Succeeded &&
                     videoUploadResult.Result.State != JobState.Completed &&
                     videoUploadResult.Result.State != JobState.Failed &&
+                    videoUploadResult.Result.State != JobState.Unknown &&
                     !cancellationToken.IsCancellationRequested)
                 {
                     Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} processing, progress {videoUploadResult.Result.Progress}");
                     await Task.Delay(1000, cancellationToken: cancellationToken);
-                    videoUploadResult = await agent.GetVideoJobStatus(videoUploadResult.Result.JobId, cancellationToken: cancellationToken);
+                    videoUploadResult = await agent.GetJobStatus(videoUploadResult.Result.JobId, cancellationToken: cancellationToken);
                 }
 
                 videoUploadResult.EnsureSucceeded();
@@ -221,7 +223,7 @@ public sealed class Program
                 {
                     ConsoleColor oldColor = Console.ForegroundColor;
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} failed. {videoUploadResult.Result.Error} {videoUploadResult.Result.Message}.");
+                    Console.WriteLine($"Video job # {videoUploadResult.Result.JobId} failed, {videoUploadResult.Result.State}. {videoUploadResult.Result.Error} {videoUploadResult.Result.Message}.");
                     Console.ForegroundColor = oldColor;
                     return;
                 }

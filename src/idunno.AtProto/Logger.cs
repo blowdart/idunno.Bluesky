@@ -344,4 +344,7 @@ internal static partial class Logger
 
     [LoggerMessage(1102, LogLevel.Error, "{uri} does not resolve to any IP addresses")]
     internal static partial void UriDoesNotResolve(ILogger logger, Uri uri);
+
+    [LoggerMessage(1120, LogLevel.Error, "Cannot GetServiceAuth, could not get serviceDescription for {service}")]
+    internal static partial void GetServiceAuthCannotGetServiceDescription(ILogger logger, Uri service);
 }

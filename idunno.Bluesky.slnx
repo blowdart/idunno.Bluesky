@@ -227,6 +227,10 @@
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
+    <Project Path="samples/Samples.PartialUploads/Samples.PartialUploads.csproj" Id="592ef987-eca7-4409-816e-a8d1ca452df0">
+      <Build Solution="CodeQL|*" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
     <Project Path="samples/Samples.Posting/Samples.Posting.csproj">
       <Build Solution="CodeQL|*" Project="false" />
       <Build Solution="Release|*" Project="false" />
@@ -247,7 +251,6 @@
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path=".gitignore" />
-    <File Path=".runsettings" />
     <File Path=".ssh-allowed-signers" />
     <File Path=".ssh-allowed-signers.md" />
     <File Path=".vsconfig" />
@@ -267,6 +270,7 @@
     <File Path="regeneratePublicApiFiles.ps1" />
     <File Path="SECURITY.md" />
     <File Path="sleet.json" />
+    <File Path="testconfig.json" />
     <File Path="THIRD-PARTY-NOTICES.txt" />
     <File Path="ToDo.md" />
     <File Path="trimTest.ps1" />
@@ -285,31 +289,24 @@
     <File Path="test/Directory.Build.props" />
     <Project Path="test/idunno.AtProto.Integration.Test/idunno.AtProto.Integration.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/idunno.AtProto.Serialization.Test/idunno.AtProto.Serialization.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/idunno.AtProto.Test/idunno.AtProto.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/idunno.AtProto.Types.Test/idunno.AtProto.Types.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/idunno.Bluesky.Integration.Test/idunno.Bluesky.Integration.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/idunno.Bluesky.Serialization.Test/idunno.Bluesky.Serialization.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
     <Project Path="test/idunno.Bluesky.Test/idunno.Bluesky.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
-      <Build Solution="Release|*" Project="false" />
     </Project>
   </Folder>
   <Folder Name="/trimming/">

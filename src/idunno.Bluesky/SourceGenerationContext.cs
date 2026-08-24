@@ -21,8 +21,6 @@ using idunno.Bluesky.Labeler.Model;
 using idunno.Bluesky.Notifications;
 using idunno.Bluesky.Record;
 using idunno.Bluesky.RichText;
-using idunno.Bluesky.Video;
-using idunno.Bluesky.Video.Model;
 
 namespace idunno.Bluesky;
 
@@ -70,7 +68,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Actor.Model.PutPreferencesRequest), TypeInfoPropertyName = "ActorPutPreferencesRequest")]
 [JsonSerializable(typeof(Actor.Model.SearchActorsResponse), TypeInfoPropertyName = "ActorSearchActorsResponse")]
 [JsonSerializable(typeof(Actor.Model.SearchActorsTypeAheadResponse), TypeInfoPropertyName = "ActorSearchActorsTypeAheadResponse")]
-[JsonSerializable(typeof(ViewerState), TypeInfoPropertyName = "ActorViewerState")]
+[JsonSerializable(typeof(Actor.ViewerState), TypeInfoPropertyName = "ActorViewerState")]
 [JsonSerializable(typeof(AdultContentPreference))]
 [JsonSerializable(typeof(BlueskyAppStatePreference))]
 [JsonSerializable(typeof(ContentLabelPreference))]
@@ -265,7 +263,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(BlockedPost))]
 [JsonSerializable(typeof(FeedGenerator))]
 [JsonSerializable(typeof(FeedGeneratorDescription))]
-[JsonSerializable(typeof(FeedViewerState))]
+[JsonSerializable(typeof(Feed.ViewerState), TypeInfoPropertyName = "FeedViewerState")]
 [JsonSerializable(typeof(FeedViewPost))]
 [JsonSerializable(typeof(GeneratorView))]
 [JsonSerializable(typeof(GeneratorViewerState))]
@@ -289,6 +287,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(ThreadGateView))]
 [JsonSerializable(typeof(ThreadViewPost))]
 [JsonSerializable(typeof(Timeline))]
+[JsonSerializable(typeof(Feed.KnownLikers), TypeInfoPropertyName = "FeedKnownLikers")]
 
 [JsonSerializable(typeof(GetBlocksResponse))]
 [JsonSerializable(typeof(GetFollowersResponse))]
@@ -354,10 +353,6 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Mention))]
 [JsonSerializable(typeof(MentionFacetFeature))]
 [JsonSerializable(typeof(TagFacetFeature))]
-
-[JsonSerializable(typeof(JobStatusResponse))]
-[JsonSerializable(typeof(JobStatusWireFormat))]
-[JsonSerializable(typeof(UploadLimits))]
 
 [JsonSerializable(typeof(Post))]
 [JsonSerializable(typeof(AtProtoRepositoryRecord<Post>))]
@@ -455,12 +450,12 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Chat.Group.Model.RequestJoinResponse))]
 [JsonSerializable(typeof(Chat.Group.Model.WithdrawJoinRequestRequest))]
 
-[JsonSerializable(typeof(Chat.Notifications.Preference), TypeInfoPropertyName = "ChatNotificationsPreference")]
-[JsonSerializable(typeof(Chat.Notifications.Preferences), TypeInfoPropertyName = "ChatNotificationsPreferences")]
+[JsonSerializable(typeof(Chat.ReplyReference), TypeInfoPropertyName = "ChatReplyReference")]
 [JsonSerializable(typeof(Chat.Model.GetPreferencesResponse), TypeInfoPropertyName = "ChatNotificationsModelGetPreferenceResponse")]
 [JsonSerializable(typeof(Chat.Model.PutPreferencesRequest), TypeInfoPropertyName = "ChatNotificationsModelPutPrefereceRequest")]
 [JsonSerializable(typeof(Chat.Model.PutPreferencesResponse), TypeInfoPropertyName = "ChatNotificationsModelPutPreferenceResponse")]
-[JsonSerializable(typeof(Chat.ReplyReference), TypeInfoPropertyName = "ChatReplyReference")]
+[JsonSerializable(typeof(Chat.Notifications.Preference), TypeInfoPropertyName = "ChatNotificationsPreference")]
+[JsonSerializable(typeof(Chat.Notifications.Preferences), TypeInfoPropertyName = "ChatNotificationsPreferences")]
 
 [JsonSerializable(typeof(Unspecced.TrendingTopic), TypeInfoPropertyName = "UnspeccedTrendingTopic")]
 [JsonSerializable(typeof(Unspecced.Model.GetPopularFeedGeneratorsResponse), TypeInfoPropertyName = "UnspeccedModelGetPopularFeedGeneratorsResponse")]
@@ -480,6 +475,21 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Unspecced.ThreadItemBlocked), TypeInfoPropertyName = "UnspeccedThreadItemBlocked")]
 [JsonSerializable(typeof(Unspecced.Model.GetPostThreadV2Response), TypeInfoPropertyName = "UnspeccedModelGetPostThreadV2Response")]
 [JsonSerializable(typeof(Unspecced.Model.GetPostThreadOtherV2Response), TypeInfoPropertyName = "UnspeccedModelGetPostThreadOtherV2Response")]
+
+[JsonSerializable(typeof(Video.StartUploadResponse), TypeInfoPropertyName = "VideoStartUploadResponse")]
+[JsonSerializable(typeof(Video.UploadLimits), TypeInfoPropertyName = "VideoUploadLimits")]
+[JsonSerializable(typeof(Video.UploadPartResponse), TypeInfoPropertyName = "VideoUploadPartResponse")]
+[JsonSerializable(typeof(Video.Model.AbortUploadRequest), TypeInfoPropertyName = "VideoModelAbortUploadRequest")]
+[JsonSerializable(typeof(Video.Model.AbortUploadWireResponse), TypeInfoPropertyName = "VideoModelAbortUploadWireResponse")]
+[JsonSerializable(typeof(Video.Model.FinishUploadRequest), TypeInfoPropertyName = "VideoModelFinishUploadRequest")]
+[JsonSerializable(typeof(Video.Model.FinishUploadWireResponse), TypeInfoPropertyName = "VideoModelFinishUploadResponse")]
+[JsonSerializable(typeof(Video.Model.GetUploadStatusResponse), TypeInfoPropertyName = "VideoModelGetUploadStatusResponse")]
+[JsonSerializable(typeof(Video.Model.JobStatusResponse), TypeInfoPropertyName = "VideoModelJobStatusResponse")]
+[JsonSerializable(typeof(Video.Model.JobStatusWireFormat), TypeInfoPropertyName = "VideoModelJobStatusWireFormat")]
+[JsonSerializable(typeof(Video.Model.StartUploadRequest), TypeInfoPropertyName = "VideoModelStartUploadRequest")]
+
+[JsonSerializable(typeof(Actor.ContentVisibilityDeclaration), TypeInfoPropertyName = "ActorContentVisibilityDeclaration")]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<ContentVisibilityDeclaration>), TypeInfoPropertyName = "AtProtoRepositoryRecordContentVisibilityDeclaration")]
 
 internal partial class SourceGenerationContext : JsonSerializerContext
 {

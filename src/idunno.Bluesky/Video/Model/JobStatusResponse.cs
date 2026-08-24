@@ -5,14 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace idunno.Bluesky.Video.Model;
 
-internal sealed record JobStatusResponse
+internal sealed record JobStatusResponse(
+    [property: JsonRequired] JobStatusWireFormat JobStatus)
 {
-    [JsonConstructor]
-    public JobStatusResponse(JobStatusWireFormat jobStatus)
-    {
-        JobStatus = jobStatus;
-    }
-
-    [JsonInclude]
-    public JobStatusWireFormat JobStatus { get; init; }
 }

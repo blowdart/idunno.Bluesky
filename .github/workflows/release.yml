@@ -83,10 +83,10 @@ jobs:
           10.0.x
 
     - name: 'Build'
-      run: dotnet build --configuration Release --property:PublicRelease=true
+      run: dotnet build --configuration Release --property:PublicRelease=true --property:NoWarn="S1133"
 
     - name: 'Test'
-      run: dotnet test --configuration Release --no-restore --no-build --property:PublicRelease=true
+      run: dotnet test --no-restore --no-build --configuration Release --property:PublicRelease=false
 
     - name: 'Pack release'
       run: dotnet pack --configuration Release --no-restore --no-build --output ${BUILD_OUTPUT} --property:PublicRelease=true

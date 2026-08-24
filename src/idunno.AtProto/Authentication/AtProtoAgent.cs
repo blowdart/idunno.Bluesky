@@ -12,6 +12,7 @@ using System.Timers;
 
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Events;
+using idunno.AtProto.Server;
 using idunno.Security;
 
 using Microsoft.AspNetCore.WebUtilities;
@@ -391,6 +392,46 @@ public partial class AtProtoAgent
     }
 
     /// <summary>
+    /// Get a <see cref="ServiceCredential"/> on behalf of the requesting DID for the specified <paramref name="service"/>.
+    /// </summary>
+    /// <param name="service">The server to request the service authentication from.</param>
+    /// <param name="lxm">Lexicon (XRPC) method to bind the requested token to</param>
+    /// <param name="expiry">An optional length of the time the token should be valid for.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">
+    ///   Thrown when any of <paramref name="service"/> or <paramref name="lxm"/> are <see langword="null"/>.
+    /// </exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="expiry"/> is specified but is zero or negative.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    public async Task<AtProtoHttpResult<ServiceCredential>> GetServiceAuth(
+        Uri service,
+        Nsid lxm,
+        TimeSpan? expiry = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(lxm);
+
+        // Get the server description so we can get the DID of the server.
+        AtProtoHttpResult<ServerDescription> serverDescriptionResult = await DescribeServer(service, cancellationToken).ConfigureAwait(false);
+        if (serverDescriptionResult.Succeeded)
+        {
+            return await GetServiceAuth(service, serverDescriptionResult.Result.Did, lxm, expiry, cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            Logger.GetServiceAuthCannotGetServiceDescription(_logger, service);
+            return new AtProtoHttpResult<ServiceCredential>(
+                null,
+                serverDescriptionResult.StatusCode,
+                serverDescriptionResult.HttpResponseHeaders,
+                serverDescriptionResult.AtErrorDetail,
+                serverDescriptionResult.RateLimit);
+        }
+    }
+
+    /// <summary>
     /// Get a <see cref="ServiceCredential"/> on behalf of the requesting DID for the requested <paramref name="audience"/>.
     /// </summary>
     /// <param name="service">The server to request the service authentication from.</param>
@@ -446,6 +487,7 @@ public partial class AtProtoAgent
                 accessCredentials: Credentials,
                 httpClient: HttpClient,
                 loggerFactory: LoggerFactory,
+                credentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (serviceCredentialResult.Succeeded && serviceCredentialResult.Result.AccessJwt is not null)

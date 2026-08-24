@@ -11,7 +11,6 @@ namespace idunno.Bluesky.Video;
 /// <summary>
 /// Provides the status of a video upload.
 /// </summary>
-
 // This class is used to flatten the wire format into a more usable form for consumers of the library.
 // It is not suitable for json deserialization due to the conversion of the state string into an enum.
 public sealed record JobStatus
@@ -36,16 +35,7 @@ public sealed record JobStatus
 
         if (state is not null)
         {
-            State = state.ToUpperInvariant() switch
-            {
-                "JOB_STATE_CREATED" => JobState.Created,
-                "JOB_STATE_ENCODING" => JobState.Encoding,
-                "JOB_STATE_UPLOADING" => JobState.Uploading,
-                "JOB_STATE_IN_PROGRESS" => JobState.InProgress,
-                "JOB_STATE_COMPLETED" => JobState.Completed,
-                "JOB_STATE_FAILED" => JobState.Failed,
-                _ => JobState.Unknown,
-            };
+            State = state.ToJobState();
         }
 
         if (progress is not null)

@@ -233,7 +233,7 @@ public partial class BlueskyAgent
             // Now check the upload quote for videos if we have any.
             if (videoCount > 0)
             {
-                AtProtoHttpResult<UploadLimits> videoUploadLimitsResult = await GetVideoUploadLimits(cancellationToken: cancellationToken).ConfigureAwait(false);
+                AtProtoHttpResult<UploadLimits> videoUploadLimitsResult = await GetUploadLimits(cancellationToken: cancellationToken).ConfigureAwait(false);
                 videoUploadLimitsResult.EnsureSucceeded();
 
                 if (!videoUploadLimitsResult.Result.CanUpload ||
@@ -347,7 +347,7 @@ public partial class BlueskyAgent
 
                         byte[] fileBytes = await File.ReadAllBytesAsync(path, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-                        AtProtoHttpResult<UploadLimits> videoUploadLimitsResult = await GetVideoUploadLimits(cancellationToken: cancellationToken).ConfigureAwait(false);
+                        AtProtoHttpResult<UploadLimits> videoUploadLimitsResult = await GetUploadLimits(cancellationToken: cancellationToken).ConfigureAwait(false);
                         videoUploadLimitsResult.EnsureSucceeded();
 
                         if (!videoUploadLimitsResult.Result.CanUpload ||
@@ -372,7 +372,7 @@ public partial class BlueskyAgent
                             !cancellationToken.IsCancellationRequested)
                         {
                             await Task.Delay(1000, cancellationToken: cancellationToken).ConfigureAwait(false);
-                            uploadResult = await GetVideoJobStatus(uploadResult.Result.JobId, cancellationToken: cancellationToken).ConfigureAwait(false);
+                            uploadResult = await GetJobStatus(uploadResult.Result.JobId, cancellationToken: cancellationToken).ConfigureAwait(false);
                         }
 
                         if (!uploadResult.Succeeded || uploadResult.Result.Blob is null || uploadResult.Result.State != JobState.Completed)

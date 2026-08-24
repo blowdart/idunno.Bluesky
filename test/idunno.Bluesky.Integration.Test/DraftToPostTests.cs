@@ -1451,15 +1451,6 @@ public class DraftToPostTests
             }
             else if (request.Host.Host == "video.bsky.app")
             {
-                // Ensure the proxy header is present.
-                if (request.Headers.Count == 0 ||
-                    request.Headers["atproto-proxy"].Count != 1 ||
-                    request.Headers["atproto-proxy"].ToString() != "did:web:api.bsky.app#bsky_appview")
-                {
-                    response.StatusCode = 500;
-                    return;
-                }
-
                 if (request.Path == "/xrpc/app.bsky.video.uploadVideo" &&
                     request.Query.Count != 0 &&
                     request.Query["name"].Count == 1 &&

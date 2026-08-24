@@ -87,9 +87,14 @@
 | | app.bsky.unspecced.searchActorsSkeleton | | ❌ |
 | | app.bsky.unspecced.searchPostsSkeleton | | ❌ |
 | | app.bsky.unspecced.searchStarterPacksSkeleton | | ❌ |
-| **Video** | [app.bsky.video.GetJobStatus](https://endpoints.bsky.app/#bluesky-app/tag/appbskyvideo/GET/xrpc/app.bsky.video.getJobStatus) | `BlueskyAgent.GetVideoJobStatus()` | ✔ |
-| | [app.bsky.video.GetUploadLimits](https://endpoints.bsky.app/#bluesky-app/tag/appbskyvideo/GET/xrpc/app.bsky.video.getUploadLimits) | `BlueskyAgent.GetVideoUploadLimits()` | ✔ |
-| | [app.bsky.video.UploadVideo](https://endpoints.bsky.app/#bluesky-app/tag/appbskyvideo/POST/xrpc/app.bsky.video.uploadVideo) | `BlueskyAgent.UploadVideo()` | ✔ |
+| **Video** | [app.bsky.video.abortUpload](https://endpoints.bsky.app/#bluesky-app/tag/appbskyvideo/GET/xrpc/app.bsky.video.abortUpload) | `BlueskyAgent.AbortUpload()` | ✔ |
+| | [app.bsky.video.finishUpload](https://endpoints.bsky.app/#bluesky-app/tag/appbskyvideo/GET/xrpc/app.bsky.video.finishUpload) | `BlueskyAgent.FinishUpload()` | ✔ |
+| | [app.bsky.video.getJobStatus](https://endpoints.bsky.app/#bluesky-app/tag/appbskyvideo/GET/xrpc/app.bsky.video.getJobStatus) | `BlueskyAgent.GetJobStatus()` | ✔ |
+| | [app.bsky.video.getUploadLimits](https://endpoints.bsky.app/#bluesky-app/tag/appbskyvideo/GET/xrpc/app.bsky.video.getUploadLimits) | `BlueskyAgent.GetUploadLimits()` | ✔ |
+| | [app.bsky.video.getUploadStatus](https://endpoints.bsky.app/#bluesky-app/tag/appbskyvideo/GET/xrpc/app.bsky.video.getUploadStatus) | `BlueskyAgent.GetUploadStatus()` | ✔ |
+| | [app.bsky.video.startUpload](https://endpoints.bsky.app/#bluesky-app/tag/appbskyvideo/POST/xrpc/app.bsky.video.startUpload) | `BlueskyAgent.StartUpload()` | ✔ |
+| | [app.bsky.video.uploadPart](https://endpoints.bsky.app/#bluesky-app/tag/appbskyvideo/POST/xrpc/app.bsky.video.uploadPart) | `BlueskyAgent.UploadPart()` | ✔ |
+| | [app.bsky.video.uploadVideo](https://endpoints.bsky.app/#bluesky-app/tag/appbskyvideo/POST/xrpc/app.bsky.video.uploadVideo) | `BlueskyAgent.UploadVideo()` | ✔ |
 
 ## Chat Endpoints
 | Group | Endpoint | Class / Method | Status |

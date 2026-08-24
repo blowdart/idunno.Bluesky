@@ -1,5 +1,57 @@
 # Version History
 
+## 5.0.0 - **Unreleased**
+
+### Added
+
+#### idunno.Bluesky
+
+* Added support for the new multi-part video upload API, via `StartUpload`, `UploadPart`, `FinishUpload`, `GetUploadStatus` and `AbortUpload`.
+* Added new error classes for errors from the multi-part video upload APIs.
+  * `BadAspectRatio`
+  * `DailyLimitExceeded`
+  * `InvalidPartNumber`
+  * `MissingParts`
+  * `PartSizeMismatch`
+  * `TooManyOpenUploads`
+  * `ServiceOverloaded`
+  * `UnsupportedContentType`
+  * `UploadAborted`
+  * `UploadAlreadyCompleted`
+  * `UploadExpired`
+  * `UploadFailed`
+  * `UploadForbidden`
+  * `UploadNotFound`
+  * `UploadNotReady`
+  * `VideoTooLarge`
+  * `VideoTooLong`
+* Added support for `ContentVisibilityDeclaration`, with
+  `BlueskyAgent.GetContentVisibilityDeclaration`, `BlueskyAgent.SetContentVisibilityDeclaration` and `BlueskyAgent.DeleteContentVisibilityDeclaration`.
+  See [Add content visibility lexicon](https://github.com/bluesky-social/atproto/pull/5372).
+* Added `KnownLikers` view. See [Add knownLikers to viewer state](https://github.com/bluesky-social/atproto/pull/5427).
+
+### Breaking Changes
+
+#### idunno.AtProto
+* `accessCredentialsUpdated` parameter on `AtProtoServer.GetServiceAuth` has been renamed to `credentialsUpdated` to match other methods.
+
+#### idunno.Bluesky
+
+* `BlueskyServer.GetVideoJobStatus` has been renamed to `BlueskyServer.GetJobStatus` to reflect the new multi-part video upload API.
+* `BlueskyAgent.GetVideoJobStatus` has been renamed to `BlueskyAgent.GetJobStatus` to reflect the new multi-part video upload API.
+* `FeedViewerState` has been renamed to `ViewerState` to match the lexicon definition. All properties in `ViewerState` are now nullable, as they're defined as optional in the ATProto lexicon
+  A `KnownLikers` property has been added to provide a list of likers of a post who the authenticated user also follows. See [Add knownLikers to viewer state](https://github.com/bluesky-social/atproto/pull/5427).
+* `UploadVideo` now requires a MIME type parameter to allow for more video formats. The previous method which assumed a MIME type of `video/mp4` has been marked obsolete.
+* `UploadAnimatedGif` has been marked obsolete. Use `UploadVideo` with a MIME type of `image/gif` instead.
+* `GetVideoUploadLimits` has been renamed to `GetUploadLimits` to more accurately reflect the lexicon.
+* `GetAnimatedGifJobStatus` has been removed, use `GetJobStatus` instead.
+
+### Fixed
+
+#### idunno.AtProto
+
+* Fixed a bug in `AtProtoAgent.GetServiceAuth` where if OAuth credentials were used DPoP nonce updates were not respected.
+
 ## 4.0.0 - 2026-08-10
 
 ### Added
@@ -27,6 +79,10 @@
 
 ### Fixed
 
+#### idunno.AtProto
+
+* Fixed `BlueskyServer.GetVideoUploadStatus` to correctly use the correct service credentials.
+
 #### idunno.Bluesky
 
 * Fixed a bug in `GetMutes` where the cursor query string parameter was being generated incorrectly.
@@ -52,7 +108,7 @@
 
 #### idunno.Bluesky
 
-* Added support for the new `SearchStarterPacksV2` API endpoint. This endpoint is currently feature gated.
+* Added support for the new `SearchStarterPacksV2` API endpoint.
 * Added a Starter Pack property to the `Notification` class, which is present when the notification is for a follow originating from a starter pack. See [Hydrate starter pack info for follow notifications](https://github.com/bluesky-social/atproto/pull/5263).
 * Added an optional `Sort` parameter to the `GetFollowers` and `GetFollows` methods, which allows sorting by "latest" or "top". See [Add sort order to follows endpoints](https://github.com/bluesky-social/atproto/pull/5257).
 * Added description field to trending topics. See [Add description field to trending topics](https://github.com/bluesky-social/atproto/pull/5254).
