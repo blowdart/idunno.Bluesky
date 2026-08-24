@@ -1503,6 +1503,10 @@ public class AtProtoHttpClient<TResult> where TResult : class
                             httpRequestMessage.Content = new ByteArrayContent(blob);
                             break;
 
+                        case ReadOnlyMemory<byte> blob:
+                            httpRequestMessage.Content = new ByteArrayContent(blob.ToArray());
+                            break;
+
                         case string stringContent:
                             httpRequestMessage.Content = new StringContent(stringContent, Encoding.UTF8, MediaTypeNames.Application.Json);
                             break;

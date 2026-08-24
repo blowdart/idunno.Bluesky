@@ -256,7 +256,7 @@ public class VideoTests
     }
 
     [Fact]
-    public void AllGetJobStatusReponsesDeserializeCorrectlyAndConvertToJobStatusCorrectly()
+    public void AllGetJobStatusResponsesDeserializeCorrectlyAndConvertToJobStatusCorrectly()
     {
         string jsonString = """
             {

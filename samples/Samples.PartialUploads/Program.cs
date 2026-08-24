@@ -284,7 +284,7 @@ public sealed class Program
                 }
             } while (getJobStatusResult.Succeeded && !finished);
 
-            if (getJobStatusResult.Succeeded)
+            if (getJobStatusResult.Succeeded && getJobStatusResult.Result.State == JobState.Completed)
             {
                 Console.WriteLine($"✅ Job completed with state: {getJobStatusResult.Result.State}");
 

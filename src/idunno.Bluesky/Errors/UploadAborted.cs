@@ -8,7 +8,7 @@ namespace idunno.Bluesky;
 #pragma warning restore IDE0130
 
 /// <summary>
-/// Represents an error that occurs when a finish is in progress; check <see cref="BlueskyAgent.GetUploadStatus(string, CancellationToken)" /> and retry.
+/// Represents an error that occurs when the upload was aborted.
 /// </summary>
 public sealed class UploadAborted : BlueskyError
 {

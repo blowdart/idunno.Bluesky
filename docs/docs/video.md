@@ -73,7 +73,7 @@ Using the size for each part split your video into individual parts, with the fi
 Next call `UploadPart()` for each part using the jobID from `StartUpload()`. If the part uploads succeed call `FinishUpload()` to complete the upload.
 
 >[!IMPORTANT]
-> If, at any point in the partial upload process, you encounter an error or a failure, you should must call `AbortUpload()` to clean up the upload job,
+> If, at any point in the partial upload process, you encounter an error or a failure, you **must** call `AbortUpload()` to clean up the upload job,
 > and clear the upload reservations on the server. Failing to do so will result in the user's upload limits being lowered by the full size of the failed upload.
 
 ```c#
@@ -97,22 +97,22 @@ int fileSize = (int)fileInfo.Length;
 
 
 // Check the authenticated user has the ability to upload a video of this size.
-var getVideoUploadLimitsResult = await agent.GetUploadLimits(cancellationToken: cancellationToken).ConfigureAwait(false);
-if (!getVideoUploadLimitsResult.Succeeded)
+var getUploadLimitsResult = await agent.GetUploadLimits(cancellationToken: cancellationToken).ConfigureAwait(false);
+if (!getUploadLimitsResult.Succeeded)
 {
-    Console.WriteLine($"❌ Failed to get video upload limits.{Environment.NewLine}    Server returned {getVideoUploadLimitsResult.StatusCode} / {getVideoUploadLimitsResult.AtErrorDetail?.Error} / {getVideoUploadLimitsResult.AtErrorDetail?.Message}");
+    Console.WriteLine($"❌ Failed to get video upload limits.{Environment.NewLine}    Server returned {getUploadLimitsResult.StatusCode} / {getUploadLimitsResult.AtErrorDetail?.Error} / {getUploadLimitsResult.AtErrorDetail?.Message}");
     return;
 }
 
-if (getVideoUploadLimitsResult.Result.RemainingDailyVideos == 0)
+if (getUploadLimitsResult.Result.RemainingDailyVideos == 0)
 {
     Console.WriteLine($"❌ No remaining daily video uploads.");
     return;
 }
 
-if (getVideoUploadLimitsResult.Result.RemainingDailyBytes < fileSize)
+if (getUploadLimitsResult.Result.RemainingDailyBytes < fileSize)
 {
-    Console.WriteLine($"❌ Video file is too large to upload. Max size is {getVideoUploadLimitsResult.Result.RemainingDailyBytes} bytes, but the video file is {fileSize} bytes.");
+    Console.WriteLine($"❌ Video file is too large to upload. Max size is {getUploadLimitsResult.Result.RemainingDailyBytes} bytes, but the video file is {fileSize} bytes.");
     return;
 }
 
@@ -264,7 +264,7 @@ do
     }
 } while (getJobStatusResult.Succeeded && !finished);
 
-if (getJobStatusResult.Succeeded)
+if (getJobStatusResult.Succeeded && getJobStatusResult.Result.State == JobState.Completed)
 {
     Console.WriteLine($"✅ Job completed with state: {getJobStatusResult.Result.State}");
 

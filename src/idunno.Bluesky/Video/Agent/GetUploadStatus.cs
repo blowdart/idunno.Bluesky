@@ -9,7 +9,7 @@ namespace idunno.Bluesky;
 public partial class BlueskyAgent
 {
     /// <summary>
-    /// Gets the status details for the specified single part video processing job.
+    /// Gets the authoritative upload-phase status for the specified multipart video upload.
     /// </summary>
     /// <param name="jobId">The job id whose status should be queried.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>

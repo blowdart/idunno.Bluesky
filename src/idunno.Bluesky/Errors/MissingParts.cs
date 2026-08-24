@@ -8,7 +8,7 @@ namespace idunno.Bluesky;
 #pragma warning restore IDE0130
 
 /// <summary>
-/// Represents an error that occurs an attempt is made to finish a multi-part upload but not all parts are recorded; the error message lists the missing part numbers.
+/// Represents an error that occurs when an attempt is made to finish a multi-part upload but not all parts are recorded; the error message lists the missing part numbers.
 /// </summary>
 public sealed class MissingParts : BlueskyError
 {

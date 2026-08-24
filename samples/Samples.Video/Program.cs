@@ -118,9 +118,9 @@ public sealed class Program
                     ConsoleColor oldColor = Console.ForegroundColor;
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine("Account has hit its video limits");
-                    Console.WriteLine("Can upload: {videoUploadLimitsResult.Result.CanUpload}");
-                    Console.WriteLine("Daily videos remaining: {videoUploadLimitsResult.Result.RemainingDailyVideos}");
-                    Console.WriteLine("Daily bytes remaining: {videoUploadLimitsResult.Result.RemainingBytesVideos}");
+                    Console.WriteLine($"Can upload: {videoUploadLimitsResult.Result.CanUpload}");
+                    Console.WriteLine($"Daily videos remaining: {videoUploadLimitsResult.Result.RemainingDailyVideos}");
+                    Console.WriteLine($"Daily bytes remaining: {videoUploadLimitsResult.Result.RemainingDailyBytes}");
                     Console.ForegroundColor = oldColor;
                     return;
                 }

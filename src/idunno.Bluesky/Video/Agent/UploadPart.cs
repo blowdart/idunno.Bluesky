@@ -23,7 +23,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentOutOfRangeException">Thrown when a provided argument is out of the allowable range.</exception>
     /// <exception cref="ArgumentException">Thrown when a provided argument is invalid.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    /// <exception cref="HttpRequestException">Thrown when the request fails due to an underlying issue such as network connectivity, DNS failure, server certificate validation or timeout.</exception>"
+    /// <exception cref="HttpRequestException">Thrown when the request fails due to an underlying issue such as network connectivity, DNS failure, server certificate validation or timeout.</exception>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Catch all exception logging")]
     public async Task<AtProtoHttpResult<UploadPartResponse>> UploadPart(
         string jobId,

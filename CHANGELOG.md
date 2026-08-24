@@ -7,7 +7,7 @@
 #### idunno.Bluesky
 
 * Added support for the new multi-part video upload API, via `StartUpload`, `UploadPart`, `FinishUpload`, `GetUploadStatus` and `AbortUpload`.
-* Added new error classes for error from the multi-part video upload APIs.
+* Added new error classes for errors from the multi-part video upload APIs.
   * `BadAspectRatio`
   * `DailyLimitExceeded`
   * `InvalidPartNumber`
