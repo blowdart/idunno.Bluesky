@@ -292,6 +292,10 @@ public sealed class Program
                 post.Embed(new EmbeddedVideo(getJobStatusResult.Result.Blob!, altText: "Alt Text"));
                 await agent.Post(post, cancellationToken: cancellationToken).ConfigureAwait(false);
             }
+            else if (getJobStatusResult.Succeeded)
+            {
+                Console.WriteLine($"❌ Job state != Completed: {getJobStatusResult.Result.State}");
+            }
             else
             {
                 Console.WriteLine($"❌ Failed to get job status for jobID {finishUploadResult.Result.CompletedJobId}.{Environment.NewLine}    Server returned {getJobStatusResult.StatusCode} / {getJobStatusResult.AtErrorDetail?.Error} / {getJobStatusResult.AtErrorDetail?.Message}");
