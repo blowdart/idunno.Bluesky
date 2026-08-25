@@ -335,12 +335,12 @@ To check if you have the ability to upload video, and how many videos or bytes y
 and validate you have enough quota left:
 
 ```c#
-var videoUploadLimitsResult = await agent.GetVideoUploadLimits(cancellationToken: cancellationToken);
-videoUploadLimitsResult.EnsureSucceeded();
+var uploadLimitsResult = await agent.GetUploadLimits(cancellationToken: cancellationToken);
+uploadLimitsResult.EnsureSucceeded();
 
-if (!videoUploadLimitsResult.Result.CanUpload ||
-    videoUploadLimitsResult.Result.RemainingDailyVideos == 0 ||
-    videoUploadLimitsResult.Result.RemainingDailyBytes < (ulong)videoAsBytes.LongLength)
+if (!uploadLimitsResult.Result.CanUpload ||
+    uploadLimitsResult.Result.RemainingDailyVideos == 0 ||
+    uploadLimitsResult.Result.RemainingDailyBytes < (ulong)videoAsBytes.LongLength)
     {
          // You can't upload the video stream in videoAsBytes, react accordingly.
     }
