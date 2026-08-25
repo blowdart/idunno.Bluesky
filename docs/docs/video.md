@@ -331,7 +331,7 @@ If you are using a `PostBuilder` you can use `PostBuilder.Add()` to add an insta
 
 Bluesky imposes limits outside the normal rate limitations on video.
 
-To check if you have the ability to upload video, and how many videos or bytes you have left call `agent.GetVideoUploadLimits()`
+To check if you have the ability to upload video, and how many videos or bytes you have left call `agent.GetUploadLimits()`
 and validate you have enough quota left:
 
 ```c#
