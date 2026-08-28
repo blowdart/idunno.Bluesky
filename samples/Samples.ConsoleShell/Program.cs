@@ -37,8 +37,7 @@ public sealed class Program
         // proxyUri = new Uri("http://localhost:8888");
 
         // Change the log level in the ConfigureConsoleLogging() to enable logging
-        // TODO put back to debug
-        using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Error))
+        using (ILoggerFactory? loggerFactory = Helpers.ConfigureConsoleLogging(LogLevel.Debug))
 
         // Create a new BlueSkyAgent
         using (var agent = new BlueskyAgent(
