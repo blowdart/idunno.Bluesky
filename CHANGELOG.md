@@ -1,5 +1,17 @@
 # Version History
 
+## 6.0.0 - **unreleased**
+
+### Breaking Changes
+
+#### idunno.Bluesky
+
+* `BlueskyAgent.GetContentVisibilityDeclaration` now returns a `ContentVisibilityDeclaration` instance instead of a `bool`.
+  The `HideFromAlgorithmicRecommendations` property on the returned object indicates whether the content is hidden from algorithmic recommendations.
+* Removed deprecated `Bluesky.UploadAnimatedGif`. Use `BlueskyAgent.UploadVideo` with a MIME type of `image/gif` instead.
+* Removed deprecated `UploadVideo(string fileName, byte[] video, CancellationToken cancellationToken)`.
+  Use `UploadVideo(string fileName, byte[] video, string mimeType, CancellationToken cancellationToken)` with a MIME type of `video/mp4` instead.
+
 ## 5.0.0 - 2026-08-24
 
 ### Added

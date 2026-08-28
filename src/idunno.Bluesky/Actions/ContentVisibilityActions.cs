@@ -49,7 +49,7 @@ public partial class BlueskyAgent
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
-    public async Task<AtProtoHttpResult<bool>> GetContentVisibilityDeclaration(AtIdentifier identifier, CancellationToken cancellationToken = default)
+    public async Task<AtProtoHttpResult<ContentVisibilityDeclaration>> GetContentVisibilityDeclaration(AtIdentifier identifier, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(identifier);
 
@@ -74,8 +74,8 @@ public partial class BlueskyAgent
 
         if (getRecordResult.Succeeded)
         {
-            return new AtProtoHttpResult<bool>(
-                getRecordResult.Result.Value.HideFromAlgorithmicRecommendations,
+            return new AtProtoHttpResult<ContentVisibilityDeclaration>(
+                getRecordResult.Result.Value,
                 getRecordResult.StatusCode,
                 getRecordResult.HttpResponseHeaders,
                 getRecordResult.AtErrorDetail,
@@ -83,8 +83,8 @@ public partial class BlueskyAgent
         }
         else
         {
-            return new AtProtoHttpResult<bool>(
-                false,
+            return new AtProtoHttpResult<ContentVisibilityDeclaration>(
+                null,
                 getRecordResult.StatusCode,
                 getRecordResult.HttpResponseHeaders,
                 getRecordResult.AtErrorDetail,
@@ -95,10 +95,25 @@ public partial class BlueskyAgent
     /// <summary>
     /// Gets the current authenticated user's preference for appearing in content discovery surfaces.
     /// </summary>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    public async Task<AtProtoHttpResult<ContentVisibilityDeclaration>> GetContentVisibilityDeclaration()
+    {
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        return await GetContentVisibilityDeclaration(Did, cancellationToken: default).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Gets the current authenticated user's preference for appearing in content discovery surfaces.
+    /// </summary>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<bool>> GetContentVisibilityDeclaration(CancellationToken cancellationToken = default)
+    public async Task<AtProtoHttpResult<ContentVisibilityDeclaration>> GetContentVisibilityDeclaration(CancellationToken cancellationToken)
     {
         if (!IsAuthenticated)
         {
@@ -116,13 +131,14 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     [UnconditionalSuppressMessage(
-    "Trimming",
-    "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
-    Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
-    [UnconditionalSuppressMessage("AOT",
-    "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
-    Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
-    public async Task<AtProtoHttpResult<PutRecordResult>> SetContentVisibilityDeclaration(bool hideFromAlgorithmicRecommendations, CancellationToken cancellationToken = default)
+        "Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
+    [UnconditionalSuppressMessage(
+        "AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
+    public async Task<AtProtoHttpResult<PutRecordResult>> SetContentVisibilityDeclaration(bool hideFromAlgorithmicRecommendations, CancellationToken cancellationToken)
     {
         if (!IsAuthenticated)
         {
@@ -145,6 +161,61 @@ public partial class BlueskyAgent
     /// <summary>
     /// Sets the content visibility record for the authenticated user.
     /// </summary>
+    /// <param name="hideFromAlgorithmicRecommendations">Flag indicating whether the account requests that its posts be hidden from algorithmic recommendations.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+    public async Task<AtProtoHttpResult<PutRecordResult>> SetContentVisibilityDeclaration(bool hideFromAlgorithmicRecommendations)
+    {
+        return await SetContentVisibilityDeclaration(hideFromAlgorithmicRecommendations, cancellationToken: default).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Sets the content visibility record for the authenticated user.
+    /// </summary>
+    /// <param name="declaration">The declaration record.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
+    [UnconditionalSuppressMessage(
+        "AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
+    public async Task<AtProtoHttpResult<PutRecordResult>> SetContentVisibilityDeclaration(ContentVisibilityDeclaration declaration, CancellationToken cancellationToken)
+            {
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        return await PutRecord(
+            record: declaration,
+            collection: "app.bsky.actor.contentVisibilityDeclaration",
+            rKey: "self",
+            validate: null,
+            swapCommit: null,
+            swapRecord: null,
+            jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Sets the content visibility record for the authenticated user.
+    /// </summary>
+    /// <param name="declaration">The declaration record.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+    public async Task<AtProtoHttpResult<PutRecordResult>> SetContentVisibilityDeclaration(ContentVisibilityDeclaration declaration)
+    {
+        return await SetContentVisibilityDeclaration(declaration, cancellationToken: default).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Sets the content visibility record for the authenticated user.
+    /// </summary>
     /// <param name="declaration">The declaration record to update.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -154,12 +225,13 @@ public partial class BlueskyAgent
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
         Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
-    [UnconditionalSuppressMessage("AOT",
+    [UnconditionalSuppressMessage(
+        "AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
     public async Task<AtProtoHttpResult<PutRecordResult>> SetContentVisibilityDeclaration(
         AtProtoRepositoryRecord<ContentVisibilityDeclaration> declaration,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(declaration);
 
@@ -177,5 +249,18 @@ public partial class BlueskyAgent
             swapRecord: declaration.Cid,
             jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Sets the content visibility record for the authenticated user.
+    /// </summary>
+    /// <param name="declaration">The declaration record to update.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="declaration"/> is <see langword="null"/>.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+    public async Task<AtProtoHttpResult<PutRecordResult>> SetContentVisibilityDeclaration(
+        AtProtoRepositoryRecord<ContentVisibilityDeclaration> declaration)
+    {
+        return await SetContentVisibilityDeclaration(declaration, cancellationToken: default).ConfigureAwait(false);
     }
 }
