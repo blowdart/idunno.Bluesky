@@ -2,15 +2,29 @@
 
 ## 6.0.0 - **unreleased**
 
+### Added
+
+#### idunno.Bluesky
+
+* `ListBlock` has been added in the `idunno.Bluesky.Graph` namespace, representing a block relationship against an entire an entire list of accounts (actors).
+
 ### Breaking Changes
 
 #### idunno.Bluesky
 
+* Namespace changes to match the lexicon:
+  * `BlueskyList` been renamed to `List` and has moved namespaces from `idunno.Bluesky.Record` to `idunno.Bluesky.Graph`.
+  * `BlueskyListItem` has been renamed to `ListItem` and has moved namespaces from `idunno.Bluesky.Record` to `idunno.Bluesky.Graph`.
+  * `Block` has moved namespaces from `idunno.Bluesky.Record` to `idunno.Bluesky.Graph`.
+  * `Follow` has moved namespaces from `idunno.Bluesky.Record` to `idunno.Bluesky.Graph`.
+  * `StarterPack` has moved namespaces from `idunno.Bluesky.Record` to `idunno.Bluesky.Graph`.
+  * `Verification` has moved namespaces from `idunno.Bluesky.Record` to `idunno.Bluesky.Graph`.
 * `BlueskyAgent.GetContentVisibilityDeclaration` now returns a `ContentVisibilityDeclaration` instance instead of a `bool`.
   The `HideFromAlgorithmicRecommendations` property on the returned object indicates whether the content is hidden from algorithmic recommendations.
 * Removed deprecated `Bluesky.UploadAnimatedGif`. Use `BlueskyAgent.UploadVideo` with a MIME type of `image/gif` instead.
 * Removed deprecated `UploadVideo(string fileName, byte[] video, CancellationToken cancellationToken)`.
   Use `UploadVideo(string fileName, byte[] video, string mimeType, CancellationToken cancellationToken)` with a MIME type of `video/mp4` instead.
+* `BlueskyAgent.UnmuteModeList` spelling has been corrected to `BlueskyAgent.UnmuteModList`.
 
 ## 5.0.0 - 2026-08-24
 

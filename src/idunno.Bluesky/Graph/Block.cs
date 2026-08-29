@@ -4,14 +4,16 @@
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
+using idunno.Bluesky.Record;
 
-namespace idunno.Bluesky.Record;
+namespace idunno.Bluesky.Graph;
 
 /// <summary>
 /// Encapsulates the information needed to create a block record.
 /// </summary>
-[JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
-                 UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+[JsonPolymorphic(
+    IgnoreUnrecognizedTypeDiscriminators = true,
+    UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
 [JsonDerivedType(typeof(Block), typeDiscriminator: RecordType.Block)]
 public record Block : BlueskyTimestampedRecord
 {
@@ -41,5 +43,6 @@ public record Block : BlueskyTimestampedRecord
     /// Gets the <see cref="Did"/> of the subject to be blocked.
     /// </summary>
     [JsonInclude]
+    [JsonRequired]
     public Did Subject { get; init; }
 }

@@ -5,14 +5,16 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 using idunno.Bluesky.Feed;
+using idunno.Bluesky.Record;
 
-namespace idunno.Bluesky.Record;
+namespace idunno.Bluesky.Graph;
 
 /// <summary>
 ///  Encapsulates a Bluesky starter pack.
 /// </summary>
-[JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
-             UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+[JsonPolymorphic(
+    IgnoreUnrecognizedTypeDiscriminators = true,
+    UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
 [JsonDerivedType(typeof(StarterPack), typeDiscriminator: RecordType.StarterPack)]
 public record StarterPack : BlueskyTimestampedRecord
 {

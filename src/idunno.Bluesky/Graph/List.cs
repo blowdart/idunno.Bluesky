@@ -6,26 +6,26 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 using idunno.AtProto.Labels;
-
-using idunno.Bluesky.Graph;
+using idunno.Bluesky.Record;
 using idunno.Bluesky.RichText;
 
-namespace idunno.Bluesky.Record;
+namespace idunno.Bluesky.Graph;
 
 /// <summary>
 /// Record representing a list of accounts (actors). Scope includes moderation-oriented lists, curation-oriented lists and starter packs.
 /// </summary>
-[JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
-                 UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
-[JsonDerivedType(typeof(BlueskyList), typeDiscriminator: RecordType.List)]
-public record BlueskyList : BlueskyTimestampedRecord
+[JsonPolymorphic(
+    IgnoreUnrecognizedTypeDiscriminators = true,
+    UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+[JsonDerivedType(typeof(List), typeDiscriminator: RecordType.List)]
+public record List : BlueskyTimestampedRecord
 {
     string _name;
     string? _description;
 
     // Needed as deserialization should always contain the DateTimeOffset.
     [JsonConstructor]
-    internal BlueskyList(
+    internal List(
         string name,
         ListPurpose purpose,
         DateTimeOffset createdAt,
@@ -55,7 +55,7 @@ public record BlueskyList : BlueskyTimestampedRecord
     }
 
     /// <summary>
-    /// Creates a new instance of <see cref="BlueskyList"/>.
+    /// Creates a new instance of <see cref="List"/>.
     /// </summary>
     /// <param name="name">The name of the list.</param>
     /// <param name="purpose">The list's purpose.</param>
@@ -67,7 +67,7 @@ public record BlueskyList : BlueskyTimestampedRecord
     /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="name"/> is &gt; 64 characters or <paramref name="description"/> &gt; 300 graphemes.</exception>
-    public BlueskyList(
+    public List(
         string name,
         ListPurpose purpose,
         string? description,

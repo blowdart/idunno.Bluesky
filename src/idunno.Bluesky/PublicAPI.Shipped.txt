@@ -492,7 +492,6 @@ idunno.Bluesky.BlueskyAgent.CreateBookmark(idunno.AtProto.Repo.StrongReference! 
 idunno.Bluesky.BlueskyAgent.CreateDraft(idunno.Bluesky.Drafts.Draft! draft, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.TimestampIdentifier!>!>!
 idunno.Bluesky.BlueskyAgent.CreateGroup(System.Collections.Generic.ICollection<idunno.AtProto.Did!>! members, string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Group.Model.CreateGroupResponse!>!>!
 idunno.Bluesky.BlueskyAgent.CreateJoinGroupLink(string! conversationId, bool requireApproval, string! joinRule, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Group.Model.CreateJoinLinkResponse!>!>!
-idunno.Bluesky.BlueskyAgent.CreateList(idunno.Bluesky.Record.BlueskyList! list, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.CreateLiveStatus(System.Uri! uri, string! title, string! description, idunno.AtProto.Blob? previewBlob = null, int? durationMinutes = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.CreateModerationReport(idunno.AtProto.Did! labelerDid, idunno.AtProto.Moderation.SubjectType! subject, idunno.Bluesky.Moderation.ReportType reportType, string? reason, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Moderation.ModerationReport!>!>!
 idunno.Bluesky.BlueskyAgent.CreateOpenGraphEmbeddedCardGenerator() -> idunno.Bluesky.Embed.OpenGraphEmbeddedCardGenerator!
@@ -578,7 +577,6 @@ idunno.Bluesky.BlueskyAgent.GetList(idunno.AtProto.AtUri! uri, int? limit = 50, 
 idunno.Bluesky.BlueskyAgent.GetListBlocks(int? limit = null, string? cursor = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Graph.ListView!>!>!>!
 idunno.Bluesky.BlueskyAgent.GetListFeed(idunno.AtProto.AtUri! list, int? limit = null, string? cursor = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Feed.FeedViewPost!>!>!>!
 idunno.Bluesky.BlueskyAgent.GetListMutes(int? limit = null, string? cursor = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Graph.ListView!>!>!>!
-idunno.Bluesky.BlueskyAgent.GetListRecord(idunno.AtProto.AtUri! uri, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Record.BlueskyList!>!>!>!
 idunno.Bluesky.BlueskyAgent.GetLists(idunno.AtProto.AtIdentifier! actor, int? limit = null, string? cursor = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Graph.ListView!>!>!>!
 idunno.Bluesky.BlueskyAgent.GetListsWithMembership(idunno.AtProto.AtIdentifier! actor, int? limit = null, string? cursor = null, string![]? purposes = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Graph.ListWithMembership!>!>!>!
 idunno.Bluesky.BlueskyAgent.GetMessages(string! id, int? limit = null, string? cursor = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Messages!>!>!
@@ -709,13 +707,10 @@ idunno.Bluesky.BlueskyAgent.Unmute(idunno.AtProto.AtIdentifier! actor, System.Th
 idunno.Bluesky.BlueskyAgent.UnmuteActor(idunno.AtProto.AtIdentifier! actor, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 idunno.Bluesky.BlueskyAgent.UnmuteActorList(idunno.AtProto.AtUri! listUri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 idunno.Bluesky.BlueskyAgent.UnmuteConversation(string! conversationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.ConversationView!>!>!
-idunno.Bluesky.BlueskyAgent.UnmuteModeList(idunno.AtProto.AtUri! listUri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 idunno.Bluesky.BlueskyAgent.UnmuteThread(idunno.AtProto.AtUri! rootUri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 idunno.Bluesky.BlueskyAgent.UpdateAllRead(string! status, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<ulong>!>!
 idunno.Bluesky.BlueskyAgent.UpdateDraft(idunno.Bluesky.Drafts.DraftWithId! draftWithId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 idunno.Bluesky.BlueskyAgent.UpdateJoinGroupRequestsRead(string! conversationId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
-idunno.Bluesky.BlueskyAgent.UpdateList(idunno.AtProto.AtUri! uri, idunno.Bluesky.Record.BlueskyList! list, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
-idunno.Bluesky.BlueskyAgent.UpdateList(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Record.BlueskyList!>! list, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.UpdateNotificationSeenAt(System.DateTimeOffset? seenAt = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
 idunno.Bluesky.BlueskyAgent.UpdatePostGate(idunno.Bluesky.Feed.Gates.PostGate! postGate, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.UpdateProfile(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Record.Profile!>! profile, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
@@ -2181,7 +2176,6 @@ idunno.Bluesky.Graph.StarterPackView.List.get -> idunno.Bluesky.Graph.ListViewBa
 idunno.Bluesky.Graph.StarterPackView.List.init -> void
 idunno.Bluesky.Graph.StarterPackView.ListItemsSample.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Graph.ListItemView!>!
 idunno.Bluesky.Graph.StarterPackView.ListItemsSample.init -> void
-idunno.Bluesky.Graph.StarterPackView.StarterPackView(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid, idunno.Bluesky.Record.StarterPack! record, idunno.Bluesky.Actor.ProfileViewBasic! creator, int listItemCount, int joinedWeekCount, int joinedAllTimeCount, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Labels.Label!>? labels, System.DateTimeOffset indexedAt, idunno.Bluesky.Graph.ListViewBasic! list, System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Graph.ListItemView!>? listItemsSample, System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Feed.GeneratorView!>? feeds) -> void
 idunno.Bluesky.Graph.StarterPackViewBasic
 idunno.Bluesky.Graph.StarterPackViewBasic.Cid.get -> idunno.AtProto.Cid!
 idunno.Bluesky.Graph.StarterPackViewBasic.Cid.init -> void
@@ -2197,9 +2191,7 @@ idunno.Bluesky.Graph.StarterPackViewBasic.Labels.get -> System.Collections.Gener
 idunno.Bluesky.Graph.StarterPackViewBasic.Labels.init -> void
 idunno.Bluesky.Graph.StarterPackViewBasic.ListItemCount.get -> int
 idunno.Bluesky.Graph.StarterPackViewBasic.ListItemCount.init -> void
-idunno.Bluesky.Graph.StarterPackViewBasic.Record.get -> idunno.Bluesky.Record.StarterPack!
 idunno.Bluesky.Graph.StarterPackViewBasic.Record.init -> void
-idunno.Bluesky.Graph.StarterPackViewBasic.StarterPackViewBasic(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid, idunno.Bluesky.Record.StarterPack! record, idunno.Bluesky.Actor.ProfileViewBasic! creator, int listItemCount, int joinedWeekCount, int joinedAllTimeCount, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Labels.Label!>? labels, System.DateTimeOffset indexedAt) -> void
 idunno.Bluesky.Graph.StarterPackViewBasic.StarterPackViewBasic(idunno.Bluesky.Graph.StarterPackViewBasic! original) -> void
 idunno.Bluesky.Graph.StarterPackViewBasic.StrongReference.get -> idunno.AtProto.Repo.StrongReference!
 idunno.Bluesky.Graph.StarterPackViewBasic.Uri.get -> idunno.AtProto.AtUri!
@@ -2597,27 +2589,6 @@ idunno.Bluesky.ReactionNotAllowed
 idunno.Bluesky.ReactionNotAllowed.ReactionNotAllowed(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
 idunno.Bluesky.RecipientNotFound
 idunno.Bluesky.RecipientNotFound.RecipientNotFound(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
-idunno.Bluesky.Record.Block
-idunno.Bluesky.Record.Block.Block(idunno.AtProto.Did! subject) -> void
-idunno.Bluesky.Record.Block.Block(idunno.AtProto.Did! subject, System.DateTimeOffset createdAt) -> void
-idunno.Bluesky.Record.Block.Block(idunno.Bluesky.Record.Block! original) -> void
-idunno.Bluesky.Record.Block.Subject.get -> idunno.AtProto.Did!
-idunno.Bluesky.Record.Block.Subject.init -> void
-idunno.Bluesky.Record.BlueskyList
-idunno.Bluesky.Record.BlueskyList.Avatar.get -> idunno.AtProto.Blob?
-idunno.Bluesky.Record.BlueskyList.Avatar.set -> void
-idunno.Bluesky.Record.BlueskyList.BlueskyList(idunno.Bluesky.Record.BlueskyList! original) -> void
-idunno.Bluesky.Record.BlueskyList.BlueskyList(string! name, idunno.Bluesky.Graph.ListPurpose purpose, string? description, System.Collections.Generic.IEnumerable<idunno.Bluesky.RichText.Facet!>? descriptionFacets = null, idunno.AtProto.Blob? avatar = null, idunno.AtProto.Labels.SelfLabels? labels = null, System.DateTimeOffset? createdAt = null) -> void
-idunno.Bluesky.Record.BlueskyList.Description.get -> string?
-idunno.Bluesky.Record.BlueskyList.Description.set -> void
-idunno.Bluesky.Record.BlueskyList.DescriptionFacets.get -> System.Collections.Generic.IEnumerable<idunno.Bluesky.RichText.Facet!>?
-idunno.Bluesky.Record.BlueskyList.DescriptionFacets.set -> void
-idunno.Bluesky.Record.BlueskyList.Labels.get -> idunno.AtProto.Labels.SelfLabels?
-idunno.Bluesky.Record.BlueskyList.Labels.set -> void
-idunno.Bluesky.Record.BlueskyList.Name.get -> string!
-idunno.Bluesky.Record.BlueskyList.Name.set -> void
-idunno.Bluesky.Record.BlueskyList.Purpose.get -> idunno.Bluesky.Graph.ListPurpose
-idunno.Bluesky.Record.BlueskyList.Purpose.init -> void
 idunno.Bluesky.Record.BlueskyRecord
 idunno.Bluesky.Record.BlueskyRecord.BlueskyRecord() -> void
 idunno.Bluesky.Record.BlueskyRecord.BlueskyRecord(idunno.Bluesky.Record.BlueskyRecord! record) -> void
@@ -2628,20 +2599,6 @@ idunno.Bluesky.Record.BlueskyTimestampedRecord.BlueskyTimestampedRecord(System.D
 idunno.Bluesky.Record.BlueskyTimestampedRecord.BlueskyTimestampedRecord(System.DateTimeOffset? createdAt) -> void
 idunno.Bluesky.Record.BlueskyTimestampedRecord.CreatedAt.get -> System.DateTimeOffset
 idunno.Bluesky.Record.BlueskyTimestampedRecord.CreatedAt.init -> void
-idunno.Bluesky.Record.FeedItem
-idunno.Bluesky.Record.FeedItem.FeedItem(idunno.AtProto.AtUri! uri) -> void
-idunno.Bluesky.Record.FeedItem.FeedItem(idunno.Bluesky.Record.FeedItem! original) -> void
-idunno.Bluesky.Record.FeedItem.Uri.get -> idunno.AtProto.AtUri!
-idunno.Bluesky.Record.FeedItem.Uri.init -> void
-idunno.Bluesky.Record.Follow
-idunno.Bluesky.Record.Follow.Follow(idunno.AtProto.Did! subject, idunno.AtProto.Repo.StrongReference? via = null) -> void
-idunno.Bluesky.Record.Follow.Follow(idunno.AtProto.Did! subject, idunno.AtProto.Repo.StrongReference? via, System.DateTimeOffset createdAt) -> void
-idunno.Bluesky.Record.Follow.Follow(idunno.AtProto.Did! subject, System.DateTimeOffset createdAt) -> void
-idunno.Bluesky.Record.Follow.Follow(idunno.Bluesky.Record.Follow! original) -> void
-idunno.Bluesky.Record.Follow.Subject.get -> idunno.AtProto.Did!
-idunno.Bluesky.Record.Follow.Subject.init -> void
-idunno.Bluesky.Record.Follow.Via.get -> idunno.AtProto.Repo.StrongReference?
-idunno.Bluesky.Record.Follow.Via.init -> void
 idunno.Bluesky.Record.KnownStatusValues
 idunno.Bluesky.Record.LabelerDeclaration
 idunno.Bluesky.Record.LabelerDeclaration.CreatedAt.get -> System.DateTimeOffset
@@ -2701,19 +2658,6 @@ idunno.Bluesky.Record.Repost.Subject.get -> idunno.AtProto.Repo.StrongReference!
 idunno.Bluesky.Record.Repost.Subject.init -> void
 idunno.Bluesky.Record.Repost.Via.get -> idunno.AtProto.Repo.StrongReference?
 idunno.Bluesky.Record.Repost.Via.init -> void
-idunno.Bluesky.Record.StarterPack
-idunno.Bluesky.Record.StarterPack.Description.get -> string?
-idunno.Bluesky.Record.StarterPack.Description.init -> void
-idunno.Bluesky.Record.StarterPack.Feeds.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Record.FeedItem!>?
-idunno.Bluesky.Record.StarterPack.Feeds.init -> void
-idunno.Bluesky.Record.StarterPack.List.get -> idunno.AtProto.AtUri!
-idunno.Bluesky.Record.StarterPack.List.set -> void
-idunno.Bluesky.Record.StarterPack.Name.get -> string!
-idunno.Bluesky.Record.StarterPack.Name.set -> void
-idunno.Bluesky.Record.StarterPack.StarterPack(idunno.Bluesky.Record.StarterPack! original) -> void
-idunno.Bluesky.Record.StarterPack.StarterPack(string! name, string? description, idunno.AtProto.AtUri! list, System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Record.FeedItem!>? feeds, System.DateTimeOffset createdAt, System.DateTimeOffset? updatedAt) -> void
-idunno.Bluesky.Record.StarterPack.UpdatedAt.get -> System.DateTimeOffset?
-idunno.Bluesky.Record.StarterPack.UpdatedAt.init -> void
 idunno.Bluesky.Record.Status
 idunno.Bluesky.Record.Status.AccountStatus.get -> string!
 idunno.Bluesky.Record.Status.AccountStatus.set -> void
@@ -2726,15 +2670,6 @@ idunno.Bluesky.Record.Status.Status(string! accountStatus) -> void
 idunno.Bluesky.Record.Status.Status(string! accountStatus, idunno.Bluesky.Embed.EmbeddedBase? embed, int? durationMinutes) -> void
 idunno.Bluesky.Record.Status.Status(string! accountStatus, idunno.Bluesky.Embed.EmbeddedBase? embed, int? durationMinutes, System.DateTimeOffset createdAt) -> void
 idunno.Bluesky.Record.Status.Status(string! accountStatus, System.DateTimeOffset createdAt) -> void
-idunno.Bluesky.Record.Verification
-idunno.Bluesky.Record.Verification.DisplayName.get -> string!
-idunno.Bluesky.Record.Verification.DisplayName.init -> void
-idunno.Bluesky.Record.Verification.Handle.get -> idunno.AtProto.Handle!
-idunno.Bluesky.Record.Verification.Handle.init -> void
-idunno.Bluesky.Record.Verification.Subject.get -> idunno.AtProto.Did!
-idunno.Bluesky.Record.Verification.Subject.init -> void
-idunno.Bluesky.Record.Verification.Verification(idunno.AtProto.Handle! handle, idunno.AtProto.Did! subject, System.DateTimeOffset createdAt, string! displayName) -> void
-idunno.Bluesky.Record.Verification.Verification(idunno.Bluesky.Record.Verification! original) -> void
 idunno.Bluesky.RecordType
 idunno.Bluesky.ReplyReferences
 idunno.Bluesky.ReplyReferences.<Clone>$() -> idunno.Bluesky.ReplyReferences!
@@ -4012,18 +3947,6 @@ override idunno.Bluesky.PostBuilder.GetHashCode() -> int
 override idunno.Bluesky.PostSelfLabels.Equals(object? obj) -> bool
 override idunno.Bluesky.PostSelfLabels.GetHashCode() -> int
 override idunno.Bluesky.PostSelfLabels.ToString() -> string!
-override idunno.Bluesky.Record.Block.<Clone>$() -> idunno.Bluesky.Record.Block!
-override idunno.Bluesky.Record.Block.EqualityContract.get -> System.Type!
-override idunno.Bluesky.Record.Block.Equals(object? obj) -> bool
-override idunno.Bluesky.Record.Block.GetHashCode() -> int
-override idunno.Bluesky.Record.Block.PrintMembers(System.Text.StringBuilder! builder) -> bool
-override idunno.Bluesky.Record.Block.ToString() -> string!
-override idunno.Bluesky.Record.BlueskyList.<Clone>$() -> idunno.Bluesky.Record.BlueskyList!
-override idunno.Bluesky.Record.BlueskyList.EqualityContract.get -> System.Type!
-override idunno.Bluesky.Record.BlueskyList.Equals(object? obj) -> bool
-override idunno.Bluesky.Record.BlueskyList.GetHashCode() -> int
-override idunno.Bluesky.Record.BlueskyList.PrintMembers(System.Text.StringBuilder! builder) -> bool
-override idunno.Bluesky.Record.BlueskyList.ToString() -> string!
 override idunno.Bluesky.Record.BlueskyRecord.<Clone>$() -> idunno.Bluesky.Record.BlueskyRecord!
 override idunno.Bluesky.Record.BlueskyRecord.EqualityContract.get -> System.Type!
 override idunno.Bluesky.Record.BlueskyRecord.Equals(object? obj) -> bool
@@ -4036,15 +3959,6 @@ override idunno.Bluesky.Record.BlueskyTimestampedRecord.Equals(object? obj) -> b
 override idunno.Bluesky.Record.BlueskyTimestampedRecord.GetHashCode() -> int
 override idunno.Bluesky.Record.BlueskyTimestampedRecord.PrintMembers(System.Text.StringBuilder! builder) -> bool
 override idunno.Bluesky.Record.BlueskyTimestampedRecord.ToString() -> string!
-override idunno.Bluesky.Record.FeedItem.Equals(object? obj) -> bool
-override idunno.Bluesky.Record.FeedItem.GetHashCode() -> int
-override idunno.Bluesky.Record.FeedItem.ToString() -> string!
-override idunno.Bluesky.Record.Follow.<Clone>$() -> idunno.Bluesky.Record.Follow!
-override idunno.Bluesky.Record.Follow.EqualityContract.get -> System.Type!
-override idunno.Bluesky.Record.Follow.Equals(object? obj) -> bool
-override idunno.Bluesky.Record.Follow.GetHashCode() -> int
-override idunno.Bluesky.Record.Follow.PrintMembers(System.Text.StringBuilder! builder) -> bool
-override idunno.Bluesky.Record.Follow.ToString() -> string!
 override idunno.Bluesky.Record.LabelerDeclaration.<Clone>$() -> idunno.Bluesky.Record.LabelerDeclaration!
 override idunno.Bluesky.Record.LabelerDeclaration.EqualityContract.get -> System.Type!
 override idunno.Bluesky.Record.LabelerDeclaration.Equals(object? obj) -> bool
@@ -4069,24 +3983,12 @@ override idunno.Bluesky.Record.Repost.Equals(object? obj) -> bool
 override idunno.Bluesky.Record.Repost.GetHashCode() -> int
 override idunno.Bluesky.Record.Repost.PrintMembers(System.Text.StringBuilder! builder) -> bool
 override idunno.Bluesky.Record.Repost.ToString() -> string!
-override idunno.Bluesky.Record.StarterPack.<Clone>$() -> idunno.Bluesky.Record.StarterPack!
-override idunno.Bluesky.Record.StarterPack.EqualityContract.get -> System.Type!
-override idunno.Bluesky.Record.StarterPack.Equals(object? obj) -> bool
-override idunno.Bluesky.Record.StarterPack.GetHashCode() -> int
-override idunno.Bluesky.Record.StarterPack.PrintMembers(System.Text.StringBuilder! builder) -> bool
-override idunno.Bluesky.Record.StarterPack.ToString() -> string!
 override idunno.Bluesky.Record.Status.<Clone>$() -> idunno.Bluesky.Record.Status!
 override idunno.Bluesky.Record.Status.EqualityContract.get -> System.Type!
 override idunno.Bluesky.Record.Status.Equals(object? obj) -> bool
 override idunno.Bluesky.Record.Status.GetHashCode() -> int
 override idunno.Bluesky.Record.Status.PrintMembers(System.Text.StringBuilder! builder) -> bool
 override idunno.Bluesky.Record.Status.ToString() -> string!
-override idunno.Bluesky.Record.Verification.<Clone>$() -> idunno.Bluesky.Record.Verification!
-override idunno.Bluesky.Record.Verification.EqualityContract.get -> System.Type!
-override idunno.Bluesky.Record.Verification.Equals(object? obj) -> bool
-override idunno.Bluesky.Record.Verification.GetHashCode() -> int
-override idunno.Bluesky.Record.Verification.PrintMembers(System.Text.StringBuilder! builder) -> bool
-override idunno.Bluesky.Record.Verification.ToString() -> string!
 override idunno.Bluesky.ReplyReferences.Equals(object? obj) -> bool
 override idunno.Bluesky.ReplyReferences.GetHashCode() -> int
 override idunno.Bluesky.ReplyReferences.ToString() -> string!
@@ -4337,18 +4239,13 @@ override sealed idunno.Bluesky.Labeler.LabelerViewDetailed.Equals(idunno.Bluesky
 override sealed idunno.Bluesky.Notifications.Declaration.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
 override sealed idunno.Bluesky.Notifications.Notification.Equals(idunno.AtProto.Repo.AtProtoRepositoryObject? other) -> bool
 override sealed idunno.Bluesky.Post.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
-override sealed idunno.Bluesky.Record.Block.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
-override sealed idunno.Bluesky.Record.BlueskyList.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
 override sealed idunno.Bluesky.Record.BlueskyRecord.Equals(idunno.AtProto.Repo.AtProtoRecord? other) -> bool
 override sealed idunno.Bluesky.Record.BlueskyTimestampedRecord.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
-override sealed idunno.Bluesky.Record.Follow.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
 override sealed idunno.Bluesky.Record.LabelerDeclaration.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
 override sealed idunno.Bluesky.Record.Like.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
 override sealed idunno.Bluesky.Record.Profile.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
 override sealed idunno.Bluesky.Record.Repost.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
-override sealed idunno.Bluesky.Record.StarterPack.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
 override sealed idunno.Bluesky.Record.Status.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
-override sealed idunno.Bluesky.Record.Verification.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
 override sealed idunno.Bluesky.RichText.HashTag.Equals(idunno.Bluesky.RichText.PostBuilderFacetFeature? other) -> bool
 override sealed idunno.Bluesky.RichText.Link.Equals(idunno.Bluesky.RichText.PostBuilderFacetFeature? other) -> bool
 override sealed idunno.Bluesky.RichText.LinkFacetFeature.Equals(idunno.Bluesky.RichText.FacetFeature? other) -> bool
@@ -5148,18 +5045,10 @@ static idunno.Bluesky.PostBuilder.Quote(idunno.Bluesky.PostBuilder! postBuilder,
 static idunno.Bluesky.PostSelfLabels.explicit operator idunno.AtProto.Labels.SelfLabels!(idunno.Bluesky.PostSelfLabels! postSelfLabels) -> idunno.AtProto.Labels.SelfLabels!
 static idunno.Bluesky.PostSelfLabels.operator !=(idunno.Bluesky.PostSelfLabels? left, idunno.Bluesky.PostSelfLabels? right) -> bool
 static idunno.Bluesky.PostSelfLabels.operator ==(idunno.Bluesky.PostSelfLabels? left, idunno.Bluesky.PostSelfLabels? right) -> bool
-static idunno.Bluesky.Record.Block.operator !=(idunno.Bluesky.Record.Block? left, idunno.Bluesky.Record.Block? right) -> bool
-static idunno.Bluesky.Record.Block.operator ==(idunno.Bluesky.Record.Block? left, idunno.Bluesky.Record.Block? right) -> bool
-static idunno.Bluesky.Record.BlueskyList.operator !=(idunno.Bluesky.Record.BlueskyList? left, idunno.Bluesky.Record.BlueskyList? right) -> bool
-static idunno.Bluesky.Record.BlueskyList.operator ==(idunno.Bluesky.Record.BlueskyList? left, idunno.Bluesky.Record.BlueskyList? right) -> bool
 static idunno.Bluesky.Record.BlueskyRecord.operator !=(idunno.Bluesky.Record.BlueskyRecord? left, idunno.Bluesky.Record.BlueskyRecord? right) -> bool
 static idunno.Bluesky.Record.BlueskyRecord.operator ==(idunno.Bluesky.Record.BlueskyRecord? left, idunno.Bluesky.Record.BlueskyRecord? right) -> bool
 static idunno.Bluesky.Record.BlueskyTimestampedRecord.operator !=(idunno.Bluesky.Record.BlueskyTimestampedRecord? left, idunno.Bluesky.Record.BlueskyTimestampedRecord? right) -> bool
 static idunno.Bluesky.Record.BlueskyTimestampedRecord.operator ==(idunno.Bluesky.Record.BlueskyTimestampedRecord? left, idunno.Bluesky.Record.BlueskyTimestampedRecord? right) -> bool
-static idunno.Bluesky.Record.FeedItem.operator !=(idunno.Bluesky.Record.FeedItem? left, idunno.Bluesky.Record.FeedItem? right) -> bool
-static idunno.Bluesky.Record.FeedItem.operator ==(idunno.Bluesky.Record.FeedItem? left, idunno.Bluesky.Record.FeedItem? right) -> bool
-static idunno.Bluesky.Record.Follow.operator !=(idunno.Bluesky.Record.Follow? left, idunno.Bluesky.Record.Follow? right) -> bool
-static idunno.Bluesky.Record.Follow.operator ==(idunno.Bluesky.Record.Follow? left, idunno.Bluesky.Record.Follow? right) -> bool
 static idunno.Bluesky.Record.LabelerDeclaration.operator !=(idunno.Bluesky.Record.LabelerDeclaration? left, idunno.Bluesky.Record.LabelerDeclaration? right) -> bool
 static idunno.Bluesky.Record.LabelerDeclaration.operator ==(idunno.Bluesky.Record.LabelerDeclaration? left, idunno.Bluesky.Record.LabelerDeclaration? right) -> bool
 static idunno.Bluesky.Record.Like.operator !=(idunno.Bluesky.Record.Like? left, idunno.Bluesky.Record.Like? right) -> bool
@@ -5168,12 +5057,8 @@ static idunno.Bluesky.Record.Profile.operator !=(idunno.Bluesky.Record.Profile? 
 static idunno.Bluesky.Record.Profile.operator ==(idunno.Bluesky.Record.Profile? left, idunno.Bluesky.Record.Profile? right) -> bool
 static idunno.Bluesky.Record.Repost.operator !=(idunno.Bluesky.Record.Repost? left, idunno.Bluesky.Record.Repost? right) -> bool
 static idunno.Bluesky.Record.Repost.operator ==(idunno.Bluesky.Record.Repost? left, idunno.Bluesky.Record.Repost? right) -> bool
-static idunno.Bluesky.Record.StarterPack.operator !=(idunno.Bluesky.Record.StarterPack? left, idunno.Bluesky.Record.StarterPack? right) -> bool
-static idunno.Bluesky.Record.StarterPack.operator ==(idunno.Bluesky.Record.StarterPack? left, idunno.Bluesky.Record.StarterPack? right) -> bool
 static idunno.Bluesky.Record.Status.operator !=(idunno.Bluesky.Record.Status? left, idunno.Bluesky.Record.Status? right) -> bool
 static idunno.Bluesky.Record.Status.operator ==(idunno.Bluesky.Record.Status? left, idunno.Bluesky.Record.Status? right) -> bool
-static idunno.Bluesky.Record.Verification.operator !=(idunno.Bluesky.Record.Verification? left, idunno.Bluesky.Record.Verification? right) -> bool
-static idunno.Bluesky.Record.Verification.operator ==(idunno.Bluesky.Record.Verification? left, idunno.Bluesky.Record.Verification? right) -> bool
 static idunno.Bluesky.ReplyReferences.operator !=(idunno.Bluesky.ReplyReferences? left, idunno.Bluesky.ReplyReferences? right) -> bool
 static idunno.Bluesky.ReplyReferences.operator ==(idunno.Bluesky.ReplyReferences? left, idunno.Bluesky.ReplyReferences? right) -> bool
 static idunno.Bluesky.RichText.ByteSlice.operator !=(idunno.Bluesky.RichText.ByteSlice? left, idunno.Bluesky.RichText.ByteSlice? right) -> bool
@@ -5509,22 +5394,12 @@ virtual idunno.Bluesky.Labeler.LabelerView.Equals(idunno.Bluesky.Labeler.Labeler
 virtual idunno.Bluesky.Labeler.LabelerView.PrintMembers(System.Text.StringBuilder! builder) -> bool
 virtual idunno.Bluesky.Notifications.Declaration.Equals(idunno.Bluesky.Notifications.Declaration? other) -> bool
 virtual idunno.Bluesky.Post.Equals(idunno.Bluesky.Post? other) -> bool
-virtual idunno.Bluesky.Record.Block.Equals(idunno.Bluesky.Record.Block? other) -> bool
-virtual idunno.Bluesky.Record.BlueskyList.Equals(idunno.Bluesky.Record.BlueskyList? other) -> bool
 virtual idunno.Bluesky.Record.BlueskyRecord.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
 virtual idunno.Bluesky.Record.BlueskyTimestampedRecord.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
-virtual idunno.Bluesky.Record.FeedItem.<Clone>$() -> idunno.Bluesky.Record.FeedItem!
-virtual idunno.Bluesky.Record.FeedItem.EqualityContract.get -> System.Type!
-virtual idunno.Bluesky.Record.FeedItem.Equals(idunno.Bluesky.Record.FeedItem? other) -> bool
-virtual idunno.Bluesky.Record.FeedItem.PrintMembers(System.Text.StringBuilder! builder) -> bool
-virtual idunno.Bluesky.Record.Follow.Equals(idunno.Bluesky.Record.Follow? other) -> bool
-virtual idunno.Bluesky.Record.LabelerDeclaration.Equals(idunno.Bluesky.Record.LabelerDeclaration? other) -> bool
 virtual idunno.Bluesky.Record.Like.Equals(idunno.Bluesky.Record.Like? other) -> bool
 virtual idunno.Bluesky.Record.Profile.Equals(idunno.Bluesky.Record.Profile? other) -> bool
 virtual idunno.Bluesky.Record.Repost.Equals(idunno.Bluesky.Record.Repost? other) -> bool
-virtual idunno.Bluesky.Record.StarterPack.Equals(idunno.Bluesky.Record.StarterPack? other) -> bool
 virtual idunno.Bluesky.Record.Status.Equals(idunno.Bluesky.Record.Status? other) -> bool
-virtual idunno.Bluesky.Record.Verification.Equals(idunno.Bluesky.Record.Verification? other) -> bool
 virtual idunno.Bluesky.RichText.Facet.<Clone>$() -> idunno.Bluesky.RichText.Facet!
 virtual idunno.Bluesky.RichText.Facet.EqualityContract.get -> System.Type!
 virtual idunno.Bluesky.RichText.Facet.Equals(idunno.Bluesky.RichText.Facet? other) -> bool

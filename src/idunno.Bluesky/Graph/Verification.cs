@@ -4,14 +4,16 @@
 using System.Text.Json.Serialization;
 
 using idunno.AtProto;
+using idunno.Bluesky.Record;
 
-namespace idunno.Bluesky.Record;
+namespace idunno.Bluesky.Graph;
 
 /// <summary>
 /// Encapsulates a verification record.
 /// </summary>
-[JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
-                 UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+[JsonPolymorphic(
+    IgnoreUnrecognizedTypeDiscriminators = true,
+    UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
 [JsonDerivedType(typeof(Verification), typeDiscriminator: RecordType.Verification)]
 public record Verification : BlueskyTimestampedRecord
 {

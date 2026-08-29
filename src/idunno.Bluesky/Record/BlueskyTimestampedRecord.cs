@@ -3,6 +3,8 @@
 
 using System.Text.Json.Serialization;
 
+using idunno.Bluesky.Graph;
+
 namespace idunno.Bluesky.Record;
 
 /// <summary>
@@ -17,8 +19,10 @@ namespace idunno.Bluesky.Record;
 [JsonDerivedType(typeof(Block), RecordType.Block)]
 [JsonDerivedType(typeof(StarterPack), RecordType.StarterPack)]
 [JsonDerivedType(typeof(Verification), RecordType.Verification)]
-[JsonDerivedType(typeof(BlueskyList), RecordType.List)]
-[JsonDerivedType(typeof(BlueskyListItem), RecordType.ListItem)]
+[JsonDerivedType(typeof(List), RecordType.List)]
+[JsonDerivedType(typeof(ListItem), RecordType.ListItem)]
+[JsonDerivedType(typeof(ReferenceListOptOut), RecordType.ReferenceListOptOut)]
+[JsonDerivedType(typeof(ListBlock), RecordType.ListBlock)]
 public record BlueskyTimestampedRecord : BlueskyRecord
 {
     /// <summary>

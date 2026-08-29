@@ -294,6 +294,11 @@ public static class CollectionNsid
     /// The NSID for an actor's chat declaration record.
     /// </summary>
     public static Nsid ChatDeclaration => new("chat.bsky.actor.declaration");
+
+    /// <summary>
+    /// The NSID for an actor's list blocks.
+    /// </summary>
+    public static Nsid ListBlock => new("app.bsky.graph.listblock");
 }
 
 /// <summary>
@@ -395,6 +400,16 @@ public static class RecordType
     /// Indicates a status record
     /// </summary>
     public const string Status = "app.bsky.actor.status";
+
+    /// <summary>
+    /// Indicates a request to opt out of a reference list.
+    /// </summary>
+    public const string ReferenceListOptOut = "app.bsky.graph.referencelistoptout";
+
+    /// <summary>
+    /// Indicates a record representing a block relationship against an entire an entire list of accounts (actors).
+    /// </summary>
+    public const string ListBlock = "app.graph.listblock";
 }
 
 /// <summary>
