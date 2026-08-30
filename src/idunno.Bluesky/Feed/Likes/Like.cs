@@ -2,21 +2,23 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
 
-namespace idunno.Bluesky.Feed;
+namespace idunno.Bluesky.Feed.Likes;
 
 /// <summary>
-/// Represents a like on a post, exposed through the <see cref="Likes"/> collection.
+/// Represents a like on a post, exposed through the <see cref="LikesCollection"/> collection.
 /// </summary>
 [DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed record LikesLike : AtProtoObject
+[SuppressMessage("Naming", "CA1716:Identifiers should not match keywords", Justification = "Matches the Bluesky lexicon. As a record it's hardly likely to be mistaken for the keyword.")]
+public sealed record Like : AtProtoObject
 {
     [JsonConstructor]
-    internal LikesLike(DateTimeOffset createdAt, ProfileView actor)
+    internal Like(DateTimeOffset createdAt, ProfileView actor)
     {
         CreatedAt = createdAt;
         Actor = actor;

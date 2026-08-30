@@ -235,7 +235,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> is <see langword="null"/>.</exception>
-    public async Task<AtProtoHttpResult<Likes>> GetLikes(
+    public async Task<AtProtoHttpResult<LikesCollection>> GetLikes(
         AtUri uri,
         Cid? cid = null,
         int? limit = null,
