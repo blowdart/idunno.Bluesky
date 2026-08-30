@@ -1381,7 +1381,7 @@ public partial class BlueskyAgent
         ArgumentNullException.ThrowIfNull(strongReference.Uri.Collection);
         ArgumentOutOfRangeException.ThrowIfNotEqual(strongReference.Uri.Collection, CollectionNsid.Post);
 
-        Record.Like likeRecord = new(strongReference);
+        Feed.Like likeRecord = new(strongReference);
 
         // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
         return await Like(likeRecord, cancellationToken).ConfigureAwait(false);
@@ -1466,7 +1466,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        Record.Like likeRecord;
+        Feed.Like likeRecord;
 
         if (post.Reason is ReasonRepost postReason)
         {
@@ -1492,7 +1492,7 @@ public partial class BlueskyAgent
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to CreateRecord().")]
-    private async Task<AtProtoHttpResult<CreateRecordResult>> Like(Record.Like likeRecord, CancellationToken cancellationToken = default)
+    private async Task<AtProtoHttpResult<CreateRecordResult>> Like(Feed.Like likeRecord, CancellationToken cancellationToken = default)
     {
         // We use the BlueskyTimestampedRecordValue class as the generic so the type discriminator appears in the serialized output.
         return await CreateRecord<BlueskyTimestampedRecord>(

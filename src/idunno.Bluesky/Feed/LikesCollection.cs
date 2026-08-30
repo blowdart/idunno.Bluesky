@@ -3,22 +3,21 @@
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
-using idunno.Bluesky.Feed.Likes;
 
 namespace idunno.Bluesky.Feed;
 
 /// <summary>
 /// A <see cref="PagedReadOnlyCollection{T}"/> of <see cref="Like"/>s for a post.
 /// </summary>
-public sealed class LikesCollection : PagedReadOnlyCollection<Like>
+public sealed class LikesCollection : PagedReadOnlyCollection<Likes.Like>
 {
-    internal LikesCollection(AtUri uri, Cid? cid, IList<Like> list, string? cursor = null) : base(list, cursor)
+    internal LikesCollection(AtUri uri, Cid? cid, IList<Likes.Like> list, string? cursor = null) : base(list, cursor)
     {
         Uri = uri;
         Cid = cid;
     }
 
-    internal LikesCollection(AtUri uri, Cid? cid, IEnumerable<Like> collection, string? cursor = null) : this(uri, cid, [.. collection], cursor)
+    internal LikesCollection(AtUri uri, Cid? cid, IEnumerable<Likes.Like> collection, string? cursor = null) : this(uri, cid, [.. collection], cursor)
     {
     }
 

@@ -24,6 +24,7 @@ public sealed record ListItemView : View
     /// <param name="subject">A <see cref="ProfileView"/> of the actor the list item refers to.</param>
     /// <param name="subjectOptedOut">A flag indicating the subject has opted out of appearing in the reference list.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/> or <paramref name="subject"/> are <see langword="null"/>.</exception>
+    [JsonConstructor]
     internal ListItemView(AtUri uri, ProfileView subject, bool? subjectOptedOut)
     {
         ArgumentNullException.ThrowIfNull(uri);

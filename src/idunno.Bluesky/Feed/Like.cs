@@ -5,8 +5,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto.Repo;
+using idunno.Bluesky.Record;
 
-namespace idunno.Bluesky.Record;
+namespace idunno.Bluesky.Feed;
 
 /// <summary>
 /// Encapsulates the information needed to create a like record.
@@ -21,8 +22,16 @@ public record Like : BlueskyTimestampedRecord
     /// Creates a new instance of <see cref="Like"/> with <see cref="BlueskyTimestampedRecord.CreatedAt"/> set to the current date and time.
     /// </summary>
     /// <param name="subject">The <see cref="StrongReference"/> to the post to be liked.</param>
+    public Like(StrongReference subject) : this(subject, DateTimeOffset.UtcNow, null)
+    {
+    }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="Like"/> with <see cref="BlueskyTimestampedRecord.CreatedAt"/> set to the current date and time.
+    /// </summary>
+    /// <param name="subject">The <see cref="StrongReference"/> to the post to be liked.</param>
     /// <param name="via">An optional <see cref="StrongReference"/> to a repost record, if the like is of a repost.</param>
-    public Like(StrongReference subject, StrongReference? via = null) : this(subject, DateTimeOffset.UtcNow, via)
+    public Like(StrongReference subject, StrongReference? via) : this(subject, DateTimeOffset.UtcNow, via)
     {
     }
 
@@ -33,7 +42,7 @@ public record Like : BlueskyTimestampedRecord
     /// <param name="createdAt">The <see cref="DateTimeOffset"/> for the repost creation date.</param>
     /// <param name="via">An optional <see cref="StrongReference"/> to a repost record, if the like is of a repost.</param>
     [JsonConstructor]
-    public Like(StrongReference subject, DateTimeOffset createdAt, StrongReference? via = null) : base(createdAt)
+    public Like(StrongReference subject, DateTimeOffset createdAt, StrongReference? via) : base(createdAt)
     {
         Subject = subject;
         Via = via;

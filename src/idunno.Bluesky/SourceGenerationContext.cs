@@ -38,8 +38,6 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(AtProtoRepositoryRecord<Record.Profile>), TypeInfoPropertyName = "AtProtoRepositoryRecordProfile")]
 [JsonSerializable(typeof(AtProto.Labels.SelfLabels), TypeInfoPropertyName = "AtProtoLabelsSelfLabels")]
 [JsonSerializable(typeof(AtProto.Labels.SelfLabel), TypeInfoPropertyName = "AtProtoLabelsSelfLabel")]
-[JsonSerializable(typeof(Record.Like), TypeInfoPropertyName = "RecordLike")]
-[JsonSerializable(typeof(AtProtoRepositoryRecord<Record.Like>), TypeInfoPropertyName = "AtProtoRepositoryRecordRecordLike")]
 [JsonSerializable(typeof(Record.Repost), TypeInfoPropertyName = "Repost")]
 [JsonSerializable(typeof(AtProtoRepositoryRecord<Record.Repost>), TypeInfoPropertyName = "AtProtoRepositoryRecordRepost")]
 [JsonSerializable(typeof(Record.Status), TypeInfoPropertyName = "Status")]
@@ -253,6 +251,9 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(GeneratorView))]
 [JsonSerializable(typeof(GeneratorViewerState))]
 
+[JsonSerializable(typeof(Feed.KnownLikers), TypeInfoPropertyName = "FeedKnownLikers")]
+[JsonSerializable(typeof(Feed.Like), TypeInfoPropertyName = "FeedLike")]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<Feed.Like>), TypeInfoPropertyName = "AtProtoRepositoryRecordFeedLike")]
 [JsonSerializable(typeof(Feed.LikesCollection), TypeInfoPropertyName = "FeedLikesCollection")]
 [JsonSerializable(typeof(Feed.Likes.Like), TypeInfoPropertyName = "FeedLikesLike")]
 [JsonSerializable(typeof(Feed.NotFoundPost), TypeInfoPropertyName = "FeedNotFoundPost")]
@@ -273,7 +274,6 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Feed.ThreadGateView), TypeInfoPropertyName = "FeedThreadGateView")]
 [JsonSerializable(typeof(Feed.ThreadViewPost), TypeInfoPropertyName = "FeedThreadViewPost")]
 [JsonSerializable(typeof(Feed.Timeline), TypeInfoPropertyName = "FeedTimeline")]
-[JsonSerializable(typeof(Feed.KnownLikers), TypeInfoPropertyName = "FeedKnownLikers")]
 
 [JsonSerializable(typeof(Graph.Block), TypeInfoPropertyName = "GraphBlock")]
 [JsonSerializable(typeof(AtProtoRepositoryRecord<Graph.Block>), TypeInfoPropertyName = "GraphBlockRecord")]

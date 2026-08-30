@@ -30,7 +30,8 @@
 * `BlueskyAgent.UnmuteModeList` spelling has been corrected to `BlueskyAgent.UnmuteModList`.
 * `ListViewerState` has been converted to a C# Record and now has all it's properties as nullable, to match the lexicon.
 * `Feed.Likes` has been renamed to `LikesCollection` to better reflect its purpose.
-* `Feed.Like` has been moved to the `Feed.Likes` namespace, as it is only a component in the `LikesCollection` collection.
+* `Feed.Like` has been moved to its own `Feed.Likes` namespace, as it is only a component in the `LikesCollection` collection.
+* `Record.Like` has been moved to `Feed.Like` to match the lexicon definition.
 
 ## 5.0.0 - 2026-08-24
 

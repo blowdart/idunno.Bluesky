@@ -15,7 +15,7 @@ namespace idunno.Bluesky.Record;
 [JsonDerivedType(typeof(Post), RecordType.Post)]
 [JsonDerivedType(typeof(Follow), RecordType.Follow)]
 [JsonDerivedType(typeof(Repost), RecordType.Repost)]
-[JsonDerivedType(typeof(Like), RecordType.Like)]
+[JsonDerivedType(typeof(Feed.Like), RecordType.Like)]
 [JsonDerivedType(typeof(Block), RecordType.Block)]
 [JsonDerivedType(typeof(StarterPack), RecordType.StarterPack)]
 [JsonDerivedType(typeof(Verification), RecordType.Verification)]

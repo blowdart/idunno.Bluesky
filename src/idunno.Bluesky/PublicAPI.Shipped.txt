@@ -2592,14 +2592,6 @@ idunno.Bluesky.Record.LabelerDeclaration.SubjectCollections.get -> System.Collec
 idunno.Bluesky.Record.LabelerDeclaration.SubjectCollections.init -> void
 idunno.Bluesky.Record.LabelerDeclaration.SubjectTypes.get -> System.Collections.Generic.ICollection<string!>?
 idunno.Bluesky.Record.LabelerDeclaration.SubjectTypes.init -> void
-idunno.Bluesky.Record.Like
-idunno.Bluesky.Record.Like.Like(idunno.AtProto.Repo.StrongReference! subject, idunno.AtProto.Repo.StrongReference? via = null) -> void
-idunno.Bluesky.Record.Like.Like(idunno.AtProto.Repo.StrongReference! subject, System.DateTimeOffset createdAt, idunno.AtProto.Repo.StrongReference? via = null) -> void
-idunno.Bluesky.Record.Like.Like(idunno.Bluesky.Record.Like! original) -> void
-idunno.Bluesky.Record.Like.Subject.get -> idunno.AtProto.Repo.StrongReference!
-idunno.Bluesky.Record.Like.Subject.init -> void
-idunno.Bluesky.Record.Like.Via.get -> idunno.AtProto.Repo.StrongReference?
-idunno.Bluesky.Record.Like.Via.init -> void
 idunno.Bluesky.Record.Profile
 idunno.Bluesky.Record.Profile.Avatar.get -> idunno.AtProto.Blob?
 idunno.Bluesky.Record.Profile.Avatar.set -> void
@@ -3940,12 +3932,6 @@ override idunno.Bluesky.Record.LabelerDeclaration.Equals(object? obj) -> bool
 override idunno.Bluesky.Record.LabelerDeclaration.GetHashCode() -> int
 override idunno.Bluesky.Record.LabelerDeclaration.PrintMembers(System.Text.StringBuilder! builder) -> bool
 override idunno.Bluesky.Record.LabelerDeclaration.ToString() -> string!
-override idunno.Bluesky.Record.Like.<Clone>$() -> idunno.Bluesky.Record.Like!
-override idunno.Bluesky.Record.Like.EqualityContract.get -> System.Type!
-override idunno.Bluesky.Record.Like.Equals(object? obj) -> bool
-override idunno.Bluesky.Record.Like.GetHashCode() -> int
-override idunno.Bluesky.Record.Like.PrintMembers(System.Text.StringBuilder! builder) -> bool
-override idunno.Bluesky.Record.Like.ToString() -> string!
 override idunno.Bluesky.Record.Profile.<Clone>$() -> idunno.Bluesky.Record.Profile!
 override idunno.Bluesky.Record.Profile.EqualityContract.get -> System.Type!
 override idunno.Bluesky.Record.Profile.Equals(object? obj) -> bool
@@ -4216,7 +4202,6 @@ override sealed idunno.Bluesky.Post.Equals(idunno.Bluesky.Record.BlueskyTimestam
 override sealed idunno.Bluesky.Record.BlueskyRecord.Equals(idunno.AtProto.Repo.AtProtoRecord? other) -> bool
 override sealed idunno.Bluesky.Record.BlueskyTimestampedRecord.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
 override sealed idunno.Bluesky.Record.LabelerDeclaration.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
-override sealed idunno.Bluesky.Record.Like.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
 override sealed idunno.Bluesky.Record.Profile.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
 override sealed idunno.Bluesky.Record.Repost.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
 override sealed idunno.Bluesky.Record.Status.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
@@ -5022,8 +5007,6 @@ static idunno.Bluesky.Record.BlueskyTimestampedRecord.operator !=(idunno.Bluesky
 static idunno.Bluesky.Record.BlueskyTimestampedRecord.operator ==(idunno.Bluesky.Record.BlueskyTimestampedRecord? left, idunno.Bluesky.Record.BlueskyTimestampedRecord? right) -> bool
 static idunno.Bluesky.Record.LabelerDeclaration.operator !=(idunno.Bluesky.Record.LabelerDeclaration? left, idunno.Bluesky.Record.LabelerDeclaration? right) -> bool
 static idunno.Bluesky.Record.LabelerDeclaration.operator ==(idunno.Bluesky.Record.LabelerDeclaration? left, idunno.Bluesky.Record.LabelerDeclaration? right) -> bool
-static idunno.Bluesky.Record.Like.operator !=(idunno.Bluesky.Record.Like? left, idunno.Bluesky.Record.Like? right) -> bool
-static idunno.Bluesky.Record.Like.operator ==(idunno.Bluesky.Record.Like? left, idunno.Bluesky.Record.Like? right) -> bool
 static idunno.Bluesky.Record.Profile.operator !=(idunno.Bluesky.Record.Profile? left, idunno.Bluesky.Record.Profile? right) -> bool
 static idunno.Bluesky.Record.Profile.operator ==(idunno.Bluesky.Record.Profile? left, idunno.Bluesky.Record.Profile? right) -> bool
 static idunno.Bluesky.Record.Repost.operator !=(idunno.Bluesky.Record.Repost? left, idunno.Bluesky.Record.Repost? right) -> bool
@@ -5367,7 +5350,6 @@ virtual idunno.Bluesky.Notifications.Declaration.Equals(idunno.Bluesky.Notificat
 virtual idunno.Bluesky.Post.Equals(idunno.Bluesky.Post? other) -> bool
 virtual idunno.Bluesky.Record.BlueskyRecord.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
 virtual idunno.Bluesky.Record.BlueskyTimestampedRecord.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
-virtual idunno.Bluesky.Record.Like.Equals(idunno.Bluesky.Record.Like? other) -> bool
 virtual idunno.Bluesky.Record.Profile.Equals(idunno.Bluesky.Record.Profile? other) -> bool
 virtual idunno.Bluesky.Record.Repost.Equals(idunno.Bluesky.Record.Repost? other) -> bool
 virtual idunno.Bluesky.Record.Status.Equals(idunno.Bluesky.Record.Status? other) -> bool
