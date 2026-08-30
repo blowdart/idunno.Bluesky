@@ -3,6 +3,7 @@
 
 using System.Text.Json.Serialization;
 
+using idunno.Bluesky.Feed;
 using idunno.Bluesky.Graph;
 
 namespace idunno.Bluesky.Record;

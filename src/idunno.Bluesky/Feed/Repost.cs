@@ -4,8 +4,9 @@
 using System.Text.Json.Serialization;
 
 using idunno.AtProto.Repo;
+using idunno.Bluesky.Record;
 
-namespace idunno.Bluesky.Record;
+namespace idunno.Bluesky.Feed;
 
 /// <summary>
 /// Encapsulates the information needed to create a repost record.
@@ -16,11 +17,10 @@ namespace idunno.Bluesky.Record;
 public record Repost : BlueskyTimestampedRecord
 {
     /// <summary>
-    /// Creates a new instance of <see cref="Repost"/> with<see cref = "BlueskyTimestampedRecord.CreatedAt" /> set to the current date and time.
+    /// Creates a new instance of <see cref="Repost"/>, with<see cref = "BlueskyTimestampedRecord.CreatedAt" /> set to the current date and time.
     /// </summary>
     /// <param name="subject">The <see cref="StrongReference"/> to the post to be reposted.</param>
-    /// <param name="via">An optional <see cref="StrongReference"/> to a repost record, if the repost is of a repost.</param>
-    public Repost(StrongReference subject, StrongReference? via = null) : this(subject, DateTimeOffset.UtcNow, via)
+    public Repost(StrongReference subject)  : this(subject, via: null)
     {
     }
 
@@ -29,9 +29,28 @@ public record Repost : BlueskyTimestampedRecord
     /// </summary>
     /// <param name="subject">The <see cref="StrongReference"/> to the post to be reposted.</param>
     /// <param name="createdAt">The <see cref="DateTimeOffset"/> for the repost creation date.</param>
-    /// <param name="via">An optional <see cref="StrongReference"/> to a repost record, if the repost is of a repost.</param>
+    public Repost(StrongReference subject, DateTimeOffset createdAt) : this(subject, createdAt, via: null)
+    {
+    }
+
+
+    /// <summary>
+    /// Creates a new instance of <see cref="Repost"/>, with<see cref = "BlueskyTimestampedRecord.CreatedAt" /> set to the current date and time.
+    /// </summary>
+    /// <param name="subject">The <see cref="StrongReference"/> to the post to be reposted.</param>
+    /// <param name="via">A <see cref="StrongReference"/> to a repost record, if the repost is of a repost.</param>
+    public Repost(StrongReference subject, StrongReference? via) : this(subject, DateTimeOffset.UtcNow, via)
+    {
+    }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="Repost"/>.
+    /// </summary>
+    /// <param name="subject">The <see cref="StrongReference"/> to the post to be reposted.</param>
+    /// <param name="createdAt">The <see cref="DateTimeOffset"/> for the repost creation date.</param>
+    /// <param name="via">A <see cref="StrongReference"/> to a repost record, if the repost is of a repost.</param>
     [JsonConstructor]
-    public Repost(StrongReference subject, DateTimeOffset createdAt, StrongReference? via = null) : base(createdAt)
+    public Repost(StrongReference subject, DateTimeOffset createdAt, StrongReference? via) : base(createdAt)
     {
         Subject = subject;
         Via = via;

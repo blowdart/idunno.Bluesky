@@ -32,6 +32,7 @@
 * `Feed.Likes` has been renamed to `LikesCollection` to better reflect its purpose.
 * `Feed.Like` has been moved to its own `Feed.Likes` namespace, as it is only a component in the `LikesCollection` collection.
 * `Record.Like` has been moved to `Feed.Like` to match the lexicon definition.
+* `Record.Repost` has been moved to `Feed.Repost` to match the lexicon definition.
 
 ## 5.0.0 - 2026-08-24
 

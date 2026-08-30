@@ -64,7 +64,6 @@ const idunno.Bluesky.RecordType.Post = "app.bsky.feed.post" -> string!
 const idunno.Bluesky.RecordType.PostGate = "app.bsky.feed.postgate" -> string!
 const idunno.Bluesky.RecordType.PostView = "app.bsky.feed.defs#postView" -> string!
 const idunno.Bluesky.RecordType.Profile = "app.bsky.actor.profile" -> string!
-const idunno.Bluesky.RecordType.Repost = "app.bsky.feed.repost" -> string!
 const idunno.Bluesky.RecordType.StarterPack = "app.bsky.graph.starterpack" -> string!
 const idunno.Bluesky.RecordType.Status = "app.bsky.actor.status" -> string!
 const idunno.Bluesky.RecordType.ThreadGate = "app.bsky.feed.threadgate" -> string!
@@ -2621,14 +2620,6 @@ idunno.Bluesky.Record.Profile.Pronouns.get -> string?
 idunno.Bluesky.Record.Profile.Pronouns.set -> void
 idunno.Bluesky.Record.Profile.Website.get -> System.Uri?
 idunno.Bluesky.Record.Profile.Website.set -> void
-idunno.Bluesky.Record.Repost
-idunno.Bluesky.Record.Repost.Repost(idunno.AtProto.Repo.StrongReference! subject, idunno.AtProto.Repo.StrongReference? via = null) -> void
-idunno.Bluesky.Record.Repost.Repost(idunno.AtProto.Repo.StrongReference! subject, System.DateTimeOffset createdAt, idunno.AtProto.Repo.StrongReference? via = null) -> void
-idunno.Bluesky.Record.Repost.Repost(idunno.Bluesky.Record.Repost! original) -> void
-idunno.Bluesky.Record.Repost.Subject.get -> idunno.AtProto.Repo.StrongReference!
-idunno.Bluesky.Record.Repost.Subject.init -> void
-idunno.Bluesky.Record.Repost.Via.get -> idunno.AtProto.Repo.StrongReference?
-idunno.Bluesky.Record.Repost.Via.init -> void
 idunno.Bluesky.Record.Status
 idunno.Bluesky.Record.Status.AccountStatus.get -> string!
 idunno.Bluesky.Record.Status.AccountStatus.set -> void
@@ -3938,12 +3929,6 @@ override idunno.Bluesky.Record.Profile.Equals(object? obj) -> bool
 override idunno.Bluesky.Record.Profile.GetHashCode() -> int
 override idunno.Bluesky.Record.Profile.PrintMembers(System.Text.StringBuilder! builder) -> bool
 override idunno.Bluesky.Record.Profile.ToString() -> string!
-override idunno.Bluesky.Record.Repost.<Clone>$() -> idunno.Bluesky.Record.Repost!
-override idunno.Bluesky.Record.Repost.EqualityContract.get -> System.Type!
-override idunno.Bluesky.Record.Repost.Equals(object? obj) -> bool
-override idunno.Bluesky.Record.Repost.GetHashCode() -> int
-override idunno.Bluesky.Record.Repost.PrintMembers(System.Text.StringBuilder! builder) -> bool
-override idunno.Bluesky.Record.Repost.ToString() -> string!
 override idunno.Bluesky.Record.Status.<Clone>$() -> idunno.Bluesky.Record.Status!
 override idunno.Bluesky.Record.Status.EqualityContract.get -> System.Type!
 override idunno.Bluesky.Record.Status.Equals(object? obj) -> bool
@@ -4203,7 +4188,6 @@ override sealed idunno.Bluesky.Record.BlueskyRecord.Equals(idunno.AtProto.Repo.A
 override sealed idunno.Bluesky.Record.BlueskyTimestampedRecord.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
 override sealed idunno.Bluesky.Record.LabelerDeclaration.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
 override sealed idunno.Bluesky.Record.Profile.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
-override sealed idunno.Bluesky.Record.Repost.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
 override sealed idunno.Bluesky.Record.Status.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
 override sealed idunno.Bluesky.RichText.HashTag.Equals(idunno.Bluesky.RichText.PostBuilderFacetFeature? other) -> bool
 override sealed idunno.Bluesky.RichText.Link.Equals(idunno.Bluesky.RichText.PostBuilderFacetFeature? other) -> bool
@@ -5009,8 +4993,6 @@ static idunno.Bluesky.Record.LabelerDeclaration.operator !=(idunno.Bluesky.Recor
 static idunno.Bluesky.Record.LabelerDeclaration.operator ==(idunno.Bluesky.Record.LabelerDeclaration? left, idunno.Bluesky.Record.LabelerDeclaration? right) -> bool
 static idunno.Bluesky.Record.Profile.operator !=(idunno.Bluesky.Record.Profile? left, idunno.Bluesky.Record.Profile? right) -> bool
 static idunno.Bluesky.Record.Profile.operator ==(idunno.Bluesky.Record.Profile? left, idunno.Bluesky.Record.Profile? right) -> bool
-static idunno.Bluesky.Record.Repost.operator !=(idunno.Bluesky.Record.Repost? left, idunno.Bluesky.Record.Repost? right) -> bool
-static idunno.Bluesky.Record.Repost.operator ==(idunno.Bluesky.Record.Repost? left, idunno.Bluesky.Record.Repost? right) -> bool
 static idunno.Bluesky.Record.Status.operator !=(idunno.Bluesky.Record.Status? left, idunno.Bluesky.Record.Status? right) -> bool
 static idunno.Bluesky.Record.Status.operator ==(idunno.Bluesky.Record.Status? left, idunno.Bluesky.Record.Status? right) -> bool
 static idunno.Bluesky.ReplyReferences.operator !=(idunno.Bluesky.ReplyReferences? left, idunno.Bluesky.ReplyReferences? right) -> bool
@@ -5351,7 +5333,6 @@ virtual idunno.Bluesky.Post.Equals(idunno.Bluesky.Post? other) -> bool
 virtual idunno.Bluesky.Record.BlueskyRecord.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
 virtual idunno.Bluesky.Record.BlueskyTimestampedRecord.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
 virtual idunno.Bluesky.Record.Profile.Equals(idunno.Bluesky.Record.Profile? other) -> bool
-virtual idunno.Bluesky.Record.Repost.Equals(idunno.Bluesky.Record.Repost? other) -> bool
 virtual idunno.Bluesky.Record.Status.Equals(idunno.Bluesky.Record.Status? other) -> bool
 virtual idunno.Bluesky.RichText.Facet.<Clone>$() -> idunno.Bluesky.RichText.Facet!
 virtual idunno.Bluesky.RichText.Facet.EqualityContract.get -> System.Type!
