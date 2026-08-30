@@ -17,7 +17,6 @@ using idunno.Bluesky.Feed.Model;
 using idunno.Bluesky.Labeler;
 using idunno.Bluesky.Labeler.Model;
 using idunno.Bluesky.Notifications;
-using idunno.Bluesky.Record;
 using idunno.Bluesky.RichText;
 
 namespace idunno.Bluesky;
@@ -33,20 +32,20 @@ namespace idunno.Bluesky;
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     WriteIndented = false)]
 
-[JsonSerializable(typeof(BlueskyRecord))]
-[JsonSerializable(typeof(BlueskyTimestampedRecord))]
-[JsonSerializable(typeof(Profile))]
-[JsonSerializable(typeof(AtProtoRepositoryRecord<Profile>))]
+[JsonSerializable(typeof(Record.BlueskyRecord), TypeInfoPropertyName = "RecordBlueskyRecord")]
+[JsonSerializable(typeof(Record.BlueskyTimestampedRecord), TypeInfoPropertyName = "RecordBlueskyTimestampedRecord")]
+[JsonSerializable(typeof(Record.Profile), TypeInfoPropertyName = "Profile")]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<Record.Profile>), TypeInfoPropertyName = "AtProtoRepositoryRecordProfile")]
 [JsonSerializable(typeof(AtProto.Labels.SelfLabels), TypeInfoPropertyName = "AtProtoLabelsSelfLabels")]
 [JsonSerializable(typeof(AtProto.Labels.SelfLabel), TypeInfoPropertyName = "AtProtoLabelsSelfLabel")]
-[JsonSerializable(typeof(Record.Like))]
-[JsonSerializable(typeof(AtProtoRepositoryRecord<Record.Like>))]
-[JsonSerializable(typeof(Repost))]
-[JsonSerializable(typeof(AtProtoRepositoryRecord<Repost>))]
-[JsonSerializable(typeof(Status))]
-[JsonSerializable(typeof(AtProtoRepositoryRecord<Status>))]
-[JsonSerializable(typeof(LabelerDeclaration))]
-[JsonSerializable(typeof(AtProtoRepositoryRecord<LabelerDeclaration>))]
+[JsonSerializable(typeof(Record.Like), TypeInfoPropertyName = "RecordLike")]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<Record.Like>), TypeInfoPropertyName = "AtProtoRepositoryRecordRecordLike")]
+[JsonSerializable(typeof(Record.Repost), TypeInfoPropertyName = "Repost")]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<Record.Repost>), TypeInfoPropertyName = "AtProtoRepositoryRecordRepost")]
+[JsonSerializable(typeof(Record.Status), TypeInfoPropertyName = "Status")]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<Record.Status>), TypeInfoPropertyName = "AtProtoRepositoryRecordStatus")]
+[JsonSerializable(typeof(Record.LabelerDeclaration), TypeInfoPropertyName = "LabelerDeclaration")]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<Record.LabelerDeclaration>), TypeInfoPropertyName = "AtProtoRepositoryRecordLabelerDeclaration")]
 
 [JsonSerializable(typeof(Actor.Model.GetPreferencesResponse), TypeInfoPropertyName = "ActorGetPreferencesResponse")]
 [JsonSerializable(typeof(Actor.Model.GetProfilesResponse), TypeInfoPropertyName = "ActorGetProfilesResponse")]
@@ -253,8 +252,8 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(FeedViewPost))]
 [JsonSerializable(typeof(GeneratorView))]
 [JsonSerializable(typeof(GeneratorViewerState))]
-[JsonSerializable(typeof(Feed.Like), TypeInfoPropertyName = "FeedLike")]
-[JsonSerializable(typeof(Likes))]
+[JsonSerializable(typeof(Feed.LikesLike), TypeInfoPropertyName = "FeedLikesLike")]
+[JsonSerializable(typeof(Feed.Likes), TypeInfoPropertyName = "FeedLikes")]
 [JsonSerializable(typeof(NotFoundPost))]
 [JsonSerializable(typeof(PostThread))]
 [JsonSerializable(typeof(PostView))]

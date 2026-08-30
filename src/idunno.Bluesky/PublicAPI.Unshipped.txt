@@ -27,6 +27,14 @@ idunno.Bluesky.BlueskyAgent.UpdateList(idunno.AtProto.AtUri! uri, idunno.Bluesky
 idunno.Bluesky.BlueskyAgent.UpdateList(idunno.AtProto.AtUri! uri, idunno.Bluesky.Graph.List! list, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.UpdateList(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Graph.List!>! list) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.UpdateList(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Graph.List!>! list, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.Feed.LikesLike
+idunno.Bluesky.Feed.LikesLike.Actor.get -> idunno.Bluesky.Actor.ProfileView!
+idunno.Bluesky.Feed.LikesLike.Actor.init -> void
+idunno.Bluesky.Feed.LikesLike.CreatedAt.get -> System.DateTimeOffset
+idunno.Bluesky.Feed.LikesLike.CreatedAt.init -> void
+idunno.Bluesky.Feed.LikesLike.Equals(idunno.Bluesky.Feed.LikesLike? other) -> bool
+idunno.Bluesky.Feed.LikesLike.IndexedAt.get -> System.DateTimeOffset
+idunno.Bluesky.Feed.LikesLike.IndexedAt.init -> void
 idunno.Bluesky.Graph.Block
 idunno.Bluesky.Graph.Block.Block(idunno.AtProto.Did! subject) -> void
 idunno.Bluesky.Graph.Block.Block(idunno.AtProto.Did! subject, System.DateTimeOffset createdAt) -> void
@@ -112,6 +120,10 @@ idunno.Bluesky.Graph.Verification.Subject.get -> idunno.AtProto.Did!
 idunno.Bluesky.Graph.Verification.Subject.init -> void
 idunno.Bluesky.Graph.Verification.Verification(idunno.AtProto.Handle! handle, idunno.AtProto.Did! subject, System.DateTimeOffset createdAt, string! displayName) -> void
 idunno.Bluesky.Graph.Verification.Verification(idunno.Bluesky.Graph.Verification! original) -> void
+override idunno.Bluesky.Feed.LikesLike.<Clone>$() -> idunno.Bluesky.Feed.LikesLike!
+override idunno.Bluesky.Feed.LikesLike.Equals(object? obj) -> bool
+override idunno.Bluesky.Feed.LikesLike.GetHashCode() -> int
+override idunno.Bluesky.Feed.LikesLike.ToString() -> string!
 override idunno.Bluesky.Graph.Block.<Clone>$() -> idunno.Bluesky.Graph.Block!
 override idunno.Bluesky.Graph.Block.EqualityContract.get -> System.Type!
 override idunno.Bluesky.Graph.Block.Equals(object? obj) -> bool
@@ -160,6 +172,7 @@ override idunno.Bluesky.Graph.Verification.Equals(object? obj) -> bool
 override idunno.Bluesky.Graph.Verification.GetHashCode() -> int
 override idunno.Bluesky.Graph.Verification.PrintMembers(System.Text.StringBuilder! builder) -> bool
 override idunno.Bluesky.Graph.Verification.ToString() -> string!
+override sealed idunno.Bluesky.Feed.LikesLike.Equals(idunno.AtProto.Repo.AtProtoObject? other) -> bool
 override sealed idunno.Bluesky.Graph.Block.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
 override sealed idunno.Bluesky.Graph.Follow.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
 override sealed idunno.Bluesky.Graph.List.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
@@ -169,6 +182,8 @@ override sealed idunno.Bluesky.Graph.StarterPack.Equals(idunno.Bluesky.Record.Bl
 override sealed idunno.Bluesky.Graph.Verification.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
 static idunno.Bluesky.CollectionNsid.ListBlock.get -> idunno.AtProto.Nsid!
 static idunno.Bluesky.CollectionNsid.ReferenceListOptOut.get -> idunno.AtProto.Nsid!
+static idunno.Bluesky.Feed.LikesLike.operator !=(idunno.Bluesky.Feed.LikesLike? left, idunno.Bluesky.Feed.LikesLike? right) -> bool
+static idunno.Bluesky.Feed.LikesLike.operator ==(idunno.Bluesky.Feed.LikesLike? left, idunno.Bluesky.Feed.LikesLike? right) -> bool
 static idunno.Bluesky.Graph.Block.operator !=(idunno.Bluesky.Graph.Block? left, idunno.Bluesky.Graph.Block? right) -> bool
 static idunno.Bluesky.Graph.Block.operator ==(idunno.Bluesky.Graph.Block? left, idunno.Bluesky.Graph.Block? right) -> bool
 static idunno.Bluesky.Graph.FeedItem.operator !=(idunno.Bluesky.Graph.FeedItem? left, idunno.Bluesky.Graph.FeedItem? right) -> bool

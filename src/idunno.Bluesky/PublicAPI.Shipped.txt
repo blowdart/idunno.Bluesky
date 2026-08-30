@@ -1889,14 +1889,6 @@ idunno.Bluesky.Feed.KnownLikers.Count.init -> void
 idunno.Bluesky.Feed.KnownLikers.Deconstruct(out int Count, out System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Actor.ProfileViewBasic!>! Actors) -> void
 idunno.Bluesky.Feed.KnownLikers.Equals(idunno.Bluesky.Feed.KnownLikers? other) -> bool
 idunno.Bluesky.Feed.KnownLikers.KnownLikers(int Count, System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Actor.ProfileViewBasic!>! Actors) -> void
-idunno.Bluesky.Feed.Like
-idunno.Bluesky.Feed.Like.Actor.get -> idunno.Bluesky.Actor.ProfileView!
-idunno.Bluesky.Feed.Like.Actor.init -> void
-idunno.Bluesky.Feed.Like.CreatedAt.get -> System.DateTimeOffset
-idunno.Bluesky.Feed.Like.CreatedAt.init -> void
-idunno.Bluesky.Feed.Like.Equals(idunno.Bluesky.Feed.Like? other) -> bool
-idunno.Bluesky.Feed.Like.IndexedAt.get -> System.DateTimeOffset
-idunno.Bluesky.Feed.Like.IndexedAt.init -> void
 idunno.Bluesky.Feed.Likes
 idunno.Bluesky.Feed.Likes.Cid.get -> idunno.AtProto.Cid?
 idunno.Bluesky.Feed.Likes.Cid.init -> void
@@ -2071,7 +2063,6 @@ idunno.Bluesky.Graph.Follows.Subject.get -> idunno.Bluesky.Actor.ProfileView?
 idunno.Bluesky.Graph.Follows.Subject.init -> void
 idunno.Bluesky.Graph.ListItemView
 idunno.Bluesky.Graph.ListItemView.Equals(idunno.Bluesky.Graph.ListItemView? other) -> bool
-idunno.Bluesky.Graph.ListItemView.ListItemView(idunno.AtProto.AtUri! uri, idunno.Bluesky.Actor.ProfileView! subject) -> void
 idunno.Bluesky.Graph.ListItemView.Subject.get -> idunno.Bluesky.Actor.ProfileView!
 idunno.Bluesky.Graph.ListItemView.Subject.init -> void
 idunno.Bluesky.Graph.ListItemView.Uri.get -> idunno.AtProto.AtUri!
@@ -3773,10 +3764,6 @@ override idunno.Bluesky.Feed.GeneratorViewerState.ToString() -> string!
 override idunno.Bluesky.Feed.KnownLikers.Equals(object? obj) -> bool
 override idunno.Bluesky.Feed.KnownLikers.GetHashCode() -> int
 override idunno.Bluesky.Feed.KnownLikers.ToString() -> string!
-override idunno.Bluesky.Feed.Like.<Clone>$() -> idunno.Bluesky.Feed.Like!
-override idunno.Bluesky.Feed.Like.Equals(object? obj) -> bool
-override idunno.Bluesky.Feed.Like.GetHashCode() -> int
-override idunno.Bluesky.Feed.Like.ToString() -> string!
 override idunno.Bluesky.Feed.Links.Equals(object? obj) -> bool
 override idunno.Bluesky.Feed.Links.GetHashCode() -> int
 override idunno.Bluesky.Feed.Links.ToString() -> string!
@@ -4212,7 +4199,6 @@ override sealed idunno.Bluesky.Feed.Gates.MentionRule.Equals(idunno.Bluesky.Feed
 override sealed idunno.Bluesky.Feed.Gates.PostGate.Equals(idunno.AtProto.Repo.AtProtoRecord? other) -> bool
 override sealed idunno.Bluesky.Feed.Gates.ThreadGate.Equals(idunno.AtProto.Repo.AtProtoRecord? other) -> bool
 override sealed idunno.Bluesky.Feed.GeneratorView.Equals(idunno.Bluesky.View? other) -> bool
-override sealed idunno.Bluesky.Feed.Like.Equals(idunno.AtProto.Repo.AtProtoObject? other) -> bool
 override sealed idunno.Bluesky.Feed.NotFoundPost.Equals(idunno.Bluesky.Feed.PostViewBase? other) -> bool
 override sealed idunno.Bluesky.Feed.PostView.Equals(idunno.Bluesky.Feed.PostViewBase? other) -> bool
 override sealed idunno.Bluesky.Feed.PostViewBase.Equals(idunno.Bluesky.View? other) -> bool
@@ -4921,8 +4907,6 @@ static idunno.Bluesky.Feed.GeneratorViewerState.operator !=(idunno.Bluesky.Feed.
 static idunno.Bluesky.Feed.GeneratorViewerState.operator ==(idunno.Bluesky.Feed.GeneratorViewerState? left, idunno.Bluesky.Feed.GeneratorViewerState? right) -> bool
 static idunno.Bluesky.Feed.KnownLikers.operator !=(idunno.Bluesky.Feed.KnownLikers? left, idunno.Bluesky.Feed.KnownLikers? right) -> bool
 static idunno.Bluesky.Feed.KnownLikers.operator ==(idunno.Bluesky.Feed.KnownLikers? left, idunno.Bluesky.Feed.KnownLikers? right) -> bool
-static idunno.Bluesky.Feed.Like.operator !=(idunno.Bluesky.Feed.Like? left, idunno.Bluesky.Feed.Like? right) -> bool
-static idunno.Bluesky.Feed.Like.operator ==(idunno.Bluesky.Feed.Like? left, idunno.Bluesky.Feed.Like? right) -> bool
 static idunno.Bluesky.Feed.Links.operator !=(idunno.Bluesky.Feed.Links? left, idunno.Bluesky.Feed.Links? right) -> bool
 static idunno.Bluesky.Feed.Links.operator ==(idunno.Bluesky.Feed.Links? left, idunno.Bluesky.Feed.Links? right) -> bool
 static idunno.Bluesky.Feed.NotFoundPost.operator !=(idunno.Bluesky.Feed.NotFoundPost? left, idunno.Bluesky.Feed.NotFoundPost? right) -> bool

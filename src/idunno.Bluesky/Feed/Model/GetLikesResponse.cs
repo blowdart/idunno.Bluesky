@@ -12,7 +12,7 @@ namespace idunno.Bluesky.Feed.Model;
 internal sealed record GetLikesResponse
 {
     [JsonConstructor]
-    public GetLikesResponse(AtUri uri, Cid? cid, ICollection<Like> likes, string? cursor)
+    public GetLikesResponse(AtUri uri, Cid? cid, ICollection<LikesLike> likes, string? cursor)
     {
         Uri = uri;
         Cid = cid;
@@ -29,7 +29,7 @@ internal sealed record GetLikesResponse
 
     [JsonInclude]
     [JsonRequired]
-    public ICollection<Like> Likes { get; init; }
+    public ICollection<LikesLike> Likes { get; init; }
 
     [JsonInclude]
     public string? Cursor { get; init; }
