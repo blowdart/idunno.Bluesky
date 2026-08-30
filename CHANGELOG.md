@@ -6,6 +6,9 @@
 
 #### idunno.Bluesky
 
+* Added support for opt-ing out of a reference list (typically a starter pack), via `BlueskyAgent.CreateReferenceListOptOut`. `ListReferenceListOptOuts` allow
+  for enumeration of an authenticated user's opt-outs, and `DeleteReferenceListOptOut` allows the deletion of the opt-out. Bluesky allows multiple optout
+  records for the same list. If another opt-out record for the list still exists after deletion the opt-out remains in effect. See [Add reference list opt-out lexicons](https://github.com/bluesky-social/indigo/pull/1447/changes).
 * `ListBlock` has been added in the `idunno.Bluesky.Graph` namespace, representing a block relationship against an entire an entire list of accounts (actors).
 
 ### Breaking Changes
@@ -25,6 +28,7 @@
 * Removed deprecated `UploadVideo(string fileName, byte[] video, CancellationToken cancellationToken)`.
   Use `UploadVideo(string fileName, byte[] video, string mimeType, CancellationToken cancellationToken)` with a MIME type of `video/mp4` instead.
 * `BlueskyAgent.UnmuteModeList` spelling has been corrected to `BlueskyAgent.UnmuteModList`.
+* `ListViewerState` has been converted to a C# Record and now has all it's properties as nullable, to match the lexicon.
 
 ## 5.0.0 - 2026-08-24
 

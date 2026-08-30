@@ -299,6 +299,11 @@ public static class CollectionNsid
     /// The NSID for an actor's list blocks.
     /// </summary>
     public static Nsid ListBlock => new("app.bsky.graph.listblock");
+
+    /// <summary>
+    /// The NSID for an actor's reference list opt out records.
+    /// </summary>
+    public static Nsid ReferenceListOptOut => new("app.bsky.graph.referencelistoptout");
 }
 
 /// <summary>

@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Text.Json;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
@@ -251,6 +252,51 @@ public partial class BlueskyAgent
     }
 
     /// <summary>
+    /// Gets a page of records in the specified <paramref name="collection"/>.
+    /// </summary>
+    /// <typeparam name="TRecord">The type of the record value to get.</typeparam>
+    /// <param name="repo">The <see cref="AtIdentifier"/> of the repo to retrieve the records from.</param>
+    /// <param name="collection">The NSID of the collection the records should be retrieved from.</param>
+    /// <param name="limit">The number of records to return in each page.</param>
+    /// <param name="cursor">The cursor position to start retrieving records from.</param>
+    /// <param name="reverse">A flag indicating if records should be listed in reverse order.</param>
+    /// <param name="service">The service to retrieve the records from. If <see langword="null" /> it will be resolved from <paramref name="repo"/>.</param>
+    /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="repo"/> or <paramref name="collection"/> is <see langword="null"/>.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current session is not an authenticated session.</exception>
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = "All types are preserved in the BlueskyServer.BlueskyJsonSerializerOptions passed to ListRecords().")]
+    [UnconditionalSuppressMessage("AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the BlueskyServer.BlueskyJsonSerializerOptions passed to ListRecords().")]
+    public async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TRecord>>>> ListBlueskyRecords<TRecord>(
+        AtIdentifier repo,
+        Nsid collection,
+        int? limit = 50,
+        string? cursor = null,
+        bool reverse = false,
+        Uri? service = null,
+        string? serviceProxy = null,
+        CancellationToken cancellationToken = default) where TRecord : BlueskyRecord
+    {
+        return await ListRecords<TRecord>(
+            repo: repo,
+            collection: collection,
+            jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
+            limit: limit,
+            cursor: cursor,
+            reverse: reverse,
+            service: service,
+            serviceProxy: serviceProxy,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+
+    /// <summary>
     /// Sets the current user's <see cref="Profile"/>.
     /// </summary>
     /// <param name="profile">The <see cref="Profile"/> to create.</param>
@@ -259,15 +305,15 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     [UnconditionalSuppressMessage(
-        "Trimming",
-        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
-        Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
+    "Trimming",
+    "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+    Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
     [UnconditionalSuppressMessage("AOT",
-        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
-        Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
+    "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+    Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
     public async Task<AtProtoHttpResult<CreateRecordResult>> CreateProfile(
-        Profile profile,
-        CancellationToken cancellationToken = default)
+    Profile profile,
+    CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(profile);
 
