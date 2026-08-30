@@ -7,7 +7,9 @@ using System.Text.Json.Serialization;
 using idunno.AtProto;
 using idunno.Bluesky.Actor;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Graph;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// Encapsulates a view over an individual item in a list.

@@ -2111,11 +2111,6 @@ idunno.Bluesky.Graph.ListViewBasic.Uri.get -> idunno.AtProto.AtUri!
 idunno.Bluesky.Graph.ListViewBasic.Uri.init -> void
 idunno.Bluesky.Graph.ListViewBasic.Viewer.get -> idunno.Bluesky.Graph.ListViewerState?
 idunno.Bluesky.Graph.ListViewBasic.Viewer.init -> void
-idunno.Bluesky.Graph.ListViewerState
-idunno.Bluesky.Graph.ListViewerState.BlockedBy.get -> idunno.AtProto.AtUri?
-idunno.Bluesky.Graph.ListViewerState.BlockedBy.init -> void
-idunno.Bluesky.Graph.ListViewerState.ListViewerState(bool? muted, idunno.AtProto.AtUri? blockedBy) -> void
-idunno.Bluesky.Graph.ListViewerState.Muted.get -> bool?
 idunno.Bluesky.Graph.ListViewerState.Muted.init -> void
 idunno.Bluesky.Graph.ListViewWithItems
 idunno.Bluesky.Graph.ListViewWithItems.List.get -> idunno.Bluesky.Graph.ListView!

@@ -72,11 +72,13 @@ idunno.Bluesky.Graph.ListBlock.Subject.init -> void
 idunno.Bluesky.Graph.ListItemView.ListItemView(idunno.AtProto.AtUri! uri, idunno.Bluesky.Actor.ProfileView! subject, bool? subjectOptedOut) -> void
 idunno.Bluesky.Graph.ListItemView.SubjectOptedOut.get -> bool?
 idunno.Bluesky.Graph.ListItemView.SubjectOptedOut.init -> void
+idunno.Bluesky.Graph.ListViewerState
 idunno.Bluesky.Graph.ListViewerState.Blocked.get -> idunno.AtProto.AtUri?
 idunno.Bluesky.Graph.ListViewerState.Blocked.init -> void
 idunno.Bluesky.Graph.ListViewerState.Deconstruct(out bool? Muted, out idunno.AtProto.AtUri? Blocked, out idunno.AtProto.AtUri? ReferenceListOptOut) -> void
 idunno.Bluesky.Graph.ListViewerState.ListViewerState(bool? Muted, idunno.AtProto.AtUri? Blocked, idunno.AtProto.AtUri? ReferenceListOptOut) -> void
 idunno.Bluesky.Graph.ListViewerState.ListViewerState(idunno.Bluesky.Graph.ListViewerState! original) -> void
+idunno.Bluesky.Graph.ListViewerState.Muted.get -> bool?
 idunno.Bluesky.Graph.ListViewerState.ReferenceListOptOut.get -> idunno.AtProto.AtUri?
 idunno.Bluesky.Graph.ListViewerState.ReferenceListOptOut.init -> void
 idunno.Bluesky.Graph.ReferenceListOptOut

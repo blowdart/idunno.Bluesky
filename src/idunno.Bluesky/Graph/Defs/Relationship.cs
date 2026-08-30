@@ -5,9 +5,9 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Graph;
-
-// https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/graph/defs.json
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// Lists the bi-directional graph relationships between one actor (not indicated in the object), and the target actors (the DID included in the object)

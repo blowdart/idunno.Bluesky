@@ -8,9 +8,10 @@ using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
-using idunno.Bluesky.Record;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Graph;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// Represents a basic view over a Starter Pack.
