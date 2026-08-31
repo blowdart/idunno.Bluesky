@@ -34,16 +34,16 @@ namespace idunno.Bluesky;
 
 [JsonSerializable(typeof(Record.BlueskyRecord), TypeInfoPropertyName = "RecordBlueskyRecord")]
 [JsonSerializable(typeof(Record.BlueskyTimestampedRecord), TypeInfoPropertyName = "RecordBlueskyTimestampedRecord")]
-[JsonSerializable(typeof(Record.Profile), TypeInfoPropertyName = "Profile")]
-[JsonSerializable(typeof(AtProtoRepositoryRecord<Record.Profile>), TypeInfoPropertyName = "AtProtoRepositoryRecordProfile")]
 [JsonSerializable(typeof(AtProto.Labels.SelfLabels), TypeInfoPropertyName = "AtProtoLabelsSelfLabels")]
 [JsonSerializable(typeof(AtProto.Labels.SelfLabel), TypeInfoPropertyName = "AtProtoLabelsSelfLabel")]
 
-[JsonSerializable(typeof(Record.Status), TypeInfoPropertyName = "Status")]
-[JsonSerializable(typeof(AtProtoRepositoryRecord<Record.Status>), TypeInfoPropertyName = "AtProtoRepositoryRecordStatus")]
 [JsonSerializable(typeof(Record.LabelerDeclaration), TypeInfoPropertyName = "LabelerDeclaration")]
 [JsonSerializable(typeof(AtProtoRepositoryRecord<Record.LabelerDeclaration>), TypeInfoPropertyName = "AtProtoRepositoryRecordLabelerDeclaration")]
 
+[JsonSerializable(typeof(Actor.Profile), TypeInfoPropertyName = "ActorProfile")]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<Actor.Profile>), TypeInfoPropertyName = "AtProtoRepositoryRecordActorProfile")]
+[JsonSerializable(typeof(Actor.Status), TypeInfoPropertyName = "ActorStatus")]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<Actor.Status>), TypeInfoPropertyName = "AtProtoRepositoryRecordActorStatus")]
 [JsonSerializable(typeof(Actor.Model.GetPreferencesResponse), TypeInfoPropertyName = "ActorGetPreferencesResponse")]
 [JsonSerializable(typeof(Actor.Model.GetProfilesResponse), TypeInfoPropertyName = "ActorGetProfilesResponse")]
 [JsonSerializable(typeof(Actor.Model.GetSuggestionsResponse), TypeInfoPropertyName = "ActorGetSuggestionsResponse")]

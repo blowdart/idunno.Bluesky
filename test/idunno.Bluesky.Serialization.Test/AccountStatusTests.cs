@@ -3,8 +3,8 @@
 
 using System.Text.Json;
 
+using idunno.Bluesky.Actor;
 using idunno.Bluesky.Embed;
-using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky.Serialization.Test;
 

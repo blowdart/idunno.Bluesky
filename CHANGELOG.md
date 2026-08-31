@@ -33,6 +33,9 @@
 * `Feed.Like` has been moved to its own `Feed.Likes` namespace, as it is only a component in the `LikesCollection` collection.
 * `Record.Like` has been moved to `Feed.Like` to match the lexicon definition.
 * `Record.Repost` has been moved to `Feed.Repost` to match the lexicon definition.
+* `Record.Profile` has been moved to `Actor.Profile` to match the lexicon definition.
+* `Record.Status` has been moved to `Actor.Status` to match the lexicon definition.
+* `Record.KnownStatusValues` has been moved to `Actor.KnownStatusValues`.
 
 ## 5.0.0 - 2026-08-24
 

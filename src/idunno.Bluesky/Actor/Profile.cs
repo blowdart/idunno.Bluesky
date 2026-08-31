@@ -7,8 +7,9 @@ using System.Text.Json.Serialization;
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
+using idunno.Bluesky.Record;
 
-namespace idunno.Bluesky.Record;
+namespace idunno.Bluesky.Actor;
 
 /// <summary>
 /// Encapsulates a Bluesky account profile.

@@ -4,8 +4,9 @@
 using System.Text.Json.Serialization;
 
 using idunno.Bluesky.Embed;
+using idunno.Bluesky.Record;
 
-namespace idunno.Bluesky.Record;
+namespace idunno.Bluesky.Actor;
 
 /// <summary>
 /// A profile status
