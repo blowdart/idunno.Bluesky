@@ -14,9 +14,6 @@ namespace idunno.Bluesky;
 
 public static partial class BlueskyServer
 {
-    // https://docs.bsky.app/docs/api/app-bsky-labeler-get-services
-    private const string LablerGetServicesEndpoint = "/xrpc/app.bsky.labeler.getServices";
-
     /// <summary>
     /// Gets information about the labeller services identified by the specified <paramref name="dids"/>.
     /// </summary>
@@ -65,7 +62,7 @@ public static partial class BlueskyServer
         BlueskyHttpClient<GetServicesResponse> request = new(AppViewProxy, loggerFactory);
         AtProtoHttpResult<GetServicesResponse> response = await request.Get(
             service,
-            $"{LablerGetServicesEndpoint}?{queryString}",
+            $"/xrpc/app.bsky.labeler.getServices?{queryString}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,

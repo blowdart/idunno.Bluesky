@@ -7,6 +7,7 @@ using idunno.AtProto.Repo;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Feed;
 using idunno.Bluesky.Graph;
+using idunno.Bluesky.Labeler;
 
 namespace idunno.Bluesky.Record;
 
@@ -22,7 +23,7 @@ namespace idunno.Bluesky.Record;
 [JsonDerivedType(typeof(Block), RecordType.Block)]
 [JsonDerivedType(typeof(Profile), RecordType.Profile)]
 [JsonDerivedType(typeof(StarterPack), RecordType.StarterPack)]
-[JsonDerivedType(typeof(LabelerDeclaration), RecordType.LabelerDeclaration)]
+[JsonDerivedType(typeof(Service), RecordType.LabelerDeclaration)]
 [JsonDerivedType(typeof(Verification), RecordType.Verification)]
 [JsonDerivedType(typeof(List), RecordType.List)]
 [JsonDerivedType(typeof(ListItem), RecordType.ListItem)]

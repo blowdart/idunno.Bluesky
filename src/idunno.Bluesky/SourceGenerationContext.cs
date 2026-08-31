@@ -37,9 +37,6 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(AtProto.Labels.SelfLabels), TypeInfoPropertyName = "AtProtoLabelsSelfLabels")]
 [JsonSerializable(typeof(AtProto.Labels.SelfLabel), TypeInfoPropertyName = "AtProtoLabelsSelfLabel")]
 
-[JsonSerializable(typeof(Record.LabelerDeclaration), TypeInfoPropertyName = "LabelerDeclaration")]
-[JsonSerializable(typeof(AtProtoRepositoryRecord<Record.LabelerDeclaration>), TypeInfoPropertyName = "AtProtoRepositoryRecordLabelerDeclaration")]
-
 [JsonSerializable(typeof(Actor.Profile), TypeInfoPropertyName = "ActorProfile")]
 [JsonSerializable(typeof(AtProtoRepositoryRecord<Actor.Profile>), TypeInfoPropertyName = "AtProtoRepositoryRecordActorProfile")]
 [JsonSerializable(typeof(Actor.Status), TypeInfoPropertyName = "ActorStatus")]
@@ -329,6 +326,9 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Graph.Model.MuteThreadRequest), TypeInfoPropertyName = "GraphModelMuteThreadRequest")]
 [JsonSerializable(typeof(Graph.Model.SearchStarterPacksResponse), TypeInfoPropertyName = "GraphModelSearchStarterPacksResponse")]
 [JsonSerializable(typeof(Graph.Model.SearchStarterPacksV2Response), TypeInfoPropertyName = "GraphModelSearchStarterPacksV2Response")]
+
+[JsonSerializable(typeof(Labeler.Service), TypeInfoPropertyName = "LabelerService")]
+[JsonSerializable(typeof(AtProtoRepositoryRecord<Labeler.Service>), TypeInfoPropertyName = "AtProtoRepositoryRecordLabelerService")]
 
 [JsonSerializable(typeof(Notifications.Model.GetPreferencesResponse), TypeInfoPropertyName = "NotificationGetPreferencesResponse")]
 [JsonSerializable(typeof(Notifications.Model.ListActivitySubscriptionsResponse))]

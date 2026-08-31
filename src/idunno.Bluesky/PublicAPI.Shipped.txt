@@ -563,9 +563,6 @@ idunno.Bluesky.BlueskyAgent.GetFollows(int? limit = null, string? cursor = null,
 idunno.Bluesky.BlueskyAgent.GetJobStatus(string! jobId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Video.JobStatus!>!>!
 idunno.Bluesky.BlueskyAgent.GetJoinGroupLinkPreviews(System.Collections.Generic.ICollection<string!>! codes, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Group.Model.GetJoinLinkPreviewsResponse!>!>!
 idunno.Bluesky.BlueskyAgent.GetKnownFollowers(idunno.AtProto.AtIdentifier! actor, int? limit = null, string? cursor = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Graph.Followers!>!>!
-idunno.Bluesky.BlueskyAgent.GetLabelerDeclaration(idunno.AtProto.AtIdentifier! identifier, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Record.LabelerDeclaration!>!>!
-idunno.Bluesky.BlueskyAgent.GetLabelerDeclaration(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Record.LabelerDeclaration!>!>!
-idunno.Bluesky.BlueskyAgent.GetLabelerDeclaration(idunno.AtProto.Handle! handle, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Record.LabelerDeclaration!>!>!
 idunno.Bluesky.BlueskyAgent.GetLabelerServices(bool getDetailedViews = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.Collections.Generic.ICollection<idunno.Bluesky.Labeler.LabelerView!>!>!>!
 idunno.Bluesky.BlueskyAgent.GetLabelerServices(System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>! dids, bool getDetailedViews = false, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.Collections.Generic.ICollection<idunno.Bluesky.Labeler.LabelerView!>!>!>!
 idunno.Bluesky.BlueskyAgent.GetList(idunno.AtProto.AtUri! uri, int? limit = 50, string? cursor = null, System.Collections.Generic.IEnumerable<idunno.AtProto.Did!>? subscribedLabelers = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Graph.ListViewWithItems!>!>!
@@ -2566,19 +2563,6 @@ idunno.Bluesky.Record.BlueskyTimestampedRecord.BlueskyTimestampedRecord(System.D
 idunno.Bluesky.Record.BlueskyTimestampedRecord.BlueskyTimestampedRecord(System.DateTimeOffset? createdAt) -> void
 idunno.Bluesky.Record.BlueskyTimestampedRecord.CreatedAt.get -> System.DateTimeOffset
 idunno.Bluesky.Record.BlueskyTimestampedRecord.CreatedAt.init -> void
-idunno.Bluesky.Record.LabelerDeclaration
-idunno.Bluesky.Record.LabelerDeclaration.CreatedAt.get -> System.DateTimeOffset
-idunno.Bluesky.Record.LabelerDeclaration.CreatedAt.init -> void
-idunno.Bluesky.Record.LabelerDeclaration.LabelerDeclaration() -> void
-idunno.Bluesky.Record.LabelerDeclaration.LabelerDeclaration(idunno.Bluesky.Record.LabelerDeclaration! original) -> void
-idunno.Bluesky.Record.LabelerDeclaration.Labels.get -> System.Collections.Generic.ICollection<idunno.AtProto.Labels.SelfLabel!>!
-idunno.Bluesky.Record.LabelerDeclaration.Labels.init -> void
-idunno.Bluesky.Record.LabelerDeclaration.Policies.get -> idunno.Bluesky.Labeler.LabelerPolicies!
-idunno.Bluesky.Record.LabelerDeclaration.Policies.init -> void
-idunno.Bluesky.Record.LabelerDeclaration.SubjectCollections.get -> System.Collections.Generic.ICollection<idunno.AtProto.Nsid!>?
-idunno.Bluesky.Record.LabelerDeclaration.SubjectCollections.init -> void
-idunno.Bluesky.Record.LabelerDeclaration.SubjectTypes.get -> System.Collections.Generic.ICollection<string!>?
-idunno.Bluesky.Record.LabelerDeclaration.SubjectTypes.init -> void
 idunno.Bluesky.RecordType
 idunno.Bluesky.ReplyReferences
 idunno.Bluesky.ReplyReferences.<Clone>$() -> idunno.Bluesky.ReplyReferences!
@@ -3864,12 +3848,6 @@ override idunno.Bluesky.Record.BlueskyTimestampedRecord.Equals(object? obj) -> b
 override idunno.Bluesky.Record.BlueskyTimestampedRecord.GetHashCode() -> int
 override idunno.Bluesky.Record.BlueskyTimestampedRecord.PrintMembers(System.Text.StringBuilder! builder) -> bool
 override idunno.Bluesky.Record.BlueskyTimestampedRecord.ToString() -> string!
-override idunno.Bluesky.Record.LabelerDeclaration.<Clone>$() -> idunno.Bluesky.Record.LabelerDeclaration!
-override idunno.Bluesky.Record.LabelerDeclaration.EqualityContract.get -> System.Type!
-override idunno.Bluesky.Record.LabelerDeclaration.Equals(object? obj) -> bool
-override idunno.Bluesky.Record.LabelerDeclaration.GetHashCode() -> int
-override idunno.Bluesky.Record.LabelerDeclaration.PrintMembers(System.Text.StringBuilder! builder) -> bool
-override idunno.Bluesky.Record.LabelerDeclaration.ToString() -> string!
 override idunno.Bluesky.ReplyReferences.Equals(object? obj) -> bool
 override idunno.Bluesky.ReplyReferences.GetHashCode() -> int
 override idunno.Bluesky.ReplyReferences.ToString() -> string!
@@ -4121,7 +4099,6 @@ override sealed idunno.Bluesky.Notifications.Notification.Equals(idunno.AtProto.
 override sealed idunno.Bluesky.Post.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
 override sealed idunno.Bluesky.Record.BlueskyRecord.Equals(idunno.AtProto.Repo.AtProtoRecord? other) -> bool
 override sealed idunno.Bluesky.Record.BlueskyTimestampedRecord.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
-override sealed idunno.Bluesky.Record.LabelerDeclaration.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
 override sealed idunno.Bluesky.RichText.HashTag.Equals(idunno.Bluesky.RichText.PostBuilderFacetFeature? other) -> bool
 override sealed idunno.Bluesky.RichText.Link.Equals(idunno.Bluesky.RichText.PostBuilderFacetFeature? other) -> bool
 override sealed idunno.Bluesky.RichText.LinkFacetFeature.Equals(idunno.Bluesky.RichText.FacetFeature? other) -> bool
@@ -4922,8 +4899,6 @@ static idunno.Bluesky.Record.BlueskyRecord.operator !=(idunno.Bluesky.Record.Blu
 static idunno.Bluesky.Record.BlueskyRecord.operator ==(idunno.Bluesky.Record.BlueskyRecord? left, idunno.Bluesky.Record.BlueskyRecord? right) -> bool
 static idunno.Bluesky.Record.BlueskyTimestampedRecord.operator !=(idunno.Bluesky.Record.BlueskyTimestampedRecord? left, idunno.Bluesky.Record.BlueskyTimestampedRecord? right) -> bool
 static idunno.Bluesky.Record.BlueskyTimestampedRecord.operator ==(idunno.Bluesky.Record.BlueskyTimestampedRecord? left, idunno.Bluesky.Record.BlueskyTimestampedRecord? right) -> bool
-static idunno.Bluesky.Record.LabelerDeclaration.operator !=(idunno.Bluesky.Record.LabelerDeclaration? left, idunno.Bluesky.Record.LabelerDeclaration? right) -> bool
-static idunno.Bluesky.Record.LabelerDeclaration.operator ==(idunno.Bluesky.Record.LabelerDeclaration? left, idunno.Bluesky.Record.LabelerDeclaration? right) -> bool
 static idunno.Bluesky.ReplyReferences.operator !=(idunno.Bluesky.ReplyReferences? left, idunno.Bluesky.ReplyReferences? right) -> bool
 static idunno.Bluesky.ReplyReferences.operator ==(idunno.Bluesky.ReplyReferences? left, idunno.Bluesky.ReplyReferences? right) -> bool
 static idunno.Bluesky.RichText.ByteSlice.operator !=(idunno.Bluesky.RichText.ByteSlice? left, idunno.Bluesky.RichText.ByteSlice? right) -> bool

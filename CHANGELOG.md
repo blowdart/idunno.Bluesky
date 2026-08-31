@@ -36,6 +36,7 @@
 * `Record.Profile` has been moved to `Actor.Profile` to match the lexicon definition.
 * `Record.Status` has been moved to `Actor.Status` to match the lexicon definition.
 * `Record.KnownStatusValues` has been moved to `Actor.KnownStatusValues`.
+* `Record.LabelerDeclaration` has been moved to `Labeler.Service` to match the lexicon definition.
 
 ## 5.0.0 - 2026-08-24
 

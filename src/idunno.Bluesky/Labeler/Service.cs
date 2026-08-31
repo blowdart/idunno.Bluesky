@@ -5,18 +5,17 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 using idunno.AtProto.Labels;
+using idunno.Bluesky.Record;
 
-using idunno.Bluesky.Labeler;
-
-namespace idunno.Bluesky.Record;
+namespace idunno.Bluesky.Labeler;
 
 /// <summary>
 /// Encapsulates a declaration of the existence of a labeler service.
 /// </summary>
 [JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
                  UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
-[JsonDerivedType(typeof(LabelerDeclaration), typeDiscriminator: RecordType.LabelerDeclaration)]
-public record LabelerDeclaration : BlueskyRecord
+[JsonDerivedType(typeof(Service), typeDiscriminator: RecordType.LabelerDeclaration)]
+public record Service : BlueskyRecord
 {
     // See https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/labeler/service.json
 
