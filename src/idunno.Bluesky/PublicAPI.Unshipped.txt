@@ -1,9 +1,20 @@
 #nullable enable
+const idunno.Bluesky.Actor.AllowSubscriptionsKnownValues.Followers = "followers" -> string!
+const idunno.Bluesky.Actor.AllowSubscriptionsKnownValues.Mutuals = "mutuals" -> string!
+const idunno.Bluesky.Actor.AllowSubscriptionsKnownValues.None = "none" -> string!
 const idunno.Bluesky.Actor.KnownStatusValues.Live = "app.bsky.actor.status#live" -> string!
 const idunno.Bluesky.RecordType.ListBlock = "app.graph.listblock" -> string!
 const idunno.Bluesky.RecordType.ReferenceListOptOut = "app.bsky.graph.referencelistoptout" -> string!
 const idunno.Bluesky.RecordType.Repost = "app.bsky.feed.repost" -> string!
+idunno.Bluesky.Actor.AllowSubscriptionsKnownValues
 idunno.Bluesky.Actor.KnownStatusValues
+idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription
+idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.<Clone>$() -> idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription!
+idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.AllowSubscriptions.get -> string!
+idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.AllowSubscriptions.init -> void
+idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.Deconstruct(out string! AllowSubscriptions) -> void
+idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.Equals(idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription? other) -> bool
+idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.ProfileAssociatedActivitySubscription(string! AllowSubscriptions) -> void
 idunno.Bluesky.BlueskyAgent.CreateList(idunno.Bluesky.Graph.List! list, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.CreateProfile(idunno.Bluesky.Actor.Profile! profile) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.CreateProfile(idunno.Bluesky.Actor.Profile! profile, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
@@ -230,6 +241,9 @@ override idunno.Bluesky.Actor.Profile.Equals(object? obj) -> bool
 override idunno.Bluesky.Actor.Profile.GetHashCode() -> int
 override idunno.Bluesky.Actor.Profile.PrintMembers(System.Text.StringBuilder! builder) -> bool
 override idunno.Bluesky.Actor.Profile.ToString() -> string!
+override idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.Equals(object? obj) -> bool
+override idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.GetHashCode() -> int
+override idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.ToString() -> string!
 override idunno.Bluesky.Actor.Status.<Clone>$() -> idunno.Bluesky.Actor.Status!
 override idunno.Bluesky.Actor.Status.EqualityContract.get -> System.Type!
 override idunno.Bluesky.Actor.Status.Equals(object? obj) -> bool
@@ -319,6 +333,8 @@ override sealed idunno.Bluesky.Graph.ReferenceListOptOut.Equals(idunno.Bluesky.R
 override sealed idunno.Bluesky.Graph.StarterPack.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
 override sealed idunno.Bluesky.Graph.Verification.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
 override sealed idunno.Bluesky.Labeler.Service.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
+static idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.operator !=(idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription? left, idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription? right) -> bool
+static idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.operator ==(idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription? left, idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription? right) -> bool
 static idunno.Bluesky.BlueskyServer.GetLikes(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid? cid, int? limit, string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Feed.LikesCollection!>!>!
 static idunno.Bluesky.CollectionNsid.ListBlock.get -> idunno.AtProto.Nsid!
 static idunno.Bluesky.CollectionNsid.ReferenceListOptOut.get -> idunno.AtProto.Nsid!

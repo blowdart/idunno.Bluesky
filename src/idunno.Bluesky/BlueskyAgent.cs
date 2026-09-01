@@ -5,6 +5,7 @@ using System.Security.Claims;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
+using idunno.Bluesky.Actor;
 using idunno.Bluesky.RichText;
 
 using Microsoft.Extensions.Logging;
@@ -415,4 +416,28 @@ public partial class BlueskyAgent : AtProtoAgent
 
         return new Uri($"https://bsky.app/profile/{atUri.Repo}/post/{atUri.RecordKey}");
     }
+
+    /// <summary>
+    /// Performs a reverse lookup on a <see cref="Did"/> and returns its handle.
+    /// </summary>
+    /// <param name="did">The <see cref="Did"/> to lookup.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
+    public async Task<Handle?> LookupDid(Did did, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(did);
+
+        AtProtoHttpResult<ProfileViewDetailed> result = await GetProfile(did, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        if (result.Succeeded)
+        {
+            return result.Result.Handle;
+        }
+        else
+        {
+            return null;
+        }
+    }
+
 }
