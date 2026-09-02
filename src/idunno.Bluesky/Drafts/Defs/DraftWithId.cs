@@ -5,7 +5,9 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Drafts;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// Encapsulates a draft with an identifier, used to store drafts in private storage (stash).

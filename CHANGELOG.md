@@ -11,6 +11,7 @@
   records for the same list. If another opt-out record for the list still exists after deletion the opt-out remains in effect. See [Add reference list opt-out lexicons](https://github.com/bluesky-social/indigo/pull/1447/changes).
 * `ListBlock` has been added in the `idunno.Bluesky.Graph` namespace, representing a block relationship against an entire an entire list of accounts (actors).
 * Added `Actor.ProfileAssociatedActivitySubscription` and the known values `AllowSubscriptionsKnownValues`. This appears in the lexicon, but does not current seem to be used anywhere.
+* Added gallery support to Draft post records, via `Draft.EmbeddedGallery`.
 
 ### Breaking Changes
 

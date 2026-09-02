@@ -6,7 +6,9 @@ using System.Text.Json.Serialization;
 using idunno.AtProto;
 using idunno.AtProto.Labels;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Drafts;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// Encapsulates the content of a draft post, including text and any embedded media or records. This is used to create a new draft or update an existing draft.
@@ -24,6 +26,7 @@ public record DraftPost
     /// <param name="text">The primary post content. It has a higher limit than post contents to allow storing a larger text that can later be refined into smaller posts.</param>
     /// <param name="labels">The labels to apply to the post.</param>
     /// <param name="embedImages">The images to embed in the post. (Maximum 4)</param>
+    /// <param name="embedGallery">The gallery to embed in the post.</param>
     /// <param name="embedVideos">The videos to embed in the post. (Maximum 1)</param>
     /// <param name="embedExternals">The external content to embed in the post. (Maximum 1)</param>
     /// <param name="embedRecords">The records to embed in the post. (Maximum 1)</param>
@@ -37,6 +40,7 @@ public record DraftPost
         string text,
         SelfLabels? labels,
         IList<DraftEmbedImage>? embedImages,
+        DraftEmbedGallery? embedGallery,
         IList<DraftEmbedVideo>? embedVideos,
         IList<DraftEmbedExternal>? embedExternals,
         IList<DraftEmbedRecord>? embedRecords)
@@ -65,6 +69,7 @@ public record DraftPost
         Text = text;
         Labels = labels;
         EmbedImages = embedImages;
+        EmbedGallery = embedGallery;
         EmbedVideos = embedVideos;
         EmbedExternals = embedExternals;
         EmbedRecords = embedRecords;
@@ -80,6 +85,7 @@ public record DraftPost
         text: text,
         labels: null,
         embedImages: null,
+        embedGallery: null,
         embedVideos: null,
         embedExternals: null,
         embedRecords: null)
@@ -104,6 +110,7 @@ public record DraftPost
         text: text,
         labels: null,
         embedImages: embedImages,
+        embedGallery: null,
         embedVideos: null,
         embedExternals: null,
         embedRecords: null)
@@ -132,6 +139,7 @@ public record DraftPost
         text: text,
         labels: null,
         embedImages: [embedImage],
+        embedGallery: null,
         embedVideos: null,
         embedExternals: null,
         embedRecords: null)
@@ -156,6 +164,7 @@ public record DraftPost
         text: text,
         labels: labels,
         embedImages: null,
+        embedGallery: null,
         embedVideos: null,
         embedExternals: null,
         embedRecords: null)
@@ -180,6 +189,7 @@ public record DraftPost
         text: text,
         labels: null,
         embedImages: null,
+        embedGallery: null,
         embedVideos: [embedVideo],
         embedExternals: null,
         embedRecords: null)
@@ -199,6 +209,7 @@ public record DraftPost
     /// <param name="text">The primary post content. It has a higher limit than post contents to allow storing a larger text that can later be refined into smaller posts.</param>
     /// <param name="postSelfLabels">The labels to apply to the post.</param>
     /// <param name="embedImages">The images to embed in the post. (Maximum 4)</param>
+    /// <param name="embedGallery">The gallery to embed in the post.</param>
     /// <param name="embedVideos">The videos to embed in the post. (Maximum 1)</param>
     /// <param name="embedExternals">The external content to embed in the post. (Maximum 1)</param>
     /// <param name="embedRecords">The records to embed in the post. (Maximum 1)</param>
@@ -208,12 +219,14 @@ public record DraftPost
         string text,
         PostSelfLabels? postSelfLabels,
         IList<DraftEmbedImage>? embedImages,
+        DraftEmbedGallery? embedGallery,
         IList<DraftEmbedVideo>? embedVideos,
         IList<DraftEmbedExternal>? embedExternals,
         IList<DraftEmbedRecord>? embedRecords) : this(
             text: text,
             labels: null,
             embedImages: embedImages,
+            embedGallery: embedGallery,
             embedVideos: embedVideos,
             embedExternals: embedExternals,
             embedRecords: embedRecords)
@@ -274,6 +287,12 @@ public record DraftPost
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IList<DraftEmbedImage>? EmbedImages { get; init; }
+
+    /// <summary>
+    /// Gets the embedded gallery for this draft.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DraftEmbedGallery? EmbedGallery { get; init; }
 
     /// <summary>
     /// Gets the embedded videos for this draft.

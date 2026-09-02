@@ -47,6 +47,7 @@ public abstract class BlueskyError : AtErrorDetail
             BlockedSubject.ErrorTitle => new BlockedSubject(atErrorDetail),
             ConversationLocked.ErrorTitle => new ConversationLocked(atErrorDetail),
             DailyLimitExceeded.ErrorTitle => new DailyLimitExceeded(atErrorDetail),
+            DraftLimitReached.ErrorTitle => new DraftLimitReached(atErrorDetail),
             EnabledJoinLinkAlreadyExists.ErrorTitle => new EnabledJoinLinkAlreadyExists(atErrorDetail),
             FollowRequired.ErrorTitle => new FollowRequired(atErrorDetail),
             InsufficientRole.ErrorTitle => new InsufficientRole(atErrorDetail),

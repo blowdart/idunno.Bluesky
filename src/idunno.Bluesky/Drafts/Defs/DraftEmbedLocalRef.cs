@@ -3,7 +3,9 @@
 
 using System.Text.Json.Serialization;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Drafts;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// Encapsulates a local reference to a file to be embedded in a draft post.

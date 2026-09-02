@@ -133,6 +133,10 @@ internal static partial class Logger
     [LoggerMessage(108, LogLevel.Error, "GetServerDescription in UploadMedia for user {did}, service {service} failed with {statusCode} error {error} message {message}")]
     internal static partial void UploadMediaGetServerDescriptionFailed(ILogger logger, Did did, Uri service, HttpStatusCode statusCode, string? error, string? message);
 
+    [LoggerMessage(109, LogLevel.Information, "Uploading gallery image {fileName} from draft {draftId}")]
+    internal static partial void UploadingGalleryImageFromDraft(ILogger logger, string fileName, TimestampIdentifier draftId);
+
+
     // Card Generator errors
     [LoggerMessage(110, LogLevel.Error, "Failed to upload embedded card image for {url} with status code {statusCode}, error {error} message {message}")]
     internal static partial void EmbeddedCardImageUploadFailed(ILogger logger, Uri url, HttpStatusCode statusCode, string? error, string? message);

@@ -56,3 +56,4 @@ public partial class BlueskyAgent
         return await
             GetBlueskyRecord<Chat.Actor.Declaration>($"at://{did}/{CollectionNsid.ChatDeclaration}/self", cancellationToken: cancellationToken).ConfigureAwait(false);
     }
+}

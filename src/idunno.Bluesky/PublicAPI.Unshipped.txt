@@ -105,6 +105,18 @@ idunno.Bluesky.BlueskyAgent.UpdateProfile(idunno.AtProto.Repo.AtProtoRepositoryR
 idunno.Bluesky.BlueskyAgent.UpdateProfile(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Actor.Profile!>! profile, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.UpdateProfile(idunno.Bluesky.Actor.Profile! profile) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
 idunno.Bluesky.BlueskyAgent.UpdateProfile(idunno.Bluesky.Actor.Profile! profile, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.DraftLimitReached
+idunno.Bluesky.DraftLimitReached.DraftLimitReached(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+idunno.Bluesky.Drafts.DraftEmbedGallery
+idunno.Bluesky.Drafts.DraftEmbedGallery.Deconstruct(out System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Drafts.DraftEmbedImage!>? Items) -> void
+idunno.Bluesky.Drafts.DraftEmbedGallery.DraftEmbedGallery(idunno.Bluesky.Drafts.DraftEmbedGallery! original) -> void
+idunno.Bluesky.Drafts.DraftEmbedGallery.DraftEmbedGallery(System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Drafts.DraftEmbedImage!>? Items) -> void
+idunno.Bluesky.Drafts.DraftEmbedGallery.Items.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Drafts.DraftEmbedImage!>?
+idunno.Bluesky.Drafts.DraftEmbedGallery.Items.init -> void
+idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, idunno.AtProto.Labels.SelfLabels? labels, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedImage!>? embedImages, idunno.Bluesky.Drafts.DraftEmbedGallery? embedGallery, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedVideo!>? embedVideos, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedExternal!>? embedExternals, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedRecord!>? embedRecords) -> void
+idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, idunno.Bluesky.PostSelfLabels? postSelfLabels, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedImage!>? embedImages, idunno.Bluesky.Drafts.DraftEmbedGallery? embedGallery, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedVideo!>? embedVideos, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedExternal!>? embedExternals, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedRecord!>? embedRecords) -> void
+idunno.Bluesky.Drafts.DraftPost.EmbedGallery.get -> idunno.Bluesky.Drafts.DraftEmbedGallery?
+idunno.Bluesky.Drafts.DraftPost.EmbedGallery.init -> void
 idunno.Bluesky.Feed.Like
 idunno.Bluesky.Feed.Like.Like(idunno.AtProto.Repo.StrongReference! subject) -> void
 idunno.Bluesky.Feed.Like.Like(idunno.AtProto.Repo.StrongReference! subject, idunno.AtProto.Repo.StrongReference? via) -> void
@@ -250,6 +262,9 @@ override idunno.Bluesky.Actor.Status.Equals(object? obj) -> bool
 override idunno.Bluesky.Actor.Status.GetHashCode() -> int
 override idunno.Bluesky.Actor.Status.PrintMembers(System.Text.StringBuilder! builder) -> bool
 override idunno.Bluesky.Actor.Status.ToString() -> string!
+override idunno.Bluesky.Drafts.DraftEmbedGallery.Equals(object? obj) -> bool
+override idunno.Bluesky.Drafts.DraftEmbedGallery.GetHashCode() -> int
+override idunno.Bluesky.Drafts.DraftEmbedGallery.ToString() -> string!
 override idunno.Bluesky.Feed.Like.<Clone>$() -> idunno.Bluesky.Feed.Like!
 override idunno.Bluesky.Feed.Like.EqualityContract.get -> System.Type!
 override idunno.Bluesky.Feed.Like.Equals(object? obj) -> bool
@@ -342,6 +357,8 @@ static idunno.Bluesky.Actor.Profile.operator !=(idunno.Bluesky.Actor.Profile? le
 static idunno.Bluesky.Actor.Profile.operator ==(idunno.Bluesky.Actor.Profile? left, idunno.Bluesky.Actor.Profile? right) -> bool
 static idunno.Bluesky.Actor.Status.operator !=(idunno.Bluesky.Actor.Status? left, idunno.Bluesky.Actor.Status? right) -> bool
 static idunno.Bluesky.Actor.Status.operator ==(idunno.Bluesky.Actor.Status? left, idunno.Bluesky.Actor.Status? right) -> bool
+static idunno.Bluesky.Drafts.DraftEmbedGallery.operator !=(idunno.Bluesky.Drafts.DraftEmbedGallery? left, idunno.Bluesky.Drafts.DraftEmbedGallery? right) -> bool
+static idunno.Bluesky.Drafts.DraftEmbedGallery.operator ==(idunno.Bluesky.Drafts.DraftEmbedGallery? left, idunno.Bluesky.Drafts.DraftEmbedGallery? right) -> bool
 static idunno.Bluesky.Feed.Like.operator !=(idunno.Bluesky.Feed.Like? left, idunno.Bluesky.Feed.Like? right) -> bool
 static idunno.Bluesky.Feed.Like.operator ==(idunno.Bluesky.Feed.Like? left, idunno.Bluesky.Feed.Like? right) -> bool
 static idunno.Bluesky.Feed.Likes.Like.operator !=(idunno.Bluesky.Feed.Likes.Like? left, idunno.Bluesky.Feed.Likes.Like? right) -> bool
@@ -370,6 +387,10 @@ static idunno.Bluesky.Labeler.Service.operator !=(idunno.Bluesky.Labeler.Service
 static idunno.Bluesky.Labeler.Service.operator ==(idunno.Bluesky.Labeler.Service? left, idunno.Bluesky.Labeler.Service? right) -> bool
 virtual idunno.Bluesky.Actor.Profile.Equals(idunno.Bluesky.Actor.Profile? other) -> bool
 virtual idunno.Bluesky.Actor.Status.Equals(idunno.Bluesky.Actor.Status? other) -> bool
+virtual idunno.Bluesky.Drafts.DraftEmbedGallery.<Clone>$() -> idunno.Bluesky.Drafts.DraftEmbedGallery!
+virtual idunno.Bluesky.Drafts.DraftEmbedGallery.EqualityContract.get -> System.Type!
+virtual idunno.Bluesky.Drafts.DraftEmbedGallery.Equals(idunno.Bluesky.Drafts.DraftEmbedGallery? other) -> bool
+virtual idunno.Bluesky.Drafts.DraftEmbedGallery.PrintMembers(System.Text.StringBuilder! builder) -> bool
 virtual idunno.Bluesky.Feed.Like.Equals(idunno.Bluesky.Feed.Like? other) -> bool
 virtual idunno.Bluesky.Feed.Repost.Equals(idunno.Bluesky.Feed.Repost? other) -> bool
 virtual idunno.Bluesky.Graph.Block.Equals(idunno.Bluesky.Graph.Block? other) -> bool

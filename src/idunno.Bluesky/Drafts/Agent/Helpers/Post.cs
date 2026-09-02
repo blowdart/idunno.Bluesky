@@ -16,130 +16,6 @@ namespace idunno.Bluesky;
 public partial class BlueskyAgent
 {
     /// <summary>
-    /// Creates a draft for the authenticated user.
-    /// </summary>
-    /// <param name="draft">The draft to create.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="draft"/> is <see langword="null"/>.</exception>
-    public async Task<AtProtoHttpResult<TimestampIdentifier>> CreateDraft(
-        Draft draft,
-        CancellationToken cancellationToken = default)
-    {
-        if (!IsAuthenticated)
-        {
-            throw new AuthenticationRequiredException();
-        }
-
-        ArgumentNullException.ThrowIfNull(draft);
-
-        return await BlueskyServer.CreateDraft(
-            draft,
-            service: Service,
-            accessCredentials: Credentials,
-            httpClient: HttpClient,
-            onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
-            loggerFactory: LoggerFactory,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Deletes a draft by ID.
-    /// </summary>
-    /// <param name="draftId">The ID of the draft to delete.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="draftId"/> is <see langword="null"/>.</exception>
-    public async Task<AtProtoHttpResult<EmptyResponse>> DeleteDraft(
-        TimestampIdentifier draftId,
-        CancellationToken cancellationToken = default)
-    {
-        if (!IsAuthenticated)
-        {
-            throw new AuthenticationRequiredException();
-        }
-
-        ArgumentNullException.ThrowIfNull(draftId);
-
-        return await BlueskyServer.DeleteDraft(
-            draftId,
-            service: Service,
-            accessCredentials: Credentials,
-            httpClient: HttpClient,
-            onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
-            loggerFactory: LoggerFactory,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Get a paged list of suggested drafts for the authenticated user.
-    /// </summary>
-    /// <param name="limit">The maximum number of drafts to return.</param>
-    /// <param name="cursor">An optional cursor for pagination.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is negative, zero, or greater than <see cref="Maximum.ListedDrafts"/>.</exception>
-    public async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<DraftView>>> GetDrafts(
-        int? limit = null,
-        string? cursor = null,
-        CancellationToken cancellationToken = default)
-    {
-        if (!IsAuthenticated)
-        {
-            throw new AuthenticationRequiredException();
-        }
-
-        if (limit is not null)
-        {
-            ArgumentOutOfRangeException.ThrowIfNegative(limit.Value);
-            ArgumentOutOfRangeException.ThrowIfZero(limit.Value);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(limit.Value, Maximum.ListedDrafts);
-        }
-
-        return await BlueskyServer.GetDrafts(
-            limit,
-            cursor,
-            service: Service,
-            accessCredentials: Credentials,
-            httpClient: HttpClient,
-            onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
-            loggerFactory: LoggerFactory,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Updates a draft for the authenticated user.
-    /// </summary>
-    /// <param name="draftWithId">The draft and ID to update.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="draftWithId"/> is <see langword="null"/>.</exception>
-    public async Task<AtProtoHttpResult<EmptyResponse>> UpdateDraft(
-        DraftWithId draftWithId,
-        CancellationToken cancellationToken = default)
-    {
-        if (!IsAuthenticated)
-        {
-            throw new AuthenticationRequiredException();
-        }
-
-        ArgumentNullException.ThrowIfNull(draftWithId);
-
-        return await BlueskyServer.UpdateDraft(
-            draftWithId,
-            service: Service,
-            accessCredentials: Credentials,
-            httpClient: HttpClient,
-            onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
-            loggerFactory: LoggerFactory,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
     /// Creates a Bluesky post record from the specified <paramref name="draftWithId"/>.
     /// </summary>
     /// <param name="draftWithId">The <see cref="DraftWithId"/> to use to create the post record(s).</param>
@@ -208,6 +84,18 @@ public partial class BlueskyAgent
                     }
                 }
 
+                if (draftPost.EmbedGallery is not null && draftPost.EmbedGallery.Items is not null)
+                {
+                    var missingImages = draftPost.EmbedGallery.Items
+                        .Where(image => !File.Exists(image.LocalRef.Path))
+                        .ToList();
+
+                    if (missingImages.Count > 0)
+                    {
+                        throw new DraftException($"Embedded Gallary has embedded image {missingImages[0].LocalRef.Path} in DraftPost[{validationOffset}] not found.");
+                    }
+                }
+
                 if (draftPost.EmbedVideos is not null)
                 {
                     var missingVideos = draftPost.EmbedVideos
@@ -227,6 +115,13 @@ public partial class BlueskyAgent
                             totalVideoUploadSize += new FileInfo(videoPath.LocalRef.Path).Length;
                         }
                     }
+                }
+
+                if ((draftPost.EmbedImages is not null && draftPost.EmbedGallery is not null) ||
+                    (draftPost.EmbedImages is not null && draftPost.EmbedVideos is not null) ||
+                    (draftPost.EmbedGallery is not null && draftPost.EmbedVideos is not null))
+                {
+                    throw new DraftException($"DraftPost[{validationOffset}] has more than one type of media embedded.");
                 }
             }
 
@@ -334,6 +229,28 @@ public partial class BlueskyAgent
                     }
 
                     postBuilder.Add(uploadResult.Result);
+                }
+
+                // Upload the gallery images for the post, then attach.
+                if (draftPost.EmbedGallery is not null)
+                {
+                    foreach (DraftEmbedImage embed in draftPost.EmbedGallery.Items ?? [])
+                    {
+                        Logger.UploadingGalleryImageFromDraft(_logger, embed.LocalRef.Path, draftWithId.Id);
+                        string? mimeType = MapExtensionToMimeType(embed.LocalRef.Path) ?? throw new DraftException($"Unsupported image format for file {embed.LocalRef.Path}.");
+                        byte[] fileBytes = await File.ReadAllBytesAsync(embed.LocalRef.Path, cancellationToken: cancellationToken).ConfigureAwait(false);
+                        AtProtoHttpResult<EmbeddedImage> uploadResult = await UploadImage(
+                            fileBytes,
+                            mimeType: mimeType,
+                            altText: embed.AltText ?? string.Empty,
+                            aspectRatio: null,
+                            cancellationToken: cancellationToken).ConfigureAwait(false);
+                        if (!uploadResult.Succeeded)
+                        {
+                            throw new DraftException($"Failed to upload gallery image {embed.LocalRef.Path}: {uploadResult.StatusCode} {uploadResult.AtErrorDetail?.Error} {uploadResult.AtErrorDetail?.Message}");
+                        }
+                        postBuilder.Add(uploadResult.Result);
+                    }
                 }
 
                 // Upload the videos for the post, with their captions if any, then attach.

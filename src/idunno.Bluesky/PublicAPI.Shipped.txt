@@ -1395,10 +1395,8 @@ idunno.Bluesky.Drafts.DraftPost.ContainsSexualContent.set -> void
 idunno.Bluesky.Drafts.DraftPost.DraftPost(idunno.Bluesky.Drafts.DraftPost! original) -> void
 idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text) -> void
 idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, idunno.AtProto.Labels.SelfLabels! labels) -> void
-idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, idunno.AtProto.Labels.SelfLabels? labels, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedImage!>? embedImages, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedVideo!>? embedVideos, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedExternal!>? embedExternals, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedRecord!>? embedRecords) -> void
 idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, idunno.Bluesky.Drafts.DraftEmbedImage! embedImage) -> void
 idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, idunno.Bluesky.Drafts.DraftEmbedVideo! embedVideo) -> void
-idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, idunno.Bluesky.PostSelfLabels? postSelfLabels, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedImage!>? embedImages, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedVideo!>? embedVideos, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedExternal!>? embedExternals, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedRecord!>? embedRecords) -> void
 idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedImage!>! embedImages) -> void
 idunno.Bluesky.Drafts.DraftPost.EmbedExternals.get -> System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedExternal!>?
 idunno.Bluesky.Drafts.DraftPost.EmbedExternals.init -> void
