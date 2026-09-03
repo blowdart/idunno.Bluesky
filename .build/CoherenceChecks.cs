@@ -236,6 +236,11 @@ static async Task<int> CheckCoherenceAsync(string directory, string gitHubRef, s
             }
             Console.WriteLine($"✔️ Prerelease version");
 
+            if (!await CheckPublicAPIUnshippedAsync(dirInfo))
+            {
+                WriteWarning("One or more PublicAPI.unshipped.txt files contain unshipped APIs");
+            }
+
             if (branchName.StartsWith("version/v", StringComparison.OrdinalIgnoreCase))
             {
                 if (branchName.Length <= "version/v".Length)
@@ -459,12 +464,20 @@ static async Task<bool> CheckPublicAPIUnshippedAsync(DirectoryInfo directory)
     return true;
 }
 
- static void WriteError(string s)
+static void WriteError(string s)
 {
     Console.ForegroundColor = ConsoleColor.Red;
     Console.WriteLine($"❌ {s}");
     Console.ResetColor();
 }
+
+static void WriteWarning(string s)
+{
+    Console.ForegroundColor = ConsoleColor.Yellow;
+    Console.WriteLine($"⚠️ {s}");
+    Console.ResetColor();
+}
+
 
 public record VersionJson([field: JsonRequired] string Version);
 
