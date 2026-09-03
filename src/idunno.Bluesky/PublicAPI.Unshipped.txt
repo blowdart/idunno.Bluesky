@@ -7,6 +7,10 @@ const idunno.Bluesky.RecordType.ListBlock = "app.graph.listblock" -> string!
 const idunno.Bluesky.RecordType.ReferenceListOptOut = "app.bsky.graph.referencelistoptout" -> string!
 const idunno.Bluesky.RecordType.Repost = "app.bsky.feed.repost" -> string!
 idunno.Bluesky.Actor.AllowSubscriptionsKnownValues
+idunno.Bluesky.Actor.InterestsPreference.InterestsPreference(System.Collections.Generic.ICollection<string!>! tags) -> void
+idunno.Bluesky.Actor.InterestsPreference.Tags.get -> System.Collections.Generic.ICollection<string!>!
+idunno.Bluesky.Actor.InterestsPreference.UpdatedAt.get -> System.DateTimeOffset?
+idunno.Bluesky.Actor.InterestsPreference.UpdatedAt.set -> void
 idunno.Bluesky.Actor.KnownStatusValues
 idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription
 idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.<Clone>$() -> idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription!

@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace idunno.Bluesky.Actor;
 
 /// <summary>
@@ -15,20 +17,27 @@ public sealed record InterestsPreference : Preference
     /// Creates a new instance of <see cref="InterestsPreference"/>.
     /// </summary>
     /// <param name="tags">A list of tags which describe the account owner's interests gathered during onboarding.</param>
-    public InterestsPreference(IReadOnlyList<string> tags)
+    public InterestsPreference(ICollection<string> tags)
     {
         if (tags is null)
         {
-            Tags = new List<string>().AsReadOnly();
+            Tags = [];
         }
         else
         {
-            Tags = new List<string>(tags).AsReadOnly();
+            Tags = [.. tags];
         }
     }
 
     /// <summary>
     /// A list of tags which describe the account owner's interests gathered during onboarding.
     /// </summary>
-    public IReadOnlyList<string> Tags { get; set; }
+    [SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Set as writable to allow for ease of full replacement.")]
+    public ICollection<string> Tags { get; set; }
+
+    /// <summary>
+    /// Gets or sets the timestamp when the account owner last updated their interests
+    /// </summary>
+    public DateTimeOffset? UpdatedAt { get; set; }
+
 }

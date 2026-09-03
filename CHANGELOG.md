@@ -12,6 +12,7 @@
 * `ListBlock` has been added in the `idunno.Bluesky.Graph` namespace, representing a block relationship against an entire an entire list of accounts (actors).
 * Added `Actor.ProfileAssociatedActivitySubscription` and the known values `AllowSubscriptionsKnownValues`. This appears in the lexicon, but does not current seem to be used anywhere.
 * Added gallery support to Draft post records, via `Draft.EmbeddedGallery`.
+* Added optional `UpdatedAt` property to `Actor.InterestsPreference`, which indicates when the account owner last updated their interests. See [Add updatedAt to base prefs lexicon- #43](https://github.com/bluesky-social/bsky/pull/43/)
 
 ### Breaking Changes
 
@@ -39,6 +40,7 @@
 * `Record.Status` has been moved to `Actor.Status` to match the lexicon definition.
 * `Record.KnownStatusValues` has been moved to `Actor.KnownStatusValues`.
 * `Record.LabelerDeclaration` has been moved to `Labeler.Service` to match the lexicon definition.
+* Changed `InterestsPreference.Tags` from `IReadOnlyList<string>` to `ICollection<string>` to allow for easier modification of the list of tags.
 
 ## 5.0.0 - 2026-08-24
 
