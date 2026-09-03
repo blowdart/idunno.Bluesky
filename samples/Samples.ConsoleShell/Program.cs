@@ -31,7 +31,7 @@ public sealed class Program
         ArgumentException.ThrowIfNullOrEmpty(password);
 
         // Uncomment the next line to route all requests through Fiddler Everywhere
-        proxyUri = new Uri("http://localhost:8866");
+        // proxyUri = new Uri("http://localhost:8866");
 
         // Uncomment the next line to route all requests  through Fiddler Classic
         // proxyUri = new Uri("http://localhost:8888");
@@ -88,13 +88,6 @@ public sealed class Program
                 }
             }
             // END-AUTHENTICATION
-
-            // Josh's test list
-            var listUri =  new AtUri($"at://did:plc:wtdzzfgzjpirnk5wvpjutqoy/app.bsky.graph.list/3kvu7qvdebq2l");
-
-            var createReferenceListOptOutResult = await agent.CreateReferenceListOptOut(listUri, cancellationToken: cancellationToken);
-
-            var listReferenceListOptOutsResult = await agent.ListReferenceListOptOuts(cancellationToken: cancellationToken);
         }
     }
 }
