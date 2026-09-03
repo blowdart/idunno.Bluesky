@@ -10,6 +10,10 @@ using System.CommandLine.Parsing;
 
 using Semver;
 
+// Test run examples
+// dotnet run .\.build\CoherenceChecks.cs -- --github-ref=refs/heads/version/v6.0.0 --github-ref-type=branch --github-workflow=prerelease
+// dotnet run .\.build\CoherenceChecks.cs -- --github-ref=refs/tags/v6.0.0 --github-ref-type=tag --github-workflow=release
+
 Option<string> directoryOption = new("--directory", "-d")
 {
     Description = "The directory to check coherence in. Defaults to the current working directory.",
@@ -98,6 +102,11 @@ static async Task<int> CheckCoherenceAsync(string directory, string gitHubRef, s
 {
     Console.WriteLine("➡️ Checking GitHub Environment...");
 
+    if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GITHUB_ACTIONS")))
+    {
+        Console.WriteLine($"⚠️ GITHUB_ACTIONS environment variable is not set, assuming local test runs");
+    }
+
     ExitCode exitCode = ExitCode.Success;
     if (string.IsNullOrEmpty(gitHubRef))
     {
@@ -116,8 +125,6 @@ static async Task<int> CheckCoherenceAsync(string directory, string gitHubRef, s
     }
     if (!string.IsNullOrEmpty(gitHubWorkflow))
     {
-        string branchName = gitHubRef.Substring("refs/heads/".Length);
-
         switch (gitHubWorkflow.ToLowerInvariant())
         {
             case "release":
@@ -127,25 +134,22 @@ static async Task<int> CheckCoherenceAsync(string directory, string gitHubRef, s
                     WriteError($"Release workflow needs to be triggered by a tag, but was triggered by a {gitHubRefType}");
                     exitCode = ExitCode.NotBranch;
                 }
-
-                if (string.Compare(branchName, "main", StringComparison.OrdinalIgnoreCase) != 0)
-                {
-                    WriteError($"Release workflow needs to be run on the main branch, but was run on {branchName}");
-                    exitCode = ExitCode.NotMainBranch;
-                }
                 break;
 
             case "prerelease":
                 Console.WriteLine("➡️ Checking prerelease coherence...");
+
                 if (string.Compare(gitHubRefType, "branch", StringComparison.OrdinalIgnoreCase) != 0)
                 {
                     WriteError($"Prerelease workflow needs to be run on a branch, but was triggered by a {gitHubRefType}");
                     exitCode = ExitCode.NotBranch;
                 }
 
-                if (!branchName.StartsWith("version/v", StringComparison.OrdinalIgnoreCase))
+                string branch = gitHubRef.Substring("refs/heads/".Length);
+
+                if (!branch.StartsWith("version/v", StringComparison.OrdinalIgnoreCase))
                 {
-                    WriteError($"Prerelease workflow needs to be a version/v branch but was run on {branchName}");
+                    WriteError($"Prerelease workflow needs to be a version/v branch but was run on {branch}");
                     exitCode = ExitCode.NotPrerelease;
                 }
 
@@ -287,7 +291,8 @@ static async Task<int> CheckCoherenceAsync(string directory, string gitHubRef, s
             return (int)ExitCode.NotReleaseVersion;
         }
 
-        // Check the CHANGELOG.md has an entry for the json version that matches the tag
+        Console.WriteLine("➡️ Checking version.json...");
+        // Check the version.json stamp
         SemVersion? releaseJsonVersion = await GetReleaseJsonVersionAsync(dirInfo);
         if (releaseJsonVersion is null)
         {
@@ -297,7 +302,7 @@ static async Task<int> CheckCoherenceAsync(string directory, string gitHubRef, s
 
         if (!tagVersion.Equals(releaseJsonVersion))
         {
-            WriteError($"Tag version {tagVersion} does not match version.json version {releaseJsonVersion}");
+            WriteError($"Tag semver {tagVersion} does not match version.json version {releaseJsonVersion}");
             return (int)ExitCode.VersionTagMismatch;
         }
 
@@ -461,10 +466,13 @@ static async Task<bool> CheckPublicAPIUnshippedAsync(DirectoryInfo directory)
     Console.ResetColor();
 }
 
-
 public record VersionJson([field: JsonRequired] string Version);
 
-[JsonSourceGenerationOptions(WriteIndented = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true, NumberHandling = JsonNumberHandling.AllowReadingFromString)]
+[JsonSourceGenerationOptions(
+    WriteIndented = true,
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    PropertyNameCaseInsensitive = true,
+    NumberHandling = JsonNumberHandling.AllowReadingFromString)]
 [JsonSerializable(typeof(VersionJson))]
 partial class JsonContext : JsonSerializerContext
 {
