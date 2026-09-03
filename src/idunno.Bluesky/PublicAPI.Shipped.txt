@@ -177,8 +177,6 @@ idunno.Bluesky.Actor.InteractionPreferences.ThreadGateAllowRules.get -> System.C
 idunno.Bluesky.Actor.InteractionPreferences.ThreadGateAllowRules.init -> void
 idunno.Bluesky.Actor.InterestsPreference
 idunno.Bluesky.Actor.InterestsPreference.Equals(idunno.Bluesky.Actor.InterestsPreference? other) -> bool
-idunno.Bluesky.Actor.InterestsPreference.InterestsPreference(System.Collections.Generic.IReadOnlyList<string!>! tags) -> void
-idunno.Bluesky.Actor.InterestsPreference.Tags.get -> System.Collections.Generic.IReadOnlyList<string!>!
 idunno.Bluesky.Actor.InterestsPreference.Tags.set -> void
 idunno.Bluesky.Actor.KnownFollowers
 idunno.Bluesky.Actor.KnownFollowers.<Clone>$() -> idunno.Bluesky.Actor.KnownFollowers!
