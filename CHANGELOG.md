@@ -41,6 +41,15 @@
 * `Record.KnownStatusValues` has been moved to `Actor.KnownStatusValues`.
 * `Record.LabelerDeclaration` has been moved to `Labeler.Service` to match the lexicon definition.
 * Changed `InterestsPreference.Tags` from `IReadOnlyList<string>` to `ICollection<string>` to allow for easier modification of the list of tags.
+* Renamed `Actor.Preferences.SavedFeedPreference2s` property to `SavedFeedPreferenceV2` to match the lexicon definition.
+* Renamed `Actor.Preferences.SavedFeedPreference2` to `SavedFeedPreferenceV2` to match the lexicon definition.
+* Renamed `Actor.Preferences.SavedFeedPreferences2` to `SavedFeedPreferencesV2` to match the lexicon definition.
+
+### Fixed
+
+##### idunno.Bluesky
+
+* Fixed a bug in the deserialization of `Actor.Preferences` where `SavedFeedPreferencesV2` was not being deserialized correctly, resulting in null values.
 
 ## 5.0.0 - 2026-08-24
 

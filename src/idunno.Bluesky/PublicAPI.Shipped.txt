@@ -248,7 +248,6 @@ idunno.Bluesky.Actor.Preferences.PersonalDetailsPreference.get -> idunno.Bluesky
 idunno.Bluesky.Actor.Preferences.Preferences(bool enableBlueskyModerationLabeler = true) -> void
 idunno.Bluesky.Actor.Preferences.Preferences(System.Collections.Generic.IEnumerable<idunno.Bluesky.Actor.Preference!>! preferences, bool enableBlueskyModerationLabeler = true) -> void
 idunno.Bluesky.Actor.Preferences.Preferences(System.Collections.Generic.IList<idunno.Bluesky.Actor.Preference!>! list, bool enableBlueskyModerationLabeler = true) -> void
-idunno.Bluesky.Actor.Preferences.SavedFeedPreference2s.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Actor.SavedFeedPreference2!>!
 idunno.Bluesky.Actor.Preferences.SavedFeedPreferences.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Actor.SavedFeedPreference!>!
 idunno.Bluesky.Actor.Preferences.SubscribedLabelers.get -> System.Collections.Generic.IReadOnlyList<idunno.AtProto.Did!>!
 idunno.Bluesky.Actor.Preferences.ThreadViewPreference.get -> idunno.Bluesky.Actor.ThreadViewPreference?
@@ -341,22 +340,6 @@ idunno.Bluesky.Actor.SavedFeedPreference.SavedFeedPreference(idunno.Bluesky.Acto
 idunno.Bluesky.Actor.SavedFeedPreference.SavedFeedPreference(System.Collections.Generic.IReadOnlyList<idunno.AtProto.AtUri!>! saved, System.Collections.Generic.IReadOnlyList<idunno.AtProto.AtUri!>! pinned, int? timelineIndex) -> void
 idunno.Bluesky.Actor.SavedFeedPreference.TimelineIndex.get -> int?
 idunno.Bluesky.Actor.SavedFeedPreference.TimelineIndex.init -> void
-idunno.Bluesky.Actor.SavedFeedPreference2
-idunno.Bluesky.Actor.SavedFeedPreference2.Id.get -> string!
-idunno.Bluesky.Actor.SavedFeedPreference2.Id.init -> void
-idunno.Bluesky.Actor.SavedFeedPreference2.Pinned.get -> bool
-idunno.Bluesky.Actor.SavedFeedPreference2.Pinned.init -> void
-idunno.Bluesky.Actor.SavedFeedPreference2.SavedFeedPreference2(idunno.Bluesky.Actor.SavedFeedPreference2! original) -> void
-idunno.Bluesky.Actor.SavedFeedPreference2.SavedFeedPreference2(string! id, idunno.Bluesky.Actor.SavedFeedPreferenceType type, string! value, bool pinned) -> void
-idunno.Bluesky.Actor.SavedFeedPreference2.Type.get -> idunno.Bluesky.Actor.SavedFeedPreferenceType
-idunno.Bluesky.Actor.SavedFeedPreference2.Type.init -> void
-idunno.Bluesky.Actor.SavedFeedPreference2.Value.get -> string!
-idunno.Bluesky.Actor.SavedFeedPreference2.Value.init -> void
-idunno.Bluesky.Actor.SavedFeedPreferences2
-idunno.Bluesky.Actor.SavedFeedPreferences2.Items.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Actor.SavedFeedPreference2!>!
-idunno.Bluesky.Actor.SavedFeedPreferences2.Items.init -> void
-idunno.Bluesky.Actor.SavedFeedPreferences2.SavedFeedPreferences2(idunno.Bluesky.Actor.SavedFeedPreferences2! original) -> void
-idunno.Bluesky.Actor.SavedFeedPreferences2.SavedFeedPreferences2(System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Actor.SavedFeedPreference2!>! items) -> void
 idunno.Bluesky.Actor.SavedFeedPreferenceType
 idunno.Bluesky.Actor.SavedFeedPreferenceType.Feed = 0 -> idunno.Bluesky.Actor.SavedFeedPreferenceType
 idunno.Bluesky.Actor.SavedFeedPreferenceType.List = 1 -> idunno.Bluesky.Actor.SavedFeedPreferenceType
@@ -3007,18 +2990,6 @@ override idunno.Bluesky.Actor.SavedFeedPreference.Equals(object? obj) -> bool
 override idunno.Bluesky.Actor.SavedFeedPreference.GetHashCode() -> int
 override idunno.Bluesky.Actor.SavedFeedPreference.PrintMembers(System.Text.StringBuilder! builder) -> bool
 override idunno.Bluesky.Actor.SavedFeedPreference.ToString() -> string!
-override idunno.Bluesky.Actor.SavedFeedPreference2.<Clone>$() -> idunno.Bluesky.Actor.SavedFeedPreference2!
-override idunno.Bluesky.Actor.SavedFeedPreference2.EqualityContract.get -> System.Type!
-override idunno.Bluesky.Actor.SavedFeedPreference2.Equals(object? obj) -> bool
-override idunno.Bluesky.Actor.SavedFeedPreference2.GetHashCode() -> int
-override idunno.Bluesky.Actor.SavedFeedPreference2.PrintMembers(System.Text.StringBuilder! builder) -> bool
-override idunno.Bluesky.Actor.SavedFeedPreference2.ToString() -> string!
-override idunno.Bluesky.Actor.SavedFeedPreferences2.<Clone>$() -> idunno.Bluesky.Actor.SavedFeedPreferences2!
-override idunno.Bluesky.Actor.SavedFeedPreferences2.EqualityContract.get -> System.Type!
-override idunno.Bluesky.Actor.SavedFeedPreferences2.Equals(object? obj) -> bool
-override idunno.Bluesky.Actor.SavedFeedPreferences2.GetHashCode() -> int
-override idunno.Bluesky.Actor.SavedFeedPreferences2.PrintMembers(System.Text.StringBuilder! builder) -> bool
-override idunno.Bluesky.Actor.SavedFeedPreferences2.ToString() -> string!
 override idunno.Bluesky.Actor.StatusView.Equals(object? obj) -> bool
 override idunno.Bluesky.Actor.StatusView.GetHashCode() -> int
 override idunno.Bluesky.Actor.StatusView.ToString() -> string!
@@ -3967,8 +3938,6 @@ override sealed idunno.Bluesky.Actor.ProfileView.Equals(idunno.Bluesky.Actor.Pro
 override sealed idunno.Bluesky.Actor.ProfileViewBasic.Equals(idunno.Bluesky.View? other) -> bool
 override sealed idunno.Bluesky.Actor.ProfileViewDetailed.Equals(idunno.Bluesky.Actor.ProfileView? other) -> bool
 override sealed idunno.Bluesky.Actor.SavedFeedPreference.Equals(idunno.Bluesky.Actor.Preference? other) -> bool
-override sealed idunno.Bluesky.Actor.SavedFeedPreference2.Equals(idunno.Bluesky.Actor.Preference? other) -> bool
-override sealed idunno.Bluesky.Actor.SavedFeedPreferences2.Equals(idunno.Bluesky.Actor.Preference? other) -> bool
 override sealed idunno.Bluesky.Actor.ThreadViewPreference.Equals(idunno.Bluesky.Actor.Preference? other) -> bool
 override sealed idunno.Bluesky.Actor.VerificationPreferences.Equals(idunno.Bluesky.Actor.Preference? other) -> bool
 override sealed idunno.Bluesky.Bookmarks.BookmarkView.Equals(idunno.Bluesky.View? other) -> bool
@@ -4303,10 +4272,6 @@ static idunno.Bluesky.Actor.ProfileViewDetailed.operator !=(idunno.Bluesky.Actor
 static idunno.Bluesky.Actor.ProfileViewDetailed.operator ==(idunno.Bluesky.Actor.ProfileViewDetailed? left, idunno.Bluesky.Actor.ProfileViewDetailed? right) -> bool
 static idunno.Bluesky.Actor.SavedFeedPreference.operator !=(idunno.Bluesky.Actor.SavedFeedPreference? left, idunno.Bluesky.Actor.SavedFeedPreference? right) -> bool
 static idunno.Bluesky.Actor.SavedFeedPreference.operator ==(idunno.Bluesky.Actor.SavedFeedPreference? left, idunno.Bluesky.Actor.SavedFeedPreference? right) -> bool
-static idunno.Bluesky.Actor.SavedFeedPreference2.operator !=(idunno.Bluesky.Actor.SavedFeedPreference2? left, idunno.Bluesky.Actor.SavedFeedPreference2? right) -> bool
-static idunno.Bluesky.Actor.SavedFeedPreference2.operator ==(idunno.Bluesky.Actor.SavedFeedPreference2? left, idunno.Bluesky.Actor.SavedFeedPreference2? right) -> bool
-static idunno.Bluesky.Actor.SavedFeedPreferences2.operator !=(idunno.Bluesky.Actor.SavedFeedPreferences2? left, idunno.Bluesky.Actor.SavedFeedPreferences2? right) -> bool
-static idunno.Bluesky.Actor.SavedFeedPreferences2.operator ==(idunno.Bluesky.Actor.SavedFeedPreferences2? left, idunno.Bluesky.Actor.SavedFeedPreferences2? right) -> bool
 static idunno.Bluesky.Actor.StatusView.operator !=(idunno.Bluesky.Actor.StatusView? left, idunno.Bluesky.Actor.StatusView? right) -> bool
 static idunno.Bluesky.Actor.StatusView.operator ==(idunno.Bluesky.Actor.StatusView? left, idunno.Bluesky.Actor.StatusView? right) -> bool
 static idunno.Bluesky.Actor.ThreadViewPreference.operator !=(idunno.Bluesky.Actor.ThreadViewPreference? left, idunno.Bluesky.Actor.ThreadViewPreference? right) -> bool
@@ -5050,8 +5015,6 @@ virtual idunno.Bluesky.Actor.ProfileAssociatedGerm.PrintMembers(System.Text.Stri
 virtual idunno.Bluesky.Actor.ProfileView.Equals(idunno.Bluesky.Actor.ProfileView? other) -> bool
 virtual idunno.Bluesky.Actor.ProfileViewBasic.Equals(idunno.Bluesky.Actor.ProfileViewBasic? other) -> bool
 virtual idunno.Bluesky.Actor.SavedFeedPreference.Equals(idunno.Bluesky.Actor.SavedFeedPreference? other) -> bool
-virtual idunno.Bluesky.Actor.SavedFeedPreference2.Equals(idunno.Bluesky.Actor.SavedFeedPreference2? other) -> bool
-virtual idunno.Bluesky.Actor.SavedFeedPreferences2.Equals(idunno.Bluesky.Actor.SavedFeedPreferences2? other) -> bool
 virtual idunno.Bluesky.Actor.ThreadViewPreference.Equals(idunno.Bluesky.Actor.ThreadViewPreference? other) -> bool
 virtual idunno.Bluesky.Actor.VerificationPreferences.Equals(idunno.Bluesky.Actor.VerificationPreferences? other) -> bool
 virtual idunno.Bluesky.Actor.ViewerState.<Clone>$() -> idunno.Bluesky.Actor.ViewerState!

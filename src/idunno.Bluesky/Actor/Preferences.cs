@@ -25,7 +25,7 @@ public class Preferences : ReadOnlyCollection<Preference>
         List<Did> labelerPreferenceList = [];
         List<ContentLabelPreference> contentLabelPreferenceList = [];
         List<SavedFeedPreference> savedFeedPreferenceList = [];
-        List<SavedFeedPreference2> savedFeedPreference2List = [];
+        List<SavedFeedPreferenceV2> savedFeedPreferenceV2List = [];
         List<AtUri> hiddenPostUris = [];
         List<string> interestTags = [];
         Dictionary<string, FeedViewPreference> feedViewPreferences = [];
@@ -50,8 +50,8 @@ public class Preferences : ReadOnlyCollection<Preference>
                     savedFeedPreferenceList.Add(savedFeedPreference);
                     break;
 
-                case SavedFeedPreferences2 savedFeedPreferences2:
-                    savedFeedPreference2List.AddRange(savedFeedPreferences2.Items);
+                case SavedFeedPreferencesV2 savedFeedPreferencesV2:
+                    savedFeedPreferenceV2List.AddRange(savedFeedPreferencesV2.Items);
                     break;
 
                 case HiddenPostsPreferences hiddenPostsPreferences:
@@ -112,7 +112,7 @@ public class Preferences : ReadOnlyCollection<Preference>
         SubscribedLabelers = labelerPreferenceList.AsReadOnly();
         ContentLabelPreferences = contentLabelPreferenceList.AsReadOnly();
         SavedFeedPreferences = savedFeedPreferenceList.AsReadOnly();
-        SavedFeedPreference2s = savedFeedPreference2List.AsReadOnly();
+        SavedFeedPreferenceV2 = savedFeedPreferenceV2List.AsReadOnly();
         HiddenPosts = hiddenPostUris.AsReadOnly();
         InterestTags = interestTags;
         FeedViewPreferences = feedViewPreferences.AsReadOnly();
@@ -152,9 +152,9 @@ public class Preferences : ReadOnlyCollection<Preference>
     public IReadOnlyList<SavedFeedPreference> SavedFeedPreferences { get; }
 
     /// <summary>
-    /// A list of the actor's <see cref="SavedFeedPreference2"/>s.
+    /// A list of the actor's <see cref="Actor.SavedFeedPreferenceV2"/>s.
     /// </summary>
-    public IReadOnlyList<SavedFeedPreference2> SavedFeedPreference2s { get; }
+    public IReadOnlyList<SavedFeedPreferenceV2> SavedFeedPreferenceV2 { get; }
 
     /// <summary>
     /// A list of <see cref="AtUri"/>s of posts the account owner has hidden.

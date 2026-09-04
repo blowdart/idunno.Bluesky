@@ -11,7 +11,7 @@ internal static class PreferenceTypeDiscriminators
 
     public const string SavedFeeds = "app.bsky.actor.defs#savedFeedsPref";
 
-    public const string SavedFeeds2 = "app.bsky.actor.defs#savedFeedsPrefV2";
+    public const string SavedFeedsV2 = "app.bsky.actor.defs#savedFeedsPrefV2";
 
     public const string PersonalDetails = "app.bsky.actor.defs#personalDetailsPref";
 

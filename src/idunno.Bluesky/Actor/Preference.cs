@@ -15,7 +15,7 @@ namespace idunno.Bluesky.Actor;
 [JsonDerivedType(typeof(ContentLabelPreference), typeDiscriminator: PreferenceTypeDiscriminators.ContentLabel)]
 [JsonDerivedType(typeof(InterestsPreference), typeDiscriminator: PreferenceTypeDiscriminators.Interests)]
 [JsonDerivedType(typeof(SavedFeedPreference), typeDiscriminator: PreferenceTypeDiscriminators.SavedFeeds)]
-[JsonDerivedType(typeof(SavedFeedPreference2), typeDiscriminator: PreferenceTypeDiscriminators.SavedFeeds2)]
+[JsonDerivedType(typeof(SavedFeedPreferencesV2), typeDiscriminator: PreferenceTypeDiscriminators.SavedFeedsV2)]
 [JsonDerivedType(typeof(HiddenPostsPreferences), typeDiscriminator: PreferenceTypeDiscriminators.HiddenPosts)]
 [JsonDerivedType(typeof(AdultContentPreference), typeDiscriminator: PreferenceTypeDiscriminators.AdultContent)]
 [JsonDerivedType(typeof(PersonalDetailsPreference), typeDiscriminator: PreferenceTypeDiscriminators.PersonalDetails)]
