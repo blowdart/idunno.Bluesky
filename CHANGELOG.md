@@ -9,6 +9,17 @@
 * Added support for opt-ing out of a reference list (typically a starter pack), via `BlueskyAgent.CreateReferenceListOptOut`. `ListReferenceListOptOuts` allow
   for enumeration of an authenticated user's opt-outs, and `DeleteReferenceListOptOut` allows the deletion of the opt-out. Bluesky allows multiple optout
   records for the same list. If another opt-out record for the list still exists after deletion the opt-out remains in effect. See [APP-2933: implement reference-list opt-outs in AppView](https://github.com/bluesky-social/atproto/pull/5461).
+
+  To check if the authenticated user has opted out of a reference list, you use `agent.GetList`, then check `List.Viewer?.ReferenceListOptOut != null`.
+
+  As a list owner you can check if a user has opted out of your reference list by calling `agent.GetList`, then checking `List.Viewer?.ReferenceListOptOut`. If the user has opted out,
+  the `ReferenceListOptOut` property will be non-null with a value of `true`. For example:
+  ```c#
+  var myListResult = await agent.GetList(myList, cancellationToken: cancellationToken);
+  var optedOutUsers = from item in myListResult.Result
+                      where item.SubjectOptedOut is not null && item.SubjectOptedOut.Value
+                      select item.Subject;
+  ```
 * `ListBlock` has been added in the `idunno.Bluesky.Graph` namespace, representing a block relationship against an entire an entire list of accounts (actors).
 * Added `Actor.ProfileAssociatedActivitySubscription` and the known values `AllowSubscriptionsKnownValues`. This appears in the lexicon, but does not current seem to be used anywhere.
 * Added gallery support to Draft post records, via `Draft.EmbeddedGallery`.

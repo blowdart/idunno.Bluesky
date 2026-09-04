@@ -41,7 +41,6 @@ public partial class BlueskyAgent
         return await CreateBlueskyRecord(
             record,
             collection: CollectionNsid.ReferenceListOptOut,
-            rKey: TimestampIdentifier.Next(),
             validate: null,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
