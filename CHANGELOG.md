@@ -29,12 +29,6 @@
 
 ### Breaking Changes
 
-#### idunno.AtProto
-
-* `idunno.AtProto.Server.Models` `ServerDescription`, `Links` and `Contact` are now part of the `idunno.AtProto.Server` namespace.
-* `ServerDescription.InviteCodeRequired` and `PhoneVerificationRequired` are now nullable , as they're defined as optional in the ATProto lexicon.
-* `AtProtoServer.GetServiceAuth` `accessCredentialsUpdated` parameter renamed to `credentialsUpdated`.
-
 #### idunno.Bluesky
 
 * Namespace changes to match the lexicon:
@@ -61,12 +55,10 @@
 * `Record.LabelerDeclaration` has been moved to `Labeler.Service` to match the lexicon definition.
 * Actor preferences have had major changes, to match the published lexicons and fix deserialization issues with the previous implementation.
   * Changed `InterestsPreference.Tags` from `IReadOnlyList<string>` to `ICollection<string>` to allow for easier modification of the list of tags.
-  * Renamed `Actor.Preferences.SavedFeedPreference2s` property to `SavedFeedPreferenceV2` to match the lexicon definition.
   * Renamed `Actor.Preferences.SavedFeedPreference2` to `SavedFeedPreferenceV2` to match the lexicon definition.
   * Renamed `Actor.Preferences.SavedFeedPreferences2` to `SavedFeedPreferencesV2` to match the lexicon definition.
   * `Preferences.InterestTags` has been removed, use `Preferences.Interests` instead, and iterate through the `Tags` property.
   * `Preferences.SavedFeedPreference` has been removed, and replaced with `Preferences.SavedFeedsPreference`, which is a single instance of `SavedFeedsPreference`.
-  * `Preferences.SavedFeedPreferenceV2` has been removed, and replaced with `Preferences.SavedFeedsPreferenceV2`, which is a collection of `SavedFeed`.
   * `Preferences.InteractionPreferences` has been renamed to `Preferences.PostInteractionSettingsPreferences` to match the lexicon definition.
 
 ### Fixed
