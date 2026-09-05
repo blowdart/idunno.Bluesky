@@ -6,6 +6,7 @@ using System.Text.Json;
 using idunno.AtProto;
 using idunno.Bluesky.Actor;
 using idunno.Bluesky.Actor.Model;
+using idunno.Bluesky.Feed.Gates;
 
 namespace idunno.Bluesky.Serialization.Test;
 
@@ -219,9 +220,9 @@ public class PreferencesTests
         var preferences = new Preferences(deserializedGetPreferencesResponse.Preferences, false);
 
         Assert.NotNull(preferences);
-        Assert.NotNull(preferences.SavedFeedPreferenceV2);
+        Assert.NotNull(preferences.SavedFeedsPreferenceV2);
 
-        SavedFeedPreferenceV2 savedPreferenceV2 = Assert.Single(preferences.SavedFeedPreferenceV2);
+        SavedFeed savedPreferenceV2 = Assert.Single(preferences.SavedFeedsPreferenceV2);
         Assert.NotNull(savedPreferenceV2);
         Assert.Equal("3ligfgnjlu22q", savedPreferenceV2.Id);
         Assert.Equal(SavedFeedPreferenceType.Timeline, savedPreferenceV2.Type);
@@ -253,7 +254,7 @@ public class PreferencesTests
     }
 
     [Fact]
-    public void SavedFeedPreferenceV2DeserializesCorrectly()
+    public void IndividualSavedFeedPreferenceV2DeserializesCorrectly()
     {
         string json = """
             {
@@ -264,7 +265,7 @@ public class PreferencesTests
             }
             """;
 
-        SavedFeedPreferenceV2? deserializedSavedFeedPreferenceV2 = JsonSerializer.Deserialize<SavedFeedPreferenceV2>(json, BlueskyJsonSerializerOptions.Options);
+        SavedFeed? deserializedSavedFeedPreferenceV2 = JsonSerializer.Deserialize<SavedFeed>(json, BlueskyJsonSerializerOptions.Options);
         Assert.NotNull(deserializedSavedFeedPreferenceV2);
         Assert.Equal("3ligfgnjlu22q", deserializedSavedFeedPreferenceV2.Id);
         Assert.Equal(SavedFeedPreferenceType.Timeline, deserializedSavedFeedPreferenceV2.Type);
@@ -277,27 +278,341 @@ public class PreferencesTests
     {
         string json = """
             {
-                "$type": "app.bsky.actor.defs#savedFeedsPrefV2",
-                "items": [
+                "preferences": [
                     {
-                        "id": "3ligfgnjlu22q",
-                        "type": "timeline",
-                        "value": "following",
-                        "pinned": true
+                        "$type": "app.bsky.actor.defs#savedFeedsPrefV2",
+                        "items": [
+                            {
+                                "id": "3ligfgnjlu22q",
+                                "type": "timeline",
+                                "value": "following",
+                                "pinned": true
+                            }
+                        ]
                     }
                 ]
             }
             """;
 
-        SavedFeedPreferencesV2? deserializedSavedFeedPreferenceV2 = JsonSerializer.Deserialize<SavedFeedPreferencesV2>(json, BlueskyJsonSerializerOptions.Options);
+        GetPreferencesResponse? deserializedGetPreferencesResponse = JsonSerializer.Deserialize<GetPreferencesResponse>(json, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(deserializedGetPreferencesResponse);
+        Assert.NotNull(deserializedGetPreferencesResponse.Preferences);
 
-        Assert.NotNull(deserializedSavedFeedPreferenceV2);
-        SavedFeedPreferenceV2 savedFeedPreferenceV2 = Assert.Single(deserializedSavedFeedPreferenceV2.Items);
+        var preferences = new Preferences(deserializedGetPreferencesResponse.Preferences, false);
+
+        Assert.NotNull(preferences);
+        Assert.NotNull(preferences.SavedFeedsPreferenceV2);
+
+        SavedFeed savedFeedPreferenceV2 = Assert.Single(preferences.SavedFeedsPreferenceV2);
 
         Assert.NotNull(savedFeedPreferenceV2);
         Assert.Equal("3ligfgnjlu22q", savedFeedPreferenceV2.Id);
         Assert.Equal(SavedFeedPreferenceType.Timeline, savedFeedPreferenceV2.Type);
         Assert.Equal("following", savedFeedPreferenceV2.Value);
         Assert.True(savedFeedPreferenceV2.Pinned);
+    }
+
+    [Fact]
+    public void InterestsPrefsDeserializesCorrectly()
+    {
+        string json = """
+            {
+                "preferences": [
+                    {
+                        "$type": "app.bsky.actor.defs#interestsPref",
+                        "tags": [
+                            "tag1",
+                            "tag2",
+                            "tag3"
+                        ]
+                    }
+                ]
+            }
+            """;
+
+        GetPreferencesResponse? deserializedGetPreferencesResponse = JsonSerializer.Deserialize<GetPreferencesResponse>(json, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(deserializedGetPreferencesResponse);
+        Assert.NotNull(deserializedGetPreferencesResponse.Preferences);
+
+        var preferences = new Preferences(deserializedGetPreferencesResponse.Preferences, false);
+
+        Assert.NotNull(preferences);
+        Assert.Equal(3, preferences.Interests!.Tags.Count);
+        Assert.Contains("tag1", preferences.Interests.Tags);
+        Assert.Contains("tag2", preferences.Interests.Tags);
+        Assert.Contains("tag3", preferences.Interests.Tags);
+        Assert.Null(preferences.Interests.UpdatedAt);
+    }
+
+    [Fact]
+    public void InterestsPrefsWithUpdatedAtDeserializesCorrectly()
+    {
+        string json = """
+            {
+                "preferences": [
+                    {
+                        "$type": "app.bsky.actor.defs#interestsPref",
+                        "tags": [
+                            "tag1",
+                            "tag2",
+                            "tag3"
+                        ],
+                        "updatedAt": "2024-06-01T12:34:56.789Z"
+                    }
+                ]
+            }
+            """;
+
+        GetPreferencesResponse? deserializedGetPreferencesResponse = JsonSerializer.Deserialize<GetPreferencesResponse>(json, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(deserializedGetPreferencesResponse);
+        Assert.NotNull(deserializedGetPreferencesResponse.Preferences);
+
+        var preferences = new Preferences(deserializedGetPreferencesResponse.Preferences, false);
+
+        Assert.NotNull(preferences);
+        Assert.NotNull(preferences.Interests);
+
+        Assert.Equal(DateTimeOffset.Parse("2024-06-01T12:34:56.789Z"), preferences.Interests.UpdatedAt);
+    }
+
+    [Fact]
+    public void MutedWordsPrefsDeserializesCorrectly()
+    {
+        string json = """
+            {
+                "preferences": [
+                    {
+                        "$type": "app.bsky.actor.defs#mutedWordsPref",
+                        "items": [
+                            {
+                                "value": "Wordle",
+                                "targets": [
+                                    "tag",
+                                    "content"
+                                ],
+                                "id": "3lkeh5t5pwt2s",
+                                "actorTarget": "all"
+                            }
+                        ]
+                    }
+                ]
+            }
+            """;
+
+        GetPreferencesResponse? deserializedGetPreferencesResponse = JsonSerializer.Deserialize<GetPreferencesResponse>(json, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(deserializedGetPreferencesResponse);
+        Assert.NotNull(deserializedGetPreferencesResponse.Preferences);
+
+        var preferences = new Preferences(deserializedGetPreferencesResponse.Preferences, false);
+
+        Assert.NotNull(preferences);
+        Assert.NotNull(preferences.MutedWords);
+
+        MutedWord mutedWord = Assert.Single(preferences.MutedWords);
+        Assert.Equal("Wordle", mutedWord.Value);
+        Assert.Contains(MutedWordTarget.Tag, mutedWord.Targets);
+        Assert.Contains(MutedWordTarget.Content, mutedWord.Targets);
+        Assert.Equal("3lkeh5t5pwt2s", mutedWord.Id);
+        Assert.Equal(MutedWordActorTarget.All, mutedWord.ActorTarget);
+    }
+
+    [Fact]
+    public void SavedFeedPrefV2DeserializesCorrectly()
+    {
+        string json = """
+            {
+                "preferences": [
+                    {
+                        "$type": "app.bsky.actor.defs#savedFeedsPrefV2",
+                        "items": [
+                            {
+                                "id": "3ligfgnjlu22q",
+                                "type": "timeline",
+                                "value": "following",
+                                "pinned": true
+                            }
+                        ]
+                    }
+                ]
+            }
+            """;
+
+        GetPreferencesResponse? deserializedGetPreferencesResponse = JsonSerializer.Deserialize<GetPreferencesResponse>(json, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(deserializedGetPreferencesResponse);
+        Assert.NotNull(deserializedGetPreferencesResponse.Preferences);
+
+        var preferences = new Preferences(deserializedGetPreferencesResponse.Preferences, false);
+
+        Assert.NotNull(preferences);
+        Assert.NotNull(preferences.SavedFeedsPreferenceV2);
+
+        SavedFeed savedFeedPreferenceV2 = Assert.Single(preferences.SavedFeedsPreferenceV2);
+        Assert.Equal("3ligfgnjlu22q", savedFeedPreferenceV2.Id);
+        Assert.Equal(SavedFeedPreferenceType.Timeline, savedFeedPreferenceV2.Type);
+        Assert.Equal("following", savedFeedPreferenceV2.Value);
+        Assert.True(savedFeedPreferenceV2.Pinned);
+    }
+
+    [Fact]
+    public void SavedFeedsPrefDeserializesCorrectly()
+    {
+        string json = """
+            {
+                "preferences": [
+                    {
+                        "$type": "app.bsky.actor.defs#savedFeedsPref",
+                        "pinned": [
+                            "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot",
+                            "at://did:plc:wqowuobffl66jv3kpsvo7ak4/app.bsky.feed.generator/the-algorithm"
+                        ],
+                        "saved": [
+                            "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/bsky-team"
+                        ]
+                    }
+                ]
+            }
+            """;
+
+        GetPreferencesResponse? deserializedGetPreferencesResponse = JsonSerializer.Deserialize<GetPreferencesResponse>(json, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(deserializedGetPreferencesResponse);
+        Assert.NotNull(deserializedGetPreferencesResponse.Preferences);
+        var preferences = new Preferences(deserializedGetPreferencesResponse.Preferences, false);
+
+        Assert.NotNull(preferences);
+        Assert.NotNull(preferences.SavedFeedsPreference);
+
+        Assert.Equal(2, preferences.SavedFeedsPreference.Pinned.Count);
+
+        AtUri saved = Assert.Single(preferences.SavedFeedsPreference.Saved);
+
+        Assert.Contains(new AtUri("at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot"), preferences.SavedFeedsPreference.Pinned);
+        Assert.Contains(new AtUri("at://did:plc:wqowuobffl66jv3kpsvo7ak4/app.bsky.feed.generator/the-algorithm"), preferences.SavedFeedsPreference.Pinned);
+        Assert.Equal(new AtUri("at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/bsky-team"), saved);
+
+        Assert.Null(preferences.SavedFeedsPreference.TimelineIndex);
+    }
+
+    [Fact]
+    public void PostInteractionPreferencesDeserializesCorrectly()
+    {
+        string json = """
+            {
+                "preferences": [
+                    {
+                        "threadgateAllowRules": [
+                            {
+                                "$type": "app.bsky.feed.threadgate#followingRule"
+                            }
+                        ],
+                        "postgateEmbeddingRules": [
+                            {
+                                "$type": "app.bsky.feed.postgate#disableRule"
+                            }
+                        ],
+                        "$type": "app.bsky.actor.defs#postInteractionSettingsPref"
+                    }
+                ]
+            }
+            """;
+        GetPreferencesResponse? deserializedGetPreferencesResponse = JsonSerializer.Deserialize<GetPreferencesResponse>(json, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(deserializedGetPreferencesResponse);
+        Assert.NotNull(deserializedGetPreferencesResponse.Preferences);
+
+        var preferences = new Preferences(deserializedGetPreferencesResponse.Preferences, false);
+        Assert.NotNull(preferences);
+        Assert.NotNull(preferences.PostInteractionSettingsPreferences);
+
+        Assert.NotNull(preferences.PostInteractionSettingsPreferences.ThreadGateAllowRules);
+        ThreadGateRule threadGateAllowRule = Assert.Single(preferences.PostInteractionSettingsPreferences.ThreadGateAllowRules);
+        Assert.IsType<FollowingRule>(threadGateAllowRule);
+
+        Assert.NotNull(preferences.PostInteractionSettingsPreferences.PostGateEmbeddingRules);
+        PostGateRule postgateEmbeddingRule = Assert.Single(preferences.PostInteractionSettingsPreferences.PostGateEmbeddingRules);
+        Assert.IsType<DisableEmbeddingRule>(postgateEmbeddingRule);
+    }
+
+    [Fact]
+    public void EnableAdultContentPreferenceDeserializesCorrectlyWhenTrue()
+    {
+        string json = """
+            {
+                "preferences": [
+                    {
+                        "$type": "app.bsky.actor.defs#adultContentPref",
+                        "enabled": true
+                    }
+                ]
+            }
+            """;
+
+        GetPreferencesResponse? deserializedGetPreferencesResponse = JsonSerializer.Deserialize<GetPreferencesResponse>(json, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(deserializedGetPreferencesResponse);
+        Assert.NotNull(deserializedGetPreferencesResponse.Preferences);
+
+        var preferences = new Preferences(deserializedGetPreferencesResponse.Preferences, false);
+        Assert.NotNull(preferences);
+        Assert.NotNull(preferences.AdultContentPreference);
+        Assert.True(preferences.AdultContentPreference.Enabled);
+    }
+
+    [Fact]
+    public void EnableAdultContentPreferenceDeserializesCorrectlyWhenFalse()
+    {
+        string json = """
+            {
+                "preferences": [
+                    {
+                        "$type": "app.bsky.actor.defs#adultContentPref",
+                        "enabled": false
+                    }
+                ]
+            }
+            """;
+
+        GetPreferencesResponse? deserializedGetPreferencesResponse = JsonSerializer.Deserialize<GetPreferencesResponse>(json, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(deserializedGetPreferencesResponse);
+        Assert.NotNull(deserializedGetPreferencesResponse.Preferences);
+
+        var preferences = new Preferences(deserializedGetPreferencesResponse.Preferences, false);
+        Assert.NotNull(preferences);
+        Assert.NotNull(preferences.AdultContentPreference);
+        Assert.False(preferences.AdultContentPreference.Enabled);
+    }
+
+    [Fact]
+    public void FeedViewPerferenceDeserializesCorrectly()
+    {
+        string json = """
+            {
+                "preferences": [
+                    {
+                        "$type": "app.bsky.actor.defs#feedViewPref",
+                        "feed": "home",
+                        "lab_mergeFeedEnabled": true,
+                        "hideReplies": false,
+                        "hideRepliesByUnfollowed": false,
+                        "hideRepliesByLikeCount": 0,
+                        "hideReposts": true,
+                        "hideQuotePosts": false
+                    }
+                ]
+            }
+            """;
+        GetPreferencesResponse? deserializedGetPreferencesResponse = JsonSerializer.Deserialize<GetPreferencesResponse>(json, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(deserializedGetPreferencesResponse);
+        Assert.NotNull(deserializedGetPreferencesResponse.Preferences);
+        var preferences = new Preferences(deserializedGetPreferencesResponse.Preferences, false);
+        Assert.NotNull(preferences);
+        Assert.NotNull(preferences.FeedViewPreference);
+
+        Assert.Equal("home", preferences.FeedViewPreference.Feed);
+        Assert.False(preferences.FeedViewPreference.HideReplies);
+        Assert.False(preferences.FeedViewPreference.HideRepliesByUnfollowed);
+        Assert.Equal(0, preferences.FeedViewPreference.HideRepliesByLikeCount);
+        Assert.True(preferences.FeedViewPreference.HideReposts);
+        Assert.False(preferences.FeedViewPreference.HideQuotePosts);
+
+        Assert.NotNull(preferences.FeedViewPreference.ExtensionData);
+        Assert.Contains("lab_mergeFeedEnabled", preferences.FeedViewPreference.ExtensionData.Keys);
     }
 }

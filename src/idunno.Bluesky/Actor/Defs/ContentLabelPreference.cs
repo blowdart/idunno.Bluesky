@@ -5,7 +5,9 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Actor;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// User preferences for a content label.

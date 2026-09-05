@@ -3,7 +3,9 @@
 
 using System.Text.Json.Serialization;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Actor;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// A user's adult content preferences.

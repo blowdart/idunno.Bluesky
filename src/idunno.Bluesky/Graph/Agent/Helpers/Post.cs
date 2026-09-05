@@ -32,13 +32,14 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/>, empty or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Various helpers")]
     public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
         string text,
         string langs,
         DateTimeOffset? createdAt = null,
         ICollection<ThreadGateRule>? threadGateRules = null,
         ICollection<PostGateRule>? postGateRules = null,
-        InteractionPreferences? interactionPreferences = null,
+        PostInteractionSettingsPreferences? interactionPreferences = null,
         PostSelfLabels? labels = null,
         ICollection<string>? tags = null,
         bool extractFacets = true,
@@ -81,13 +82,14 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/>, empty or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Various helpers")]
     public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
         string text,
         DateTimeOffset? createdAt = null,
         ICollection<string>? langs = null,
         ICollection<ThreadGateRule>? threadGateRules = null,
         ICollection<PostGateRule>? postGateRules = null,
-        InteractionPreferences? interactionPreferences = null,
+        PostInteractionSettingsPreferences? interactionPreferences = null,
         PostSelfLabels? labels = null,
         ICollection<string>? tags = null,
         bool extractFacets = true,
@@ -149,6 +151,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentException">Thrown when <paramref name="text"/> is <see langword="null"/>, empty or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Various helpers")]
     public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
         string text,
         EmbeddedImage image,
@@ -156,7 +159,7 @@ public partial class BlueskyAgent
         ICollection<string>? langs = null,
         ICollection<ThreadGateRule>? threadGateRules = null,
         ICollection<PostGateRule>? postGateRules = null,
-        InteractionPreferences? interactionPreferences = null,
+        PostInteractionSettingsPreferences? interactionPreferences = null,
         PostSelfLabels? labels = null,
         ICollection<string>? tags = null,
         bool extractFacets = true,
@@ -218,6 +221,7 @@ public partial class BlueskyAgent
     ///   if <paramref name="text"/> length is greater than the maximum number of characters or graphemes, or
     ///   <paramref name="images"/> contains more than the maximum allowed number of images.
     /// </exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Various helpers")]
     public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
         string text,
         ICollection<EmbeddedImage>? images,
@@ -225,7 +229,7 @@ public partial class BlueskyAgent
         ICollection<string>? langs = null,
         ICollection<ThreadGateRule>? threadGateRules = null,
         ICollection<PostGateRule>? postGateRules = null,
-        InteractionPreferences? interactionPreferences = null,
+        PostInteractionSettingsPreferences? interactionPreferences = null,
         PostSelfLabels? labels = null,
         ICollection<string>? tags = null,
         bool extractFacets = true,
@@ -330,6 +334,7 @@ public partial class BlueskyAgent
     /// <paramref name="threadGateRules"/> contains more than the maximum allowed number of rules, or
     /// <paramref name="postGateRules"/> contains more than the maximum allowed number of rules
     /// </exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Various helpers")]
     public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
         string? text,
         EmbeddedVideo video,
@@ -337,7 +342,7 @@ public partial class BlueskyAgent
         ICollection<string>? langs = null,
         ICollection<ThreadGateRule>? threadGateRules = null,
         ICollection<PostGateRule>? postGateRules = null,
-        InteractionPreferences? interactionPreferences = null,
+        PostInteractionSettingsPreferences? interactionPreferences = null,
         PostSelfLabels? labels = null,
         ICollection<string>? tags = null,
         bool extractFacets = true,
@@ -419,13 +424,14 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="externalCard"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     /// <remarks><para>Posts containing an embedded card do not require post text.</para></remarks>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Various helpers")]
     public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
         EmbeddedExternal externalCard,
         DateTimeOffset? createdAt = null,
         ICollection<string>? langs = null,
         ICollection<ThreadGateRule>? threadGateRules = null,
         ICollection<PostGateRule>? postGateRules = null,
-        InteractionPreferences? interactionPreferences = null,
+        PostInteractionSettingsPreferences? interactionPreferences = null,
         PostSelfLabels? labels = null,
         ICollection<string>? tags = null,
         CancellationToken cancellationToken = default)
@@ -464,6 +470,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="externalCard"/> is <see langword="null"/>, empty or whitespace.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="text"/> length is greater than the maximum number of characters or graphemes.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Various helpers")]
     public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
         string text,
         EmbeddedExternal externalCard,
@@ -471,7 +478,7 @@ public partial class BlueskyAgent
         ICollection<string>? langs = null,
         ICollection<ThreadGateRule>? threadGateRules = null,
         ICollection<PostGateRule>? postGateRules = null,
-        InteractionPreferences? interactionPreferences = null,
+        PostInteractionSettingsPreferences? interactionPreferences = null,
         PostSelfLabels? labels = null,
         bool extractFacets = true,
         ICollection<string>? tags = null,
@@ -540,11 +547,12 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="post"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
     [SuppressMessage("Minor Code Smell", "S3267:Loops should be simplified with \"LINQ\" expressions", Justification = "Remove linq for clarity")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Various helpers")]
     public async Task<AtProtoHttpResult<CreateRecordResult>> Post(
         Post post,
         ICollection<ThreadGateRule>? threadGateRules = null,
         ICollection<PostGateRule>? postGateRules = null,
-        InteractionPreferences? interactionPreferences = null,
+        PostInteractionSettingsPreferences? interactionPreferences = null,
         bool extractFacets = true,
         CancellationToken cancellationToken = default)
     {
@@ -624,6 +632,7 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="postBuilder"/> is <see langword="null"/>.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the agent is not authenticated.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Various helpers")]
     public async Task<AtProtoHttpResult<CreateRecordResult>> Post(PostBuilder postBuilder, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(postBuilder);
@@ -673,7 +682,7 @@ public partial class BlueskyAgent
         Post post,
         ICollection<ThreadGateRule>? threadGateRules,
         ICollection<PostGateRule>? postGateRules,
-        InteractionPreferences? interactionPreferences,
+        PostInteractionSettingsPreferences? interactionPreferences,
         CancellationToken cancellationToken = default)
     {
         if (!IsAuthenticated)

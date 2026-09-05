@@ -20,10 +20,12 @@
                       where item.SubjectOptedOut is not null && item.SubjectOptedOut.Value
                       select item.Subject;
   ```
-* `ListBlock` has been added in the `idunno.Bluesky.Graph` namespace, representing a block relationship against an entire an entire list of accounts (actors).
+* `ListBlock` has been added in the `idunno.Bluesky.Graph` namespace, representing a block relationship against an entire list of accounts (actors).
 * Added `Actor.ProfileAssociatedActivitySubscription` and the known values `AllowSubscriptionsKnownValues`. This appears in the lexicon, but does not current seem to be used anywhere.
-* Added gallery support to Draft post records, via `Draft.EmbeddedGallery`.
+* Added gallery support to Draft posts, via `Draft.EmbeddedGallery`.
 * Added optional `UpdatedAt` property to `Actor.InterestsPreference`, which indicates when the account owner last updated their interests. See [Add updatedAt to base prefs lexicon- #43](https://github.com/bluesky-social/bsky/pull/43/)
+* Added `Preferences.Interests` property, which is an `InterestsPreference` instance, which in turn allows for a new `LastUpdated` property.
+* Added `Preferences.LiveEventPreferences` property, which is a `LiveEventPreferences` instance.
 
 ### Breaking Changes
 
@@ -51,16 +53,24 @@
 * `Record.Status` has been moved to `Actor.Status` to match the lexicon definition.
 * `Record.KnownStatusValues` has been moved to `Actor.KnownStatusValues`.
 * `Record.LabelerDeclaration` has been moved to `Labeler.Service` to match the lexicon definition.
-* Changed `InterestsPreference.Tags` from `IReadOnlyList<string>` to `ICollection<string>` to allow for easier modification of the list of tags.
-* Renamed `Actor.Preferences.SavedFeedPreference2s` property to `SavedFeedPreferenceV2` to match the lexicon definition.
-* Renamed `Actor.Preferences.SavedFeedPreference2` to `SavedFeedPreferenceV2` to match the lexicon definition.
-* Renamed `Actor.Preferences.SavedFeedPreferences2` to `SavedFeedPreferencesV2` to match the lexicon definition.
+* Actor preferences have had major changes, to match the published lexicons and fix deserialization issues with the previous implementation.
+  * Changed `InterestsPreference.Tags` from `IReadOnlyList<string>` to `ICollection<string>` to allow for easier modification of the list of tags.
+  * Renamed `Actor.Preferences.SavedFeedPreference2s` property to `SavedFeedPreferenceV2` to match the lexicon definition.
+  * Renamed `Actor.Preferences.SavedFeedPreference2` to `SavedFeedPreferenceV2` to match the lexicon definition.
+  * Renamed `Actor.Preferences.SavedFeedPreferences2` to `SavedFeedPreferencesV2` to match the lexicon definition.
+  * `Preferences.InterestTags` has been removed, use `Preferences.Interests` instead, and iterate through the `Tags` property.
+  * `Preferences.SavedFeedPreference` has been removed, and replaced with `Preferences.SavedFeedsPreference`, which is a single instance of `SavedFeedsPreference`.
+  * `Preferences.SavedFeedPreferenceV2` has been removed, and replaced with `Preferences.SavedFeedsPreferenceV2`, which is a collection of `SavedFeed`.
+  * `Preferences.InteractionPreferences` has been renamed to `Preferences.PostInteractionSettingsPreferences` to match the lexicon definition.
+  * `Preferences.FeedViewPreferences` has been renamed to `Preferences.FeedViewPreference` to match the lexicon definition, and is now a nullable instance of `FeedViewPreference`..
 
 ### Fixed
 
 ##### idunno.Bluesky
 
-* Fixed a bug in the deserialization of `Actor.Preferences` where `SavedFeedPreferencesV2` was not being deserialized correctly, resulting in null values.
+* Fixed a bug in the deserialization of `Actor.Preferences` where `SavedFeedsPreferenceV2` was not being deserialized correctly, resulting in null values.
+* `Preferences.SavedFeedsPreference` is now correctly deserialized.
+* `Preferences.SavedFeedsPreferenceV2` is now correctly deserialized.
 
 ## 5.0.0 - 2026-08-24
 

@@ -14,7 +14,7 @@ namespace idunno.Bluesky.Actor;
 [JsonDerivedType(typeof(LabelersPreference), typeDiscriminator: PreferenceTypeDiscriminators.Labelers)]
 [JsonDerivedType(typeof(ContentLabelPreference), typeDiscriminator: PreferenceTypeDiscriminators.ContentLabel)]
 [JsonDerivedType(typeof(InterestsPreference), typeDiscriminator: PreferenceTypeDiscriminators.Interests)]
-[JsonDerivedType(typeof(SavedFeedPreference), typeDiscriminator: PreferenceTypeDiscriminators.SavedFeeds)]
+[JsonDerivedType(typeof(SavedFeedsPreference), typeDiscriminator: PreferenceTypeDiscriminators.SavedFeeds)]
 [JsonDerivedType(typeof(SavedFeedPreferencesV2), typeDiscriminator: PreferenceTypeDiscriminators.SavedFeedsV2)]
 [JsonDerivedType(typeof(HiddenPostsPreferences), typeDiscriminator: PreferenceTypeDiscriminators.HiddenPosts)]
 [JsonDerivedType(typeof(AdultContentPreference), typeDiscriminator: PreferenceTypeDiscriminators.AdultContent)]
@@ -23,9 +23,10 @@ namespace idunno.Bluesky.Actor;
 [JsonDerivedType(typeof(MutedWordPreferences), typeDiscriminator: PreferenceTypeDiscriminators.MutedWords)]
 [JsonDerivedType(typeof(ThreadViewPreference), typeDiscriminator: PreferenceTypeDiscriminators.ThreadView)]
 [JsonDerivedType(typeof(BlueskyAppStatePreference), typeDiscriminator: PreferenceTypeDiscriminators.BlueskyAppState)]
-[JsonDerivedType(typeof(InteractionPreferences), typeDiscriminator: PreferenceTypeDiscriminators.PostInteraction)]
+[JsonDerivedType(typeof(PostInteractionSettingsPreferences), typeDiscriminator: PreferenceTypeDiscriminators.PostInteraction)]
 [JsonDerivedType(typeof(VerificationPreferences), typeDiscriminator: PreferenceTypeDiscriminators.Verification)]
 [JsonDerivedType(typeof(DeclaredAgePreference), typeDiscriminator: PreferenceTypeDiscriminators.DeclaredAge)]
+[JsonDerivedType(typeof(LiveEventPreferences), typeDiscriminator: PreferenceTypeDiscriminators.LiveEvents)]
 public record Preference
 {
     /// <summary>

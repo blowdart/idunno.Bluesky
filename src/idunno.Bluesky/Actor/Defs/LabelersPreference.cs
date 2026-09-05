@@ -5,7 +5,9 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Actor;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// A user's labelers preferences
@@ -27,28 +29,4 @@ public sealed record LabelersPreference : Preference
     /// </summary>
     [JsonInclude]
     public IReadOnlyList<LabelerPreference> Labelers { get; init; }
-}
-
-/// <summary>
-/// A preference for an individual labeler.
-/// </summary>
-public record LabelerPreference
-{
-    /// <summary>
-    /// Creates a new instance of <see cref="LabelerPreference"/>.
-    /// </summary>
-    /// <param name="did">The <paramref name="did"/> of the labeler this preference applies to.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
-    [JsonConstructor]
-    public LabelerPreference(Did did)
-    {
-        ArgumentNullException.ThrowIfNull(did);
-        Did = did;
-    }
-
-    /// <summary>
-    /// The <see cref="Did"/> of the labeler.
-    /// </summary>
-    [JsonRequired]
-    public Did Did { get; init; }
 }

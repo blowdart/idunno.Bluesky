@@ -5,22 +5,24 @@ using System.Text.Json.Serialization;
 
 using idunno.Bluesky.Feed.Gates;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Actor;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// User's default post interaction preferences
 /// These values should be applied as default values when creating new posts. These refs should mirror the threadgate and postgate records exactly.
 /// </summary>
-public sealed record InteractionPreferences : Preference
+public sealed record PostInteractionSettingsPreferences : Preference
 {
     /// <summary>
-    /// Creates a new instance of <see cref="InteractionPreferences"/>.
+    /// Creates a new instance of <see cref="PostInteractionSettingsPreferences"/>.
     /// </summary>
     /// <param name="threadGateAllowRules"> List of rules defining who can reply to this users posts.</param>
     /// <param name="postGateEmbeddingRules">List of rules defining who can embed this users posts.</param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when more than 5 rules are provided for either parameter.</exception>
     [JsonConstructor]
-    public InteractionPreferences(ICollection<ThreadGateRule>? threadGateAllowRules, ICollection<PostGateRule>? postGateEmbeddingRules)
+    public PostInteractionSettingsPreferences(ICollection<ThreadGateRule>? threadGateAllowRules, ICollection<PostGateRule>? postGateEmbeddingRules)
     {
         if (threadGateAllowRules is not null)
         {

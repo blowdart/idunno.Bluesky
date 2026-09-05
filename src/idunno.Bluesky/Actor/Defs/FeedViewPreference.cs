@@ -1,9 +1,13 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Actor;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// A user's <see cref="Preference"/>s controlling how posts in feeds are displayed.
@@ -17,15 +21,15 @@ public sealed record class FeedViewPreference : Preference
     /// <param name="hideReplies">Flag indicating whether to hide replies in the feed.s</param>
     /// <param name="hideRepliesByUnfollowed">Flag indicating whether to replies in the feed if they are not by followed users.</param>
     /// <param name="hideRepliesByLikeCount">Minimum number of likes a reply must have in the feed before being shown.</param>
-    /// <param name="hideRepostsInFeed">Flag indicating whether to hide reposts in the feed.</param>
+    /// <param name="hideReposts">Flag indicating whether to hide reposts in the feed.</param>
     /// <param name="hideQuotePosts">Flag indicating whether to hide quote posts in the feed.</param>
-    public FeedViewPreference(string feed, bool hideReplies, bool hideRepliesByUnfollowed, int? hideRepliesByLikeCount, bool hideRepostsInFeed, bool hideQuotePosts)
+    public FeedViewPreference(string feed, bool hideReplies, bool hideRepliesByUnfollowed, int? hideRepliesByLikeCount, bool hideReposts, bool hideQuotePosts)
     {
         Feed = feed;
         HideReplies = hideReplies;
         HideRepliesByUnfollowed = hideRepliesByUnfollowed;
         HideRepliesByLikeCount = hideRepliesByLikeCount;
-        HideRepostsInFeed = hideRepostsInFeed;
+        HideReposts = hideReposts;
         HideQuotePosts = hideQuotePosts;
     }
 
@@ -58,7 +62,7 @@ public sealed record class FeedViewPreference : Preference
     /// Flag indicating whether to hide reposts in the feed.
     /// </summary>
     [JsonInclude]
-    public bool HideRepostsInFeed { get; init; }
+    public bool HideReposts { get; init; }
 
     /// <summary>
     /// Flag indicating whether to hide quote posts in the feed.

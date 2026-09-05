@@ -3,51 +3,24 @@
 
 using System.Text.Json.Serialization;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Actor;
-
-/// <summary>
-/// Encapsulates an actor's feed preferences.
-/// </summary>
-public record SavedFeedPreferencesV2 : Preference
-{
-    /// <summary>
-    /// Creates a new instance of <see cref="SavedFeedPreferencesV2"/>.
-    /// </summary>
-    /// <param name="items">A list of feed preferences.</param>
-    [JsonConstructor]
-    public SavedFeedPreferencesV2(IReadOnlyList<SavedFeedPreferenceV2> items)
-    {
-        if (items is null)
-        {
-            Items = new List<SavedFeedPreferenceV2>().AsReadOnly();
-        }
-        else
-        {
-            Items = new List<SavedFeedPreferenceV2>(items).AsReadOnly();
-        }
-    }
-
-    /// <summary>
-    /// Gets a readonly list of an actors saved feed preferences.
-    /// </summary>
-    [JsonRequired]
-    public IReadOnlyList<SavedFeedPreferenceV2> Items { get; init; }
-}
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// Encapsulates feed preferences for an actor
 /// </summary>
-public sealed record SavedFeedPreferenceV2
+public sealed record SavedFeed
 {
     /// <summary>
-    /// Creates a new instance of <see cref="SavedFeedPreferenceV2"/>
+    /// Creates a new instance of <see cref="SavedFeed"/>
     /// </summary>
     /// <param name="id">The identifier of the feed preference.</param>
     /// <param name="type">The type of the feed preference.</param>
     /// <param name="value">The value of the feed preference.</param>
     /// <param name="pinned">A flag indicating whether the feed is pinned.</param>
     [JsonConstructor]
-    public SavedFeedPreferenceV2(string id, SavedFeedPreferenceType type, string value, bool pinned)
+    public SavedFeed(string id, SavedFeedPreferenceType type, string value, bool pinned)
     {
         Id = id;
         Type = type;

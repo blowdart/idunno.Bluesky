@@ -3,7 +3,9 @@
 
 using System.Diagnostics.CodeAnalysis;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Actor;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// A <see cref="Preference"/> containing tags which describe the account owner's interests gathered during onboarding.

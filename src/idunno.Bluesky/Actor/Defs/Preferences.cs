@@ -5,7 +5,9 @@ using System.Collections.ObjectModel;
 
 using idunno.AtProto;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Actor;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// An actor's Bluesky preferences.
@@ -24,11 +26,8 @@ public class Preferences : ReadOnlyCollection<Preference>
 
         List<Did> labelerPreferenceList = [];
         List<ContentLabelPreference> contentLabelPreferenceList = [];
-        List<SavedFeedPreference> savedFeedPreferenceList = [];
-        List<SavedFeedPreferenceV2> savedFeedPreferenceV2List = [];
+        List<SavedFeed> savedFeedPreferenceV2List = [];
         List<AtUri> hiddenPostUris = [];
-        List<string> interestTags = [];
-        Dictionary<string, FeedViewPreference> feedViewPreferences = [];
         List<MutedWord> mutedWords = [];
 
         foreach (Preference preference in this)
@@ -46,8 +45,8 @@ public class Preferences : ReadOnlyCollection<Preference>
                     contentLabelPreferenceList.Add(contentLabelPreference);
                     break;
 
-                case SavedFeedPreference savedFeedPreference:
-                    savedFeedPreferenceList.Add(savedFeedPreference);
+                case SavedFeedsPreference savedFeedPreference:
+                    SavedFeedsPreference = savedFeedPreference;
                     break;
 
                 case SavedFeedPreferencesV2 savedFeedPreferencesV2:
@@ -67,11 +66,11 @@ public class Preferences : ReadOnlyCollection<Preference>
                     break;
 
                 case InterestsPreference interestsPreference:
-                    interestTags.AddRange(interestsPreference.Tags);
+                    Interests = interestsPreference;
                     break;
 
                 case FeedViewPreference feedViewPreference:
-                    feedViewPreferences.Add(feedViewPreference.Feed, feedViewPreference);
+                    FeedViewPreference = feedViewPreference;
                     break;
 
                 case MutedWordPreferences mutedWordPreferences:
@@ -82,8 +81,8 @@ public class Preferences : ReadOnlyCollection<Preference>
                     ThreadViewPreference = threadViewPreference;
                     break;
 
-                case InteractionPreferences postInteractionSettingsPreference:
-                    InteractionPreferences = postInteractionSettingsPreference;
+                case PostInteractionSettingsPreferences postInteractionSettingsPreference:
+                    PostInteractionSettingsPreferences = postInteractionSettingsPreference;
                     break;
 
                 case VerificationPreferences verificationPreferences:
@@ -92,6 +91,10 @@ public class Preferences : ReadOnlyCollection<Preference>
 
                 case DeclaredAgePreference declaredAgePreference:
                     DeclaredAgePreference = declaredAgePreference;
+                    break;
+
+                case LiveEventPreferences liveEventPreferences:
+                    LiveEventPreferences = liveEventPreferences;
                     break;
 
                 // As this is only meant for official Bluesky apps we'll just skip doing anything with it
@@ -111,11 +114,8 @@ public class Preferences : ReadOnlyCollection<Preference>
 
         SubscribedLabelers = labelerPreferenceList.AsReadOnly();
         ContentLabelPreferences = contentLabelPreferenceList.AsReadOnly();
-        SavedFeedPreferences = savedFeedPreferenceList.AsReadOnly();
-        SavedFeedPreferenceV2 = savedFeedPreferenceV2List.AsReadOnly();
+        SavedFeedsPreferenceV2 = savedFeedPreferenceV2List.AsReadOnly();
         HiddenPosts = hiddenPostUris.AsReadOnly();
-        InterestTags = interestTags;
-        FeedViewPreferences = feedViewPreferences.AsReadOnly();
         MutedWords = mutedWords.AsReadOnly();
     }
 
@@ -147,14 +147,14 @@ public class Preferences : ReadOnlyCollection<Preference>
     public IReadOnlyList<ContentLabelPreference> ContentLabelPreferences { get; }
 
     /// <summary>
-    /// A list of the actor's <see cref="SavedFeedPreference"/>s.
+    /// A list of the actor's <see cref="SavedFeedsPreference"/>s.
     /// </summary>
-    public IReadOnlyList<SavedFeedPreference> SavedFeedPreferences { get; }
+    public SavedFeedsPreference? SavedFeedsPreference { get; }
 
     /// <summary>
-    /// A list of the actor's <see cref="Actor.SavedFeedPreferenceV2"/>s.
+    /// A list of the actor's <see cref="Actor.SavedFeed"/>s.
     /// </summary>
-    public IReadOnlyList<SavedFeedPreferenceV2> SavedFeedPreferenceV2 { get; }
+    public IReadOnlyList<SavedFeed> SavedFeedsPreferenceV2 { get; }
 
     /// <summary>
     /// A list of <see cref="AtUri"/>s of posts the account owner has hidden.
@@ -174,12 +174,12 @@ public class Preferences : ReadOnlyCollection<Preference>
     /// <summary>
     /// A list of tags which describe the account owner's interests gathered during onboarding.
     /// </summary>
-    public IReadOnlyList<string>? InterestTags { get; }
+    public InterestsPreference? Interests { get; }
 
     /// <summary>
     /// A dictionary of feeds and their <see cref="FeedViewPreference"/> for the account owner.
     /// </summary>
-    public IReadOnlyDictionary<string, FeedViewPreference> FeedViewPreferences { get; }
+    public FeedViewPreference? FeedViewPreference { get; }
 
     /// <summary>
     /// A list of muted word properties for the account owner.
@@ -194,7 +194,7 @@ public class Preferences : ReadOnlyCollection<Preference>
     /// <summary>
     /// Default gate settings for posts and threads.
     /// </summary>
-    public InteractionPreferences? InteractionPreferences { get; }
+    public PostInteractionSettingsPreferences? PostInteractionSettingsPreferences { get; }
 
     /// <summary>
     /// Preferences for how verified accounts appear in an app.
@@ -206,4 +206,9 @@ public class Preferences : ReadOnlyCollection<Preference>
     /// Absence of this preference object in the response indicates that the user has not made a declaration.
     /// </summary>
     public DeclaredAgePreference? DeclaredAgePreference { get; }
+
+    /// <summary>
+    /// User preferences for live events.
+    /// </summary>
+    public LiveEventPreferences? LiveEventPreferences { get; }
 }

@@ -34,4 +34,6 @@ internal static class PreferenceTypeDiscriminators
     public const string Verification = "app.bsky.actor.defs#verificationPrefs";
 
     public const string DeclaredAge = "app.bsky.actor.defs#declaredAgePref";
+
+    public const string LiveEvents = "app.bsky.actor.defs#liveEventPreferences";
 }

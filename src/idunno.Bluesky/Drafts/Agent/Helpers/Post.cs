@@ -33,7 +33,7 @@ public partial class BlueskyAgent
         DraftWithId draftWithId,
         bool extractFacets,
         bool deleteDraft,
-        InteractionPreferences? interactionPreferences,
+        PostInteractionSettingsPreferences? interactionPreferences,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(draftWithId);
