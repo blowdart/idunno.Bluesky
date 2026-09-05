@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Text.Json.Serialization;
+
 using idunno.AtProto;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
@@ -13,6 +15,9 @@ namespace idunno.Bluesky.Actor;
 /// <param name="Saved">A read only list of <see cref="AtUri"/>s of feeds that the actor has saved.</param>
 /// <param name="Pinned">A read only list of <see cref="AtUri"/>s of feeds that the actor has pinned</param>
 /// <param name="TimelineIndex">The user's timeline index, if any.</param>
-public record SavedFeedsPreference(ICollection<AtUri> Saved, ICollection<AtUri> Pinned, int? TimelineIndex) : Preference
+public record SavedFeedsPreference(
+    [property: JsonRequired] ICollection<AtUri> Saved,
+    [property: JsonRequired] ICollection<AtUri> Pinned,
+    int? TimelineIndex) : Preference
 {
 }
