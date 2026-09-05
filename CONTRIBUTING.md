@@ -42,7 +42,7 @@ When creating a pull request please create an issue first, unless it's a simple 
   * Act on any comments in the pull request or associated issue.
   * Finally, hopefully, your pull request is merged into the main branch.
 
-Tests use the new MTP runner. If you attempt to `dotnet test --nologo` it will report "Zero tests ran" with an exit code of 5. Remove the `--nologo` parameter..
+Tests use the new MTP runner. If you attempt to `dotnet test --nologo` it will report "Zero tests ran" with an exit code of 5. Remove the `--nologo` parameter.
 
 ### Dependencies Upgrades
 

@@ -38,6 +38,15 @@
   * `Follow` has moved namespaces from `idunno.Bluesky.Record` to `idunno.Bluesky.Graph`.
   * `StarterPack` has moved namespaces from `idunno.Bluesky.Record` to `idunno.Bluesky.Graph`.
   * `Verification` has moved namespaces from `idunno.Bluesky.Record` to `idunno.Bluesky.Graph`.
+ * `Record.Like` has been moved to `Feed.Like` to match the lexicon definition.
+ * `Record.Repost` has been moved to `Feed.Repost` to match the lexicon definition.
+ * `Record.Profile` has been moved to `Actor.Profile` to match the lexicon definition.
+ * `Record.Status` has been moved to `Actor.Status` to match the lexicon definition.
+ * `Record.KnownStatusValues` has been moved to `Actor.KnownStatusValues`.
+ * `Record.LabelerDeclaration` has been moved to `Labeler.Service` to match the lexicon definition.
+ * The `SavedFeedPreferences2` type has been renamed to `SavedFeedPreferencesV2` to match the lexicon.
+ * The `SavedFeedPreference` type has been renamed to `SavedFeedsPreference` to match the lexicon.
+ * The `SavedFeedPreference2` type has been renamed to `SavedFeed` to match the lexicon.
 * `BlueskyAgent.GetContentVisibilityDeclaration` now returns a `ContentVisibilityDeclaration` instance instead of a `bool`.
   The `HideFromAlgorithmicRecommendations` property on the returned object indicates whether the content is hidden from algorithmic recommendations.
 * Removed deprecated `Bluesky.UploadAnimatedGif`. Use `BlueskyAgent.UploadVideo` with a MIME type of `image/gif` instead.
@@ -47,25 +56,18 @@
 * `ListViewerState` has been converted to a C# Record and now has all it's properties as nullable, to match the lexicon.
 * `Feed.Likes` has been renamed to `LikesCollection` to better reflect its purpose.
 * `Feed.Like` has been moved to its own `Feed.Likes` namespace, as it is only a component in the `LikesCollection` collection.
-* `Record.Like` has been moved to `Feed.Like` to match the lexicon definition.
-* `Record.Repost` has been moved to `Feed.Repost` to match the lexicon definition.
-* `Record.Profile` has been moved to `Actor.Profile` to match the lexicon definition.
-* `Record.Status` has been moved to `Actor.Status` to match the lexicon definition.
-* `Record.KnownStatusValues` has been moved to `Actor.KnownStatusValues`.
-* `Record.LabelerDeclaration` has been moved to `Labeler.Service` to match the lexicon definition.
 * Actor preferences have had major changes, to match the published lexicons and fix deserialization issues with the previous implementation.
   * Changed `InterestsPreference.Tags` from `IReadOnlyList<string>` to `ICollection<string>` to allow for easier modification of the list of tags.
-* `Preferences.SavedFeedPreference2s` has been replaced by `Preferences.SavedFeedsPreferenceV2`,
-  which is an `IReadOnlyList<SavedFeed>`.
-* The `SavedFeedPreferences2` type has been renamed to `SavedFeedPreferencesV2` to match the lexicon.
-* The `SavedFeedPreference` type has been renamed to `SavedFeedsPreference` to match the lexicon.
-* The `SavedFeedPreference2` type has been renamed to `SavedFeed` to match the lexicon.
-* `Preferences.InterestTags` has been removed, use `Preferences.Interests` instead, and iterate through the `Tags` property.
-* `Preferences.SavedFeedPreferences`, an `IReadOnlyList<SavedFeedPreference>`, has been removed and replaced with `Preferences.SavedFeedsPreference`, a single nullable `SavedFeedsPreference`.
-* `Preferences.InteractionPreferences` has been renamed to `Preferences.PostInteractionSettingsPreferences` to match the lexicon definition.
-* `Preferences.FeedViewPreferences` guards against multiple instances of `FeedViewPreference` for the same feed,
-  and will use the last instance in the list if duplicates are present. Whilst duplicates are technically valid in the lexicon,
-  they are not expected to be present in the wild, and this change prevents deserialization errors when they are encountered.
+  * `Preferences.SavedFeedPreference2s` has been replaced by `Preferences.SavedFeedsPreferenceV2`,
+    which is an `IReadOnlyList<SavedFeed>`.
+  * `Preferences.InterestTags` has been removed, use `Preferences.Interests` instead, and iterate through the `Tags` property.
+  * `Preferences.SavedFeedPreferences`, an `IReadOnlyList<SavedFeedPreference>`, has been removed and replaced with `Preferences.SavedFeedsPreference`, a single nullable `SavedFeedsPreference`.
+  * Changed `SavedFeedsPreference.Saved` and `SavedFeedsPreference.Pinned` from `IReadOnlyList<AtUri>`
+    to `ICollection<AtUri>` to allow for easier modification.
+  * `Preferences.InteractionPreferences` has been renamed to `Preferences.PostInteractionSettingsPreferences` to match the lexicon definition.
+  * `Preferences.FeedViewPreferences` guards against multiple instances of `FeedViewPreference` for the same feed,
+    and will use the last instance in the list if duplicates are present. Whilst duplicates are technically valid in the lexicon,
+    they are not expected to be present in the wild, and this change prevents deserialization errors when they are encountered.
 
 ### Fixed
 
