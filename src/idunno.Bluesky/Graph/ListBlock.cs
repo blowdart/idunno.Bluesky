@@ -23,6 +23,7 @@ public record ListBlock : BlueskyTimestampedRecord
     /// <param name="subject">The reference <see cref="AtUri"/> to the mod list record.</param>
     /// <param name="createdAt">The timestamp when the record was created.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="subject"/> is <see langword="null"/>.</exception>
+    [JsonConstructor]
     public ListBlock(AtUri subject, DateTimeOffset createdAt)
         : base(createdAt)
     {
