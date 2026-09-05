@@ -604,16 +604,17 @@ public class PreferencesTests
         Assert.NotNull(deserializedGetPreferencesResponse.Preferences);
         var preferences = new Preferences(deserializedGetPreferencesResponse.Preferences, false);
         Assert.NotNull(preferences);
-        Assert.NotNull(preferences.FeedViewPreference);
+        Assert.NotNull(preferences.FeedViewPreferences);
 
-        Assert.Equal("home", preferences.FeedViewPreference.Feed);
-        Assert.False(preferences.FeedViewPreference.HideReplies);
-        Assert.False(preferences.FeedViewPreference.HideRepliesByUnfollowed);
-        Assert.Equal(0, preferences.FeedViewPreference.HideRepliesByLikeCount);
-        Assert.True(preferences.FeedViewPreference.HideReposts);
-        Assert.False(preferences.FeedViewPreference.HideQuotePosts);
+        FeedViewPreference feedViewPreference = Assert.Single(preferences.FeedViewPreferences);
+        Assert.Equal("home", feedViewPreference.Feed);
+        Assert.False(feedViewPreference.HideReplies);
+        Assert.False(feedViewPreference.HideRepliesByUnfollowed);
+        Assert.Equal(0, feedViewPreference.HideRepliesByLikeCount);
+        Assert.True(feedViewPreference.HideReposts);
+        Assert.False(feedViewPreference.HideQuotePosts);
 
-        Assert.NotNull(preferences.FeedViewPreference.ExtensionData);
-        Assert.Contains("lab_mergeFeedEnabled", preferences.FeedViewPreference.ExtensionData.Keys);
+        Assert.NotNull(feedViewPreference.ExtensionData);
+        Assert.Contains("lab_mergeFeedEnabled", feedViewPreference.ExtensionData.Keys);
     }
 }
