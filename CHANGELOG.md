@@ -68,6 +68,7 @@
   * `Preferences.FeedViewPreferences` guards against multiple instances of `FeedViewPreference` for the same feed,
     and will use the last instance in the list if duplicates are present. Whilst duplicates are technically valid in the lexicon,
     they are not expected to be present in the wild, and this change prevents deserialization errors when they are encountered.
+  * `BlueskyAgent.PutPreference` has been removed, use `BlueskyAgent.PutPreferences` instead, which accepts a `Preferences` instance and replaces the entire preferences for the authenticated user.
 
 ### Fixed
 

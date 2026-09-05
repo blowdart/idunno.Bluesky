@@ -9,16 +9,17 @@ namespace idunno.Bluesky;
 public partial class BlueskyAgent
 {
     /// <summary>
-    /// Updates the specified preference for the current user.
+    /// Updates the preferences for the current user, replacing them with the specified <paramref name="preferences"/>.
     /// </summary>
-    /// <param name="preference">The preference to update</param>
-    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <param name="preferences">The preferences to update</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="preference"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="preferences"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="preferences"/> is empty.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<EmptyResponse>> PutPreferences(Preference preference, CancellationToken cancellationToken = default)
+    public async Task<AtProtoHttpResult<EmptyResponse>> PutPreferences(IList<Preference> preferences)
     {
-        ArgumentNullException.ThrowIfNull(preference);
+        ArgumentNullException.ThrowIfNull(preferences);
+        ArgumentOutOfRangeException.ThrowIfZero(preferences.Count);
 
         if (!IsAuthenticated)
         {
@@ -26,12 +27,12 @@ public partial class BlueskyAgent
         }
 
         return await PutPreferences(
-            [preference],
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+            preferences,
+            cancellationToken: default).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Updates the specified preferences for the current user.
+    /// Updates the preferences for the current user, replacing them with the specified <paramref name="preferences"/>.
     /// </summary>
     /// <param name="preferences">The preferences to update</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -39,7 +40,7 @@ public partial class BlueskyAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="preferences"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="preferences"/> is empty.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
-    public async Task<AtProtoHttpResult<EmptyResponse>> PutPreferences(IList<Preference> preferences, CancellationToken cancellationToken = default)
+    public async Task<AtProtoHttpResult<EmptyResponse>> PutPreferences(IList<Preference> preferences, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(preferences);
         ArgumentOutOfRangeException.ThrowIfZero(preferences.Count);
@@ -59,4 +60,56 @@ public partial class BlueskyAgent
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Updates the preferences for the current user, replacing them with the specified <paramref name="preferences"/>.
+    /// </summary>
+    /// <param name="preferences">The preferences to update</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="preferences"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="preferences"/> is empty.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+    public async Task<AtProtoHttpResult<EmptyResponse>> PutPreferences(Preferences preferences)
+    {
+        ArgumentNullException.ThrowIfNull(preferences);
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        return await BlueskyServer.PutPreferences(
+            preferences,
+            Service,
+            accessCredentials: Credentials,
+            httpClient: HttpClient,
+            onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+            loggerFactory: LoggerFactory,
+            cancellationToken: default).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Updates the preferences for the current user, replacing them with the specified <paramref name="preferences"/>.
+    /// </summary>
+    /// <param name="preferences">The preferences to update</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="preferences"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="preferences"/> is empty.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+    public async Task<AtProtoHttpResult<EmptyResponse>> PutPreferences(Preferences preferences, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(preferences);
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        return await BlueskyServer.PutPreferences(
+            preferences,
+            Service,
+            accessCredentials: Credentials,
+            httpClient: HttpClient,
+            onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+            loggerFactory: LoggerFactory,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
 }
