@@ -598,6 +598,7 @@ public class PreferencesTests
                 ]
             }
             """;
+
         GetPreferencesResponse? deserializedGetPreferencesResponse = JsonSerializer.Deserialize<GetPreferencesResponse>(json, BlueskyJsonSerializerOptions.Options);
         Assert.NotNull(deserializedGetPreferencesResponse);
         Assert.NotNull(deserializedGetPreferencesResponse.Preferences);
