@@ -1,6 +1,6 @@
 # Version History
 
-## 6.0.0 - **unreleased**
+## 6.0.0 - 2026-09-05
 
 ### Added
 
