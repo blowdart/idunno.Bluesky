@@ -1,6 +1,6 @@
 #!/usr/bin/env -S dotnet --
 #:property TargetFramework=net10.0
-#:package System.CommandLine@2.0.10
+#:package System.CommandLine@2.0.11
 #:package SemVer@3.0.0
 #:property ManagePackageVersionsCentrally=false
 using System.Text.Json;
@@ -9,6 +9,10 @@ using System.CommandLine;
 using System.CommandLine.Parsing;
 
 using Semver;
+
+// Test run examples
+// dotnet run .\.build\CoherenceChecks.cs -- --github-ref=refs/heads/version/v6.0.0 --github-ref-type=branch --github-workflow=prerelease
+// dotnet run .\.build\CoherenceChecks.cs -- --github-ref=refs/tags/v6.0.0 --github-ref-type=tag --github-workflow=release
 
 Option<string> directoryOption = new("--directory", "-d")
 {
@@ -29,41 +33,135 @@ directoryOption.Validators.Add(result =>
     }
 });
 
+Option<string> gitHubRefOption = new("--github-ref", "-ref", "-r")
+{
+    Description = "The GitHub reference to check coherence against. Defaults to the GITHUB_REF environment variable.",
+    DefaultValueFactory = _ => Environment.GetEnvironmentVariable("GITHUB_REF") ?? string.Empty,
+    Required = false
+};
+gitHubRefOption.Validators.Add(result =>
+{
+    string? gitHubRef = result.GetValue(gitHubRefOption);
+    if (string.IsNullOrEmpty(gitHubRef))
+    {
+        result.AddError("GitHub reference cannot be null or empty.");
+    }
+});
+
+Option<string> gitHubRefTypeOption = new("--github-ref-type", "-type", "-t", "-rt")
+{
+    Description = "The GitHub reference type to check coherence against. Defaults to the GITHUB_REF_TYPE environment variable.",
+    DefaultValueFactory = _ => Environment.GetEnvironmentVariable("GITHUB_REF_TYPE") ?? string.Empty,
+    Required = false
+};
+gitHubRefTypeOption.Validators.Add(result =>
+{
+    string? gitHubRefType = result.GetValue(gitHubRefTypeOption);
+    if (string.IsNullOrEmpty(gitHubRefType))
+    {
+        result.AddError("GitHub reference type cannot be null or empty.");
+    }
+});
+
+Option<string> gitHubWorkflowOption = new("--github-workflow", "-workflow", "-w")
+{
+    Description = "The GitHub workflow to check coherence against. Defaults to the GITHUB_WORKFLOW environment variable.",
+    DefaultValueFactory = _ => Environment.GetEnvironmentVariable("GITHUB_WORKFLOW") ?? string.Empty,
+    Required = false
+};
+gitHubWorkflowOption.Validators.Add(result =>
+{
+    string? gitHubWorkflow = result.GetValue(gitHubWorkflowOption);
+    if (string.IsNullOrEmpty(gitHubWorkflow))
+    {
+        result.AddError("GitHub workflow cannot be null or empty.");
+    }
+});
+
 RootCommand rootCommand = new("Checks the coherence of the repository in preparation for a release or pre-release.")
 {
-    Options = { directoryOption },
+    Options = { directoryOption, gitHubRefOption, gitHubRefTypeOption, gitHubWorkflowOption },
 };
 
 ParseResult parseResult = rootCommand.Parse(args);
 if (parseResult.Errors.Count > 0)
 {
+    rootCommand.Parse("-h").Invoke();
+
     foreach (ParseError error in parseResult.Errors)
     {
-        Console.WriteLine($"❌ {error.Message}");
+        WriteError(error.Message);
     }
     Environment.Exit((int)ExitCode.InvalidParameters);
 }
 
-int result = await CheckCoherenceAsync(parseResult.GetValue(directoryOption)!);
+int result = await CheckCoherenceAsync(parseResult.GetValue(directoryOption)!, parseResult.GetValue(gitHubRefOption)!, parseResult.GetValue(gitHubRefTypeOption)!, parseResult.GetValue(gitHubWorkflowOption)!);
 Environment.Exit(result);
 
-static async Task<int> CheckCoherenceAsync(string directory)
+static async Task<int> CheckCoherenceAsync(string directory, string gitHubRef, string gitHubRefType, string gitHubWorkflow)
 {
     Console.WriteLine("➡️ Checking GitHub Environment...");
 
+    if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GITHUB_ACTIONS")))
+    {
+        Console.WriteLine($"⚠️ GITHUB_ACTIONS environment variable is not set, assuming local test runs");
+    }
+
     ExitCode exitCode = ExitCode.Success;
-    string? gitHubRef = Environment.GetEnvironmentVariable("GITHUB_REF");
     if (string.IsNullOrEmpty(gitHubRef))
     {
-        Console.WriteLine("❌ GITHUB_REF environment variable is not set. Cannot check coherence");
+        WriteError("GitHub reference is not provided. Cannot check coherence");
         exitCode = ExitCode.NoRef;
     }
-    string? gitHubRefType = Environment.GetEnvironmentVariable("GITHUB_REF_TYPE");
     if (string.IsNullOrEmpty(gitHubRefType))
     {
-        Console.WriteLine("❌ GITHUB_REF_TYPE environment variable is not set. Cannot check coherence");
+        WriteError("GitHub reference type is not provided. Cannot check coherence");
         exitCode = ExitCode.NoRefType;
     }
+    if (string.IsNullOrEmpty(gitHubWorkflow))
+    {
+        WriteError("GitHub workflow is not provided. Cannot check coherence");
+        exitCode = ExitCode.NoWorkflow;
+    }
+    if (!string.IsNullOrEmpty(gitHubWorkflow))
+    {
+        switch (gitHubWorkflow.ToLowerInvariant())
+        {
+            case "release":
+                Console.WriteLine("➡️ Checking release coherence...");
+                if (string.Compare(gitHubRefType, "tag", StringComparison.OrdinalIgnoreCase) != 0)
+                {
+                    WriteError($"Release workflow needs to be triggered by a tag, but was triggered by a {gitHubRefType}");
+                    exitCode = ExitCode.NotBranch;
+                }
+                break;
+
+            case "prerelease":
+                Console.WriteLine("➡️ Checking prerelease coherence...");
+
+                if (string.Compare(gitHubRefType, "branch", StringComparison.OrdinalIgnoreCase) != 0)
+                {
+                    WriteError($"Prerelease workflow needs to be run on a branch, but was triggered by a {gitHubRefType}");
+                    exitCode = ExitCode.NotBranch;
+                }
+
+                string branch = gitHubRef.Substring("refs/heads/".Length);
+
+                if (!branch.StartsWith("version/v", StringComparison.OrdinalIgnoreCase))
+                {
+                    WriteError($"Prerelease workflow needs to be a version/v branch but was run on {branch}");
+                    exitCode = ExitCode.NotPrerelease;
+                }
+
+                break;
+
+            default:
+                WriteError($"Unexpected GitHub workflow: {gitHubWorkflow}");
+                exitCode = ExitCode.WorkflowNotKnown;
+                break;
+        }
+    }
+
     if (exitCode != ExitCode.Success)
     {
         return (int)exitCode;
@@ -83,13 +181,13 @@ static async Task<int> CheckCoherenceAsync(string directory)
             SemVersion? version = await GetReleaseJsonVersionAsync(dirInfo);
             if (version is null)
             {
-                Console.WriteLine("❌ Failed to get version from version.json");
+                WriteError("Failed to get version from version.json");
                 return (int)ExitCode.MissingVersionJson;
             }
 
             if (!version.IsRelease)
             {
-                Console.WriteLine($"❌ version.json does not contain a release version {version}");
+                WriteError($"version.json does not contain a release version {version}");
                 return (int)ExitCode.NotReleaseVersion;
             }
             Console.WriteLine($"✔️ version.json has a release version {version}");
@@ -121,34 +219,39 @@ static async Task<int> CheckCoherenceAsync(string directory)
             SemVersion? version = await GetReleaseJsonVersionAsync(dirInfo);
             if (version is null)
             {
-                Console.WriteLine("❌ Failed to get version from version.json");
+                WriteError("Failed to get version from version.json");
                 return (int)ExitCode.MissingVersionJson;
             }
             Console.WriteLine($"➡️ version.json version is {version}");
 
             if (version.Prerelease == null)
             {
-                Console.WriteLine($"❌ {version} in version.json version has no prerelease tag.");
+                WriteError($" {version} in version.json version has no prerelease tag.");
                 return (int)ExitCode.NotPrereleaseVersion;
             }
             else if (!version.Prerelease.Equals("prerelease", StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine($"❌ {version} in version.json version has incorrect prerelease tag.");
+                WriteError($" {version} in version.json version has incorrect prerelease tag.");
                 return (int)ExitCode.NotPrereleaseTag;
             }
             Console.WriteLine($"✔️ Prerelease version");
+
+            if (!await CheckPublicAPIUnshippedAsync(dirInfo))
+            {
+                WriteWarning("One or more PublicAPI.unshipped.txt files contain unshipped APIs");
+            }
 
             if (branchName.StartsWith("version/v", StringComparison.OrdinalIgnoreCase))
             {
                 if (branchName.Length <= "version/v".Length)
                 {
-                    Console.WriteLine($"❌ Branch name {branchName} does not begin with 'version/v'");
+                    WriteError($"Branch name {branchName} does not begin with 'version/v'");
                     return (int)ExitCode.VersionBranchMissingPrefix;
                 }
                 SemVersion? branchVersion = SemVersion.Parse(branchName.Substring("version/v".Length), SemVersionStyles.Strict);
                 if (!branchVersion.Major.Equals(version.Major) || !branchVersion.Minor.Equals(version.Minor) || !branchVersion.Patch.Equals(version.Patch))
                 {
-                    Console.WriteLine($"version.json version {version} does not match version from branch {branchVersion}");
+                    WriteError($"version.json version {version} does not match version from branch {branchVersion}");
                     return (int)ExitCode.VersionBranchMismatch;
                 }
                 Console.WriteLine($"✔️ version.json version {version} matches version from branch {branchVersion}");
@@ -163,7 +266,7 @@ static async Task<int> CheckCoherenceAsync(string directory)
             }
             else
             {
-                Console.WriteLine($"❌ {branchName} is not a version branch. Version branches must start with 'version/v'");
+                WriteError($" {branchName} is not a version branch. Version branches must start with 'version/v'");
                 return (int)ExitCode.VersionBranchMissingPrefix;
             }
         }
@@ -176,34 +279,35 @@ static async Task<int> CheckCoherenceAsync(string directory)
 
         if (!tag.StartsWith("v", StringComparison.OrdinalIgnoreCase))
         {
-            Console.WriteLine($"❌ Tag name {tag} does not start with 'v'");
+            WriteError($"Tag name {tag} does not start with 'v'");
             return (int)ExitCode.TagMissingPrefix;
         }
         Console.WriteLine($"✔️ Tag name {tag} is a version tag");
 
         if (!SemVersion.TryParse(tag.Substring(1), SemVersionStyles.Strict, out SemVersion? tagVersion) || tagVersion is null)
         {
-            Console.WriteLine($"❌ Tag name {tag} is not a valid semantic version");
+            WriteError($"Tag name {tag} is not a valid semantic version");
             return (int)ExitCode.TagInvalid;
         }
 
         if (!tagVersion.IsRelease)
         {
-            Console.WriteLine($"❌ Tag {tag} is not a release version");
+            WriteError($"Tag {tag} is not a release version");
             return (int)ExitCode.NotReleaseVersion;
         }
 
-        // Check the CHANGELOG.md has an entry for the json version that matches the tag
+        Console.WriteLine("➡️ Checking version.json...");
+        // Check the version.json stamp
         SemVersion? releaseJsonVersion = await GetReleaseJsonVersionAsync(dirInfo);
         if (releaseJsonVersion is null)
         {
-            Console.WriteLine("❌ Failed to get version from version.json");
+            WriteError("Failed to get version from version.json");
             return (int)ExitCode.MissingVersionJson;
         }
 
         if (!tagVersion.Equals(releaseJsonVersion))
         {
-            Console.WriteLine($"❌ Tag version {tagVersion} does not match version.json version {releaseJsonVersion}");
+            WriteError($"Tag semver {tagVersion} does not match version.json version {releaseJsonVersion}");
             return (int)ExitCode.VersionTagMismatch;
         }
 
@@ -234,7 +338,7 @@ static async Task<int> CheckCoherenceAsync(string directory)
     }
     else
     {
-        Console.WriteLine($"❌ GITHUB_REF_TYPE is not a branch or tag: {gitHubRefType}");
+        WriteError($"GITHUB_REF_TYPE is not a branch or tag: {gitHubRefType}");
         return (int)ExitCode.UnknownRefType;
     }
 }
@@ -244,7 +348,7 @@ static async Task<SemVersion?> GetReleaseJsonVersionAsync(DirectoryInfo director
     string versionJsonPath = Path.Combine(directory.FullName, "version.json");
     if (!File.Exists(versionJsonPath))
     {
-        Console.WriteLine($"❌ version.json file not found at {versionJsonPath}");
+        WriteError($"version.json file not found at {versionJsonPath}");
         return null;
     }
     try
@@ -253,7 +357,7 @@ static async Task<SemVersion?> GetReleaseJsonVersionAsync(DirectoryInfo director
         VersionJson? versionFile = await JsonSerializer.DeserializeAsync<VersionJson>(fs, JsonContext.Default.VersionJson);
         if (versionFile == null || string.IsNullOrEmpty(versionFile.Version))
         {
-            Console.WriteLine("❌ Version not found in version.json");
+            WriteError("Version not found in version.json");
             return null;
         }
 
@@ -263,13 +367,13 @@ static async Task<SemVersion?> GetReleaseJsonVersionAsync(DirectoryInfo director
         }
         else
         {
-            Console.WriteLine($"❌ Invalid version format in version.json: {versionFile.Version}");
+            WriteError($"Invalid version format in version.json: {versionFile.Version}");
             return null;
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"❌ Error reading version.json: {ex.Message}");
+        WriteError($"Error reading version.json: {ex.Message}");
         return null;
     }
 }
@@ -279,7 +383,7 @@ static async Task<bool> CheckChangelogForVersionAsync(DirectoryInfo directory, S
     string changelogPath = Path.Combine(directory.FullName, "CHANGELOG.md");
     if (!File.Exists(changelogPath))
     {
-        Console.WriteLine($"❌ CHANGELOG.md file not found at {changelogPath}");
+        WriteError($"CHANGELOG.md file not found at {changelogPath}");
         return false;
     }
 
@@ -294,7 +398,7 @@ static async Task<bool> CheckChangelogForVersionAsync(DirectoryInfo directory, S
         }
     }
 
-    Console.WriteLine($"❌ Version heading for {version} not found in CHANGELOG.md");
+    WriteError($"Version heading for {version} not found in CHANGELOG.md");
     return false;
 }
 
@@ -303,7 +407,7 @@ static async Task<bool> CheckChangelogForVersionAndReleaseDateAsync(DirectoryInf
     string changelogPath = Path.Combine(directory.FullName, "CHANGELOG.md");
     if (!File.Exists(changelogPath))
     {
-        Console.WriteLine($"❌ CHANGELOG.md file not found at {changelogPath}");
+        WriteError($"CHANGELOG.md file not found at {changelogPath}");
         return false;
     }
 
@@ -322,14 +426,14 @@ static async Task<bool> CheckChangelogForVersionAndReleaseDateAsync(DirectoryInf
             }
             else
             {
-                Console.WriteLine($"❌ CHANGELOG.MD version heading for {version} found at line {lineNumber} but release date is missing or invalid.");
+                WriteError($"CHANGELOG.MD version heading for {version} found at line {lineNumber} but release date is missing or invalid.");
                 return false;
             }
         }
         lineNumber++;
     }
 
-    Console.WriteLine($"❌ Version heading for {version} not found in CHANGELOG.md");
+    WriteError($"Version heading for {version} not found in CHANGELOG.md");
     return false;
 }
 
@@ -352,7 +456,7 @@ static async Task<bool> CheckPublicAPIUnshippedAsync(DirectoryInfo directory)
     {
         foreach (string file in nonEmptyFiles)
         {
-            Console.WriteLine($"❌ {file} contains unshipped API changes.");
+            WriteError($" {file} contains unshipped API changes.");
         }
         return false;
     }
@@ -360,9 +464,28 @@ static async Task<bool> CheckPublicAPIUnshippedAsync(DirectoryInfo directory)
     return true;
 }
 
+static void WriteError(string s)
+{
+    Console.ForegroundColor = ConsoleColor.Red;
+    Console.WriteLine($"❌ {s}");
+    Console.ResetColor();
+}
+
+static void WriteWarning(string s)
+{
+    Console.ForegroundColor = ConsoleColor.Yellow;
+    Console.WriteLine($"⚠️ {s}");
+    Console.ResetColor();
+}
+
+
 public record VersionJson([field: JsonRequired] string Version);
 
-[JsonSourceGenerationOptions(WriteIndented = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true, NumberHandling = JsonNumberHandling.AllowReadingFromString)]
+[JsonSourceGenerationOptions(
+    WriteIndented = true,
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    PropertyNameCaseInsensitive = true,
+    NumberHandling = JsonNumberHandling.AllowReadingFromString)]
 [JsonSerializable(typeof(VersionJson))]
 partial class JsonContext : JsonSerializerContext
 {
@@ -386,6 +509,11 @@ enum ExitCode : int
     TagInvalid = 13,
     VersionTagMismatch = 14,
     PublicAPIsHaveUnshipped = 15,
+    NoWorkflow = 16,
+    WorkflowNotKnown = 17,
+    NotBranch = 18,
+    NotPrerelease = 19,
+    NotMainBranch = 20,
     InvalidParameters = 98,
     Failure = 99
 }

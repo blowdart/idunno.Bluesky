@@ -26,7 +26,7 @@ public class ListTests
             }
             """;
 
-        BlueskyList? actual = JsonSerializer.Deserialize<BlueskyList>(json, BlueskyServer.BlueskyJsonSerializerOptions);
+        List? actual = JsonSerializer.Deserialize<List>(json, BlueskyServer.BlueskyJsonSerializerOptions);
 
         Assert.NotNull(actual);
         Assert.Equal("Super Bean Fans", actual.Name);

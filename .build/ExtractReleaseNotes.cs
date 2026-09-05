@@ -1,6 +1,6 @@
 #!/usr/bin/env -S dotnet --
 #:property TargetFramework=net10.0
-#:package System.CommandLine@2.0.10
+#:package System.CommandLine@2.0.11
 #:package SemVer@3.0.0
 #:property ManagePackageVersionsCentrally=false
 using System.CommandLine;

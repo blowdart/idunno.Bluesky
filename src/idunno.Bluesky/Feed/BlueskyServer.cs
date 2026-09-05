@@ -646,7 +646,7 @@ public static partial class BlueskyServer
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Get().")]
-    public static async Task<AtProtoHttpResult<Likes>> GetLikes(
+    public static async Task<AtProtoHttpResult<LikesCollection>> GetLikes(
         AtUri uri,
         Cid? cid,
         int? limit,
@@ -697,8 +697,8 @@ public static partial class BlueskyServer
 
         if (response.Succeeded)
         {
-            return new AtProtoHttpResult<Likes>(
-                new Likes(response.Result.Uri, response.Result.Cid, response.Result.Likes, response.Result.Cursor),
+            return new AtProtoHttpResult<LikesCollection>(
+                new LikesCollection(response.Result.Uri, response.Result.Cid, response.Result.Likes, response.Result.Cursor),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,
@@ -706,8 +706,8 @@ public static partial class BlueskyServer
         }
         else
         {
-            return new AtProtoHttpResult<Likes>(
-                new Likes(uri, cid),
+            return new AtProtoHttpResult<LikesCollection>(
+                new LikesCollection(uri, cid),
                 response.StatusCode,
                 response.HttpResponseHeaders,
                 response.AtErrorDetail,

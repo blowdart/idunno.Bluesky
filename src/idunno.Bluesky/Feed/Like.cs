@@ -1,55 +1,62 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 using idunno.AtProto.Repo;
-using idunno.Bluesky.Actor;
+using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky.Feed;
 
 /// <summary>
-/// Encapsulates a like record.
+/// Encapsulates the information needed to create a like record.
 /// </summary>
 [SuppressMessage("Naming", "CA1716:Identifiers should not match keywords", Justification = "It's like in the Bluesky lexicon.")]
-[DebuggerDisplay("{DebuggerDisplay,nq}")]
-public sealed record Like : AtProtoObject
+[JsonPolymorphic(IgnoreUnrecognizedTypeDiscriminators = true,
+                 UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType)]
+[JsonDerivedType(typeof(Like), typeDiscriminator: RecordType.Like)]
+public record Like : BlueskyTimestampedRecord
 {
+    /// <summary>
+    /// Creates a new instance of <see cref="Like"/> with <see cref="BlueskyTimestampedRecord.CreatedAt"/> set to the current date and time.
+    /// </summary>
+    /// <param name="subject">The <see cref="StrongReference"/> to the post to be liked.</param>
+    public Like(StrongReference subject) : this(subject, DateTimeOffset.UtcNow, null)
+    {
+    }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="Like"/> with <see cref="BlueskyTimestampedRecord.CreatedAt"/> set to the current date and time.
+    /// </summary>
+    /// <param name="subject">The <see cref="StrongReference"/> to the post to be liked.</param>
+    /// <param name="via">An optional <see cref="StrongReference"/> to a repost record, if the like is of a repost.</param>
+    public Like(StrongReference subject, StrongReference? via) : this(subject, DateTimeOffset.UtcNow, via)
+    {
+    }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="Like"/>.
+    /// </summary>
+    /// <param name="subject">The <see cref="StrongReference"/> to the post to be liked.</param>
+    /// <param name="createdAt">The <see cref="DateTimeOffset"/> for the repost creation date.</param>
+    /// <param name="via">An optional <see cref="StrongReference"/> to a repost record, if the like is of a repost.</param>
     [JsonConstructor]
-    internal Like(DateTimeOffset createdAt, ProfileView actor)
+    public Like(StrongReference subject, DateTimeOffset createdAt, StrongReference? via) : base(createdAt)
     {
-        CreatedAt = createdAt;
-        Actor = actor;
+        Subject = subject;
+        Via = via;
     }
 
     /// <summary>
-    /// The <see cref="DateTimeOffset"/> the post was liked.
+    /// Gets the <see cref="StrongReference"/> to the record to be reposted.
     /// </summary>
     [JsonInclude]
-    [JsonRequired]
-    public DateTimeOffset CreatedAt { get; init; }
+    public StrongReference Subject { get; init; }
 
     /// <summary>
-    /// The <see cref="DateTimeOffset"/> the like was indexed on.
+    /// Gets the <see cref="StrongReference"/> to the repost record, if the like is of a repost.
     /// </summary>
     [JsonInclude]
-    [JsonRequired]
-    public DateTimeOffset IndexedAt { get; init; }
-
-    /// <summary>
-    /// A <see cref="ProfileView"/> of the user that liked the post.
-    /// </summary>
-    [JsonInclude]
-    [JsonRequired]
-    public ProfileView Actor { get; init; }
-
-    private string DebuggerDisplay
-    {
-        get
-        {
-            return $"Liked {Actor.Handle} on {CreatedAt.LocalDateTime:R}";
-        }
-    }
+    public StrongReference? Via { get; init; }
 }

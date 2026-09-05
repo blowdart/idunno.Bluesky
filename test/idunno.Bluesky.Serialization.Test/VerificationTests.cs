@@ -5,6 +5,7 @@ using System.Text.Json;
 
 using idunno.AtProto;
 using idunno.Bluesky.Actor;
+using idunno.Bluesky.Graph;
 using idunno.Bluesky.Record;
 
 namespace idunno.Bluesky.Serialization.Test;
@@ -184,9 +185,7 @@ public class VerificationTests
 
         BlueskyRecord? actual = JsonSerializer.Deserialize<BlueskyRecord>(json, BlueskyServer.BlueskyJsonSerializerOptions);
 
-        Assert.IsType<Verification>(actual);
-
-        Verification? verificationRecordValue = actual as Verification;
+        Verification? verificationRecordValue = Assert.IsType<Verification>(actual);
 
         Assert.NotNull(verificationRecordValue);
         Assert.Equal("ashley.dev", verificationRecordValue.Handle);

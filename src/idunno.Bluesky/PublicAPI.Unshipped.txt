@@ -1,1 +1,527 @@
 #nullable enable
+const idunno.Bluesky.Actor.AllowSubscriptionsKnownValues.Followers = "followers" -> string!
+const idunno.Bluesky.Actor.AllowSubscriptionsKnownValues.Mutuals = "mutuals" -> string!
+const idunno.Bluesky.Actor.AllowSubscriptionsKnownValues.None = "none" -> string!
+const idunno.Bluesky.Actor.KnownStatusValues.Live = "app.bsky.actor.status#live" -> string!
+const idunno.Bluesky.RecordType.ContentVisibilityDeclaration = "app.bsky.actor.contentVisibilityDeclaration" -> string!
+const idunno.Bluesky.RecordType.ListBlock = "app.bsky.graph.listblock" -> string!
+const idunno.Bluesky.RecordType.ReferenceListOptOut = "app.bsky.graph.referencelistoptout" -> string!
+const idunno.Bluesky.RecordType.Repost = "app.bsky.feed.repost" -> string!
+idunno.Bluesky.Actor.AllowSubscriptionsKnownValues
+idunno.Bluesky.Actor.FeedViewPreference.FeedViewPreference(string! feed, bool hideReplies, bool hideRepliesByUnfollowed, int? hideRepliesByLikeCount, bool hideReposts, bool hideQuotePosts) -> void
+idunno.Bluesky.Actor.FeedViewPreference.HideReposts.get -> bool
+idunno.Bluesky.Actor.FeedViewPreference.HideReposts.init -> void
+idunno.Bluesky.Actor.InterestsPreference.InterestsPreference(System.Collections.Generic.ICollection<string!>! tags) -> void
+idunno.Bluesky.Actor.InterestsPreference.Tags.get -> System.Collections.Generic.ICollection<string!>!
+idunno.Bluesky.Actor.InterestsPreference.UpdatedAt.get -> System.DateTimeOffset?
+idunno.Bluesky.Actor.InterestsPreference.UpdatedAt.set -> void
+idunno.Bluesky.Actor.KnownStatusValues
+idunno.Bluesky.Actor.LabelerPreference.Deconstruct(out idunno.AtProto.Did! Did) -> void
+idunno.Bluesky.Actor.LabelerPreference.LabelerPreference(idunno.AtProto.Did! Did) -> void
+idunno.Bluesky.Actor.LiveEventPreferences
+idunno.Bluesky.Actor.LiveEventPreferences.Deconstruct(out System.Collections.Generic.ICollection<string!>? HiddenFeedIds, out bool? HideAllFeeds) -> void
+idunno.Bluesky.Actor.LiveEventPreferences.HiddenFeedIds.get -> System.Collections.Generic.ICollection<string!>?
+idunno.Bluesky.Actor.LiveEventPreferences.HiddenFeedIds.init -> void
+idunno.Bluesky.Actor.LiveEventPreferences.HideAllFeeds.get -> bool?
+idunno.Bluesky.Actor.LiveEventPreferences.HideAllFeeds.init -> void
+idunno.Bluesky.Actor.LiveEventPreferences.LiveEventPreferences(idunno.Bluesky.Actor.LiveEventPreferences! original) -> void
+idunno.Bluesky.Actor.LiveEventPreferences.LiveEventPreferences(System.Collections.Generic.ICollection<string!>? HiddenFeedIds, bool? HideAllFeeds) -> void
+idunno.Bluesky.Actor.PostInteractionSettingsPreferences
+idunno.Bluesky.Actor.PostInteractionSettingsPreferences.Equals(idunno.Bluesky.Actor.PostInteractionSettingsPreferences? other) -> bool
+idunno.Bluesky.Actor.PostInteractionSettingsPreferences.PostGateEmbeddingRules.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.PostGateRule!>?
+idunno.Bluesky.Actor.PostInteractionSettingsPreferences.PostGateEmbeddingRules.init -> void
+idunno.Bluesky.Actor.PostInteractionSettingsPreferences.PostInteractionSettingsPreferences(System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.ThreadGateRule!>? threadGateAllowRules, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.PostGateRule!>? postGateEmbeddingRules) -> void
+idunno.Bluesky.Actor.PostInteractionSettingsPreferences.ThreadGateAllowRules.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.ThreadGateRule!>?
+idunno.Bluesky.Actor.PostInteractionSettingsPreferences.ThreadGateAllowRules.init -> void
+idunno.Bluesky.Actor.Preferences.FeedViewPreferences.get -> System.Collections.Generic.IReadOnlyDictionary<string!, idunno.Bluesky.Actor.FeedViewPreference!>!
+idunno.Bluesky.Actor.Preferences.Interests.get -> idunno.Bluesky.Actor.InterestsPreference?
+idunno.Bluesky.Actor.Preferences.LiveEventPreferences.get -> idunno.Bluesky.Actor.LiveEventPreferences?
+idunno.Bluesky.Actor.Preferences.PostInteractionSettingsPreferences.get -> idunno.Bluesky.Actor.PostInteractionSettingsPreferences?
+idunno.Bluesky.Actor.Preferences.SavedFeedsPreference.get -> idunno.Bluesky.Actor.SavedFeedsPreference?
+idunno.Bluesky.Actor.Preferences.SavedFeedsPreferenceV2.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Actor.SavedFeed!>!
+idunno.Bluesky.Actor.Profile
+idunno.Bluesky.Actor.Profile.Avatar.get -> idunno.AtProto.Blob?
+idunno.Bluesky.Actor.Profile.Avatar.set -> void
+idunno.Bluesky.Actor.Profile.Banner.get -> idunno.AtProto.Blob?
+idunno.Bluesky.Actor.Profile.Banner.set -> void
+idunno.Bluesky.Actor.Profile.Bot.get -> bool
+idunno.Bluesky.Actor.Profile.Bot.set -> void
+idunno.Bluesky.Actor.Profile.CreatedAt.get -> System.DateTimeOffset?
+idunno.Bluesky.Actor.Profile.CreatedAt.set -> void
+idunno.Bluesky.Actor.Profile.Description.get -> string?
+idunno.Bluesky.Actor.Profile.Description.set -> void
+idunno.Bluesky.Actor.Profile.DiscourageShowingToLoggedOutUsers.get -> bool
+idunno.Bluesky.Actor.Profile.DiscourageShowingToLoggedOutUsers.set -> void
+idunno.Bluesky.Actor.Profile.DisplayName.get -> string?
+idunno.Bluesky.Actor.Profile.DisplayName.set -> void
+idunno.Bluesky.Actor.Profile.JoinedViaStarterPack.get -> idunno.AtProto.Repo.StrongReference?
+idunno.Bluesky.Actor.Profile.JoinedViaStarterPack.init -> void
+idunno.Bluesky.Actor.Profile.Labels.get -> idunno.AtProto.Labels.SelfLabels?
+idunno.Bluesky.Actor.Profile.Labels.init -> void
+idunno.Bluesky.Actor.Profile.PinnedPost.get -> idunno.AtProto.Repo.StrongReference?
+idunno.Bluesky.Actor.Profile.PinnedPost.set -> void
+idunno.Bluesky.Actor.Profile.Profile(idunno.Bluesky.Actor.Profile! original) -> void
+idunno.Bluesky.Actor.Profile.Profile(string? displayName = null, string? description = null, string? pronouns = null, System.Uri? website = null, idunno.AtProto.Blob? avatar = null, idunno.AtProto.Blob? banner = null, idunno.AtProto.Repo.StrongReference? pinnedPost = null, idunno.AtProto.Labels.SelfLabels? labels = null) -> void
+idunno.Bluesky.Actor.Profile.Profile(string? displayName, string? description, string? pronouns, System.Uri? website, idunno.AtProto.Blob? avatar, idunno.AtProto.Blob? banner, idunno.AtProto.Repo.StrongReference? joinedViaStarterPack, idunno.AtProto.Repo.StrongReference? pinnedPost, idunno.AtProto.Labels.SelfLabels? labels, System.DateTimeOffset? createdAt) -> void
+idunno.Bluesky.Actor.Profile.Profile(string? displayName, string? description, string? pronouns, System.Uri? website, idunno.AtProto.Blob? avatar, idunno.AtProto.Blob? banner, idunno.AtProto.Repo.StrongReference? pinnedPost, idunno.AtProto.Labels.SelfLabels? labels, System.DateTimeOffset createdAt) -> void
+idunno.Bluesky.Actor.Profile.Pronouns.get -> string?
+idunno.Bluesky.Actor.Profile.Pronouns.set -> void
+idunno.Bluesky.Actor.Profile.Website.get -> System.Uri?
+idunno.Bluesky.Actor.Profile.Website.set -> void
+idunno.Bluesky.Actor.ProfileAssociated.ActivitySubscription.get -> idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription?
+idunno.Bluesky.Actor.ProfileAssociated.ProfileAssociated(int lists, int feedGens, int starterPacks, bool labeler, idunno.Bluesky.Actor.ProfileAssociatedChat? chat, idunno.Bluesky.Actor.ProfileAssociatedGerm? germ, idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription? activitySubscription) -> void
+idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription
+idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.<Clone>$() -> idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription!
+idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.AllowSubscriptions.get -> string!
+idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.AllowSubscriptions.init -> void
+idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.Deconstruct(out string! AllowSubscriptions) -> void
+idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.Equals(idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription? other) -> bool
+idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.ProfileAssociatedActivitySubscription(string! AllowSubscriptions) -> void
+idunno.Bluesky.Actor.SavedFeed
+idunno.Bluesky.Actor.SavedFeed.<Clone>$() -> idunno.Bluesky.Actor.SavedFeed!
+idunno.Bluesky.Actor.SavedFeed.Equals(idunno.Bluesky.Actor.SavedFeed? other) -> bool
+idunno.Bluesky.Actor.SavedFeed.Id.get -> string!
+idunno.Bluesky.Actor.SavedFeed.Id.init -> void
+idunno.Bluesky.Actor.SavedFeed.Pinned.get -> bool
+idunno.Bluesky.Actor.SavedFeed.Pinned.init -> void
+idunno.Bluesky.Actor.SavedFeed.SavedFeed(string! id, idunno.Bluesky.Actor.SavedFeedPreferenceType type, string! value, bool pinned) -> void
+idunno.Bluesky.Actor.SavedFeed.Type.get -> idunno.Bluesky.Actor.SavedFeedPreferenceType
+idunno.Bluesky.Actor.SavedFeed.Type.init -> void
+idunno.Bluesky.Actor.SavedFeed.Value.get -> string!
+idunno.Bluesky.Actor.SavedFeed.Value.init -> void
+idunno.Bluesky.Actor.SavedFeedPreferencesV2
+idunno.Bluesky.Actor.SavedFeedPreferencesV2.Items.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Actor.SavedFeed!>!
+idunno.Bluesky.Actor.SavedFeedPreferencesV2.Items.init -> void
+idunno.Bluesky.Actor.SavedFeedPreferencesV2.SavedFeedPreferencesV2(idunno.Bluesky.Actor.SavedFeedPreferencesV2! original) -> void
+idunno.Bluesky.Actor.SavedFeedPreferencesV2.SavedFeedPreferencesV2(System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Actor.SavedFeed!>! items) -> void
+idunno.Bluesky.Actor.SavedFeedsPreference
+idunno.Bluesky.Actor.SavedFeedsPreference.Deconstruct(out System.Collections.Generic.ICollection<idunno.AtProto.AtUri!>! Saved, out System.Collections.Generic.ICollection<idunno.AtProto.AtUri!>! Pinned, out int? TimelineIndex) -> void
+idunno.Bluesky.Actor.SavedFeedsPreference.Pinned.get -> System.Collections.Generic.ICollection<idunno.AtProto.AtUri!>!
+idunno.Bluesky.Actor.SavedFeedsPreference.Pinned.init -> void
+idunno.Bluesky.Actor.SavedFeedsPreference.Saved.get -> System.Collections.Generic.ICollection<idunno.AtProto.AtUri!>!
+idunno.Bluesky.Actor.SavedFeedsPreference.Saved.init -> void
+idunno.Bluesky.Actor.SavedFeedsPreference.SavedFeedsPreference(idunno.Bluesky.Actor.SavedFeedsPreference! original) -> void
+idunno.Bluesky.Actor.SavedFeedsPreference.SavedFeedsPreference(System.Collections.Generic.ICollection<idunno.AtProto.AtUri!>! Saved, System.Collections.Generic.ICollection<idunno.AtProto.AtUri!>! Pinned, int? TimelineIndex) -> void
+idunno.Bluesky.Actor.SavedFeedsPreference.TimelineIndex.get -> int?
+idunno.Bluesky.Actor.SavedFeedsPreference.TimelineIndex.init -> void
+idunno.Bluesky.Actor.Status
+idunno.Bluesky.Actor.Status.AccountStatus.get -> string!
+idunno.Bluesky.Actor.Status.AccountStatus.set -> void
+idunno.Bluesky.Actor.Status.DurationMinutes.get -> int?
+idunno.Bluesky.Actor.Status.DurationMinutes.set -> void
+idunno.Bluesky.Actor.Status.Embed.get -> idunno.Bluesky.Embed.EmbeddedBase?
+idunno.Bluesky.Actor.Status.Embed.set -> void
+idunno.Bluesky.Actor.Status.Status(idunno.Bluesky.Actor.Status! original) -> void
+idunno.Bluesky.Actor.Status.Status(string! accountStatus) -> void
+idunno.Bluesky.Actor.Status.Status(string! accountStatus, idunno.Bluesky.Embed.EmbeddedBase? embed, int? durationMinutes) -> void
+idunno.Bluesky.Actor.Status.Status(string! accountStatus, idunno.Bluesky.Embed.EmbeddedBase? embed, int? durationMinutes, System.DateTimeOffset createdAt) -> void
+idunno.Bluesky.Actor.Status.Status(string! accountStatus, System.DateTimeOffset createdAt) -> void
+idunno.Bluesky.BlueskyAgent.CreateList(idunno.Bluesky.Graph.List! list, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.CreateProfile(idunno.Bluesky.Actor.Profile! profile) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.CreateProfile(idunno.Bluesky.Actor.Profile! profile, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.CreateReferenceListOptOut(idunno.AtProto.AtUri! subject, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.CreateStatus(idunno.Bluesky.Actor.Status! status, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.DeleteReferenceListOptOut(idunno.AtProto.AtUri! uri) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Commit!>!>!
+idunno.Bluesky.BlueskyAgent.DeleteReferenceListOptOut(idunno.AtProto.AtUri! uri, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Commit!>!>!
+idunno.Bluesky.BlueskyAgent.DeleteReferenceListOptOut(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Graph.ReferenceListOptOut!>! record) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Commit!>!>!
+idunno.Bluesky.BlueskyAgent.DeleteReferenceListOptOut(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Graph.ReferenceListOptOut!>! record, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.Commit!>!>!
+idunno.Bluesky.BlueskyAgent.GetContentVisibilityDeclaration() -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Actor.ContentVisibilityDeclaration!>!>!
+idunno.Bluesky.BlueskyAgent.GetContentVisibilityDeclaration(idunno.AtProto.AtIdentifier! identifier, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Actor.ContentVisibilityDeclaration!>!>!
+idunno.Bluesky.BlueskyAgent.GetContentVisibilityDeclaration(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Actor.ContentVisibilityDeclaration!>!>!
+idunno.Bluesky.BlueskyAgent.GetLabelerDeclaration(idunno.AtProto.AtIdentifier! identifier) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Labeler.Service!>!>!
+idunno.Bluesky.BlueskyAgent.GetLabelerDeclaration(idunno.AtProto.AtIdentifier! identifier, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Labeler.Service!>!>!
+idunno.Bluesky.BlueskyAgent.GetLabelerDeclaration(idunno.AtProto.Did! did) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Labeler.Service!>!>!
+idunno.Bluesky.BlueskyAgent.GetLabelerDeclaration(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Labeler.Service!>!>!
+idunno.Bluesky.BlueskyAgent.GetLabelerDeclaration(idunno.AtProto.Handle! handle) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Labeler.Service!>!>!
+idunno.Bluesky.BlueskyAgent.GetLabelerDeclaration(idunno.AtProto.Handle! handle, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Labeler.Service!>!>!
+idunno.Bluesky.BlueskyAgent.GetLikes(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid? cid = null, int? limit = null, string? cursor = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Feed.LikesCollection!>!>!
+idunno.Bluesky.BlueskyAgent.GetListRecord(idunno.AtProto.AtUri! uri, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Graph.List!>!>!>!
+idunno.Bluesky.BlueskyAgent.GetProfile() -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Actor.Profile!>!>!>!
+idunno.Bluesky.BlueskyAgent.GetProfile(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Actor.Profile!>!>!>!
+idunno.Bluesky.BlueskyAgent.GetProfileRecord(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Actor.Profile!>!>!>!
+idunno.Bluesky.BlueskyAgent.GetStatus(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Actor.Status!>!>!>!
+idunno.Bluesky.BlueskyAgent.ListBlueskyRecords<TRecord>(idunno.AtProto.AtIdentifier! repo, idunno.AtProto.Nsid! collection, int? limit = 50, string? cursor = null, bool reverse = false, System.Uri? service = null, string? serviceProxy = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Repo.AtProtoRepositoryRecord<TRecord!>!>!>!>!
+idunno.Bluesky.BlueskyAgent.ListReferenceListOptOuts() -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Graph.ReferenceListOptOut!>!>!>!>!
+idunno.Bluesky.BlueskyAgent.ListReferenceListOptOuts(int? limit) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Graph.ReferenceListOptOut!>!>!>!>!
+idunno.Bluesky.BlueskyAgent.ListReferenceListOptOuts(int? limit, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Graph.ReferenceListOptOut!>!>!>!>!
+idunno.Bluesky.BlueskyAgent.ListReferenceListOptOuts(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.PagedReadOnlyCollection<idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Graph.ReferenceListOptOut!>!>!>!>!
+idunno.Bluesky.BlueskyAgent.Post(idunno.Bluesky.Drafts.DraftWithId! draftWithId, bool extractFacets, bool deleteDraft, idunno.Bluesky.Actor.PostInteractionSettingsPreferences? interactionPreferences, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<System.Collections.Generic.IReadOnlyList<idunno.AtProto.Repo.CreateRecordResult!>!>!>!
+idunno.Bluesky.BlueskyAgent.Post(idunno.Bluesky.Embed.EmbeddedExternal! externalCard, System.DateTimeOffset? createdAt = null, System.Collections.Generic.ICollection<string!>? langs = null, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.ThreadGateRule!>? threadGateRules = null, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.PostGateRule!>? postGateRules = null, idunno.Bluesky.Actor.PostInteractionSettingsPreferences? interactionPreferences = null, idunno.Bluesky.PostSelfLabels? labels = null, System.Collections.Generic.ICollection<string!>? tags = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.Post(idunno.Bluesky.Post! post, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.ThreadGateRule!>? threadGateRules = null, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.PostGateRule!>? postGateRules = null, idunno.Bluesky.Actor.PostInteractionSettingsPreferences? interactionPreferences = null, bool extractFacets = true, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.Post(string! text, idunno.Bluesky.Embed.EmbeddedExternal! externalCard, System.DateTimeOffset? createdAt = null, System.Collections.Generic.ICollection<string!>? langs = null, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.ThreadGateRule!>? threadGateRules = null, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.PostGateRule!>? postGateRules = null, idunno.Bluesky.Actor.PostInteractionSettingsPreferences? interactionPreferences = null, idunno.Bluesky.PostSelfLabels? labels = null, bool extractFacets = true, System.Collections.Generic.ICollection<string!>? tags = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.Post(string! text, idunno.Bluesky.Embed.EmbeddedImage! image, System.DateTimeOffset? createdAt = null, System.Collections.Generic.ICollection<string!>? langs = null, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.ThreadGateRule!>? threadGateRules = null, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.PostGateRule!>? postGateRules = null, idunno.Bluesky.Actor.PostInteractionSettingsPreferences? interactionPreferences = null, idunno.Bluesky.PostSelfLabels? labels = null, System.Collections.Generic.ICollection<string!>? tags = null, bool extractFacets = true, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.Post(string! text, string! langs, System.DateTimeOffset? createdAt = null, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.ThreadGateRule!>? threadGateRules = null, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.PostGateRule!>? postGateRules = null, idunno.Bluesky.Actor.PostInteractionSettingsPreferences? interactionPreferences = null, idunno.Bluesky.PostSelfLabels? labels = null, System.Collections.Generic.ICollection<string!>? tags = null, bool extractFacets = true, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.Post(string! text, System.Collections.Generic.ICollection<idunno.Bluesky.Embed.EmbeddedImage!>? images, System.DateTimeOffset? createdAt = null, System.Collections.Generic.ICollection<string!>? langs = null, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.ThreadGateRule!>? threadGateRules = null, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.PostGateRule!>? postGateRules = null, idunno.Bluesky.Actor.PostInteractionSettingsPreferences? interactionPreferences = null, idunno.Bluesky.PostSelfLabels? labels = null, System.Collections.Generic.ICollection<string!>? tags = null, bool extractFacets = true, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.Post(string! text, System.DateTimeOffset? createdAt = null, System.Collections.Generic.ICollection<string!>? langs = null, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.ThreadGateRule!>? threadGateRules = null, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.PostGateRule!>? postGateRules = null, idunno.Bluesky.Actor.PostInteractionSettingsPreferences? interactionPreferences = null, idunno.Bluesky.PostSelfLabels? labels = null, System.Collections.Generic.ICollection<string!>? tags = null, bool extractFacets = true, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.Post(string? text, idunno.Bluesky.Embed.EmbeddedVideo! video, System.DateTimeOffset? createdAt = null, System.Collections.Generic.ICollection<string!>? langs = null, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.ThreadGateRule!>? threadGateRules = null, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.PostGateRule!>? postGateRules = null, idunno.Bluesky.Actor.PostInteractionSettingsPreferences? interactionPreferences = null, idunno.Bluesky.PostSelfLabels? labels = null, System.Collections.Generic.ICollection<string!>? tags = null, bool extractFacets = true, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.CreateRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.PutPreferences(idunno.Bluesky.Actor.Preferences! preferences) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+idunno.Bluesky.BlueskyAgent.PutPreferences(idunno.Bluesky.Actor.Preferences! preferences, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+idunno.Bluesky.BlueskyAgent.PutPreferences(System.Collections.Generic.IList<idunno.Bluesky.Actor.Preference!>! preferences) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+idunno.Bluesky.BlueskyAgent.PutPreferences(System.Collections.Generic.IList<idunno.Bluesky.Actor.Preference!>! preferences, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+idunno.Bluesky.BlueskyAgent.SetContentVisibilityDeclaration(bool hideFromAlgorithmicRecommendations) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.SetContentVisibilityDeclaration(bool hideFromAlgorithmicRecommendations, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.SetContentVisibilityDeclaration(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Actor.ContentVisibilityDeclaration!>! declaration) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.SetContentVisibilityDeclaration(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Actor.ContentVisibilityDeclaration!>! declaration, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.SetContentVisibilityDeclaration(idunno.Bluesky.Actor.ContentVisibilityDeclaration! declaration) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.SetContentVisibilityDeclaration(idunno.Bluesky.Actor.ContentVisibilityDeclaration! declaration, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.SetProfile(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Actor.Profile!>! profile) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.SetProfile(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Actor.Profile!>! profile, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.SetProfile(idunno.Bluesky.Actor.Profile! profile) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.SetProfile(idunno.Bluesky.Actor.Profile! profile, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.UnmuteModList(idunno.AtProto.AtUri! listUri, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.EmptyResponse!>!>!
+idunno.Bluesky.BlueskyAgent.UpdateList(idunno.AtProto.AtUri! uri, idunno.Bluesky.Graph.List! list) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.UpdateList(idunno.AtProto.AtUri! uri, idunno.Bluesky.Graph.List! list, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.UpdateList(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Graph.List!>! list) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.UpdateList(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Graph.List!>! list, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.UpdateProfile(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Actor.Profile!>! profile) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.UpdateProfile(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Actor.Profile!>! profile, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.UpdateProfile(idunno.Bluesky.Actor.Profile! profile) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.UpdateProfile(idunno.Bluesky.Actor.Profile! profile, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.BlueskyAgent.UpdateStatus(idunno.AtProto.Repo.AtProtoRepositoryRecord<idunno.Bluesky.Actor.Status!>! status, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.AtProto.Repo.PutRecordResult!>!>!
+idunno.Bluesky.DraftLimitReached
+idunno.Bluesky.DraftLimitReached.DraftLimitReached(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
+idunno.Bluesky.Drafts.DraftEmbedGallery
+idunno.Bluesky.Drafts.DraftEmbedGallery.Deconstruct(out System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Drafts.DraftEmbedImage!>? Items) -> void
+idunno.Bluesky.Drafts.DraftEmbedGallery.DraftEmbedGallery(idunno.Bluesky.Drafts.DraftEmbedGallery! original) -> void
+idunno.Bluesky.Drafts.DraftEmbedGallery.DraftEmbedGallery(System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Drafts.DraftEmbedImage!>? Items) -> void
+idunno.Bluesky.Drafts.DraftEmbedGallery.Items.get -> System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Drafts.DraftEmbedImage!>?
+idunno.Bluesky.Drafts.DraftEmbedGallery.Items.init -> void
+idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, idunno.AtProto.Labels.SelfLabels? labels, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedImage!>? embedImages, idunno.Bluesky.Drafts.DraftEmbedGallery? embedGallery, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedVideo!>? embedVideos, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedExternal!>? embedExternals, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedRecord!>? embedRecords) -> void
+idunno.Bluesky.Drafts.DraftPost.DraftPost(string! text, idunno.Bluesky.PostSelfLabels? postSelfLabels, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedImage!>? embedImages, idunno.Bluesky.Drafts.DraftEmbedGallery? embedGallery, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedVideo!>? embedVideos, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedExternal!>? embedExternals, System.Collections.Generic.IList<idunno.Bluesky.Drafts.DraftEmbedRecord!>? embedRecords) -> void
+idunno.Bluesky.Drafts.DraftPost.EmbedGallery.get -> idunno.Bluesky.Drafts.DraftEmbedGallery?
+idunno.Bluesky.Drafts.DraftPost.EmbedGallery.init -> void
+idunno.Bluesky.Feed.Like
+idunno.Bluesky.Feed.Like.Like(idunno.AtProto.Repo.StrongReference! subject) -> void
+idunno.Bluesky.Feed.Like.Like(idunno.AtProto.Repo.StrongReference! subject, idunno.AtProto.Repo.StrongReference? via) -> void
+idunno.Bluesky.Feed.Like.Like(idunno.AtProto.Repo.StrongReference! subject, System.DateTimeOffset createdAt, idunno.AtProto.Repo.StrongReference? via) -> void
+idunno.Bluesky.Feed.Like.Like(idunno.Bluesky.Feed.Like! original) -> void
+idunno.Bluesky.Feed.Like.Subject.get -> idunno.AtProto.Repo.StrongReference!
+idunno.Bluesky.Feed.Like.Subject.init -> void
+idunno.Bluesky.Feed.Like.Via.get -> idunno.AtProto.Repo.StrongReference?
+idunno.Bluesky.Feed.Like.Via.init -> void
+idunno.Bluesky.Feed.Likes.Like
+idunno.Bluesky.Feed.Likes.Like.Actor.get -> idunno.Bluesky.Actor.ProfileView!
+idunno.Bluesky.Feed.Likes.Like.Actor.init -> void
+idunno.Bluesky.Feed.Likes.Like.CreatedAt.get -> System.DateTimeOffset
+idunno.Bluesky.Feed.Likes.Like.CreatedAt.init -> void
+idunno.Bluesky.Feed.Likes.Like.Equals(idunno.Bluesky.Feed.Likes.Like? other) -> bool
+idunno.Bluesky.Feed.Likes.Like.IndexedAt.get -> System.DateTimeOffset
+idunno.Bluesky.Feed.Likes.Like.IndexedAt.init -> void
+idunno.Bluesky.Feed.LikesCollection
+idunno.Bluesky.Feed.LikesCollection.Cid.get -> idunno.AtProto.Cid?
+idunno.Bluesky.Feed.LikesCollection.Cid.init -> void
+idunno.Bluesky.Feed.LikesCollection.StrongReference.get -> idunno.AtProto.Repo.StrongReference?
+idunno.Bluesky.Feed.LikesCollection.Uri.get -> idunno.AtProto.AtUri!
+idunno.Bluesky.Feed.LikesCollection.Uri.init -> void
+idunno.Bluesky.Feed.Repost
+idunno.Bluesky.Feed.Repost.Repost(idunno.AtProto.Repo.StrongReference! subject) -> void
+idunno.Bluesky.Feed.Repost.Repost(idunno.AtProto.Repo.StrongReference! subject, idunno.AtProto.Repo.StrongReference? via) -> void
+idunno.Bluesky.Feed.Repost.Repost(idunno.AtProto.Repo.StrongReference! subject, System.DateTimeOffset createdAt) -> void
+idunno.Bluesky.Feed.Repost.Repost(idunno.AtProto.Repo.StrongReference! subject, System.DateTimeOffset createdAt, idunno.AtProto.Repo.StrongReference? via) -> void
+idunno.Bluesky.Feed.Repost.Repost(idunno.Bluesky.Feed.Repost! original) -> void
+idunno.Bluesky.Feed.Repost.Subject.get -> idunno.AtProto.Repo.StrongReference!
+idunno.Bluesky.Feed.Repost.Subject.init -> void
+idunno.Bluesky.Feed.Repost.Via.get -> idunno.AtProto.Repo.StrongReference?
+idunno.Bluesky.Feed.Repost.Via.init -> void
+idunno.Bluesky.Graph.Block
+idunno.Bluesky.Graph.Block.Block(idunno.AtProto.Did! subject) -> void
+idunno.Bluesky.Graph.Block.Block(idunno.AtProto.Did! subject, System.DateTimeOffset createdAt) -> void
+idunno.Bluesky.Graph.Block.Block(idunno.Bluesky.Graph.Block! original) -> void
+idunno.Bluesky.Graph.Block.Subject.get -> idunno.AtProto.Did!
+idunno.Bluesky.Graph.Block.Subject.init -> void
+idunno.Bluesky.Graph.FeedItem
+idunno.Bluesky.Graph.FeedItem.FeedItem(idunno.AtProto.AtUri! uri) -> void
+idunno.Bluesky.Graph.FeedItem.FeedItem(idunno.Bluesky.Graph.FeedItem! original) -> void
+idunno.Bluesky.Graph.FeedItem.Uri.get -> idunno.AtProto.AtUri!
+idunno.Bluesky.Graph.FeedItem.Uri.init -> void
+idunno.Bluesky.Graph.Follow
+idunno.Bluesky.Graph.Follow.Follow(idunno.AtProto.Did! subject) -> void
+idunno.Bluesky.Graph.Follow.Follow(idunno.AtProto.Did! subject, idunno.AtProto.Repo.StrongReference? via) -> void
+idunno.Bluesky.Graph.Follow.Follow(idunno.AtProto.Did! subject, idunno.AtProto.Repo.StrongReference? via, System.DateTimeOffset createdAt) -> void
+idunno.Bluesky.Graph.Follow.Follow(idunno.AtProto.Did! subject, System.DateTimeOffset createdAt) -> void
+idunno.Bluesky.Graph.Follow.Follow(idunno.Bluesky.Graph.Follow! original) -> void
+idunno.Bluesky.Graph.Follow.Subject.get -> idunno.AtProto.Did!
+idunno.Bluesky.Graph.Follow.Subject.init -> void
+idunno.Bluesky.Graph.Follow.Via.get -> idunno.AtProto.Repo.StrongReference?
+idunno.Bluesky.Graph.Follow.Via.init -> void
+idunno.Bluesky.Graph.List
+idunno.Bluesky.Graph.List.Avatar.get -> idunno.AtProto.Blob?
+idunno.Bluesky.Graph.List.Avatar.set -> void
+idunno.Bluesky.Graph.List.Description.get -> string?
+idunno.Bluesky.Graph.List.Description.set -> void
+idunno.Bluesky.Graph.List.DescriptionFacets.get -> System.Collections.Generic.IEnumerable<idunno.Bluesky.RichText.Facet!>?
+idunno.Bluesky.Graph.List.DescriptionFacets.set -> void
+idunno.Bluesky.Graph.List.Labels.get -> idunno.AtProto.Labels.SelfLabels?
+idunno.Bluesky.Graph.List.Labels.set -> void
+idunno.Bluesky.Graph.List.List(idunno.Bluesky.Graph.List! original) -> void
+idunno.Bluesky.Graph.List.List(string! name, idunno.Bluesky.Graph.ListPurpose purpose, string? description, System.Collections.Generic.IEnumerable<idunno.Bluesky.RichText.Facet!>? descriptionFacets = null, idunno.AtProto.Blob? avatar = null, idunno.AtProto.Labels.SelfLabels? labels = null, System.DateTimeOffset? createdAt = null) -> void
+idunno.Bluesky.Graph.List.Name.get -> string!
+idunno.Bluesky.Graph.List.Name.set -> void
+idunno.Bluesky.Graph.List.Purpose.get -> idunno.Bluesky.Graph.ListPurpose
+idunno.Bluesky.Graph.List.Purpose.init -> void
+idunno.Bluesky.Graph.ListBlock
+idunno.Bluesky.Graph.ListBlock.ListBlock(idunno.AtProto.AtUri! subject) -> void
+idunno.Bluesky.Graph.ListBlock.ListBlock(idunno.AtProto.AtUri! subject, System.DateTimeOffset createdAt) -> void
+idunno.Bluesky.Graph.ListBlock.ListBlock(idunno.Bluesky.Graph.ListBlock! original) -> void
+idunno.Bluesky.Graph.ListBlock.Subject.get -> idunno.AtProto.AtUri!
+idunno.Bluesky.Graph.ListBlock.Subject.init -> void
+idunno.Bluesky.Graph.ListItemView.SubjectOptedOut.get -> bool?
+idunno.Bluesky.Graph.ListItemView.SubjectOptedOut.init -> void
+idunno.Bluesky.Graph.ListViewerState
+idunno.Bluesky.Graph.ListViewerState.Blocked.get -> idunno.AtProto.AtUri?
+idunno.Bluesky.Graph.ListViewerState.Blocked.init -> void
+idunno.Bluesky.Graph.ListViewerState.Deconstruct(out bool? Muted, out idunno.AtProto.AtUri? Blocked, out idunno.AtProto.AtUri? ReferenceListOptOut) -> void
+idunno.Bluesky.Graph.ListViewerState.ListViewerState(bool? Muted, idunno.AtProto.AtUri? Blocked, idunno.AtProto.AtUri? ReferenceListOptOut) -> void
+idunno.Bluesky.Graph.ListViewerState.ListViewerState(idunno.Bluesky.Graph.ListViewerState! original) -> void
+idunno.Bluesky.Graph.ListViewerState.Muted.get -> bool?
+idunno.Bluesky.Graph.ListViewerState.ReferenceListOptOut.get -> idunno.AtProto.AtUri?
+idunno.Bluesky.Graph.ListViewerState.ReferenceListOptOut.init -> void
+idunno.Bluesky.Graph.ReferenceListOptOut
+idunno.Bluesky.Graph.ReferenceListOptOut.ReferenceListOptOut(idunno.AtProto.AtUri! subject) -> void
+idunno.Bluesky.Graph.ReferenceListOptOut.ReferenceListOptOut(idunno.AtProto.AtUri! subject, System.DateTimeOffset createdAt) -> void
+idunno.Bluesky.Graph.ReferenceListOptOut.ReferenceListOptOut(idunno.Bluesky.Graph.ReferenceListOptOut! original) -> void
+idunno.Bluesky.Graph.ReferenceListOptOut.Subject.get -> idunno.AtProto.AtUri!
+idunno.Bluesky.Graph.ReferenceListOptOut.Subject.init -> void
+idunno.Bluesky.Graph.StarterPack
+idunno.Bluesky.Graph.StarterPack.Description.get -> string?
+idunno.Bluesky.Graph.StarterPack.Description.init -> void
+idunno.Bluesky.Graph.StarterPack.Feeds.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Graph.FeedItem!>?
+idunno.Bluesky.Graph.StarterPack.Feeds.init -> void
+idunno.Bluesky.Graph.StarterPack.List.get -> idunno.AtProto.AtUri!
+idunno.Bluesky.Graph.StarterPack.List.set -> void
+idunno.Bluesky.Graph.StarterPack.Name.get -> string!
+idunno.Bluesky.Graph.StarterPack.Name.set -> void
+idunno.Bluesky.Graph.StarterPack.StarterPack(idunno.Bluesky.Graph.StarterPack! original) -> void
+idunno.Bluesky.Graph.StarterPack.StarterPack(string! name, string? description, idunno.AtProto.AtUri! list, System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Graph.FeedItem!>? feeds, System.DateTimeOffset createdAt, System.DateTimeOffset? updatedAt) -> void
+idunno.Bluesky.Graph.StarterPack.UpdatedAt.get -> System.DateTimeOffset?
+idunno.Bluesky.Graph.StarterPack.UpdatedAt.init -> void
+idunno.Bluesky.Graph.StarterPackView.StarterPackView(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid, idunno.Bluesky.Graph.StarterPack! record, idunno.Bluesky.Actor.ProfileViewBasic! creator, int listItemCount, int joinedWeekCount, int joinedAllTimeCount, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Labels.Label!>? labels, System.DateTimeOffset indexedAt, idunno.Bluesky.Graph.ListViewBasic! list, System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Graph.ListItemView!>? listItemsSample, System.Collections.Generic.IReadOnlyCollection<idunno.Bluesky.Feed.GeneratorView!>? feeds) -> void
+idunno.Bluesky.Graph.StarterPackViewBasic.Record.get -> idunno.Bluesky.Graph.StarterPack!
+idunno.Bluesky.Graph.StarterPackViewBasic.StarterPackViewBasic(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid! cid, idunno.Bluesky.Graph.StarterPack! record, idunno.Bluesky.Actor.ProfileViewBasic! creator, int listItemCount, int joinedWeekCount, int joinedAllTimeCount, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Labels.Label!>? labels, System.DateTimeOffset indexedAt) -> void
+idunno.Bluesky.Graph.Verification
+idunno.Bluesky.Graph.Verification.DisplayName.get -> string!
+idunno.Bluesky.Graph.Verification.DisplayName.init -> void
+idunno.Bluesky.Graph.Verification.Handle.get -> idunno.AtProto.Handle!
+idunno.Bluesky.Graph.Verification.Handle.init -> void
+idunno.Bluesky.Graph.Verification.Subject.get -> idunno.AtProto.Did!
+idunno.Bluesky.Graph.Verification.Subject.init -> void
+idunno.Bluesky.Graph.Verification.Verification(idunno.AtProto.Handle! handle, idunno.AtProto.Did! subject, System.DateTimeOffset createdAt, string! displayName) -> void
+idunno.Bluesky.Graph.Verification.Verification(idunno.Bluesky.Graph.Verification! original) -> void
+idunno.Bluesky.Labeler.Service
+idunno.Bluesky.Labeler.Service.CreatedAt.get -> System.DateTimeOffset
+idunno.Bluesky.Labeler.Service.CreatedAt.init -> void
+idunno.Bluesky.Labeler.Service.Labels.get -> System.Collections.Generic.ICollection<idunno.AtProto.Labels.SelfLabel!>!
+idunno.Bluesky.Labeler.Service.Labels.init -> void
+idunno.Bluesky.Labeler.Service.Policies.get -> idunno.Bluesky.Labeler.LabelerPolicies!
+idunno.Bluesky.Labeler.Service.Policies.init -> void
+idunno.Bluesky.Labeler.Service.Service() -> void
+idunno.Bluesky.Labeler.Service.Service(idunno.Bluesky.Labeler.Service! original) -> void
+idunno.Bluesky.Labeler.Service.SubjectCollections.get -> System.Collections.Generic.ICollection<idunno.AtProto.Nsid!>?
+idunno.Bluesky.Labeler.Service.SubjectCollections.init -> void
+idunno.Bluesky.Labeler.Service.SubjectTypes.get -> System.Collections.Generic.ICollection<string!>?
+idunno.Bluesky.Labeler.Service.SubjectTypes.init -> void
+idunno.Bluesky.PostBuilder.ApplyInteractionPreferences(idunno.Bluesky.Actor.PostInteractionSettingsPreferences! interactionPreferences) -> void
+override idunno.Bluesky.Actor.LiveEventPreferences.<Clone>$() -> idunno.Bluesky.Actor.LiveEventPreferences!
+override idunno.Bluesky.Actor.LiveEventPreferences.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Actor.LiveEventPreferences.Equals(object? obj) -> bool
+override idunno.Bluesky.Actor.LiveEventPreferences.GetHashCode() -> int
+override idunno.Bluesky.Actor.LiveEventPreferences.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.Bluesky.Actor.LiveEventPreferences.ToString() -> string!
+override idunno.Bluesky.Actor.PostInteractionSettingsPreferences.<Clone>$() -> idunno.Bluesky.Actor.PostInteractionSettingsPreferences!
+override idunno.Bluesky.Actor.PostInteractionSettingsPreferences.Equals(object? obj) -> bool
+override idunno.Bluesky.Actor.PostInteractionSettingsPreferences.GetHashCode() -> int
+override idunno.Bluesky.Actor.PostInteractionSettingsPreferences.ToString() -> string!
+override idunno.Bluesky.Actor.Profile.<Clone>$() -> idunno.Bluesky.Actor.Profile!
+override idunno.Bluesky.Actor.Profile.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Actor.Profile.Equals(object? obj) -> bool
+override idunno.Bluesky.Actor.Profile.GetHashCode() -> int
+override idunno.Bluesky.Actor.Profile.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.Bluesky.Actor.Profile.ToString() -> string!
+override idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.Equals(object? obj) -> bool
+override idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.GetHashCode() -> int
+override idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.ToString() -> string!
+override idunno.Bluesky.Actor.SavedFeed.Equals(object? obj) -> bool
+override idunno.Bluesky.Actor.SavedFeed.GetHashCode() -> int
+override idunno.Bluesky.Actor.SavedFeed.ToString() -> string!
+override idunno.Bluesky.Actor.SavedFeedPreferencesV2.<Clone>$() -> idunno.Bluesky.Actor.SavedFeedPreferencesV2!
+override idunno.Bluesky.Actor.SavedFeedPreferencesV2.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Actor.SavedFeedPreferencesV2.Equals(object? obj) -> bool
+override idunno.Bluesky.Actor.SavedFeedPreferencesV2.GetHashCode() -> int
+override idunno.Bluesky.Actor.SavedFeedPreferencesV2.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.Bluesky.Actor.SavedFeedPreferencesV2.ToString() -> string!
+override idunno.Bluesky.Actor.SavedFeedsPreference.<Clone>$() -> idunno.Bluesky.Actor.SavedFeedsPreference!
+override idunno.Bluesky.Actor.SavedFeedsPreference.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Actor.SavedFeedsPreference.Equals(object? obj) -> bool
+override idunno.Bluesky.Actor.SavedFeedsPreference.GetHashCode() -> int
+override idunno.Bluesky.Actor.SavedFeedsPreference.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.Bluesky.Actor.SavedFeedsPreference.ToString() -> string!
+override idunno.Bluesky.Actor.Status.<Clone>$() -> idunno.Bluesky.Actor.Status!
+override idunno.Bluesky.Actor.Status.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Actor.Status.Equals(object? obj) -> bool
+override idunno.Bluesky.Actor.Status.GetHashCode() -> int
+override idunno.Bluesky.Actor.Status.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.Bluesky.Actor.Status.ToString() -> string!
+override idunno.Bluesky.Drafts.DraftEmbedGallery.Equals(object? obj) -> bool
+override idunno.Bluesky.Drafts.DraftEmbedGallery.GetHashCode() -> int
+override idunno.Bluesky.Drafts.DraftEmbedGallery.ToString() -> string!
+override idunno.Bluesky.Feed.Like.<Clone>$() -> idunno.Bluesky.Feed.Like!
+override idunno.Bluesky.Feed.Like.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Feed.Like.Equals(object? obj) -> bool
+override idunno.Bluesky.Feed.Like.GetHashCode() -> int
+override idunno.Bluesky.Feed.Like.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.Bluesky.Feed.Like.ToString() -> string!
+override idunno.Bluesky.Feed.Likes.Like.<Clone>$() -> idunno.Bluesky.Feed.Likes.Like!
+override idunno.Bluesky.Feed.Likes.Like.Equals(object? obj) -> bool
+override idunno.Bluesky.Feed.Likes.Like.GetHashCode() -> int
+override idunno.Bluesky.Feed.Likes.Like.ToString() -> string!
+override idunno.Bluesky.Feed.Repost.<Clone>$() -> idunno.Bluesky.Feed.Repost!
+override idunno.Bluesky.Feed.Repost.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Feed.Repost.Equals(object? obj) -> bool
+override idunno.Bluesky.Feed.Repost.GetHashCode() -> int
+override idunno.Bluesky.Feed.Repost.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.Bluesky.Feed.Repost.ToString() -> string!
+override idunno.Bluesky.Graph.Block.<Clone>$() -> idunno.Bluesky.Graph.Block!
+override idunno.Bluesky.Graph.Block.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Graph.Block.Equals(object? obj) -> bool
+override idunno.Bluesky.Graph.Block.GetHashCode() -> int
+override idunno.Bluesky.Graph.Block.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.Bluesky.Graph.Block.ToString() -> string!
+override idunno.Bluesky.Graph.FeedItem.Equals(object? obj) -> bool
+override idunno.Bluesky.Graph.FeedItem.GetHashCode() -> int
+override idunno.Bluesky.Graph.FeedItem.ToString() -> string!
+override idunno.Bluesky.Graph.Follow.<Clone>$() -> idunno.Bluesky.Graph.Follow!
+override idunno.Bluesky.Graph.Follow.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Graph.Follow.Equals(object? obj) -> bool
+override idunno.Bluesky.Graph.Follow.GetHashCode() -> int
+override idunno.Bluesky.Graph.Follow.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.Bluesky.Graph.Follow.ToString() -> string!
+override idunno.Bluesky.Graph.List.<Clone>$() -> idunno.Bluesky.Graph.List!
+override idunno.Bluesky.Graph.List.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Graph.List.Equals(object? obj) -> bool
+override idunno.Bluesky.Graph.List.GetHashCode() -> int
+override idunno.Bluesky.Graph.List.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.Bluesky.Graph.List.ToString() -> string!
+override idunno.Bluesky.Graph.ListBlock.<Clone>$() -> idunno.Bluesky.Graph.ListBlock!
+override idunno.Bluesky.Graph.ListBlock.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Graph.ListBlock.Equals(object? obj) -> bool
+override idunno.Bluesky.Graph.ListBlock.GetHashCode() -> int
+override idunno.Bluesky.Graph.ListBlock.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.Bluesky.Graph.ListBlock.ToString() -> string!
+override idunno.Bluesky.Graph.ListViewerState.Equals(object? obj) -> bool
+override idunno.Bluesky.Graph.ListViewerState.GetHashCode() -> int
+override idunno.Bluesky.Graph.ListViewerState.ToString() -> string!
+override idunno.Bluesky.Graph.ReferenceListOptOut.<Clone>$() -> idunno.Bluesky.Graph.ReferenceListOptOut!
+override idunno.Bluesky.Graph.ReferenceListOptOut.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Graph.ReferenceListOptOut.Equals(object? obj) -> bool
+override idunno.Bluesky.Graph.ReferenceListOptOut.GetHashCode() -> int
+override idunno.Bluesky.Graph.ReferenceListOptOut.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.Bluesky.Graph.ReferenceListOptOut.ToString() -> string!
+override idunno.Bluesky.Graph.StarterPack.<Clone>$() -> idunno.Bluesky.Graph.StarterPack!
+override idunno.Bluesky.Graph.StarterPack.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Graph.StarterPack.Equals(object? obj) -> bool
+override idunno.Bluesky.Graph.StarterPack.GetHashCode() -> int
+override idunno.Bluesky.Graph.StarterPack.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.Bluesky.Graph.StarterPack.ToString() -> string!
+override idunno.Bluesky.Graph.Verification.<Clone>$() -> idunno.Bluesky.Graph.Verification!
+override idunno.Bluesky.Graph.Verification.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Graph.Verification.Equals(object? obj) -> bool
+override idunno.Bluesky.Graph.Verification.GetHashCode() -> int
+override idunno.Bluesky.Graph.Verification.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.Bluesky.Graph.Verification.ToString() -> string!
+override idunno.Bluesky.Labeler.Service.<Clone>$() -> idunno.Bluesky.Labeler.Service!
+override idunno.Bluesky.Labeler.Service.EqualityContract.get -> System.Type!
+override idunno.Bluesky.Labeler.Service.Equals(object? obj) -> bool
+override idunno.Bluesky.Labeler.Service.GetHashCode() -> int
+override idunno.Bluesky.Labeler.Service.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override idunno.Bluesky.Labeler.Service.ToString() -> string!
+override sealed idunno.Bluesky.Actor.LiveEventPreferences.Equals(idunno.Bluesky.Actor.Preference? other) -> bool
+override sealed idunno.Bluesky.Actor.PostInteractionSettingsPreferences.Equals(idunno.Bluesky.Actor.Preference? other) -> bool
+override sealed idunno.Bluesky.Actor.Profile.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
+override sealed idunno.Bluesky.Actor.SavedFeedPreferencesV2.Equals(idunno.Bluesky.Actor.Preference? other) -> bool
+override sealed idunno.Bluesky.Actor.SavedFeedsPreference.Equals(idunno.Bluesky.Actor.Preference? other) -> bool
+override sealed idunno.Bluesky.Actor.Status.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
+override sealed idunno.Bluesky.Feed.Like.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
+override sealed idunno.Bluesky.Feed.Likes.Like.Equals(idunno.AtProto.Repo.AtProtoObject? other) -> bool
+override sealed idunno.Bluesky.Feed.Repost.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
+override sealed idunno.Bluesky.Graph.Block.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
+override sealed idunno.Bluesky.Graph.Follow.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
+override sealed idunno.Bluesky.Graph.List.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
+override sealed idunno.Bluesky.Graph.ListBlock.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
+override sealed idunno.Bluesky.Graph.ReferenceListOptOut.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
+override sealed idunno.Bluesky.Graph.StarterPack.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
+override sealed idunno.Bluesky.Graph.Verification.Equals(idunno.Bluesky.Record.BlueskyTimestampedRecord? other) -> bool
+override sealed idunno.Bluesky.Labeler.Service.Equals(idunno.Bluesky.Record.BlueskyRecord? other) -> bool
+static idunno.Bluesky.Actor.LiveEventPreferences.operator !=(idunno.Bluesky.Actor.LiveEventPreferences? left, idunno.Bluesky.Actor.LiveEventPreferences? right) -> bool
+static idunno.Bluesky.Actor.LiveEventPreferences.operator ==(idunno.Bluesky.Actor.LiveEventPreferences? left, idunno.Bluesky.Actor.LiveEventPreferences? right) -> bool
+static idunno.Bluesky.Actor.PostInteractionSettingsPreferences.operator !=(idunno.Bluesky.Actor.PostInteractionSettingsPreferences? left, idunno.Bluesky.Actor.PostInteractionSettingsPreferences? right) -> bool
+static idunno.Bluesky.Actor.PostInteractionSettingsPreferences.operator ==(idunno.Bluesky.Actor.PostInteractionSettingsPreferences? left, idunno.Bluesky.Actor.PostInteractionSettingsPreferences? right) -> bool
+static idunno.Bluesky.Actor.Profile.operator !=(idunno.Bluesky.Actor.Profile? left, idunno.Bluesky.Actor.Profile? right) -> bool
+static idunno.Bluesky.Actor.Profile.operator ==(idunno.Bluesky.Actor.Profile? left, idunno.Bluesky.Actor.Profile? right) -> bool
+static idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.operator !=(idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription? left, idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription? right) -> bool
+static idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.operator ==(idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription? left, idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription? right) -> bool
+static idunno.Bluesky.Actor.SavedFeed.operator !=(idunno.Bluesky.Actor.SavedFeed? left, idunno.Bluesky.Actor.SavedFeed? right) -> bool
+static idunno.Bluesky.Actor.SavedFeed.operator ==(idunno.Bluesky.Actor.SavedFeed? left, idunno.Bluesky.Actor.SavedFeed? right) -> bool
+static idunno.Bluesky.Actor.SavedFeedPreferencesV2.operator !=(idunno.Bluesky.Actor.SavedFeedPreferencesV2? left, idunno.Bluesky.Actor.SavedFeedPreferencesV2? right) -> bool
+static idunno.Bluesky.Actor.SavedFeedPreferencesV2.operator ==(idunno.Bluesky.Actor.SavedFeedPreferencesV2? left, idunno.Bluesky.Actor.SavedFeedPreferencesV2? right) -> bool
+static idunno.Bluesky.Actor.SavedFeedsPreference.operator !=(idunno.Bluesky.Actor.SavedFeedsPreference? left, idunno.Bluesky.Actor.SavedFeedsPreference? right) -> bool
+static idunno.Bluesky.Actor.SavedFeedsPreference.operator ==(idunno.Bluesky.Actor.SavedFeedsPreference? left, idunno.Bluesky.Actor.SavedFeedsPreference? right) -> bool
+static idunno.Bluesky.Actor.Status.operator !=(idunno.Bluesky.Actor.Status? left, idunno.Bluesky.Actor.Status? right) -> bool
+static idunno.Bluesky.Actor.Status.operator ==(idunno.Bluesky.Actor.Status? left, idunno.Bluesky.Actor.Status? right) -> bool
+static idunno.Bluesky.BlueskyServer.GetLikes(idunno.AtProto.AtUri! uri, idunno.AtProto.Cid? cid, int? limit, string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials? accessCredentials, System.Net.Http.HttpClient! httpClient, System.Action<idunno.AtProto.Authentication.AtProtoCredential!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Feed.LikesCollection!>!>!
+static idunno.Bluesky.CollectionNsid.ListBlock.get -> idunno.AtProto.Nsid!
+static idunno.Bluesky.CollectionNsid.ReferenceListOptOut.get -> idunno.AtProto.Nsid!
+static idunno.Bluesky.Drafts.DraftEmbedGallery.operator !=(idunno.Bluesky.Drafts.DraftEmbedGallery? left, idunno.Bluesky.Drafts.DraftEmbedGallery? right) -> bool
+static idunno.Bluesky.Drafts.DraftEmbedGallery.operator ==(idunno.Bluesky.Drafts.DraftEmbedGallery? left, idunno.Bluesky.Drafts.DraftEmbedGallery? right) -> bool
+static idunno.Bluesky.Feed.Like.operator !=(idunno.Bluesky.Feed.Like? left, idunno.Bluesky.Feed.Like? right) -> bool
+static idunno.Bluesky.Feed.Like.operator ==(idunno.Bluesky.Feed.Like? left, idunno.Bluesky.Feed.Like? right) -> bool
+static idunno.Bluesky.Feed.Likes.Like.operator !=(idunno.Bluesky.Feed.Likes.Like? left, idunno.Bluesky.Feed.Likes.Like? right) -> bool
+static idunno.Bluesky.Feed.Likes.Like.operator ==(idunno.Bluesky.Feed.Likes.Like? left, idunno.Bluesky.Feed.Likes.Like? right) -> bool
+static idunno.Bluesky.Feed.Repost.operator !=(idunno.Bluesky.Feed.Repost? left, idunno.Bluesky.Feed.Repost? right) -> bool
+static idunno.Bluesky.Feed.Repost.operator ==(idunno.Bluesky.Feed.Repost? left, idunno.Bluesky.Feed.Repost? right) -> bool
+static idunno.Bluesky.Graph.Block.operator !=(idunno.Bluesky.Graph.Block? left, idunno.Bluesky.Graph.Block? right) -> bool
+static idunno.Bluesky.Graph.Block.operator ==(idunno.Bluesky.Graph.Block? left, idunno.Bluesky.Graph.Block? right) -> bool
+static idunno.Bluesky.Graph.FeedItem.operator !=(idunno.Bluesky.Graph.FeedItem? left, idunno.Bluesky.Graph.FeedItem? right) -> bool
+static idunno.Bluesky.Graph.FeedItem.operator ==(idunno.Bluesky.Graph.FeedItem? left, idunno.Bluesky.Graph.FeedItem? right) -> bool
+static idunno.Bluesky.Graph.Follow.operator !=(idunno.Bluesky.Graph.Follow? left, idunno.Bluesky.Graph.Follow? right) -> bool
+static idunno.Bluesky.Graph.Follow.operator ==(idunno.Bluesky.Graph.Follow? left, idunno.Bluesky.Graph.Follow? right) -> bool
+static idunno.Bluesky.Graph.List.operator !=(idunno.Bluesky.Graph.List? left, idunno.Bluesky.Graph.List? right) -> bool
+static idunno.Bluesky.Graph.List.operator ==(idunno.Bluesky.Graph.List? left, idunno.Bluesky.Graph.List? right) -> bool
+static idunno.Bluesky.Graph.ListBlock.operator !=(idunno.Bluesky.Graph.ListBlock? left, idunno.Bluesky.Graph.ListBlock? right) -> bool
+static idunno.Bluesky.Graph.ListBlock.operator ==(idunno.Bluesky.Graph.ListBlock? left, idunno.Bluesky.Graph.ListBlock? right) -> bool
+static idunno.Bluesky.Graph.ListViewerState.operator !=(idunno.Bluesky.Graph.ListViewerState? left, idunno.Bluesky.Graph.ListViewerState? right) -> bool
+static idunno.Bluesky.Graph.ListViewerState.operator ==(idunno.Bluesky.Graph.ListViewerState? left, idunno.Bluesky.Graph.ListViewerState? right) -> bool
+static idunno.Bluesky.Graph.ReferenceListOptOut.operator !=(idunno.Bluesky.Graph.ReferenceListOptOut? left, idunno.Bluesky.Graph.ReferenceListOptOut? right) -> bool
+static idunno.Bluesky.Graph.ReferenceListOptOut.operator ==(idunno.Bluesky.Graph.ReferenceListOptOut? left, idunno.Bluesky.Graph.ReferenceListOptOut? right) -> bool
+static idunno.Bluesky.Graph.StarterPack.operator !=(idunno.Bluesky.Graph.StarterPack? left, idunno.Bluesky.Graph.StarterPack? right) -> bool
+static idunno.Bluesky.Graph.StarterPack.operator ==(idunno.Bluesky.Graph.StarterPack? left, idunno.Bluesky.Graph.StarterPack? right) -> bool
+static idunno.Bluesky.Graph.Verification.operator !=(idunno.Bluesky.Graph.Verification? left, idunno.Bluesky.Graph.Verification? right) -> bool
+static idunno.Bluesky.Graph.Verification.operator ==(idunno.Bluesky.Graph.Verification? left, idunno.Bluesky.Graph.Verification? right) -> bool
+static idunno.Bluesky.Labeler.Service.operator !=(idunno.Bluesky.Labeler.Service? left, idunno.Bluesky.Labeler.Service? right) -> bool
+static idunno.Bluesky.Labeler.Service.operator ==(idunno.Bluesky.Labeler.Service? left, idunno.Bluesky.Labeler.Service? right) -> bool
+virtual idunno.Bluesky.Actor.LiveEventPreferences.Equals(idunno.Bluesky.Actor.LiveEventPreferences? other) -> bool
+virtual idunno.Bluesky.Actor.Profile.Equals(idunno.Bluesky.Actor.Profile? other) -> bool
+virtual idunno.Bluesky.Actor.SavedFeedPreferencesV2.Equals(idunno.Bluesky.Actor.SavedFeedPreferencesV2? other) -> bool
+virtual idunno.Bluesky.Actor.SavedFeedsPreference.Equals(idunno.Bluesky.Actor.SavedFeedsPreference? other) -> bool
+virtual idunno.Bluesky.Actor.Status.Equals(idunno.Bluesky.Actor.Status? other) -> bool
+virtual idunno.Bluesky.Drafts.DraftEmbedGallery.<Clone>$() -> idunno.Bluesky.Drafts.DraftEmbedGallery!
+virtual idunno.Bluesky.Drafts.DraftEmbedGallery.EqualityContract.get -> System.Type!
+virtual idunno.Bluesky.Drafts.DraftEmbedGallery.Equals(idunno.Bluesky.Drafts.DraftEmbedGallery? other) -> bool
+virtual idunno.Bluesky.Drafts.DraftEmbedGallery.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual idunno.Bluesky.Feed.Like.Equals(idunno.Bluesky.Feed.Like? other) -> bool
+virtual idunno.Bluesky.Feed.Repost.Equals(idunno.Bluesky.Feed.Repost? other) -> bool
+virtual idunno.Bluesky.Graph.Block.Equals(idunno.Bluesky.Graph.Block? other) -> bool
+virtual idunno.Bluesky.Graph.FeedItem.<Clone>$() -> idunno.Bluesky.Graph.FeedItem!
+virtual idunno.Bluesky.Graph.FeedItem.EqualityContract.get -> System.Type!
+virtual idunno.Bluesky.Graph.FeedItem.Equals(idunno.Bluesky.Graph.FeedItem? other) -> bool
+virtual idunno.Bluesky.Graph.FeedItem.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual idunno.Bluesky.Graph.Follow.Equals(idunno.Bluesky.Graph.Follow? other) -> bool
+virtual idunno.Bluesky.Graph.List.Equals(idunno.Bluesky.Graph.List? other) -> bool
+virtual idunno.Bluesky.Graph.ListBlock.Equals(idunno.Bluesky.Graph.ListBlock? other) -> bool
+virtual idunno.Bluesky.Graph.ListViewerState.<Clone>$() -> idunno.Bluesky.Graph.ListViewerState!
+virtual idunno.Bluesky.Graph.ListViewerState.EqualityContract.get -> System.Type!
+virtual idunno.Bluesky.Graph.ListViewerState.Equals(idunno.Bluesky.Graph.ListViewerState? other) -> bool
+virtual idunno.Bluesky.Graph.ListViewerState.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual idunno.Bluesky.Graph.ReferenceListOptOut.Equals(idunno.Bluesky.Graph.ReferenceListOptOut? other) -> bool
+virtual idunno.Bluesky.Graph.StarterPack.Equals(idunno.Bluesky.Graph.StarterPack? other) -> bool
+virtual idunno.Bluesky.Graph.Verification.Equals(idunno.Bluesky.Graph.Verification? other) -> bool
+virtual idunno.Bluesky.Labeler.Service.Equals(idunno.Bluesky.Labeler.Service? other) -> bool

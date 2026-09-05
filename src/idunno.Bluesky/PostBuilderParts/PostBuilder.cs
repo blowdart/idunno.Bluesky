@@ -1041,7 +1041,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     /// </summary>
     /// <param name="interactionPreferences">The user's interaction preferences.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="interactionPreferences"/> is <see langword="null"/>.</exception>
-    public void ApplyInteractionPreferences(InteractionPreferences interactionPreferences)
+    public void ApplyInteractionPreferences(PostInteractionSettingsPreferences interactionPreferences)
     {
         ArgumentNullException.ThrowIfNull(interactionPreferences);
         lock (_syncLock)
