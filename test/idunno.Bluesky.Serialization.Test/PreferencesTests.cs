@@ -619,4 +619,55 @@ public class PreferencesTests
         Assert.NotNull(feedViewPreference.ExtensionData);
         Assert.Contains("lab_mergeFeedEnabled", feedViewPreference.ExtensionData.Keys);
     }
+
+    [Fact]
+    public void FeedViewPerferenceDeserializesCorrectlyAndGuardsAgainstDuplicates()
+    {
+        string json = """
+            {
+                "preferences": [
+                    {
+                        "$type": "app.bsky.actor.defs#feedViewPref",
+                        "feed": "home",
+                        "lab_mergeFeedEnabled": true,
+                        "hideReplies": false,
+                        "hideRepliesByUnfollowed": false,
+                        "hideRepliesByLikeCount": 0,
+                        "hideReposts": true,
+                        "hideQuotePosts": false
+                    },
+                    {
+                        "$type": "app.bsky.actor.defs#feedViewPref",
+                        "feed": "home",
+                        "lab_mergeFeedEnabled": true,
+                        "hideReplies": false,
+                        "hideRepliesByUnfollowed": false,
+                        "hideRepliesByLikeCount": 0,
+                        "hideReposts": false,
+                        "hideQuotePosts": false
+                    }
+                ]
+            }
+            """;
+
+        GetPreferencesResponse? deserializedGetPreferencesResponse = JsonSerializer.Deserialize<GetPreferencesResponse>(json, BlueskyJsonSerializerOptions.Options);
+        Assert.NotNull(deserializedGetPreferencesResponse);
+        Assert.NotNull(deserializedGetPreferencesResponse.Preferences);
+        var preferences = new Preferences(deserializedGetPreferencesResponse.Preferences, false);
+        Assert.NotNull(preferences);
+        Assert.NotNull(preferences.FeedViewPreferences);
+
+        Assert.Contains("home", preferences.FeedViewPreferences.Keys);
+
+        FeedViewPreference feedViewPreference = preferences.FeedViewPreferences["home"];
+        Assert.Equal("home", feedViewPreference.Feed);
+        Assert.False(feedViewPreference.HideReplies);
+        Assert.False(feedViewPreference.HideRepliesByUnfollowed);
+        Assert.Equal(0, feedViewPreference.HideRepliesByLikeCount);
+        Assert.False(feedViewPreference.HideReposts);
+        Assert.False(feedViewPreference.HideQuotePosts);
+
+        Assert.NotNull(feedViewPreference.ExtensionData);
+        Assert.Contains("lab_mergeFeedEnabled", feedViewPreference.ExtensionData.Keys);
+    }
 }
