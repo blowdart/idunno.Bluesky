@@ -606,7 +606,9 @@ public class PreferencesTests
         Assert.NotNull(preferences);
         Assert.NotNull(preferences.FeedViewPreferences);
 
-        FeedViewPreference feedViewPreference = Assert.Single(preferences.FeedViewPreferences);
+        Assert.Contains("home", preferences.FeedViewPreferences.Keys);
+
+        FeedViewPreference feedViewPreference = preferences.FeedViewPreferences["home"];
         Assert.Equal("home", feedViewPreference.Feed);
         Assert.False(feedViewPreference.HideReplies);
         Assert.False(feedViewPreference.HideRepliesByUnfollowed);

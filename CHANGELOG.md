@@ -29,7 +29,7 @@
 * Added `Actor.ProfileAssociatedActivitySubscription` and the known values `AllowSubscriptionsKnownValues`. This appears in the lexicon, but does not current seem to be used anywhere.
 * Added gallery support to Draft posts, via `Draft.EmbeddedGallery`.
 * Added optional `UpdatedAt` property to `Actor.InterestsPreference`, which indicates when the account owner last updated their interests. See [Add updatedAt to base prefs lexicon- #43](https://github.com/bluesky-social/bsky/pull/43/)
-* Added `Preferences.Interests` property, which is an `InterestsPreference` instance, which in turn allows for a new `LastUpdated` property.
+* Added `Preferences.Interests` property, which is an `InterestsPreference` instance, which in turn allows for a new `UpdatedAt` property.
 * Added `Preferences.LiveEventPreferences` property, which is a `LiveEventPreferences` instance.
 
 ### Breaking Changes
@@ -73,7 +73,6 @@
   * `Preferences.SavedFeedPreference` has been removed, and replaced with `Preferences.SavedFeedsPreference`, which is a single instance of `SavedFeedsPreference`.
   * `Preferences.SavedFeedPreferenceV2` has been removed, and replaced with `Preferences.SavedFeedsPreferenceV2`, which is a collection of `SavedFeed`.
   * `Preferences.InteractionPreferences` has been renamed to `Preferences.PostInteractionSettingsPreferences` to match the lexicon definition.
-  * `Preferences.FeedViewPreferences` has been renamed to `Preferences.FeedViewPreference` to match the lexicon definition, and is now a nullable instance of `FeedViewPreference`.
 
 ### Fixed
 

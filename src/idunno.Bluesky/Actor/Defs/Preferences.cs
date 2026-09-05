@@ -29,7 +29,7 @@ public class Preferences : ReadOnlyCollection<Preference>
         List<SavedFeed> savedFeedPreferenceV2List = [];
         List<AtUri> hiddenPostUris = [];
         List<MutedWord> mutedWords = [];
-        List<FeedViewPreference> feedViewPreferences = [];
+        Dictionary<string, FeedViewPreference> feedViewPreferences = [];
 
         foreach (Preference preference in this)
         {
@@ -71,7 +71,7 @@ public class Preferences : ReadOnlyCollection<Preference>
                     break;
 
                 case FeedViewPreference feedViewPreference:
-                    feedViewPreferences.Add(feedViewPreference);
+                    feedViewPreferences.Add(feedViewPreference.Feed, feedViewPreference);
                     break;
 
                 case MutedWordPreferences mutedWordPreferences:
@@ -184,7 +184,7 @@ public class Preferences : ReadOnlyCollection<Preference>
     /// <remarks>
     /// <para>Currently, this list will only contain a single <see cref="FeedViewPreference"/> for the following feed.</para>
     /// </remarks>
-    public IReadOnlyList<FeedViewPreference> FeedViewPreferences { get; }
+    public IReadOnlyDictionary<string, FeedViewPreference> FeedViewPreferences { get; }
 
     /// <summary>
     /// A list of muted word properties for the account owner.

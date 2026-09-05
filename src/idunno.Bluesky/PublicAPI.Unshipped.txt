@@ -32,7 +32,7 @@ idunno.Bluesky.Actor.PostInteractionSettingsPreferences.PostGateEmbeddingRules.i
 idunno.Bluesky.Actor.PostInteractionSettingsPreferences.PostInteractionSettingsPreferences(System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.ThreadGateRule!>? threadGateAllowRules, System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.PostGateRule!>? postGateEmbeddingRules) -> void
 idunno.Bluesky.Actor.PostInteractionSettingsPreferences.ThreadGateAllowRules.get -> System.Collections.Generic.ICollection<idunno.Bluesky.Feed.Gates.ThreadGateRule!>?
 idunno.Bluesky.Actor.PostInteractionSettingsPreferences.ThreadGateAllowRules.init -> void
-idunno.Bluesky.Actor.Preferences.FeedViewPreferences.get -> System.Collections.Generic.IReadOnlyList<idunno.Bluesky.Actor.FeedViewPreference!>!
+idunno.Bluesky.Actor.Preferences.FeedViewPreferences.get -> System.Collections.Generic.IReadOnlyDictionary<string!, idunno.Bluesky.Actor.FeedViewPreference!>!
 idunno.Bluesky.Actor.Preferences.Interests.get -> idunno.Bluesky.Actor.InterestsPreference?
 idunno.Bluesky.Actor.Preferences.LiveEventPreferences.get -> idunno.Bluesky.Actor.LiveEventPreferences?
 idunno.Bluesky.Actor.Preferences.PostInteractionSettingsPreferences.get -> idunno.Bluesky.Actor.PostInteractionSettingsPreferences?
