@@ -15,7 +15,7 @@ public partial class BlueskyAgent
     /// <summary>
     /// Creates a block record in the authenticated user's repo for the specified <paramref name="did"/>.
     /// </summary>
-    /// <param name="did">The <see cref="Did"/> of the actor to follow.</param>
+    /// <param name="did">The <see cref="Did"/> of the actor to block.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
