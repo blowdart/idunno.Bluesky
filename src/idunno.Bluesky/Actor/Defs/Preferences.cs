@@ -184,9 +184,6 @@ public class Preferences : ReadOnlyCollection<Preference>
     /// <summary>
     /// A list of feeds and their <see cref="FeedViewPreference"/>s for the account owner.
     /// </summary>
-    /// <remarks>
-    /// <para>Currently, this list will only contain a single <see cref="FeedViewPreference"/> for the following feed.</para>
-    /// </remarks>
     public IReadOnlyDictionary<string, FeedViewPreference> FeedViewPreferences { get; }
 
     /// <summary>
