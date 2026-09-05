@@ -46,7 +46,7 @@ public partial class BlueskyAgent
         }
         else
         {
-            if (result.Result is null)
+            if (result.StatusCode == System.Net.HttpStatusCode.OK && result.Result is null)
             {
                 Logger.GetPostRecordSucceededButReturnedNullResult(_logger, uri, cid, AuthenticatedOrUnauthenticatedServiceUri);
             }
