@@ -31,6 +31,7 @@ namespace idunno.Bluesky.Record;
 [JsonDerivedType(typeof(Status), RecordType.Status)]
 [JsonDerivedType(typeof(ReferenceListOptOut), RecordType.ReferenceListOptOut)]
 [JsonDerivedType(typeof(ListBlock), RecordType.ListBlock)]
+[JsonDerivedType(typeof(ContentVisibilityDeclaration), RecordType.ContentVisibilityDeclaration)]
 public record BlueskyRecord : AtProtoRecord
 {
     /// <summary>
