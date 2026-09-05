@@ -71,7 +71,10 @@ public class Preferences : ReadOnlyCollection<Preference>
                     break;
 
                 case FeedViewPreference feedViewPreference:
-                    feedViewPreferences.Add(feedViewPreference.Feed, feedViewPreference);
+                    if (!feedViewPreferences.TryAdd(feedViewPreference.Feed, feedViewPreference))
+                    {
+                        feedViewPreferences[feedViewPreference.Feed] = feedViewPreference;
+                    }
                     break;
 
                 case MutedWordPreferences mutedWordPreferences:

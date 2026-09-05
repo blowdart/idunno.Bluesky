@@ -85,6 +85,9 @@
 * Fixed a bug in the deserialization of `Actor.Preferences` where `SavedFeedsPreferenceV2` was not being deserialized correctly, resulting in null values.
 * `Preferences.SavedFeedsPreference` is now correctly deserialized.
 * `Preferences.SavedFeedsPreferenceV2` is now correctly deserialized.
+* `Preferences.FeedViewPreferences` guards against multiple instances of `FeedViewPreference` for the same feed,
+  and will use the last instance in the list if duplicates are present. Whilst duplicates are technically valid in the lexicon,
+  they are not expected to be present in the wild, and this change prevents deserialization errors when they are encountered.
 
 ## 5.0.0 - 2026-08-24
 
