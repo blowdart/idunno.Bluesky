@@ -68,6 +68,8 @@ idunno.Bluesky.Actor.Profile.Pronouns.get -> string?
 idunno.Bluesky.Actor.Profile.Pronouns.set -> void
 idunno.Bluesky.Actor.Profile.Website.get -> System.Uri?
 idunno.Bluesky.Actor.Profile.Website.set -> void
+idunno.Bluesky.Actor.ProfileAssociated.ActivitySubscription.get -> idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription?
+idunno.Bluesky.Actor.ProfileAssociated.ProfileAssociated(int lists, int feedGens, int starterPacks, bool labeler, idunno.Bluesky.Actor.ProfileAssociatedChat? chat, idunno.Bluesky.Actor.ProfileAssociatedGerm? germ, idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription? activitySubscription) -> void
 idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription
 idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.<Clone>$() -> idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription!
 idunno.Bluesky.Actor.ProfileAssociatedActivitySubscription.AllowSubscriptions.get -> string!

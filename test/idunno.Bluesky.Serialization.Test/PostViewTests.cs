@@ -4,6 +4,7 @@
 using System.Text.Json;
 
 using idunno.AtProto;
+using idunno.Bluesky.Actor;
 using idunno.Bluesky.Feed;
 
 namespace idunno.Bluesky.Serialization.Test;
@@ -98,7 +99,7 @@ public class PostViewTests
         Assert.NotNull(postView.Author.Associated.Chat);
         Assert.Equal(Actor.AllowIncomingChat.All, postView.Author.Associated.Chat.AllowIncoming);
         Assert.NotNull(postView.Author.Associated.ActivitySubscription);
-        Assert.Equal(Notifications.NotificationAllowedFrom.Followers, postView.Author.Associated.ActivitySubscription.AllowSubscriptions);
+        Assert.Equal(AllowSubscriptionsKnownValues.Followers, postView.Author.Associated.ActivitySubscription.AllowSubscriptions);
         Assert.NotNull(postView.Author.Associated.Germ);
         Assert.Equal(GermNetwork.Com.ShowButtonToKnownValues.UsersIFollow, postView.Author.Associated.Germ.ShowButtonTo);
         Assert.Equal(new Uri("https://landing.ger.mx/newUser"), postView.Author.Associated.Germ.MessageMeUrl);
@@ -229,7 +230,7 @@ public class PostViewTests
         Assert.NotNull(postView.Author.Associated.Chat);
         Assert.Equal(Actor.AllowIncomingChat.All, postView.Author.Associated.Chat.AllowIncoming);
         Assert.NotNull(postView.Author.Associated.ActivitySubscription);
-        Assert.Equal(Notifications.NotificationAllowedFrom.Followers, postView.Author.Associated.ActivitySubscription.AllowSubscriptions);
+        Assert.Equal(AllowSubscriptionsKnownValues.Followers, postView.Author.Associated.ActivitySubscription.AllowSubscriptions);
         Assert.NotNull(postView.Author.Associated.Germ);
         Assert.Equal(GermNetwork.Com.ShowButtonToKnownValues.UsersIFollow, postView.Author.Associated.Germ.ShowButtonTo);
         Assert.Equal(new Uri("https://landing.ger.mx/newUser"), postView.Author.Associated.Germ.MessageMeUrl);

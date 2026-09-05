@@ -56,6 +56,7 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Actor.Profile), TypeInfoPropertyName = "ActorProfile")]
 [JsonSerializable(typeof(AtProtoRepositoryRecord<Actor.Profile>), TypeInfoPropertyName = "AtProtoRepositoryRecordActorProfile")]
 [JsonSerializable(typeof(Actor.ProfileAssociated), TypeInfoPropertyName = "ActorProfileAssociated")]
+[JsonSerializable(typeof(Actor.ProfileAssociatedActivitySubscription), TypeInfoPropertyName = "ActorProfileAssociatedActivitySubscription")]
 [JsonSerializable(typeof(Actor.ProfileAssociatedChat), TypeInfoPropertyName = "ActorProfileAssociatedChat")]
 [JsonSerializable(typeof(Actor.ProfileView), TypeInfoPropertyName = "ActorProfileView")]
 [JsonSerializable(typeof(Actor.ProfileViewBasic), TypeInfoPropertyName = "ActorProfileViewBasic")]
@@ -345,7 +346,6 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Notifications.Declaration), TypeInfoPropertyName = "NotificationDeclaration")]
 [JsonSerializable(typeof(NotificationAllowedFrom))]
 [JsonSerializable(typeof(AtProtoRepositoryRecord<Notifications.Declaration>))]
-[JsonSerializable(typeof(ActivitySubscription))]
 [JsonSerializable(typeof(SubjectActivitySubscription))]
 [JsonSerializable(typeof(Notifications.Preferences), TypeInfoPropertyName = "NotificationPreferences")]
 

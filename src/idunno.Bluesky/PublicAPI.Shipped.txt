@@ -105,13 +105,6 @@ GermNetwork.Com.MessageMe.ShowButtonTo.set -> void
 GermNetwork.Com.ShowButtonToKnownValues
 idunno.Bluesky.AccountSuspended
 idunno.Bluesky.AccountSuspended.AccountSuspended(idunno.AtProto.AtErrorDetail! atErrorDetail) -> void
-idunno.Bluesky.Actor.ActivitySubscriptions
-idunno.Bluesky.Actor.ActivitySubscriptions.<Clone>$() -> idunno.Bluesky.Actor.ActivitySubscriptions!
-idunno.Bluesky.Actor.ActivitySubscriptions.ActivitySubscriptions(idunno.Bluesky.Notifications.NotificationAllowedFrom AllowSubscriptions) -> void
-idunno.Bluesky.Actor.ActivitySubscriptions.AllowSubscriptions.get -> idunno.Bluesky.Notifications.NotificationAllowedFrom
-idunno.Bluesky.Actor.ActivitySubscriptions.AllowSubscriptions.init -> void
-idunno.Bluesky.Actor.ActivitySubscriptions.Deconstruct(out idunno.Bluesky.Notifications.NotificationAllowedFrom AllowSubscriptions) -> void
-idunno.Bluesky.Actor.ActivitySubscriptions.Equals(idunno.Bluesky.Actor.ActivitySubscriptions? other) -> bool
 idunno.Bluesky.Actor.AdultContentPreference
 idunno.Bluesky.Actor.AdultContentPreference.AdultContentPreference(bool enabled) -> void
 idunno.Bluesky.Actor.AdultContentPreference.Enabled.get -> bool
@@ -238,7 +231,6 @@ idunno.Bluesky.Actor.Preferences.SubscribedLabelers.get -> System.Collections.Ge
 idunno.Bluesky.Actor.Preferences.ThreadViewPreference.get -> idunno.Bluesky.Actor.ThreadViewPreference?
 idunno.Bluesky.Actor.Preferences.VerificationPreferences.get -> idunno.Bluesky.Actor.VerificationPreferences?
 idunno.Bluesky.Actor.ProfileAssociated
-idunno.Bluesky.Actor.ProfileAssociated.ActivitySubscription.get -> idunno.Bluesky.Actor.ActivitySubscriptions?
 idunno.Bluesky.Actor.ProfileAssociated.ActivitySubscription.init -> void
 idunno.Bluesky.Actor.ProfileAssociated.Chat.get -> idunno.Bluesky.Actor.ProfileAssociatedChat?
 idunno.Bluesky.Actor.ProfileAssociated.Chat.init -> void
@@ -251,7 +243,6 @@ idunno.Bluesky.Actor.ProfileAssociated.Labeler.init -> void
 idunno.Bluesky.Actor.ProfileAssociated.Lists.get -> int
 idunno.Bluesky.Actor.ProfileAssociated.Lists.init -> void
 idunno.Bluesky.Actor.ProfileAssociated.ProfileAssociated(idunno.Bluesky.Actor.ProfileAssociated! original) -> void
-idunno.Bluesky.Actor.ProfileAssociated.ProfileAssociated(int lists, int feedGens, int starterPacks, bool labeler, idunno.Bluesky.Actor.ProfileAssociatedChat? chat, idunno.Bluesky.Actor.ProfileAssociatedGerm? germ, idunno.Bluesky.Actor.ActivitySubscriptions? activitySubscription) -> void
 idunno.Bluesky.Actor.ProfileAssociated.StarterPacks.get -> int
 idunno.Bluesky.Actor.ProfileAssociated.StarterPacks.init -> void
 idunno.Bluesky.Actor.ProfileAssociatedChat
@@ -2853,9 +2844,6 @@ override GermNetwork.Com.Declaration.ToString() -> string!
 override GermNetwork.Com.MessageMe.Equals(object? obj) -> bool
 override GermNetwork.Com.MessageMe.GetHashCode() -> int
 override GermNetwork.Com.MessageMe.ToString() -> string!
-override idunno.Bluesky.Actor.ActivitySubscriptions.Equals(object? obj) -> bool
-override idunno.Bluesky.Actor.ActivitySubscriptions.GetHashCode() -> int
-override idunno.Bluesky.Actor.ActivitySubscriptions.ToString() -> string!
 override idunno.Bluesky.Actor.AdultContentPreference.<Clone>$() -> idunno.Bluesky.Actor.AdultContentPreference!
 override idunno.Bluesky.Actor.AdultContentPreference.Equals(object? obj) -> bool
 override idunno.Bluesky.Actor.AdultContentPreference.GetHashCode() -> int
@@ -4175,8 +4163,6 @@ static GermNetwork.Com.Declaration.operator !=(GermNetwork.Com.Declaration? left
 static GermNetwork.Com.Declaration.operator ==(GermNetwork.Com.Declaration? left, GermNetwork.Com.Declaration? right) -> bool
 static GermNetwork.Com.MessageMe.operator !=(GermNetwork.Com.MessageMe? left, GermNetwork.Com.MessageMe? right) -> bool
 static GermNetwork.Com.MessageMe.operator ==(GermNetwork.Com.MessageMe? left, GermNetwork.Com.MessageMe? right) -> bool
-static idunno.Bluesky.Actor.ActivitySubscriptions.operator !=(idunno.Bluesky.Actor.ActivitySubscriptions? left, idunno.Bluesky.Actor.ActivitySubscriptions? right) -> bool
-static idunno.Bluesky.Actor.ActivitySubscriptions.operator ==(idunno.Bluesky.Actor.ActivitySubscriptions? left, idunno.Bluesky.Actor.ActivitySubscriptions? right) -> bool
 static idunno.Bluesky.Actor.AdultContentPreference.operator !=(idunno.Bluesky.Actor.AdultContentPreference? left, idunno.Bluesky.Actor.AdultContentPreference? right) -> bool
 static idunno.Bluesky.Actor.AdultContentPreference.operator ==(idunno.Bluesky.Actor.AdultContentPreference? left, idunno.Bluesky.Actor.AdultContentPreference? right) -> bool
 static idunno.Bluesky.Actor.BlueskyAppStatePreference.operator !=(idunno.Bluesky.Actor.BlueskyAppStatePreference? left, idunno.Bluesky.Actor.BlueskyAppStatePreference? right) -> bool

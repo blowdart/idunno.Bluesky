@@ -1,7 +1,9 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace idunno.Bluesky.Actor;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// Metadata associated with an actor's profile.
@@ -18,7 +20,7 @@ public record ProfileAssociated
     /// <param name="chat">The chat configuration for the actor.</param>
     /// <param name="germ">The Germ configuration for the actor.</param>
     /// <param name="activitySubscription">The actor's activity subscription preferences.</param>
-    public ProfileAssociated(int lists, int feedGens, int starterPacks, bool labeler, ProfileAssociatedChat? chat, ProfileAssociatedGerm? germ, ActivitySubscriptions? activitySubscription)
+    public ProfileAssociated(int lists, int feedGens, int starterPacks, bool labeler, ProfileAssociatedChat? chat, ProfileAssociatedGerm? germ, ProfileAssociatedActivitySubscription? activitySubscription)
     {
         Lists = lists;
         FeedGens = feedGens;
@@ -64,5 +66,5 @@ public record ProfileAssociated
     /// <summary>
     /// Gets the actor's activity subscription preferences.
     /// </summary>
-    public ActivitySubscriptions? ActivitySubscription { get; init; }
+    public ProfileAssociatedActivitySubscription? ActivitySubscription { get; init; }
 }
