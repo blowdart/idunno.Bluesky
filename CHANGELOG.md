@@ -58,8 +58,10 @@
 * `Preferences.SavedFeedPreference2s` has been replaced by `Preferences.SavedFeedsPreferenceV2`,
   which is an `IReadOnlyList<SavedFeed>`.
 * The `SavedFeedPreferences2` type has been renamed to `SavedFeedPreferencesV2` to match the lexicon.
+* The `SavedFeedPreference` type has been renamed to `SavedFeedsPreference` to match the lexicon.
+* The `SavedFeedPreference2` type has been renamed to `SavedFeed` to match the lexicon.
 * `Preferences.InterestTags` has been removed, use `Preferences.Interests` instead, and iterate through the `Tags` property.
-* `Preferences.SavedFeedPreference` has been removed, and replaced with `Preferences.SavedFeedsPreference`, which is a single instance of `SavedFeedsPreference`.
+* `Preferences.SavedFeedPreferences`, an `IReadOnlyList<SavedFeedPreference>`, has been removed and replaced with `Preferences.SavedFeedsPreference`, a single nullable `SavedFeedsPreference`.
 * `Preferences.InteractionPreferences` has been renamed to `Preferences.PostInteractionSettingsPreferences` to match the lexicon definition.
 * `Preferences.FeedViewPreferences` guards against multiple instances of `FeedViewPreference` for the same feed,
   and will use the last instance in the list if duplicates are present. Whilst duplicates are technically valid in the lexicon,
