@@ -30,8 +30,8 @@ public partial class BlueskyAgent
             Logger.GetUserPreferencesFailedInGetLabelerServices(
                 _logger,
                 userPreferencesResult.StatusCode,
-                userPreferencesResult.AtErrorDetail!.Error,
-                userPreferencesResult.AtErrorDetail.Message);
+                userPreferencesResult.AtErrorDetail?.Error,
+                userPreferencesResult.AtErrorDetail?.Message);
 
             return new AtProtoHttpResult<ICollection<LabelerViewDetailed>>(
                 result: null,
