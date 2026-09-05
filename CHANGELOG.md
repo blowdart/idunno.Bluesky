@@ -4,11 +4,6 @@
 
 ### Added
 
-### idunno.AtProto
-
-* Added new overload `AtProtoAgent.GetServiceAuth(Uri service, Nsid lxm, TimeSpan? expiry, CancellationToken)`.
-  This resolves the audience DID automatically, but involves an extra roundtrip request to do so.
-
 #### idunno.Bluesky
 
 * Added support for opt-ing out of a reference list (typically a starter pack), via `BlueskyAgent.CreateReferenceListOptOut`. `ListReferenceListOptOuts` allow
