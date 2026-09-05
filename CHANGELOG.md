@@ -55,26 +55,23 @@
 * `Record.LabelerDeclaration` has been moved to `Labeler.Service` to match the lexicon definition.
 * Actor preferences have had major changes, to match the published lexicons and fix deserialization issues with the previous implementation.
   * Changed `InterestsPreference.Tags` from `IReadOnlyList<string>` to `ICollection<string>` to allow for easier modification of the list of tags.
-  * Renamed `Actor.Preferences.SavedFeedPreference2` to `SavedFeedPreferenceV2` to match the lexicon definition.
-  * Renamed `Actor.Preferences.SavedFeedPreferences2` to `SavedFeedPreferencesV2` to match the lexicon definition.
-  * `Preferences.InterestTags` has been removed, use `Preferences.Interests` instead, and iterate through the `Tags` property.
-  * `Preferences.SavedFeedPreference` has been removed, and replaced with `Preferences.SavedFeedsPreference`, which is a single instance of `SavedFeedsPreference`.
-  * `Preferences.InteractionPreferences` has been renamed to `Preferences.PostInteractionSettingsPreferences` to match the lexicon definition.
+* `Preferences.SavedFeedPreference2s` has been replaced by `Preferences.SavedFeedsPreferenceV2`,
+  which is an `IReadOnlyList<SavedFeed>`.
+* The `SavedFeedPreferences2` type has been renamed to `SavedFeedPreferencesV2` to match the lexicon.
+* `Preferences.InterestTags` has been removed, use `Preferences.Interests` instead, and iterate through the `Tags` property.
+* `Preferences.SavedFeedPreference` has been removed, and replaced with `Preferences.SavedFeedsPreference`, which is a single instance of `SavedFeedsPreference`.
+* `Preferences.InteractionPreferences` has been renamed to `Preferences.PostInteractionSettingsPreferences` to match the lexicon definition.
+* `Preferences.FeedViewPreferences` guards against multiple instances of `FeedViewPreference` for the same feed,
+  and will use the last instance in the list if duplicates are present. Whilst duplicates are technically valid in the lexicon,
+  they are not expected to be present in the wild, and this change prevents deserialization errors when they are encountered.
 
 ### Fixed
-
-#### idunno.AtProto
-
-* `AtProtoAgent.GetServiceAuth` now respects DPoP nonce updates when OAuth credentials are used, fixing a bug where the DPoP nonce was not being updated correctly.
 
 #### idunno.Bluesky
 
 * Fixed a bug in the deserialization of `Actor.Preferences` where `SavedFeedsPreferenceV2` was not being deserialized correctly, resulting in null values.
 * `Preferences.SavedFeedsPreference` is now correctly deserialized.
 * `Preferences.SavedFeedsPreferenceV2` is now correctly deserialized.
-* `Preferences.FeedViewPreferences` guards against multiple instances of `FeedViewPreference` for the same feed,
-  and will use the last instance in the list if duplicates are present. Whilst duplicates are technically valid in the lexicon,
-  they are not expected to be present in the wild, and this change prevents deserialization errors when they are encountered.
 
 ## 5.0.0 - 2026-08-24
 

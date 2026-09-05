@@ -83,9 +83,7 @@ jobs:
           10.0.x
 
     - name: 'Build'
-      run: |
-        :# Build the project in Release configuration, with PublicRelease set to true, and suppress warning S1133 (obsolete code), in case any [Obsolete] attributes are present.
-        dotnet build --configuration Release --property:PublicRelease=true --property:NoWarn="S1133"
+      run: dotnet build --configuration Release --property:PublicRelease=true --property:NoWarn="S1133"
 
     - name: 'Test'
       run: dotnet test --no-restore --no-build --configuration Release --property:PublicRelease=true
