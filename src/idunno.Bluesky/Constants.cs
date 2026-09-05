@@ -414,7 +414,7 @@ public static class RecordType
     /// <summary>
     /// Indicates a record representing a block relationship against an entire an entire list of accounts (actors).
     /// </summary>
-    public const string ListBlock = "app.graph.listblock";
+    public const string ListBlock = "app.bsky.graph.listblock";
 }
 
 /// <summary>

@@ -3,7 +3,7 @@ const idunno.Bluesky.Actor.AllowSubscriptionsKnownValues.Followers = "followers"
 const idunno.Bluesky.Actor.AllowSubscriptionsKnownValues.Mutuals = "mutuals" -> string!
 const idunno.Bluesky.Actor.AllowSubscriptionsKnownValues.None = "none" -> string!
 const idunno.Bluesky.Actor.KnownStatusValues.Live = "app.bsky.actor.status#live" -> string!
-const idunno.Bluesky.RecordType.ListBlock = "app.graph.listblock" -> string!
+const idunno.Bluesky.RecordType.ListBlock = "app.bsky.graph.listblock" -> string!
 const idunno.Bluesky.RecordType.ReferenceListOptOut = "app.bsky.graph.referencelistoptout" -> string!
 const idunno.Bluesky.RecordType.Repost = "app.bsky.feed.repost" -> string!
 idunno.Bluesky.Actor.AllowSubscriptionsKnownValues

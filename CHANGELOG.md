@@ -4,6 +4,11 @@
 
 ### Added
 
+### idunno.AtProto
+
+* Added new overload `AtProtoAgent.GetServiceAuth(Uri service, Nsid lxm, TimeSpan? expiry, CancellationToken)`.
+  This resolves the audience DID automatically, but involves an extra roundtrip request to do so.
+
 #### idunno.Bluesky
 
 * Added support for opt-ing out of a reference list (typically a starter pack), via `BlueskyAgent.CreateReferenceListOptOut`. `ListReferenceListOptOuts` allow
@@ -28,6 +33,12 @@
 * Added `Preferences.LiveEventPreferences` property, which is a `LiveEventPreferences` instance.
 
 ### Breaking Changes
+
+#### idunno.AtProto
+
+* `idunno.AtProto.Server.Models` `ServerDescription`, `Links` and `Contact` are now part of the `idunno.AtProto.Server` namespace.
+* `ServerDescription.InviteCodeRequired` and `PhoneVerificationRequired` are now nullable , as they're defined as optional in the ATProto lexicon.
+* `AtProtoServer.GetServiceAuth` `accessCredentialsUpdated` parameter renamed to `credentialsUpdated`.
 
 #### idunno.Bluesky
 
@@ -62,11 +73,15 @@
   * `Preferences.SavedFeedPreference` has been removed, and replaced with `Preferences.SavedFeedsPreference`, which is a single instance of `SavedFeedsPreference`.
   * `Preferences.SavedFeedPreferenceV2` has been removed, and replaced with `Preferences.SavedFeedsPreferenceV2`, which is a collection of `SavedFeed`.
   * `Preferences.InteractionPreferences` has been renamed to `Preferences.PostInteractionSettingsPreferences` to match the lexicon definition.
-  * `Preferences.FeedViewPreferences` has been renamed to `Preferences.FeedViewPreference` to match the lexicon definition, and is now a nullable instance of `FeedViewPreference`..
+  * `Preferences.FeedViewPreferences` has been renamed to `Preferences.FeedViewPreference` to match the lexicon definition, and is now a nullable instance of `FeedViewPreference`.
 
 ### Fixed
 
-##### idunno.Bluesky
+#### idunno.AtProto
+
+* `AtProtoAgent.GetServiceAuth` now respects DPoP nonce updates when OAuth credentials are used, fixing a bug where the DPoP nonce was not being updated correctly.
+
+#### idunno.Bluesky
 
 * Fixed a bug in the deserialization of `Actor.Preferences` where `SavedFeedsPreferenceV2` was not being deserialized correctly, resulting in null values.
 * `Preferences.SavedFeedsPreference` is now correctly deserialized.
