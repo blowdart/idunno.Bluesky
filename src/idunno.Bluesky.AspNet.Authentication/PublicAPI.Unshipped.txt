@@ -54,7 +54,7 @@ idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.BlueskyAgentOptions.in
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.BlueskyAuthenticationOptions.get -> idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions!
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.BlueskyAuthenticationOptions.init -> void
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.BlueskySignInManager(Microsoft.AspNetCore.Http.IHttpContextAccessor! contextAccessor, Microsoft.Extensions.Options.IOptions<idunno.Bluesky.BlueskyAgentOptions!>! agentOptionsAccessor, Microsoft.Extensions.Options.IOptions<idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions!>! authenticationOptionsAccessor, Microsoft.Extensions.Hosting.IHostEnvironment! env, Microsoft.Extensions.Logging.ILogger<idunno.Bluesky.AspNet.Authentication.BlueskySignInManager!>! logger) -> void
-idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.CreateRedirectUri(idunno.AtProto.Handle! handle, System.Uri? returnUri = null, System.Guid? correlationId = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string!, string!>>? uriExtraParameters = null, System.Collections.Generic.Dictionary<string!, string!>? stateExtraProperties = null) -> System.Threading.Tasks.Task<System.Uri!>!
+idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.CreateRedirectUri(idunno.AtProto.Handle! handle, System.Uri? returnUri = null, System.Guid? correlationId = null, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string!, string!>>? uriExtraParameters = null, System.Collections.Generic.Dictionary<string!, string!>? stateExtraProperties = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Uri!>!
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.CreateReturnUri() -> System.Uri!
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.HttpContext.get -> Microsoft.AspNetCore.Http.HttpContext!
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.IsSignedIn(System.Security.Claims.ClaimsPrincipal! principal) -> bool
@@ -62,7 +62,7 @@ idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.LoadState(System.Guid?
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.OAuthOptions.get -> idunno.AtProto.Authentication.OAuthOptions!
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.OAuthOptions.init -> void
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.SaveState(idunno.AtProto.Authentication.OAuthLoginState! state, System.Guid? correlationId = null) -> System.Threading.Tasks.Task<System.Guid>!
-idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.SaveStateAndCreateCorrelationCookie(idunno.AtProto.Authentication.OAuthLoginState! state, System.Guid? correlationId = null) -> System.Threading.Tasks.Task<System.Guid>!
+idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.SaveStateAndCreateCorrelationCookie(idunno.AtProto.Authentication.OAuthLoginState! state, System.Guid? correlationId = null, bool markCookieAsSecure = true) -> System.Threading.Tasks.Task<System.Guid>!
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.SignIn() -> System.Threading.Tasks.Task<idunno.Bluesky.AspNet.Authentication.SignInResult!>!
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.SignOut(string? scheme = null) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.ClaimsExtensions
@@ -161,14 +161,17 @@ idunno.Bluesky.AspNet.Authentication.PostConfigureProfileClaimsTransformerOption
 idunno.Bluesky.AspNet.Authentication.PostConfigureProfileClaimsTransformerOptions.PostConfigure(string? name, idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions! options) -> void
 idunno.Bluesky.AspNet.Authentication.PostConfigureProfileClaimsTransformerOptions.PostConfigureProfileClaimsTransformerOptions(Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory) -> void
 idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry
+idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.<Clone>$() -> idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry!
 idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.Avatar.get -> System.Uri?
 idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.Avatar.init -> void
 idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.Banner.get -> System.Uri?
 idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.Banner.init -> void
+idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.Deconstruct(out idunno.AtProto.Handle? Handle, out string? DisplayName, out string? Description, out string? Pronouns, out System.Uri? Website, out System.Uri? Avatar, out System.Uri? Banner, out string! Issuer) -> void
 idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.Description.get -> string?
 idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.Description.init -> void
 idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.DisplayName.get -> string?
 idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.DisplayName.init -> void
+idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.Equals(idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry? other) -> bool
 idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.Handle.get -> idunno.AtProto.Handle?
 idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.Handle.init -> void
 idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.Issuer.get -> string!
@@ -186,7 +189,10 @@ idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions.Cache.get -
 idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions.Cache.set -> void
 idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions.CacheTimeout.get -> System.TimeSpan
 idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions.CacheTimeout.set -> void
+idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions.ProfileClaimsTransformerOptions() -> void
+idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions.ProfileClaimsTransformerOptions(idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions! original) -> void
 idunno.Bluesky.AspNet.Authentication.SignInResult
+idunno.Bluesky.AspNet.Authentication.SignInResult.Deconstruct(out bool Succeeded, out bool MissingQueryString, out bool MissingCorrelationState, out bool ErrorProcessingOAuth2Response, out idunno.AtProto.Authentication.OAuthLoginState? OAuthLoginState) -> void
 idunno.Bluesky.AspNet.Authentication.SignInResult.ErrorProcessingOAuth2Response.get -> bool
 idunno.Bluesky.AspNet.Authentication.SignInResult.ErrorProcessingOAuth2Response.init -> void
 idunno.Bluesky.AspNet.Authentication.SignInResult.MissingCorrelationState.get -> bool
@@ -196,6 +202,7 @@ idunno.Bluesky.AspNet.Authentication.SignInResult.MissingQueryString.init -> voi
 idunno.Bluesky.AspNet.Authentication.SignInResult.OAuthLoginState.get -> idunno.AtProto.Authentication.OAuthLoginState?
 idunno.Bluesky.AspNet.Authentication.SignInResult.OAuthLoginState.init -> void
 idunno.Bluesky.AspNet.Authentication.SignInResult.SignInResult(bool Succeeded, bool MissingQueryString = false, bool MissingCorrelationState = false, bool ErrorProcessingOAuth2Response = false, idunno.AtProto.Authentication.OAuthLoginState? OAuthLoginState = null) -> void
+idunno.Bluesky.AspNet.Authentication.SignInResult.SignInResult(idunno.Bluesky.AspNet.Authentication.SignInResult! original) -> void
 idunno.Bluesky.AspNet.Authentication.SignInResult.Succeeded.get -> bool
 idunno.Bluesky.AspNet.Authentication.SignInResult.Succeeded.init -> void
 Microsoft.Extensions.DependencyInjection.BlueskyExtensions
@@ -204,8 +211,30 @@ override idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.Handl
 override idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.HandleChallengeAsync(Microsoft.AspNetCore.Authentication.AuthenticationProperties! properties) -> System.Threading.Tasks.Task!
 override idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.HandleSignInAsync(System.Security.Claims.ClaimsPrincipal! user, Microsoft.AspNetCore.Authentication.AuthenticationProperties? properties) -> System.Threading.Tasks.Task!
 override idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.HandleSignOutAsync(Microsoft.AspNetCore.Authentication.AuthenticationProperties? properties) -> System.Threading.Tasks.Task!
+override idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.Equals(object? obj) -> bool
+override idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.GetHashCode() -> int
+override idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.ToString() -> string!
+override idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions.Equals(object? obj) -> bool
+override idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions.GetHashCode() -> int
+override idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions.ToString() -> string!
+override idunno.Bluesky.AspNet.Authentication.SignInResult.Equals(object? obj) -> bool
+override idunno.Bluesky.AspNet.Authentication.SignInResult.GetHashCode() -> int
+override idunno.Bluesky.AspNet.Authentication.SignInResult.ToString() -> string!
+static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.get_Avatar(System.Security.Claims.ClaimsPrincipal! principal) -> System.Uri?
+static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.get_Banner(System.Security.Claims.ClaimsPrincipal! principal) -> System.Uri?
+static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.get_Description(System.Security.Claims.ClaimsPrincipal! principal) -> string?
+static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.get_DisplayName(System.Security.Claims.ClaimsPrincipal! principal) -> string?
+static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.get_Handle(System.Security.Claims.ClaimsPrincipal! principal) -> idunno.AtProto.Handle?
+static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.get_Pronouns(System.Security.Claims.ClaimsPrincipal! principal) -> string?
+static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.get_Website(System.Security.Claims.ClaimsPrincipal! principal) -> System.Uri?
 static idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.Cache.get -> Microsoft.Extensions.Caching.Distributed.IDistributedCache?
 static idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.Cache.set -> void
+static idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.operator !=(idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry? left, idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry? right) -> bool
+static idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.operator ==(idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry? left, idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry? right) -> bool
+static idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions.operator !=(idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions? left, idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions? right) -> bool
+static idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions.operator ==(idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions? left, idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions? right) -> bool
+static idunno.Bluesky.AspNet.Authentication.SignInResult.operator !=(idunno.Bluesky.AspNet.Authentication.SignInResult? left, idunno.Bluesky.AspNet.Authentication.SignInResult? right) -> bool
+static idunno.Bluesky.AspNet.Authentication.SignInResult.operator ==(idunno.Bluesky.AspNet.Authentication.SignInResult? left, idunno.Bluesky.AspNet.Authentication.SignInResult? right) -> bool
 static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddBluesky(this Microsoft.AspNetCore.Authentication.AuthenticationBuilder! builder) -> Microsoft.AspNetCore.Authentication.AuthenticationBuilder!
 static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddBluesky(this Microsoft.AspNetCore.Authentication.AuthenticationBuilder! builder, string! authenticationScheme) -> Microsoft.AspNetCore.Authentication.AuthenticationBuilder!
 static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddBluesky(this Microsoft.AspNetCore.Authentication.AuthenticationBuilder! builder, string! authenticationScheme, string? displayName, System.Action<idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions!>! configureOptions) -> Microsoft.AspNetCore.Authentication.AuthenticationBuilder!
@@ -231,3 +260,11 @@ virtual idunno.Bluesky.AspNet.Authentication.Events.BlueskyAuthenticationEvents.
 virtual idunno.Bluesky.AspNet.Authentication.Events.BlueskyAuthenticationEvents.SigningIn(idunno.Bluesky.AspNet.Authentication.Events.BlueskySigningInContext! context) -> System.Threading.Tasks.Task!
 virtual idunno.Bluesky.AspNet.Authentication.Events.BlueskyAuthenticationEvents.SigningOut(idunno.Bluesky.AspNet.Authentication.Events.BlueskySigningOutContext! context) -> System.Threading.Tasks.Task!
 virtual idunno.Bluesky.AspNet.Authentication.Events.BlueskyAuthenticationEvents.ValidatePrincipal(idunno.Bluesky.AspNet.Authentication.Events.BlueskyValidatePrincipalContext! context) -> System.Threading.Tasks.Task!
+virtual idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions.<Clone>$() -> idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions!
+virtual idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions.EqualityContract.get -> System.Type!
+virtual idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions.Equals(idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions? other) -> bool
+virtual idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual idunno.Bluesky.AspNet.Authentication.SignInResult.<Clone>$() -> idunno.Bluesky.AspNet.Authentication.SignInResult!
+virtual idunno.Bluesky.AspNet.Authentication.SignInResult.EqualityContract.get -> System.Type!
+virtual idunno.Bluesky.AspNet.Authentication.SignInResult.Equals(idunno.Bluesky.AspNet.Authentication.SignInResult? other) -> bool
+virtual idunno.Bluesky.AspNet.Authentication.SignInResult.PrintMembers(System.Text.StringBuilder! builder) -> bool

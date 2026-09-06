@@ -7,9 +7,7 @@ using idunno.Bluesky.AspNet.Authentication;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddAuthentication(BlueskyAuthenticationDefaults.AuthenticationScheme)
-    .AddBluesky(options =>
-    {
-    });
+    .AddBluesky(options => {});
 builder.Services.AddProfileClaimsTransformer();
 builder.Services.AddTransient<IClaimsTransformation, ProfileClaimsTransformer>();
 builder.Services.AddBlueskyAgentFactory();

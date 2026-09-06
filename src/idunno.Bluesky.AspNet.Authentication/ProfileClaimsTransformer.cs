@@ -93,8 +93,7 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
             return principal;
         }
 
-        DPoPAccessCredentials dPoPAccessCredentials = AtProtoCredential.Create(principal);
-        if (dPoPAccessCredentials == null)
+        if (!AtProtoCredential.TryCreate(principal, out DPoPAccessCredentials? dPoPAccessCredentials) || dPoPAccessCredentials is null)
         {
             return principal;
         }
@@ -140,15 +139,17 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
         {
             if (profile.Handle is not null)
             {
+                string handle = profile.Handle.ToString();
+
                 identity.AddClaim(new Claim(
                     Bluesky.ClaimTypes.Handle,
-                    profile.Handle!,
+                    handle,
                     ClaimValueTypes.String,
                     profile.Issuer));
 
                 identity.AddClaim(new Claim(
                     System.Security.Claims.ClaimTypes.Name,
-                    profile.Handle!,
+                    handle,
                     ClaimValueTypes.String,
                     profile.Issuer));
             }
@@ -166,7 +167,7 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
             {
                 identity.AddClaim(new Claim(
                     Bluesky.ClaimTypes.Description,
-                    profile.Description!,
+                    profile.Description,
                     ClaimValueTypes.String,
                     profile.Issuer));
             }
@@ -175,7 +176,7 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
             {
                 identity.AddClaim(new Claim(
                     Bluesky.ClaimTypes.Pronouns,
-                    profile.Pronouns!,
+                    profile.Pronouns,
                     ClaimValueTypes.String,
                     profile.Issuer));
             }

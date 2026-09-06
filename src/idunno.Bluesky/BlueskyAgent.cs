@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 
 using idunno.AtProto;
@@ -73,8 +74,10 @@ public partial class BlueskyAgent : AtProtoAgent
     ///     <see langword="false"/> if you are using a debugging proxy which does not support CRLs.
     ///   </para>
     /// </remarks>
-    public BlueskyAgent(ClaimsPrincipal principal, BlueskyAgentOptions? options = null) : base(
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Already overloaded with various helpers")]
+    public BlueskyAgent(ClaimsPrincipal? principal, BlueskyAgentOptions? options = null) : base(
         principal: principal,
+        service: DefaultServiceUris.BlueskyApiUri,
         options: options)
     {
         ArgumentNullException.ThrowIfNull(principal);
@@ -121,6 +124,7 @@ public partial class BlueskyAgent : AtProtoAgent
 
     public BlueskyAgent(ClaimsIdentity identity, BlueskyAgentOptions? options = null) : base(
         identity: identity,
+        service: DefaultServiceUris.BlueskyApiUri,
         options: options)
     {
         ArgumentNullException.ThrowIfNull(identity);
@@ -200,6 +204,7 @@ public partial class BlueskyAgent : AtProtoAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="principal"/> or <paramref name="httpClientFactory"/>is <see langword="null"/>.</exception>
     public BlueskyAgent(ClaimsPrincipal principal, IHttpClientFactory httpClientFactory, BlueskyAgentOptions? options = null) : base(
             principal: principal,
+            service: DefaultServiceUris.BlueskyApiUri,
             httpClientFactory: httpClientFactory,
             options: options)
     {
@@ -242,6 +247,7 @@ public partial class BlueskyAgent : AtProtoAgent
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> or <paramref name="httpClientFactory"/>is <see langword="null"/>.</exception>
     public BlueskyAgent(ClaimsIdentity identity, IHttpClientFactory httpClientFactory, BlueskyAgentOptions? options = null) : base(
             identity: identity,
+            service: DefaultServiceUris.BlueskyApiUri,
             httpClientFactory: httpClientFactory,
             options: options)
     {

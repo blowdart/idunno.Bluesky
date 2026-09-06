@@ -110,18 +110,28 @@ public partial class AtProtoAgent : Agent
     /// a <see cref="AccessCredentials"/> derived from the <paramref name="principal"/>.
     /// </summary>
     /// <param name="principal">The <see cref="ClaimsPrincipal"/> to extract authentication properties from.</param>
+    /// <param name="service">The URI of the AtProto service to default to.</param>
     /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="principal"/> is <see langword="null"/>.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Already overloaded with various helpers")]
     public AtProtoAgent(
-        ClaimsPrincipal principal,
+        ClaimsPrincipal? principal,
+        Uri service,
         AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions, options?.LoggerFactory)
     {
         ArgumentNullException.ThrowIfNull(principal);
 
-        var credentials = AtProtoCredential.Create(principal);
-        OriginalService = credentials.Service;
-        Service = credentials.Service;
-        _credentials = credentials;
+        OriginalService = service;
+        Service = service;
+
+        if (principal is not null &&
+            principal.Identity is not null &&
+            principal.Identity.IsAuthenticated && AtProtoCredential.TryCreate(principal, out DPoPAccessCredentials? credentials) && credentials is not null)
+        {
+            OriginalService = credentials.Service;
+            Service = credentials.Service;
+            _credentials = credentials;
+        }
 
         if (options is not null)
         {
@@ -154,21 +164,29 @@ public partial class AtProtoAgent : Agent
     /// a <see cref="DPoPAccessCredentials"/> derived from the <paramref name="principal"/>.
     /// </summary>
     /// <param name="principal">The <see cref="ClaimsPrincipal"/> to extract authentication properties from.</param>
+    /// <param name="service">The URI of the AtProto service to default to.</param>
     /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
     /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="principal"/> or <paramref name="options"/> is <see langword="null"/>.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Already overloaded with various helpers")]
     public AtProtoAgent(
-        ClaimsPrincipal principal,
+        ClaimsPrincipal? principal,
+        Uri service,
         IHttpClientFactory httpClientFactory,
         AtProtoAgentOptions? options = null) : base(httpClientFactory, options?.HttpJsonOptions)
     {
         ArgumentNullException.ThrowIfNull(principal);
         ArgumentNullException.ThrowIfNull(httpClientFactory);
 
-        DPoPAccessCredentials credentials = AtProtoCredential.Create(principal);
-        OriginalService = credentials.Service;
-        Service = credentials.Service;
-        _credentials = credentials;
+        OriginalService = service;
+        Service = service;
+
+        if (AtProtoCredential.TryCreate(principal, out DPoPAccessCredentials? credentials) && credentials is not null)
+        {
+            OriginalService = credentials.Service;
+            Service = credentials.Service;
+            _credentials = credentials;
+        }
 
         if (options is not null)
         {
@@ -196,18 +214,26 @@ public partial class AtProtoAgent : Agent
     /// a <see cref="DPoPAccessCredentials"/> derived from the <paramref name="identity"/>.
     /// </summary>
     /// <param name="identity">The <see cref="ClaimsIdentity"/> to extract authentication properties from.</param>
+    /// <param name="service">The URI of the AtProto service to default to.</param>
     /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> is <see langword="null"/>.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Already overloaded with various helpers")]
     public AtProtoAgent(
-        ClaimsIdentity identity,
+        ClaimsIdentity? identity,
+        Uri service,
         AtProtoAgentOptions? options = null) : base(options?.HttpClientOptions, options?.HttpJsonOptions, options?.LoggerFactory)
     {
         ArgumentNullException.ThrowIfNull(identity);
 
-        DPoPAccessCredentials credentials = AtProtoCredential.Create(identity);
-        OriginalService = credentials.Service;
-        Service = credentials.Service;
-        _credentials = credentials;
+        OriginalService = service;
+        Service = service;
+
+        if (AtProtoCredential.TryCreate(identity, out DPoPAccessCredentials? credentials) && credentials is not null)
+        {
+            OriginalService = credentials.Service;
+            Service = credentials.Service;
+            _credentials = credentials;
+        }
 
         if (options is not null)
         {
@@ -240,20 +266,28 @@ public partial class AtProtoAgent : Agent
     /// a <see cref="DPoPAccessCredentials"/> derived from the <paramref name="identity"/>.
     /// </summary>
     /// <param name="identity">The <see cref="ClaimsIdentity"/> to extract authentication properties from.</param>
+    /// <param name="service">The URI of the AtProto service to default to.</param>
     /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
     /// <param name="options">Any <see cref="AtProtoAgentOptions"/> to configure this instance with.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> is <see langword="null"/>.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Already overloaded with various helpers")]
     public AtProtoAgent(
-        ClaimsIdentity identity,
+        ClaimsIdentity? identity,
+        Uri service,
         IHttpClientFactory httpClientFactory,
         AtProtoAgentOptions? options = null) : base(httpClientFactory, options?.HttpJsonOptions)
     {
         ArgumentNullException.ThrowIfNull(identity);
 
-        DPoPAccessCredentials credentials = AtProtoCredential.Create(identity);
-        OriginalService = credentials.Service;
-        Service = credentials.Service;
-        _credentials = credentials;
+        OriginalService = service;
+        Service = service;
+
+        if (AtProtoCredential.TryCreate(identity, out DPoPAccessCredentials? credentials) && credentials is not null)
+        {
+            OriginalService = credentials.Service;
+            Service = credentials.Service;
+            _credentials = credentials;
+        }
 
         if (options is not null)
         {

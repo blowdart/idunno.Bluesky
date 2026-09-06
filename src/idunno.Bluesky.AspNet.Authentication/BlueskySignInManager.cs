@@ -116,6 +116,7 @@ public class BlueskySignInManager
     /// <param name="correlationId">The <see cref="Guid"/> to use as a correlation identifier. If <see langword="null" /> a new GUID will be generated.</param>
     /// <param name="uriExtraParameters">Any extra parameters to attach to the URI.</param>
     /// <param name="stateExtraProperties">Any extra properties to save in the correlation state store.</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/> to observe while waiting for the task to complete.</param>
     /// <returns>A URI for OAuth sign-in.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the state could not be created.</exception>
     public async Task<Uri> CreateRedirectUri(
@@ -123,7 +124,8 @@ public class BlueskySignInManager
         Uri? returnUri = null,
         Guid? correlationId = null,
         IEnumerable<KeyValuePair<string, string>>? uriExtraParameters = null,
-        Dictionary<string, string>? stateExtraProperties = null)
+        Dictionary<string, string>? stateExtraProperties = null,
+        CancellationToken cancellationToken = default)
     {
         returnUri ??= CreateReturnUri();
 
@@ -135,7 +137,8 @@ public class BlueskySignInManager
             handle: handle,
             returnUri: returnUri,
             uriExtraParameters: uriExtraParameters,
-            stateExtraProperties: stateExtraProperties).ConfigureAwait(false);
+            stateExtraProperties: stateExtraProperties,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (oAuthClient.State is null)
         {
@@ -143,7 +146,7 @@ public class BlueskySignInManager
             throw new InvalidOperationException("OAuthState could not be prepared");
         }
 
-        await SaveStateAndCreateCorrelationCookie(oAuthClient.State, correlationId).ConfigureAwait(false);
+        await SaveStateAndCreateCorrelationCookie(oAuthClient.State, correlationId, returnUri.Scheme == "https").ConfigureAwait(false);
 
         return redirectUri;
     }
@@ -260,15 +263,17 @@ public class BlueskySignInManager
     }
 
     /// <summary>
-    /// Saves the OAuth login state in the correlation cache and drops a correlation cookie that can be used to restore the state..
+    /// Saves the OAuth login state in the correlation cache and drops a correlation cookie that can be used to restore the state.
     /// </summary>
     /// <param name="state">The state to save.</param>
     /// <param name="correlationId">A correlation id. If <see langword="null"/> a new identifier will be generated.</param>
+    /// <param name="markCookieAsSecure">If <see langword="true"/> the correlation cookie will be marked as secure.</param>
     /// <returns>The correlation id that the state was saved against.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="state"/> is <see langword="null" />.</exception>
     public async Task<Guid> SaveStateAndCreateCorrelationCookie(
         OAuthLoginState state,
-        Guid? correlationId = null)
+        Guid? correlationId = null,
+        bool markCookieAsSecure = true)
     {
         ArgumentNullException.ThrowIfNull(state);
 
@@ -282,7 +287,9 @@ public class BlueskySignInManager
             new CookieOptions
             {
                 Expires = DateTime.Now + correlationValidityPeriod,
-                SameSite = SameSiteMode.Lax
+                SameSite = SameSiteMode.Lax,
+                HttpOnly = true,
+                Secure = markCookieAsSecure
             });
 
         return correlationId.Value;
@@ -329,7 +336,10 @@ public class BlueskySignInManager
 
         using var agent = new BlueskyAgent(options: BlueskyAgentOptions);
         OAuthClient oAuthClient = agent.CreateOAuthClient();
-        DPoPAccessCredentials? accessCredentials = await oAuthClient.ProcessOAuth2Response(correlationState, HttpContext.Request.QueryString.Value[1..]).ConfigureAwait(false);
+        DPoPAccessCredentials? accessCredentials = await oAuthClient.ProcessOAuth2Response(
+            correlationState,
+            HttpContext.Request.QueryString.Value[1..],
+            HttpContext.RequestAborted).ConfigureAwait(false);
         if (accessCredentials is null)
         {
             Logger.SignInFailedOAuth2ProcessingFailed();

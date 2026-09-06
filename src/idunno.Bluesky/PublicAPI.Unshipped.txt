@@ -6,4 +6,5 @@ const idunno.Bluesky.ClaimTypes.DisplayName = "http://schemas.xmlsoap.org/ws/200
 const idunno.Bluesky.ClaimTypes.Handle = "urn:bluesky:handle" -> string!
 const idunno.Bluesky.ClaimTypes.Pronouns = "urn:bluesky:pronouns" -> string!
 const idunno.Bluesky.ClaimTypes.Website = "urn:bluesky:website" -> string!
+idunno.Bluesky.BlueskyAgent.BlueskyAgent(System.Security.Claims.ClaimsPrincipal? principal, idunno.Bluesky.BlueskyAgentOptions? options = null) -> void
 idunno.Bluesky.ClaimTypes

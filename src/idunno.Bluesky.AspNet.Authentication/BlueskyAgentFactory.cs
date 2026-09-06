@@ -68,7 +68,8 @@ public sealed class BlueskyAgentFactory
 
         if (Context is not null && Context.User is not null && Context.User.Identity is not null)
         {
-            identity = Context.User.Identity as ClaimsIdentity;
+            var userIdentity = Context.User.Identity as ClaimsIdentity;
+            identity = new ClaimsIdentity(userIdentity);
         }
 
         if (identity is not null && identity.IsAuthenticated && identity.HasClaim(c => c.Type == AtProtoClaims.Did))
