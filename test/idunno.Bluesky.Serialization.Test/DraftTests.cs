@@ -50,11 +50,11 @@ public class DraftTests
         Assert.Equal("3meiuav4lyk2t", actual.Id);
         Assert.Equal(new Guid("5c76194c-fc19-4413-ac45-bf851a289459"), actual.Draft!.DeviceId);
         Assert.Equal("Web", actual.Draft.DeviceName);
-        Assert.Single(actual.Draft.Posts!);
-        Assert.Equal("Draft with an embedded quote record", actual.Draft.Posts[0].Text);
-        Assert.Single(actual.Draft.Posts[0].EmbedRecords!);
+        DraftPost post = Assert.Single(actual.Draft.Posts!);
+        Assert.Equal("Draft with an embedded quote record", post.Text);
+        Assert.Single(post.EmbedRecords!);
         Assert.Equal(new StrongReference("at://did:plc:hfgp6pj3akhqxntgqwramlbg/app.bsky.feed.post/3mei4u5pu6226", "bafyreiehul32p4srxi32ztf3dyp7yeffsbv7654uotlssqaenjite3wt2y"),
-            actual.Draft.Posts[0].EmbedRecords![0].Record!);
+            post.EmbedRecords![0].Record!);
         Assert.Equal(DateTimeOffset.Parse("2026-02-10T11:28:24.168Z"), actual.CreatedAt);
         Assert.Equal(DateTimeOffset.Parse("2026-02-10T11:28:24.168Z"), actual.UpdatedAt);
     }
@@ -166,14 +166,14 @@ public class DraftTests
         Assert.Equal("3meitnaeyts25", actual.Id);
         Assert.Equal(new Guid("5c76194c-fc19-4413-ac45-bf851a289459"), actual.Draft!.DeviceId);
         Assert.Equal("Web", actual.Draft.DeviceName);
-        Assert.Single(actual.Draft.Posts);
-        Assert.Equal("This is a self-labelled draft", actual.Draft.Posts[0].Text);
-        Assert.Equal(2, actual.Draft.Posts[0].Labels!.Values.Count);
-        Assert.Equal("graphic-media", actual.Draft.Posts[0].Labels!.Values[0]!.Value);
-        Assert.Equal("sexual", actual.Draft.Posts[0].Labels!.Values[1]!.Value);
-        Assert.Single(actual.Draft.Posts[0].EmbedImages!);
-        Assert.Equal("image:Og3ev8pkVSWamiLpEyU9Y", (actual.Draft.Posts[0].EmbedImages![0].LocalRef!).Path);
-        Assert.Equal("Butterfly", actual.Draft.Posts[0].EmbedImages![0].AltText);
+        DraftPost post = Assert.Single(actual.Draft.Posts);
+        Assert.Equal("This is a self-labelled draft", post.Text);
+        Assert.Equal(2, post.Labels!.Values.Count);
+        Assert.Equal("graphic-media", post.Labels!.Values[0]!.Value);
+        Assert.Equal("sexual", post.Labels!.Values[1]!.Value);
+        Assert.Single(post.EmbedImages!);
+        Assert.Equal("image:Og3ev8pkVSWamiLpEyU9Y", (post.EmbedImages![0].LocalRef!).Path);
+        Assert.Equal("Butterfly", post.EmbedImages![0].AltText);
         Assert.Equal(DateTimeOffset.Parse("2026-02-10T11:17:25.045Z"), actual.CreatedAt);
         Assert.Equal(DateTimeOffset.Parse("2026-02-10T11:17:25.045Z"), actual.UpdatedAt);
     }
@@ -212,10 +212,10 @@ public class DraftTests
         Assert.Equal("3meitjzyfbs2x", actual.Id);
         Assert.Equal(new Guid("5c76194c-fc19-4413-ac45-bf851a289459"), actual.Draft!.DeviceId);
         Assert.Equal("Web", actual.Draft.DeviceName);
-        Assert.Single(actual.Draft.Posts);
-        Assert.Equal("This is a draft with an external link\n\nhttps://www.heinz.com\n", actual.Draft.Posts[0].Text);
-        Assert.Single(actual.Draft.Posts[0].EmbedExternals!);
-        Assert.Equal(new Uri("https://www.heinz.com"), actual.Draft.Posts[0].EmbedExternals![0].Uri!);
+        DraftPost post = Assert.Single(actual.Draft.Posts);
+        Assert.Equal("This is a draft with an external link\n\nhttps://www.heinz.com\n", post.Text);
+        Assert.Single(post.EmbedExternals!);
+        Assert.Equal(new Uri("https://www.heinz.com"), post.EmbedExternals![0].Uri!);
         Assert.Equal(DateTimeOffset.Parse("2026-02-10T11:15:37.715Z"), actual.CreatedAt);
         Assert.Equal(DateTimeOffset.Parse("2026-02-10T11:15:37.715Z"), actual.UpdatedAt);
     }
@@ -265,12 +265,12 @@ public class DraftTests
         Assert.Equal("3meitiszczs2d", actual.Id);
         Assert.Equal(new Guid("5c76194c-fc19-4413-ac45-bf851a289459"), actual.Draft!.DeviceId);
         Assert.Equal("Web", actual.Draft.DeviceName);
-        Assert.Single(actual.Draft.Posts);
-        Assert.Equal("This is a video draft", actual.Draft.Posts[0].Text);
-        Assert.Single(actual.Draft.Posts[0].EmbedVideos!);
-        Assert.Equal("video:video/mp4:wXYnx9IohEuF1QD_AfWhv.mp4", (actual.Draft.Posts[0].EmbedVideos![0].LocalRef!).Path);
-        Assert.Equal("Traffic", actual.Draft.Posts[0].EmbedVideos![0].AltText);
-        Assert.Single(actual.Draft.Posts[0].EmbedVideos![0].Captions!);
+        DraftPost post = Assert.Single(actual.Draft.Posts);
+        Assert.Equal("This is a video draft", post.Text);
+        Assert.Single(post.EmbedVideos!);
+        Assert.Equal("video:video/mp4:wXYnx9IohEuF1QD_AfWhv.mp4", (post.EmbedVideos![0].LocalRef!).Path);
+        Assert.Equal("Traffic", post.EmbedVideos![0].AltText);
+        Assert.Single(post.EmbedVideos![0].Captions!);
         Assert.Equal("en", actual.Draft.Posts[0].EmbedVideos![0].Captions![0].Lang);
         Assert.Equal("WEBVTT\r\n\r\n00:00.000 --> 00:05.000\r\nTraffic makes noise in the background", actual.Draft.Posts[0].EmbedVideos![0].Captions![0].Content);
         Assert.Equal(DateTimeOffset.Parse("2026-02-10T11:14:56.820Z"), actual.CreatedAt);
@@ -315,11 +315,11 @@ public class DraftTests
         Assert.Equal("3mehe45pqfk2q", actual.Id);
         Assert.Equal(new Guid("c34a6403-4bf2-49bd-8578-21ad32567ec4"), actual.Draft!.DeviceId);
         Assert.Equal("iPhone", actual.Draft.DeviceName);
-        Assert.Single(actual.Draft.Posts);
-        Assert.Equal("This is a photo draft ", actual.Draft.Posts[0].Text);
-        Assert.Single(actual.Draft.Posts[0].EmbedImages!);
-        Assert.Equal("image:2qSiBW-zfD1wijwSJydpl", (actual.Draft.Posts[0].EmbedImages![0].LocalRef!).Path);
-        Assert.Equal("Alt text", actual.Draft.Posts[0].EmbedImages![0].AltText);
+        DraftPost post = Assert.Single(actual.Draft.Posts);
+        Assert.Equal("This is a photo draft ", post.Text);
+        Assert.Single(post.EmbedImages!);
+        Assert.Equal("image:2qSiBW-zfD1wijwSJydpl", (post.EmbedImages![0].LocalRef!).Path);
+        Assert.Equal("Alt text", post.EmbedImages![0].AltText);
         Assert.Equal(DateTimeOffset.Parse("2026-02-09T21:06:45.977Z"), actual.CreatedAt);
         Assert.Equal(DateTimeOffset.Parse("2026-02-09T21:06:45.977Z"), actual.UpdatedAt);
     }
@@ -454,6 +454,7 @@ public class DraftTests
             expectedDraftPostText,
             postSelfLabels: expectedSelfLabels,
             embedImages: null,
+            embedGallery: null,
             embedVideos: null,
             embedExternals: null,
             embedRecords: null);
@@ -534,5 +535,122 @@ public class DraftTests
 
             offset++;
         }
+    }
+
+    [Fact]
+    public void DraftViewWithGalleryDeserializesCorrectly()
+    {
+        string json = """
+            {
+                "id": "3mujvfiepic2e",
+                "draft": {
+                    "$type": "app.bsky.draft.defs#draft",
+                    "deviceId": "5c76194c-fc19-4413-ac45-bf851a289459",
+                    "deviceName": "Web",
+                    "posts": [
+                        {
+                            "$type": "app.bsky.draft.defs#draftPost",
+                            "text": "Creating a draft with a gallery",
+                            "embedGallery": {
+                                "$type": "app.bsky.draft.defs#draftEmbedGallery",
+                                "items": [
+                                    {
+                                        "$type": "app.bsky.draft.defs#draftEmbedImage",
+                                        "localRef": {
+                                            "$type": "app.bsky.draft.defs#draftEmbedLocalRef",
+                                            "path": "image:X8tMUrvWi9tUqVVCAgI9l"
+                                        },
+                                        "alt": "long cat"
+                                    },
+                                    {
+                                        "$type": "app.bsky.draft.defs#draftEmbedImage",
+                                        "localRef": {
+                                            "$type": "app.bsky.draft.defs#draftEmbedLocalRef",
+                                            "path": "image:tcWGouJCpJsHE888dqHsg"
+                                        }
+                                    },
+                                    {
+                                        "$type": "app.bsky.draft.defs#draftEmbedImage",
+                                        "localRef": {
+                                            "$type": "app.bsky.draft.defs#draftEmbedLocalRef",
+                                            "path": "image:0ngv_Mya3vMs5HSfb5FFl"
+                                        }
+                                    },
+                                    {
+                                        "$type": "app.bsky.draft.defs#draftEmbedImage",
+                                        "localRef": {
+                                            "$type": "app.bsky.draft.defs#draftEmbedLocalRef",
+                                            "path": "image:z0PDpybtfUf3AubUwFtP5"
+                                        }
+                                    },
+                                    {
+                                        "$type": "app.bsky.draft.defs#draftEmbedImage",
+                                        "localRef": {
+                                            "$type": "app.bsky.draft.defs#draftEmbedLocalRef",
+                                            "path": "image:vK9CdRoiW0mdZniq7CV-4"
+                                        }
+                                    },
+                                    {
+                                        "$type": "app.bsky.draft.defs#draftEmbedImage",
+                                        "localRef": {
+                                            "$type": "app.bsky.draft.defs#draftEmbedLocalRef",
+                                            "path": "image:c8cMw6a8d_B3jUsSQeSX0"
+                                        }
+                                    },
+                                    {
+                                        "$type": "app.bsky.draft.defs#draftEmbedImage",
+                                        "localRef": {
+                                            "$type": "app.bsky.draft.defs#draftEmbedLocalRef",
+                                            "path": "image:9kIRoWOPPEQU9uPsR7J76"
+                                        }
+                                    },
+                                    {
+                                        "$type": "app.bsky.draft.defs#draftEmbedImage",
+                                        "localRef": {
+                                            "$type": "app.bsky.draft.defs#draftEmbedLocalRef",
+                                            "path": "image:W_QESvRGdxKAd3kKbEm2w"
+                                        }
+                                    },
+                                    {
+                                        "$type": "app.bsky.draft.defs#draftEmbedImage",
+                                        "localRef": {
+                                            "$type": "app.bsky.draft.defs#draftEmbedLocalRef",
+                                            "path": "image:VVrK48by5RL-bB_SuzQdP"
+                                        },
+                                        "alt": "Looong"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "createdAt": "2026-09-02T12:04:38.360Z",
+                "updatedAt": "2026-09-02T12:04:38.360Z"
+            }
+            """;
+
+        DraftView? actual = JsonSerializer.Deserialize<DraftView>(json, BlueskyJsonSerializerOptions.Options);
+
+        Assert.NotNull(actual);
+        Assert.Equal("3mujvfiepic2e", actual.Id);
+        Assert.Equal(new Guid("5c76194c-fc19-4413-ac45-bf851a289459"), actual.Draft!.DeviceId);
+        Assert.Equal("Web", actual.Draft.DeviceName);
+        DraftPost draftPost = Assert.Single(actual.Draft.Posts);
+        Assert.Equal("Creating a draft with a gallery", draftPost.Text);
+        Assert.NotNull(draftPost.EmbedGallery);
+        Assert.NotNull(draftPost.EmbedGallery!.Items);
+        Assert.Equal(9, draftPost.EmbedGallery!.Items!.Count);
+
+        Assert.Equal("long cat", draftPost.EmbedGallery!.Items!.ElementAt(0).AltText);
+        Assert.Equal("image:X8tMUrvWi9tUqVVCAgI9l", draftPost.EmbedGallery!.Items!.ElementAt(0).LocalRef!.Path);
+
+        Assert.Null(draftPost.EmbedGallery!.Items!.ElementAt(1).AltText);
+        Assert.Equal("image:tcWGouJCpJsHE888dqHsg", draftPost.EmbedGallery!.Items!.ElementAt(1).LocalRef!.Path);
+
+        Assert.Equal("Looong", draftPost.EmbedGallery!.Items!.ElementAt(8).AltText);
+        Assert.Equal("image:VVrK48by5RL-bB_SuzQdP", draftPost.EmbedGallery!.Items!.ElementAt(8).LocalRef!.Path);
+
+        Assert.Equal(DateTimeOffset.Parse("2026-09-02T12:04:38.360Z"), actual.CreatedAt);
+        Assert.Equal(DateTimeOffset.Parse("2026-09-02T12:04:38.360Z"), actual.UpdatedAt);
     }
 }

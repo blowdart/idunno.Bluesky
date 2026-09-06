@@ -8,6 +8,7 @@ using idunno.AtProto.Labels;
 using idunno.AtProto.Repo;
 
 using idunno.Bluesky.Actor;
+using idunno.Bluesky.Graph;
 using idunno.Bluesky.Notifications.Model;
 using idunno.Bluesky.Record;
 
@@ -24,6 +25,7 @@ public sealed record Notification : AtProtoRepositoryObject
         notificationResponse.Author,
         notificationResponse.Reason,
         notificationResponse.Record,
+        notificationResponse.StarterPack,
         notificationResponse.IsRead,
         notificationResponse.IndexedAt,
         notificationResponse.Labels)
@@ -36,6 +38,7 @@ public sealed record Notification : AtProtoRepositoryObject
         ProfileViewBasic author,
         string reason,
         BlueskyRecord record,
+        StarterPackViewBasic? starterPack,
         bool isRead,
         DateTimeOffset indexedAt,
         IReadOnlyCollection<Label>? labels) : base(uri, cid)
@@ -45,6 +48,7 @@ public sealed record Notification : AtProtoRepositoryObject
         Record = record;
         IsRead = isRead;
         IndexedAt = indexedAt;
+        StarterPack = starterPack;
 
         if (labels is not null)
         {
@@ -108,6 +112,11 @@ public sealed record Notification : AtProtoRepositoryObject
     /// </summary>
     [JsonInclude]
     public BlueskyRecord Record { get; init; }
+
+    /// <summary>
+    /// Gets the starter pack associated with the notification, if any. Present when the notification is for a follow originating from a starter pack.
+    /// </summary>
+    public StarterPackViewBasic? StarterPack { get; init; }
 
     /// <summary>
     /// Gets a flag indicating whether the notification has been read by the authenticated user.

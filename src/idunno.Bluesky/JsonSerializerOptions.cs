@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace idunno.Bluesky;
 
-public partial class BlueskyServer
+public static partial class BlueskyServer
 {
     /// <summary>
     /// Gets a <see cref="JsonSerializerOptions"/> which includes the Bluesky record types.

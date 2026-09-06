@@ -52,7 +52,7 @@ public static partial class BlueskyServer
 
         AtProtoHttpResult<ConversationResponse> response = await client.Get(
             service,
-            $"xrpc/chat.bsky.convo.getConvo?convoId={Uri.EscapeDataString(id)}",
+            $"/xrpc/chat.bsky.convo.getConvo?convoId={Uri.EscapeDataString(id)}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,

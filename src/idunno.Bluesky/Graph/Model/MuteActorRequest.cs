@@ -17,4 +17,12 @@ internal sealed record MuteActorRequest
     [JsonInclude]
     [JsonRequired]
     public AtIdentifier Actor { get; init; }
+
+    [JsonInclude]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? OnlyReposts { get; init; }
+
+    [JsonInclude]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? OnlyQuoteposts { get; init; }
 }

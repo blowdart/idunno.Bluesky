@@ -1,0 +1,16 @@
+{
+    "platformOptions": {
+        "Coverlet": {
+            "exclude": "[*.Test]",
+            "excludeByAttribute": "Obsolete,GeneratedCode,ExcludeFromCodeCoverage,ExcludeFromCodeCoverageAttribute,CompilerGeneratedAttribute,DebuggerNonUserCodeAttribute,DebuggerNonUserCodeAttribute",
+            "excludeByFile": "**/Migrations/*.cs,**/SourceGenerationContext.cs,**/*.g.cs",
+            "format": "cobertura",
+            "useSourceLink": false,
+            "singleHit": false,
+            "includeTestAssembly": false,
+            "skipAutoProps": true,
+            "deterministicReport": false,
+            "excludeAssembliesWithoutSources": "MissingAll"
+        }
+    }
+}

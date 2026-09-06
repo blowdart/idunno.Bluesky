@@ -14,7 +14,7 @@ namespace idunno.Bluesky.Feed;
 public sealed record BlockedAuthor
 {
     [JsonConstructor]
-    internal BlockedAuthor(Did did, ActorViewerState? viewer)
+    internal BlockedAuthor(Did did, ViewerState? viewer)
     {
         Did = did;
         Viewer = viewer;
@@ -31,5 +31,5 @@ public sealed record BlockedAuthor
     /// Metadata about the requesting account's relationship with the author.
     /// </summary>
     [JsonInclude]
-    public ActorViewerState? Viewer { get; init; }
+    public ViewerState? Viewer { get; init; }
 }

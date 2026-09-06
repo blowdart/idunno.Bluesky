@@ -4,6 +4,10 @@
 using System.Text.Json.Serialization;
 
 using idunno.AtProto.Repo;
+using idunno.Bluesky.Actor;
+using idunno.Bluesky.Feed;
+using idunno.Bluesky.Graph;
+using idunno.Bluesky.Labeler;
 
 namespace idunno.Bluesky.Record;
 
@@ -15,16 +19,19 @@ namespace idunno.Bluesky.Record;
 [JsonDerivedType(typeof(Post), RecordType.Post)]
 [JsonDerivedType(typeof(Follow), RecordType.Follow)]
 [JsonDerivedType(typeof(Repost), RecordType.Repost)]
-[JsonDerivedType(typeof(Like), RecordType.Like)]
+[JsonDerivedType(typeof(Feed.Like), RecordType.Like)]
 [JsonDerivedType(typeof(Block), RecordType.Block)]
 [JsonDerivedType(typeof(Profile), RecordType.Profile)]
 [JsonDerivedType(typeof(StarterPack), RecordType.StarterPack)]
-[JsonDerivedType(typeof(LabelerDeclaration), RecordType.LabelerDeclaration)]
+[JsonDerivedType(typeof(Service), RecordType.LabelerDeclaration)]
 [JsonDerivedType(typeof(Verification), RecordType.Verification)]
-[JsonDerivedType(typeof(BlueskyList), RecordType.List)]
-[JsonDerivedType(typeof(BlueskyListItem), RecordType.ListItem)]
+[JsonDerivedType(typeof(List), RecordType.List)]
+[JsonDerivedType(typeof(ListItem), RecordType.ListItem)]
 [JsonDerivedType(typeof(Notifications.Declaration), RecordType.NotificationDeclaration)]
 [JsonDerivedType(typeof(Status), RecordType.Status)]
+[JsonDerivedType(typeof(ReferenceListOptOut), RecordType.ReferenceListOptOut)]
+[JsonDerivedType(typeof(ListBlock), RecordType.ListBlock)]
+[JsonDerivedType(typeof(ContentVisibilityDeclaration), RecordType.ContentVisibilityDeclaration)]
 public record BlueskyRecord : AtProtoRecord
 {
     /// <summary>

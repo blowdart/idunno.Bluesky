@@ -1,10 +1,202 @@
 # Version History
 
+## 6.0.0 - 2026-09-05
+
+### Added
+
+#### idunno.Bluesky
+
+* Added support for opt-ing out of a reference list (typically a starter pack), via `BlueskyAgent.CreateReferenceListOptOut`. `ListReferenceListOptOuts` allow
+  for enumeration of an authenticated user's opt-outs, and `DeleteReferenceListOptOut` allows the deletion of the opt-out. Bluesky allows multiple optout
+  records for the same list. If another opt-out record for the list still exists after deletion the opt-out remains in effect. See [APP-2933: implement reference-list opt-outs in AppView](https://github.com/bluesky-social/atproto/pull/5461).
+
+  To check if the authenticated user has opted out of a reference list, you use `agent.GetList`, then check `List.Viewer?.ReferenceListOptOut != null`.
+
+  As a list owner you can check if a user has opted out of your reference list by calling `agent.GetList`, then checking `List.Viewer?.ReferenceListOptOut`. If the user has opted out,
+  the `ReferenceListOptOut` property will be non-null with a value of `true`. For example:
+  ```c#
+  var myListResult = await agent.GetList(myList, cancellationToken: cancellationToken);
+  var optedOutUsers = from item in myListResult.Result
+                      where item.SubjectOptedOut is not null && item.SubjectOptedOut.Value
+                      select item.Subject;
+  ```
+* `ListBlock` has been added in the `idunno.Bluesky.Graph` namespace, representing a block relationship against an entire list of accounts (actors).
+* Added `Actor.ProfileAssociatedActivitySubscription` and the known values `AllowSubscriptionsKnownValues`. This appears in the lexicon, but does not current seem to be used anywhere.
+* Added gallery support to Draft posts, via `Draft.EmbeddedGallery`.
+* Added optional `UpdatedAt` property to `Actor.InterestsPreference`, which indicates when the account owner last updated their interests. See [Add updatedAt to base prefs lexicon- #43](https://github.com/bluesky-social/bsky/pull/43/)
+* Added `Preferences.Interests` property, which is an `InterestsPreference` instance, which in turn allows for a new `UpdatedAt` property.
+* Added `Preferences.LiveEventPreferences` property, which is a `LiveEventPreferences` instance.
+
+### Breaking Changes
+
+#### idunno.Bluesky
+
+* Namespace changes to match the lexicon:
+  * `BlueskyList` been renamed to `List` and has moved namespaces from `idunno.Bluesky.Record` to `idunno.Bluesky.Graph`.
+  * `BlueskyListItem` has been renamed to `ListItem` and has moved namespaces from `idunno.Bluesky.Record` to `idunno.Bluesky.Graph`.
+  * `Block` has moved namespaces from `idunno.Bluesky.Record` to `idunno.Bluesky.Graph`.
+  * `Follow` has moved namespaces from `idunno.Bluesky.Record` to `idunno.Bluesky.Graph`.
+  * `StarterPack` has moved namespaces from `idunno.Bluesky.Record` to `idunno.Bluesky.Graph`.
+  * `Verification` has moved namespaces from `idunno.Bluesky.Record` to `idunno.Bluesky.Graph`.
+  * `Record.Like` has been moved to `Feed.Like` to match the lexicon definition.
+  * `Record.Repost` has been moved to `Feed.Repost` to match the lexicon definition.
+  * `Record.Profile` has been moved to `Actor.Profile` to match the lexicon definition.
+  * `Record.Status` has been moved to `Actor.Status` to match the lexicon definition.
+  * `Record.KnownStatusValues` has been moved to `Actor.KnownStatusValues`.
+  * `Record.LabelerDeclaration` has been moved to `Labeler.Service` to match the lexicon definition.
+* `BlueskyAgent.GetContentVisibilityDeclaration` now returns a `ContentVisibilityDeclaration` instance instead of a `bool`.
+  The `HideFromAlgorithmicRecommendations` property on the returned object indicates whether the content is hidden from algorithmic recommendations.
+* Removed deprecated `Bluesky.UploadAnimatedGif`. Use `BlueskyAgent.UploadVideo` with a MIME type of `image/gif` instead.
+* Removed deprecated `UploadVideo(string fileName, byte[] video, CancellationToken cancellationToken)`.
+  Use `UploadVideo(string fileName, byte[] video, string mimeType, CancellationToken cancellationToken)` with a MIME type of `video/mp4` instead.
+* `BlueskyAgent.UnmuteModeList` spelling has been corrected to `BlueskyAgent.UnmuteModList`.
+* `ListViewerState` has been converted to a C# Record and now has all it's properties as nullable, to match the lexicon.
+* `Feed.Likes` has been renamed to `LikesCollection` to better reflect its purpose.
+* `Feed.Like` has been moved to its own `Feed.Likes` namespace, as it is only a component in the `LikesCollection` collection.
+* Actor preferences have had major changes, to match the published lexicons and fix deserialization issues with the previous implementation.
+  * The `SavedFeedPreferences2` type has been renamed to `SavedFeedPreferencesV2` to match the lexicon.
+  * The `SavedFeedPreference` type has been renamed to `SavedFeedsPreference` to match the lexicon.
+  * The `SavedFeedPreference2` type has been renamed to `SavedFeed` to match the lexicon.
+  * Changed `InterestsPreference.Tags` from `IReadOnlyList<string>` to `ICollection<string>` to allow for easier modification of the list of tags.
+  * `Preferences.SavedFeedPreference2s` has been replaced by `Preferences.SavedFeedsPreferenceV2`,
+    which is an `IReadOnlyList<SavedFeed>`.
+  * `Preferences.InterestTags` has been removed, use `Preferences.Interests` instead, and iterate through the `Tags` property.
+  * `Preferences.SavedFeedPreferences`, an `IReadOnlyList<SavedFeedPreference>`, has been removed and replaced with `Preferences.SavedFeedsPreference`, a single nullable `SavedFeedsPreference`.
+  * Changed `SavedFeedsPreference.Saved` and `SavedFeedsPreference.Pinned` from `IReadOnlyList<AtUri>`
+    to `ICollection<AtUri>` to allow for easier modification.
+  * `Preferences.InteractionPreferences` has been renamed to `Preferences.PostInteractionSettingsPreferences` to match the lexicon definition.
+  * `Preferences.FeedViewPreferences` guards against multiple instances of `FeedViewPreference` for the same feed,
+    and will use the last instance in the list if duplicates are present. Whilst duplicates are technically valid in the lexicon,
+    they are not expected to be present in the wild, and this change prevents deserialization errors when they are encountered.
+  * `BlueskyAgent.PutPreference` has been removed, use `BlueskyAgent.PutPreferences` instead, which accepts a `Preferences` instance and replaces the entire preferences for the authenticated user.
+* `ActivitySubscription` has been replace with `Actor.ProfileAssociatedActivitySubscription` to match the lexicon definition. `ProfileAssociated` has been updated to use the new record.
+
+### Fixed
+
+#### idunno.Bluesky
+
+* Fixed a bug in the deserialization of `Actor.Preferences` where `SavedFeedsPreferenceV2` was not being deserialized correctly, resulting in null values.
+* `Preferences.SavedFeedsPreference` is now correctly deserialized.
+* `Preferences.SavedFeedsPreferenceV2` is now correctly deserialized.
+
+## 5.0.0 - 2026-08-24
+
+### Added
+
+#### idunno.Bluesky
+
+* Added support for the new multi-part video upload API, via `StartUpload`, `UploadPart`, `FinishUpload`, `GetUploadStatus` and `AbortUpload`.
+* Added new error classes for errors from the multi-part video upload APIs.
+  * `BadAspectRatio`
+  * `DailyLimitExceeded`
+  * `InvalidPartNumber`
+  * `MissingParts`
+  * `PartSizeMismatch`
+  * `TooManyOpenUploads`
+  * `ServiceOverloaded`
+  * `UnsupportedContentType`
+  * `UploadAborted`
+  * `UploadAlreadyCompleted`
+  * `UploadExpired`
+  * `UploadFailed`
+  * `UploadForbidden`
+  * `UploadNotFound`
+  * `UploadNotReady`
+  * `VideoTooLarge`
+  * `VideoTooLong`
+* Added support for `ContentVisibilityDeclaration`, with
+  `BlueskyAgent.GetContentVisibilityDeclaration`, `BlueskyAgent.SetContentVisibilityDeclaration` and `BlueskyAgent.DeleteContentVisibilityDeclaration`.
+  See [Add content visibility lexicon](https://github.com/bluesky-social/atproto/pull/5372).
+* Added `KnownLikers` view. See [Add knownLikers to viewer state](https://github.com/bluesky-social/atproto/pull/5427).
+
+### Breaking Changes
+
+#### idunno.AtProto
+* `accessCredentialsUpdated` parameter on `AtProtoServer.GetServiceAuth` has been renamed to `credentialsUpdated` to match other methods.
+
+#### idunno.Bluesky
+
+* `BlueskyServer.GetVideoJobStatus` has been renamed to `BlueskyServer.GetJobStatus` to reflect the new multi-part video upload API.
+* `BlueskyAgent.GetVideoJobStatus` has been renamed to `BlueskyAgent.GetJobStatus` to reflect the new multi-part video upload API.
+* `FeedViewerState` has been renamed to `ViewerState` to match the lexicon definition. All properties in `ViewerState` are now nullable, as they're defined as optional in the ATProto lexicon
+  A `KnownLikers` property has been added to provide a list of likers of a post who the authenticated user also follows. See [Add knownLikers to viewer state](https://github.com/bluesky-social/atproto/pull/5427).
+* `UploadVideo` now requires a MIME type parameter to allow for more video formats. The previous method which assumed a MIME type of `video/mp4` has been marked obsolete.
+* `UploadAnimatedGif` has been marked obsolete. Use `UploadVideo` with a MIME type of `image/gif` instead.
+* `GetVideoUploadLimits` has been renamed to `GetUploadLimits` to more accurately reflect the lexicon.
+* `GetAnimatedGifJobStatus` has been removed, use `GetJobStatus` instead.
+
+### Fixed
+
+#### idunno.AtProto
+
+* Fixed a bug in `AtProtoAgent.GetServiceAuth` where if OAuth credentials were used DPoP nonce updates were not respected.
+
+## 4.0.0 - 2026-08-10
+
+### Added
+
+#### idunno.AtProto
+
+* Added `BlobUploadLimit` to `ServerDescription`, which indicates the maximum size of a blob that a server will accept via uploadBlob. See [pds: expose blobUploadLimit through describeServer](https://github.com/bluesky-social/atproto/pull/5277).
+
+#### idunno.Bluesky
+
+* Added support for muting actors reposts and quote posts, with the addition of scopes to the `MuteActor` method to specify the type of mute. See [Add repost and quotepost-only mutes](https://github.com/bluesky-social/atproto/pull/5118).
+   For example, to mute only reposts from an actor, you can use the following code:
+   ```c#
+   await agent.MuteActor(
+     new Handle("jcsalterego.bsky.social"),
+     onlyReposts: true,
+     onlyQuotePosts: null);
+   ```
+* Added optional `FailureCode` property to `JobStatus` class to provide machine-readable failure codes for video processing jobs. Known values are defined in the `FailureCodes` class. See [Add video job failure codes](https://github.com/bluesky-social/atproto/pull/5283).
+* Added new, undocumented, `Uploading` and `Encoding` states to the `JobState` enum to reflect the discovered video processing states.
+* Added implementation of the unspecced `GetPostThreadV2` and `GetPostThreadOtherV2` apis.
+* Updated `CreateGroup` to allow up to 10000 members in a group. See [update chat lexicons](https://github.com/bluesky-social/atproto/pull/5303).
+* Added fallback in `OpenGraphEmbeddedCardGenerator` to also look for `<meta name="og:([^\"]+)" content="([^\"]+)"` tags, not just `<meta property="og:([^\"]+)" content="([^\"]+)"` tags.
+* Added `SubscribedLabelers` optional parameter to `ListActivitySubscriptions`, `ListNotifications` and `GetSuggestedUsers` to allow labels to be applied to the returned results.
+
+### Fixed
+
+#### idunno.AtProto
+
+* Fixed `BlueskyServer.GetVideoUploadStatus` to correctly use the correct service credentials.
+
+#### idunno.Bluesky
+
+* Fixed a bug in `GetMutes` where the cursor query string parameter was being generated incorrectly.
+
+### Breaking Changes
+
+#### idunno.AtProto
+
+* `ServerDescription`, `Links` and `Contact` are now part of the `idunno.AtProto.Server` namespace.
+* `InviteCodeRequired` and `PhoneVerificationRequired` properties of `ServerDescription` are now nullable, as they're defined as optional in the ATProto lexicon.
+
+#### idunno.Bluesky
+
+* `ActorViewerState` has been renamed to `ViewerState` to match the lexicon definition. Its constructors have updated to be `internal`,
+  and the `Muted` and `BlockedBy` properties are now nullable, as they're defined as optional in the ATProto lexicon.
+  Two new properties, `MutedOnlyReposts` and `MutedOnlyQuotePosts`, have been added to reflect the new mute scopes.
+* Removed the ambiguous `ListNotifications` method.
+* Removed the ambiguous `GetSuggestedUsers` method.
+
+## 3.1.0 - 2026-07-29
+
+### Added
+
+#### idunno.Bluesky
+
+* Added support for the new `SearchStarterPacksV2` API endpoint.
+* Added a Starter Pack property to the `Notification` class, which is present when the notification is for a follow originating from a starter pack. See [Hydrate starter pack info for follow notifications](https://github.com/bluesky-social/atproto/pull/5263).
+* Added an optional `Sort` parameter to the `GetFollowers` and `GetFollows` methods, which allows sorting by "latest" or "top". See [Add sort order to follows endpoints](https://github.com/bluesky-social/atproto/pull/5257).
+* Added description field to trending topics. See [Add description field to trending topics](https://github.com/bluesky-social/atproto/pull/5254).
+
 ## 3.0.0 - 2026-07-11
 
-## Added
+### Added
 
-### idunno.AtProto
+#### idunno.AtProto
 
 * Added error classes for known error messages.
   * `AccountNotFound`
@@ -45,7 +237,7 @@
 * Added `MapError` property to `AtProtoHttpResult<TResult>` which is an `IList<Func<AtErrorDetail?, AtErrorDetail?>>`
   to allow mapping for the generic `AtErrorDetail` type to a more specific derived error type.
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * Added `BlueskyHttpClient` which derives from `AtProtoHttpClient` and adds the Bluesky specified error mapping.
 * Added error classes for known error messages.
@@ -108,30 +300,30 @@
 * Added `GetStarterPacksWithMembership` to allow the authenticated user to search their starter packs and see which ones a specified actor is a member of.
 * Added `SearchPostsV2` to allow searching for posts with more advanced filtering options.
 
-## Fixed
+### Fixed
 
-### idunno.AtProto
+#### idunno.AtProto
 
 * Added error handling inside `AtProtoAgent.ResolveHandle()` to swallow exceptions from DNS and HTTP lookup.
   Errors are logged as Debug log messages and the method will return null if errors are encountered.
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * Added missing `Like` settings to `Notification.Preferences`.
 
-## Changed
+### Changed
 
-### idunno.AtProto.Types
+#### idunno.AtProto.Types
 
 * Added comparison operators to `TimestampIdentifier` to allow for equality comparisons and sorting.
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * `GetUnreadConversationCounts` now has an optional `includeGroupChats` parameter, which defaults to `true`, to include or exclude group conversations in the unread counts.
 
 ## Breaking Changes
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * Corrected case of `AllowSubscriptions` property on `ActivitySubscriptions`.
 * Changed `BlueskyAgent.GetRelationships()` to accept `AtIdentifier` instead of `Did` types for the `actor` and `others` parameters.
@@ -146,15 +338,15 @@
 
 ## 2.0.0 - 2026-06-02
 
-## Added
+### Added
 
-### idunno.AtProto.Types
+#### idunno.AtProto.Types
 
 * Moved the atproto `Blob` type from idunno.AtProto.
 * Added the atproto `CidLink` type.
 * Added the atproto `Bytes` type and associated JSON converter.
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * Added classes for Germ Network lexicon.
 * Added classes for Standard.Site lexicon.
@@ -162,9 +354,9 @@
 * Added `OpenGraphEmbeddedCardGenerator` to generate embedded records from Open Graph metadata, and documented its use.
 * Added `StandardSiteEmbeddedCardGenerator` to generate embedded records from [standard.site](https://standard.site), and documented its use.
 
-## Changed
+### Changed
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * `BlueskyAgent.Post(Post post)` now extracts facets from the post text by default, as promised in documentation. You can use the `extractFacets` parameter to control this behavior.
 * Updated `EmbeddedExternalView` to support the new [Standard Site integration](https://github.com/bluesky-social/atproto/discussions/4978).
@@ -172,14 +364,14 @@
 * Updated `ProfileViewBasic` to add properties for [Germ integration](https://github.com/bluesky-social/atproto/pull/4415).
 * Updated `VerificationView` to add properties for [Fix app.bsky.actor.getProfile verifier data](https://github.com/bluesky-social/atproto/pull/5016)
 
-## Breaking Changes
+### Breaking Changes
 
-### idunno.AtProto
+#### idunno.AtProto
 
 * Moved `Blob` type to `idunno.AtProto.Types`.
 * Moved `BlobReference` type and renamed to `CidLink` in `idunno.AtProto.Types`.
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * Moved various external Embedded content classes to their own files and namespaces. This is a breaking change if you are using these classes directly, rather than through the utility methods on `BlueskyAgent`.
 * Removed previously marked obsolete `BlueskyAgent.SetLiveStatus` method. Update your code to use `BlueskyAgent.CreateLiveStatus` instead.
@@ -189,9 +381,9 @@
 
 ## 1.8.3 - 2026-05-16
 
-## Added
+### Added
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * Added validation to `PostBuilder` to check its internal state before converting to a post.
   You can call `IsValid()` to check if the `PostBuilder` is coherent and enumerate through `ValidationErrors()` to
@@ -202,23 +394,23 @@
 * Added `.Quote()` to `PostBuilder` for adding a quote of another post to the post content.
 * Added various `Add` overloads to `PostBuilder` for adding content to the post body, including hash tags, links and mentions.
 
-## Changed
+### Changed
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * Updated `PostBuilder` to allow for replies to quote other posts. Fixes [#343](https://github.com/blowdart/idunno.Bluesky/issues/343), thank you [OatmealDome](https://github.com/OatmealDome).
 
 ## 1.8.2 - 2026-05-11
 
-## Added
+### Added
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * Added support for `GetListsWithMembership()`, which enumerates the lists created by the authenticated user, and includes membership information about the specified actor in those lists.
 
-## Changed
+### Changed
 
-### idunno.Bluesky
+#### idunno.Bluesky
 
 * Updated `EmbeddedExternal` to include option `AssociatedRecord` property. See [Add associatedRecord to external embed record](https://github.com/bluesky-social/atproto/pull/4915)
 

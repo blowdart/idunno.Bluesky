@@ -271,7 +271,7 @@ public static partial class AtProtoServer
     /// <param name="service">The service to get a signed token from.</param>
     /// <param name="accessCredentials">The access credentials to retrieve the session for.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="accessCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="credentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -295,7 +295,7 @@ public static partial class AtProtoServer
         Uri service,
         AccessCredentials accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? accessCredentialsUpdated = null,
+        Action<AtProtoCredential>? credentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default)
     {
@@ -330,7 +330,7 @@ public static partial class AtProtoServer
             endpoint,
             accessCredentials,
             httpClient: httpClient,
-            onCredentialsUpdated: accessCredentialsUpdated,
+            onCredentialsUpdated: credentialsUpdated,
             jsonSerializerOptions: AtProtoJsonSerializerOptions,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 

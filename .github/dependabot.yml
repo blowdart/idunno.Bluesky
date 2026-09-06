@@ -1,4 +1,4 @@
-﻿version: 2
+version: 2
 updates:
 - package-ecosystem: nuget
   directory: "/"
@@ -30,7 +30,25 @@ updates:
       update-types: ["version-update:semver-major"]
     - dependency-name: "System.Runtime.Caching"
       update-types: ["version-update:semver-major"]
-
+    - dependency-name: "JunitXml.TestLogger"
+      update-types: ["version-update:semver-major"]
+  groups:
+    TestSdk:
+      patterns:
+        - Microsoft.NET.Test.Sdk
+        - Microsoft.CodeCoverage
+    AspNetCoreTesting:
+      patterns:
+        - Microsoft.AspNetCore.Mvc.Testing
+        - Microsoft.AspNetCore.TestHost
+    Xunit:
+      patterns:
+        - xunit.v3
+        - xunit.runner.visualstudio
+    IdentityJwt:
+      patterns:
+        - System.IdentityModel.Tokens.Jwt
+        - Microsoft.IdentityModel.JsonWebTokens
 
 - package-ecosystem: "github-actions"
   directory: "/"
@@ -38,3 +56,9 @@ updates:
     interval: "daily"
   cooldown:
     default-days: 7
+  groups:
+    github/codeql-action:
+      patterns:
+        - github/codeql-action/analyze
+        - github/codeql-action/init
+        - github/codeql-action/upload-sarif

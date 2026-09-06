@@ -4,15 +4,12 @@
 using System.Diagnostics.CodeAnalysis;
 
 using idunno.AtProto;
-using idunno.AtProto.Authentication;
-using idunno.Bluesky.Chat.Convo.Model;
 using idunno.Bluesky.Feed;
 
 namespace idunno.Bluesky;
 
 public partial class BlueskyAgent
 {
-
     /// <summary>
     /// Find posts matching a search query or filters, returning search hits for matching post records.
     /// </summary>

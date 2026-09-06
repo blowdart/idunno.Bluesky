@@ -12,8 +12,8 @@ namespace idunno.AtProto;
 internal static partial class Logger
 {
     // Create session logging
-    [LoggerMessage(1, LogLevel.Debug, "CreateSession called for {did} on {service}")]
-    internal static partial void CreateSessionCalled(ILogger logger, string did, Uri service);
+    [LoggerMessage(1, LogLevel.Debug, "CreateSession called for {identifier} on {service}")]
+    internal static partial void CreateSessionCalled(ILogger logger, string identifier, Uri service);
 
     [LoggerMessage(2, LogLevel.Debug, "CreateSession API returned {statusCode}")]
     internal static partial void CreateSessionReturned(ILogger logger, HttpStatusCode statusCode);
@@ -344,4 +344,7 @@ internal static partial class Logger
 
     [LoggerMessage(1102, LogLevel.Error, "{uri} does not resolve to any IP addresses")]
     internal static partial void UriDoesNotResolve(ILogger logger, Uri uri);
+
+    [LoggerMessage(1120, LogLevel.Error, "Cannot GetServiceAuth, could not get serviceDescription for {service}")]
+    internal static partial void GetServiceAuthCannotGetServiceDescription(ILogger logger, Uri service);
 }

@@ -9,7 +9,7 @@ using Duende.IdentityModel.OidcClient;
 using Duende.IdentityModel.OidcClient.DPoP;
 using Duende.IdentityModel.OidcClient.Results;
 
-using idunno.AtProto.Server.Models;
+using idunno.AtProto.Server;
 
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;

@@ -12,7 +12,7 @@ The `Bluesky.Actor.Preferences` class is both a list of user preferences, but al
 
 * `LabelersPreference` - a list of labelers the user has subscribed to.
 * `ContentLabelPeference` - a list of preferences for content labelling, the DID of the labeler that produces it and the visibility of content that is labeled.
-* `SavedFeedPreference2` - a list of saved feeds.
+* `SavedFeedsPreferenceV2` - a list of saved feeds.
 * `HiddenPosts` - a list of AT URIs for posts the user has hidden.
 * `AdultContentPreferences` - the users preferences for the display of adult content.
 * `FeedViewPreferences` - how the user wants to view their feeds, include settings for hiding replies, hiding replies by actors they don't follow etc.

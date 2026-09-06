@@ -5,7 +5,7 @@ using System.Text;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
-using idunno.AtProto.Server.Models;
+using idunno.AtProto.Server;
 using idunno.Bluesky;
 using idunno.Bluesky.Actor;
 

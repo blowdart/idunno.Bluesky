@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky;
 
-public partial class BlueskyServer
+public static partial class BlueskyServer
 {
     /// <summary>
     /// Find starter packs matching search criteria.

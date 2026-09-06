@@ -3,6 +3,8 @@
 
 using System.Runtime.Serialization;
 
+using idunno.AtProto;
+
 namespace idunno.Bluesky;
 
 /// <summary>
@@ -11,6 +13,9 @@ namespace idunno.Bluesky;
 [Serializable]
 public class HandleResolutionException : Exception
 {
+    [NonSerialized]
+    private readonly Handle? _handle;
+
     /// <summary>
     /// Creates a new instance of the <see cref="HandleResolutionException"/> class for serialization.
     /// </summary>
@@ -35,6 +40,32 @@ public class HandleResolutionException : Exception
     /// Initializes a new instance of the <see cref="HandleResolutionException"/> class with a specified error message.
     /// </summary>
     /// <param name="message">The message that describes the parsing error.</param>
+    /// <param name="handle">The handle that could not be resolved.</param>
+    public HandleResolutionException(string message, Handle? handle) : base(message)
+    {
+        _handle = handle;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HandleResolutionException"/> class with a specified error message.
+    /// </summary>
+    /// <param name="message">The message that describes the parsing error.</param>
     /// <param name="inner">The exception that is the cause of the current exception</param>
     public HandleResolutionException(string message, Exception inner) : base(message, inner) { }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="HandleResolutionException"/> class with a specified error message.
+    /// </summary>
+    /// <param name="message">The message that describes the parsing error.</param>
+    /// <param name="handle">The handle that could not be resolved.</param>
+    /// <param name="inner">The exception that is the cause of the current exception</param>
+    public HandleResolutionException(string message, Handle? handle, Exception inner) : base(message, inner)
+    {
+        _handle = handle;
+    }
+
+    /// <summary>
+    /// Gets the handle that could not be resolved.
+    /// </summary>
+    public Handle? Handle { get => _handle; }
 }

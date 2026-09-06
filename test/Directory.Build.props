@@ -2,17 +2,18 @@
   <Import Project="..\Directory.Build.props" />
 
   <PropertyGroup>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <IsPublishable>False</IsPublishable>
-    <NoWarn>SPELL</NoWarn>
-    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <IsPackable>false</IsPackable>
-    <IsTestProject>true</IsTestProject>
     <Configurations>Debug;Release;CodeQL</Configurations>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsPublishable>False</IsPublishable>
+    <IsTestProject>true</IsTestProject>
+    <Nullable>enable</Nullable>
+    <NoWarn>$(NoWarn);SPELL;CS1591</NoWarn>
     <NoError>$(NoError);CS1591</NoError>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
     <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>
   </PropertyGroup>
 
@@ -26,17 +27,19 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="coverlet.MTP" />
     <PackageReference Include="Microsoft.CodeCoverage" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="coverlet.collector">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="JunitXml.TestLogger" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\testconfig.json" Link="testconfig.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

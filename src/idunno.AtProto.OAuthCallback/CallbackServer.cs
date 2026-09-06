@@ -189,30 +189,30 @@ public sealed class CallbackServer : IAsyncDisposable
         {
             context.Response.StatusCode = (int)HttpStatusCode.OK;
             context.Response.ContentType = MediaTypeNames.Text.Html;
-            await context.Response.WriteAsync("<html>").ConfigureAwait(false);
-            await context.Response.WriteAsync("<head>").ConfigureAwait(false);
+            await context.Response.WriteAsync("<html>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
+            await context.Response.WriteAsync("<head>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
             if (!string.IsNullOrEmpty(SuccessTitle))
             {
-                await context.Response.WriteAsync(SuccessTitle).ConfigureAwait(false);
+                await context.Response.WriteAsync(SuccessTitle, cancellationToken: context.RequestAborted).ConfigureAwait(false);
             }
             if (!string.IsNullOrEmpty(ResponseStyleSheet))
             {
-                await context.Response.WriteAsync(ResponseStyleSheet).ConfigureAwait(false);
+                await context.Response.WriteAsync(ResponseStyleSheet, cancellationToken: context.RequestAborted).ConfigureAwait(false);
             }
-            await context.Response.WriteAsync("</head>").ConfigureAwait(false);
-            await context.Response.WriteAsync("<body>").ConfigureAwait(false);
-            await context.Response.WriteAsync(SuccessBody).ConfigureAwait(false);
-            await context.Response.WriteAsync("</body>").ConfigureAwait(false);
-            await context.Response.WriteAsync("</html>").ConfigureAwait(false);
+            await context.Response.WriteAsync("</head>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
+            await context.Response.WriteAsync("<body>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
+            await context.Response.WriteAsync(SuccessBody, cancellationToken: context.RequestAborted).ConfigureAwait(false);
+            await context.Response.WriteAsync("</body>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
+            await context.Response.WriteAsync("</html>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
 
-            await context.Response.Body.FlushAsync().ConfigureAwait(false);
+            await context.Response.Body.FlushAsync(cancellationToken: context.RequestAborted).ConfigureAwait(false);
         }
         catch
         {
             context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
             context.Response.ContentType = MediaTypeNames.Text.Html;
-            await context.Response.WriteAsync("<h1>Invalid request.</h1>").ConfigureAwait(false);
-            await context.Response.Body.FlushAsync().ConfigureAwait(false);
+            await context.Response.WriteAsync("<h1>Invalid request.</h1>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
+            await context.Response.Body.FlushAsync(cancellationToken: context.RequestAborted).ConfigureAwait(false);
         }
     }
 
@@ -222,10 +222,9 @@ public sealed class CallbackServer : IAsyncDisposable
 
         context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
         context.Response.ContentType = MediaTypeNames.Text.Html;
-        await context.Response.WriteAsync("<h1>Invalid request.</h1>").ConfigureAwait(false);
-        await context.Response.Body.FlushAsync().ConfigureAwait(false);
+        await context.Response.WriteAsync("<h1>Invalid request.</h1>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
+        await context.Response.Body.FlushAsync(cancellationToken: context.RequestAborted).ConfigureAwait(false);
     }
-
 
     private async Task MethodNotAllowed(HttpContext context)
     {
@@ -233,8 +232,7 @@ public sealed class CallbackServer : IAsyncDisposable
 
         context.Response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
         context.Response.ContentType = MediaTypeNames.Text.Html;
-        await context.Response.WriteAsync("<h1>Method Not Allowed.</h1>").ConfigureAwait(false);
-        await context.Response.Body.FlushAsync().ConfigureAwait(false);
+        await context.Response.WriteAsync("<h1>Method Not Allowed.</h1>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
+        await context.Response.Body.FlushAsync(cancellationToken: context.RequestAborted).ConfigureAwait(false);
     }
-
 }
