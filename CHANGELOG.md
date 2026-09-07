@@ -1,5 +1,13 @@
 # Version History
 
+## 7.0.0-aspnet - ** unreleased **
+
+### Addded
+
+#### idunno.AtProto
+
+* Added `Agent.HasCredentials` which returns a flag indicating whether the agent has access credentials, regardless of whether the credentials are expired.
+
 ## 6.0.0 - 2026-09-05
 
 ### Added

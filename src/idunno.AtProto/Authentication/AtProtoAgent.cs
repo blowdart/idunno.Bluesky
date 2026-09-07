@@ -131,6 +131,19 @@ public partial class AtProtoAgent
     }
 
     /// <summary>
+    /// Gets a flag indicating whether the agent has access credentials.
+    /// </summary>
+    [MemberNotNullWhen(true, nameof(Credentials))]
+    [MemberNotNullWhen(true, nameof(Did))]
+    public bool HasCredentials
+    {
+        get
+        {
+            return _credentials is IAccessCredential;
+        }
+    }
+
+    /// <summary>
     /// Called internally by an <see cref="AtProtoHttpClient{TResult}"/> if the credentials were updated.
     /// </summary>
     /// <param name="credentials">The new credentials</param>

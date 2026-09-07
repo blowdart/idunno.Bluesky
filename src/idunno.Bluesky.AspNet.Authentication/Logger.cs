@@ -70,7 +70,7 @@ internal static partial class Logger
     [LoggerMessage(251, LogLevel.Debug, "Cached Identity not found for {did}")]
     public static partial void IdentityNotFoundInCache(this ILogger logger, Did did);
 
-    [LoggerMessage(252, LogLevel.Error, "Cached identity {did} is corrupt.")]
+    [LoggerMessage(252, LogLevel.Error, "Cached identity for {did} is corrupt.")]
     public static partial void CachedIdentityIsCorrupt(this ILogger logger, Did did, Exception ex);
 
     [LoggerMessage(253, LogLevel.Debug, "Identity cache renewed for {did}")]

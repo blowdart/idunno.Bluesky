@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
 using Microsoft.AspNetCore.Http;
@@ -72,7 +73,9 @@ public sealed class BlueskyAgentFactory
             identity = new ClaimsIdentity(userIdentity);
         }
 
-        if (identity is not null && identity.IsAuthenticated && identity.HasClaim(c => c.Type == AtProtoClaims.Did))
+        if (identity is not null &&
+            identity.IsAuthenticated &&
+            identity.HasClaim(c => c.Type == AtProtoClaims.Did))
         {
             agent = new BlueskyAgent(identity: identity, BlueskyAgentOptions);
         }

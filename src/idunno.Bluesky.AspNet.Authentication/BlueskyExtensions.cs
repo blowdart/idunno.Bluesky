@@ -118,6 +118,7 @@ public static class BlueskyExtensions
         ArgumentNullException.ThrowIfNull(configureOptions);
 
         builder.Services.AddBlueskyAgentOptions();
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<BlueskyAgentOptions>, PostConfigureBlueksyAgentOptions>());
         builder.Services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
         builder.Services.TryAddScoped<BlueskySignInManager, BlueskySignInManager>();
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<BlueskyAuthenticationOptions>, PostConfigureBlueskyAuthenticationOptions>());
@@ -142,7 +143,7 @@ public static class BlueskyExtensions
     }
 
     /// <summary>
-    /// Adds a <see cref="BlueskyAgentFactory"/> and to the service collection.
+    /// Adds a <see cref="BlueskyAgentFactory"/> to the service collection.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to add to.</param>
     /// <returns>The service collection</returns>

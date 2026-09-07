@@ -1,28 +1,31 @@
 @page
-@using idunno.AtProto.Authentication;
-@using idunno.Bluesky.AspNet.Authentication;
 @model IndexModel
 @{
     ViewData["Title"] = "Home page";
 }
 
+@if (User is null || User.Identity is null || !User.Identity.IsAuthenticated)
+{
 <div class="text-center">
-    <h1 class="display-4">
-        Welcome 
-        @if (User is not null && User.Identity is not null && User.Identity.IsAuthenticated)
-        {
-            if (User.DisplayName is not null)
-            {
-                @User.DisplayName
-            }          
-            else if (User.Handle is not null)
-            {
-                @User.Handle!.Value
-            }
-            else if (User.Did is not null)
-            {
-                @User.Did!.Value
-            }
-        }
-    </h1>
+  <h1 class="display-4">
+    Welcome
+  </h1>
 </div>
+}
+@if (Model.Timeline is not null && Model.Timeline.Count > 0)
+{
+    <table>
+        <tbody>
+            @foreach (var entry in Model.Timeline)
+            {
+                <tr>
+                    <td><img class="rounded-circle" loading="lazy" fetchpriority="auto" height="42" width="42" src="@entry.Post.Author.Avatar" alt="@entry.Post.Author.DisplayName" /></td>
+                    <td>
+                        @entry.Post.Author.DisplayName @entry.Post.Author.Handle.Value @@ @entry.Post.Record.CreatedAt.ToLocalTime().ToString("g")<br />
+                        @entry.Post.Record.Text
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

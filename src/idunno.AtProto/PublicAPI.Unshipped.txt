@@ -8,6 +8,7 @@ idunno.AtProto.AtProtoAgent.AtProtoAgent(System.Security.Claims.ClaimsIdentity? 
 idunno.AtProto.AtProtoAgent.AtProtoAgent(System.Security.Claims.ClaimsIdentity? identity, System.Uri! service, System.Net.Http.IHttpClientFactory! httpClientFactory, idunno.AtProto.AtProtoAgentOptions? options = null) -> void
 idunno.AtProto.AtProtoAgent.AtProtoAgent(System.Security.Claims.ClaimsPrincipal? principal, System.Uri! service, idunno.AtProto.AtProtoAgentOptions? options = null) -> void
 idunno.AtProto.AtProtoAgent.AtProtoAgent(System.Security.Claims.ClaimsPrincipal? principal, System.Uri! service, System.Net.Http.IHttpClientFactory! httpClientFactory, idunno.AtProto.AtProtoAgentOptions? options = null) -> void
+idunno.AtProto.AtProtoAgent.HasCredentials.get -> bool
 idunno.AtProto.Authentication.ClaimsExtensions
 idunno.AtProto.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!)
 idunno.AtProto.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!).Did.get -> idunno.AtProto.Did?

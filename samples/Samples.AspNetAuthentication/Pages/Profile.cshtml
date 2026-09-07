@@ -1,0 +1,31 @@
+@page
+
+@model Samples.AspNetAuthentication.Pages.ProfileModel
+@{
+    ViewData["Title"] = "Profile";
+}
+
+<div class="text-center">
+    <h1 class="display-4">
+        User Profile
+    </h1>
+</div>
+<table class="table table-striped table-sm">
+    <thead>
+        <tr>
+            <th>Claim Type</th>
+            <th>Value</th>
+            <th>Issuer</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var claim in Model.Claims)
+        {
+            <tr @if (claim.Type == AtProtoClaims.Did) {<text>class="table-primary"</text>}>
+                    <td>@claim.Type</td>
+                    <td>@claim.Value</td>
+                    <td>@claim.Issuer</td>
+                </tr>
+            }
+        </tbody>
+</table>

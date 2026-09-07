@@ -2,40 +2,47 @@
 // Licensed under the MIT License.
 
 using System.Security.Claims;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 
-using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky;
 using idunno.Bluesky.Actor;
+using idunno.Bluesky.Feed;
+
+using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Samples.AspNetAuthentication.Pages;
 
 public class IndexModel(BlueskyAgent agent) : PageModel
 {
+    public ICollection<FeedViewPost>? Timeline { get; set; }
+
     public async Task OnGet()
     {
         if (User is not null && User.Identity?.IsAuthenticated == true && User.Identity is ClaimsIdentity && User.Did is not null)
         {
-            System.Diagnostics.Debug.WriteLine($"Authenticated user: {User.Identity.Name} ({User.Did})");
-            Claim? claim = User.Claims.FirstOrDefault(c => c.Type == AtProtoClaims.DPoPNonce);
-            if (claim is not null)
+            if (agent.HasCredentials && agent.Credentials.ExpiresOn < DateTimeOffset.UtcNow)
             {
-                System.Diagnostics.Debug.WriteLine($"DPoP Nonce: {claim.Value} @ {DateTimeOffset.Now}");
+                bool refreshResult = await agent.RefreshCredentials(cancellationToken: HttpContext.RequestAborted);
+                if (!refreshResult || !agent.IsAuthenticated)
+                {
+                    throw new InvalidOperationException("Failed to refresh token.");
+                }
             }
 
-            AtProtoHttpResult<ProfileViewDetailed> profile = await agent.GetProfile(User.Did!).ConfigureAwait(true);
-
-            if (claim is not null)
+            Preferences preferences = new();
+            var preferencesResult = await agent.GetPreferences(cancellationToken: HttpContext.RequestAborted);
+            if (preferencesResult.Succeeded)
             {
-                System.Diagnostics.Debug.WriteLine($"DPoP Nonce: {claim.Value} @ {DateTimeOffset.Now}");
+                preferences = preferencesResult.Result;
             }
 
-            profile = await agent.GetProfile(User.Did!).ConfigureAwait(true);
+            var timelineResult = await agent.GetTimeline(
+                subscribedLabelers: preferences.SubscribedLabelers,
+                cancellationToken: HttpContext.RequestAborted);
 
-            if (claim is not null)
+            if (timelineResult.Succeeded)
             {
-                System.Diagnostics.Debug.WriteLine($"DPoP Nonce: {claim.Value} @ {DateTimeOffset.Now}");
+                Timeline = timelineResult.Result;
             }
         }
     }
