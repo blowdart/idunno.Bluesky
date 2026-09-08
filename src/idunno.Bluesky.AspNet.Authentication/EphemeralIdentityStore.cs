@@ -22,8 +22,10 @@ public class EphemeralIdentityStore : IIdentityStore
 
 #if NET9_0_OR_GREATER
     private static readonly Lock s_warnedLock = new ();
+    private static readonly Lock s_refreshLock = new ();
 #else
     private static readonly object s_warnedLock = new();
+    private static readonly object s_refreshLock = new();
 #endif
 
     static EphemeralIdentityStore()
@@ -34,6 +36,7 @@ public class EphemeralIdentityStore : IIdentityStore
         };
 
         Cache = new MemoryCache(cacheOptions);
+        RefreshCache = new MemoryCache(cacheOptions);
     }
 
     /// <summary>
@@ -60,6 +63,8 @@ public class EphemeralIdentityStore : IIdentityStore
     }
 
     private static MemoryCache Cache { get; set; }
+
+    private static MemoryCache RefreshCache { get; set; }
 
     private TimeSpan SlidingExpiration { get; set; }
 
@@ -106,6 +111,53 @@ public class EphemeralIdentityStore : IIdentityStore
 
         Logger.CachedIdentityRenewed(did);
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> StartRefresh(Did did, CancellationToken cancellationToken = default)
+    {
+        var options = new MemoryCacheEntryOptions()
+        {
+            SlidingExpiration = SlidingExpiration,
+            Size = 1
+        };
+
+        lock (s_refreshLock)
+        {
+            if (RefreshCache.Get($"{did}") is not null)
+            {
+                Logger.StartRefreshDenied(did);
+                return false;
+            }
+
+            Logger.StartRefreshEntered(did);
+            RefreshCache.Set($"{did}", true, options);
+            return true;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task EndRefresh(Did did, CancellationToken cancellationToken = default)
+    {
+        lock (s_refreshLock)
+        {
+            RefreshCache.Remove($"{did}");
+
+            Logger.EndRefreshFinished(did);
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> IsRefreshing(Did did, CancellationToken cancellationToken = default)
+    {
+        lock (s_refreshLock)
+        {
+            if (RefreshCache.Get($"{did}") is not null)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private Did Set(ClaimsIdentity claimsIdentity)

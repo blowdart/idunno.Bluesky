@@ -1,15 +1,13 @@
 @page
 
-@model Samples.AspNetAuthentication.Pages.ProfileModel
+@model Samples.AspNetAuthentication.Pages.ClaimsModel
 @{
-    ViewData["Title"] = "Profile";
+    ViewData["Title"] = "User Claims";
 }
 
-<div class="text-center">
-    <h1 class="display-4">
-        User Profile
-    </h1>
-</div>
+<h1 class="display-4">
+    User Claims
+</h1>
 <table class="table table-striped table-sm">
     <thead>
         <tr>
@@ -21,7 +19,7 @@
     <tbody>
         @foreach (var claim in Model.Claims)
         {
-            <tr @if (claim.Type == AtProtoClaims.Did) {<text>class="table-primary"</text>}>
+            <tr class="@(claim.Type == AtProtoClaims.Did ? "table-primary" : String.Empty)">
                     <td>@claim.Type</td>
                     <td>@claim.Value</td>
                     <td>@claim.Issuer</td>
@@ -29,3 +27,7 @@
             }
         </tbody>
 </table>
+@if (Model.ExpiresOn is not null)
+{
+    <p class="display-6">Access token expires on @Model.ExpiresOn.Value.ToLocalTime().ToString("G")</p>
+}

@@ -19,6 +19,7 @@ namespace idunno.Bluesky.AspNet.Authentication;
 public class DistributedCacheIdentityStore : IIdentityStore
 {
     const string ClaimsStorePrefix = "_didMap:";
+    const string RefreshStorePrefix = "_tokenRefreshLock:";
 
     /// <summary>
     /// Creates a new instance of <see cref="DistributedCacheIdentityStore"/>.
@@ -146,6 +147,37 @@ public class DistributedCacheIdentityStore : IIdentityStore
 
         await Add(identity, cancellationToken).ConfigureAwait(false);
         Logger.CachedIdentityRenewed(did);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> StartRefresh(Did did, CancellationToken cancellationToken = default)
+    {
+        byte[]? existing = await Cache.GetAsync($"{RefreshStorePrefix}{did}", token: cancellationToken).ConfigureAwait(false);
+
+        if (existing is not null)
+        {
+            return false;
+        }
+
+        DistributedCacheEntryOptions options = new DistributedCacheEntryOptions()
+            .SetAbsoluteExpiration(DateTime.UtcNow.Add(EntryTTL));
+
+        await Cache.SetAsync($"{RefreshStorePrefix}{did}", [1], options, token: cancellationToken).ConfigureAwait(false);
+
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public async Task EndRefresh(Did did, CancellationToken cancellationToken = default)
+    {
+        await Cache.RemoveAsync($"{RefreshStorePrefix}{did}", token: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> IsRefreshing(Did did, CancellationToken cancellationToken = default)
+    {
+        byte[]? existing = await Cache.GetAsync($"{RefreshStorePrefix}{did}", token: cancellationToken).ConfigureAwait(false);
+        return existing is not null;
     }
 }
 

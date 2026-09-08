@@ -79,6 +79,15 @@ internal static partial class Logger
     [LoggerMessage(254, LogLevel.Debug, "Entry for {did} removed from cache")]
     public static partial void CachedIdentityRemoved(this ILogger logger, Did did);
 
+    [LoggerMessage(260, LogLevel.Debug, "StartRefresh entered for {did}")]
+    public static partial void StartRefreshEntered(this ILogger logger, Did did);
+
+    [LoggerMessage(261, LogLevel.Debug, "StartRefresh denied for {did}, refresh already in progress.")]
+    public static partial void StartRefreshDenied(this ILogger logger, Did did);
+
+    [LoggerMessage(262, LogLevel.Debug, "EndRefresh finished for {did}")]
+    public static partial void EndRefreshFinished(this ILogger logger, Did did);
+
     [LoggerMessage(300, LogLevel.Error, "Credentials were refreshed for {did} but were not DPoPAccessCredentials.")]
     public static partial void CredentialsRefreshedNotDPoP(this ILogger logger, Did did);
 
@@ -90,4 +99,5 @@ internal static partial class Logger
 
     [LoggerMessage(502, LogLevel.Warning, "Using an in-memory cache which is not suitable for production environments. A maximum of 1024 profile entries will be cached. Profiles will not be persisted to storage.")]
     public static partial void UsingInMemoryProfileCacheWarning(this ILogger logger);
+
 }

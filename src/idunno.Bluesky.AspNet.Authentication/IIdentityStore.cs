@@ -74,6 +74,30 @@ public interface IIdentityStore
     }
 
     /// <summary>
+    /// Marks the specified <paramref name="did"/> as starting the refresh token process. This is used to prevent multiple refreshes from occurring at the same time.
+    /// </summary>
+    /// <param name="did">The <see cref="Did"/> to mark as being refreshed.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation. The task result contains <see langword="true"/> if the caller can start a refresh flow; otherwise, <see langword="false"/>.</returns>
+    Task<bool> StartRefresh(Did did, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Removes the specified <paramref name="did"/> from the list of DIDs being refreshed. This is used to prevent multiple refreshes from occurring at the same time.
+    /// </summary>
+    /// <param name="did">The <see cref="Did"/> to remove from the list of DIDs being refreshed.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    Task EndRefresh(Did did, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Determines if the specified <paramref name="did"/> is currently being refreshed. This is used to prevent multiple refreshes from occurring at the same time.
+    /// </summary>
+    /// <param name="did">The <see cref="Did"/> to check.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains <see langword="true"/> if the specified <paramref name="did"/> is currently being refreshed; otherwise, <see langword="false"/>.</returns>
+    Task<bool> IsRefreshing(Did did, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Called by an agent when it receives an <see cref="CredentialsUpdatedEventArgs"/>.
     /// A store should use this to update the cached identity for the specified <see cref="Did"/> with the new credentials.
     /// </summary>
