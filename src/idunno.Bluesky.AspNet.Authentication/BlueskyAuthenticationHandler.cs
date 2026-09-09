@@ -557,7 +557,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                     if (!Context.RequestAborted.IsCancellationRequested &&!await _identityStore.IsRefreshing(CurrentUserDid, cancellationToken: default).ConfigureAwait(false))
                     {
                         // Refresh is done, get the updated identity
-                        ClaimsIdentity? updatedIdentity = await _identityStore.GetIdentity(didClaim.Value).ConfigureAwait(false);
+                        ClaimsIdentity? updatedIdentity = await _identityStore.GetIdentity(didClaim.Value, cancellationToken: CancellationToken.None).ConfigureAwait(false);
                         if (updatedIdentity == null)
                         {
                             return AuthenticateResults.s_identityStoreRefreshMissing;
