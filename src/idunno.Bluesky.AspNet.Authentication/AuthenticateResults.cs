@@ -15,5 +15,6 @@ internal static class AuthenticateResults
     internal static readonly AuthenticateResult s_tokenRefreshFailed = AuthenticateResult.Fail("Token refresh failed.");
     internal static readonly AuthenticateResult s_identityStoreRefreshMissing = AuthenticateResult.Fail("Identity missing in identity store after token refresh");
     internal static readonly AuthenticateResult s_awaitTokenRefreshLoopExpired = AuthenticateResult.Fail("Token refresh check loop expired.");
+    internal static readonly AuthenticateResult s_cancellationRequested = AuthenticateResult.Fail("Request cancelled.");
 
 }

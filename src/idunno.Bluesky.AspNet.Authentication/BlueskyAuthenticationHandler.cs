@@ -31,16 +31,12 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
     private Task<AuthenticateResult>? _readCookieTask;
     
-#pragma warning disable S4487 // Unread "private" fields should be removed
     private DateTimeOffset? _refreshIssuedUtc;
     private DateTimeOffset? _refreshExpiresUtc;
     private AuthenticationTicket? _refreshTicket;
-#pragma warning disable CS0414 // Assigned but its value is never used
     private bool _shouldRefresh;
     private bool _signInCalled;
     private bool _signOutCalled;
-#pragma warning restore CS0414 // Assigned but its value is never used
-#pragma warning restore S4487 // Unread "private" fields should be removed
 
     /// <summary>
     /// Initalizes a new instance of <see cref="BlueskyAuthenticationHandler"/>
@@ -303,6 +299,51 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         Logger.AuthenticationSchemeSignedOut(Scheme.Name);
     }
 
+    /// <summary>
+    /// Hook that is called when the response about to be sent.
+    /// </summary>
+    /// <returns>A task that represents the completion of the response finishing.</returns>
+    protected virtual async Task FinishResponseAsync()
+    {
+        // Only renew if requested, and neither sign in or sign out was called
+        if (!_shouldRefresh || _signInCalled || _signOutCalled)
+        {
+            return;
+        }
+
+        AuthenticationTicket? ticket = _refreshTicket;
+        if (ticket != null)
+        {
+            AuthenticationProperties properties = ticket.Properties;
+
+            if (_refreshIssuedUtc.HasValue)
+            {
+                properties.IssuedUtc = _refreshIssuedUtc;
+            }
+
+            if (_refreshExpiresUtc.HasValue)
+            {
+                properties.ExpiresUtc = _refreshExpiresUtc;
+            }
+
+            string cookieValue = Options.TicketDataFormat.Protect(ticket, GetTlsTokenBinding());
+
+            CookieOptions cookieOptions = BuildCookieOptions();
+            if (properties.IsPersistent && _refreshExpiresUtc.HasValue)
+            {
+                cookieOptions.Expires = _refreshExpiresUtc.Value.ToUniversalTime();
+            }
+
+            Options.CookieManager.AppendResponseCookie(
+                Context,
+                Options.Cookie.Name!,
+                cookieValue,
+                cookieOptions);
+
+            await ApplyHeaders(shouldRedirect: false, shouldHonorReturnUrlParameter: false, properties: properties).ConfigureAwait(false);
+        }
+    }
+
     private CookieOptions BuildCookieOptions()
     {
         CookieOptions cookieOptions = Options.Cookie.Build(Context);
@@ -461,24 +502,29 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
             if (agent.HasCredentials && agent.Credentials.ExpiresOn < currentUtc)
             {
                 // Fresh the token as it has expired, and update the identity store with the new credentials
-
-                if (!await _identityStore.IsRefreshing(CurrentUserDid, cancellationToken: Context.RequestAborted).ConfigureAwait(false))
+                // Do not use the cancellation token from HttpContext.RequestAborted, this needs to process all the way through
+                if (Context.RequestAborted.IsCancellationRequested)
                 {
-                    bool startedRefresh = await _identityStore.StartRefresh(CurrentUserDid, cancellationToken: Context.RequestAborted).ConfigureAwait(false);
+                    return AuthenticateResults.s_cancellationRequested;
+                }
+
+                if (!await _identityStore.IsRefreshing(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false))
+                {
+                    bool startedRefresh = await _identityStore.StartRefresh(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false);
 
                     if (startedRefresh)
                     {
-                        bool refreshCredentialsResult = await agent.RefreshCredentials(cancellationToken: Context.RequestAborted).ConfigureAwait(false);
+                        bool refreshCredentialsResult = await agent.RefreshCredentials(cancellationToken: CancellationToken.None).ConfigureAwait(false);
                         if (!refreshCredentialsResult || !agent.IsAuthenticated)
                         {
                             await _identityStore.Remove(CurrentUserDid).ConfigureAwait(false);
-                            await _identityStore.EndRefresh(CurrentUserDid, cancellationToken: Context.RequestAborted).ConfigureAwait(false);
+                            await _identityStore.EndRefresh(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false);
                             CurrentUserDid = null;
                             return AuthenticateResults.s_tokenRefreshFailed;
                         }
                         else
                         {
-                            await _identityStore.Renew(agent.Credentials, cancellationToken: Context.RequestAborted).ConfigureAwait(false);
+                            await _identityStore.Renew(agent.Credentials, cancellationToken: CancellationToken.None).ConfigureAwait(false);
 
                             // Update the ticket with the new credentials
                             ClaimsIdentity? updatedIdentity = await _identityStore.GetIdentity(didClaim.Value).ConfigureAwait(false);
@@ -487,7 +533,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                                 return AuthenticateResults.s_identityStoreRefreshMissing;
                             }
                             hydratedTicket = new AuthenticationTicket(new ClaimsPrincipal(updatedIdentity), ticket.Properties, ticket.AuthenticationScheme);
-                            await _identityStore.EndRefresh(CurrentUserDid, cancellationToken: Context.RequestAborted).ConfigureAwait(false);
+                            await _identityStore.EndRefresh(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false);
                             return AuthenticateResult.Success(hydratedTicket);
                         }
                     }
@@ -497,11 +543,18 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                 // In either case, we will wait for the refresh to complete and then get the updated identity from the store.
 
                 int refreshCheckCount = 0;
-                while (await _identityStore.IsRefreshing(CurrentUserDid, cancellationToken: Context.RequestAborted).ConfigureAwait(false) && refreshCheckCount < Options.MaxRefreshChecks)
+                while (!Context.RequestAborted.IsCancellationRequested &&
+                    refreshCheckCount < Options.MaxRefreshChecks &&
+                    await _identityStore.IsRefreshing(CurrentUserDid, cancellationToken: default).ConfigureAwait(false))
                 {
+                    if (Context.RequestAborted.IsCancellationRequested)
+                    {
+                        return AuthenticateResults.s_cancellationRequested;
+                    }
+
                     await Task.Delay(Options.RefreshCheckWait, Context.RequestAborted).ConfigureAwait(false);
 
-                    if (!await _identityStore.IsRefreshing(CurrentUserDid, cancellationToken: Context.RequestAborted).ConfigureAwait(false))
+                    if (!Context.RequestAborted.IsCancellationRequested &&!await _identityStore.IsRefreshing(CurrentUserDid, cancellationToken: default).ConfigureAwait(false))
                     {
                         // Refresh is done, get the updated identity
                         ClaimsIdentity? updatedIdentity = await _identityStore.GetIdentity(didClaim.Value).ConfigureAwait(false);
@@ -515,6 +568,13 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
                     refreshCheckCount++;
                 }
+
+                if (Context.RequestAborted.IsCancellationRequested)
+                {
+                    return AuthenticateResults.s_cancellationRequested;
+                }
+
+
                 return AuthenticateResults.s_awaitTokenRefreshLoopExpired;
             }
         }

@@ -265,6 +265,7 @@ static readonly idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationDefaul
 static readonly idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationDefaults.LoginPath -> Microsoft.AspNetCore.Http.PathString
 static readonly idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationDefaults.LogoutPath -> Microsoft.AspNetCore.Http.PathString
 static readonly idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationDefaults.ReturnUrlParameter -> string!
+virtual idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.FinishResponseAsync() -> System.Threading.Tasks.Task!
 virtual idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.Logger.get -> Microsoft.Extensions.Logging.ILogger!
 virtual idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.Logger.init -> void
 virtual idunno.Bluesky.AspNet.Authentication.Events.BlueskyAuthenticationEvents.CheckSlidingExpiration(idunno.Bluesky.AspNet.Authentication.Events.BlueskySlidingExpirationContext! context) -> System.Threading.Tasks.Task!

@@ -1,4 +1,5 @@
 @page
+@using idunno.Bluesky.Feed
 @model IndexModel
 @{
     ViewData["Title"] = "Home page";
@@ -16,28 +17,16 @@
 {
     <table>
         <tbody>
-            @foreach (var entry in Model.Timeline)
-            {
+            @foreach (var entry in Model.Timeline) {
                 <tr>
-                    <td class="align-top"><img class="rounded-circle" loading="lazy" fetchpriority="auto" height="42" width="42" src="@entry.Post.Author.Avatar" alt="@entry.Post.Author.DisplayName" /></td>
-                    <td>
-                        @if (!string.IsNullOrEmpty(entry.Post.Author.DisplayName))
-                        {
-                            <b>@entry.Post.Author.DisplayName</b> 
+                    <td class="align-top"><partial name="_RenderAuthorPartial" model="entry.Post" /></td>
+                    <td class="align-top">
+                        <partial name="_RenderPostPartial" model="entry.Post" />
+
+                        @if (entry.Reply is not null && entry.Reply.Parent is PostView inReplyTo) {
+                            <table><tbody><tr><td class="align-top">⬑</td><td class="align-top"><partial name="_RenderAuthorPartial" model="inReplyTo" /></td><td class="align-top"><partial name="_RenderPostPartial" model="inReplyTo" /></td></tr></tbody></table>
                         }
-                        @entry.Post.Author.Handle.Value @@ @entry.Post.Record.CreatedAt.ToLocalTime().ToString("g")<br />
-                        @entry.Post.Record.Text<br />
-                        @if (entry.Post.Embed is idunno.Bluesky.Embed.EmbeddedImagesView images)
-                        {
-                            <img src="@images.Images[0].ThumbnailUri" alt="@images.Images[0].AltText" class="rounded" loading="lazy" fetchpriority="auto" /><br />
-                        }
-                        @if (entry.Post.LikeCount > 0) {
-                            <text>@entry.Post.LikeCount like@(entry.Post.LikeCount != 1 ? "s" : "") </text>
-                        }
-                        @if (entry.Post.RepostCount > 0) {
-                            <text>@entry.Post.RepostCount repost@(entry.Post.RepostCount != 1 ? "s" : "")</text>
-                        }
-                    </td>
+                   </td>
                 </tr>
             }
         </tbody>
