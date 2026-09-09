@@ -574,7 +574,6 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                     return AuthenticateResults.s_cancellationRequested;
                 }
 
-
                 return AuthenticateResults.s_awaitTokenRefreshLoopExpired;
             }
         }
