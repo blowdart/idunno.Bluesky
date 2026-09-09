@@ -545,7 +545,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                 int refreshCheckCount = 0;
                 while (!Context.RequestAborted.IsCancellationRequested &&
                     refreshCheckCount < Options.MaxRefreshChecks &&
-                    await _identityStore.IsRefreshing(CurrentUserDid, cancellationToken: default).ConfigureAwait(false))
+                    await _identityStore.IsRefreshing(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false))
                 {
                     if (Context.RequestAborted.IsCancellationRequested)
                     {
@@ -554,7 +554,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
                     await Task.Delay(Options.RefreshCheckWait, Context.RequestAborted).ConfigureAwait(false);
 
-                    if (!Context.RequestAborted.IsCancellationRequested &&!await _identityStore.IsRefreshing(CurrentUserDid, cancellationToken: default).ConfigureAwait(false))
+                    if (!Context.RequestAborted.IsCancellationRequested &&!await _identityStore.IsRefreshing(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false))
                     {
                         // Refresh is done, get the updated identity
                         ClaimsIdentity? updatedIdentity = await _identityStore.GetIdentity(didClaim.Value, cancellationToken: CancellationToken.None).ConfigureAwait(false);
