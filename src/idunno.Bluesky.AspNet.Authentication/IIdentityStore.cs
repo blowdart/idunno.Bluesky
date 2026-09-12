@@ -39,38 +39,38 @@ public interface IIdentityStore
     Task Remove(Did did, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Refreshes the specified <paramref name="identity"/> in the identity store.
+    /// Updates the specified <paramref name="identity"/> in the identity store.
     /// </summary>
-    /// <param name="identity">The <see cref="ClaimsIdentity"/> to refresh</param>
+    /// <param name="identity">The <see cref="ClaimsIdentity"/> to update</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    Task Refresh(ClaimsIdentity identity) => Refresh(identity, default);
+    Task Update(ClaimsIdentity identity) => Update(identity, default);
 
     /// <summary>
-    /// Refreshes the specified <paramref name="identity"/> in the identity store.
+    /// Updates the specified <paramref name="identity"/> in the identity store.
     /// </summary>
-    /// <param name="identity">The <see cref="ClaimsIdentity"/> to refresh</param>
+    /// <param name="identity">The <see cref="ClaimsIdentity"/> to update</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    Task Refresh(ClaimsIdentity identity, CancellationToken cancellationToken);
+    Task Update(ClaimsIdentity identity, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Refreshes the specified <paramref name="credentials"/> in the identity store.
+    /// Updates the specified <paramref name="credentials"/> in the identity store.
     /// </summary>
-    /// <param name="credentials">The <see cref="AccessCredentials"/> to refresh</param>
+    /// <param name="credentials">The <see cref="AccessCredentials"/> to update</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    Task Refresh(AccessCredentials credentials) => Refresh(credentials, default);
+    Task Update(AccessCredentials credentials) => Update(credentials, default);
 
     /// <summary>
-    /// Refreshes the specified <paramref name="credentials"/> in the identity store.
+    /// Updates the specified <paramref name="credentials"/> in the identity store.
     /// </summary>
-    /// <param name="credentials">The <see cref="AccessCredentials"/> to refresh</param>
+    /// <param name="credentials">The <see cref="AccessCredentials"/> to update</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="System.ArgumentNullException">Thrown when <paramref name="credentials"/> is <see langword="null" />.</exception>
-    Task Refresh(AccessCredentials credentials, CancellationToken cancellationToken)
+    Task Update(AccessCredentials credentials, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(credentials);
-        return Refresh(BuildClaimsIdentity(credentials), cancellationToken);
+        return Update(BuildClaimsIdentity(credentials), cancellationToken);
     }
 
     /// <summary>
@@ -107,7 +107,7 @@ public interface IIdentityStore
     {
         if (e is not null && e.AccessCredentials is not null)
         {
-            _ = Refresh(e.AccessCredentials);
+            _ = Update(e.AccessCredentials);
         }
     }
 

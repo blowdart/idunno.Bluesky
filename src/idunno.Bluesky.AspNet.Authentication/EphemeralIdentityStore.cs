@@ -118,7 +118,7 @@ public class EphemeralIdentityStore : IIdentityStore
 
     /// <inheritdoc />
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> is <see langword="null" />./</exception>
-    public Task Refresh(ClaimsIdentity identity, CancellationToken cancellationToken)
+    public Task Update(ClaimsIdentity identity, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(identity);
 
