@@ -8,6 +8,13 @@
 
 * Added `Agent.HasCredentials` which returns a flag indicating whether the agent has access credentials, regardless of whether the credentials are expired.
 
+### Breaking Changes
+
+#### idunno.AtProto
+
+* Removed the `ReaderWriterLockSlim` property to avoid potential deadlocks. Any code that was using this property should be now use its own locking mechanism to avoid deadlocks.
+* `DPoPRevokeCredentials` no longer implement `IDisposable`.
+
 ## 6.0.0 - 2026-09-05
 
 ### Added

@@ -44,6 +44,8 @@ idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.MaxRefreshChec
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.MaxRefreshChecks.set -> void
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.RefreshCheckWait.get -> System.TimeSpan
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.RefreshCheckWait.set -> void
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.RefreshLockLength.get -> System.TimeSpan?
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.RefreshLockLength.set -> void
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.ReturnUrlParameter.get -> string!
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.ReturnUrlParameter.set -> void
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.SlidingExpiration.get -> bool
@@ -96,7 +98,7 @@ idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.StartRefresh(
 idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore
 idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.Add(System.Security.Claims.ClaimsIdentity! claimsIdentity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.EndRefresh(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.EphemeralIdentityStore(Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory, System.TimeSpan? entryTimeToLive = null) -> void
+idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.EphemeralIdentityStore(Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory, System.TimeSpan? entryTimeToLive = null, System.TimeSpan? refreshLockExpiration = null) -> void
 idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.GetIdentity(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Security.Claims.ClaimsIdentity?>!
 idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.IsRefreshing(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.Remove(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
@@ -151,6 +153,7 @@ idunno.Bluesky.AspNet.Authentication.Events.BlueskyValidatePrincipalContext.Shou
 idunno.Bluesky.AspNet.Authentication.ICorrelationStateCache
 idunno.Bluesky.AspNet.Authentication.ICorrelationStateCache.AddOAuthLoginState(System.Guid correlationId, idunno.AtProto.Authentication.OAuthLoginState! state) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.ICorrelationStateCache.GetOAuthLoginState(System.Guid correlationId) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.OAuthLoginState?>!
+idunno.Bluesky.AspNet.Authentication.ICorrelationStateCache.RemoveCorrelationState(System.Guid correlationId) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.IIdentityStore
 idunno.Bluesky.AspNet.Authentication.IIdentityStore.Add(System.Security.Claims.ClaimsIdentity! claimsIdentity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.IIdentityStore.BuildClaimsIdentity(idunno.AtProto.Authentication.AccessCredentials! credentials, string? scheme = null) -> System.Security.Claims.ClaimsIdentity!
@@ -167,9 +170,9 @@ idunno.Bluesky.AspNet.Authentication.IIdentityStore.StartRefresh(idunno.AtProto.
 idunno.Bluesky.AspNet.Authentication.IProfileCache
 idunno.Bluesky.AspNet.Authentication.IProfileCache.Add(idunno.AtProto.Did! did, idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry! profile) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.IProfileCache.GetCachedValue(idunno.AtProto.Did! did) -> System.Threading.Tasks.Task<idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry?>!
-idunno.Bluesky.AspNet.Authentication.PostConfigureBlueksyAgentOptions
-idunno.Bluesky.AspNet.Authentication.PostConfigureBlueksyAgentOptions.PostConfigure(string? name, idunno.Bluesky.BlueskyAgentOptions! options) -> void
-idunno.Bluesky.AspNet.Authentication.PostConfigureBlueksyAgentOptions.PostConfigureBlueksyAgentOptions() -> void
+idunno.Bluesky.AspNet.Authentication.PostConfigureBlueskyAgentOptions
+idunno.Bluesky.AspNet.Authentication.PostConfigureBlueskyAgentOptions.PostConfigure(string? name, idunno.Bluesky.BlueskyAgentOptions! options) -> void
+idunno.Bluesky.AspNet.Authentication.PostConfigureBlueskyAgentOptions.PostConfigureBlueskyAgentOptions() -> void
 idunno.Bluesky.AspNet.Authentication.PostConfigureBlueskyAuthenticationOptions
 idunno.Bluesky.AspNet.Authentication.PostConfigureBlueskyAuthenticationOptions.PostConfigure(string? name, idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions! options) -> void
 idunno.Bluesky.AspNet.Authentication.PostConfigureBlueskyAuthenticationOptions.PostConfigureBlueskyAuthenticationOptions(Microsoft.AspNetCore.DataProtection.IDataProtectionProvider! dataProtection, Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory) -> void

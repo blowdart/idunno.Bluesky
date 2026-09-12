@@ -88,6 +88,9 @@ internal static partial class Logger
     [LoggerMessage(262, LogLevel.Debug, "EndRefresh finished for {did}")]
     public static partial void EndRefreshFinished(this ILogger logger, Did did);
 
+    [LoggerMessage(263, LogLevel.Error, "Token refresh failed for {did}.")]
+    public static partial void TokenRefreshThrew(this ILogger logger, Did did, Exception ex);
+
     [LoggerMessage(300, LogLevel.Error, "Credentials were refreshed for {did} but were not DPoPAccessCredentials.")]
     public static partial void CredentialsRefreshedNotDPoP(this ILogger logger, Did did);
 

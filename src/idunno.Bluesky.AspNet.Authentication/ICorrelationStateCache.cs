@@ -16,6 +16,7 @@ public interface ICorrelationStateCache
     /// </summary>
     /// <param name="correlationId">The key to use</param>
     /// <param name="state">The state to store.</param>
+    /// <returns>A task that represents the asynchronous addoperation.</returns>
     Task AddOAuthLoginState(Guid correlationId, OAuthLoginState state);
 
     /// <summary>
@@ -25,4 +26,11 @@ public interface ICorrelationStateCache
     /// <param name="correlationId">The key to retrieve the <see cref="OAuthLoginState"/> for.</param>
     /// <returns>The <see cref="OAuthLoginState"/> for the key if it was in the cache, otherwise <see langword="null"/>.</returns>
     Task<OAuthLoginState?> GetOAuthLoginState(Guid correlationId);
+
+    /// <summary>
+    /// Removes the correlation state for the specified <paramref name="correlationId"/> from the cache.
+    /// </summary>
+    /// <param name="correlationId">The key to remove the <see cref="OAuthLoginState"/> for.</param>
+    /// <returns>A task that represents the asynchronous remove operation.</returns>
+    Task RemoveCorrelationState(Guid correlationId);
 }

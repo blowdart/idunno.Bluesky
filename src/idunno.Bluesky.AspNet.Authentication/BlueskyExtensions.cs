@@ -118,7 +118,7 @@ public static class BlueskyExtensions
         ArgumentNullException.ThrowIfNull(configureOptions);
 
         builder.Services.AddBlueskyAgentOptions();
-        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<BlueskyAgentOptions>, PostConfigureBlueksyAgentOptions>());
+        builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<BlueskyAgentOptions>, PostConfigureBlueskyAgentOptions>());
         builder.Services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
         builder.Services.TryAddScoped<BlueskySignInManager, BlueskySignInManager>();
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<BlueskyAuthenticationOptions>, PostConfigureBlueskyAuthenticationOptions>());

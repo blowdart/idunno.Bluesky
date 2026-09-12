@@ -6,9 +6,9 @@ using Microsoft.Extensions.Options;
 namespace idunno.Bluesky.AspNet.Authentication;
 
 /// <summary>
-/// Initializes a new instance of <see cref="PostConfigureBlueksyAgentOptions"/> used to set default options..
+/// Initializes a new instance of <see cref="PostConfigureBlueskyAgentOptions"/> used to set default options..
 /// </summary>
-public class PostConfigureBlueksyAgentOptions() : IPostConfigureOptions<BlueskyAgentOptions>
+public class PostConfigureBlueskyAgentOptions() : IPostConfigureOptions<BlueskyAgentOptions>
 {
     /// <summary>
     /// Invoked to post configure a TOptions instance.

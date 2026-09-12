@@ -62,6 +62,11 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     public int MaxRefreshChecks { get; set; } = 5;
 
     /// <summary>
+    /// Gets or sets a value for how long to lock a refresh attempt.
+    /// </summary>
+    public TimeSpan? RefreshLockLength { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
     /// Determines the settings used to create the authentication cookie.
     /// </summary>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is <see langword="null" />.</exception>

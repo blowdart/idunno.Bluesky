@@ -66,4 +66,10 @@ public class DistributedCacheCorrelationStateCache : ICorrelationStateCache
             return null;
         }
     }
+    
+    /// <inheritdoc/>
+    public async Task RemoveCorrelationState(Guid correlationId)
+    {
+        await Cache.RemoveAsync($"{CorrelationPrefix}{correlationId}").ConfigureAwait(false);
+    }
 }

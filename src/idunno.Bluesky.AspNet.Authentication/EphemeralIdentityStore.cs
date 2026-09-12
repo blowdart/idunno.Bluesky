@@ -44,13 +44,26 @@ public class EphemeralIdentityStore : IIdentityStore
     /// </summary>
     /// <param name="loggerFactory">The logger to create loggers from.</param>
     /// <param name="entryTimeToLive">The time to live for cache entries.</param>
+    /// <param name="refreshLockExpiration">The time to lock a token refresh attempt for.</param>
     [SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Used to ensure the emphermal warning is only logged once")]
     public EphemeralIdentityStore(
         ILoggerFactory loggerFactory,
-        TimeSpan? entryTimeToLive = null)
+        TimeSpan? entryTimeToLive = null,
+        TimeSpan? refreshLockExpiration = null)
     {
         Logger = loggerFactory.CreateLogger<EphemeralIdentityStore>();
-        SlidingExpiration = entryTimeToLive ?? new(7, 0, 0, 0);
+
+        TokenCacheMemoryOptions = new MemoryCacheEntryOptions()
+        {
+            SlidingExpiration = entryTimeToLive ?? new(7, 0, 0, 0),
+            Size = 1
+        };
+
+        RefreshCacheMemoryOptions = new MemoryCacheEntryOptions()
+        {
+            AbsoluteExpirationRelativeToNow = refreshLockExpiration ?? TimeSpan.FromSeconds(30),
+            Size = 1
+        };
 
         if (!s_warned)
         {
@@ -66,7 +79,9 @@ public class EphemeralIdentityStore : IIdentityStore
 
     private static MemoryCache RefreshCache { get; set; }
 
-    private TimeSpan SlidingExpiration { get; set; }
+    private MemoryCacheEntryOptions TokenCacheMemoryOptions { get; set; }
+
+    private MemoryCacheEntryOptions RefreshCacheMemoryOptions { get; set; }
 
     private ILogger<EphemeralIdentityStore> Logger { get; set; }
 
@@ -76,7 +91,7 @@ public class EphemeralIdentityStore : IIdentityStore
     {
         ArgumentNullException.ThrowIfNull(claimsIdentity);
 
-        Did did = Set(claimsIdentity);
+        Did did = Set(claimsIdentity, TokenCacheMemoryOptions);
 
         Logger.IdentityAddedToCache(did);
     }
@@ -107,7 +122,7 @@ public class EphemeralIdentityStore : IIdentityStore
     {
         ArgumentNullException.ThrowIfNull(identity);
 
-        Did did = Set(identity);
+        Did did = Set(identity, TokenCacheMemoryOptions);
 
         Logger.CachedIdentityRenewed(did);
         return Task.CompletedTask;
@@ -116,12 +131,6 @@ public class EphemeralIdentityStore : IIdentityStore
     /// <inheritdoc />
     public async Task<bool> StartRefresh(Did did, CancellationToken cancellationToken = default)
     {
-        var options = new MemoryCacheEntryOptions()
-        {
-            SlidingExpiration = SlidingExpiration,
-            Size = 1
-        };
-
         lock (s_refreshLock)
         {
             if (RefreshCache.Get($"{did}") is not null)
@@ -131,7 +140,7 @@ public class EphemeralIdentityStore : IIdentityStore
             }
 
             Logger.StartRefreshEntered(did);
-            RefreshCache.Set($"{did}", true, options);
+            RefreshCache.Set($"{did}", true, RefreshCacheMemoryOptions);
             return true;
         }
     }
@@ -160,7 +169,7 @@ public class EphemeralIdentityStore : IIdentityStore
         return false;
     }
 
-    private Did Set(ClaimsIdentity claimsIdentity)
+    private static Did Set(ClaimsIdentity claimsIdentity, MemoryCacheEntryOptions options)
     {
         ArgumentNullException.ThrowIfNull(claimsIdentity);
 
@@ -172,12 +181,6 @@ public class EphemeralIdentityStore : IIdentityStore
         {
             throw new ArgumentException("DID claim was not a valid DID", nameof(claimsIdentity));
         }
-
-        var options = new MemoryCacheEntryOptions()
-        {
-            SlidingExpiration = SlidingExpiration,
-            Size = 1
-        };
 
         Cache.Set($"{did}", claimsIdentity, options);
 

@@ -30,7 +30,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
     private readonly IIdentityStore _identityStore;
 
     private Task<AuthenticateResult>? _readCookieTask;
-    
+
     private DateTimeOffset? _refreshIssuedUtc;
     private DateTimeOffset? _refreshExpiresUtc;
     private AuthenticationTicket? _refreshTicket;
@@ -454,6 +454,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         return path[0] == '/' && path[1] != '/' && path[1] != '\\';
     }
 
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Token refresh exceptions are logged and handled gracefully.")]
     private async Task<AuthenticateResult> ReadCookieTicket()
     {
         string? cookie = Options.CookieManager.GetRequestCookie(Context, Options.Cookie.Name!);
@@ -474,7 +475,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         {
             return AuthenticateResults.s_missingDidInCookie;
         }
-       
+
         CurrentUserDid = new Did(didClaim.Value);
         ClaimsIdentity? storedIdentity = await _identityStore.GetIdentity(didClaim.Value).ConfigureAwait(false);
 
@@ -514,72 +515,85 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
                     if (startedRefresh)
                     {
-                        bool refreshCredentialsResult = await agent.RefreshCredentials(cancellationToken: CancellationToken.None).ConfigureAwait(false);
-                        if (!refreshCredentialsResult || !agent.IsAuthenticated)
+                        Did refreshingFor = CurrentUserDid;
+
+                        try
                         {
-                            await _identityStore.Remove(CurrentUserDid).ConfigureAwait(false);
-                            await _identityStore.EndRefresh(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false);
-                            CurrentUserDid = null;
+                            bool refreshCredentialsResult = await agent.RefreshCredentials(cancellationToken: CancellationToken.None).ConfigureAwait(false);
+                            if (!refreshCredentialsResult || !agent.IsAuthenticated)
+                            {
+                                CurrentUserDid = null;
+                                await _identityStore.Remove(refreshingFor).ConfigureAwait(false);
+                                return AuthenticateResults.s_tokenRefreshFailed;
+                            }
+                            else
+                            {
+                                await _identityStore.Renew(agent.Credentials, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+
+                                // Update the ticket with the new credentials
+                                ClaimsIdentity? updatedIdentity = await _identityStore.GetIdentity(refreshingFor).ConfigureAwait(false);
+                                if (updatedIdentity == null)
+                                {
+                                    return AuthenticateResults.s_identityStoreRefreshMissing;
+                                }
+
+                                hydratedTicket = new AuthenticationTicket(new ClaimsPrincipal(updatedIdentity), ticket.Properties, ticket.AuthenticationScheme);
+                                return AuthenticateResult.Success(hydratedTicket);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.TokenRefreshThrew(refreshingFor, ex);
                             return AuthenticateResults.s_tokenRefreshFailed;
                         }
-                        else
+                        finally
                         {
-                            await _identityStore.Renew(agent.Credentials, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+                            await _identityStore.EndRefresh(refreshingFor, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+                        }
+                    }
 
-                            // Update the ticket with the new credentials
-                            ClaimsIdentity? updatedIdentity = await _identityStore.GetIdentity(didClaim.Value).ConfigureAwait(false);
+                    // Either we are already refreshing, or we couldn't start the refresh because another thread did.
+                    // In either case, we will wait for the refresh to complete and then get the updated identity from the store.
+
+                    int refreshCheckCount = 0;
+                    while (!Context.RequestAborted.IsCancellationRequested &&
+                        refreshCheckCount < Options.MaxRefreshChecks &&
+                        await _identityStore.IsRefreshing(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false))
+                    {
+                        if (Context.RequestAborted.IsCancellationRequested)
+                        {
+                            return AuthenticateResults.s_cancellationRequested;
+                        }
+
+                        await Task.Delay(Options.RefreshCheckWait, Context.RequestAborted).ConfigureAwait(false);
+
+                        if (!Context.RequestAborted.IsCancellationRequested && !await _identityStore.IsRefreshing(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false))
+                        {
+                            // Refresh is done, get the updated identity
+                            ClaimsIdentity? updatedIdentity = await _identityStore.GetIdentity(didClaim.Value, cancellationToken: CancellationToken.None).ConfigureAwait(false);
                             if (updatedIdentity == null)
                             {
                                 return AuthenticateResults.s_identityStoreRefreshMissing;
                             }
                             hydratedTicket = new AuthenticationTicket(new ClaimsPrincipal(updatedIdentity), ticket.Properties, ticket.AuthenticationScheme);
-                            await _identityStore.EndRefresh(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false);
                             return AuthenticateResult.Success(hydratedTicket);
                         }
+
+                        refreshCheckCount++;
                     }
-                }
 
-                // Either we are already refreshing, or we couldn't start the refresh because another thread did.
-                // In either case, we will wait for the refresh to complete and then get the updated identity from the store.
-
-                int refreshCheckCount = 0;
-                while (!Context.RequestAborted.IsCancellationRequested &&
-                    refreshCheckCount < Options.MaxRefreshChecks &&
-                    await _identityStore.IsRefreshing(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false))
-                {
                     if (Context.RequestAborted.IsCancellationRequested)
                     {
                         return AuthenticateResults.s_cancellationRequested;
                     }
 
-                    await Task.Delay(Options.RefreshCheckWait, Context.RequestAborted).ConfigureAwait(false);
-
-                    if (!Context.RequestAborted.IsCancellationRequested &&!await _identityStore.IsRefreshing(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false))
-                    {
-                        // Refresh is done, get the updated identity
-                        ClaimsIdentity? updatedIdentity = await _identityStore.GetIdentity(didClaim.Value, cancellationToken: CancellationToken.None).ConfigureAwait(false);
-                        if (updatedIdentity == null)
-                        {
-                            return AuthenticateResults.s_identityStoreRefreshMissing;
-                        }
-                        hydratedTicket = new AuthenticationTicket(new ClaimsPrincipal(updatedIdentity), ticket.Properties, ticket.AuthenticationScheme);
-                        return AuthenticateResult.Success(hydratedTicket);
-                    }
-
-                    refreshCheckCount++;
+                    return AuthenticateResults.s_awaitTokenRefreshLoopExpired;
                 }
-
-                if (Context.RequestAborted.IsCancellationRequested)
-                {
-                    return AuthenticateResults.s_cancellationRequested;
-                }
-
-                return AuthenticateResults.s_awaitTokenRefreshLoopExpired;
             }
-        }
 
-        // Ticket from store has not expired, so use it.
-        return AuthenticateResult.Success(hydratedTicket);
+            // Ticket from store has not expired, so use it.
+            return AuthenticateResult.Success(hydratedTicket);
+        }
     }
 
     private void RequestRefresh(AuthenticationTicket ticket, ClaimsPrincipal? replacedPrincipal = null)

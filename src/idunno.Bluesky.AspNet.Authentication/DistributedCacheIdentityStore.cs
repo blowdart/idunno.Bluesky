@@ -16,6 +16,12 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// <summary>
 /// Implements an <see cref="IIdentityStore"/> using a distributed cache.
 /// </summary>
+/// <remarks>
+/// <para>This implementation uses a distributed cache to store identity information, allowing for scalable and shared access across multiple instances.</para>
+/// <para>
+/// Depending on the backing distributed cache, this may be a best effort. Caches that are eventually consistent will not guarantee locking.
+/// </para>
+/// </remarks>
 public class DistributedCacheIdentityStore : IIdentityStore
 {
     const string ClaimsStorePrefix = "_didMap:";
@@ -180,4 +186,3 @@ public class DistributedCacheIdentityStore : IIdentityStore
         return existing is not null;
     }
 }
-
