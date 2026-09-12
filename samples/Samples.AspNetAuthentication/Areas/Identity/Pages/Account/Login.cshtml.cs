@@ -15,7 +15,7 @@ public class LoginModel(BlueskySignInManager blueskyAuthenticationManager, ILogg
 {
     private const string HandleCookieName = "Handle";
 
-    private readonly TimeSpan _rememberMeCookieLifetime = new (365, 0, 0, 0, 0);
+    private readonly TimeSpan _rememberMeCookieLifetime = new (days: 30, hours: 0, minutes: 0, seconds: 0);
 
     [BindProperty]
     public InputModel Input { get; set; } = default!;
@@ -57,9 +57,15 @@ public class LoginModel(BlueskySignInManager blueskyAuthenticationManager, ILogg
                 RememberHandle = true
             };
 
+            // Bluesky handles are public information, so we can store them in a cookie without needing to encrypt them.
+            // We will set the cookie to expire in 30 days if the user has selected "Remember my handle".
             Response.Cookies.Append(HandleCookieName, parsedHandle.Value, new CookieOptions
             {
-                Expires = DateTimeOffset.UtcNow + _rememberMeCookieLifetime
+                Expires = DateTimeOffset.UtcNow + _rememberMeCookieLifetime,
+                HttpOnly = true,
+                IsEssential = true,
+                SameSite = SameSiteMode.Strict,
+                Secure = Request.IsHttps
             });
         }
 
