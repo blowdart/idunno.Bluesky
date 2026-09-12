@@ -60,7 +60,7 @@ public class PostConfigureBlueskyAuthenticationOptions(
             options.AccessDeniedPath = CookieAuthenticationDefaults.AccessDeniedPath;
         }
 
-        options.IdentityStore ??= new EphemeralIdentityStore(loggerFactory, options.IdentityStoreEntryTimeToLive);
+        options.IdentityStore ??= new EphemeralIdentityStore(loggerFactory, options.IdentityStoreEntryTimeToLive, options.ExpireTimeSpan);
         options.CorrelationCache ??= new EphemeralCorrelationStateCache(loggerFactory);
     }
 }

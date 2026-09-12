@@ -61,7 +61,7 @@ public class EphemeralIdentityStore : IIdentityStore
 
         RefreshCacheMemoryOptions = new MemoryCacheEntryOptions()
         {
-            AbsoluteExpirationRelativeToNow = refreshLockExpiration ?? TimeSpan.FromSeconds(30),
+            AbsoluteExpirationRelativeToNow = refreshLockExpiration ?? TimeSpan.FromSeconds(90),
             Size = 1
         };
 

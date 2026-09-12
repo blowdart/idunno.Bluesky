@@ -64,7 +64,7 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     /// <summary>
     /// Gets or sets a value for how long to lock a refresh attempt.
     /// </summary>
-    public TimeSpan? RefreshLockLength { get; set; } = TimeSpan.FromSeconds(30);
+    public TimeSpan? RefreshLockLength { get; set; } = TimeSpan.FromSeconds(90);
 
     /// <summary>
     /// Determines the settings used to create the authentication cookie.

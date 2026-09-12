@@ -4,12 +4,12 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 
+using idunno.AtProto;
+using idunno.AtProto.Authentication;
+
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
-using idunno.AtProto;
-using idunno.AtProto.Authentication;
 
 namespace idunno.Bluesky.AspNet.Authentication;
 
@@ -24,6 +24,9 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// </remarks>
 public class DistributedCacheIdentityStore : IIdentityStore
 {
+    private static readonly TimeSpan s_defaultEntryTTL = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan s_defaultRefreshLockTTL = TimeSpan.FromSeconds(90);
+
     const string ClaimsStorePrefix = "_didMap:";
     const string RefreshStorePrefix = "_tokenRefreshLock:";
 
@@ -44,9 +47,28 @@ public class DistributedCacheIdentityStore : IIdentityStore
         Cache = cache;
         Logger = loggerFactory.CreateLogger<DistributedCacheIdentityStore>();
 
-        if (options is not null && options.Value.IdentityStoreEntryTimeToLive is not null)
+        if (options is not null)
         {
-            EntryTTL = options.Value.IdentityStoreEntryTimeToLive.Value;
+            TokenCacheMemoryOptions = new DistributedCacheEntryOptions()
+            {
+                AbsoluteExpirationRelativeToNow = options.Value.IdentityStoreEntryTimeToLive ?? s_defaultEntryTTL
+            };
+            RefreshCacheMemoryOptions = new DistributedCacheEntryOptions()
+            {
+                AbsoluteExpirationRelativeToNow = options.Value.IdentityStoreEntryTimeToLive ?? s_defaultRefreshLockTTL
+            };
+
+        }
+        else
+        {
+            TokenCacheMemoryOptions = new DistributedCacheEntryOptions()
+            {
+                SlidingExpiration = s_defaultEntryTTL
+            };
+            RefreshCacheMemoryOptions = new DistributedCacheEntryOptions()
+            {
+                AbsoluteExpirationRelativeToNow = s_defaultRefreshLockTTL
+            };
         }
     }
 
@@ -57,9 +79,14 @@ public class DistributedCacheIdentityStore : IIdentityStore
     protected static IDistributedCache? Cache { get; set; }
 
     /// <summary>
-    /// Gets or sets how long a cache entry should live for.
+    /// Gets or sets the time to live for entries in the identity store.
     /// </summary>
-    protected TimeSpan EntryTTL { get; } = new(7, 0, 0, 0);
+    protected DistributedCacheEntryOptions TokenCacheMemoryOptions { get; init; }
+
+    /// <summary>
+    /// Gets or sets the time to live for entries in the refresh lock store.
+    /// </summary>
+    protected DistributedCacheEntryOptions RefreshCacheMemoryOptions { get; init; }
 
     private ILogger<DistributedCacheIdentityStore> Logger { get; }
 
@@ -88,10 +115,7 @@ public class DistributedCacheIdentityStore : IIdentityStore
             claimsIdentityAsBytes = claimsMemoryStream.ToArray();
         }
 
-        DistributedCacheEntryOptions options = new DistributedCacheEntryOptions()
-            .SetAbsoluteExpiration(DateTime.UtcNow.Add(EntryTTL));
-
-        await Cache.SetAsync($"{ClaimsStorePrefix}{did}", claimsIdentityAsBytes, options, token: cancellationToken).ConfigureAwait(false);
+        await Cache.SetAsync($"{ClaimsStorePrefix}{did}", claimsIdentityAsBytes, TokenCacheMemoryOptions, token: cancellationToken).ConfigureAwait(false);
 
         Logger.IdentityAddedToCache(did);
     }
@@ -165,10 +189,7 @@ public class DistributedCacheIdentityStore : IIdentityStore
             return false;
         }
 
-        DistributedCacheEntryOptions options = new DistributedCacheEntryOptions()
-            .SetAbsoluteExpiration(DateTime.UtcNow.Add(EntryTTL));
-
-        await Cache.SetAsync($"{RefreshStorePrefix}{did}", [1], options, token: cancellationToken).ConfigureAwait(false);
+        await Cache.SetAsync($"{RefreshStorePrefix}{did}", [1], RefreshCacheMemoryOptions, token: cancellationToken).ConfigureAwait(false);
 
         return true;
     }

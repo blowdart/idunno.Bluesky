@@ -259,6 +259,7 @@ public class BlueskySignInManager
             }
         }
 
+        await _correlationCache.RemoveCorrelationState(correlationId.Value).ConfigureAwait(false);
         return await _correlationCache.GetOAuthLoginState(correlationId.Value).ConfigureAwait(false);
     }
 
@@ -334,8 +335,6 @@ public class BlueskySignInManager
             return new SignInResult(Succeeded: false, MissingCorrelationState: true);
         }
         
-        await _correlationCache.RemoveCorrelationState(correlationState.CorrelationId).ConfigureAwait(false);
-
         using var agent = new BlueskyAgent(options: BlueskyAgentOptions);
         OAuthClient oAuthClient = agent.CreateOAuthClient();
         DPoPAccessCredentials? accessCredentials = await oAuthClient.ProcessOAuth2Response(

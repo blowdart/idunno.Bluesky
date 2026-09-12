@@ -85,16 +85,20 @@ idunno.Bluesky.AspNet.Authentication.DistributedCacheCorrelationStateCache
 idunno.Bluesky.AspNet.Authentication.DistributedCacheCorrelationStateCache.AddOAuthLoginState(System.Guid correlationId, idunno.AtProto.Authentication.OAuthLoginState! state) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.DistributedCacheCorrelationStateCache.DistributedCacheCorrelationStateCache(Microsoft.Extensions.Caching.Distributed.IDistributedCache! cache, System.TimeSpan? entryTimeToLive = null) -> void
 idunno.Bluesky.AspNet.Authentication.DistributedCacheCorrelationStateCache.GetOAuthLoginState(System.Guid correlationId) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.OAuthLoginState?>!
+idunno.Bluesky.AspNet.Authentication.DistributedCacheCorrelationStateCache.RemoveCorrelationState(System.Guid correlationId) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore
 idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.Add(System.Security.Claims.ClaimsIdentity! claimsIdentity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.DistributedCacheIdentityStore(Microsoft.Extensions.Caching.Distributed.IDistributedCache! cache, Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory, Microsoft.Extensions.Options.IOptions<idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions!>? options = null) -> void
 idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.EndRefresh(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
-idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.EntryTTL.get -> System.TimeSpan
 idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.GetIdentity(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Security.Claims.ClaimsIdentity?>!
 idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.IsRefreshing(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.RefreshCacheMemoryOptions.get -> Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions!
+idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.RefreshCacheMemoryOptions.init -> void
 idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.Remove(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.Renew(System.Security.Claims.ClaimsIdentity! identity, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.StartRefresh(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.TokenCacheMemoryOptions.get -> Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions!
+idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.TokenCacheMemoryOptions.init -> void
 idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore
 idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.Add(System.Security.Claims.ClaimsIdentity! claimsIdentity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.EndRefresh(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
