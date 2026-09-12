@@ -165,7 +165,7 @@ public class DistributedCacheIdentityStore : IIdentityStore
     /// <inheritdoc/>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> is <see langword="null" />./</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="identity"/> does not have a DID claim, or the DID claim is invalid.</exception>
-    public async Task Renew(ClaimsIdentity identity, CancellationToken cancellationToken)
+    public async Task Refresh(ClaimsIdentity identity, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(identity);
         string? didAsString = (identity.Claims?.FirstOrDefault(

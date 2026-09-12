@@ -530,7 +530,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                             }
                             else
                             {
-                                await _identityStore.Renew(agent.Credentials, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+                                await _identityStore.Refresh(agent.Credentials, cancellationToken: CancellationToken.None).ConfigureAwait(false);
 
                                 // Update the ticket with the new credentials
                                 ClaimsIdentity? updatedIdentity = await _identityStore.GetIdentity(refreshingFor).ConfigureAwait(false);
