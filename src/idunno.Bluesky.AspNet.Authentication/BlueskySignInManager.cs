@@ -259,8 +259,14 @@ public class BlueskySignInManager
             }
         }
 
-        await _correlationCache.RemoveCorrelationState(correlationId.Value).ConfigureAwait(false);
-        return await _correlationCache.GetOAuthLoginState(correlationId.Value).ConfigureAwait(false);
+        OAuthLoginState? state = await _correlationCache.GetOAuthLoginState(correlationId.Value).ConfigureAwait(false);
+
+        if (state is not null)
+        {
+            await _correlationCache.RemoveCorrelationState(correlationId.Value).ConfigureAwait(false);
+        }
+
+        return state;
     }
 
     /// <summary>

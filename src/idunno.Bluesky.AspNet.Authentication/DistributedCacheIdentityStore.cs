@@ -24,7 +24,7 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// </remarks>
 public class DistributedCacheIdentityStore : IIdentityStore
 {
-    private static readonly TimeSpan s_defaultEntryTTL = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan s_defaultEntryTTL = TimeSpan.FromDays(7);
     private static readonly TimeSpan s_defaultRefreshLockTTL = TimeSpan.FromSeconds(90);
 
     const string ClaimsStorePrefix = "_didMap:";
@@ -51,11 +51,12 @@ public class DistributedCacheIdentityStore : IIdentityStore
         {
             TokenCacheMemoryOptions = new DistributedCacheEntryOptions()
             {
-                AbsoluteExpirationRelativeToNow = options.Value.IdentityStoreEntryTimeToLive ?? s_defaultEntryTTL
+                SlidingExpiration = options.Value.IdentityStoreEntryTimeToLive ?? s_defaultEntryTTL
             };
+
             RefreshCacheMemoryOptions = new DistributedCacheEntryOptions()
             {
-                AbsoluteExpirationRelativeToNow = options.Value.IdentityStoreEntryTimeToLive ?? s_defaultRefreshLockTTL
+                AbsoluteExpirationRelativeToNow = options.Value.RefreshLockLength ?? s_defaultRefreshLockTTL
             };
 
         }
@@ -65,6 +66,7 @@ public class DistributedCacheIdentityStore : IIdentityStore
             {
                 SlidingExpiration = s_defaultEntryTTL
             };
+
             RefreshCacheMemoryOptions = new DistributedCacheEntryOptions()
             {
                 AbsoluteExpirationRelativeToNow = s_defaultRefreshLockTTL

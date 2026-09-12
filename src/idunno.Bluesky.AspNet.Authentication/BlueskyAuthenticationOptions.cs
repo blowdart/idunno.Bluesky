@@ -52,6 +52,11 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     public TimeSpan? IdentityStoreEntryTimeToLive { get; set; } = TimeSpan.FromDays(7);
 
     /// <summary>
+    /// Gets or sets a value for how long to lock a refresh attempt.
+    /// </summary>
+    public TimeSpan? RefreshLockLength { get; set; } = TimeSpan.FromSeconds(90);
+
+    /// <summary>
     /// Gets or sets a value for how long to wait between refresh attempts, if a refresh is already in progress.
     /// </summary>
     public TimeSpan RefreshCheckWait { get; set; } = TimeSpan.FromSeconds(5);
@@ -60,11 +65,6 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     /// Gets or sets a value for the maximum number of times to check for a refresh, if a refresh is already in progress.
     /// </summary>
     public int MaxRefreshChecks { get; set; } = 5;
-
-    /// <summary>
-    /// Gets or sets a value for how long to lock a refresh attempt.
-    /// </summary>
-    public TimeSpan? RefreshLockLength { get; set; } = TimeSpan.FromSeconds(90);
 
     /// <summary>
     /// Determines the settings used to create the authentication cookie.
