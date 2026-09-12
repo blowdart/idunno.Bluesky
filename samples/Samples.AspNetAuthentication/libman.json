@@ -1,0 +1,19 @@
+{
+    "version": "3.0",
+    "defaultProvider": "cdnjs",
+    "libraries": [
+        {
+            "library": "twitter-bootstrap@5.3.3",
+            "destination": "wwwroot/lib/bootstrap/dist/"
+        },
+        {
+            "library": "jquery@3.7.1",
+            "destination": "wwwroot/lib/jquery/dist/"
+        },
+        {
+            "library": "jquery-validate@1.21.0",
+            "destination": "wwwroot/lib/jquery-validation/dist/",
+            "files": [ "jquery.validate.js", "jquery.validate.min.js" ]
+        }
+    ]
+}

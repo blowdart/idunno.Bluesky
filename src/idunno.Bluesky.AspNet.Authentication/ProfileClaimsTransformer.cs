@@ -107,7 +107,7 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
                 if (cachedProfile is not null)
                 {
                     Logger.TransformerCachedClaimsFound(agent.Did);
-                    return SupplementClaimsPrinciple(principal, cachedProfile);
+                    return SupplementClaimsPrincipal(principal, cachedProfile);
                 }
 
                 AtProtoHttpResult<ProfileViewDetailed> getProfileResult = await agent.GetProfile(agent.Did).ConfigureAwait(false);
@@ -118,7 +118,7 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
                     cachedProfile = new (getProfileResult.Result, agent.Service.ToString());
                     await Cache.Add(agent.Did, cachedProfile).ConfigureAwait(false);
                     Logger.TransformerCachedClaimsForDid(agent.Did);
-                    return SupplementClaimsPrinciple(principal, cachedProfile);
+                    return SupplementClaimsPrincipal(principal, cachedProfile);
                 }
                 else
                 {
@@ -131,7 +131,7 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
         return principal;
     }
 
-    private static ClaimsPrincipal SupplementClaimsPrinciple(ClaimsPrincipal principal, ProfileCacheEntry profile)
+    private static ClaimsPrincipal SupplementClaimsPrincipal(ClaimsPrincipal principal, ProfileCacheEntry profile)
     {
         ClaimsIdentity identity = new(principal.Claims, principal.Identity!.AuthenticationType);
 

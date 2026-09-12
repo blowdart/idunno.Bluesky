@@ -108,10 +108,10 @@ idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.IsRefreshing(idunno.
 idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.Remove(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.StartRefresh(idunno.AtProto.Did! did, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
 idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.Update(System.Security.Claims.ClaimsIdentity! identity, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
-idunno.Bluesky.AspNet.Authentication.EphermealProfileCache
-idunno.Bluesky.AspNet.Authentication.EphermealProfileCache.Add(idunno.AtProto.Did! did, idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry! profile) -> System.Threading.Tasks.Task!
-idunno.Bluesky.AspNet.Authentication.EphermealProfileCache.EphermealProfileCache(Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory, System.TimeSpan? entryTimeToLive = null) -> void
-idunno.Bluesky.AspNet.Authentication.EphermealProfileCache.GetCachedValue(idunno.AtProto.Did! did) -> System.Threading.Tasks.Task<idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry?>!
+idunno.Bluesky.AspNet.Authentication.EphemeralProfileCache
+idunno.Bluesky.AspNet.Authentication.EphemeralProfileCache.Add(idunno.AtProto.Did! did, idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry! profile) -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Authentication.EphemeralProfileCache.EphemeralProfileCache(Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory, System.TimeSpan? entryTimeToLive = null) -> void
+idunno.Bluesky.AspNet.Authentication.EphemeralProfileCache.GetCachedValue(idunno.AtProto.Did! did) -> System.Threading.Tasks.Task<idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry?>!
 idunno.Bluesky.AspNet.Authentication.Events.BlueskyAuthenticationEvents
 idunno.Bluesky.AspNet.Authentication.Events.BlueskyAuthenticationEvents.BlueskyAuthenticationEvents() -> void
 idunno.Bluesky.AspNet.Authentication.Events.BlueskyAuthenticationEvents.OnCheckSlidingExpiration.get -> System.Func<idunno.Bluesky.AspNet.Authentication.Events.BlueskySlidingExpirationContext!, System.Threading.Tasks.Task!>!

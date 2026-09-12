@@ -22,6 +22,6 @@ public class PostConfigureProfileClaimsTransformerOptions(ILoggerFactory loggerF
     {
         ArgumentNullException.ThrowIfNull(options);
 
-        options.Cache ??= new EphermealProfileCache(loggerFactory, options.CacheTimeout);
+        options.Cache ??= new EphemeralProfileCache(loggerFactory, options.CacheTimeout);
     }
 }

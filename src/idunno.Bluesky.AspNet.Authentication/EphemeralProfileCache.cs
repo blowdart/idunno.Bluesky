@@ -12,7 +12,7 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// <summary>
 /// Implements an in-memory profile cache.
 /// </summary>
-public sealed class EphermealProfileCache : IProfileCache
+public sealed class EphemeralProfileCache : IProfileCache
 {
     private static volatile bool s_warned;
 
@@ -22,7 +22,7 @@ public sealed class EphermealProfileCache : IProfileCache
     private static readonly object s_warnedLock = new();
 #endif
 
-    static EphermealProfileCache()
+    static EphemeralProfileCache()
     {
         MemoryCacheOptions cacheOptions = new()
         {
@@ -33,16 +33,16 @@ public sealed class EphermealProfileCache : IProfileCache
     }
 
     /// <summary>
-    /// Creates a new instance of <see cref="EphermealProfileCache"/>.
+    /// Creates a new instance of <see cref="EphemeralProfileCache"/>.
     /// </summary>
     /// <param name="loggerFactory">The logger to create loggers from.</param>
     /// <param name="entryTimeToLive">The time to live for cache entries.</param>
-    [SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Used to ensure the emphermal warning is only logged once")]
-    public EphermealProfileCache(
+    [SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Used to ensure the ephemeral warning is only logged once")]
+    public EphemeralProfileCache(
         ILoggerFactory loggerFactory,
         TimeSpan? entryTimeToLive = null)
     {
-        Logger = loggerFactory.CreateLogger<EphermealProfileCache>();
+        Logger = loggerFactory.CreateLogger<EphemeralProfileCache>();
         EntryTTL = entryTimeToLive ?? new(0, 0, 15, 0);
 
         if (!s_warned)
@@ -59,7 +59,7 @@ public sealed class EphermealProfileCache : IProfileCache
 
     private TimeSpan EntryTTL { get; set; }
 
-    private ILogger<EphermealProfileCache> Logger { get; set; }
+    private ILogger<EphemeralProfileCache> Logger { get; set; }
 
     /// <inheritdoc />
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/> is <see langword="null" />./</exception>
