@@ -113,9 +113,12 @@ public partial class AtProtoAgent
                 return false;
             }
 
-            return _credentials is IAccessCredential accessCredential &&
-                accessCredential.Did is not null &&
-                accessCredential.ExpiresOn > DateTimeOffset.UtcNow;
+            lock (_credentialLock)
+            {
+                return _credentials is IAccessCredential accessCredential &&
+                    accessCredential.Did is not null &&
+                    accessCredential.ExpiresOn > DateTimeOffset.UtcNow;
+            }
         }
     }
 
@@ -128,7 +131,15 @@ public partial class AtProtoAgent
     {
         get
         {
-            return _credentials is IAccessCredential;
+            if (_disposed)
+            {
+                return false;
+            }
+
+            lock (_credentialLock)
+            {
+                return _credentials is IAccessCredential accessCredential && accessCredential.Did is not null;
+            }
         }
     }
 
