@@ -59,14 +59,7 @@ public class LoginModel(BlueskySignInManager blueskyAuthenticationManager, ILogg
 
             // Bluesky handles are public information, so we can store them in a cookie without needing to encrypt them.
             // We will set the cookie to expire in 30 days if the user has selected "Remember my handle".
-            Response.Cookies.Append(HandleCookieName, parsedHandle.Value, new CookieOptions
-            {
-                Expires = DateTimeOffset.UtcNow + _rememberMeCookieLifetime,
-                HttpOnly = true,
-                IsEssential = true,
-                SameSite = SameSiteMode.Strict,
-                Secure = Request.IsHttps
-            });
+            Response.Cookies.Append(HandleCookieName, parsedHandle.Value, BuildCookieOptions(isSecure: Request.IsHttps, expires: _rememberMeCookieLifetime));
         }
 
         ReturnUrl = returnUrl;
@@ -100,10 +93,7 @@ public class LoginModel(BlueskySignInManager blueskyAuthenticationManager, ILogg
 
         if (Input.RememberHandle)
         {
-            Response.Cookies.Append(HandleCookieName, Input.UserHandle, new CookieOptions
-            {
-                Expires = DateTimeOffset.UtcNow + _rememberMeCookieLifetime
-            });
+            Response.Cookies.Append(HandleCookieName, Input.UserHandle, BuildCookieOptions(isSecure: Request.IsHttps, expires: _rememberMeCookieLifetime));
         }
         else if (Request.Cookies.ContainsKey(HandleCookieName))
         {
@@ -129,5 +119,17 @@ public class LoginModel(BlueskySignInManager blueskyAuthenticationManager, ILogg
 #pragma warning restore CA1848 // Use the LoggerMessage delegates
             return Page();
         }
+    }
+
+    private static CookieOptions BuildCookieOptions(bool isSecure, TimeSpan? expires = null)
+    {
+        return new CookieOptions
+        {
+            HttpOnly = true,
+            IsEssential = true,
+            SameSite = SameSiteMode.Strict,
+            Secure = isSecure,
+            Expires = expires.HasValue ? DateTimeOffset.UtcNow + expires.Value : null
+        };
     }
 }

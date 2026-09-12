@@ -27,7 +27,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
     private const string HeaderValueNoCacheNoStore = "no-cache,no-store";
     private const string HeaderValueEpochDate = "Thu, 01 Jan 1970 00:00:00 GMT";
 
-    private static readonly TimeSpan s_RefreshClockSkew = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan s_refreshClockSkew = TimeSpan.FromMinutes(5);
 
     private readonly IIdentityStore _identityStore;
 
@@ -502,7 +502,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         // Now check the actual token from the store, and spin up an agent to check if the token is still valid
         using (BlueskyAgent agent = new(hydratedTicket.Principal, BlueskyAgentOptions))
         {
-            if (agent.HasCredentials && (agent.Credentials.ExpiresOn - s_RefreshClockSkew) < currentUtc )
+            if (agent.HasCredentials && (agent.Credentials.ExpiresOn - s_refreshClockSkew) < currentUtc )
             {
                 // Fresh the token as it has expired, and update the identity store with the new credentials
                 // Do not use the cancellation token from HttpContext.RequestAborted, this needs to process all the way through
