@@ -178,7 +178,7 @@ public class DistributedCacheIdentityStore : IIdentityStore
         }
 
         await Add(identity, cancellationToken).ConfigureAwait(false);
-        Logger.CachedIdentityRenewed(did);
+        Logger.CachedIdentityRefreshed(did);
     }
 
     /// <inheritdoc/>
