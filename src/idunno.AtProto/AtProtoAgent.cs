@@ -348,6 +348,8 @@ public partial class AtProtoAgent : Agent
 
         if (disposing)
         {
+            _disposed = true;
+
             Authenticated = null;
             CredentialsUpdated = null;
             TokenRefreshFailed = null;
@@ -362,12 +364,9 @@ public partial class AtProtoAgent : Agent
             }
 
             _directoryAgent.Dispose();
-            _credentialReaderWriterLockSlim.Dispose();
         }
 
         base.Dispose(disposing);
-
-        _disposed = true;
     }
 
     /// <summary>

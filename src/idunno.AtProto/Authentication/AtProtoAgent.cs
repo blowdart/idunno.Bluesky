@@ -24,7 +24,12 @@ namespace idunno.AtProto;
 
 public partial class AtProtoAgent
 {
-    private readonly ReaderWriterLockSlim _credentialReaderWriterLockSlim = new();
+#if NET9_0_OR_GREATER
+    private readonly Lock _credentialLock = new();
+#else
+    private readonly object _credentialLock = new();
+#endif
+
     private AccessCredentials? _credentials;
 
     internal readonly bool _enableTokenRefresh = true;
@@ -43,14 +48,9 @@ public partial class AtProtoAgent
                 return null;
             }
 
-            _credentialReaderWriterLockSlim.EnterReadLock();
-            try
+            lock (_credentialLock)
             {
                 return _credentials;
-            }
-            finally
-            {
-                _credentialReaderWriterLockSlim.ExitReadLock();
             }
         }
 
@@ -58,8 +58,7 @@ public partial class AtProtoAgent
         {
             if (!_disposed)
             {
-                _credentialReaderWriterLockSlim.EnterWriteLock();
-                try
+                lock (_credentialLock)
                 {
                     _credentials = value;
                     if (_credentials is not null)
@@ -70,10 +69,6 @@ public partial class AtProtoAgent
                     {
                         Service = OriginalService;
                     }
-                }
-                finally
-                {
-                    _credentialReaderWriterLockSlim.ExitWriteLock();
                 }
             }
         }
@@ -92,18 +87,12 @@ public partial class AtProtoAgent
             }
 
             Did? did = null;
-            _credentialReaderWriterLockSlim.EnterReadLock();
-
-            try
+            lock (_credentialLock)
             {
                 if (_credentials is AccessCredentials accessCredentials)
                 {
                     did = accessCredentials.Did;
                 }
-            }
-            finally
-            {
-                _credentialReaderWriterLockSlim.ExitReadLock();
             }
 
             return did;
