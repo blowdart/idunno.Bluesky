@@ -10,6 +10,12 @@ namespace idunno.AtProto.Authentication;
 /// </summary>
 public class RefreshCredential : AtProtoCredential, IRefreshCredential
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
+    private readonly object _lock = new();
+#endif
+
     /// <summary>
     /// The refresh token value.
     /// </summary>
@@ -52,14 +58,9 @@ public class RefreshCredential : AtProtoCredential, IRefreshCredential
     {
         get
         {
-            ReaderWriterLockSlim.EnterReadLock();
-            try
+            lock (_lock)
             {
                 return _refreshToken;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
@@ -67,14 +68,9 @@ public class RefreshCredential : AtProtoCredential, IRefreshCredential
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            ReaderWriterLockSlim.EnterWriteLock();
-            try
+            lock (_lock)
             {
                 _refreshToken = value;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitWriteLock();
             }
         }
     }
@@ -88,6 +84,9 @@ public class RefreshCredential : AtProtoCredential, IRefreshCredential
     {
         ArgumentNullException.ThrowIfNull(httpRequestMessage);
 
-        httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", RefreshToken);
+        lock (_lock)
+        {
+            httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", RefreshToken);
+        }
     }
 }

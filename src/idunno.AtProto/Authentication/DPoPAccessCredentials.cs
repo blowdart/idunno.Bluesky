@@ -11,6 +11,12 @@ namespace idunno.AtProto.Authentication;
 /// </summary>
 public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredential
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
+    private readonly object _lock = new();
+#endif
+
     private string _dPoPProofKey;
     private string _dPoPNonce;
 
@@ -47,14 +53,9 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
     {
         get
         {
-            ReaderWriterLockSlim.EnterReadLock();
-            try
+            lock (_lock)
             {
                 return _dPoPProofKey;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
@@ -62,14 +63,9 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            ReaderWriterLockSlim.EnterWriteLock();
-            try
+            lock (_lock)
             {
                 _dPoPProofKey = value;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitWriteLock();
             }
         }
     }
@@ -77,31 +73,24 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
     /// <summary>
     /// Gets a string representation of the DPoP nonce to use when signing requests.
     /// </summary>
+    /// <exception cref="ArgumentException">Thrown when setting the value and the value is <see langword="null"/> or whitespace.</exception>
     public string DPoPNonce
     {
         get
         {
-            ReaderWriterLockSlim.EnterReadLock();
-            try
+            lock (_lock)
             {
                 return _dPoPNonce;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
         set
         {
-            ReaderWriterLockSlim.EnterWriteLock();
-            try
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
+
+            lock (_lock)
             {
                 _dPoPNonce = value;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitWriteLock();
             }
         }
     }
@@ -115,18 +104,21 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
     {
         ArgumentNullException.ThrowIfNull(httpRequestMessage);
 
-        DPoPProofRequest dPoPProofRequest = new()
+        lock (_lock)
         {
-            AccessToken = AccessJwt,
-            DPoPNonce = DPoPNonce,
-            Method = httpRequestMessage.Method.ToString(),
-            Url = httpRequestMessage.GetDPoPUrl()
-        };
+            DPoPProofRequest dPoPProofRequest = new()
+            {
+                AccessToken = AccessJwt,
+                DPoPNonce = DPoPNonce,
+                Method = httpRequestMessage.Method.ToString(),
+                Url = httpRequestMessage.GetDPoPUrl()
+            };
 
-        DefaultDPoPProofTokenFactory factory = new(DPoPProofKey);
-        DPoPProof proofToken = factory.CreateProofToken(dPoPProofRequest);
+            DefaultDPoPProofTokenFactory factory = new(DPoPProofKey);
+            DPoPProof proofToken = factory.CreateProofToken(dPoPProofRequest);
 
-        httpRequestMessage.SetDPoPToken(AccessJwt, proofToken.ProofToken);
+            httpRequestMessage.SetDPoPToken(AccessJwt, proofToken.ProofToken);
+        }
     }
 
     internal void Update(DPoPAccessCredentials dPoPAccessCredentials)
@@ -136,17 +128,11 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
         ArgumentException.ThrowIfNullOrWhiteSpace(dPoPAccessCredentials.RefreshToken);
         ArgumentException.ThrowIfNullOrWhiteSpace(dPoPAccessCredentials.DPoPProofKey);
 
-        ReaderWriterLockSlim.EnterWriteLock();
-
-        try
+        lock (_lock)
         {
             Update(dPoPAccessCredentials as AccessCredentials);
             _dPoPProofKey = dPoPAccessCredentials.DPoPProofKey;
             _dPoPNonce = dPoPAccessCredentials.DPoPNonce;
-        }
-        finally
-        {
-            ReaderWriterLockSlim.ExitWriteLock();
         }
     }
 }

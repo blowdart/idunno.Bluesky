@@ -257,10 +257,8 @@ idunno.AtProto.Authentication.AtProtoCredential
 idunno.AtProto.Authentication.AtProtoCredential.AtProtoCredential(System.Uri! service, idunno.AtProto.Authentication.AuthenticationType authenticationType) -> void
 idunno.AtProto.Authentication.AtProtoCredential.AuthenticationType.get -> idunno.AtProto.Authentication.AuthenticationType
 idunno.AtProto.Authentication.AtProtoCredential.AuthenticationType.set -> void
-idunno.AtProto.Authentication.AtProtoCredential.ReaderWriterLockSlim.get -> System.Threading.ReaderWriterLockSlim!
 idunno.AtProto.Authentication.AtProtoCredential.Service.get -> System.Uri!
 idunno.AtProto.Authentication.AtProtoCredential.Service.set -> void
-idunno.AtProto.Authentication.AtProtoCredential.~AtProtoCredential() -> void
 idunno.AtProto.Authentication.AuthenticationType
 idunno.AtProto.Authentication.AuthenticationType.OAuth = 3 -> idunno.AtProto.Authentication.AuthenticationType
 idunno.AtProto.Authentication.AuthenticationType.Service = 4 -> idunno.AtProto.Authentication.AuthenticationType

@@ -13,6 +13,12 @@ namespace idunno.AtProto.Authentication;
 /// </summary>
 public class AccessCredentials : RefreshCredential, IAccessCredential
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
+    private readonly object _lock = new();
+#endif
+
     private string _accessToken;
 
     /// <summary>
@@ -42,14 +48,9 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
     {
         get
         {
-            ReaderWriterLockSlim.EnterReadLock();
-            try
+            lock (_lock)
             {
                 return _accessToken;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
@@ -57,15 +58,10 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            ReaderWriterLockSlim.EnterWriteLock();
-            try
+            lock (_lock)
             {
                 _accessToken = value;
                 ExtractJwtProperties(value);
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitWriteLock();
             }
         }
     }
@@ -102,17 +98,11 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
         ArgumentException.ThrowIfNullOrWhiteSpace(accessCredentials.AccessJwt);
         ArgumentException.ThrowIfNullOrWhiteSpace(accessCredentials.RefreshToken);
 
-        ReaderWriterLockSlim.EnterWriteLock();
-
-        try
+        lock (_lock)
         {
             AccessJwt = accessCredentials.AccessJwt;
             RefreshToken = accessCredentials.RefreshToken;
             ExtractJwtProperties(_accessToken);
-        }
-        finally
-        {
-            ReaderWriterLockSlim.ExitWriteLock();
         }
     }
 

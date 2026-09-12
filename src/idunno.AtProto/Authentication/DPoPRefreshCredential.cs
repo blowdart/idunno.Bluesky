@@ -11,6 +11,12 @@ namespace idunno.AtProto.Authentication;
 /// </summary>
 public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredential
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
+    private readonly object _lock = new();
+#endif
+
     private string _dPoPProofKey;
     private string _dPoPNonce;
 
@@ -56,14 +62,9 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
     {
         get
         {
-            ReaderWriterLockSlim.EnterReadLock();
-            try
+            lock (_lock)
             {
                 return _dPoPProofKey;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
@@ -71,14 +72,9 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            ReaderWriterLockSlim.EnterWriteLock();
-            try
+            lock (_lock)
             {
                 _dPoPProofKey = value;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitWriteLock();
             }
         }
     }
@@ -91,29 +87,20 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
     {
         get
         {
-            ReaderWriterLockSlim.EnterReadLock();
-            try
+            lock (_lock)
             {
                 return _dPoPNonce;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
         set
         {
-            ReaderWriterLockSlim.EnterWriteLock();
-            try
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
+
+            lock (_lock)
             {
-                ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
                 _dPoPNonce = value;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitWriteLock();
             }
         }
     }
@@ -127,17 +114,20 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
     {
         ArgumentNullException.ThrowIfNull(httpRequestMessage);
 
-        DPoPProofRequest dPoPProofRequest = new()
+        lock (_lock)
         {
-            AccessToken = RefreshToken,
-            DPoPNonce = DPoPNonce,
-            Method = httpRequestMessage.Method.ToString(),
-            Url = httpRequestMessage.GetDPoPUrl()
-        };
+            DPoPProofRequest dPoPProofRequest = new()
+            {
+                AccessToken = RefreshToken,
+                DPoPNonce = DPoPNonce,
+                Method = httpRequestMessage.Method.ToString(),
+                Url = httpRequestMessage.GetDPoPUrl()
+            };
 
-        DefaultDPoPProofTokenFactory factory = new(DPoPProofKey);
-        DPoPProof proofToken = factory.CreateProofToken(dPoPProofRequest);
+            DefaultDPoPProofTokenFactory factory = new(DPoPProofKey);
+            DPoPProof proofToken = factory.CreateProofToken(dPoPProofRequest);
 
-        httpRequestMessage.SetDPoPToken(RefreshToken, proofToken.ProofToken);
+            httpRequestMessage.SetDPoPToken(RefreshToken, proofToken.ProofToken);
+        }
     }
 }

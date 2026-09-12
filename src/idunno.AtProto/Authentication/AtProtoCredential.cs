@@ -13,14 +13,6 @@ namespace idunno.AtProto.Authentication;
 public abstract class AtProtoCredential(Uri service, AuthenticationType authenticationType)
 {
     /// <summary>
-    /// Finalizes this instance of <see cref="AtProtoCredential"/>.
-    /// </summary>
-    ~AtProtoCredential()
-    {
-        ReaderWriterLockSlim?.Dispose();
-    }
-
-    /// <summary>
     /// The type of authentication used to acquire the credentials.
     /// </summary>
     public AuthenticationType AuthenticationType { get; protected set; } = authenticationType;
@@ -35,11 +27,6 @@ public abstract class AtProtoCredential(Uri service, AuthenticationType authenti
     /// </summary>
     /// <param name="httpRequestMessage">The <see cref="HttpRequestMessage"/> to add authentication headers to.</param>
     public abstract void SetAuthenticationHeaders(HttpRequestMessage httpRequestMessage);
-
-    /// <summary>
-    /// Gets a <see cref="ReaderWriterLock"/> used to guard access to properties.
-    /// </summary>
-    protected ReaderWriterLockSlim ReaderWriterLockSlim { get; } = new();
 
     /// <summary>
     /// Returns a static string to prevent sensitive information from being included in logs or error messages.

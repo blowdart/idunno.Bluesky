@@ -6,9 +6,13 @@ using Duende.IdentityModel.OidcClient.DPoP;
 
 namespace idunno.AtProto.Authentication;
 
-internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential, IDisposable
+internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential
 {
-    private bool _isDisposed;
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
+    private readonly object _lock = new();
+#endif
 
     public DPoPRevokeCredentials(Uri service, string token, string dPoPProofKey, string dPoPNonce) : base(service, AuthenticationType.OAuth)
     {
@@ -34,14 +38,9 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential, 
     {
         get
         {
-            ReaderWriterLockSlim.EnterReadLock();
-            try
+            lock (_lock)
             {
                 return field;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
@@ -49,14 +48,9 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential, 
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            ReaderWriterLockSlim.EnterWriteLock();
-            try
+            lock (_lock)
             {
                 field = value;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitWriteLock();
             }
         }
     }
@@ -65,14 +59,9 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential, 
     {
         get
         {
-            ReaderWriterLockSlim.EnterReadLock();
-            try
+            lock (_lock)
             {
                 return field;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
@@ -80,14 +69,9 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential, 
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            ReaderWriterLockSlim.EnterWriteLock();
-            try
+            lock (_lock)
             {
                 field = value;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitWriteLock();
             }
         }
     }
@@ -96,27 +80,19 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential, 
     {
         get
         {
-            ReaderWriterLockSlim.EnterReadLock();
-            try
+            lock (_lock)
             {
                 return field;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
         set
         {
-            ReaderWriterLockSlim.EnterWriteLock();
-            try
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
+
+            lock (_lock)
             {
                 field = value;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitWriteLock();
             }
         }
     }
@@ -125,41 +101,20 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential, 
     {
         ArgumentNullException.ThrowIfNull(httpRequestMessage);
 
-        DPoPProofRequest dPoPProofRequest = new()
+        lock (_lock)
         {
-            DPoPNonce = DPoPNonce,
-            Method = httpRequestMessage.Method.ToString(),
-            Url = httpRequestMessage.GetDPoPUrl()
-        };
 
-        DefaultDPoPProofTokenFactory factory = new(DPoPProofKey);
-        DPoPProof proofToken = factory.CreateProofToken(dPoPProofRequest);
-
-        httpRequestMessage.SetDPoPToken(Token, proofToken.ProofToken);
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!_isDisposed)
-        {
-            if (disposing)
+            DPoPProofRequest dPoPProofRequest = new()
             {
-                ReaderWriterLockSlim.Dispose();
-            }
+                DPoPNonce = DPoPNonce,
+                Method = httpRequestMessage.Method.ToString(),
+                Url = httpRequestMessage.GetDPoPUrl()
+            };
 
-            _isDisposed = true;
+            DefaultDPoPProofTokenFactory factory = new(DPoPProofKey);
+            DPoPProof proofToken = factory.CreateProofToken(dPoPProofRequest);
+
+            httpRequestMessage.SetDPoPToken(Token, proofToken.ProofToken);
         }
-    }
-
-    ~DPoPRevokeCredentials()
-    {
-        Dispose(disposing: false);
-    }
-
-    public void Dispose()
-    {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        Dispose(disposing: true);
-        GC.SuppressFinalize(this);
     }
 }

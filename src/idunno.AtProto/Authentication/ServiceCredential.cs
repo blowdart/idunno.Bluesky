@@ -15,6 +15,12 @@ namespace idunno.AtProto.Authentication;
 
 public class ServiceCredential : AtProtoCredential, IAccessCredential
 {
+#if NET9_0_OR_GREATER
+    private readonly Lock _lock = new();
+#else
+    private readonly object _lock = new();
+#endif
+
     private string _accessToken;
 
     /// <summary>
@@ -41,14 +47,9 @@ public class ServiceCredential : AtProtoCredential, IAccessCredential
     {
         get
         {
-            ReaderWriterLockSlim.EnterReadLock();
-            try
+            lock (_lock)
             {
                 return _accessToken;
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitReadLock();
             }
         }
 
@@ -56,15 +57,10 @@ public class ServiceCredential : AtProtoCredential, IAccessCredential
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-            ReaderWriterLockSlim.EnterWriteLock();
-            try
+            lock (_lock)
             {
                 _accessToken = value;
                 ExtractJwtProperties(value);
-            }
-            finally
-            {
-                ReaderWriterLockSlim.ExitWriteLock();
             }
         }
     }
@@ -92,7 +88,10 @@ public class ServiceCredential : AtProtoCredential, IAccessCredential
     {
         ArgumentNullException.ThrowIfNull(httpRequestMessage);
 
-        httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", AccessJwt);
+        lock (_lock)
+        {
+            httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", AccessJwt);
+        }
     }
 
     [MemberNotNull(nameof(ExpiresOn))]
