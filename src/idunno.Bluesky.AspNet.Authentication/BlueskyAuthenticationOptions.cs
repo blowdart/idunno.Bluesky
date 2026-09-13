@@ -176,6 +176,25 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     public IdentityStoreEvents IdentityStoreEvents { get; set; } = new IdentityStoreEvents();
 
     /// <summary>
+    /// The CorrelationStateCacheEvents may be assigned to an instance of an object created by the application at startup time. The
+    /// sign in manager calls methods on the provider which give the application control at certain points where processing is occurring.
+    /// If it is not provided a default instance is supplied which does nothing when the methods are called.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   This is applied to <see cref="CorrelationCache"/> when the options for the scheme are built, so it takes effect
+    ///   whether the cache is the default one or one the application supplied.
+    /// </para>
+    /// <para>
+    ///   Correlation state holds the PKCE code verifier and, for a DPoP login, the DPoP private key, so an application using a
+    ///   correlation cache backed by shared storage should set this to a
+    ///   <see cref="idunno.Bluesky.AspNet.Authentication.Events.DataProtectingCorrelationStateCacheEvents"/>.
+    /// </para>
+    /// </remarks>
+    [JsonIgnore]
+    public CorrelationStateCacheEvents CorrelationStateCacheEvents { get; set; } = new CorrelationStateCacheEvents();
+
+    /// <summary>
     /// <para>
     /// Controls how much time the authentication ticket stored in the cookie will remain valid from the point it is created.
     /// The expiration information is stored in the protected cookie ticket. Because of that an expired cookie will be ignored

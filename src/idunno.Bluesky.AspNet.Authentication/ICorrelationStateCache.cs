@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using idunno.AtProto.Authentication;
+using idunno.Bluesky.AspNet.Authentication.Events;
 
 namespace idunno.Bluesky.AspNet.Authentication;
 
@@ -10,6 +11,22 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// </summary>
 public interface ICorrelationStateCache
 {
+    /// <summary>
+    /// Gets or sets the <see cref="CorrelationStateCacheEvents"/> the cache raises as state is stored and retrieved.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   This is set from <see cref="BlueskyAuthenticationOptions.CorrelationStateCacheEvents"/> when the options for an
+    ///   authentication scheme are built. It cannot be read from the options by a cache's constructor, because the options
+    ///   are configured named by scheme and a constructor only has access to the unnamed instance.
+    /// </para>
+    /// <para>
+    ///   A cache instance should not be shared between authentication schemes which configure different events, as the
+    ///   scheme whose options are built last would win.
+    /// </para>
+    /// </remarks>
+    CorrelationStateCacheEvents Events { get; set; }
+
     /// <summary>
     /// Adds the specified <paramref name="state"/> to the authentication state cache 
     /// using the <paramref name="correlationId"/> as a key.
