@@ -14,6 +14,23 @@ namespace idunno.Bluesky.AspNet.Authentication;
 [SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "Nested type is an extension property.")]
 public static class ClaimsExtensions
 {
+    /// <summary>
+    /// Gets a value indicating whether <paramref name="uri"/> is safe to surface to an application as a web link.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Profile URIs originate from user supplied profile fields, and <see cref="Uri.TryCreate(string?, UriKind, out Uri?)"/>
+    ///   happily parses schemes such as <c>javascript:</c>. Returning one of those would hand an application a script
+    ///   injection vector the moment it rendered the value as an anchor target, so only HTTP and HTTPS are allowed.
+    /// </para>
+    /// </remarks>
+    /// <param name="uri">The <see cref="Uri"/> to check.</param>
+    /// <returns><see langword="true"/> if <paramref name="uri"/> is an HTTP or HTTPS URI; otherwise <see langword="false"/>.</returns>
+    internal static bool IsSafeWebUri(Uri? uri) =>
+        uri is not null &&
+        (uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.Ordinal) ||
+         uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.Ordinal));
+
     /// <summary>Extension methods for <see cref="ClaimsPrincipal"/>.</summary>
     extension(ClaimsPrincipal principal)
     {
@@ -100,7 +117,7 @@ public static class ClaimsExtensions
         }
 
         /// <summary>
-        /// Gets the user's specified website from the claims principal, if any and it converts to a valid <see cref="Uri"/>.
+        /// Gets the user's specified website from the claims principal, if any and it converts to a valid HTTP or HTTPS <see cref="Uri"/>.
         /// </summary>
         /// <value>The website if present; otherwise, <see langword="null"/>.</value>
         public Uri? Website
@@ -113,7 +130,7 @@ public static class ClaimsExtensions
                 }
                 Claim? claim = principal.Claims.FirstOrDefault(c => c.Type == Bluesky.ClaimTypes.Website);
 
-                if (claim is not null && claim.Value is not null && Uri.TryCreate(claim.Value, UriKind.Absolute, out Uri? uri))
+                if (claim is not null && claim.Value is not null && Uri.TryCreate(claim.Value, UriKind.Absolute, out Uri? uri) && IsSafeWebUri(uri))
                 {
                     return uri;
                 }
@@ -123,7 +140,7 @@ public static class ClaimsExtensions
         }
 
         /// <summary>
-        /// Gets the URI for the user's specified avatar from the claims principal, if any and it converts to a valid <see cref="Uri"/>.
+        /// Gets the URI for the user's specified avatar from the claims principal, if any and it converts to a valid HTTP or HTTPS <see cref="Uri"/>.
         /// </summary>
         /// <value>The avatar if present; otherwise, <see langword="null"/>.</value>
         public Uri? Avatar
@@ -136,7 +153,7 @@ public static class ClaimsExtensions
                 }
                 Claim? claim = principal.Claims.FirstOrDefault(c => c.Type == Bluesky.ClaimTypes.Avatar);
 
-                if (claim is not null && claim.Value is not null && Uri.TryCreate(claim.Value, UriKind.Absolute, out Uri? uri))
+                if (claim is not null && claim.Value is not null && Uri.TryCreate(claim.Value, UriKind.Absolute, out Uri? uri) && IsSafeWebUri(uri))
                 {
                     return uri;
                 }
@@ -146,7 +163,7 @@ public static class ClaimsExtensions
         }
 
         /// <summary>
-        /// Gets the URI for the user's specified profile banner from the claims principal, if any and it converts to a valid <see cref="Uri"/>.
+        /// Gets the URI for the user's specified profile banner from the claims principal, if any and it converts to a valid HTTP or HTTPS <see cref="Uri"/>.
         /// </summary>
         /// <value>The banner if present; otherwise, <see langword="null"/>.</value>
         public Uri? Banner
@@ -159,7 +176,7 @@ public static class ClaimsExtensions
                 }
                 Claim? claim = principal.Claims.FirstOrDefault(c => c.Type == Bluesky.ClaimTypes.Banner);
 
-                if (claim is not null && claim.Value is not null && Uri.TryCreate(claim.Value, UriKind.Absolute, out Uri? uri))
+                if (claim is not null && claim.Value is not null && Uri.TryCreate(claim.Value, UriKind.Absolute, out Uri? uri) && IsSafeWebUri(uri))
                 {
                     return uri;
                 }

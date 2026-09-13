@@ -219,29 +219,29 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
                     profile.Issuer));
             }
 
-            if (profile.Website is not null)
+            if (ClaimsExtensions.IsSafeWebUri(profile.Website))
             {
                 identity.AddClaim(new Claim(
                     Bluesky.ClaimTypes.Website,
-                    profile.Website.ToString(),
+                    profile.Website!.ToString(),
                     ClaimValueTypes.String,
                     profile.Issuer));
             }
 
-            if (profile.Avatar is not null)
+            if (ClaimsExtensions.IsSafeWebUri(profile.Avatar))
             {
                 identity.AddClaim(new Claim(
                     Bluesky.ClaimTypes.Avatar,
-                    profile.Avatar.ToString(),
+                    profile.Avatar!.ToString(),
                     ClaimValueTypes.String,
                     profile.Issuer));
             }
 
-            if (profile.Banner is not null)
+            if (ClaimsExtensions.IsSafeWebUri(profile.Banner))
             {
                 identity.AddClaim(new Claim(
                     Bluesky.ClaimTypes.Banner,
-                    profile.Banner.ToString(),
+                    profile.Banner!.ToString(),
                     ClaimValueTypes.String,
                     profile.Issuer));
             }

@@ -49,8 +49,11 @@ public sealed class EphemeralProfileCache : IProfileCache
         {
             lock (s_warnedLock)
             {
-                s_warned = true;
-                Logger.UsingInMemoryProfileCacheWarning();
+                if (!s_warned)
+                {
+                    s_warned = true;
+                    Logger.UsingInMemoryProfileCacheWarning();
+                }
             }
         }
     }
