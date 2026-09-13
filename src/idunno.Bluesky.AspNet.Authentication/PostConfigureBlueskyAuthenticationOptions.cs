@@ -81,5 +81,6 @@ public class PostConfigureBlueskyAuthenticationOptions(
         options.IdentityStore.Events = options.IdentityStoreEvents;
 
         options.CorrelationCache ??= new EphemeralCorrelationStateCache(loggerFactory);
+        options.CorrelationCache.Events = options.CorrelationStateCacheEvents;
     }
 }

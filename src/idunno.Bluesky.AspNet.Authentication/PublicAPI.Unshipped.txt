@@ -324,3 +324,31 @@ virtual idunno.Bluesky.AspNet.Authentication.SignInResult.Equals(idunno.Bluesky.
 virtual idunno.Bluesky.AspNet.Authentication.SignInResult.PrintMembers(System.Text.StringBuilder! builder) -> bool
 idunno.Bluesky.AspNet.Authentication.BlueskyAgentFactory.BlueskyAgentFactory(Microsoft.AspNetCore.Http.IHttpContextAccessor! contextAccessor, Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions!>! authenticationOptionsMonitor, Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.BlueskyAgentOptions!>! agentOptionsMonitor, Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory, string! authenticationScheme) -> void
 static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddBlueskyAgentFactory(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! authenticationScheme) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.CorrelationStateCacheEvents.get -> idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateCacheEvents!
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.CorrelationStateCacheEvents.set -> void
+idunno.Bluesky.AspNet.Authentication.DistributedCacheCorrelationStateCache.Events.get -> idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateCacheEvents!
+idunno.Bluesky.AspNet.Authentication.DistributedCacheCorrelationStateCache.Events.set -> void
+idunno.Bluesky.AspNet.Authentication.ICorrelationStateCache.Events.get -> idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateCacheEvents!
+idunno.Bluesky.AspNet.Authentication.ICorrelationStateCache.Events.set -> void
+idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateCacheEvents
+idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateCacheEvents.CorrelationStateCacheEvents() -> void
+idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateCacheEvents.OnStoring.get -> System.Func<idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateSettingContext!, System.Threading.Tasks.Task!>!
+idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateCacheEvents.OnStoring.set -> void
+idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateCacheEvents.OnRetrieved.get -> System.Func<idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateRetrievedContext!, System.Threading.Tasks.Task!>!
+idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateCacheEvents.OnRetrieved.set -> void
+virtual idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateCacheEvents.PreStoring(idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateSettingContext! context) -> System.Threading.Tasks.Task!
+virtual idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateCacheEvents.PostRetrieval(idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateRetrievedContext! context) -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateSettingContext
+idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateSettingContext.CorrelationStateSettingContext(string! state) -> void
+idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateSettingContext.State.get -> string!
+idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateSettingContext.ReplaceState(string! state) -> void
+idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateRetrievedContext
+idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateRetrievedContext.CorrelationStateRetrievedContext(string! state) -> void
+idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateRetrievedContext.State.get -> string!
+idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateRetrievedContext.ReplaceState(string! state) -> void
+idunno.Bluesky.AspNet.Authentication.Events.DataProtectingCorrelationStateCacheEvents
+const idunno.Bluesky.AspNet.Authentication.Events.DataProtectingCorrelationStateCacheEvents.ProtectorPurpose = "idunno.Bluesky.AspNet.Authentication.CorrelationStateCache.v1" -> string!
+idunno.Bluesky.AspNet.Authentication.Events.DataProtectingCorrelationStateCacheEvents.DataProtectingCorrelationStateCacheEvents(Microsoft.AspNetCore.DataProtection.IDataProtector! protector) -> void
+idunno.Bluesky.AspNet.Authentication.Events.DataProtectingCorrelationStateCacheEvents.DataProtectingCorrelationStateCacheEvents(Microsoft.AspNetCore.DataProtection.IDataProtectionProvider! dataProtectionProvider) -> void
+override idunno.Bluesky.AspNet.Authentication.Events.DataProtectingCorrelationStateCacheEvents.PreStoring(idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateSettingContext! context) -> System.Threading.Tasks.Task!
+override idunno.Bluesky.AspNet.Authentication.Events.DataProtectingCorrelationStateCacheEvents.PostRetrieval(idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateRetrievedContext! context) -> System.Threading.Tasks.Task!
