@@ -573,8 +573,16 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
             return AuthenticateResults.s_missingDidInCookie;
         }
 
-        CurrentUserDid = new Did(didClaim.Value);
-        ClaimsIdentity? storedIdentity = await IdentityStore.GetIdentity(didClaim.Value).ConfigureAwait(false);
+        if (!Did.TryParse(didClaim.Value, out Did? did))
+        {
+            // The ticket is protected, so a DID which will not parse means the data protection key ring is shared with
+            // something issuing a different shape of ticket, rather than a user editing their cookie.
+            Logger.InvalidDidInCookie();
+            return AuthenticateResults.s_invalidDidInCookie;
+        }
+
+        CurrentUserDid = did;
+        ClaimsIdentity? storedIdentity = await IdentityStore.GetIdentity(did).ConfigureAwait(false);
 
         if (storedIdentity == null)
         {
