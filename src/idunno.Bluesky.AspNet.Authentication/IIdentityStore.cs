@@ -78,16 +78,36 @@ public interface IIdentityStore
     /// </summary>
     /// <param name="did">The <see cref="Did"/> to mark as being refreshed.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    /// <returns>The task object representing the asynchronous operation. The task result contains <see langword="true"/> if the caller can start a refresh flow; otherwise, <see langword="false"/>.</returns>
-    Task<bool> StartRefresh(Did did, CancellationToken cancellationToken = default);
+    /// <returns>
+    ///   The task object representing the asynchronous operation. The task result contains a token identifying the caller's ownership of the refresh lock
+    ///   if the caller can start a refresh flow; otherwise <see langword="null"/>.
+    /// </returns>
+    /// <remarks>
+    /// <para>
+    ///   Implementations must acquire the lock atomically. AT Proto refresh tokens are single use, so if two callers are allowed to refresh the same
+    ///   <see cref="Did"/> concurrently the loser's refresh will fail against a token the winner has already consumed.
+    /// </para>
+    /// <para>
+    ///   The returned token must be passed to <see cref="EndRefresh(Did, string?, CancellationToken)"/> so that a caller can only release a lock it still
+    ///   owns. Without it a caller whose lock had already expired and been re-acquired by someone else would release the new owner's lock.
+    /// </para>
+    /// </remarks>
+    Task<string?> StartRefresh(Did did, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Removes the specified <paramref name="did"/> from the list of DIDs being refreshed. This is used to prevent multiple refreshes from occurring at the same time.
     /// </summary>
     /// <param name="did">The <see cref="Did"/> to remove from the list of DIDs being refreshed.</param>
+    /// <param name="refreshLockToken">The token returned by <see cref="StartRefresh(Did, CancellationToken)"/> when the lock was acquired.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    Task EndRefresh(Did did, CancellationToken cancellationToken = default);
+    /// <remarks>
+    /// <para>
+    ///   Implementations must only release the lock if <paramref name="refreshLockToken"/> matches the token currently held against <paramref name="did"/>,
+    ///   otherwise a caller whose lock expired mid refresh would release a lock another caller has since acquired.
+    /// </para>
+    /// </remarks>
+    Task EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Determines if the specified <paramref name="did"/> is currently being refreshed. This is used to prevent multiple refreshes from occurring at the same time.
