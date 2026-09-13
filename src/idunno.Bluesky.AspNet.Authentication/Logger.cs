@@ -73,8 +73,8 @@ internal static partial class Logger
     [LoggerMessage(252, LogLevel.Error, "Cached identity for {did} is corrupt.")]
     public static partial void CachedIdentityIsCorrupt(this ILogger logger, Did did, Exception ex);
 
-    [LoggerMessage(253, LogLevel.Debug, "Identity cache refreshed for {did}")]
-    public static partial void CachedIdentityRefreshed(this ILogger logger, Did did);
+    [LoggerMessage(253, LogLevel.Debug, "Identity cache updated for {did}")]
+    public static partial void CachedIdentityUpdated(this ILogger logger, Did did);
 
     [LoggerMessage(254, LogLevel.Debug, "Entry for {did} removed from cache")]
     public static partial void CachedIdentityRemoved(this ILogger logger, Did did);

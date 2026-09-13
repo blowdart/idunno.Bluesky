@@ -124,7 +124,7 @@ public class EphemeralIdentityStore : IIdentityStore
 
         Did did = Set(identity, TokenCacheMemoryOptions);
 
-        Logger.CachedIdentityRefreshed(did);
+        Logger.CachedIdentityUpdated(did);
         return Task.CompletedTask;
     }
 

@@ -20,7 +20,6 @@ public sealed partial class DefaultFacetExtractor : IFacetExtractor
     private static partial Regex s_HashTagRegex();
 
     [GeneratedRegex(@"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+,.~#&\/=]*)(\?[-a-zA-Z0-9()@:%_\+,.~#&\/=]+)?", RegexOptions.IgnoreCase, 5000)]
-
     private static partial Regex s_UrlRegex();
 
     [GeneratedRegex(@"@\w+(\.\w+)*", RegexOptions.IgnoreCase, 5000)]

@@ -20,18 +20,19 @@ public record Properties
     /// <summary>
     /// Creates a new instance of <see cref="Properties"/>.
     /// </summary>
-    /// <param name="uri">The external <see cref="Uri"/> for the link.</param>
+    /// <param name="uri">The external uri, as a string, for the link.</param>
     /// <param name="title">The title for the external link.</param>
     /// <param name="description">The description of the external link, if any.</param>
     /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
     /// <param name="associatedRefs">The collection of <see cref="StrongReference"/> representing the Atmosphere records for this external content, if any.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="title"/>, or <paramref name="description"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="uri"/> is <see langword="null"/> or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="title"/> or <paramref name="description"/> is <see langword="null"/>.</exception>
     [JsonConstructor]
     [SuppressMessage("Design", "CA1054:URI-like parameters should not be strings", Justification = "The Bluesky web app can create facets with illegal URIs, so a string is used to accommodate them.")]
 
     public Properties(string uri, string title, string description, Blob? thumbnail = null, IReadOnlyCollection<StrongReference>? associatedRefs = null) : base()
     {
-        ArgumentNullException.ThrowIfNull(uri);
+        ArgumentException.ThrowIfNullOrWhiteSpace(uri);
         ArgumentNullException.ThrowIfNull(title);
         ArgumentNullException.ThrowIfNull(description);
 
@@ -43,12 +44,23 @@ public record Properties
     }
 
     /// <summary>
-    /// Gets or sets the external <see cref="Uri"/>.
+    /// Gets or sets the external uri, as a string.
     /// </summary>
+    /// <exception cref="ArgumentException">Thrown when the value is <see langword="null"/> or whitespace.</exception>
+    /// <remarks><para>This property is a string to accommodate illegal URIs that the Bluesky web app can create. Validate the URI before using it.</para></remarks>
     [JsonInclude]
     [JsonRequired]
     [SuppressMessage("Design", "CA1056:URI-like properties should not be strings", Justification = "The official Bluesky can create facets with illegal URIs, so this property is a string to accommodate those cases.")]
-    public string Uri { get; set; }
+    public string Uri {
+        get;
+
+        set
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
+            field = value;
+        }
+
+    }
 
     /// <summary>
     /// Gets or sets the title for the external link.
