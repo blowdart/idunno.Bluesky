@@ -128,7 +128,7 @@ public class DistributedCacheIdentityStore : IIdentityStore
 
         IdentityStoreSettingContext context = new(claimsIdentityAsBytes);
         await Events.PreStoring(context).ConfigureAwait(false);
-        claimsIdentityAsBytes = [.. context.Identity];
+        claimsIdentityAsBytes = context.Identity.ToArray();
 
         await Cache.SetAsync($"{ClaimsStorePrefix}{did}", claimsIdentityAsBytes, TokenCacheMemoryOptions, token: cancellationToken).ConfigureAwait(false);
 
