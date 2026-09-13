@@ -75,6 +75,11 @@ public class PostConfigureBlueskyAuthenticationOptions(
         }
 
         options.IdentityStore ??= new EphemeralIdentityStore(loggerFactory, options.IdentityStoreEntryTimeToLive, options.RefreshLockLength);
+
+        // The options are configured named by scheme, so a store cannot read the events it should raise from its own
+        // constructor, which only ever sees the unnamed options instance. They are pushed onto the store here instead.
+        options.IdentityStore.Events = options.IdentityStoreEvents;
+
         options.CorrelationCache ??= new EphemeralCorrelationStateCache(loggerFactory);
     }
 }

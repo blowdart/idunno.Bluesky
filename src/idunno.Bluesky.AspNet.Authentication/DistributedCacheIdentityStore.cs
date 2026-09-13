@@ -48,6 +48,7 @@ public class DistributedCacheIdentityStore : IIdentityStore
 
         Cache = cache;
         Logger = loggerFactory.CreateLogger<DistributedCacheIdentityStore>();
+
         if (options is not null)
         {
             TokenCacheMemoryOptions = new DistributedCacheEntryOptions()
@@ -59,8 +60,6 @@ public class DistributedCacheIdentityStore : IIdentityStore
             {
                 AbsoluteExpirationRelativeToNow = options.Value.RefreshLockLength ?? s_defaultRefreshLockTTL
             };
-
-            Events = options.Value.IdentityStoreEvents ?? new IdentityStoreEvents();
         }
         else
         {
@@ -73,8 +72,6 @@ public class DistributedCacheIdentityStore : IIdentityStore
             {
                 AbsoluteExpirationRelativeToNow = s_defaultRefreshLockTTL
             };
-
-            Events = new IdentityStoreEvents();
         }
     }
 
@@ -101,7 +98,8 @@ public class DistributedCacheIdentityStore : IIdentityStore
 
     private ILogger<DistributedCacheIdentityStore> Logger { get; }
 
-    private IdentityStoreEvents Events { get; }
+    /// <inheritdoc/>
+    public IdentityStoreEvents Events { get; set; } = new IdentityStoreEvents();
 
     /// <inheritdoc/>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="claimsIdentity"/> is <see langword="null" />./</exception>

@@ -6,6 +6,7 @@ using System.Security.Claims;
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.AtProto.Events;
+using idunno.Bluesky.AspNet.Authentication.Events;
 
 namespace idunno.Bluesky.AspNet.Authentication;
 
@@ -14,6 +15,26 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// </summary>
 public interface IIdentityStore
 {
+    /// <summary>
+    /// Gets or sets the <see cref="IdentityStoreEvents"/> the store raises as identities are stored and retrieved.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   This is set from <see cref="BlueskyAuthenticationOptions.IdentityStoreEvents"/> when the options for an
+    ///   authentication scheme are built. It cannot be read from the options by a store's constructor, because the options
+    ///   are configured named by scheme and a constructor only has access to the unnamed instance.
+    /// </para>
+    /// <para>
+    ///   A store instance should not be shared between authentication schemes which configure different events, as the
+    ///   scheme whose options are built last would win.
+    /// </para>
+    /// <para>
+    ///   A store which does not serialize the identities it holds, such as <see cref="EphemeralIdentityStore"/>, has nothing
+    ///   to hand to the events and may ignore this property.
+    /// </para>
+    /// </remarks>
+    IdentityStoreEvents Events { get; set; }
+
     /// <summary>
     /// Adds the specified <see cref="ClaimsIdentity"/> to the identity store.
     /// </summary>

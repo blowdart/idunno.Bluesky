@@ -10,13 +10,36 @@ using idunno.AtProto.Authentication;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+
+using idunno.Bluesky.AspNet.Authentication.Events;
 
 namespace idunno.Bluesky.AspNet.Authentication;
 
 /// <summary>
 /// An in memory implementation of <see cref="IIdentityStore"/>.
 /// </summary>
+/// <remarks>
+/// <para>
+///   This store is intended for development time use only. It holds live <see cref="ClaimsIdentity"/> instances, including
+///   their access and refresh token claims, in the memory of a single process. Nothing is encrypted, and the identities it
+///   holds are readable by anything with access to the process memory or to a dump of it.
+/// </para>
+/// <para>
+///   The <see cref="Events"/> raised by a serializing store, which is where
+///   <see cref="idunno.Bluesky.AspNet.Authentication.Events.DataProtectingIdentityStoreEvents"/> applies data protection, are never raised by this store, because
+///   it has no serialized payload to protect. Setting
+///   <see cref="BlueskyAuthenticationOptions.IdentityStoreEvents"/> has no effect when this store is in use.
+/// </para>
+/// <para>
+///   Its contents are also lost when the process restarts, signing every user out, and are not shared between instances of an
+///   application, so it cannot be used in a farm or with more than one worker process.
+/// </para>
+/// <para>
+///   Production applications should use <see cref="DistributedCacheIdentityStore"/>, or another
+///   <see cref="IIdentityStore"/> implementation backed by durable storage, with
+///   <see cref="idunno.Bluesky.AspNet.Authentication.Events.DataProtectingIdentityStoreEvents"/> configured so the stored credentials are encrypted at rest.
+/// </para>
+/// </remarks>
 public class EphemeralIdentityStore : IIdentityStore
 {
     private static volatile bool s_warned;
@@ -88,6 +111,15 @@ public class EphemeralIdentityStore : IIdentityStore
     private MemoryCacheEntryOptions RefreshCacheMemoryOptions { get; set; }
 
     private ILogger<EphemeralIdentityStore> Logger { get; set; }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// <para>
+    ///   This store holds live <see cref="ClaimsIdentity"/> instances in process and never serializes them, so there is no
+    ///   payload to hand to the events and this property is not used.
+    /// </para>
+    /// </remarks>
+    public IdentityStoreEvents Events { get; set; } = new IdentityStoreEvents();
 
     /// <inheritdoc />
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="claimsIdentity"/> is <see langword="null" />./</exception>
