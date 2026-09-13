@@ -31,6 +31,7 @@ public record Properties
     [SuppressMessage("Design", "CA1054:URI-like parameters should not be strings", Justification = "The Bluesky web app can create facets with illegal URIs, so a string is used to accommodate them.")]
     public Properties(string uri, string title, string description, Blob? thumbnail = null, IReadOnlyCollection<StrongReference>? associatedRefs = null) : base()
     {
+        // Even though we are using a string for the URI, we still want to ensure that it is not null or whitespace, as its marked as required in the lexicon and this a bare minimum validation.
         ArgumentException.ThrowIfNullOrWhiteSpace(uri);
         ArgumentNullException.ThrowIfNull(title);
         ArgumentException.ThrowIfNullOrWhiteSpace(description);
@@ -55,6 +56,7 @@ public record Properties
 
         set
         {
+            // Even though we are using a string for the URI, we still want to ensure that it is not null or whitespace, as its marked as required in the lexicon and this a bare minimum validation.
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
             field = value;
         }

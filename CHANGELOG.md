@@ -26,6 +26,7 @@
 * `RichText.LinkFacetFeature.Uri` has been changed from a `Uri` type to a `string` type as the Bluesky web app can create facets with illegal URIs. The constructor has also been updated to accept a `string` instead of a `Uri`.
 * `Embed.External.Properties.Uri` has been changed from a `Uri` type to a `string` type as the Bluesky web app can create facets with illegal URIs. The constructor has also been updated to accept a `string` instead of a `Uri`.
 * `Embed.EmbeddedExternal` has been updated to only accept a `string` for its `uri` constructor parameter instead of a `Uri` type, as the Bluesky web app can create facets with illegal URIs.
+* `Embed.EmbeddedExternal` constructors have been simplifed to a single constructor, which has defaults for all optional parameters.
 
 ## 6.0.0 - 2026-09-05
 
