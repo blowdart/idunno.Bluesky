@@ -2858,7 +2858,6 @@ idunno.Bluesky.RichText.Link.Uri.get -> System.Uri!
 idunno.Bluesky.RichText.Link.Uri.init -> void
 idunno.Bluesky.RichText.LinkFacetFeature
 idunno.Bluesky.RichText.LinkFacetFeature.Equals(idunno.Bluesky.RichText.LinkFacetFeature? other) -> bool
-idunno.Bluesky.RichText.LinkFacetFeature.Uri.init -> void
 idunno.Bluesky.RichText.Mention
 idunno.Bluesky.RichText.Mention.Did.get -> idunno.AtProto.Did!
 idunno.Bluesky.RichText.Mention.Did.init -> void
