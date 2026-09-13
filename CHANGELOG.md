@@ -44,6 +44,16 @@
   rotation round trip on the next call.
 * `AuthenticationBuilder.AddBluesky()` and `AuthenticationBuilder.AddBluesky(string authenticationScheme)` no longer throw an `ArgumentNullException`.
   Both overloads pass a `null` configuration delegate to the underlying overload, which rejected it, so neither could be used.
+* `DistributedCacheIdentityStore.StartRefresh` no longer allows two callers to refresh the same DID at the same time as easily. It performed a
+  non atomic get then set, so two requests could both be told they had acquired the refresh lock. As AT Proto refresh tokens are single use the loser's
+  refresh then failed against a token the winner had already consumed, and the handler responded by removing the identity from the store, signing the
+  user out. `IDistributedCache` has no atomic conditional set, so the lock is now taken by writing a unique token and reading it back, which narrows the
+  window to the gap between those two calls rather than it spanning the whole refresh. The method is now `virtual`, so a cache which can do better, such
+  as Redis with `SET NX`, can override it.
+* `BlueskyAuthenticationHandler` no longer signs a user out when a token refresh fails but the identity store holds unexpired credentials written by a
+  concurrent refresh. It now re-reads the store before removing the identity, which makes a lost refresh race harmless rather than fatal.
+* `EndRefresh` on both identity stores no longer releases a refresh lock held by another caller. It removed the lock unconditionally, so a caller whose
+  lock had expired part way through a refresh would release the lock a second caller had since acquired, letting a third start refreshing as well.
 
 ### Breaking Changes
 
@@ -58,6 +68,10 @@
 
 #### idunno.Bluesky.AspNet.Authentication
 
+* `IIdentityStore.StartRefresh` has changed from `Task<bool>` to `Task<string?>`, returning a token identifying the caller's ownership of the refresh
+  lock, or `null` if the lock could not be acquired. `IIdentityStore.EndRefresh` takes that token as a new second parameter and must only release the
+  lock if it still matches, so that a caller whose lock expired mid refresh cannot release a lock another caller has since acquired. Custom identity
+  stores need updating, and implementations must acquire the lock atomically.
 * `ProfileClaimsTransformer`'s constructor takes an additional `IOptionsMonitor<BlueskyAuthenticationOptions>` parameter, used to locate the
   `IIdentityStore` updated credentials are saved to. The transformer is resolved from dependency injection, so applications registering it with
   `AddProfileClaimsTransformer()` need no changes.

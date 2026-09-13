@@ -83,8 +83,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
     /// <summary>
     /// Gets the <see cref="IIdentityStore"/> configured for the authentication scheme this handler is running as.
-    /// </summary>
-    /// <remarks>
+    /// </summary>    /// <remarks>
     /// <para>
     ///   <see cref="BlueskyAuthenticationOptions"/> are configured against the name of the authentication scheme they belong to, so this must come from
     ///   <see cref="AuthenticationHandler{TOptions}.Options"/>, which the base class resolves with the scheme name, rather than from the unnamed options
@@ -450,6 +449,18 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         return binding == null ? null : Convert.ToBase64String(binding);
     }
 
+    /// <summary>
+    /// Returns a flag indicating whether the credentials carried by <paramref name="identity"/> are present and have not expired.
+    /// </summary>
+    /// <param name="identity">The <see cref="ClaimsIdentity"/> whose credentials should be checked.</param>
+    /// <param name="currentUtc">The current UTC time to check the credential expiry against.</param>
+    private bool HasUnexpiredCredentials(ClaimsIdentity identity, DateTimeOffset currentUtc)
+    {
+        using BlueskyAgent agent = new(new ClaimsPrincipal(identity), BlueskyAgentOptions);
+
+        return agent.HasCredentials && (agent.Credentials.ExpiresOn - s_refreshClockSkew) >= currentUtc;
+    }
+
     private static bool IsHostRelative(string path)
     {
         if (string.IsNullOrEmpty(path))
@@ -520,9 +531,9 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
                 if (!await IdentityStore.IsRefreshing(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false))
                 {
-                    bool startedRefresh = await IdentityStore.StartRefresh(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+                    string? refreshLockToken = await IdentityStore.StartRefresh(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false);
 
-                    if (startedRefresh)
+                    if (refreshLockToken is not null)
                     {
                         Did refreshingFor = CurrentUserDid;
 
@@ -531,6 +542,21 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                             bool refreshCredentialsResult = await agent.RefreshCredentials(cancellationToken: CancellationToken.None).ConfigureAwait(false);
                             if (!refreshCredentialsResult || !agent.IsAuthenticated)
                             {
+                                // A refresh can fail because another request refreshed concurrently and consumed the single use refresh token, so
+                                // check whether the store now holds usable credentials before signing the user out.
+                                ClaimsIdentity? concurrentlyRefreshedIdentity =
+                                    await IdentityStore.GetIdentity(refreshingFor, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+
+                                if (concurrentlyRefreshedIdentity is not null &&
+                                    HasUnexpiredCredentials(concurrentlyRefreshedIdentity, currentUtc))
+                                {
+                                    Logger.TokenRefreshFailedButStoreIsCurrent(refreshingFor);
+
+                                    hydratedTicket = new AuthenticationTicket(
+                                        new ClaimsPrincipal(concurrentlyRefreshedIdentity), ticket.Properties, ticket.AuthenticationScheme);
+                                    return AuthenticateResult.Success(hydratedTicket);
+                                }
+
                                 CurrentUserDid = null;
                                 await IdentityStore.Remove(refreshingFor).ConfigureAwait(false);
                                 return AuthenticateResults.s_tokenRefreshFailed;
@@ -557,7 +583,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                         }
                         finally
                         {
-                            await IdentityStore.EndRefresh(refreshingFor, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+                            await IdentityStore.EndRefresh(refreshingFor, refreshLockToken, cancellationToken: CancellationToken.None).ConfigureAwait(false);
                         }
                     }
 
