@@ -29,8 +29,6 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
     private static readonly TimeSpan s_refreshClockSkew = TimeSpan.FromMinutes(5);
 
-    private readonly IIdentityStore _identityStore;
-
     private Task<AuthenticateResult>? _readCookieTask;
 
     private DateTimeOffset? _refreshIssuedUtc;
@@ -48,7 +46,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
     /// <param name="logger">The <see cref="ILoggerFactory"/> to create loggers from.</param>
     /// <param name="encoder">The <see cref="UrlEncoder"/>.</param>
     /// <param name="clock">The <see cref="ISystemClock"/>.</param>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="options"/> or <paramref name="options.CurrentValue.IdentityStore"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="options"/> is <see langword="null"/>.</exception>
     [Obsolete("ISystemClock is obsolete, use TimeProvider on AuthenticationSchemeOptions instead.")]
     [SuppressMessage("Info Code Smell", "S1133:Deprecated code should be removed", Justification = "Until ASP.NET Core removes this from SignInAuthenticationHandler it must stay.")]
     public BlueskyAuthenticationHandler(
@@ -59,9 +57,6 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         ISystemClock clock) : base(options, logger, encoder, clock)
     {
         ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(options.CurrentValue.IdentityStore);
-
-        _identityStore = options.CurrentValue.IdentityStore;
 
         BlueskyAgentOptionsMonitor = agentOptions;
     }
@@ -73,7 +68,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
     /// <param name="agentOptions">The monitor for the agent options instance.</param>
     /// <param name="logger">The <see cref="ILoggerFactory"/> to create loggers from.</param>
     /// <param name="encoder">The <see cref="UrlEncoder"/>.</param>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="options"/> or <paramref name="options.CurrentValue.IdentityStore"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="options"/> is <see langword="null"/>.</exception>
     public BlueskyAuthenticationHandler(
         IOptionsMonitor<BlueskyAuthenticationOptions> options,
         IOptionsMonitor<BlueskyAgentOptions> agentOptions,
@@ -82,12 +77,24 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         : base(options, logger, encoder)
     {
         ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(options.CurrentValue.IdentityStore);
-
-        _identityStore = options.CurrentValue.IdentityStore;
 
         BlueskyAgentOptionsMonitor = agentOptions;
     }
+
+    /// <summary>
+    /// Gets the <see cref="IIdentityStore"/> configured for the authentication scheme this handler is running as.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   <see cref="BlueskyAuthenticationOptions"/> are configured against the name of the authentication scheme they belong to, so this must come from
+    ///   <see cref="AuthenticationHandler{TOptions}.Options"/>, which the base class resolves with the scheme name, rather than from the unnamed options
+    ///   instance exposed by <see cref="IOptionsMonitor{TOptions}.CurrentValue"/>.
+    /// </para>
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown if no <see cref="IIdentityStore"/> is configured for the scheme.</exception>
+    private IIdentityStore IdentityStore =>
+        Options.IdentityStore ??
+            throw new InvalidOperationException($"No {nameof(IIdentityStore)} is configured for the {Scheme.Name} authentication scheme.");
 
     /// <summary>
     /// The handler calls methods on the events which give the application control at certain points where processing is occurring.
@@ -227,7 +234,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         }
 
         // Store the full identity in the identity store.
-        await _identityStore.Add(userIdentity).ConfigureAwait(false);
+        await IdentityStore.Add(userIdentity).ConfigureAwait(false);
 
         // Strip the principal down to just the DID, acting as a reference cookie.
         var ticketPrincipal = new ClaimsPrincipal(
@@ -277,7 +284,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
         if (CurrentUserDid is not null)
         {
-            await _identityStore.Remove(CurrentUserDid).ConfigureAwait(false);
+            await IdentityStore.Remove(CurrentUserDid).ConfigureAwait(false);
         }
 
         var context = new BlueskySigningOutContext(
@@ -479,7 +486,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         }
 
         CurrentUserDid = new Did(didClaim.Value);
-        ClaimsIdentity? storedIdentity = await _identityStore.GetIdentity(didClaim.Value).ConfigureAwait(false);
+        ClaimsIdentity? storedIdentity = await IdentityStore.GetIdentity(didClaim.Value).ConfigureAwait(false);
 
         if (storedIdentity == null)
         {
@@ -491,7 +498,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
         if (expiresUtc != null && expiresUtc.Value < currentUtc)
         {
-            await _identityStore.Remove(CurrentUserDid).ConfigureAwait(false);
+            await IdentityStore.Remove(CurrentUserDid).ConfigureAwait(false);
             CurrentUserDid = null;
             return AuthenticateResults.s_expiredTicket;
         }
@@ -511,9 +518,9 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                     return AuthenticateResults.s_cancellationRequested;
                 }
 
-                if (!await _identityStore.IsRefreshing(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false))
+                if (!await IdentityStore.IsRefreshing(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false))
                 {
-                    bool startedRefresh = await _identityStore.StartRefresh(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+                    bool startedRefresh = await IdentityStore.StartRefresh(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false);
 
                     if (startedRefresh)
                     {
@@ -525,15 +532,15 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                             if (!refreshCredentialsResult || !agent.IsAuthenticated)
                             {
                                 CurrentUserDid = null;
-                                await _identityStore.Remove(refreshingFor).ConfigureAwait(false);
+                                await IdentityStore.Remove(refreshingFor).ConfigureAwait(false);
                                 return AuthenticateResults.s_tokenRefreshFailed;
                             }
                             else
                             {
-                                await _identityStore.Update(agent.Credentials, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+                                await IdentityStore.Update(agent.Credentials, cancellationToken: CancellationToken.None).ConfigureAwait(false);
 
                                 // Update the ticket with the new credentials
-                                ClaimsIdentity? updatedIdentity = await _identityStore.GetIdentity(refreshingFor).ConfigureAwait(false);
+                                ClaimsIdentity? updatedIdentity = await IdentityStore.GetIdentity(refreshingFor).ConfigureAwait(false);
                                 if (updatedIdentity == null)
                                 {
                                     return AuthenticateResults.s_identityStoreRefreshMissing;
@@ -550,39 +557,47 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                         }
                         finally
                         {
-                            await _identityStore.EndRefresh(refreshingFor, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+                            await IdentityStore.EndRefresh(refreshingFor, cancellationToken: CancellationToken.None).ConfigureAwait(false);
                         }
                     }
 
                     // If we get here, then another request has already started a refresh, so we will wait for it to complete below.
                 }
 
-                // A refresh is in progress, so wait for it to complete.
-                int refreshCheckCount = 0;
-                while (!Context.RequestAborted.IsCancellationRequested &&
-                    refreshCheckCount < Options.MaxRefreshChecks &&
-                    await _identityStore.IsRefreshing(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false))
+                // A refresh is in progress, so wait for it to complete, then use the credentials it stored.
+                //
+                // The refresh may also have completed in the window between the check above and here, so check the
+                // store before waiting, otherwise a request which arrives just as a refresh finishes would be
+                // failed even though valid credentials are sitting in the store.
+                for (int refreshCheckCount = 0; refreshCheckCount < Options.MaxRefreshChecks; refreshCheckCount++)
                 {
                     if (Context.RequestAborted.IsCancellationRequested)
                     {
                         return AuthenticateResults.s_cancellationRequested;
                     }
 
-                    await Task.Delay(Options.RefreshCheckWait, Context.RequestAborted).ConfigureAwait(false);
-
-                    if (!Context.RequestAborted.IsCancellationRequested && !await _identityStore.IsRefreshing(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false))
+                    if (!await IdentityStore.IsRefreshing(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false))
                     {
-                        // Refresh is done, get the updated identity
-                        ClaimsIdentity? updatedIdentity = await _identityStore.GetIdentity(didClaim.Value, cancellationToken: CancellationToken.None).ConfigureAwait(false);
-                        if (updatedIdentity == null)
+                        // The refresh has finished, so pick up the identity it stored.
+                        ClaimsIdentity? refreshedIdentity = await IdentityStore.GetIdentity(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+
+                        if (refreshedIdentity is null)
                         {
                             return AuthenticateResults.s_identityStoreRefreshMissing;
                         }
-                        hydratedTicket = new AuthenticationTicket(new ClaimsPrincipal(updatedIdentity), ticket.Properties, ticket.AuthenticationScheme);
+
+                        hydratedTicket = new AuthenticationTicket(new ClaimsPrincipal(refreshedIdentity), ticket.Properties, ticket.AuthenticationScheme);
                         return AuthenticateResult.Success(hydratedTicket);
                     }
 
-                    refreshCheckCount++;
+                    try
+                    {
+                        await Task.Delay(Options.RefreshCheckWait, Context.RequestAborted).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return AuthenticateResults.s_cancellationRequested;
+                    }
                 }
 
                 if (Context.RequestAborted.IsCancellationRequested)

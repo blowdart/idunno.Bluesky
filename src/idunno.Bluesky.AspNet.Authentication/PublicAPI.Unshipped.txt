@@ -205,7 +205,7 @@ idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.Pronouns.init -> void
 idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.Website.get -> System.Uri?
 idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.Website.init -> void
 idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformer
-idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformer.ProfileClaimsTransformer(Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory, Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions!>! options, Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.BlueskyAgentOptions!>! blueskyAgentOptions) -> void
+idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformer.ProfileClaimsTransformer(Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory, Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions!>! options, Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.BlueskyAgentOptions!>! blueskyAgentOptions, Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions!>! blueskyAuthenticationOptions) -> void
 idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformer.TransformAsync(System.Security.Claims.ClaimsPrincipal! principal) -> System.Threading.Tasks.Task<System.Security.Claims.ClaimsPrincipal!>!
 idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions
 idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions.Cache.get -> idunno.Bluesky.AspNet.Authentication.IProfileCache?
@@ -292,3 +292,5 @@ virtual idunno.Bluesky.AspNet.Authentication.SignInResult.<Clone>$() -> idunno.B
 virtual idunno.Bluesky.AspNet.Authentication.SignInResult.EqualityContract.get -> System.Type!
 virtual idunno.Bluesky.AspNet.Authentication.SignInResult.Equals(idunno.Bluesky.AspNet.Authentication.SignInResult? other) -> bool
 virtual idunno.Bluesky.AspNet.Authentication.SignInResult.PrintMembers(System.Text.StringBuilder! builder) -> bool
+idunno.Bluesky.AspNet.Authentication.BlueskyAgentFactory.BlueskyAgentFactory(Microsoft.AspNetCore.Http.IHttpContextAccessor! contextAccessor, Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions!>! authenticationOptionsMonitor, Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.BlueskyAgentOptions!>! agentOptionsMonitor, Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory, string! authenticationScheme) -> void
+static Microsoft.Extensions.DependencyInjection.BlueskyExtensions.AddBlueskyAgentFactory(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! authenticationScheme) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

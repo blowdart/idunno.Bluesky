@@ -12,11 +12,38 @@
   credential persistence completes before the updated credentials are used, and any exceptions it throws surface to the caller rather than being
   silently swallowed. Code which persists credentials should move from the `CredentialsUpdated` event to `CredentialsUpdatedAsync`.
 
+#### idunno.Bluesky.AspNet.Authentication
+
+* Added `AddBlueskyAgentFactory(string authenticationScheme)`, and a matching `BlueskyAgentFactory` constructor overload, for applications which registered
+  Bluesky authentication under a scheme name other than `BlueskyAuthenticationDefaults.AuthenticationScheme`. The factory takes the scheme from the current
+  user when the request has one, so this only affects agents created for anonymous requests.
+
 ### Changed
 
 #### idunno.Bluesky
 
 * `DefaultFacetExtractor` now uses a more permissive regex for URLs, which allows for query strings to be included in the extracted URL.
+
+### Fixed
+
+#### idunno.Bluesky.AspNet.Authentication
+
+* A custom `IIdentityStore` configured in `AddBluesky(...)` is now actually used. `BlueskyAuthenticationOptions` are configured against the name of the
+  authentication scheme they belong to, but `BlueskyAuthenticationHandler`, `BlueskyAgentFactory` and `ProfileClaimsTransformer` all read the store from
+  the monitor's unnamed `CurrentValue` instance, which the application's configuration delegate never runs against. Post configuration then filled the
+  missing store in with an `EphemeralIdentityStore`, so an application which configured a `DistributedCacheIdentityStore` silently ran on in-process
+  memory instead, losing every signed in user when the process recycled and failing to share credentials between instances of a multi instance
+  deployment. All three now resolve the store for the scheme they are running as.
+* Requests which arrive whilst another request is refreshing the current user's credentials no longer fail authentication when the refresh completes
+  before the waiting request starts polling for it. Previously the wait loop only checked the identity store after sleeping, so a refresh which
+  finished in the window between the initial check and the loop starting left the waiting request to fall through to a failed authentication result,
+  even though freshly refreshed credentials were sitting in the identity store. The loop now checks the store before waiting, and a request whose
+  wait is aborted returns a cancellation result rather than throwing a `TaskCanceledException`.
+* `ProfileClaimsTransformer` now saves any credentials updated whilst it retrieves the user's profile to the configured `IIdentityStore`. Previously the
+  agent it created had no credential update callback, so a DPoP nonce rotation triggered by the profile lookup was discarded, forcing another nonce
+  rotation round trip on the next call.
+* `AuthenticationBuilder.AddBluesky()` and `AuthenticationBuilder.AddBluesky(string authenticationScheme)` no longer throw an `ArgumentNullException`.
+  Both overloads pass a `null` configuration delegate to the underlying overload, which rejected it, so neither could be used.
 
 ### Breaking Changes
 
@@ -31,6 +58,9 @@
 
 #### idunno.Bluesky.AspNet.Authentication
 
+* `ProfileClaimsTransformer`'s constructor takes an additional `IOptionsMonitor<BlueskyAuthenticationOptions>` parameter, used to locate the
+  `IIdentityStore` updated credentials are saved to. The transformer is resolved from dependency injection, so applications registering it with
+  `AddProfileClaimsTransformer()` need no changes.
 * `IIdentityStore.OnCredentialsUpdated` has changed from `void OnCredentialsUpdated(object? sender, CredentialsUpdatedEventArgs e)` to
   `Task OnCredentialsUpdated(CredentialsUpdatedEventArgs e, CancellationToken cancellationToken = default)`, and is now hooked up to the agent's
   `CredentialsUpdatedAsync` callback rather than its `CredentialsUpdated` event. The previous implementation discarded the task returned by the
