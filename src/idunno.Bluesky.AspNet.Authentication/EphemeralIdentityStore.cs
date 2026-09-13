@@ -20,9 +20,10 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// </summary>
 /// <remarks>
 /// <para>
-///   This store is intended for development time use only. It holds live <see cref="ClaimsIdentity"/> instances, including
-///   their access and refresh token claims, in the memory of a single process. Nothing is encrypted, and the identities it
-///   holds are readable by anything with access to the process memory or to a dump of it.
+///   This store is intended for development time use only. It holds serialized identities, including their access and
+///   refresh token claims, in the memory of a single process. Unless <see cref="Events"/> is configured to encrypt them
+///   they are readable by anything with access to the process memory or to a dump of it, and even when they are encrypted
+///   the key material used to protect them is held in the same process.
 /// </para>
 /// <para>
 ///   Its contents are also lost when the process restarts, signing every user out, and are not shared between instances of an
@@ -107,42 +108,47 @@ public class EphemeralIdentityStore : IIdentityStore
     private ILogger<EphemeralIdentityStore> Logger { get; set; }
 
     /// <inheritdoc />
-    /// <remarks>
-    /// <para>
-    ///   This store holds live <see cref="ClaimsIdentity"/> instances in process and never serializes them, so there is no
-    ///   payload to hand to the events and this property is not used.
-    /// </para>
-    /// </remarks>
     public IdentityStoreEvents Events { get; set; } = new IdentityStoreEvents();
 
     /// <inheritdoc />
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="claimsIdentity"/> is <see langword="null" />./</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="claimsIdentity"/> does not have a DID claim, or the DID claim is invalid.</exception>
     public async Task Add(ClaimsIdentity claimsIdentity, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(claimsIdentity);
 
-        Did did = Set(claimsIdentity, TokenCacheMemoryOptions);
+        Did did = await Set(claimsIdentity).ConfigureAwait(false);
 
         Logger.IdentityAddedToCache(did);
     }
 
     /// <inheritdoc />
-    /// <remarks>
-    /// <para>
-    ///   The returned identity is a copy. Concurrent requests for the same <see cref="Did"/> would otherwise share a
-    ///   single <see cref="ClaimsIdentity"/> instance, which is not safe to enumerate while another request mutates it,
-    ///   and would behave differently from a store which deserializes a fresh instance for every call.
-    /// </para>
-    /// </remarks>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Error handling needs to catch all exceptions")]
     public async Task<ClaimsIdentity?> GetIdentity(Did did, CancellationToken cancellationToken = default)
     {
-        if (Cache.Get($"{did}") is not ClaimsIdentity result)
+        if (Cache.Get($"{did}") is not byte[] claimsIdentityAsBytes)
         {
             Logger.IdentityNotFoundInCache(did);
             return null;
         }
 
-        return result.Clone();
+        try
+        {
+            IdentityStoreRetrievedContext context = new(claimsIdentityAsBytes);
+            await Events.PostRetrieval(context).ConfigureAwait(false);
+
+            using MemoryStream contextMemoryStream = new();
+            await contextMemoryStream.WriteAsync(context.Identity, cancellationToken).ConfigureAwait(false);
+            contextMemoryStream.Position = 0;
+            using BinaryReader contextReader = new(contextMemoryStream);
+
+            return new ClaimsIdentity(contextReader);
+        }
+        catch (Exception ex)
+        {
+            Logger.CachedIdentityIsCorrupt(did, ex);
+            return null;
+        }
     }
 
     /// <inheritdoc />
@@ -155,14 +161,14 @@ public class EphemeralIdentityStore : IIdentityStore
 
     /// <inheritdoc />
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> is <see langword="null" />./</exception>
-    public Task Update(ClaimsIdentity identity, CancellationToken cancellationToken)
+    /// <exception cref="ArgumentException">Thrown when <paramref name="identity"/> does not have a DID claim, or the DID claim is invalid.</exception>
+    public async Task Update(ClaimsIdentity identity, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(identity);
 
-        Did did = Set(identity, TokenCacheMemoryOptions);
+        Did did = await Set(identity).ConfigureAwait(false);
 
         Logger.CachedIdentityUpdated(did);
-        return Task.CompletedTask;
     }
 
     /// <inheritdoc />
@@ -216,7 +222,7 @@ public class EphemeralIdentityStore : IIdentityStore
         return false;
     }
 
-    private static Did Set(ClaimsIdentity claimsIdentity, MemoryCacheEntryOptions options)
+    private async Task<Did> Set(ClaimsIdentity claimsIdentity)
     {
         ArgumentNullException.ThrowIfNull(claimsIdentity);
 
@@ -229,8 +235,19 @@ public class EphemeralIdentityStore : IIdentityStore
             throw new ArgumentException("DID claim was not a valid DID", nameof(claimsIdentity));
         }
 
-        // Store a copy so later mutation of the caller's identity cannot change what the store hands out.
-        Cache.Set($"{did}", claimsIdentity.Clone(), options);
+        byte[] claimsIdentityAsBytes;
+        using (MemoryStream claimsMemoryStream = new())
+        {
+            using BinaryWriter claimsWriter = new(claimsMemoryStream);
+            claimsIdentity.WriteTo(claimsWriter);
+            claimsWriter.Flush();
+            claimsIdentityAsBytes = claimsMemoryStream.ToArray();
+        }
+
+        IdentityStoreSettingContext context = new(claimsIdentityAsBytes);
+        await Events.PreStoring(context).ConfigureAwait(false);
+
+        Cache.Set($"{did}", context.Identity.ToArray(), TokenCacheMemoryOptions);
 
         return did;
     }
