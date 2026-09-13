@@ -48,8 +48,11 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
         {
             lock (s_warnedLock)
             {
-                s_warned = true;
-                Logger.UsingInMemoryCorrelationCacheWarning();
+                if (!s_warned)
+                {
+                    s_warned = true;
+                    Logger.UsingInMemoryCorrelationCacheWarning();
+                }
             }
         }
     }

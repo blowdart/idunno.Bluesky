@@ -69,8 +69,11 @@ public class EphemeralIdentityStore : IIdentityStore
         {
             lock (s_warnedLock)
             {
-                s_warned = true;
-                Logger.UsingInMemoryCacheWarning();
+                if (!s_warned)
+                {
+                    s_warned = true;
+                    Logger.UsingInMemoryCacheWarning();
+                }
             }
         }
     }

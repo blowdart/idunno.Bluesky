@@ -25,7 +25,10 @@ public class BlueskySignInManager
 
     private readonly IHttpContextAccessor _contextAccessor;
     private readonly IHostEnvironment _env;
-    private readonly ICorrelationStateCache _correlationCache;
+    private readonly IOptionsMonitor<BlueskyAuthenticationOptions> _authenticationOptionsMonitor;
+
+    private string? _dataProtectorScheme;
+    private ITimeLimitedDataProtector? _dataProtector;
 
     /// <summary>
     /// Creates a new instance of <see cref="BlueskySignInManager"/>.
@@ -39,7 +42,7 @@ public class BlueskySignInManager
     public BlueskySignInManager(
         IHttpContextAccessor contextAccessor,
         IOptions<BlueskyAgentOptions> agentOptionsAccessor,
-        IOptions<BlueskyAuthenticationOptions> authenticationOptionsAccessor,
+        IOptionsMonitor<BlueskyAuthenticationOptions> authenticationOptionsAccessor,
         IHostEnvironment env,
         ILogger<BlueskySignInManager> logger)
     {
@@ -48,21 +51,14 @@ public class BlueskySignInManager
         ArgumentNullException.ThrowIfNull(agentOptionsAccessor.Value);
         ArgumentNullException.ThrowIfNull(agentOptionsAccessor.Value.OAuthOptions);
         ArgumentNullException.ThrowIfNull(authenticationOptionsAccessor);
-        ArgumentNullException.ThrowIfNull(authenticationOptionsAccessor.Value);
-        ArgumentNullException.ThrowIfNull(authenticationOptionsAccessor.Value.CorrelationCache);
 
         _contextAccessor = contextAccessor;
-        _correlationCache = authenticationOptionsAccessor.Value.CorrelationCache;
+        _authenticationOptionsMonitor = authenticationOptionsAccessor;
         _env = env;
 
         Logger = logger;
         BlueskyAgentOptions = agentOptionsAccessor.Value;
         OAuthOptions = agentOptionsAccessor.Value.OAuthOptions;
-        BlueskyAuthenticationOptions = authenticationOptionsAccessor.Value;
-
-        DataProtector = BlueskyAuthenticationOptions.DataProtectionProvider!
-            .CreateProtector(Constants.CorrelationPurpose, "v1")
-            .ToTimeLimitedDataProtector();
     }
 
     /// <summary>
@@ -86,14 +82,49 @@ public class BlueskySignInManager
     /// <summary>
     /// The Bluesky authentication options used.
     /// </summary>
-    public BlueskyAuthenticationOptions BlueskyAuthenticationOptions { get; init; }
+    /// <value>
+    /// The Bluesky authentication options configured for <see cref="AuthenticationScheme"/>.
+    /// </value>
+    /// <remarks>
+    /// <para>
+    ///   <see cref="BlueskyAuthenticationOptions"/> instances are configured against the name of the authentication
+    ///   scheme they belong to, so the unnamed instance is not the one the handler for <see cref="AuthenticationScheme"/>
+    ///   is using. Resolving on each access, rather than in the constructor, also keeps the manager correct when
+    ///   <see cref="AuthenticationScheme"/> is changed after construction.
+    /// </para>
+    /// </remarks>
+    public BlueskyAuthenticationOptions BlueskyAuthenticationOptions => _authenticationOptionsMonitor.Get(AuthenticationScheme);
 
     /// <summary>
     /// The <see cref="AtProto.Authentication.OAuthOptions"/> used.
     /// </summary>
     public OAuthOptions OAuthOptions { get; init; }
 
-    internal ITimeLimitedDataProtector DataProtector { get; init; }
+    internal ICorrelationStateCache CorrelationCache =>
+        BlueskyAuthenticationOptions.CorrelationCache ??
+        throw new InvalidOperationException($"No CorrelationCache is configured for the '{AuthenticationScheme}' authentication scheme.");
+
+    internal ITimeLimitedDataProtector DataProtector
+    {
+        get
+        {
+            string scheme = AuthenticationScheme;
+
+            if (_dataProtector is null || !string.Equals(_dataProtectorScheme, scheme, StringComparison.Ordinal))
+            {
+                IDataProtectionProvider dataProtectionProvider =
+                    BlueskyAuthenticationOptions.DataProtectionProvider ??
+                    throw new InvalidOperationException($"No DataProtectionProvider is configured for the '{scheme}' authentication scheme.");
+
+                _dataProtector = dataProtectionProvider
+                    .CreateProtector(Constants.CorrelationPurpose, "v1")
+                    .ToTimeLimitedDataProtector();
+                _dataProtectorScheme = scheme;
+            }
+
+            return _dataProtector;
+        }
+    }
 
     /// <summary>
     /// The <see cref="Microsoft.AspNetCore.Http.HttpContext"/> used.
@@ -259,11 +290,11 @@ public class BlueskySignInManager
             }
         }
 
-        OAuthLoginState? state = await _correlationCache.GetOAuthLoginState(correlationId.Value).ConfigureAwait(false);
+        OAuthLoginState? state = await CorrelationCache.GetOAuthLoginState(correlationId.Value).ConfigureAwait(false);
 
         if (state is not null)
         {
-            await _correlationCache.RemoveCorrelationState(correlationId.Value).ConfigureAwait(false);
+            await CorrelationCache.RemoveCorrelationState(correlationId.Value).ConfigureAwait(false);
         }
 
         return state;
@@ -317,7 +348,7 @@ public class BlueskySignInManager
 
         correlationId ??= Guid.NewGuid();
 
-        await _correlationCache.AddOAuthLoginState(correlationId.Value, state).ConfigureAwait(false);
+        await CorrelationCache.AddOAuthLoginState(correlationId.Value, state).ConfigureAwait(false);
 
         return correlationId.Value;
     }
@@ -356,6 +387,7 @@ public class BlueskySignInManager
         ClaimsIdentity identity = IIdentityStore.BuildClaimsIdentity(accessCredentials, AuthenticationScheme);
 
         await HttpContext.SignInAsync(
+            AuthenticationScheme,
             new ClaimsPrincipal(identity),
             new AuthenticationProperties()
             {
@@ -370,10 +402,10 @@ public class BlueskySignInManager
     /// <summary>
     /// Signs out the current session.
     /// </summary>
-    /// <param name="scheme">The authentication scheme to sign out of. If <see langword="null" />, the default scheme will be used.</param>
+    /// <param name="scheme">The authentication scheme to sign out of. If <see langword="null" />, <see cref="AuthenticationScheme"/> will be used.</param>
     public async Task SignOut(string? scheme = null)
     {
-        scheme ??= BlueskyAuthenticationDefaults.AuthenticationScheme;
+        scheme ??= AuthenticationScheme;
 
         await HttpContext.SignOutAsync(scheme).ConfigureAwait(false);
     }
