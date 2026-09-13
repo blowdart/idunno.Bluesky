@@ -263,6 +263,8 @@ public class BlueskySignInManager
     /// <exception cref="InvalidOperationException">If <paramref name="correlationId"/> is <see langword="null" /> and a correlation cookie cannot be found or cannot be parsed.</exception>
     public async Task<OAuthLoginState?> LoadState(Guid? correlationId = null)
     {
+        bool correlationCookieRejected = false;
+
         if (correlationId == null)
         {
             if (HttpContext.Request is null)
@@ -281,10 +283,9 @@ public class BlueskySignInManager
                     if (expiration < DateTimeOffset.UtcNow)
                     {
                         Logger.ExpiredCorrelationCookie();
-                        return null;
+                        correlationCookieRejected = true;
                     }
-
-                    if (Guid.TryParse(unprotectedCookieValue, out Guid parsedGuid))
+                    else if (Guid.TryParse(unprotectedCookieValue, out Guid parsedGuid))
                     {
                         correlationId = parsedGuid;
                     }
@@ -292,7 +293,7 @@ public class BlueskySignInManager
                 catch (CryptographicException ex)
                 {
                     Logger.ExceptionUnprotectingCorrelationCookie(ex);
-                    return null;
+                    correlationCookieRejected = true;
                 }
             }
 
@@ -302,20 +303,20 @@ public class BlueskySignInManager
                 CorrelationCookieName,
                 BlueskyAuthenticationOptions.CorrelationCookie.Build(HttpContext, DateTimeOffset.UtcNow));
 
+            // An expired or unreadable cookie has now been deleted, so it cannot be presented again.
+            if (correlationCookieRejected)
+            {
+                return null;
+            }
+
             if (correlationId is null)
             {
                 throw new InvalidOperationException("Missing or invalid correlation cookie.");
             }
         }
 
-        OAuthLoginState? state = await CorrelationCache.GetOAuthLoginState(correlationId.Value).ConfigureAwait(false);
-
-        if (state is not null)
-        {
-            await CorrelationCache.RemoveCorrelationState(correlationId.Value).ConfigureAwait(false);
-        }
-
-        return state;
+        // Login state is single use, so take it rather than reading it and removing it separately.
+        return await CorrelationCache.TakeOAuthLoginState(correlationId.Value).ConfigureAwait(false);
     }
 
     /// <summary>

@@ -24,9 +24,14 @@ public class PostConfigureBlueskyAuthenticationOptions(
     /// <param name="name">The name of the options instance being configured.</param>
     /// <param name="options">The options instance to configure.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> or <paramref name="name"/> is <see langword="null"/></exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <see cref="BlueskyAuthenticationOptions.RefreshCheckWait"/> is not greater than zero.</exception>
     public void PostConfigure(string? name, BlueskyAuthenticationOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
+
+        // Task.Delay throws on a negative wait, and a zero wait would spin through every check without ever giving the
+        // refresh holder time to finish, so reject both here rather than part way through authenticating a request.
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(options.RefreshCheckWait, TimeSpan.Zero);
 
         options.DataProtectionProvider ??= dataProtection;
 

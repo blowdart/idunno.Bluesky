@@ -45,6 +45,25 @@ public interface ICorrelationStateCache
     Task<OAuthLoginState?> GetOAuthLoginState(Guid correlationId);
 
     /// <summary>
+    /// Retrieves the <see cref="OAuthLoginState"/> for the <paramref name="correlationId"/> from the authentication
+    /// state cache and removes it, so it can only be consumed once.
+    /// </summary>
+    /// <param name="correlationId">The key to take the <see cref="OAuthLoginState"/> for.</param>
+    /// <returns>The <see cref="OAuthLoginState"/> for the key if it was in the cache, otherwise <see langword="null"/>.</returns>
+    /// <remarks>
+    /// <para>
+    ///   Login state is single use. Calling <see cref="GetOAuthLoginState(Guid)"/> and then
+    ///   <see cref="RemoveCorrelationState(Guid)"/> leaves a window in which two callbacks carrying the same correlation
+    ///   identifier can both be given the state, so callers consuming a callback should use this instead.
+    /// </para>
+    /// <para>
+    ///   The entry is removed whether or not the state it held could be read, so an entry which cannot be deserialized or
+    ///   unprotected does not survive to be presented again.
+    /// </para>
+    /// </remarks>
+    Task<OAuthLoginState?> TakeOAuthLoginState(Guid correlationId);
+
+    /// <summary>
     /// Removes the correlation state for the specified <paramref name="correlationId"/> from the cache.
     /// </summary>
     /// <param name="correlationId">The key to remove the <see cref="OAuthLoginState"/> for.</param>
