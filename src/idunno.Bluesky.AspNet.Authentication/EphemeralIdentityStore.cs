@@ -38,26 +38,27 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// </remarks>
 public class EphemeralIdentityStore : IIdentityStore
 {
+    /// <summary>
+    /// The number of identities the store holds before it starts evicting them.
+    /// </summary>
+    public const int DefaultSizeLimit = 1024;
+
     private static volatile bool s_warned;
+    private static volatile bool s_capacityWarned;
+
+    private static MemoryCache? s_cache;
+    private static MemoryCache? s_refreshCache;
+    private static int s_configuredSizeLimit;
 
 #if NET9_0_OR_GREATER
     private static readonly Lock s_warnedLock = new ();
     private static readonly Lock s_refreshLock = new ();
+    private static readonly Lock s_cacheLock = new ();
 #else
     private static readonly object s_warnedLock = new();
     private static readonly object s_refreshLock = new();
+    private static readonly object s_cacheLock = new();
 #endif
-
-    static EphemeralIdentityStore()
-    {
-        MemoryCacheOptions cacheOptions = new()
-        {
-            SizeLimit = 1024
-        };
-
-        Cache = new MemoryCache(cacheOptions);
-        RefreshCache = new MemoryCache(cacheOptions);
-    }
 
     /// <summary>
     /// Creates a new instance of <see cref="EphemeralIdentityStore"/>.
@@ -65,19 +66,36 @@ public class EphemeralIdentityStore : IIdentityStore
     /// <param name="loggerFactory">The logger to create loggers from.</param>
     /// <param name="entryTimeToLive">The time to live for cache entries.</param>
     /// <param name="refreshLockExpiration">The time to lock a token refresh attempt for.</param>
+    /// <param name="sizeLimit">The number of identities to hold before evicting them. Defaults to <see cref="DefaultSizeLimit"/>.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="sizeLimit"/> is not greater than zero.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The caches backing this store are static, so the first instance created fixes <paramref name="sizeLimit"/> for
+    ///   the lifetime of the process. A later instance asking for a different limit is warned that its value was ignored.
+    /// </para>
+    /// </remarks>
     [SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Used to ensure the emphermal warning is only logged once")]
     public EphemeralIdentityStore(
         ILoggerFactory loggerFactory,
         TimeSpan? entryTimeToLive = null,
-        TimeSpan? refreshLockExpiration = null)
+        TimeSpan? refreshLockExpiration = null,
+        int? sizeLimit = null)
     {
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(sizeLimit ?? DefaultSizeLimit, 0);
+
         Logger = loggerFactory.CreateLogger<EphemeralIdentityStore>();
+
+        EnsureCaches(sizeLimit ?? DefaultSizeLimit, Logger);
 
         TokenCacheMemoryOptions = new MemoryCacheEntryOptions()
         {
             SlidingExpiration = entryTimeToLive ?? new(7, 0, 0, 0),
             Size = 1
         };
+
+        // Eviction for capacity silently signs a user out, as their authentication cookie outlives the identity the
+        // store was holding for them, so it needs to be reported rather than left to look like an expired login.
+        TokenCacheMemoryOptions.RegisterPostEvictionCallback(OnIdentityEvicted, Logger);
 
         RefreshCacheMemoryOptions = new MemoryCacheEntryOptions()
         {
@@ -98,9 +116,9 @@ public class EphemeralIdentityStore : IIdentityStore
         }
     }
 
-    private static MemoryCache Cache { get; set; }
+    private static MemoryCache Cache => s_cache!;
 
-    private static MemoryCache RefreshCache { get; set; }
+    private static MemoryCache RefreshCache => s_refreshCache!;
 
     private MemoryCacheEntryOptions TokenCacheMemoryOptions { get; set; }
 
@@ -235,8 +253,57 @@ public class EphemeralIdentityStore : IIdentityStore
         return false;
     }
 
-    private async Task<Did> Set(ClaimsIdentity claimsIdentity)
+    private static void EnsureCaches(int sizeLimit, ILogger logger)
     {
+        lock (s_cacheLock)
+        {
+            if (s_cache is null || s_refreshCache is null)
+            {
+                s_configuredSizeLimit = sizeLimit;
+
+                // Each cache gets its own options, otherwise the limit reads as though it were shared between them.
+                s_cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit });
+                s_refreshCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit });
+            }
+            else if (s_configuredSizeLimit != sizeLimit)
+            {
+                logger.EphemeralStoreSizeLimitIgnored(nameof(EphemeralIdentityStore), sizeLimit, s_configuredSizeLimit);
+            }
+        }
+    }
+
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A post eviction callback must not throw, as MemoryCache gives the exception nowhere to go")]
+    private static void OnIdentityEvicted(object key, object? value, EvictionReason reason, object? state)
+    {
+        if (reason != EvictionReason.Capacity || state is not ILogger logger || s_capacityWarned)
+        {
+            return;
+        }
+
+        // Reaching the limit compacts the cache, evicting a proportion of it rather than a single entry, so report
+        // this once for the process rather than once for every identity the compaction removed.
+        lock (s_warnedLock)
+        {
+            if (s_capacityWarned)
+            {
+                return;
+            }
+
+            s_capacityWarned = true;
+        }
+
+        try
+        {
+            logger.EphemeralIdentityStoreCapacityReached(s_configuredSizeLimit);
+        }
+        catch (Exception)
+        {
+            // Deliberately ignored. This runs on a thread pool thread after the entry has already gone, so there is
+            // nothing to recover and nowhere for an exception to propagate to; a failed diagnostic must not crash the process.
+        }
+    }
+
+    private async Task<Did> Set(ClaimsIdentity claimsIdentity)    {
         ArgumentNullException.ThrowIfNull(claimsIdentity);
 
         string? didAsString = (claimsIdentity.Claims?.FirstOrDefault(
