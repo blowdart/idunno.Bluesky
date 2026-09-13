@@ -7,6 +7,10 @@
 #### idunno.AtProto
 
 * Added `Agent.HasCredentials` which returns a flag indicating whether the agent has access credentials, regardless of whether the credentials are expired.
+* Added `AtProtoAgent.CredentialsUpdatedAsync`, an awaitable counterpart to the `CredentialsUpdated` event, of type
+  `Func<CredentialsUpdatedEventArgs, CancellationToken, Task>?`. Unlike the event, the agent awaits this callback before continuing, so asynchronous
+  credential persistence completes before the updated credentials are used, and any exceptions it throws surface to the caller rather than being
+  silently swallowed. Code which persists credentials should move from the `CredentialsUpdated` event to `CredentialsUpdatedAsync`.
 
 ### Changed
 
@@ -20,6 +24,18 @@
 
 * Removed the `ReaderWriterLockSlim` property to avoid potential deadlocks. Any code that was using this property should be now use its own locking mechanism to avoid deadlocks.
 * `DPoPRevokeCredentials` no longer implement `IDisposable`.
+* The `onCredentialsUpdated` parameter on `AtProtoServer` and `AtProtoHttpClient` methods has changed from `Action<AtProtoCredential>?` to
+  `Func<AtProtoCredential, CancellationToken, Task>?`, and the callback is now awaited. Previously the callback was invoked synchronously, which meant
+  asynchronous credential persistence could not be awaited, and any work it started could be abandoned. Callers passing a lambda should change
+  `credential => Save(credential)` to `(credential, cancellationToken) => SaveAsync(credential, cancellationToken)`.
+
+#### idunno.Bluesky.AspNet.Authentication
+
+* `IIdentityStore.OnCredentialsUpdated` has changed from `void OnCredentialsUpdated(object? sender, CredentialsUpdatedEventArgs e)` to
+  `Task OnCredentialsUpdated(CredentialsUpdatedEventArgs e, CancellationToken cancellationToken = default)`, and is now hooked up to the agent's
+  `CredentialsUpdatedAsync` callback rather than its `CredentialsUpdated` event. The previous implementation discarded the task returned by the
+  store update, so a failure to persist rotated credentials was silently ignored. As AT Proto refresh tokens are single use, a dropped update
+  would leave the stored credentials stale and unusable, signing the user out on their next request.
 
 #### idunno.Bluesky
 
@@ -27,6 +43,8 @@
 * `Embed.External.Properties.Uri` has been changed from a `Uri` type to a `string` type as the Bluesky web app can create facets with illegal URIs. The constructor has also been updated to accept a `string` instead of a `Uri`.
 * `Embed.EmbeddedExternal` has been updated to only accept a `string` for its `uri` constructor parameter instead of a `Uri` type, as the Bluesky web app can create facets with illegal URIs.
 * `Embed.EmbeddedExternal` constructors have been simplifed to a single constructor, which has defaults for all optional parameters.
+* The `onCredentialsUpdated` parameter on `BlueskyServer` methods has changed from `Action<AtProtoCredential>?` to
+  `Func<AtProtoCredential, CancellationToken, Task>?`, mirroring the change in `idunno.AtProto`.
 
 ## 6.0.0 - 2026-09-05
 

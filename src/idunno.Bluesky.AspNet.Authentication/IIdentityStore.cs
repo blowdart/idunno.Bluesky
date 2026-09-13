@@ -98,17 +98,27 @@ public interface IIdentityStore
     Task<bool> IsRefreshing(Did did, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Called by an agent when it receives an <see cref="CredentialsUpdatedEventArgs"/>.
+    /// Called by an agent when its credentials are updated.
     /// A store should use this to update the cached identity for the specified <see cref="Did"/> with the new credentials.
     /// </summary>
-    /// <param name="sender">The source of the event.</param>
     /// <param name="e">The <see cref="CredentialsUpdatedEventArgs"/> instance containing the event data.</param>
-    public virtual void OnCredentialsUpdated(object? sender, CredentialsUpdatedEventArgs e)
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// <para>
+    /// This is awaited by the agent, so a failure to persist the updated credentials propagates to the caller rather than
+    /// being silently lost. AT Proto refresh tokens are single use, so a swallowed failure here would leave the store
+    /// holding a refresh token the service has already invalidated.
+    /// </para>
+    /// </remarks>
+    public virtual Task OnCredentialsUpdated(CredentialsUpdatedEventArgs e, CancellationToken cancellationToken = default)
     {
         if (e is not null && e.AccessCredentials is not null)
         {
-            _ = Update(e.AccessCredentials);
+            return Update(e.AccessCredentials, cancellationToken);
         }
+
+        return Task.CompletedTask;
     }
 
     /// <summary>

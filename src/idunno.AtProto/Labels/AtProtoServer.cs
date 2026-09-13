@@ -28,7 +28,7 @@ public static partial class AtProtoServer
     /// <param name="service">The service to create fine the labels on.</param>
     /// <param name="accessCredentials">Optional access credentials to use to authenticate against the <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -49,7 +49,7 @@ public static partial class AtProtoServer
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default)
     {
