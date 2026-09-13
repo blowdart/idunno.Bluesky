@@ -106,6 +106,9 @@ internal static partial class Logger
     [LoggerMessage(268, LogLevel.Debug, "Sign out was called without the request having been authenticated. The DID was recovered from the request cookie.")]
     public static partial void SignOutDidRecoveredFromCookie(this ILogger logger);
 
+    [LoggerMessage(269, LogLevel.Warning, "The identity store time to live for the '{scheme}' authentication scheme is {identityStoreEntryTimeToLive}, which is shorter than the ExpireTimeSpan of {expireTimeSpan}. Users will be signed out when their stored credentials expire, before their authentication cookie does.")]
+    public static partial void IdentityStoreTimeToLiveShorterThanCookieLifetime(this ILogger logger, string scheme, TimeSpan identityStoreEntryTimeToLive, TimeSpan expireTimeSpan);
+
     [LoggerMessage(300, LogLevel.Error, "Credentials were refreshed for {did} but were not DPoPAccessCredentials.")]
     public static partial void CredentialsRefreshedNotDPoP(this ILogger logger, Did did);
 

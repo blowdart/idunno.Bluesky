@@ -18,8 +18,6 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// </summary>
 public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
 {
-    private const string CorrelationPrefix = ".BlueskyAuthentication.Correlation.";
-
     /// <summary>
     /// Initializes a new <see cref="BlueskyAuthenticationOptions"/>.
     /// </summary>
@@ -49,7 +47,15 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     /// <summary>
     /// Gets or sets a value for how long entries are kept in the identity store.
     /// </summary>
-    public TimeSpan? IdentityStoreEntryTimeToLive { get; set; } = TimeSpan.FromDays(7);
+    /// <remarks>
+    /// <para>
+    ///   If <see langword="null"/> the identity store follows <see cref="ExpireTimeSpan"/>, which is the default.
+    ///   Configuring a value shorter than <see cref="ExpireTimeSpan"/> signs users out part way through the lifetime
+    ///   of their authentication cookie, because the credentials the cookie refers to are dropped while the cookie
+    ///   is still being honoured.
+    /// </para>
+    /// </remarks>
+    public TimeSpan? IdentityStoreEntryTimeToLive { get; set; }
 
     /// <summary>
     /// Gets or sets a value for how long to lock a refresh attempt.
@@ -113,14 +119,14 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is <see langword="null"/>.</exception>
     /// <remarks>
     /// <para>
-    /// If an explicit <see cref="CookieBuilder.Name"/> is not provided, the system will automatically generate a
-    /// unique name that begins with <c>.BlueskyAuthentication.Correlation.</c>.
+    /// If an explicit <see cref="CookieBuilder.Name"/> is not provided the correlation cookie is named
+    /// <c>_idunno_bluesky_Correlation</c>.
     /// </para>
     /// <list type="bullet">
     /// <item><description><see cref="CookieBuilder.SameSite"/> defaults to <see cref="SameSiteMode.Lax"/>.</description></item>
     /// <item><description><see cref="CookieBuilder.HttpOnly"/> defaults to <see langword="true"/>.</description></item>
     /// <item><description><see cref="CookieBuilder.IsEssential"/> defaults to <see langword="true"/>.</description></item>
-    /// <item><description><see cref="CookieBuilder.SecurePolicy"/> defaults to <see cref="CookieSecurePolicy.None"/>.</description></item>
+    /// <item><description><see cref="CookieBuilder.SecurePolicy"/> defaults to <see cref="CookieSecurePolicy.SameAsRequest"/>.</description></item>
     /// </list>
     /// </remarks>
     [JsonIgnore]
@@ -130,10 +136,10 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
         set => field = value ?? throw new ArgumentNullException(nameof(value));
     } = new RequestPathBaseCookieBuilder()
     {
-        Name = CorrelationPrefix,
+        Name = Constants.CorrelationCookieName,
         HttpOnly = true,
         SameSite = SameSiteMode.Lax,
-        SecurePolicy = CookieSecurePolicy.None,
+        SecurePolicy = CookieSecurePolicy.SameAsRequest,
         IsEssential = true,
     };
 

@@ -104,6 +104,23 @@ public class BlueskySignInManager
         BlueskyAuthenticationOptions.CorrelationCache ??
         throw new InvalidOperationException($"No CorrelationCache is configured for the '{AuthenticationScheme}' authentication scheme.");
 
+    /// <summary>
+    /// Gets the name the correlation cookie is written with and read from.
+    /// </summary>
+    /// <value>
+    /// <see cref="CookieBuilder.Name"/> from <see cref="BlueskyAuthenticationOptions.CorrelationCookie"/>, or
+    /// <see cref="Constants.CorrelationCookieName"/> if the builder does not carry a name.
+    /// </value>
+    internal string CorrelationCookieName
+    {
+        get
+        {
+            string? configuredName = BlueskyAuthenticationOptions.CorrelationCookie.Name;
+
+            return string.IsNullOrEmpty(configuredName) ? Constants.CorrelationCookieName : configuredName;
+        }
+    }
+
     internal ITimeLimitedDataProtector DataProtector
     {
         get
@@ -257,12 +274,12 @@ public class BlueskySignInManager
             }
 
             if (HttpContext.Request.Cookies is not null &&
-                HttpContext.Request.Cookies.ContainsKey(Constants.CorrelationCookieName) &&
-                HttpContext.Request.Cookies[Constants.CorrelationCookieName] is not null)
+                HttpContext.Request.Cookies.ContainsKey(CorrelationCookieName) &&
+                HttpContext.Request.Cookies[CorrelationCookieName] is not null)
             {
                 try
                 {
-                    string unprotectedCookieValue = DataProtector.Unprotect(HttpContext.Request.Cookies[Constants.CorrelationCookieName]!, out DateTimeOffset expiration);
+                    string unprotectedCookieValue = DataProtector.Unprotect(HttpContext.Request.Cookies[CorrelationCookieName]!, out DateTimeOffset expiration);
 
                     if (expiration < DateTimeOffset.UtcNow)
                     {
@@ -282,7 +299,11 @@ public class BlueskySignInManager
                 }
             }
 
-            HttpContext.Response.Cookies.Delete(Constants.CorrelationCookieName);
+            // Delete with the options the cookie was written with, otherwise a correlation cookie written with a
+            // path or domain from the CookieBuilder would not be matched and so would not be removed.
+            HttpContext.Response.Cookies.Delete(
+                CorrelationCookieName,
+                BlueskyAuthenticationOptions.CorrelationCookie.Build(HttpContext, DateTimeOffset.UtcNow));
 
             if (correlationId is null)
             {
@@ -308,6 +329,7 @@ public class BlueskySignInManager
     /// <param name="markCookieAsSecure">If <see langword="true"/> the correlation cookie will be marked as secure.</param>
     /// <returns>The correlation id that the state was saved against.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="state"/> is <see langword="null" />.</exception>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Security Hotspot", "S2092:Set the 'Secure' flag on this cookie", Justification = "The secure flag comes from the configured CorrelationCookie builder, raised by markCookieAsSecure, which cannot be required unconditionally because OAuth against a http://localhost client identifier is not served over https.")]
     public async Task<Guid> SaveStateAndCreateCorrelationCookie(
         OAuthLoginState state,
         Guid? correlationId = null,
@@ -321,14 +343,16 @@ public class BlueskySignInManager
 
         string cookieValue = DataProtector.Protect(correlationId.Value.ToString(), correlationValidityPeriod);
 
-        HttpContext.Response.Cookies.Append(Constants.CorrelationCookieName, cookieValue,
-            new CookieOptions
-            {
-                Expires = DateTime.Now + correlationValidityPeriod,
-                SameSite = SameSiteMode.Lax,
-                HttpOnly = true,
-                Secure = markCookieAsSecure
-            });
+        CookieOptions cookieOptions = BlueskyAuthenticationOptions.CorrelationCookie.Build(HttpContext, DateTimeOffset.UtcNow);
+
+        // CookieBuilder only sets an expiry when the application configured one, and the correlation cookie has no
+        // value once the state it points at has aged out of the correlation cache.
+        cookieOptions.Expires ??= DateTimeOffset.UtcNow.Add(correlationValidityPeriod);
+
+        // markCookieAsSecure may only raise the security of the cookie, never lower what the CookieBuilder asked for.
+        cookieOptions.Secure = cookieOptions.Secure || markCookieAsSecure;
+
+        HttpContext.Response.Cookies.Append(CorrelationCookieName, cookieValue, cookieOptions);
 
         return correlationId.Value;
     }
