@@ -16,35 +16,38 @@ namespace idunno.Bluesky.AspNet.Authentication;
 
 internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
 {
+    internal const int DefaultSizeLimit = 1024;
+
     private static volatile bool s_warned;
+    private static volatile bool s_capacityWarned;
+
+    private static MemoryCache? s_cache;
+    private static int s_configuredSizeLimit;
 
 #if NET9_0_OR_GREATER
     private static readonly Lock s_warnedLock = new ();
     private static readonly Lock s_takeLock = new ();
+    private static readonly Lock s_cacheLock = new ();
 #else
     private static readonly object s_warnedLock = new();
     private static readonly object s_takeLock = new();
+    private static readonly object s_cacheLock = new();
 #endif
 
     private static readonly TimeSpan s_defaultSlidingExpiration = new(0, 0, 15, 0);
 
-    static EphemeralCorrelationStateCache()
-    {
-        MemoryCacheOptions cacheOptions = new()
-        {
-            SizeLimit = 1024
-        };
-
-        Cache = new MemoryCache(cacheOptions);
-    }
-
     [SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Used to ensure the emphermal warning is only logged once")]
     public EphemeralCorrelationStateCache(
         ILoggerFactory loggerFactory,
-        TimeSpan? entryTimeToLive = null)
+        TimeSpan? entryTimeToLive = null,
+        int? sizeLimit = null)
     {
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(sizeLimit ?? DefaultSizeLimit, 0);
+
         Logger = loggerFactory.CreateLogger<EphemeralCorrelationStateCache>();
         EntryTTL = entryTimeToLive ?? s_defaultSlidingExpiration;
+
+        EnsureCache(sizeLimit ?? DefaultSizeLimit, Logger);
 
         if (!s_warned)
         {
@@ -59,7 +62,7 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
         }
     }
 
-    private static MemoryCache Cache { get; set; }
+    private static MemoryCache Cache => s_cache!;
 
     private TimeSpan EntryTTL { get; } = new(0, 15, 0);
 
@@ -77,6 +80,10 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
         MemoryCacheEntryOptions cacheOptions = new MemoryCacheEntryOptions()
             .SetAbsoluteExpiration(DateTime.UtcNow.Add(EntryTTL))
             .SetSize(1);
+
+        // Eviction for capacity fails a login which is still in flight, so it needs to be reported rather than
+        // looking like a user who took too long over the authorization server.
+        cacheOptions.RegisterPostEvictionCallback(OnStateEvicted, Logger);
 
         CorrelationStateSettingContext context = new(state.ToJson());
         await Events.PreStoring(context).ConfigureAwait(false);
@@ -107,8 +114,54 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
         return await Decode(encodedState).ConfigureAwait(false);
     }
 
-    private async Task<OAuthLoginState?> Decode(string? encodedState)
+    private static void EnsureCache(int sizeLimit, ILogger logger)
     {
+        lock (s_cacheLock)
+        {
+            if (s_cache is null)
+            {
+                s_configuredSizeLimit = sizeLimit;
+                s_cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit });
+            }
+            else if (s_configuredSizeLimit != sizeLimit)
+            {
+                logger.EphemeralStoreSizeLimitIgnored(nameof(EphemeralCorrelationStateCache), sizeLimit, s_configuredSizeLimit);
+            }
+        }
+    }
+
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A post eviction callback must not throw, as MemoryCache gives the exception nowhere to go")]
+    private static void OnStateEvicted(object key, object? value, EvictionReason reason, object? state)
+    {
+        if (reason != EvictionReason.Capacity || state is not ILogger logger || s_capacityWarned)
+        {
+            return;
+        }
+
+        // Reaching the limit compacts the cache, evicting a proportion of it rather than a single entry, so report
+        // this once for the process rather than once for every login the compaction removed.
+        lock (s_warnedLock)
+        {
+            if (s_capacityWarned)
+            {
+                return;
+            }
+
+            s_capacityWarned = true;
+        }
+
+        try
+        {
+            logger.EphemeralCorrelationStateCacheCapacityReached(s_configuredSizeLimit);
+        }
+        catch (Exception)
+        {
+            // Deliberately ignored. This runs on a thread pool thread after the entry has already gone, so there is
+            // nothing to recover and nowhere for an exception to propagate to; a failed diagnostic must not crash the process.
+        }
+    }
+
+    private async Task<OAuthLoginState?> Decode(string? encodedState)    {
         if (string.IsNullOrEmpty(encodedState))
         {
             return null;

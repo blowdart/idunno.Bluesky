@@ -91,7 +91,8 @@ idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore
 idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.Add(System.Security.Claims.ClaimsIdentity! claimsIdentity, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.Cache.get -> Microsoft.Extensions.Caching.Distributed.IDistributedCache!
 idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.DistributedCacheIdentityStore(Microsoft.Extensions.Caching.Distributed.IDistributedCache! cache, Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory, Microsoft.Extensions.Options.IOptions<idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions!>? options = null) -> void
-idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.EphemeralIdentityStore(Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory, System.TimeSpan? entryTimeToLive = null, System.TimeSpan? refreshLockExpiration = null) -> void
+idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.EphemeralIdentityStore(Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory, System.TimeSpan? entryTimeToLive = null, System.TimeSpan? refreshLockExpiration = null, int? sizeLimit = null) -> void
+const idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.DefaultSizeLimit = 1024 -> int
 idunno.Bluesky.AspNet.Authentication.Events.DataProtectingIdentityStoreEvents
 idunno.Bluesky.AspNet.Authentication.Events.DataProtectingIdentityStoreEvents.DataProtectingIdentityStoreEvents(Microsoft.AspNetCore.DataProtection.IDataProtectionProvider! dataProtectionProvider) -> void
 idunno.Bluesky.AspNet.Authentication.Events.DataProtectingIdentityStoreEvents.DataProtectingIdentityStoreEvents(Microsoft.AspNetCore.DataProtection.IDataProtector! protector) -> void

@@ -79,6 +79,15 @@ internal static partial class Logger
     [LoggerMessage(256, LogLevel.Warning, "The DID claim in the authentication cookie is not a valid DID.")]
     public static partial void InvalidDidInCookie(this ILogger logger);
 
+    [LoggerMessage(257, LogLevel.Warning, "The in memory identity store reached its size limit of {sizeLimit} identities and has evicted some of them. The users whose identities were evicted will be signed out even though their authentication cookies are still valid. Use a distributed identity store, or raise the size limit.")]
+    public static partial void EphemeralIdentityStoreCapacityReached(this ILogger logger, int sizeLimit);
+
+    [LoggerMessage(258, LogLevel.Warning, "A size limit of {requestedSizeLimit} was requested for {storeName}, but its cache already exists with a limit of {configuredSizeLimit}. The cache is static, so the first limit configured wins and this one has been ignored.")]
+    public static partial void EphemeralStoreSizeLimitIgnored(this ILogger logger, string storeName, int requestedSizeLimit, int configuredSizeLimit);
+
+    [LoggerMessage(259, LogLevel.Warning, "The in memory correlation state cache reached its size limit of {sizeLimit} entries and has evicted some of them. Logins in flight when their state was evicted will fail at the callback. Use a distributed correlation state cache, or raise the size limit.")]
+    public static partial void EphemeralCorrelationStateCacheCapacityReached(this ILogger logger, int sizeLimit);
+
     [LoggerMessage(253, LogLevel.Debug, "Identity cache updated for {did}")]
     public static partial void CachedIdentityUpdated(this ILogger logger, Did did);
 
