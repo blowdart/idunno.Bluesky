@@ -103,13 +103,13 @@ idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreEvents.OnStoring.get ->
 idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreEvents.OnStoring.set -> void
 idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreRetrievedContext
 idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreRetrievedContext.Identity.get -> System.ReadOnlyMemory<byte>
-idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreRetrievedContext.IdentityStoreRetrievedContext(byte[]! identity) -> void
-idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreRetrievedContext.ReplaceIdentity(byte[]! identity) -> void
+idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreRetrievedContext.IdentityStoreRetrievedContext(System.ReadOnlyMemory<byte> identity) -> void
+idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreRetrievedContext.ReplaceIdentity(System.ReadOnlyMemory<byte> identity) -> void
 idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreRetrievedContext.ReplaceIdentity(System.Collections.ObjectModel.Collection<byte>! identity) -> void
 idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreSettingContext
-idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreSettingContext.Identity.get -> System.Collections.ObjectModel.Collection<byte>!
-idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreSettingContext.IdentityStoreSettingContext(byte[]! identity) -> void
-idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreSettingContext.ReplaceIdentity(byte[]! identity) -> void
+idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreSettingContext.Identity.get -> System.ReadOnlyMemory<byte>
+idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreSettingContext.IdentityStoreSettingContext(System.ReadOnlyMemory<byte> identity) -> void
+idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreSettingContext.ReplaceIdentity(System.ReadOnlyMemory<byte> identity) -> void
 idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreSettingContext.ReplaceIdentity(System.Collections.ObjectModel.Collection<byte>! identity) -> void
 virtual idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.EndRefresh(idunno.AtProto.Did! did, string? refreshLockToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.Events.get -> idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreEvents!

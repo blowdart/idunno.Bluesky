@@ -55,25 +55,35 @@ public class DataProtectingIdentityStoreEvents : IdentityStoreEvents
 
     /// <inheritdoc/>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="context"/> is <see langword="null" />.</exception>
-    public override Task PreStoring(IdentityStoreSettingContext context)
+    /// <remarks>
+    /// <para>
+    ///   Any <see cref="IdentityStoreEvents.OnStoring"/> delegate runs before the identity is protected, so it sees, and can
+    ///   replace, the unprotected identity. Protection is always the outermost layer.
+    /// </para>
+    /// </remarks>
+    public override async Task PreStoring(IdentityStoreSettingContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        byte[] protectedIdentity = _protector.Protect([.. context.Identity]);
-        context.ReplaceIdentity(protectedIdentity);
+        await base.PreStoring(context).ConfigureAwait(false);
 
-        return base.PreStoring(context);
+        context.ReplaceIdentity(_protector.Protect(context.Identity.ToArray()));
     }
 
     /// <inheritdoc/>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="context"/> is <see langword="null" />.</exception>
-    public override Task PostRetrieval(IdentityStoreRetrievedContext context)
+    /// <remarks>
+    /// <para>
+    ///   The identity is unprotected before any <see cref="IdentityStoreEvents.OnRetrieved"/> delegate runs, so the delegate
+    ///   sees the unprotected identity, mirroring <see cref="PreStoring(IdentityStoreSettingContext)"/>.
+    /// </para>
+    /// </remarks>
+    public override async Task PostRetrieval(IdentityStoreRetrievedContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        byte[] unprotectedIdentity = _protector.Unprotect(context.Identity.ToArray());
-        context.ReplaceIdentity(unprotectedIdentity);
+        context.ReplaceIdentity(_protector.Unprotect(context.Identity.ToArray()));
 
-        return base.PostRetrieval(context);
+        await base.PostRetrieval(context).ConfigureAwait(false);
     }
 }
