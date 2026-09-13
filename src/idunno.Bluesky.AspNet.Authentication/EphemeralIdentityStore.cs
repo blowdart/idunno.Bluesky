@@ -25,19 +25,13 @@ namespace idunno.Bluesky.AspNet.Authentication;
 ///   holds are readable by anything with access to the process memory or to a dump of it.
 /// </para>
 /// <para>
-///   The <see cref="Events"/> raised by a serializing store, which is where
-///   <see cref="idunno.Bluesky.AspNet.Authentication.Events.DataProtectingIdentityStoreEvents"/> applies data protection, are never raised by this store, because
-///   it has no serialized payload to protect. Setting
-///   <see cref="BlueskyAuthenticationOptions.IdentityStoreEvents"/> has no effect when this store is in use.
-/// </para>
-/// <para>
 ///   Its contents are also lost when the process restarts, signing every user out, and are not shared between instances of an
 ///   application, so it cannot be used in a farm or with more than one worker process.
 /// </para>
 /// <para>
 ///   Production applications should use <see cref="DistributedCacheIdentityStore"/>, or another
 ///   <see cref="IIdentityStore"/> implementation backed by durable storage, with
-///   <see cref="idunno.Bluesky.AspNet.Authentication.Events.DataProtectingIdentityStoreEvents"/> configured so the stored credentials are encrypted at rest.
+///   <see cref="DataProtectingIdentityStoreEvents"/> configured so the stored credentials are encrypted at rest.
 /// </para>
 /// </remarks>
 public class EphemeralIdentityStore : IIdentityStore
