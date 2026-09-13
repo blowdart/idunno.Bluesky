@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
+using System.Text;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
@@ -182,24 +183,63 @@ public class DistributedCacheIdentityStore : IIdentityStore
     }
 
     /// <inheritdoc/>
-    public async Task<bool> StartRefresh(Did did, CancellationToken cancellationToken = default)
+    /// <remarks>
+    /// <para>
+    ///   <see cref="IDistributedCache"/> has no atomic conditional set, so the lock is acquired by writing a unique token and reading it back. If another
+    ///   caller raced and its write landed last it owns the lock and this caller backs off. This narrows the window in which two callers can both start a
+    ///   refresh to the gap between the write and the read back, rather than it spanning the whole refresh, but it cannot close it entirely.
+    /// </para>
+    /// <para>
+    ///   A cache which supports an atomic conditional set, such as Redis with <c>SET NX</c>, should derive from this class and override this method and
+    ///   <see cref="EndRefresh(Did, string?, CancellationToken)"/> to use it.
+    /// </para>
+    /// </remarks>
+    public virtual async Task<string?> StartRefresh(Did did, CancellationToken cancellationToken = default)
     {
-        byte[]? existing = await Cache.GetAsync($"{RefreshStorePrefix}{did}", token: cancellationToken).ConfigureAwait(false);
+        string refreshLockKey = $"{RefreshStorePrefix}{did}";
+
+        byte[]? existing = await Cache.GetAsync(refreshLockKey, token: cancellationToken).ConfigureAwait(false);
 
         if (existing is not null)
         {
-            return false;
+            Logger.StartRefreshDenied(did);
+            return null;
         }
 
-        await Cache.SetAsync($"{RefreshStorePrefix}{did}", [1], RefreshCacheMemoryOptions, token: cancellationToken).ConfigureAwait(false);
+        string refreshLockToken = Guid.NewGuid().ToString("N");
 
-        return true;
+        await Cache.SetAsync(refreshLockKey, Encoding.UTF8.GetBytes(refreshLockToken), RefreshCacheMemoryOptions, token: cancellationToken).ConfigureAwait(false);
+
+        byte[]? written = await Cache.GetAsync(refreshLockKey, token: cancellationToken).ConfigureAwait(false);
+
+        if (written is null || !Encoding.UTF8.GetString(written).Equals(refreshLockToken, StringComparison.Ordinal))
+        {
+            Logger.StartRefreshDenied(did);
+            return null;
+        }
+
+        Logger.StartRefreshEntered(did);
+
+        return refreshLockToken;
     }
 
     /// <inheritdoc/>
-    public async Task EndRefresh(Did did, CancellationToken cancellationToken = default)
+    public virtual async Task EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default)
     {
-        await Cache.RemoveAsync($"{RefreshStorePrefix}{did}", token: cancellationToken).ConfigureAwait(false);
+        string refreshLockKey = $"{RefreshStorePrefix}{did}";
+
+        byte[]? current = await Cache.GetAsync(refreshLockKey, token: cancellationToken).ConfigureAwait(false);
+
+        if (current is not null && !Encoding.UTF8.GetString(current).Equals(refreshLockToken, StringComparison.Ordinal))
+        {
+            // The lock expired and someone else acquired it, so it is not ours to release.
+            Logger.EndRefreshLockNotOwned(did);
+            return;
+        }
+
+        await Cache.RemoveAsync(refreshLockKey, token: cancellationToken).ConfigureAwait(false);
+
+        Logger.EndRefreshFinished(did);
     }
 
     /// <inheritdoc/>

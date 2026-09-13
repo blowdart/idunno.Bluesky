@@ -91,6 +91,12 @@ internal static partial class Logger
     [LoggerMessage(263, LogLevel.Error, "Token refresh failed for {did}.")]
     public static partial void TokenRefreshThrew(this ILogger logger, Did did, Exception ex);
 
+    [LoggerMessage(264, LogLevel.Warning, "EndRefresh for {did} did not release the refresh lock as it is now held by another caller.")]
+    public static partial void EndRefreshLockNotOwned(this ILogger logger, Did did);
+
+    [LoggerMessage(265, LogLevel.Warning, "Token refresh failed for {did}, but the identity store holds unexpired credentials from a concurrent refresh, which will be used instead.")]
+    public static partial void TokenRefreshFailedButStoreIsCurrent(this ILogger logger, Did did);
+
     [LoggerMessage(300, LogLevel.Error, "Credentials were refreshed for {did} but were not DPoPAccessCredentials.")]
     public static partial void CredentialsRefreshedNotDPoP(this ILogger logger, Did did);
 

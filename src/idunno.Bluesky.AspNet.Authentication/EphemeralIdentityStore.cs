@@ -129,27 +129,37 @@ public class EphemeralIdentityStore : IIdentityStore
     }
 
     /// <inheritdoc />
-    public async Task<bool> StartRefresh(Did did, CancellationToken cancellationToken = default)
+    public async Task<string?> StartRefresh(Did did, CancellationToken cancellationToken = default)
     {
         lock (s_refreshLock)
         {
             if (RefreshCache.Get($"{did}") is not null)
             {
                 Logger.StartRefreshDenied(did);
-                return false;
+                return null;
             }
 
             Logger.StartRefreshEntered(did);
-            RefreshCache.Set($"{did}", true, RefreshCacheMemoryOptions);
-            return true;
+
+            string refreshLockToken = Guid.NewGuid().ToString("N");
+            RefreshCache.Set($"{did}", refreshLockToken, RefreshCacheMemoryOptions);
+            return refreshLockToken;
         }
     }
 
     /// <inheritdoc />
-    public async Task EndRefresh(Did did, CancellationToken cancellationToken = default)
+    public async Task EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default)
     {
         lock (s_refreshLock)
         {
+            if (RefreshCache.Get($"{did}") is string currentToken &&
+                !currentToken.Equals(refreshLockToken, StringComparison.Ordinal))
+            {
+                // The lock expired and someone else acquired it, so it is not ours to release.
+                Logger.EndRefreshLockNotOwned(did);
+                return;
+            }
+
             RefreshCache.Remove($"{did}");
 
             Logger.EndRefreshFinished(did);

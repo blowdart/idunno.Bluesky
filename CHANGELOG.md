@@ -37,6 +37,10 @@
 
 #### idunno.Bluesky.AspNet.Authentication
 
+* `IIdentityStore.StartRefresh` has changed from `Task<bool>` to `Task<string?>`, returning a token identifying the caller's ownership of the refresh
+  lock, or `null` if the lock could not be acquired. `IIdentityStore.EndRefresh` takes that token as a new second parameter and must only release the
+  lock if it still matches, so that a caller whose lock expired mid refresh cannot release a lock another caller has since acquired. Custom identity
+  stores need updating, and implementations must acquire the lock atomically.
 * `ProfileClaimsTransformer`'s constructor takes an additional `IOptionsMonitor<BlueskyAuthenticationOptions>` parameter, used to locate the
   `IIdentityStore` updated credentials are saved to. The transformer is resolved from dependency injection, so applications registering it with
   `AddProfileClaimsTransformer()` need no changes.
