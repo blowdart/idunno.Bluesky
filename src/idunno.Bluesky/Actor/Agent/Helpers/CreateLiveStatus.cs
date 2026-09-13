@@ -42,7 +42,7 @@ public partial class BlueskyAgent
         Status status = new(
             KnownStatusValues.Live,
             embed: new EmbeddedExternal(
-                uri: uri,
+                uri: uri.ToString(),
                 title: title,
                 description: description,
                 thumbnail: previewBlob),

@@ -33,8 +33,9 @@ public class PostTests
         Assert.NotNull(post);
         Assert.Equal("Post text", post.Text);
         Assert.NotNull(post.Langs);
-        Assert.Single(post.Langs);
-        Assert.Equal("en", post.Langs.ElementAt(0));
+
+        string language = Assert.Single(post.Langs);
+        Assert.Equal("en", language);
         Assert.Equal(DateTimeOffset.Parse("2025-04-25T17:25:46.3164586+00:00"), post.CreatedAt);
     }
 
@@ -57,8 +58,8 @@ public class PostTests
         Assert.NotNull(post);
         Assert.Equal("Post text", post.Text);
         Assert.NotNull(post.Langs);
-        Assert.Single(post.Langs);
-        Assert.Equal("en", post.Langs.ElementAt(0));
+        string language = Assert.Single(post.Langs);
+        Assert.Equal("en", language);
         Assert.Equal(DateTimeOffset.Parse("2025-04-25T17:25:46.3164586+00:00"), post.CreatedAt);
     }
 
@@ -81,8 +82,8 @@ public class PostTests
         Assert.NotNull(post);
         Assert.Equal("Post text", post.Text);
         Assert.NotNull(post.Langs);
-        Assert.Single(post.Langs);
-        Assert.Equal("en", post.Langs.ElementAt(0));
+        string language = Assert.Single(post.Langs);
+        Assert.Equal("en", language);
         Assert.Equal(DateTimeOffset.Parse("2023-08-07T05:49:39.417839Z"), post.CreatedAt);
     }
 
@@ -147,22 +148,22 @@ public class PostTests
         Assert.NotNull(post);
         Assert.Equal("estrattonbailey.pckt.blog/test-post-bn...", post.Text);
         Assert.NotNull(post.Langs);
-        Assert.Single(post.Langs);
-        Assert.Equal("de", post.Langs.ElementAt(0));
+
+        string language = Assert.Single(post.Langs);
+        Assert.Equal("de", language);
         Assert.Equal(DateTimeOffset.Parse("2026-05-21T17:41:14.270Z"), post.CreatedAt);
         Assert.NotNull(post.Facets);
-        Assert.Single(post.Facets);
-        Assert.Equal(0, post.Facets.ElementAt(0)!.Index!.ByteStart);
-        Assert.Equal(41, post.Facets.ElementAt(0)!.Index!.ByteEnd);
-        Assert.Single(post.Facets.ElementAt(0)!.Features);
-        Assert.IsType<LinkFacetFeature>(post.Facets.ElementAt(0)!.Features!.ElementAt(0));
-        var link = (LinkFacetFeature)post.Facets.ElementAt(0)!.Features!.ElementAt(0);
-        Assert.Equal(new Uri("https://estrattonbailey.pckt.blog/test-post-bn5bcy2"), link.Uri);
-        Assert.NotNull(post.EmbeddedRecord);
-        Assert.IsType<EmbeddedExternal>(post.EmbeddedRecord);
-        var embeddedExternal = (EmbeddedExternal)post.EmbeddedRecord;
+        Facet facet = Assert.Single(post.Facets);
+        Assert.Equal(0, facet.Index!.ByteStart);
+        Assert.Equal(41, facet.Index!.ByteEnd);
+        Assert.Single(facet.Features);
+
+        LinkFacetFeature link = Assert.IsType<LinkFacetFeature>(facet.Features!.ElementAt(0));
+        Assert.Equal("https://estrattonbailey.pckt.blog/test-post-bn5bcy2", link.Uri);
+
+        EmbeddedExternal embeddedExternal = Assert.IsType<EmbeddedExternal>(post.EmbeddedRecord);
         Assert.NotNull(embeddedExternal.External);
-        Assert.Equal(new Uri("https://estrattonbailey.pckt.blog/test-post-bn5bcy2"), embeddedExternal.External.Uri);
+        Assert.Equal("https://estrattonbailey.pckt.blog/test-post-bn5bcy2", embeddedExternal.External.Uri);
         Assert.NotNull(embeddedExternal.External.Thumbnail);
         Assert.NotNull(embeddedExternal.External.Thumbnail.Reference);
         Assert.IsType<CidLink>(embeddedExternal.External.Thumbnail.Reference);

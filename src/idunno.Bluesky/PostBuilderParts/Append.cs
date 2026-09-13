@@ -84,7 +84,7 @@ public sealed partial class PostBuilder
             ByteSlice byteSlice = GetFacetPosition(_post.Text, link.Text);
             _post.Text += link.Text;
 
-            LinkFacetFeature linkFacetFeature = new(link.Uri);
+            LinkFacetFeature linkFacetFeature = new(link.Uri.ToString());
             List<FacetFeature> features =
                 [
                     linkFacetFeature

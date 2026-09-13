@@ -27,11 +27,9 @@ public record Properties
     /// <param name="associatedRefs">The collection of <see cref="StrongReference"/> representing the Atmosphere records for this external content, if any.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="title"/>, or <paramref name="description"/> is <see langword="null"/>.</exception>
     [JsonConstructor]
-    [SuppressMessage(
-        "ApiDesign",
-        "RS0027:API with optional parameter(s) should have the most parameters amongst its public overloads",
-        Justification = "Alternate constructions take URI as a string, so having the exact same parameters ensures consistency")]
-    public Properties(Uri uri, string title, string description, Blob? thumbnail = null, IReadOnlyCollection<StrongReference>? associatedRefs = null) : base()
+    [SuppressMessage("Design", "CA1054:URI-like parameters should not be strings", Justification = "The Bluesky web app can create facets with illegal URIs, so a string is used to accommodate them.")]
+
+    public Properties(string uri, string title, string description, Blob? thumbnail = null, IReadOnlyCollection<StrongReference>? associatedRefs = null) : base()
     {
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(title);
@@ -45,51 +43,12 @@ public record Properties
     }
 
     /// <summary>
-    /// Creates a new instance of <see cref="Properties"/>.
-    /// </summary>
-    /// <param name="uri">The external uri for the link.</param>
-    /// <param name="title">The title for the external link.</param>
-    /// <param name="description">The description of the external link.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="title"/>, or <paramref name="description"/> is <see langword="null"/>.</exception>
-    [SuppressMessage("Design", "CA1054:URI-like parameters should not be strings", Justification = "Alternative constructor for convenience")]
-    public Properties(string uri, string title, string description) : this(uri: new Uri(uri), title: title, description: description)
-    {
-    }
-
-    /// <summary>
-    /// Creates a new instance of <see cref="Properties"/>.
-    /// </summary>
-    /// <param name="uri">The external uri for the link.</param>
-    /// <param name="title">The title for the external link.</param>
-    /// <param name="description">The description of the external link.</param>
-    /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="title"/>, or <paramref name="description"/> is <see langword="null"/>.</exception>
-    [SuppressMessage("Design", "CA1054:URI-like parameters should not be strings", Justification = "Alternative constructor for convenience")]
-    public Properties(string uri, string title, string description, Blob? thumbnail) :
-        this(uri: new Uri(uri), title: title, description: description, thumbnail: thumbnail)
-    {
-    }
-
-    /// <summary>
-    /// Creates a new instance of <see cref="Properties"/>.
-    /// </summary>
-    /// <param name="uri">The external uri for the link.</param>
-    /// <param name="title">The title for the external link.</param>
-    /// <param name="description">The description of the external link.</param>
-    /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
-    /// <param name="associatedRefs">The collection of <see cref="StrongReference"/> representing the Atmosphere records for this external content, if any.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="title"/>, or <paramref name="description"/> is <see langword="null"/>.</exception>
-    public Properties(string uri, string title, string description, Blob? thumbnail, IReadOnlyCollection<StrongReference>? associatedRefs) :
-        this(new Uri(uri), title, description, thumbnail, associatedRefs)
-    {
-    }
-
-    /// <summary>
     /// Gets or sets the external <see cref="Uri"/>.
     /// </summary>
     [JsonInclude]
     [JsonRequired]
-    public Uri Uri { get; set; }
+    [SuppressMessage("Design", "CA1056:URI-like properties should not be strings", Justification = "The official Bluesky can create facets with illegal URIs, so this property is a string to accommodate those cases.")]
+    public string Uri { get; set; }
 
     /// <summary>
     /// Gets or sets the title for the external link.

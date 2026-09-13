@@ -196,9 +196,10 @@ public partial class BlueskyAgent
                 if (draftPost.EmbedExternals is not null && draftPost.EmbedExternals[0] is not null)
                 {
                     EmbeddedExternal embeddedExternal = new(
-                        uri: draftPost.EmbedExternals[0].Uri,
+                        uri: draftPost.EmbedExternals[0].Uri.ToString(),
                         title: draftPost.EmbedExternals[0].Uri.ToString(),
-                        description: draftPost.EmbedExternals[0].Uri.ToString());
+                        description: draftPost.EmbedExternals[0].Uri.ToString(),
+                        thumbnail: null);
                     postBuilder.Embed = embeddedExternal;
                 }
 

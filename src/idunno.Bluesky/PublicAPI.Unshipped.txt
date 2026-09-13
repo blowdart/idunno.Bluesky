@@ -8,3 +8,9 @@ const idunno.Bluesky.ClaimTypes.Pronouns = "urn:bluesky:pronouns" -> string!
 const idunno.Bluesky.ClaimTypes.Website = "urn:bluesky:website" -> string!
 idunno.Bluesky.BlueskyAgent.BlueskyAgent(System.Security.Claims.ClaimsPrincipal? principal, idunno.Bluesky.BlueskyAgentOptions? options = null) -> void
 idunno.Bluesky.ClaimTypes
+idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title, string! description, idunno.AtProto.Blob? thumbnail) -> void
+idunno.Bluesky.Embed.EmbeddedExternal.EmbeddedExternal(string! uri, string! title, string! description, idunno.AtProto.Blob? thumbnail, idunno.AtProto.Repo.StrongReference![]? associatedRefs) -> void
+idunno.Bluesky.Embed.External.Properties.Properties(string! uri, string! title, string! description, idunno.AtProto.Blob? thumbnail = null, System.Collections.Generic.IReadOnlyCollection<idunno.AtProto.Repo.StrongReference!>? associatedRefs = null) -> void
+idunno.Bluesky.Embed.External.Properties.Uri.get -> string!
+idunno.Bluesky.RichText.LinkFacetFeature.LinkFacetFeature(string! uri) -> void
+idunno.Bluesky.RichText.LinkFacetFeature.Uri.get -> string!

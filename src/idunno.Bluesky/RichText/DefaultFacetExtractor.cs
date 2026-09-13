@@ -19,7 +19,8 @@ public sealed partial class DefaultFacetExtractor : IFacetExtractor
     [GeneratedRegex(@"(?:^|\s)(#[^\d\s]\S*)(?=\s)?", RegexOptions.IgnoreCase, 5000)]
     private static partial Regex s_HashTagRegex();
 
-    [GeneratedRegex(@"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+,.~#&\/=]*)", RegexOptions.IgnoreCase, 5000)]
+    [GeneratedRegex(@"https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+,.~#&\/=]*)(\?[-a-zA-Z0-9()@:%_\+,.~#&\/=]+)?", RegexOptions.IgnoreCase, 5000)]
+
     private static partial Regex s_UrlRegex();
 
     [GeneratedRegex(@"@\w+(\.\w+)*", RegexOptions.IgnoreCase, 5000)]
@@ -161,7 +162,7 @@ public sealed partial class DefaultFacetExtractor : IFacetExtractor
 
         foreach (Match match in matches)
         {
-            LinkFacetFeature tagFacetFeature = new(new Uri(match.Value));
+            LinkFacetFeature tagFacetFeature = new(match.Value);
             ByteSlice index = new(text.GetUtf8BytePosition(match.Index), text.GetUtf8BytePosition(match.Index + match.Length));
             links.Add(new Facet(index, [tagFacetFeature]));
         }

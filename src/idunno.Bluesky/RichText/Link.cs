@@ -4,7 +4,7 @@
 namespace idunno.Bluesky.RichText;
 
 /// <summary>
-/// Provides an object representation of a hash tag in a Bluesky post.
+/// Provides an object representation of a link tag in a Bluesky post.
 /// </summary>
 public record Link : PostBuilderFacetFeature
 {

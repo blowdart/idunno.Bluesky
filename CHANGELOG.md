@@ -8,12 +8,24 @@
 
 * Added `Agent.HasCredentials` which returns a flag indicating whether the agent has access credentials, regardless of whether the credentials are expired.
 
+### Changed
+
+#### idunno.Bluesky
+
+* `DefaultFacetExtractor` now uses a more permissive regex for URLs, which allows for query strings to be included in the extracted URL.
+
 ### Breaking Changes
 
 #### idunno.AtProto
 
 * Removed the `ReaderWriterLockSlim` property to avoid potential deadlocks. Any code that was using this property should be now use its own locking mechanism to avoid deadlocks.
 * `DPoPRevokeCredentials` no longer implement `IDisposable`.
+
+#### idunno.Bluesky
+
+* `RichText.LinkFacetFeature.Uri` has been changed from a `Uri` type to a `string` type as the Bluesky web app can create facets with illegal URIs. The constructor has also been updated to accept a `string` instead of a `Uri`.
+* `Embed.External.Properties.Uri` has been changed from a `Uri` type to a `string` type as the Bluesky web app can create facets with illegal URIs. The constructor has also been updated to accept a `string` instead of a `Uri`.
+* `Embed.EmbeddedExternal` has been updated to only accept a `string` for its `uri` constructor parameter instead of a `Uri` type, as the Bluesky web app can create facets with illegal URIs.
 
 ## 6.0.0 - 2026-09-05
 

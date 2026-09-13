@@ -44,9 +44,8 @@ public class FacetExtractorTests
         foreach (Facet facet in results)
         {
             Assert.NotNull(facet.Features);
-            Assert.Single(facet.Features);
-
-            Assert.IsType<TagFacetFeature>(facet.Features[0]);
+            FacetFeature facetFeature = Assert.Single(facet.Features);
+            Assert.IsType<TagFacetFeature>(facetFeature);
         }
     }
 
@@ -71,9 +70,8 @@ public class FacetExtractorTests
         foreach (Facet facet in results)
         {
             Assert.NotNull(facet.Features);
-            Assert.Single(facet.Features);
-
-            Assert.IsType<TagFacetFeature>(facet.Features[0]);
+            FacetFeature featureFeature = Assert.Single(facet.Features);
+            Assert.IsType<TagFacetFeature>(featureFeature);
         }
     }
 
@@ -107,8 +105,8 @@ public class FacetExtractorTests
         foreach (Facet facet in results)
         {
             Assert.NotNull(facet.Features);
-            Assert.Single(facet.Features);
-            Assert.IsType<TagFacetFeature>(facet.Features[0]);
+            FacetFeature facetFeature = Assert.Single(facet.Features);
+            TagFacetFeature tagFeature = Assert.IsType<TagFacetFeature>(facetFeature);
             Assert.Equal(facet.Index.ByteStart, expectedStartPosition);
             Assert.Equal(facet.Index.ByteEnd, expectedEndPosition);
         }
@@ -138,8 +136,8 @@ public class FacetExtractorTests
         foreach (Facet facet in results)
         {
             Assert.NotNull(facet.Features);
-            Assert.Single(facet.Features);
-            Assert.IsType<TagFacetFeature>(facet.Features[0]);
+            FacetFeature facetFeature = Assert.Single(facet.Features);
+            Assert.IsType<TagFacetFeature>(facetFeature);
             Assert.Equal(facet.Index.ByteStart, expectedStartPosition);
             Assert.Equal(facet.Index.ByteEnd, expectedEndPosition);
         }
@@ -167,10 +165,10 @@ public class FacetExtractorTests
         foreach (Facet facet in results)
         {
             Assert.NotNull(facet.Features);
-            Assert.Single(facet.Features);
-            Assert.IsType<TagFacetFeature>(facet.Features[0]);
+            FacetFeature facetFeature = Assert.Single(facet.Features);
+            Assert.IsType<TagFacetFeature>(facetFeature);
 
-            TagFacetFeature tagFeature = (TagFacetFeature)facet.Features[0];
+            TagFacetFeature tagFeature = Assert.IsType<TagFacetFeature>(facetFeature);
 
             Assert.Equal(expectedTag, tagFeature.Tag);
         }
@@ -191,11 +189,8 @@ public class FacetExtractorTests
         foreach (Facet facet in results)
         {
             Assert.NotNull(facet.Features);
-            Assert.Single(facet.Features);
-            Assert.IsType<TagFacetFeature>(facet.Features[0]);
-
-            TagFacetFeature tagFeature = (TagFacetFeature)facet.Features[0];
-
+            FacetFeature facetFeature = Assert.Single(facet.Features);
+            TagFacetFeature tagFeature = Assert.IsType<TagFacetFeature>(facetFeature);
             Assert.Equal(expectedTag, tagFeature.Tag);
         }
     }
@@ -222,19 +217,22 @@ public class FacetExtractorTests
         foreach (Facet facet in results)
         {
             Assert.NotNull(facet.Features);
-            Assert.Single(facet.Features);
+            FacetFeature facetFeature = Assert.Single(facet.Features);
 
-            Assert.IsType<LinkFacetFeature>(facet.Features[0]);
+            Assert.IsType<LinkFacetFeature>(facetFeature);
         }
     }
 
     [Theory]
     [InlineData("http://example.org", "http://example.org")]
     [InlineData("http://example.org/path", "http://example.org/path")]
+    [InlineData("http://example.org/path?", "http://example.org/path")]
     [InlineData("http://example.org/path/", "http://example.org/path/")]
-    [InlineData("http://example.org/path?queryString", "http://example.org/path")]
-    [InlineData("http://example.org/path?queryString=1", "http://example.org/path")]
-    [InlineData("http://example.org/path?queryString=1&two=2", "http://example.org/path")]
+    [InlineData("http://example.org/path/?", "http://example.org/path/")]
+    [InlineData("http://example.org/path?queryString", "http://example.org/path?queryString")]
+    [InlineData("http://example.org/path?queryString?ignore", "http://example.org/path?queryString")]
+    [InlineData("http://example.org/path?queryString=1", "http://example.org/path?queryString=1")]
+    [InlineData("http://example.org/path?queryString=1&two=2", "http://example.org/path?queryString=1&two=2")]
     [InlineData("https://example.org", "https://example.org")]
     [InlineData("https://example.org ", "https://example.org")]
     [InlineData(" https://example.org", "https://example.org")]
@@ -252,12 +250,9 @@ public class FacetExtractorTests
         foreach (Facet facet in results)
         {
             Assert.NotNull(facet.Features);
-            Assert.Single(facet.Features);
-            Assert.IsType<LinkFacetFeature>(facet.Features[0]);
-
-            LinkFacetFeature linkFeature = (LinkFacetFeature)facet.Features[0];
-
-            Assert.Equal(new Uri(expectedLink), linkFeature.Uri);
+            FacetFeature facetFeature = Assert.Single(facet.Features);
+            LinkFacetFeature linkFeature = Assert.IsType<LinkFacetFeature>(facetFeature);
+            Assert.Equal(expectedLink, linkFeature.Uri);
         }
     }
 
@@ -280,8 +275,8 @@ public class FacetExtractorTests
         foreach (Facet facet in results)
         {
             Assert.NotNull(facet.Features);
-            Assert.Single(facet.Features);
-            Assert.IsType<LinkFacetFeature>(facet.Features[0]);
+            FacetFeature facetFeature = Assert.Single(facet.Features);
+            Assert.IsType<LinkFacetFeature>(facetFeature);
             Assert.Equal(facet.Index.ByteStart, expectedStartPosition);
             Assert.Equal(facet.Index.ByteEnd, expectedEndPosition);
         }
@@ -309,9 +304,9 @@ public class FacetExtractorTests
         foreach (Facet facet in results)
         {
             Assert.NotNull(facet.Features);
-            Assert.Single(facet.Features);
+            FacetFeature facetFeature = Assert.Single(facet.Features);
 
-            Assert.IsType<MentionFacetFeature>(facet.Features[0]);
+            Assert.IsType<MentionFacetFeature>(facetFeature);
         }
     }
 
@@ -334,8 +329,8 @@ public class FacetExtractorTests
         foreach (Facet facet in results)
         {
             Assert.NotNull(facet.Features);
-            Assert.Single(facet.Features);
-            Assert.IsType<MentionFacetFeature>(facet.Features[0]);
+            FacetFeature facetFeature = Assert.Single(facet.Features);
+            Assert.IsType<MentionFacetFeature>(facetFeature);
             Assert.Equal(facet.Index.ByteStart, expectedStartPosition);
             Assert.Equal(facet.Index.ByteEnd, expectedEndPosition);
         }
@@ -357,10 +352,10 @@ public class FacetExtractorTests
         foreach (Facet facet in results)
         {
             Assert.NotNull(facet.Features);
-            Assert.Single(facet.Features);
-            Assert.IsType<MentionFacetFeature>(facet.Features[0]);
+            FacetFeature facetFeature = Assert.Single(facet.Features);
+            Assert.IsType<MentionFacetFeature>(facetFeature);
 
-            MentionFacetFeature mentionFeature = (MentionFacetFeature)facet.Features[0];
+            MentionFacetFeature mentionFeature = Assert.IsType<MentionFacetFeature>(facetFeature);
 
             Assert.Equal(new Did(expectedDid), mentionFeature.Did);
         }
@@ -387,8 +382,8 @@ public class FacetExtractorTests
 
         foreach (Facet facet in results)
         {
-            Assert.Single(facet.Features);
-            switch (facet.Features[0])
+            FacetFeature facetFeature = Assert.Single(facet.Features);
+            switch (facetFeature)
             {
                 case MentionFacetFeature mentionFacetFeature:
                     mentionCount++;
@@ -412,7 +407,7 @@ public class FacetExtractorTests
                     urlCount++;
                     Assert.Equal(1, urlCount);
 
-                    Assert.Equal(new Uri("https://en.wikipedia.org/wiki/H._J._Heinz,_Wigan"), linkFacetFeature.Uri);
+                    Assert.Equal("https://en.wikipedia.org/wiki/H._J._Heinz,_Wigan", linkFacetFeature.Uri);
                     Assert.Equal(113, facet.Index.ByteStart);
                     Assert.Equal(161, facet.Index.ByteEnd);
 
