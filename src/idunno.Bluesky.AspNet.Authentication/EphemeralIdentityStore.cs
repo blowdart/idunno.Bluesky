@@ -100,6 +100,13 @@ public class EphemeralIdentityStore : IIdentityStore
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// <para>
+    ///   The returned identity is a copy. Concurrent requests for the same <see cref="Did"/> would otherwise share a
+    ///   single <see cref="ClaimsIdentity"/> instance, which is not safe to enumerate while another request mutates it,
+    ///   and would behave differently from a store which deserializes a fresh instance for every call.
+    /// </para>
+    /// </remarks>
     public async Task<ClaimsIdentity?> GetIdentity(Did did, CancellationToken cancellationToken = default)
     {
         if (Cache.Get($"{did}") is not ClaimsIdentity result)
@@ -108,7 +115,7 @@ public class EphemeralIdentityStore : IIdentityStore
             return null;
         }
 
-        return result;
+        return result.Clone();
     }
 
     /// <inheritdoc />
@@ -195,7 +202,8 @@ public class EphemeralIdentityStore : IIdentityStore
             throw new ArgumentException("DID claim was not a valid DID", nameof(claimsIdentity));
         }
 
-        Cache.Set($"{did}", claimsIdentity, options);
+        // Store a copy so later mutation of the caller's identity cannot change what the store hands out.
+        Cache.Set($"{did}", claimsIdentity.Clone(), options);
 
         return did;
     }
