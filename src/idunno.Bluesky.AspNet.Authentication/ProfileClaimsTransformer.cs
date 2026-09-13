@@ -30,26 +30,36 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
     /// <param name="loggerFactory">The <see cref="LoggerFactory"/> to create loggers from.</param>
     /// <param name="options">The <see cref="ProfileClaimsTransformerOptions"/> to configure the transformer.</param>
     /// <param name="blueskyAgentOptions">The <see cref="Bluesky.BlueskyAgentOptions"/> to use for the agent retrieving the profile.</param>
+    /// <param name="blueskyAuthenticationOptions">
+    ///   The <see cref="BlueskyAuthenticationOptions"/> used to locate the <see cref="IIdentityStore"/> any
+    ///   credentials updated whilst retrieving the profile should be saved to.
+    /// </param>
     /// <exception cref="ArgumentNullException">
-    ///   Thrown if <paramref name="options"/> is <see langword="null"/>.
+    ///   Thrown if <paramref name="options"/>, <paramref name="blueskyAgentOptions"/> or
+    ///   <paramref name="blueskyAuthenticationOptions"/> is <see langword="null"/>.
     /// </exception>
     public ProfileClaimsTransformer(
         ILoggerFactory loggerFactory,
         IOptionsMonitor<ProfileClaimsTransformerOptions> options,
-        IOptionsMonitor<BlueskyAgentOptions> blueskyAgentOptions)
+        IOptionsMonitor<BlueskyAgentOptions> blueskyAgentOptions,
+        IOptionsMonitor<BlueskyAuthenticationOptions> blueskyAuthenticationOptions)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(blueskyAgentOptions);
+        ArgumentNullException.ThrowIfNull(blueskyAuthenticationOptions);
 
         Options = options;
 
         loggerFactory ??= NullLoggerFactory.Instance;
 
         BlueskyAgentOptions = blueskyAgentOptions;
+        AuthenticationOptions = blueskyAuthenticationOptions;
         Logger = loggerFactory.CreateLogger(GetType().FullName!);
     }
 
     private IOptionsMonitor<BlueskyAgentOptions> BlueskyAgentOptions { get; }
+
+    private IOptionsMonitor<BlueskyAuthenticationOptions> AuthenticationOptions { get; }
 
     [NotNull]
     private IOptionsMonitor<ProfileClaimsTransformerOptions> Options { get; }
@@ -100,6 +110,16 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
 
         using (BlueskyAgent agent = new(principal, BlueskyAgentOptions?.CurrentValue))
         {
+            // The agent makes authenticated calls, so its credentials can be updated underneath us, most commonly
+            // by a DPoP nonce rotation. Without this any updated credentials would be discarded when the agent is
+            // disposed and the next call would have to pay for another nonce rotation round trip.
+            IIdentityStore? identityStore = ResolveIdentityStore(principal.Identity.AuthenticationType);
+
+            if (identityStore is not null)
+            {
+                agent.CredentialsUpdatedAsync = identityStore.OnCredentialsUpdated;
+            }
+
             if (agent.IsAuthenticated)
             {
                 ProfileCacheEntry? cachedProfile = await Cache.GetCachedValue(agent.Did).ConfigureAwait(false);
@@ -129,6 +149,24 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
         }
 
         return principal;
+    }
+
+    /// <summary>
+    /// Resolves the <see cref="IIdentityStore"/> configured for the authentication scheme the principal was issued by.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   <see cref="BlueskyAuthenticationOptions"/> are configured against the name of the authentication scheme they
+    ///   belong to, so the unnamed options instance is not necessarily the one the handler is using. The authentication
+    ///   type on a principal issued by the handler is the scheme name, so use that to get the right options instance.
+    /// </para>
+    /// </remarks>
+    /// <param name="authenticationScheme">The name of the authentication scheme the principal was issued by, if any.</param>
+    private IIdentityStore? ResolveIdentityStore(string? authenticationScheme)
+    {
+        authenticationScheme = string.IsNullOrEmpty(authenticationScheme) ? BlueskyAuthenticationDefaults.AuthenticationScheme : authenticationScheme;
+
+        return AuthenticationOptions.Get(authenticationScheme).IdentityStore;
     }
 
     private static ClaimsPrincipal SupplementClaimsPrincipal(ClaimsPrincipal principal, ProfileCacheEntry profile)

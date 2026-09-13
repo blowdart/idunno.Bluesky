@@ -17,9 +17,12 @@ namespace idunno.Bluesky.AspNet.Authentication;
 public sealed class BlueskyAgentFactory
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IOptionsMonitor<BlueskyAuthenticationOptions> _authenticationOptionsMonitor;
+    private readonly string _authenticationScheme;
 
     /// <summary>
-    /// Creates a new instance of the <see cref="BlueskyAgentFactory"/> class.
+    /// Creates a new instance of the <see cref="BlueskyAgentFactory"/> class, for the authentication scheme specified by
+    /// <see cref="BlueskyAuthenticationDefaults.AuthenticationScheme"/>.
     /// </summary>
     /// <param name="contextAccessor">The <see cref="IHttpContextAccessor"/></param>
     /// <param name="authenticationOptionsMonitor">The <see cref="IOptionsMonitor{BlueskyAuthenticationOptions}"/></param>
@@ -30,29 +33,66 @@ public sealed class BlueskyAgentFactory
         IHttpContextAccessor contextAccessor,
         IOptionsMonitor<BlueskyAuthenticationOptions> authenticationOptionsMonitor,
         IOptionsMonitor<BlueskyAgentOptions> agentOptionsMonitor,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory) :
+            this(contextAccessor, authenticationOptionsMonitor, agentOptionsMonitor, loggerFactory, BlueskyAuthenticationDefaults.AuthenticationScheme)
+    {
+    }
+
+    /// <summary>
+    /// Creates a new instance of the <see cref="BlueskyAgentFactory"/> class for the specified authentication scheme.
+    /// </summary>
+    /// <param name="contextAccessor">The <see cref="IHttpContextAccessor"/></param>
+    /// <param name="authenticationOptionsMonitor">The <see cref="IOptionsMonitor{BlueskyAuthenticationOptions}"/></param>
+    /// <param name="agentOptionsMonitor">The <see cref="IOptionsMonitor{BlueskyAgentOptions}"/></param>
+    /// <param name="loggerFactory">The <see cref="ILoggerFactory"/></param>
+    /// <param name="authenticationScheme">
+    ///   The name of the authentication scheme whose <see cref="BlueskyAuthenticationOptions"/> the factory should use when the current request has no
+    ///   authenticated Bluesky user to take the scheme name from.
+    /// </param>
+    /// <exception cref="ArgumentNullException">Thrown if any of the parameters are <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="authenticationScheme"/> is empty or white space.</exception>
+    public BlueskyAgentFactory(
+        IHttpContextAccessor contextAccessor,
+        IOptionsMonitor<BlueskyAuthenticationOptions> authenticationOptionsMonitor,
+        IOptionsMonitor<BlueskyAgentOptions> agentOptionsMonitor,
+        ILoggerFactory loggerFactory,
+        string authenticationScheme)
     {
         ArgumentNullException.ThrowIfNull(contextAccessor);
         ArgumentNullException.ThrowIfNull(authenticationOptionsMonitor);
-        ArgumentNullException.ThrowIfNull(authenticationOptionsMonitor.CurrentValue.IdentityStore);
         ArgumentNullException.ThrowIfNull(agentOptionsMonitor);
         ArgumentNullException.ThrowIfNull(loggerFactory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(authenticationScheme);
 
-        IdentityStore = authenticationOptionsMonitor.CurrentValue.IdentityStore;
-        AuthenticationOptions = authenticationOptionsMonitor.CurrentValue;
         BlueskyAgentOptions = agentOptionsMonitor.CurrentValue;
         BlueskyAgentOptions.LoggerFactory = loggerFactory;
 
+        _authenticationOptionsMonitor = authenticationOptionsMonitor;
+        _authenticationScheme = authenticationScheme;
         _httpContextAccessor = contextAccessor;
     }
-
-    internal BlueskyAuthenticationOptions AuthenticationOptions { get; }
 
     internal BlueskyAgentOptions BlueskyAgentOptions { get; }
 
     internal HttpContext? Context => _httpContextAccessor.HttpContext;
 
-    internal IIdentityStore IdentityStore { get; }
+    /// <summary>
+    /// Gets the <see cref="BlueskyAuthenticationOptions"/> configured for the specified authentication scheme.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   <see cref="BlueskyAuthenticationOptions"/> are configured against the name of the authentication scheme they belong to, so the unnamed options
+    ///   instance exposed by <see cref="IOptionsMonitor{TOptions}.CurrentValue"/> is not the instance the authentication handler is using, and would not
+    ///   carry any configuration the application applied in its call to <c>AddBluesky</c>.
+    /// </para>
+    /// </remarks>
+    /// <param name="authenticationScheme">The name of the authentication scheme to get the options for, if known.</param>
+    internal BlueskyAuthenticationOptions GetAuthenticationOptions(string? authenticationScheme)
+    {
+        authenticationScheme = string.IsNullOrEmpty(authenticationScheme) ? _authenticationScheme : authenticationScheme;
+
+        return _authenticationOptionsMonitor.Get(authenticationScheme);
+    }
 
     /// <summary>
     /// Creates a <see cref="BlueskyAgent"/>.
@@ -78,10 +118,18 @@ public sealed class BlueskyAgentFactory
         }
         else
         {
+            identity = null;
             agent = new BlueskyAgent(options: BlueskyAgentOptions);
         }
 
-        agent.CredentialsUpdatedAsync = IdentityStore.OnCredentialsUpdated;
+        // An identity issued by the authentication handler carries the name of the scheme which issued it as its authentication type,
+        // which is the name the options for that scheme, and so its identity store, are configured against.
+        IIdentityStore? identityStore = GetAuthenticationOptions(identity?.AuthenticationType).IdentityStore;
+
+        if (identityStore is not null)
+        {
+            agent.CredentialsUpdatedAsync = identityStore.OnCredentialsUpdated;
+        }
 
         return agent;
     }

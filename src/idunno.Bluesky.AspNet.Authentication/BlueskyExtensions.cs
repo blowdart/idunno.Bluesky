@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 using idunno.Bluesky.AspNet.Authentication;
@@ -115,7 +116,6 @@ public static class BlueskyExtensions
         Action<BlueskyAuthenticationOptions> configureOptions)
     {
         ArgumentNullException.ThrowIfNull(builder);
-        ArgumentNullException.ThrowIfNull(configureOptions);
 
         builder.Services.AddBlueskyAgentOptions();
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<BlueskyAgentOptions>, PostConfigureBlueskyAgentOptions>());
@@ -143,15 +143,44 @@ public static class BlueskyExtensions
     }
 
     /// <summary>
-    /// Adds a <see cref="BlueskyAgentFactory"/> to the service collection.
+    /// Adds a <see cref="BlueskyAgentFactory"/> to the service collection, for the authentication scheme specified by
+    /// <see cref="BlueskyAuthenticationDefaults.AuthenticationScheme"/>.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to add to.</param>
     /// <returns>The service collection</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="services"/> is <see langword="null"/>.</exception>
     public static IServiceCollection AddBlueskyAgentFactory(this IServiceCollection services)
+        => services.AddBlueskyAgentFactory(BlueskyAuthenticationDefaults.AuthenticationScheme);
+
+    /// <summary>
+    /// Adds a <see cref="BlueskyAgentFactory"/> to the service collection, for the specified authentication scheme.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add to.</param>
+    /// <param name="authenticationScheme">The name of the authentication scheme the factory should create agents for.</param>
+    /// <returns>The service collection</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="services"/> or <paramref name="authenticationScheme"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="authenticationScheme"/> is empty or white space.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The factory takes the authentication scheme, and so the <see cref="BlueskyAuthenticationOptions"/> and <see cref="IIdentityStore"/> it should use,
+    ///   from the current user when the request has an authenticated Bluesky user. Specify <paramref name="authenticationScheme"/> if the application
+    ///   registered Bluesky authentication under a scheme name other than <see cref="BlueskyAuthenticationDefaults.AuthenticationScheme"/>, so that agents
+    ///   created for anonymous requests use the right options.
+    /// </para>
+    /// </remarks>
+    public static IServiceCollection AddBlueskyAgentFactory(this IServiceCollection services, string authenticationScheme)
     {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(authenticationScheme);
+
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
         services.AddOptions<BlueskyAgentOptions>();
-        services.AddSingleton<BlueskyAgentFactory>();
+        services.AddSingleton(provider => new BlueskyAgentFactory(
+            provider.GetRequiredService<IHttpContextAccessor>(),
+            provider.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<BlueskyAgentOptions>>(),
+            provider.GetRequiredService<ILoggerFactory>(),
+            authenticationScheme));
         services.AddScoped(provider => provider.GetRequiredService<BlueskyAgentFactory>().CreateAgent());
 
         return services;
