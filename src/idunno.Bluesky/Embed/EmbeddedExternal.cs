@@ -33,27 +33,10 @@ public sealed record EmbeddedExternal : EmbeddedBase
     /// <param name="title">The title for the external link.</param>
     /// <param name="description">The description of the external link, if any.</param>
     /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="title"/>, or <paramref name="description"/> is <see langword="null"/>.</exception>
-    [SuppressMessage("Design", "CA1054:URI-like parameters should not be strings", Justification = "The Bluesky web app can create facets with illegal URIs, so a string is used to accommodate them.")]
-    public EmbeddedExternal(string uri, string title, string description, Blob? thumbnail) :
-        this(new External.Properties(uri, title, description, thumbnail))
-    {
-        ArgumentNullException.ThrowIfNull(uri);
-        ArgumentNullException.ThrowIfNull(title);
-        ArgumentNullException.ThrowIfNull(description);
-    }
-
-    /// <summary>
-    /// Creates a new instance of <see cref="EmbeddedExternal"/>.
-    /// </summary>
-    /// <param name="uri">The external uri for the link, as a string.</param>
-    /// <param name="title">The title for the external link.</param>
-    /// <param name="description">The description of the external link, if any.</param>
-    /// <param name="thumbnail">The <see cref="Blob"/> for the thumbnail of the link, if any.</param>
     /// <param name="associatedRefs">An array of strong references associated with the embed.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="uri"/>, <paramref name="title"/>, or <paramref name="description"/> is <see langword="null"/>.</exception>
     [SuppressMessage("Design", "CA1054:URI-like parameters should not be strings", Justification = "The Bluesky web app can create facets with illegal URIs, so a string is used to accommodate them.")]
-    public EmbeddedExternal(string uri, string title, string description, Blob? thumbnail, StrongReference[]? associatedRefs) :
+    public EmbeddedExternal(string uri, string title, string description, Blob? thumbnail = null, StrongReference[]? associatedRefs = null) :
         this(new External.Properties(uri, title, description, thumbnail, associatedRefs))
     {
         ArgumentNullException.ThrowIfNull(uri);
