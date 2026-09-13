@@ -5,13 +5,13 @@
     {
         <li class="nav-item">
             <a class="nav-link text-dark" asp-area="Account" asp-page="/Identity/Manage/Index" title="Manage">
-                @if (User.Avatar is not null)
+                @if (User.GetAvatar() is not null)
                 {
-                    <img src="@User.Avatar" alt="Avatar" class="rounded-circle" width="30" height="30" />
+                    <img src="@User.GetAvatar()" alt="Avatar" class="rounded-circle" width="30" height="30" />
                 }
-                else if (User.DisplayName is not null)
+                else if (User.GetDisplayName() is not null)
                 {
-                    <span>Hello @User.DisplayName!</span>
+                    <span>Hello @User.GetDisplayName()!</span>
                 }
                 else
                 {

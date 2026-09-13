@@ -73,14 +73,6 @@ idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.SaveStateAndCreateCorr
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.SignIn() -> System.Threading.Tasks.Task<idunno.Bluesky.AspNet.Authentication.SignInResult!>!
 idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.SignOut(string? scheme = null) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.ClaimsExtensions
-idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!)
-idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!).Avatar.get -> System.Uri?
-idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!).Banner.get -> System.Uri?
-idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!).Description.get -> string?
-idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!).DisplayName.get -> string?
-idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!).Handle.get -> idunno.AtProto.Handle?
-idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!).Pronouns.get -> string?
-idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.extension(System.Security.Claims.ClaimsPrincipal!).Website.get -> System.Uri?
 idunno.Bluesky.AspNet.Authentication.Constants
 idunno.Bluesky.AspNet.Authentication.DistributedCacheCorrelationStateCache
 idunno.Bluesky.AspNet.Authentication.DistributedCacheCorrelationStateCache.AddOAuthLoginState(System.Guid correlationId, idunno.AtProto.Authentication.OAuthLoginState! state) -> System.Threading.Tasks.Task!
@@ -271,13 +263,13 @@ override idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions.To
 override idunno.Bluesky.AspNet.Authentication.SignInResult.Equals(object? obj) -> bool
 override idunno.Bluesky.AspNet.Authentication.SignInResult.GetHashCode() -> int
 override idunno.Bluesky.AspNet.Authentication.SignInResult.ToString() -> string!
-static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.get_Avatar(System.Security.Claims.ClaimsPrincipal! principal) -> System.Uri?
-static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.get_Banner(System.Security.Claims.ClaimsPrincipal! principal) -> System.Uri?
-static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.get_Description(System.Security.Claims.ClaimsPrincipal! principal) -> string?
-static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.get_DisplayName(System.Security.Claims.ClaimsPrincipal! principal) -> string?
-static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.get_Handle(System.Security.Claims.ClaimsPrincipal! principal) -> idunno.AtProto.Handle?
-static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.get_Pronouns(System.Security.Claims.ClaimsPrincipal! principal) -> string?
-static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.get_Website(System.Security.Claims.ClaimsPrincipal! principal) -> System.Uri?
+static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.GetAvatar(this System.Security.Claims.ClaimsPrincipal? principal) -> System.Uri?
+static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.GetBanner(this System.Security.Claims.ClaimsPrincipal? principal) -> System.Uri?
+static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.GetDescription(this System.Security.Claims.ClaimsPrincipal? principal) -> string?
+static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.GetDisplayName(this System.Security.Claims.ClaimsPrincipal? principal) -> string?
+static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.GetHandle(this System.Security.Claims.ClaimsPrincipal? principal) -> idunno.AtProto.Handle?
+static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.GetPronouns(this System.Security.Claims.ClaimsPrincipal? principal) -> string?
+static idunno.Bluesky.AspNet.Authentication.ClaimsExtensions.GetWebsite(this System.Security.Claims.ClaimsPrincipal? principal) -> System.Uri?
 static idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.operator !=(idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry? left, idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry? right) -> bool
 static idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry.operator ==(idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry? left, idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry? right) -> bool
 static idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions.operator !=(idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions? left, idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformerOptions? right) -> bool
