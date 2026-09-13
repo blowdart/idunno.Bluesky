@@ -2,7 +2,7 @@
 
 ## 7.0.0-aspnet - ** unreleased **
 
-### Addded
+### Added
 
 #### idunno.AtProto
 

@@ -29,16 +29,15 @@ public record Properties
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="title"/> or <paramref name="description"/> is <see langword="null"/>.</exception>
     [JsonConstructor]
     [SuppressMessage("Design", "CA1054:URI-like parameters should not be strings", Justification = "The Bluesky web app can create facets with illegal URIs, so a string is used to accommodate them.")]
-
     public Properties(string uri, string title, string description, Blob? thumbnail = null, IReadOnlyCollection<StrongReference>? associatedRefs = null) : base()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(uri);
         ArgumentNullException.ThrowIfNull(title);
-        ArgumentNullException.ThrowIfNull(description);
+        ArgumentException.ThrowIfNullOrWhiteSpace(description);
 
         Uri = uri;
         Title = title;
-        Description = description ?? string.Empty;
+        Description = description;
         Thumbnail = thumbnail;
         AssociatedRefs = associatedRefs;
     }
@@ -59,22 +58,41 @@ public record Properties
             ArgumentException.ThrowIfNullOrWhiteSpace(value);
             field = value;
         }
-
     }
 
     /// <summary>
     /// Gets or sets the title for the external link.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when the value is <see langword="null"/>.</exception>
     [JsonInclude]
     [JsonRequired]
-    public string Title { get; set; }
+    public string Title
+    {
+        get;
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            field = value;
+        }
+    }
 
     /// <summary>
     /// Gets or sets the description of the external link.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when the value is <see langword="null"/>.</exception>
     [JsonInclude]
     [JsonRequired]
-    public string Description { get; set; }
+    public string Description
+    {
+        get;
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            field = value;
+        }
+    }
 
     /// <summary>
     /// Gets or sets the <see cref="Blob"/> to a thumbnail image for the external link.

@@ -28,9 +28,19 @@ public sealed record LinkFacetFeature : FacetFeature
     /// <summary>
     /// The uri, as a string, for the facet.
     /// </summary>
+    /// <exception cref="ArgumentException">Thrown when the value is <see langword="null"/> or whitespace.</exception>
     /// <remarks><para>This property is a string to accommodate illegal URIs that the Bluesky web app can create. Validate the URI before using it.</para></remarks>
     [JsonInclude]
     [JsonRequired]
     [SuppressMessage("Design", "CA1056:URI-like properties should not be strings", Justification = "The official Bluesky can create facets with illegal URIs, so this property is a string to accommodate those cases.")]
-    public string Uri { get; init; }
+    public string Uri
+    {
+        get;
+
+        set
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(value);
+            field = value;
+        }
+    }
 }
