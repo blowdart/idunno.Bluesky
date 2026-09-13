@@ -60,6 +60,34 @@ public class DistributedCacheCorrelationStateCache : ICorrelationStateCache
     {
         string? encodedState = await Cache.GetStringAsync($"{CorrelationPrefix}{correlationId}").ConfigureAwait(false);
 
+        return await Decode(encodedState).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    ///   <see cref="IDistributedCache"/> has no atomic take, so the entry is removed immediately after it is read and
+    ///   before it is unprotected or deserialized. This narrows the window in which two callers can both be given the
+    ///   same state to a single cache round trip, but it cannot close it entirely.
+    /// </para>
+    /// <para>
+    ///   A cache which supports an atomic take, such as Redis with <c>GETDEL</c>, should derive from this class and
+    ///   override this method to use it.
+    /// </para>
+    /// </remarks>
+    public virtual async Task<OAuthLoginState?> TakeOAuthLoginState(Guid correlationId)
+    {
+        string key = $"{CorrelationPrefix}{correlationId}";
+
+        string? encodedState = await Cache.GetStringAsync(key).ConfigureAwait(false);
+
+        await Cache.RemoveAsync(key).ConfigureAwait(false);
+
+        return await Decode(encodedState).ConfigureAwait(false);
+    }
+
+    private async Task<OAuthLoginState?> Decode(string? encodedState)
+    {
         if (string.IsNullOrEmpty(encodedState))
         {
             return null;

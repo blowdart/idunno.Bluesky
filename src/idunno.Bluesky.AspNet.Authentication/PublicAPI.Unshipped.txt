@@ -352,3 +352,5 @@ idunno.Bluesky.AspNet.Authentication.Events.DataProtectingCorrelationStateCacheE
 idunno.Bluesky.AspNet.Authentication.Events.DataProtectingCorrelationStateCacheEvents.DataProtectingCorrelationStateCacheEvents(Microsoft.AspNetCore.DataProtection.IDataProtectionProvider! dataProtectionProvider) -> void
 override idunno.Bluesky.AspNet.Authentication.Events.DataProtectingCorrelationStateCacheEvents.PreStoring(idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateSettingContext! context) -> System.Threading.Tasks.Task!
 override idunno.Bluesky.AspNet.Authentication.Events.DataProtectingCorrelationStateCacheEvents.PostRetrieval(idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateRetrievedContext! context) -> System.Threading.Tasks.Task!
+idunno.Bluesky.AspNet.Authentication.ICorrelationStateCache.TakeOAuthLoginState(System.Guid correlationId) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.OAuthLoginState?>!
+virtual idunno.Bluesky.AspNet.Authentication.DistributedCacheCorrelationStateCache.TakeOAuthLoginState(System.Guid correlationId) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.OAuthLoginState?>!

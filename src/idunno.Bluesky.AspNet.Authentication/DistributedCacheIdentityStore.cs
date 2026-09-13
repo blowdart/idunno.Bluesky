@@ -153,14 +153,8 @@ public class DistributedCacheIdentityStore : IIdentityStore
 
         try
         {
-            // First read the stored identity into a byte array, then raise the event to allow subscribers to modify it before deserializing it back into a ClaimsIdentity.
-            using MemoryStream claimsMemoryStream = new();
-            await claimsMemoryStream.WriteAsync(claimsIdentityAsBytes, cancellationToken).ConfigureAwait(false);
-            claimsMemoryStream.Position = 0;
-            using BinaryReader claimsReader = new(claimsMemoryStream);
-            byte[] identityBytes = claimsReader.ReadBytes(claimsIdentityAsBytes.Length);
-
-            IdentityStoreRetrievedContext context = new(identityBytes);
+            // Raise the event to allow subscribers to modify the stored bytes before they are deserialized into a ClaimsIdentity.
+            IdentityStoreRetrievedContext context = new(claimsIdentityAsBytes);
             await Events.PostRetrieval(context).ConfigureAwait(false);
 
             // Deserialize the potentially modified identity bytes back into a ClaimsIdentity.

@@ -65,11 +65,28 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     /// <summary>
     /// Gets or sets a value for how long to wait between refresh attempts, if a refresh is already in progress.
     /// </summary>
-    public TimeSpan RefreshCheckWait { get; set; } = TimeSpan.FromSeconds(5);
+    /// <remarks>
+    /// <para>
+    ///   This is multiplied by <see cref="MaxRefreshChecks"/> to give the longest a request can be held waiting for a
+    ///   refresh started elsewhere to finish. The defaults allow a worst case of 12.5 seconds, during which the request
+    ///   occupies a thread pool thread. Raising either value extends that hold, and a total longer than the timeout of
+    ///   any proxy or load balancer in front of the application will simply be cut short by it.
+    /// </para>
+    /// <para>
+    ///   Must be greater than zero.
+    /// </para>
+    /// </remarks>
+    public TimeSpan RefreshCheckWait { get; set; } = TimeSpan.FromSeconds(2.5);
 
     /// <summary>
     /// Gets or sets a value for the maximum number of times to check for a refresh, if a refresh is already in progress.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   This is multiplied by <see cref="RefreshCheckWait"/> to give the longest a request can be held waiting for a
+    ///   refresh started elsewhere to finish. See <see cref="RefreshCheckWait"/> for the consequences of raising it.
+    /// </para>
+    /// </remarks>
     public int MaxRefreshChecks { get; set; } = 5;
 
     /// <summary>

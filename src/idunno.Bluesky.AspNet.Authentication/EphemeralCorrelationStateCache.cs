@@ -20,8 +20,10 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
 
 #if NET9_0_OR_GREATER
     private static readonly Lock s_warnedLock = new ();
+    private static readonly Lock s_takeLock = new ();
 #else
     private static readonly object s_warnedLock = new();
+    private static readonly object s_takeLock = new();
 #endif
 
     private static readonly TimeSpan s_defaultSlidingExpiration = new(0, 0, 15, 0);
@@ -87,6 +89,26 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
     {
         string? encodedState = Cache.Get($"{correlationId}") as string;
 
+        return await Decode(encodedState).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<OAuthLoginState?> TakeOAuthLoginState(Guid correlationId)
+    {
+        string? encodedState;
+
+        // The read and the removal are held together so two concurrent callers cannot both be given the same state.
+        lock (s_takeLock)
+        {
+            encodedState = Cache.Get($"{correlationId}") as string;
+            Cache.Remove($"{correlationId}");
+        }
+
+        return await Decode(encodedState).ConfigureAwait(false);
+    }
+
+    private async Task<OAuthLoginState?> Decode(string? encodedState)
+    {
         if (string.IsNullOrEmpty(encodedState))
         {
             return null;
