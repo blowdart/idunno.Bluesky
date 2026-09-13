@@ -166,6 +166,12 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     /// calls methods on the provider which give the application control at certain points where processing is occurring.
     /// If it is not provided a default instance is supplied which does nothing when the methods are called.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   This is applied to <see cref="IdentityStore"/> when the options for the scheme are built, so it takes effect
+    ///   whether the store is the default one or one the application supplied.
+    /// </para>
+    /// </remarks>
     [JsonIgnore]
     public IdentityStoreEvents IdentityStoreEvents { get; set; } = new IdentityStoreEvents();
 
