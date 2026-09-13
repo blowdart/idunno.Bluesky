@@ -97,6 +97,15 @@ internal static partial class Logger
     [LoggerMessage(265, LogLevel.Warning, "Token refresh failed for {did}, but the identity store holds unexpired credentials from a concurrent refresh, which will be used instead.")]
     public static partial void TokenRefreshFailedButStoreIsCurrent(this ILogger logger, Did did);
 
+    [LoggerMessage(266, LogLevel.Debug, "Credentials for {did} were revoked at the authorization server during sign out.")]
+    public static partial void CredentialsRevokedOnSignOut(this ILogger logger, Did did);
+
+    [LoggerMessage(267, LogLevel.Warning, "Credentials for {did} could not be revoked at the authorization server during sign out. The local sign out completed, but the tokens remain valid until they expire.")]
+    public static partial void CredentialRevocationFailed(this ILogger logger, Did did, Exception exception);
+
+    [LoggerMessage(268, LogLevel.Debug, "Sign out was called without the request having been authenticated. The DID was recovered from the request cookie.")]
+    public static partial void SignOutDidRecoveredFromCookie(this ILogger logger);
+
     [LoggerMessage(300, LogLevel.Error, "Credentials were refreshed for {did} but were not DPoPAccessCredentials.")]
     public static partial void CredentialsRefreshedNotDPoP(this ILogger logger, Did did);
 
