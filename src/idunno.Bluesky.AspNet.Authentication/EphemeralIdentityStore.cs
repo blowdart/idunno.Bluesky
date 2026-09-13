@@ -4,12 +4,13 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 
+using idunno.AtProto;
+using idunno.AtProto.Authentication;
+
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-
-using idunno.AtProto;
-using idunno.AtProto.Authentication;
+using Microsoft.Extensions.Options;
 
 namespace idunno.Bluesky.AspNet.Authentication;
 

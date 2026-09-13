@@ -162,6 +162,14 @@ public class BlueskyAuthenticationOptions : AuthenticationSchemeOptions
     }
 
     /// <summary>
+    /// The IdentityStoreEvents may be assigned to an instance of an object created by the application at startup time. The handler
+    /// calls methods on the provider which give the application control at certain points where processing is occurring.
+    /// If it is not provided a default instance is supplied which does nothing when the methods are called.
+    /// </summary>
+    [JsonIgnore]
+    public IdentityStoreEvents IdentityStoreEvents { get; set; } = new IdentityStoreEvents();
+
+    /// <summary>
     /// <para>
     /// Controls how much time the authentication ticket stored in the cookie will remain valid from the point it is created.
     /// The expiration information is stored in the protected cookie ticket. Because of that an expired cookie will be ignored

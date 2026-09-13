@@ -7,6 +7,7 @@ using System.Text;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
+using idunno.Bluesky.AspNet.Authentication.Events;
 
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -47,7 +48,6 @@ public class DistributedCacheIdentityStore : IIdentityStore
 
         Cache = cache;
         Logger = loggerFactory.CreateLogger<DistributedCacheIdentityStore>();
-
         if (options is not null)
         {
             TokenCacheMemoryOptions = new DistributedCacheEntryOptions()
@@ -60,6 +60,7 @@ public class DistributedCacheIdentityStore : IIdentityStore
                 AbsoluteExpirationRelativeToNow = options.Value.RefreshLockLength ?? s_defaultRefreshLockTTL
             };
 
+            Events = options.Value.IdentityStoreEvents ?? new IdentityStoreEvents();
         }
         else
         {
@@ -72,6 +73,8 @@ public class DistributedCacheIdentityStore : IIdentityStore
             {
                 AbsoluteExpirationRelativeToNow = s_defaultRefreshLockTTL
             };
+
+            Events = new IdentityStoreEvents();
         }
     }
 
@@ -98,6 +101,8 @@ public class DistributedCacheIdentityStore : IIdentityStore
 
     private ILogger<DistributedCacheIdentityStore> Logger { get; }
 
+    private IdentityStoreEvents Events { get; }
+
     /// <inheritdoc/>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="claimsIdentity"/> is <see langword="null" />./</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="claimsIdentity"/> does not have a DID claim, or the DID claim is invalid.</exception>
@@ -123,6 +128,10 @@ public class DistributedCacheIdentityStore : IIdentityStore
             claimsIdentityAsBytes = claimsMemoryStream.ToArray();
         }
 
+        IdentityStoreSettingContext context = new(claimsIdentityAsBytes);
+        await Events.PreStoring(context).ConfigureAwait(false);
+        claimsIdentityAsBytes = [.. context.Identity];
+
         await Cache.SetAsync($"{ClaimsStorePrefix}{did}", claimsIdentityAsBytes, TokenCacheMemoryOptions, token: cancellationToken).ConfigureAwait(false);
 
         Logger.IdentityAddedToCache(did);
@@ -144,11 +153,22 @@ public class DistributedCacheIdentityStore : IIdentityStore
 
         try
         {
+            // First read the stored identity into a byte array, then raise the event to allow subscribers to modify it before deserializing it back into a ClaimsIdentity.
             using MemoryStream claimsMemoryStream = new();
             await claimsMemoryStream.WriteAsync(claimsIdentityAsBytes, cancellationToken).ConfigureAwait(false);
             claimsMemoryStream.Position = 0;
             using BinaryReader claimsReader = new(claimsMemoryStream);
-            result = new ClaimsIdentity(claimsReader);
+            byte[] identityBytes = claimsReader.ReadBytes(claimsIdentityAsBytes.Length);
+
+            IdentityStoreRetrievedContext context = new(identityBytes);
+            await Events.PostRetrieval(context).ConfigureAwait(false);
+
+            // Deserialize the potentially modified identity bytes back into a ClaimsIdentity.
+            using MemoryStream contextMemoryStream = new();
+            await contextMemoryStream.WriteAsync(context.Identity, cancellationToken).ConfigureAwait(false);
+            contextMemoryStream.Position = 0;
+            using BinaryReader contextReader = new(contextMemoryStream);
+            result = new ClaimsIdentity(contextReader);
         }
         catch (Exception ex)
         {
