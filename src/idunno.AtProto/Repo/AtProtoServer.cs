@@ -59,7 +59,7 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials">Access credentials for the specified service.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -71,6 +71,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresUnreferencedCode("Use a ApplyWrites overload which takes JsonSerializerOptions instead.")]
     [RequiresDynamicCode("Use a ApplyWrites overload which takes JsonSerializerOptions instead.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<ApplyWritesResults>> ApplyWrites(
         ICollection<WriteOperation> operations,
         Did repo,
@@ -80,7 +81,7 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default)
     {
@@ -196,7 +197,7 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials">Access credentials for the specified service.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -208,6 +209,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<ApplyWritesResults>> ApplyWrites(
         ICollection<WriteOperation> operations,
         JsonSerializerOptions jsonSerializerOptions,
@@ -218,7 +220,7 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default)
     {
@@ -335,7 +337,7 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials"><para><see cref="AccessCredentials"/> for the specified service.</para></param>
     /// <param name="httpClient"><para>An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</para></param>
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
-    /// <param name="onCredentialsUpdated"><para>An <see cref="Action{T}" /> to call if the credentials in the request need updating.</para></param>
+    /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -347,6 +349,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
     [RequiresUnreferencedCode("Use a CreateRecord overload which takes JsonSerializerOptions instead.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<CreateRecordResult>> CreateRecord<TRecord>(
         TRecord record,
         Nsid collection,
@@ -358,7 +361,7 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
@@ -440,7 +443,7 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials"><para><see cref="AccessCredentials"/> for the specified service.</para></param>
     /// <param name="httpClient"><para>An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</para></param>
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
-    /// <param name="onCredentialsUpdated"><para>An <see cref="Action{T}" /> to call if the credentials in the request need updating.</para></param>
+    /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -452,6 +455,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<CreateRecordResult>> CreateRecord<TRecord>(
         TRecord record,
         JsonSerializerOptions jsonSerializerOptions,
@@ -464,7 +468,7 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
@@ -547,7 +551,7 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials"><see cref="AccessCredentials"/> for the specified <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -574,7 +578,7 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default)
     {
@@ -650,7 +654,7 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials"><para><see cref="AccessCredentials"/> for the specified service</para></param>
     /// <param name="httpClient"><para>An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</para></param>
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
-    /// <param name="onCredentialsUpdated"><para>An <see cref="Action{T}" /> to call if the credentials in the request need updating.</para></param>
+    /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -660,6 +664,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
     [RequiresUnreferencedCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecord>(
         AtProtoRepositoryRecord<TRecord> repositoryRecord,
         bool? validate,
@@ -667,7 +672,7 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default)
             where TRecord : AtProtoRecord
@@ -725,7 +730,7 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials"><para><see cref="AccessCredentials"/> for the specified service</para></param>
     /// <param name="httpClient"><para>An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</para></param>
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
-    /// <param name="onCredentialsUpdated"><para>An <see cref="Action{T}" /> to call if the credentials in the request need updating.</para></param>
+    /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -737,6 +742,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
     [RequiresUnreferencedCode("Use a PutRecord overload which takes JsonSerializerOptions instead.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecord>(
         TRecord record,
         Nsid collection,
@@ -749,7 +755,7 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
@@ -831,7 +837,7 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials"><para><see cref="AccessCredentials"/> for the specified service</para></param>
     /// <param name="httpClient"><para>An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</para></param>
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
-    /// <param name="onCredentialsUpdated"><para>An <see cref="Action{T}" /> to call if the credentials in the request need updating.</para></param>
+    /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -841,6 +847,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecord>(
         AtProtoRepositoryRecord<TRecord> repositoryRecord,
         JsonSerializerOptions jsonSerializerOptions,
@@ -849,7 +856,7 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default)
             where TRecord : AtProtoRecord
@@ -908,7 +915,7 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials"><para><see cref="AccessCredentials"/> for the specified service</para></param>
     /// <param name="httpClient"><para>An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</para></param>
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
-    /// <param name="onCredentialsUpdated"><para>An <see cref="Action{T}" /> to call if the credentials in the request need updating.</para></param>
+    /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -920,6 +927,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<PutRecordResult>> PutRecord<TRecord>(
         TRecord record,
         JsonSerializerOptions jsonSerializerOptions,
@@ -933,7 +941,7 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
@@ -1010,7 +1018,7 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials">Optional access credentials for the specified service.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -1020,6 +1028,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are specified but are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Use a Get overload which takes JsonSerializerOptions instead.")]
     [RequiresUnreferencedCode("Use a Get overload which takes JsonSerializerOptions instead.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>>> GetRecord<TRecord>(
         AtIdentifier repo,
         Nsid collection,
@@ -1029,7 +1038,7 @@ public static partial class AtProtoServer
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
@@ -1086,7 +1095,7 @@ public static partial class AtProtoServer
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -1096,6 +1105,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are specified but are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresUnreferencedCode("Make sure all required types are preserved in the jsonSerializerOptions parameter.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<AtProtoRepositoryRecord<TRecord>>> GetRecord<TRecord>(
         AtIdentifier repo,
         Nsid collection,
@@ -1106,7 +1116,7 @@ public static partial class AtProtoServer
         HttpClient httpClient,
         JsonSerializerOptions jsonSerializerOptions,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
@@ -1162,7 +1172,7 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials">Optional access credentials for the specified service.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -1185,7 +1195,7 @@ public static partial class AtProtoServer
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default)
     {
@@ -1243,7 +1253,7 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials">Optional access credentials for the specified service.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -1254,6 +1264,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are specified but not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Use a Get overload which takes JsonSerializerOptions instead.")]
     [RequiresUnreferencedCode("Use a Get overload which takes JsonSerializerOptions instead.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TRecord>>>> ListRecords<TRecord>(
         AtIdentifier repo,
         Nsid collection,
@@ -1264,7 +1275,7 @@ public static partial class AtProtoServer
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
@@ -1376,7 +1387,7 @@ public static partial class AtProtoServer
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="jsonSerializerOptions"><see cref="JsonSerializerOptions"/> to apply during deserialization.</param>
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -1387,6 +1398,7 @@ public static partial class AtProtoServer
     /// <exception cref="AccessTokenException">Thrown when <paramref name="accessCredentials" /> are specified but are not valid for the specified <paramref name="service"/>.</exception>
     [RequiresDynamicCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
     [RequiresUnreferencedCode("Make sure all the required types are preserved in the jsonSerializerOptions parameter.")]
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Pre-existing overload set. The onCredentialsUpdated delegate type changed in this release, which makes the analyzer treat these as newly added overloads.")]
     public static async Task<AtProtoHttpResult<PagedReadOnlyCollection<AtProtoRepositoryRecord<TRecord>>>> ListRecords<TRecord>(
         AtIdentifier repo,
         Nsid collection,
@@ -1398,7 +1410,7 @@ public static partial class AtProtoServer
         HttpClient httpClient,
         JsonSerializerOptions jsonSerializerOptions,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
@@ -1510,7 +1522,7 @@ public static partial class AtProtoServer
     /// <param name="accessCredentials">Access credentials for the specified service.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
-    /// <param name="onCredentialsUpdated">An <see cref="Action{T}" /> to call if the credentials in the request need updating.</param>
+    /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
@@ -1538,7 +1550,7 @@ public static partial class AtProtoServer
         AccessCredentials accessCredentials,
         HttpClient httpClient,
         string? serviceProxy = null,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         CancellationToken cancellationToken = default)
     {

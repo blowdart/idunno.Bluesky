@@ -81,7 +81,7 @@ public sealed class BlueskyAgentFactory
             agent = new BlueskyAgent(options: BlueskyAgentOptions);
         }
 
-        agent.CredentialsUpdated += IdentityStore.OnCredentialsUpdated;
+        agent.CredentialsUpdatedAsync = IdentityStore.OnCredentialsUpdated;
 
         return agent;
     }

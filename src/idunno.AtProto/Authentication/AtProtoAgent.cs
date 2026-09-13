@@ -147,15 +147,19 @@ public partial class AtProtoAgent
     /// Called internally by an <see cref="AtProtoHttpClient{TResult}"/> if the credentials were updated.
     /// </summary>
     /// <param name="credentials">The new credentials</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="credentials"/> is <see langword="null"/>.</exception>
-    protected internal virtual void InternalOnCredentialsUpdatedCallBack(AtProtoCredential credentials)
+    protected internal virtual async Task InternalOnCredentialsUpdatedCallBack(AtProtoCredential credentials, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(credentials);
 
         if (credentials is DPoPAccessCredentials dPopAccessCredentials)
         {
             Logger.OnCredentialUpdatedCallbackCalled(_logger);
-            OnCredentialsUpdated(new CredentialsUpdatedEventArgs(dPopAccessCredentials.Did, dPopAccessCredentials.Service, dPopAccessCredentials));
+            await OnCredentialsUpdatedAsync(
+                new CredentialsUpdatedEventArgs(dPopAccessCredentials.Did, dPopAccessCredentials.Service, dPopAccessCredentials),
+                cancellationToken).ConfigureAwait(false);
 
             if (!_disposed)
             {
@@ -165,7 +169,9 @@ public partial class AtProtoAgent
         else if (credentials is AccessCredentials accessCredentials)
         {
             Logger.OnCredentialUpdatedCallbackCalled(_logger);
-            OnCredentialsUpdated(new CredentialsUpdatedEventArgs(accessCredentials.Did, accessCredentials.Service, accessCredentials));
+            await OnCredentialsUpdatedAsync(
+                new CredentialsUpdatedEventArgs(accessCredentials.Did, accessCredentials.Service, accessCredentials),
+                cancellationToken).ConfigureAwait(false);
 
             if (!_disposed)
             {
@@ -1052,7 +1058,7 @@ public partial class AtProtoAgent
 
             // Revocation credential specific callback to update the DPoP nonce in credentials if the nonce needs updating ,
             // so that automatic retry in AtProtoHttpClient will have the updated nonce for the retry attempt.
-            void logoutCredentialsUpdated(AtProtoCredential credentials)
+            Task logoutCredentialsUpdated(AtProtoCredential credentials, CancellationToken token)
             {
                 ArgumentNullException.ThrowIfNull(credentials);
 
@@ -1066,6 +1072,8 @@ public partial class AtProtoAgent
                 {
                     throw new CredentialException("Logout credentials updated callback was called with credentials of an unexpected type.");
                 }
+
+                return Task.CompletedTask;
             }
 
             // First revoke the refresh token, then revoke the access token.
@@ -1411,7 +1419,7 @@ public partial class AtProtoAgent
                 refreshedCredentials.Service,
                 refreshedCredentials);
 
-            OnCredentialsUpdated(credentialsUpdatedEventArgs);
+            await OnCredentialsUpdatedAsync(credentialsUpdatedEventArgs, cancellationToken).ConfigureAwait(false);
 
             return true;
         }
@@ -1502,7 +1510,7 @@ public partial class AtProtoAgent
                 refreshedCredentials.Service,
                 refreshedCredentials);
 
-            OnCredentialsUpdated(credentialsUpdatedEventArgs);
+            await OnCredentialsUpdatedAsync(credentialsUpdatedEventArgs, cancellationToken).ConfigureAwait(false);
 
             return true;
         }

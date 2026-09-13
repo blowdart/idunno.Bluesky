@@ -49,7 +49,7 @@ public static partial class BlueskyServer
         Uri service,
         AccessCredentials? accessCredentials,
         HttpClient httpClient,
-        Action<AtProtoCredential>? onCredentialsUpdated = null,
+        Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
         CancellationToken cancellationToken = default)

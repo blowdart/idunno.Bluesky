@@ -16,6 +16,9 @@ An agent provides four authentication related events that you can subscribe to:
 1. `TokenRefreshFailed`
 1. `Unauthenticated`
 
+There is also a `CredentialsUpdatedAsync` callback, an awaitable counterpart to the `CredentialsUpdated` event, which is
+described in more detail [below](#credentialsUpdatedAsync).
+
 You can subscribe to these events by adding a handler to the event. For example:
 
 ```c#
@@ -48,6 +51,24 @@ token refresh occurs or you call `RefreshSession()`. A `TokenRefreshFailed` even
 Storing the access token is optional, it is meant to be short lived and may no longer be valid when your application restarts.
 
 You should update these your stored values in your handler for `CredentialsUpdated`.
+
+> [!TIP]
+> <a name="credentialsUpdatedAsync"></a>
+> If storing credentials is asynchronous, use the `CredentialsUpdatedAsync` callback rather than the `CredentialsUpdated` event.
+> Events cannot be awaited, so an `async void` handler, or one which discards the task it starts, runs unobserved. The agent will
+> carry on without waiting for your store to be written, and any exception it throws is silently swallowed. As AT Proto refresh
+> tokens are single use, a persist which fails or does not complete leaves you holding a stale refresh token and the user is
+> signed out on their next request.
+>
+> ```c#
+> agent.CredentialsUpdatedAsync = async (args, cancellationToken) =>
+> {
+>     await credentialStore.SaveAsync(args.AccessCredentials, cancellationToken);
+> };
+> ```
+>
+> The agent awaits this callback before continuing, and exceptions it throws surface to the caller which triggered the refresh.
+> Only one `CredentialsUpdatedAsync` callback can be set at a time; it is a property, not an event.
 
 Finally in the handlers for `TokenRefreshFailed` and `Unauthenticated` events you should remove any stored values you have for the DID and the service.
 

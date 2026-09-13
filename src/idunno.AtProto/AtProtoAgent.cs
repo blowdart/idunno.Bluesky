@@ -352,6 +352,7 @@ public partial class AtProtoAgent : Agent
 
             Authenticated = null;
             CredentialsUpdated = null;
+            CredentialsUpdatedAsync = null;
             TokenRefreshFailed = null;
             Unauthenticated = null;
 
