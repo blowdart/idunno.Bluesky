@@ -25,6 +25,19 @@ namespace idunno.Bluesky.AspNet.Authentication;
 public sealed class ProfileClaimsTransformer: IClaimsTransformation
 {
     /// <summary>
+    /// The type of the claim added to mark a principal as having already had its profile claims applied.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Claims transformation can run more than once for a request, so the transformer must be able to recognise a
+    ///   principal it has already supplemented. Every profile claim is only added when the profile actually carries a
+    ///   value for it, so none of them can be used for that, and this marker is added whenever the transformation
+    ///   succeeds regardless of what the profile contained.
+    /// </para>
+    /// </remarks>
+    public const string ProfileClaimsAppliedClaimType = "urn:bluesky:aspnet:profileclaimsapplied";
+
+    /// <summary>
     /// Create a new instance of <see cref="ProfileClaimsTransformer"/>
     /// </summary>
     /// <param name="loggerFactory">The <see cref="LoggerFactory"/> to create loggers from.</param>
@@ -98,7 +111,7 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
         ArgumentNullException.ThrowIfNull(principal);
 
         if (principal.Identity is null ||
-            principal.HasClaim(claim => claim.Type == Bluesky.ClaimTypes.DisplayName))
+            principal.HasClaim(claim => claim.Type == ProfileClaimsAppliedClaimType))
         {
             return principal;
         }
@@ -175,6 +188,14 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
 
         if (profile is not null)
         {
+            // Added whatever the profile held, so a principal whose profile has no display name, or no profile values
+            // at all, is still recognised as transformed and is not supplemented again.
+            identity.AddClaim(new Claim(
+                ProfileClaimsAppliedClaimType,
+                "true",
+                ClaimValueTypes.Boolean,
+                profile.Issuer));
+
             if (profile.Handle is not null)
             {
                 string handle = profile.Handle.ToString();

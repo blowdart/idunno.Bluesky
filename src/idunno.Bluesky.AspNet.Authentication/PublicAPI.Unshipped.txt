@@ -354,3 +354,4 @@ override idunno.Bluesky.AspNet.Authentication.Events.DataProtectingCorrelationSt
 override idunno.Bluesky.AspNet.Authentication.Events.DataProtectingCorrelationStateCacheEvents.PostRetrieval(idunno.Bluesky.AspNet.Authentication.Events.CorrelationStateRetrievedContext! context) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.ICorrelationStateCache.TakeOAuthLoginState(System.Guid correlationId) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.OAuthLoginState?>!
 virtual idunno.Bluesky.AspNet.Authentication.DistributedCacheCorrelationStateCache.TakeOAuthLoginState(System.Guid correlationId) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.OAuthLoginState?>!
+const idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformer.ProfileClaimsAppliedClaimType = "urn:bluesky:aspnet:profileclaimsapplied" -> string!
