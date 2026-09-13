@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
+using System.Security.Cryptography;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
@@ -123,6 +124,7 @@ public class EphemeralIdentityStore : IIdentityStore
     }
 
     /// <inheritdoc />
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is cancelled.</exception>
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Error handling needs to catch all exceptions")]
     public async Task<ClaimsIdentity?> GetIdentity(Did did, CancellationToken cancellationToken = default)
     {
@@ -143,6 +145,17 @@ public class EphemeralIdentityStore : IIdentityStore
             using BinaryReader contextReader = new(contextMemoryStream);
 
             return new ClaimsIdentity(contextReader);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (CryptographicException ex)
+        {
+            // The stored identity cannot be read, so remove it rather than leaving an entry every subsequent request will fail on.
+            Cache.Remove($"{did}");
+            Logger.CachedIdentityCouldNotBeUnprotected(did, ex);
+            return null;
         }
         catch (Exception ex)
         {

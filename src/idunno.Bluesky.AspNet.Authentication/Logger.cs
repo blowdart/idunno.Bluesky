@@ -73,6 +73,9 @@ internal static partial class Logger
     [LoggerMessage(252, LogLevel.Error, "Cached identity for {did} is corrupt.")]
     public static partial void CachedIdentityIsCorrupt(this ILogger logger, Did did, Exception ex);
 
+    [LoggerMessage(255, LogLevel.Warning, "The stored identity for {did} could not be unprotected and has been removed from the store. The data protection key ring may have changed, or its keys may not be persisted between restarts.")]
+    public static partial void CachedIdentityCouldNotBeUnprotected(this ILogger logger, Did did, Exception ex);
+
     [LoggerMessage(253, LogLevel.Debug, "Identity cache updated for {did}")]
     public static partial void CachedIdentityUpdated(this ILogger logger, Did did);
 
