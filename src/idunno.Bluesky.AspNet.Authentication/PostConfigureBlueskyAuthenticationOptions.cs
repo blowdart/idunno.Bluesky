@@ -45,6 +45,20 @@ public class PostConfigureBlueskyAuthenticationOptions(
 
         options.CookieManager ??= new ChunkingCookieManager();
 
+        // The authentication cookie is honoured for ExpireTimeSpan, but the credentials it refers to live in the
+        // identity store. If the store drops its entries first the user is silently signed out part way through the
+        // cookie's lifetime, so follow the cookie lifetime unless the application asked for something specific.
+        options.IdentityStoreEntryTimeToLive ??= options.ExpireTimeSpan;
+
+        if (options.IdentityStoreEntryTimeToLive < options.ExpireTimeSpan)
+        {
+            loggerFactory.CreateLogger<PostConfigureBlueskyAuthenticationOptions>()
+                .IdentityStoreTimeToLiveShorterThanCookieLifetime(
+                    name,
+                    options.IdentityStoreEntryTimeToLive.Value,
+                    options.ExpireTimeSpan);
+        }
+
         if (!options.LoginPath.HasValue)
         {
             options.LoginPath = CookieAuthenticationDefaults.LoginPath;
