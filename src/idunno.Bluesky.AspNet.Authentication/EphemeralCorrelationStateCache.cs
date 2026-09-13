@@ -18,10 +18,8 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
 
 #if NET9_0_OR_GREATER
     private static readonly Lock s_warnedLock = new ();
-    private static readonly Lock s_cacheLock = new ();
 #else
     private static readonly object s_warnedLock = new();
-    private static readonly object s_cacheLock = new();
 #endif
 
     private static readonly TimeSpan s_defaultSlidingExpiration = new(0, 0, 15, 0);
@@ -73,10 +71,7 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
             .SetAbsoluteExpiration(DateTime.UtcNow.Add(EntryTTL))
             .SetSize(1);
 
-        lock (s_cacheLock)
-        {
-            Cache.Set($"{correlationId}", state.ToJson(), cacheOptions);
-        }
+        Cache.Set($"{correlationId}", state.ToJson(), cacheOptions);
     }
 
     /// <inheritdoc/>
@@ -91,10 +86,7 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
 
         try
         {
-            lock (s_cacheLock)
-            {
-                return OAuthLoginState.FromJson(encodedState);
-            }
+            return OAuthLoginState.FromJson(encodedState);
         }
         catch (JsonException)
         {
@@ -105,10 +97,7 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
     /// <inheritdoc/>
     public Task RemoveCorrelationState(Guid correlationId)
     {
-        lock (s_cacheLock)
-        {
-            Cache.Remove($"{correlationId}");
-        }
+        Cache.Remove($"{correlationId}");
         return Task.CompletedTask;
     }
 }

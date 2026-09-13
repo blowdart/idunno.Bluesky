@@ -76,10 +76,15 @@ public class DistributedCacheIdentityStore : IIdentityStore
     }
 
     /// <summary>
-    /// Gets or sets the cache used to store identities.
+    /// Gets the cache used to store identities.
     /// </summary>
-    [NotNull]
-    protected static IDistributedCache? Cache { get; set; }
+    /// <remarks>
+    /// <para>
+    ///   This is an instance member. An application can register a different <see cref="IDistributedCache"/> for each
+    ///   authentication scheme, and a static cache would leave every store sharing whichever instance was constructed last.
+    /// </para>
+    /// </remarks>
+    protected IDistributedCache Cache { get; }
 
     /// <summary>
     /// Gets or sets the time to live for entries in the identity store.

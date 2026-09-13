@@ -207,32 +207,29 @@ public class BlueskySignInManager
     /// <remarks>
     /// <para>
     ///   Bluesky OAuth special cases a client identifier of http://localhost, requiring the return URI to be http://127.0.0.1 with no path.
+    ///   That default is applied by <see cref="PostConfigureBlueskyAgentOptions"/> when the options are built.
     /// </para>
     /// </remarks>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Minor Code Smell", "S1075:URIs should not be hardcoded", Justification = "Special hardcoded case for localhost.")]
     public Uri CreateReturnUri()
     {
-        bool clientIdIsLocalhost = OAuthOptions.ClientId.StartsWith("http://localhost", StringComparison.InvariantCulture);
+        // The configured options are read, never written. They are a singleton shared by every request.
+        Uri? configuredReturnUri = OAuthOptions.ReturnUri;
 
-        if (clientIdIsLocalhost && OAuthOptions.ReturnUri is null)
-        {
-            OAuthOptions.ReturnUri = new Uri("http://127.0.0.1/Account/Callback");
-        }
-
-        if (OAuthOptions.ReturnUri is null)
+        if (configuredReturnUri is null)
         {
             throw new InvalidOperationException("OAuthOptions does not specify a ReturnUri.");
         }
 
-        bool returnUriIsLocalhostIP = OAuthOptions.ReturnUri.Host == s_localhost.Host;
-        UriBuilder returnUriBuilder = new(OAuthOptions.ReturnUri);
+        bool clientIdIsLocalhost = OAuthOptions.ClientId.StartsWith("http://localhost", StringComparison.InvariantCulture);
+        bool returnUriIsLocalhostIP = configuredReturnUri.Host == s_localhost.Host;
+        UriBuilder returnUriBuilder = new(configuredReturnUri);
 
         // Insert the port for local dev if the Client ID is localhost, and the return URL has a host of 127.0.0.1
         // and the request was made on a none default port.
         if (_env.IsDevelopment() &&
             clientIdIsLocalhost &&
             returnUriIsLocalhostIP &&
-            OAuthOptions.ReturnUri.IsDefaultPort &&
+            configuredReturnUri.IsDefaultPort &&
             HttpContext.Request is not null &&
             HttpContext.Request.Host.Port is not null)
         {
