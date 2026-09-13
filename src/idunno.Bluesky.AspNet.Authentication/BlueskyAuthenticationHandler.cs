@@ -281,9 +281,22 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
         CookieOptions cookieOptions = BuildCookieOptions();
 
-        if (CurrentUserDid is not null)
+        // Sign out can be called on a request which was never authenticated, for example a dedicated sign out endpoint
+        // which does not require authorization, in which case CurrentUserDid has not been populated. Fall back to the
+        // DID in the request cookie so the stored credentials are always cleaned up rather than left until they expire.
+        Did? signingOutDid = CurrentUserDid;
+
+        if (signingOutDid is null && TryReadDidFromRequestCookie(out Did? didFromCookie))
         {
-            await IdentityStore.Remove(CurrentUserDid).ConfigureAwait(false);
+            Logger.SignOutDidRecoveredFromCookie();
+            signingOutDid = didFromCookie;
+        }
+
+        if (signingOutDid is not null)
+        {
+            await RevokeCredentials(signingOutDid).ConfigureAwait(false);
+            await IdentityStore.Remove(signingOutDid).ConfigureAwait(false);
+            CurrentUserDid = null;
         }
 
         var context = new BlueskySigningOutContext(
@@ -459,6 +472,70 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         using BlueskyAgent agent = new(new ClaimsPrincipal(identity), BlueskyAgentOptions);
 
         return agent.HasCredentials && (agent.Credentials.ExpiresOn - s_refreshClockSkew) >= currentUtc;
+    }
+
+    /// <summary>
+    /// Attempts to read the DID for the current user from the request cookie.
+    /// </summary>
+    /// <param name="did">The <see cref="Did"/> read from the cookie, if the cookie is present and valid.</param>
+    /// <returns><see langword="true"/> if a DID was read from the request cookie; otherwise <see langword="false"/>.</returns>
+    private bool TryReadDidFromRequestCookie([NotNullWhen(true)] out Did? did)
+    {
+        did = null;
+
+        string? cookie = Options.CookieManager.GetRequestCookie(Context, Options.Cookie.Name!);
+
+        if (string.IsNullOrEmpty(cookie))
+        {
+            return false;
+        }
+
+        AuthenticationTicket? ticket = Options.TicketDataFormat.Unprotect(cookie, GetTlsTokenBinding());
+
+        Claim? didClaim = ticket?.Principal.Claims.FirstOrDefault(
+            c => c.Type.Equals(AtProtoClaims.Did, StringComparison.OrdinalIgnoreCase));
+
+        return didClaim is not null && Did.TryParse(didClaim.Value, out did);
+    }
+
+    /// <summary>
+    /// Revokes the credentials held for <paramref name="did"/> at the authorization server, if any are still stored.
+    /// </summary>
+    /// <param name="did">The <see cref="Did"/> whose credentials should be revoked.</param>
+    /// <remarks>
+    /// <para>
+    ///   Revocation is best effort. Signing out locally must still happen when the authorization server cannot be
+    ///   reached, or a user would be unable to sign out of an application while its PDS was unavailable.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Revocation is best effort, failures are logged and the local sign out continues.")]
+    private async Task RevokeCredentials(Did did)
+    {
+        ClaimsIdentity? storedIdentity = await IdentityStore.GetIdentity(did, CancellationToken.None).ConfigureAwait(false);
+
+        if (storedIdentity is null)
+        {
+            return;
+        }
+
+        try
+        {
+            using BlueskyAgent agent = new(new ClaimsPrincipal(storedIdentity), BlueskyAgentOptions);
+
+            if (!agent.IsAuthenticated)
+            {
+                return;
+            }
+
+            // Do not use Context.RequestAborted, revocation needs to complete even if the client walks away.
+            await agent.Logout(CancellationToken.None).ConfigureAwait(false);
+
+            Logger.CredentialsRevokedOnSignOut(did);
+        }
+        catch (Exception ex)
+        {
+            Logger.CredentialRevocationFailed(did, ex);
+        }
     }
 
     private static bool IsHostRelative(string path)
