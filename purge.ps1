@@ -26,6 +26,21 @@ foreach ($folderName in $folderNames) {
     }
 }
 
+# Delete wwwroot/lib folders as libman should rebuild them
+$folderNames = 'wwwroot'
+foreach ($folderName in $folderNames) {
+    $folders = Get-ChildItem -Path samples -Directory -Filter $folderName -Recurse
+    foreach ($folder in $folders) {
+        $libmanPath = (get-Item $folder).parent.FullName+'\libman.json'
+        $libFolder = $folder.FullName+'\lib'
+        if ((Test-Path $libFolder) -And (Test-Path $libmanPath))
+        {
+          Write-Host '📂 Deleting ' $libFolder;
+          Remove-Item -Path $libFolder -recurse -Force
+        }
+    }
+}
+
 if (Test-Path 'docs')
 {
     # Delete docs generated directories
