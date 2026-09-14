@@ -29,12 +29,6 @@
 
 ### Changed
 
-#### idunno.AtProto.Types
-
-* `Cid.ToString()` and `Cid.Value` no longer lower case CIDv0 identifiers. CIDv0 is base58btc encoded, whose alphabet is case sensitive, so case
-  normalizing it produced a different identifier which no longer parsed back into an equal `Cid`. The base32 used by CIDv1 is case insensitive and
-  continues to be normalized to lower case.
-
 #### idunno.Bluesky
 
 * `DefaultFacetExtractor` now uses a more permissive regex for URLs, which allows for query strings to be included in the extracted URL.
@@ -73,6 +67,15 @@
 * `Embed.EmbeddedExternal` constructors have been simplifed to a single constructor, which has defaults for all optional parameters.
 * The `onCredentialsUpdated` parameter on `BlueskyServer` methods has changed from `Action<AtProtoCredential>?` to
   `Func<AtProtoCredential, CancellationToken, Task>?`, mirroring the change in `idunno.AtProto`.
+
+### Fixed
+
+#### idunno.AtProto.Types
+
+* `Cid.ToString()` and `Cid.Value` no longer lower case CIDv0 identifiers. CIDv0 is base58btc encoded, whose alphabet is case sensitive, so case
+  normalizing it produced a different identifier which no longer parsed back into an equal `Cid`. The base32 used by CIDv1 is case insensitive and
+  continues to be normalized to lower case.
+
 
 ## 6.0.0 - 2026-09-05
 
