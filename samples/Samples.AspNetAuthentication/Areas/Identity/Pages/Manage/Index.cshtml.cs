@@ -71,7 +71,7 @@ public class IndexModel(BlueskyAgent agent) : PageModel
             profile.Description = Description;
             profile.Pronouns = Pronouns;
 
-            var updateProfileResult = await agent.UpdateProfile(profile, cid: Cid, cancellationToken: HttpContext.RequestAborted);
+            var updateProfileResult = await agent.UpdateProfile(profile, cid: cid, cancellationToken: HttpContext.RequestAborted);
 
             updateProfileResult.EnsureSucceeded();
             return RedirectToPage();
