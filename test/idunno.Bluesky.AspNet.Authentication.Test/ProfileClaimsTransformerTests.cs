@@ -29,7 +29,8 @@ public class ProfileClaimsTransformerTests
             NullLoggerFactory.Instance,
             provider.GetRequiredService<IOptionsMonitor<ProfileClaimsTransformerOptions>>(),
             provider.GetRequiredService<IOptionsMonitor<BlueskyAgentOptions>>(),
-            provider.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>());
+            provider.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>(),
+            null);
     }
 
     [Fact]

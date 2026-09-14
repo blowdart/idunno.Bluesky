@@ -1,8 +1,13 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Metrics;
 using System.Security.Claims;
 using System.Security.Cryptography;
+
+using idunno.AtProto;
+using idunno.AtProto.Authentication;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
@@ -10,9 +15,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-
-using idunno.AtProto;
-using idunno.AtProto.Authentication;
 
 namespace idunno.Bluesky.AspNet.Authentication;
 
@@ -28,7 +30,11 @@ public class BlueskySignInManager
     private readonly IOptionsMonitor<BlueskyAuthenticationOptions> _authenticationOptionsMonitor;
 
     private string? _dataProtectorScheme;
+
+    [SuppressMessage("Style", "IDE0032:Use auto property", Justification = "Too much validation going on.")]
     private ITimeLimitedDataProtector? _dataProtector;
+
+    private readonly BlueskyAuthenticationMetrics _metrics;
 
     /// <summary>
     /// Creates a new instance of <see cref="BlueskySignInManager"/>.
@@ -38,13 +44,15 @@ public class BlueskySignInManager
     /// <param name="authenticationOptionsAccessor">The accessor used to access the <see cref="BlueskyAuthenticationOptions"/>.</param>
     /// <param name="env">The <see cref="IHostEnvironment"/> for the application</param>
     /// <param name="logger">The <see cref="ILogger"/> used to log messages, warnings and errors</param>
+    /// <param name="meterFactory">The <see cref="IMeterFactory"/> used to create metrics instruments</param>
     /// <exception cref="ArgumentNullException">Thrown when any of the parameters are <see langword="null" />.</exception>
     public BlueskySignInManager(
         IHttpContextAccessor contextAccessor,
         IOptions<BlueskyAgentOptions> agentOptionsAccessor,
         IOptionsMonitor<BlueskyAuthenticationOptions> authenticationOptionsAccessor,
         IHostEnvironment env,
-        ILogger<BlueskySignInManager> logger)
+        ILogger<BlueskySignInManager> logger,
+        IMeterFactory meterFactory)
     {
         ArgumentNullException.ThrowIfNull(contextAccessor);
         ArgumentNullException.ThrowIfNull(agentOptionsAccessor);
@@ -59,6 +67,8 @@ public class BlueskySignInManager
         Logger = logger;
         BlueskyAgentOptions = agentOptionsAccessor.Value;
         OAuthOptions = agentOptionsAccessor.Value.OAuthOptions;
+
+        _metrics = new BlueskyAuthenticationMetrics(meterFactory);
     }
 
     /// <summary>
@@ -213,13 +223,7 @@ public class BlueskySignInManager
     public Uri CreateReturnUri()
     {
         // The configured options are read, never written. They are a singleton shared by every request.
-        Uri? configuredReturnUri = OAuthOptions.ReturnUri;
-
-        if (configuredReturnUri is null)
-        {
-            throw new InvalidOperationException("OAuthOptions does not specify a ReturnUri.");
-        }
-
+        Uri? configuredReturnUri = OAuthOptions.ReturnUri ?? throw new InvalidOperationException("OAuthOptions does not specify a ReturnUri.");
         bool clientIdIsLocalhost = OAuthOptions.ClientId.StartsWith("http://localhost", StringComparison.InvariantCulture);
         bool returnUriIsLocalhostIP = configuredReturnUri.Host == s_localhost.Host;
         UriBuilder returnUriBuilder = new(configuredReturnUri);
@@ -293,6 +297,7 @@ public class BlueskySignInManager
                 catch (CryptographicException ex)
                 {
                     Logger.ExceptionUnprotectingCorrelationCookie(ex);
+                    _metrics.DataProtectionFailures.Add(1);
                     correlationCookieRejected = true;
                 }
             }
@@ -384,6 +389,9 @@ public class BlueskySignInManager
         if (!HttpContext.Request.QueryString.HasValue)
         {
             Logger.SignInFailedNoQueryString();
+            _metrics.SigninsFailed.Add(
+                1,
+                new KeyValuePair<string, object?>("Reason", "NoQueryString"));
             return new SignInResult(Succeeded: false, MissingQueryString: true);
         }
 
@@ -391,6 +399,9 @@ public class BlueskySignInManager
         if (correlationState == null)
         {
             Logger.SignInFailedNoCorrelation();
+            _metrics.SigninsFailed.Add(
+                1,
+                new KeyValuePair<string, object?>("Reason", "NoCorrelationState"));
             return new SignInResult(Succeeded: false, MissingCorrelationState: true);
         }
         
@@ -403,6 +414,9 @@ public class BlueskySignInManager
         if (accessCredentials is null)
         {
             Logger.SignInFailedOAuth2ProcessingFailed();
+            _metrics.SigninsFailed.Add(
+                1,
+                new KeyValuePair<string, object?>("Reason", "OAuth2StateFailure"));
             return new SignInResult(Succeeded: false, ErrorProcessingOAuth2Response: true);
         }
 
@@ -417,6 +431,8 @@ public class BlueskySignInManager
                 IsPersistent = true,
                 IssuedUtc = DateTimeOffset.UtcNow
             }).ConfigureAwait(false);
+
+        _metrics.SigninsTotal.Add(1);
 
         return new SignInResult(Succeeded: true, OAuthLoginState: correlationState);
     }

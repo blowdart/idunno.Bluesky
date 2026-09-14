@@ -1,4 +1,4 @@
-﻿# Built-in metrics in idunno.AtProto
+# Built-in metrics in idunno.AtProto
 
 This is a reference for metrics built-in for .NET, produced using the [System.Diagnostics.Metrics](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.metric) API.
 
@@ -15,7 +15,6 @@ This is a reference for metrics built-in for .NET, produced using the [System.Di
 >
 > For production environments, you can use a variety of exporters to send these metrics to monitoring systems
 > like Aspire, Prometheus, Grafana, or Azure Monitor.
-
 
 ## idunno.AtProto.AtProtoHttpClient
 
@@ -144,3 +143,47 @@ The `idunno.AtProto.Directory` Meter reports measures from the `idunno.DidPlcDir
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
 | `requests.duration` | Histogram&lt;double&gt; | s | Duration of individual requests made for DID documents. |
+
+## idunno.Bluesky.AspNet.Authentication
+
+The `idunno.Bluesky.AspNet.Authentication` Meter reports measures from the `idunno.Bluesky.AspNet.Authentication` components.
+
+### Metric: idunno.bluesky.aspnet.authentication.accesstokensrefreshed.total
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `accesstokensrefreshed.total` | Counter&lt;long&gt; | Access Tokens | Total number of access tokens refreshed. |
+
+### Metric: idunno.bluesky.aspnet.authentication.accesstokensrefreshfailures.total
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `tokenrefreshfailures.total` | Counter&lt;long&gt; | Access Tokens | Total number of access tokens refresh failures. |
+
+### Metric: idunno.bluesky.aspnet.authentication.accesstokenrefreshwaits.total
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `accesstokenrefreshwaits.total` | Counter&lt;long&gt; | Access Tokens | Total number of times the system waited for an access token to be refreshed. |
+
+### Metric: idunno.bluesky.aspnet.authentication.accesstokenrefreshwaits.duration
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `accesstokenrefreshwaits.duration` | Histogram&lt;double&gt; | s | Duration of time the system waited for an access token to be refreshed. |
+
+### Metric: idunno.bluesky.aspnet.authentication.dataprotectionfailures.total
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `dataprotectionfailures.total` | Counter&lt;long&gt; | Failures | Total number of data protection failures. |
+
+### Metric: idunno.bluesky.aspnet.authentication.profilecachemisses.total
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `profilecachemisses.total` | Counter&lt;long&gt; | Misses | Total number of profile cache misses. |
+
+### Metric: idunno.bluesky.aspnet.authentication.signins.total
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `signins.total` | Counter&lt;long&gt; | Sign-ins | Total number of sign-ins. |
+
+### Metric: idunno.bluesky.aspnet.authentication.signins.failed.total
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `signins.failed.total` | Counter&lt;long&gt; | Sign-ins | Total number of failed sign-ins. |

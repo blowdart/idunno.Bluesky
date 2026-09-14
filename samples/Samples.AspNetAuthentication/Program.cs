@@ -3,19 +3,30 @@
 
 using Microsoft.AspNetCore.Authentication;
 using idunno.Bluesky.AspNet.Authentication;
+using OpenTelemetry.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddAuthentication(BlueskyAuthenticationDefaults.AuthenticationScheme)
+builder.Services
+    .AddAuthentication(BlueskyAuthenticationDefaults.AuthenticationScheme)
     .AddBluesky(options => {
         options.LoginPath = "/Identity/Account/Login";
         options.LogoutPath = "/Identity/Account/Logout";
     });
-builder.Services.AddProfileClaimsTransformer();
-builder.Services.AddTransient<IClaimsTransformation, ProfileClaimsTransformer>();
-builder.Services.AddBlueskyAgentFactory();
 
-// Add services to the container.
+builder.Services
+    .AddProfileClaimsTransformer()
+    .AddTransient<IClaimsTransformation, ProfileClaimsTransformer>()
+    .AddBlueskyAgentFactory()
+    .AddOpenTelemetry()
+        .WithMetrics(metrics =>
+        {
+            metrics
+            .AddAtProtoDirectoryMetrics()
+            .AddAtProtoHttpClientMetrics()
+            .AddBlueskyAuthenticationMetrics();
+        });
+
 builder.Services.AddRazorPages();
 
 var app = builder.Build();

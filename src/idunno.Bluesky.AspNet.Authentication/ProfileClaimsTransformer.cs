@@ -12,6 +12,7 @@ using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using Microsoft.Extensions.Logging.Abstractions;
 using idunno.Bluesky.Actor;
+using System.Diagnostics.Metrics;
 
 namespace idunno.Bluesky.AspNet.Authentication;
 
@@ -24,6 +25,8 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// </remarks>
 public sealed class ProfileClaimsTransformer: IClaimsTransformation
 {
+    private readonly BlueskyAuthenticationMetrics _metrics;
+
     /// <summary>
     /// The type of the claim added to mark a principal as having already had its profile claims applied.
     /// </summary>
@@ -47,6 +50,7 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
     ///   The <see cref="BlueskyAuthenticationOptions"/> used to locate the <see cref="IIdentityStore"/> any
     ///   credentials updated whilst retrieving the profile should be saved to.
     /// </param>
+    /// <param name="meterFactory">The <see cref="IMeterFactory"/> to use for creating the underlying <see cref="Meter"/>.</param>
     /// <exception cref="ArgumentNullException">
     ///   Thrown if <paramref name="options"/>, <paramref name="blueskyAgentOptions"/> or
     ///   <paramref name="blueskyAuthenticationOptions"/> is <see langword="null"/>.
@@ -55,7 +59,8 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
         ILoggerFactory loggerFactory,
         IOptionsMonitor<ProfileClaimsTransformerOptions> options,
         IOptionsMonitor<BlueskyAgentOptions> blueskyAgentOptions,
-        IOptionsMonitor<BlueskyAuthenticationOptions> blueskyAuthenticationOptions)
+        IOptionsMonitor<BlueskyAuthenticationOptions> blueskyAuthenticationOptions,
+        IMeterFactory? meterFactory = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(blueskyAgentOptions);
@@ -68,6 +73,8 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
         BlueskyAgentOptions = blueskyAgentOptions;
         AuthenticationOptions = blueskyAuthenticationOptions;
         Logger = loggerFactory.CreateLogger(GetType().FullName!);
+
+        _metrics = new BlueskyAuthenticationMetrics(meterFactory);
     }
 
     private IOptionsMonitor<BlueskyAgentOptions> BlueskyAgentOptions { get; }
@@ -142,6 +149,8 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
                     Logger.TransformerCachedClaimsFound(agent.Did);
                     return SupplementClaimsPrincipal(principal, cachedProfile);
                 }
+
+                _metrics.ProfileCacheMisses.Add(1);
 
                 AtProtoHttpResult<ProfileViewDetailed> getProfileResult = await agent.GetProfile(agent.Did).ConfigureAwait(false);
 

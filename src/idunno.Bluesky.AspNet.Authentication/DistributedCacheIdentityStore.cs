@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Metrics;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -39,11 +40,13 @@ public class DistributedCacheIdentityStore : IIdentityStore
     /// <param name="cache">The <see cref="IDistributedCache"/> to store the claims in.</param>
     /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> to create loggers.</param>
     /// <param name="options">The <see cref="BlueskyAuthenticationOptions"/>.</param>
+    /// <param name="meterFactory">An optional <see cref="IMeterFactory"/> to use for creating the underlying <see cref="Meter"/>.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="cache"/> is <see langword="null" />.</exception>
     public DistributedCacheIdentityStore(
-        IDistributedCache cache, 
+        IDistributedCache cache,
         ILoggerFactory loggerFactory,
-        IOptions<BlueskyAuthenticationOptions>? options = null)
+        IOptions<BlueskyAuthenticationOptions>? options = null,
+        IMeterFactory? meterFactory = null)
     {
         ArgumentNullException.ThrowIfNull(cache);
 
@@ -74,6 +77,8 @@ public class DistributedCacheIdentityStore : IIdentityStore
                 AbsoluteExpirationRelativeToNow = s_defaultRefreshLockTTL
             };
         }
+
+        Metrics = new BlueskyAuthenticationMetrics(meterFactory);
     }
 
     /// <summary>
@@ -96,6 +101,11 @@ public class DistributedCacheIdentityStore : IIdentityStore
     /// Gets or sets the time to live for entries in the refresh lock store.
     /// </summary>
     protected DistributedCacheEntryOptions RefreshCacheMemoryOptions { get; init; }
+
+    /// <summary>
+    /// Gets the metrics for this instance.
+    /// </summary>
+    protected BlueskyAuthenticationMetrics Metrics { get; }
 
     private ILogger<DistributedCacheIdentityStore> Logger { get; }
 
@@ -173,6 +183,7 @@ public class DistributedCacheIdentityStore : IIdentityStore
             // The stored identity cannot be read, so remove it rather than leaving an entry every subsequent request will fail on.
             await Cache.RemoveAsync($"{ClaimsStorePrefix}{did}", token: cancellationToken).ConfigureAwait(false);
             Logger.CachedIdentityCouldNotBeUnprotected(did, ex);
+            Metrics.DataProtectionFailures.Add(1);
             return null;
         }
         catch (Exception ex)

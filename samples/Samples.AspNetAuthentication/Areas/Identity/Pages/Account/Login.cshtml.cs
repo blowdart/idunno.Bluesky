@@ -11,7 +11,7 @@ using idunno.Bluesky.AspNet.Authentication;
 namespace Samples.AspNetAuthentication.Areas.Identity.Pages.Account;
 
 [AllowAnonymous]
-public class LoginModel(BlueskySignInManager blueskyAuthenticationManager, ILogger<LoginModel> logger) : PageModel
+public class LoginModel(BlueskySignInManager blueskySignInManager, ILogger<LoginModel> logger) : PageModel
 {
     private const string HandleCookieName = "Handle";
 
@@ -102,7 +102,7 @@ public class LoginModel(BlueskySignInManager blueskyAuthenticationManager, ILogg
 
         try
         {
-            var redirectUri = await blueskyAuthenticationManager.CreateRedirectUri(
+            var redirectUri = await blueskySignInManager.CreateRedirectUri(
                 Input.UserHandle,
                 stateExtraProperties: new Dictionary<string, string>()
                 {

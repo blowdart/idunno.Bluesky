@@ -15,6 +15,13 @@
 }
 @if (Model.Timeline is not null && Model.Timeline.Count > 0)
 {
+    ViewData["Title"] = "Home page";
+
+    <div class="text-left">
+        <h2 class="display-4">
+            Bluesky Timeline
+        </h2>
+    </div>
     <table>
         <tbody>
             @foreach (var entry in Model.Timeline) {

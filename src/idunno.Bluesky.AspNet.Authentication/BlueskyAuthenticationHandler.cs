@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Metrics;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 
@@ -38,12 +39,15 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
     private bool _signInCalled;
     private bool _signOutCalled;
 
+    private readonly BlueskyAuthenticationMetrics _metrics;
+
     /// <summary>
     /// Initalizes a new instance of <see cref="BlueskyAuthenticationHandler"/>
     /// </summary>
     /// <param name="options">The monitor for the options instance.</param>
     /// <param name="agentOptions">The monitor for the agent options instance.</param>
     /// <param name="logger">The <see cref="ILoggerFactory"/> to create loggers from.</param>
+    /// <param name="meterFactory">The <see cref="IMeterFactory"/> to create meters from.</param>
     /// <param name="encoder">The <see cref="UrlEncoder"/>.</param>
     /// <param name="clock">The <see cref="ISystemClock"/>.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="options"/> is <see langword="null"/>.</exception>
@@ -53,12 +57,14 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         IOptionsMonitor<BlueskyAuthenticationOptions> options,
         IOptionsMonitor<BlueskyAgentOptions> agentOptions,
         ILoggerFactory logger,
+        IMeterFactory meterFactory,
         UrlEncoder encoder,
         ISystemClock clock) : base(options, logger, encoder, clock)
     {
         ArgumentNullException.ThrowIfNull(options);
 
         BlueskyAgentOptionsMonitor = agentOptions;
+        _metrics = new BlueskyAuthenticationMetrics(meterFactory);
     }
 
     /// <summary>
@@ -67,18 +73,21 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
     /// <param name="options">The monitor for the options instance.</param>
     /// <param name="agentOptions">The monitor for the agent options instance.</param>
     /// <param name="logger">The <see cref="ILoggerFactory"/> to create loggers from.</param>
+    /// <param name="meterFactory">The <see cref="IMeterFactory"/> to create meters from.</param>
     /// <param name="encoder">The <see cref="UrlEncoder"/>.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="options"/> is <see langword="null"/>.</exception>
     public BlueskyAuthenticationHandler(
         IOptionsMonitor<BlueskyAuthenticationOptions> options,
         IOptionsMonitor<BlueskyAgentOptions> agentOptions,
         ILoggerFactory logger,
+        IMeterFactory meterFactory,
         UrlEncoder encoder)
         : base(options, logger, encoder)
     {
         ArgumentNullException.ThrowIfNull(options);
 
         BlueskyAgentOptionsMonitor = agentOptions;
+        _metrics = new BlueskyAuthenticationMetrics(meterFactory);
     }
 
     /// <summary>
@@ -261,6 +270,8 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
             signInContext.CookieOptions);
 
         await Events.SignedIn(signedInContext).ConfigureAwait(false);
+
+        _metrics.SigninsTotal.Add(1);
 
         // Only honor the ReturnUrl query string parameter on the login path
         bool shouldHonorReturnUrlParameter = Options.LoginPath.HasValue && OriginalPath == Options.LoginPath;
@@ -636,7 +647,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                                     HasUnexpiredCredentials(concurrentlyRefreshedIdentity, currentUtc))
                                 {
                                     Logger.TokenRefreshFailedButStoreIsCurrent(refreshingFor);
-
+                                    _metrics.AccessTokensRefreshed.Add(1);
                                     hydratedTicket = new AuthenticationTicket(
                                         new ClaimsPrincipal(concurrentlyRefreshedIdentity), ticket.Properties, ticket.AuthenticationScheme);
                                     return AuthenticateResult.Success(hydratedTicket);
@@ -644,6 +655,8 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
                                 CurrentUserDid = null;
                                 await IdentityStore.Remove(refreshingFor).ConfigureAwait(false);
+                                _metrics.AccessTokensRefreshFailures.Add(1);
+
                                 return AuthenticateResults.s_tokenRefreshFailed;
                             }
                             else
@@ -657,12 +670,15 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                                     return AuthenticateResults.s_identityStoreRefreshMissing;
                                 }
 
+                                _metrics.AccessTokensRefreshed.Add(1);
+
                                 hydratedTicket = new AuthenticationTicket(new ClaimsPrincipal(updatedIdentity), ticket.Properties, ticket.AuthenticationScheme);
                                 return AuthenticateResult.Success(hydratedTicket);
                             }
                         }
                         catch (Exception ex)
                         {
+                            _metrics.AccessTokensRefreshFailures.Add(1);
                             Logger.TokenRefreshThrew(refreshingFor, ex);
                             return AuthenticateResults.s_tokenRefreshFailed;
                         }
@@ -680,35 +696,45 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                 // The refresh may also have completed in the window between the check above and here, so check the
                 // store before waiting, otherwise a request which arrives just as a refresh finishes would be
                 // failed even though valid credentials are sitting in the store.
-                for (int refreshCheckCount = 0; refreshCheckCount < Options.MaxRefreshChecks; refreshCheckCount++)
+
+                long startTimestamp = Stopwatch.GetTimestamp();
+                try
                 {
-                    if (Context.RequestAborted.IsCancellationRequested)
+                    _metrics.AccessTokenRefreshWaits.Add(1);
+                    for (int refreshCheckCount = 0; refreshCheckCount < Options.MaxRefreshChecks; refreshCheckCount++)
                     {
-                        return AuthenticateResults.s_cancellationRequested;
-                    }
-
-                    if (!await IdentityStore.IsRefreshing(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false))
-                    {
-                        // The refresh has finished, so pick up the identity it stored.
-                        ClaimsIdentity? refreshedIdentity = await IdentityStore.GetIdentity(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false);
-
-                        if (refreshedIdentity is null)
+                        if (Context.RequestAborted.IsCancellationRequested)
                         {
-                            return AuthenticateResults.s_identityStoreRefreshMissing;
+                            return AuthenticateResults.s_cancellationRequested;
                         }
 
-                        hydratedTicket = new AuthenticationTicket(new ClaimsPrincipal(refreshedIdentity), ticket.Properties, ticket.AuthenticationScheme);
-                        return AuthenticateResult.Success(hydratedTicket);
-                    }
+                        if (!await IdentityStore.IsRefreshing(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false))
+                        {
+                            // The refresh has finished, so pick up the identity it stored.
+                            ClaimsIdentity? refreshedIdentity = await IdentityStore.GetIdentity(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false);
 
-                    try
-                    {
-                        await Task.Delay(Options.RefreshCheckWait, Context.RequestAborted).ConfigureAwait(false);
+                            if (refreshedIdentity is null)
+                            {
+                                return AuthenticateResults.s_identityStoreRefreshMissing;
+                            }
+
+                            hydratedTicket = new AuthenticationTicket(new ClaimsPrincipal(refreshedIdentity), ticket.Properties, ticket.AuthenticationScheme);
+                            return AuthenticateResult.Success(hydratedTicket);
+                        }
+
+                        try
+                        {
+                            await Task.Delay(Options.RefreshCheckWait, Context.RequestAborted).ConfigureAwait(false);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            return AuthenticateResults.s_cancellationRequested;
+                        }
                     }
-                    catch (OperationCanceledException)
-                    {
-                        return AuthenticateResults.s_cancellationRequested;
-                    }
+                }
+                finally
+                {
+                    _metrics.AccessTokenRefreshWaitDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalSeconds);
                 }
 
                 if (Context.RequestAborted.IsCancellationRequested)

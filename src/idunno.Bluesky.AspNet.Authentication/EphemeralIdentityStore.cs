@@ -2,17 +2,17 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Metrics;
 using System.Security.Claims;
 using System.Security.Cryptography;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
+using idunno.Bluesky.AspNet.Authentication.Events;
 
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-
-using idunno.Bluesky.AspNet.Authentication.Events;
 
 namespace idunno.Bluesky.AspNet.Authentication;
 
@@ -50,6 +50,8 @@ public class EphemeralIdentityStore : IIdentityStore
     private static MemoryCache? s_refreshCache;
     private static int s_configuredSizeLimit;
 
+    private readonly BlueskyAuthenticationMetrics _metrics;
+
 #if NET9_0_OR_GREATER
     private static readonly Lock s_warnedLock = new ();
     private static readonly Lock s_refreshLock = new ();
@@ -67,6 +69,7 @@ public class EphemeralIdentityStore : IIdentityStore
     /// <param name="entryTimeToLive">The time to live for cache entries.</param>
     /// <param name="refreshLockExpiration">The time to lock a token refresh attempt for.</param>
     /// <param name="sizeLimit">The number of identities to hold before evicting them. Defaults to <see cref="DefaultSizeLimit"/>.</param>
+    /// <param name="meterFactory">An optional meter factory to create meters from.</param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="sizeLimit"/> is not greater than zero.</exception>
     /// <remarks>
     /// <para>
@@ -79,7 +82,8 @@ public class EphemeralIdentityStore : IIdentityStore
         ILoggerFactory loggerFactory,
         TimeSpan? entryTimeToLive = null,
         TimeSpan? refreshLockExpiration = null,
-        int? sizeLimit = null)
+        int? sizeLimit = null,
+        IMeterFactory? meterFactory = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(sizeLimit ?? DefaultSizeLimit, 0);
 
@@ -102,6 +106,8 @@ public class EphemeralIdentityStore : IIdentityStore
             AbsoluteExpirationRelativeToNow = refreshLockExpiration ?? TimeSpan.FromSeconds(90),
             Size = 1
         };
+
+        _metrics = new BlueskyAuthenticationMetrics(meterFactory);
 
         if (!s_warned)
         {
@@ -173,6 +179,7 @@ public class EphemeralIdentityStore : IIdentityStore
             // The stored identity cannot be read, so remove it rather than leaving an entry every subsequent request will fail on.
             Cache.Remove($"{did}");
             Logger.CachedIdentityCouldNotBeUnprotected(did, ex);
+            _metrics.DataProtectionFailures.Add(1);
             return null;
         }
         catch (Exception ex)
