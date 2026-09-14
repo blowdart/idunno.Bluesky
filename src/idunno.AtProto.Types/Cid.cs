@@ -347,13 +347,12 @@ public sealed class Cid : IEquatable<Cid>
     /// </summary>
     /// <param name="s">A string containing the id to convert.</param>
     /// <param name="result">
-    /// When this method returns contains the <see cref="AtUri"/> equivalent of the
+    /// When this method returns contains the <see cref="Cid"/> equivalent of the
     /// string contained in s, or <see langword="null"/> if the conversion failed. The conversion fails if the <paramref name="s"/> parameter
     /// is <see langword="null"/> or empty, or is not of the current format. This parameter is passed uninitialized; any value originally
     /// supplied in result will be overwritten.
     /// </param>
     /// <returns><see langword="true"/> if <paramref name="s"/> was converted successfully; otherwise, <see langword="false"/>.</returns>
-    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Deliberate catch all")]
     public static bool TryParse(string? s, [NotNullWhen(true)] out Cid? result)
     {
         if (string.IsNullOrEmpty(s))
@@ -367,7 +366,7 @@ public sealed class Cid : IEquatable<Cid>
             result = new Cid(s);
             return true;
         }
-        catch
+        catch (ArgumentException)
         {
             result = null;
             return false;
