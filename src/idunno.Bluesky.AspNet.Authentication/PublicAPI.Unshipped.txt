@@ -14,6 +14,8 @@ idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.CurrentUserDid
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.CurrentUserDid.set -> void
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.Events.get -> idunno.Bluesky.AspNet.Authentication.Events.BlueskyAuthenticationEvents!
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.Events.set -> void
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.BlueskyAuthenticationMetrics(System.Diagnostics.Metrics.IMeterFactory? meterFactory) -> void
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.AccessDeniedPath.get -> Microsoft.AspNetCore.Http.PathString
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.AccessDeniedPath.set -> void
@@ -104,6 +106,8 @@ idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreSettingContext.Identity
 idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreSettingContext.IdentityStoreSettingContext(System.ReadOnlyMemory<byte> identity) -> void
 idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreSettingContext.ReplaceIdentity(System.ReadOnlyMemory<byte> identity) -> void
 idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreSettingContext.ReplaceIdentity(System.Collections.ObjectModel.Collection<byte>! identity) -> void
+static idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.MeterName.get -> string!
+static idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.MeterVersion.get -> string!
 virtual idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.EndRefresh(idunno.AtProto.Did! did, string? refreshLockToken, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.Events.get -> idunno.Bluesky.AspNet.Authentication.Events.IdentityStoreEvents!
 idunno.Bluesky.AspNet.Authentication.DistributedCacheIdentityStore.Events.set -> void
