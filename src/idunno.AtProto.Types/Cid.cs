@@ -147,12 +147,14 @@ public sealed class Cid : IEquatable<Cid>
     /// Returns a string that represents the current <see cref="Cid"/> object.
     /// </summary>
     /// <returns>A string representation of the current <see cref="Cid"/>.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "AT Proto normalizes to lower case")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "AT Proto normalizes the base32 used by CIDv1 to lower case.")]
     public override string ToString()
     {
         if (Version == 0)
         {
-            return SimpleBase.Base58.Bitcoin.Encode(Hash.ToArray()).ToLowerInvariant();
+            // CIDv0 is base58btc, whose alphabet is case sensitive, so unlike the base32 used by CIDv1
+            // the result cannot be case normalized without producing a different, unparsable identifier.
+            return SimpleBase.Base58.Bitcoin.Encode(Hash.ToArray());
         }
         else if (Version == 1)
         {
