@@ -4,7 +4,7 @@
     @if (User.Identity?.IsAuthenticated ?? false)
     {
         <li class="nav-item">
-            <a class="nav-link text-dark" asp-area="Account" asp-page="/Identity/Manage/Index" title="Manage">
+            <a class="nav-link text-dark" asp-area="Identity" asp-page="/Manage/Index" title="Manage">
                 @if (User.GetAvatar() is not null)
                 {
                     <img src="@User.GetAvatar()" alt="Avatar" class="rounded-circle" width="30" height="30" />

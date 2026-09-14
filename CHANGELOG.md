@@ -12,6 +12,15 @@
   credential persistence completes before the updated credentials are used, and any exceptions it throws surface to the caller rather than being
   silently swallowed. Code which persists credentials should move from the `CredentialsUpdated` event to `CredentialsUpdatedAsync`.
 
+#### idunno.AtProto.Types
+
+* Added `Cid.TryParse(string, out Cid?)` which attempts to parse a string into a `Cid` instance, returning a boolean indicating success or failure.
+
+#### idunno.Bluesky
+
+* Added `BlueskyAgent.UpdateProfile(Profile, Cid?, CancellationToken)` which allows updating a user's profile with an optional `Cid` parameter.
+  The `Cid` is used to identify the specific version of the profile being updated, ensuring that updates are applied to the correct version and preventing conflicts.
+
 #### idunno.Bluesky.AspNet.Authentication
 
 * Add a new package, `idunno.Bluesky.AspNet.Authentication`, which provides ASP.NET Core authentication support for Bluesky. It includes an `AuthenticationHandler` which can be registered with

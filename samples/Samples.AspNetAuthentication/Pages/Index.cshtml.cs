@@ -20,15 +20,6 @@ public class IndexModel(BlueskyAgent agent) : PageModel
     {
         if (User is not null && User.Identity?.IsAuthenticated == true && User.Identity is ClaimsIdentity && User.Did is not null)
         {
-            if (agent.HasCredentials && agent.Credentials.ExpiresOn < DateTimeOffset.UtcNow)
-            {
-                bool refreshResult = await agent.RefreshCredentials(cancellationToken: HttpContext.RequestAborted);
-                if (!refreshResult || !agent.IsAuthenticated)
-                {
-                    throw new InvalidOperationException("Failed to refresh token.");
-                }
-            }
-
             Preferences preferences = new();
             var preferencesResult = await agent.GetPreferences(cancellationToken: HttpContext.RequestAborted);
             if (preferencesResult.Succeeded)

@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
@@ -338,5 +339,38 @@ public sealed class Cid : IEquatable<Cid>
         }
 
         return (value, length);
+    }
+
+    /// <summary>
+    /// Converts the string representation of an identifier to its <see cref="Cid"/> equivalent.
+    /// A return value indicates whether the operation succeeded.
+    /// </summary>
+    /// <param name="s">A string containing the id to convert.</param>
+    /// <param name="result">
+    /// When this method returns contains the <see cref="AtUri"/> equivalent of the
+    /// string contained in s, or <see langword="null"/> if the conversion failed. The conversion fails if the <paramref name="s"/> parameter
+    /// is <see langword="null"/> or empty, or is not of the current format. This parameter is passed uninitialized; any value originally
+    /// supplied in result will be overwritten.
+    /// </param>
+    /// <returns><see langword="true"/> if <paramref name="s"/> was converted successfully; otherwise, <see langword="false"/>.</returns>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Deliberate catch all")]
+    public static bool TryParse(string? s, [NotNullWhen(true)] out Cid? result)
+    {
+        if (string.IsNullOrEmpty(s))
+        {
+            result = null;
+            return false;
+        }
+
+        try
+        {
+            result = new Cid(s);
+            return true;
+        }
+        catch
+        {
+            result = null;
+            return false;
+        }
     }
 }

@@ -1,1 +1,2 @@
 #nullable enable
+static idunno.AtProto.Cid.TryParse(string? s, out idunno.AtProto.Cid? result) -> bool

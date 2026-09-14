@@ -74,6 +74,45 @@ public partial class BlueskyAgent
     /// Update the current user's <see cref="Profile"/>.
     /// </summary>
     /// <param name="profile">The <see cref="Profile"/> to update with.</param>
+    /// <param name="cid">The <see cref="Cid"/> of the current profile record.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/> is <see langword="null"/>.</exception>
+    /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
+    [UnconditionalSuppressMessage(
+        "Trimming",
+        "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
+    [UnconditionalSuppressMessage("AOT",
+        "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
+        Justification = "All types are preserved in the JsonSerializerOptions call to Put().")]
+    public async Task<AtProtoHttpResult<PutRecordResult>> UpdateProfile(
+        Profile profile,
+        Cid? cid,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
+        return await PutRecord(
+            record: profile,
+            jsonSerializerOptions: BlueskyServer.BlueskyJsonSerializerOptions,
+            collection: CollectionNsid.Profile,
+            rKey: "self",
+            validate: null,
+            swapCommit: null,
+            swapRecord: cid,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Update the current user's <see cref="Profile"/>.
+    /// </summary>
+    /// <param name="profile">The <see cref="Profile"/> to update with.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="profile"/> is <see langword="null"/>.</exception>
