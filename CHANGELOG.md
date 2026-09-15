@@ -42,7 +42,8 @@
 
 #### idunno.AtProto
 
-* Removed the `ReaderWriterLockSlim` property to avoid potential deadlocks. Any code that was using this property should be now use its own locking mechanism to avoid deadlocks.* `DPoPRevokeCredentials` no longer implement `IDisposable`.
+* Removed the `ReaderWriterLockSlim` property in `Credentials` to avoid potential deadlocks. Any custom credentials using this property should now use its own locking mechanism to avoid deadlocks.
+* `DPoPRevokeCredentials` no longer implement `IDisposable`.
 * The `onCredentialsUpdated` parameter on `AtProtoServer` and `AtProtoHttpClient` methods has changed from `Action<AtProtoCredential>?` to
   `Func<AtProtoCredential, CancellationToken, Task>?`, and the callback is now awaited. Previously the callback was invoked synchronously, which meant
   asynchronous credential persistence could not be awaited, and any work it started could be abandoned. Callers passing a lambda should change
