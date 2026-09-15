@@ -243,4 +243,35 @@ public class AtUriTests
     {
         Assert.Throws<AtUriFormatException>(() => new AtUri(value));
     }
+
+    [Theory]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType/.")]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType/..")]
+    public void AtUriConstructorThrowsAtUriFormatExceptionWhenTheRecordKeyIsInvalid(string value)
+    {
+        // Every way an AT URI can be malformed is reported the same way, so a caller does not have to know which
+        // segment failed to know which exception to catch. RecordKeyFormatException belongs to callers parsing a
+        // record key in isolation.
+        Assert.Throws<AtUriFormatException>(() => new AtUri(value));
+    }
+
+    [Theory]
+    [InlineData("at://did:plc:identifier/-test.idunno.lexiconType/rkey")]
+    [InlineData("at://did:plc:identifier/999.999.999/rkey")]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType-/rkey")]
+    public void AtUriConstructorThrowsAtUriFormatExceptionWhenTheCollectionIsInvalid(string value)
+    {
+        Assert.Throws<AtUriFormatException>(() => new AtUri(value));
+    }
+
+    [Theory]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType/.")]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType/..")]
+    [InlineData("at://did:plc:identifier/-test.idunno.lexiconType/rkey")]
+    [InlineData("at://did:plc:identifier/999.999.999/rkey")]
+    public void AtUriTryParseReturnsFalseWhenAPathSegmentIsInvalid(string value)
+    {
+        Assert.False(AtUri.TryParse(value, out AtUri? actual));
+        Assert.Null(actual);
+    }
 }

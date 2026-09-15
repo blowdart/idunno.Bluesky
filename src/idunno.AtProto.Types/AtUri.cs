@@ -44,7 +44,8 @@ public sealed partial class AtUri : IEquatable<AtUri>
     /// Creates a new instance of the <see cref="AtUri"/> class from <paramref name="s"/>.
     /// </summary>
     /// <param name="s">A string to construct an <see cref="AtUri"/> from.</param>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> is not a valid AT URI, or is <see langword="null"/>, empty or whitespace.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> is <see langword="null"/>, empty or whitespace.</exception>
+    /// <exception cref="AtUriFormatException">Thrown when <paramref name="s"/> is not a valid AT URI.</exception>
     public AtUri(string s)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(s);
@@ -390,22 +391,6 @@ public sealed partial class AtUri : IEquatable<AtUri>
             }
         }
 
-        if (regexValidationResult.Groups.ContainsKey("collection") && !string.IsNullOrEmpty(regexValidationResult.Groups["collection"].Value))
-        {
-            bool nsidParseResult = Nsid.TryParse(regexValidationResult.Groups["collection"].Value, out Nsid? _);
-            if (!nsidParseResult)
-            {
-                if (throwOnError)
-                {
-                    throw new AtUriFormatException($"Collection segment, {regexValidationResult.Groups["collection"].Value}, must be a valid NSID.");
-                }
-                else
-                {
-                    return false;
-                }
-            }
-        }
-
         if (s.Length > 8 * 1024)
         {
             if (throwOnError)
@@ -486,21 +471,28 @@ public sealed partial class AtUri : IEquatable<AtUri>
                 }
             }
 
-            if (pathSegments.Length >= 1)
+            // Failures in either path segment are reported as an AtUriFormatException, so that every way an AT URI
+            // can be malformed is reported the same way. The segment specific exceptions belong to callers parsing
+            // a segment in isolation, not to callers parsing a URI.
+            if (pathSegments.Length >= 1 && !Nsid.Parse(pathSegments[0], false, out collection))
             {
-                bool isSegmentValidNsid = Nsid.Parse(pathSegments[0], throwOnError, out collection);
-
-                if (!isSegmentValidNsid)
+                if (throwOnError)
+                {
+                    throw new AtUriFormatException($"Collection segment, {pathSegments[0]}, must be a valid NSID.");
+                }
+                else
                 {
                     return false;
                 }
             }
 
-            if (pathSegments.Length == 2)
+            if (pathSegments.Length == 2 && !RecordKey.Parse(pathSegments[1], false, out recordKey))
             {
-                bool isSegmentValidRecordKey = RecordKey.Parse(pathSegments[1], throwOnError, out recordKey);
-
-                if (!isSegmentValidRecordKey)
+                if (throwOnError)
+                {
+                    throw new AtUriFormatException($"Record key segment, {pathSegments[1]}, must be a valid record key.");
+                }
+                else
                 {
                     return false;
                 }

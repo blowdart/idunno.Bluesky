@@ -37,6 +37,9 @@
 
 #### idunno.AtProto.Types
 
+* `AtUri` now reports an invalid record key segment as an `AtUriFormatException` rather than a `RecordKeyFormatException`, so that every way an AT URI can
+  be malformed is reported the same way. Code which catches `RecordKeyFormatException` around `new AtUri(string)` should catch `AtUriFormatException`
+  instead. `AtUri.TryParse()` is unaffected. `RecordKey` itself still raises `RecordKeyFormatException` for callers parsing a record key in isolation.
 * `RecordKey.Value` is now read only. Previously it had an `init` accessor, which allowed object initializer syntax to replace a validated record key
   with an arbitrary string, for example `new RecordKey("self") { Value = "../../../etc/passwd" }`.
 
@@ -88,6 +91,8 @@
   normalizing it produced a different identifier which no longer parsed back into an equal `Cid`. The base32 used by CIDv1 is case insensitive and
   continues to be normalized to lower case.
 * An invalid `RecordKey` now throws a `RecordKeyFormatException` rather than an `NsidFormatException`.
+* `AtUri` no longer validates the collection segment twice. The duplicate check meant a malformed collection could be reported by either of two code
+  paths, only one of which produced an `AtUriFormatException`, leaving an `NsidFormatException` able to escape had the first check ever been changed.
 
 
 ## 6.0.0 - 2026-09-05

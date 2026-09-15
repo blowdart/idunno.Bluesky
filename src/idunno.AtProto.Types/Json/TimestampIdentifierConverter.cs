@@ -17,7 +17,7 @@ public sealed class TimestampIdentifierConverter : JsonConverter<TimestampIdenti
     /// <param name="reader">The reader.</param>
     /// <param name="typeToConvert">The type to convert.</param>
     /// <param name="options">An object that specifies serialization options to use.</param>
-    /// <returns>A <see cref="RecordKey"/> created from the JSON.</returns>
+    /// <returns>A <see cref="TimestampIdentifier"/> created from the JSON.</returns>
     /// <exception cref="JsonException">Thrown when the JSON to be converted is not a string token.</exception>
     public override TimestampIdentifier? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
@@ -48,7 +48,7 @@ public sealed class TimestampIdentifierConverter : JsonConverter<TimestampIdenti
     /// Writes the specified <see cref="TimestampIdentifier" /> as JSON.
     /// </summary>
     /// <param name="writer">The writer to write to.</param>
-    /// <param name="value">The <see cref="Cid"/> to convert to JSON.</param>
+    /// <param name="value">The <see cref="TimestampIdentifier"/> to convert to JSON.</param>
     /// <param name="options">An object that specifies serialization options to use.</param>
     /// <exception cref="ArgumentNullException">Throws when <paramref name="writer"/> or <paramref name="value"/> is <see langword="null"/>.</exception>
     public override void Write(Utf8JsonWriter writer, TimestampIdentifier value, JsonSerializerOptions options)
