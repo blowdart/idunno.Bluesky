@@ -42,6 +42,12 @@ internal static partial class Logger
     [LoggerMessage(23, LogLevel.Warning, "Exception thrown when unprotecting correlation cookie.")]
     public static partial void ExceptionUnprotectingCorrelationCookie(this ILogger logger, Exception ex);
 
+    [LoggerMessage(27, LogLevel.Debug, "Request did not contain a correlation cookie.")]
+    public static partial void MissingCorrelationCookie(this ILogger logger);
+
+    [LoggerMessage(28, LogLevel.Warning, "Correlation cookie was unprotected but its contents could not be parsed.")]
+    public static partial void MalformedCorrelationCookie(this ILogger logger);
+
     [LoggerMessage(24, LogLevel.Warning, "SignIn failed due to missing query string on the request.")]
     public static partial void SignInFailedNoQueryString(this ILogger logger);
 

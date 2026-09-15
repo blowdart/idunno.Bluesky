@@ -145,6 +145,18 @@ public class BlueskyAuthenticationMetrics
     public const string CorrelationStateRejectionUnprotectFailed = "unprotect_failed";
 
     /// <summary>
+    /// The value of the <see cref="CorrelationStateRejectionReasonTagName"/> tag when the request carried no
+    /// correlation cookie at all.
+    /// </summary>
+    public const string CorrelationStateRejectionMissingCookie = "missing_cookie";
+
+    /// <summary>
+    /// The value of the <see cref="CorrelationStateRejectionReasonTagName"/> tag when the correlation cookie was
+    /// unprotected successfully but its contents could not be parsed.
+    /// </summary>
+    public const string CorrelationStateRejectionMalformedCookie = "malformed_cookie";
+
+    /// <summary>
     /// The value of the <see cref="CorrelationStateRejectionReasonTagName"/> tag when the correlation cookie was
     /// readable but the login state it pointed at was not in the correlation cache.
     /// </summary>
@@ -442,8 +454,9 @@ public class BlueskyAuthenticationMetrics
     /// <remarks>
     /// <para>
     ///   Tagged with <see cref="CorrelationStateRejectionReasonTagName"/>, whose value is
-    ///   <see cref="CorrelationStateRejectionExpiredCookie"/>, <see cref="CorrelationStateRejectionUnprotectFailed"/> or
-    ///   <see cref="CorrelationStateRejectionStateNotFound"/>. Correlation state is what ties a login callback to the
+    ///   <see cref="CorrelationStateRejectionMissingCookie"/>, <see cref="CorrelationStateRejectionExpiredCookie"/>,
+    ///   <see cref="CorrelationStateRejectionUnprotectFailed"/>, <see cref="CorrelationStateRejectionMalformedCookie"/>
+    ///   or <see cref="CorrelationStateRejectionStateNotFound"/>. Correlation state is what ties a login callback to the
     ///   login which started it, so a sustained count is either users taking too long to log in or callbacks arriving
     ///   which no login on this application started.
     /// </para>

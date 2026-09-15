@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
+using System.Globalization;
 using System.Security.Claims;
 using System.Security.Cryptography;
 
@@ -32,7 +33,7 @@ public class BlueskySignInManager
     private string? _dataProtectorScheme;
 
     [SuppressMessage("Style", "IDE0032:Use auto property", Justification = "Too much validation going on.")]
-    private ITimeLimitedDataProtector? _dataProtector;
+    private IDataProtector? _dataProtector;
 
     private readonly BlueskyAuthenticationMetrics _metrics;
 
@@ -131,7 +132,7 @@ public class BlueskySignInManager
         }
     }
 
-    internal ITimeLimitedDataProtector DataProtector
+    internal IDataProtector DataProtector
     {
         get
         {
@@ -143,9 +144,12 @@ public class BlueskySignInManager
                     BlueskyAuthenticationOptions.DataProtectionProvider ??
                     throw new InvalidOperationException($"No DataProtectionProvider is configured for the '{scheme}' authentication scheme.");
 
-                _dataProtector = dataProtectionProvider
-                    .CreateProtector(Constants.CorrelationPurpose, "v1")
-                    .ToTimeLimitedDataProtector();
+                // The expiry the correlation cookie is valid until is carried inside the protected payload rather than
+                // by ITimeLimitedDataProtector, whose Unprotect throws a CryptographicException indistinguishable from
+                // a key ring failure once the payload has expired. Carrying it here keeps an everyday expiry, a user
+                // who left the login page open, separate from a genuine data protection problem. The payload is still
+                // authenticated by the protector, so the expiry cannot be altered by whoever holds the cookie.
+                _dataProtector = dataProtectionProvider.CreateProtector(Constants.CorrelationPurpose, "v2");
                 _dataProtectorScheme = scheme;
             }
 
@@ -264,11 +268,17 @@ public class BlueskySignInManager
     /// </summary>
     /// <param name="correlationId">The correlation ID to look up the state for. If <see langword="null" />, checks the HTTP Context for a correlation cookie.</param>
     /// <returns>The <see cref="OAuthLoginState"/> if found, otherwise <see langword="null" />.</returns>
-    /// <exception cref="InvalidOperationException">If <paramref name="correlationId"/> is <see langword="null" /> and a correlation cookie cannot be found or cannot be parsed.</exception>
+    /// <exception cref="InvalidOperationException">If the <see cref="HttpContext"/> has no request.</exception>
+    /// <remarks>
+    /// <para>
+    ///   A request which carries no correlation cookie, or one which is expired, unreadable or malformed, is a callback
+    ///   this application cannot tie to a login it started. That is not an error in the application, so it yields
+    ///   <see langword="null" /> and a <see cref="BlueskyAuthenticationMetrics.CorrelationStateRejections"/> count
+    ///   carrying the reason, rather than an exception which would surface to the user as a server error.
+    /// </para>
+    /// </remarks>
     public async Task<OAuthLoginState?> LoadState(Guid? correlationId = null)
     {
-        bool correlationCookieRejected = false;
-
         if (correlationId == null)
         {
             if (HttpContext.Request is null)
@@ -276,25 +286,32 @@ public class BlueskySignInManager
                 throw new InvalidOperationException("Context.Request is null");
             }
 
-            if (HttpContext.Request.Cookies is not null &&
-                HttpContext.Request.Cookies.ContainsKey(CorrelationCookieName) &&
-                HttpContext.Request.Cookies[CorrelationCookieName] is not null)
+            string? cookieValue = HttpContext.Request.Cookies?[CorrelationCookieName];
+
+            string? rejectionReason = null;
+
+            if (string.IsNullOrEmpty(cookieValue))
+            {
+                Logger.MissingCorrelationCookie();
+                rejectionReason = BlueskyAuthenticationMetrics.CorrelationStateRejectionMissingCookie;
+            }
+            else
             {
                 try
                 {
-                    string unprotectedCookieValue = DataProtector.Unprotect(HttpContext.Request.Cookies[CorrelationCookieName]!, out DateTimeOffset expiration);
+                    string unprotectedCookieValue = DataProtector.Unprotect(cookieValue);
 
-                    if (expiration < DateTimeOffset.UtcNow)
+                    if (!TryParseCorrelationCookiePayload(unprotectedCookieValue, out Guid parsedGuid, out DateTimeOffset expiration))
+                    {
+                        Logger.MalformedCorrelationCookie();
+                        rejectionReason = BlueskyAuthenticationMetrics.CorrelationStateRejectionMalformedCookie;
+                    }
+                    else if (expiration < DateTimeOffset.UtcNow)
                     {
                         Logger.ExpiredCorrelationCookie();
-                        _metrics.CorrelationStateRejections.Add(
-                            1,
-                            new KeyValuePair<string, object?>(
-                                BlueskyAuthenticationMetrics.CorrelationStateRejectionReasonTagName,
-                                BlueskyAuthenticationMetrics.CorrelationStateRejectionExpiredCookie));
-                        correlationCookieRejected = true;
+                        rejectionReason = BlueskyAuthenticationMetrics.CorrelationStateRejectionExpiredCookie;
                     }
-                    else if (Guid.TryParse(unprotectedCookieValue, out Guid parsedGuid))
+                    else
                     {
                         correlationId = parsedGuid;
                     }
@@ -302,17 +319,15 @@ public class BlueskySignInManager
                 catch (CryptographicException ex)
                 {
                     Logger.ExceptionUnprotectingCorrelationCookie(ex);
+
+                    // The expiry is carried inside the payload, so reaching here means the payload could not be read
+                    // at all, which is a data protection problem rather than an everyday expiry.
                     _metrics.DataProtectionFailures.Add(
                         1,
                         new KeyValuePair<string, object?>(
                             BlueskyAuthenticationMetrics.DataProtectionSourceTagName,
                             BlueskyAuthenticationMetrics.DataProtectionSourceCorrelationCookie));
-                    _metrics.CorrelationStateRejections.Add(
-                        1,
-                        new KeyValuePair<string, object?>(
-                            BlueskyAuthenticationMetrics.CorrelationStateRejectionReasonTagName,
-                            BlueskyAuthenticationMetrics.CorrelationStateRejectionUnprotectFailed));
-                    correlationCookieRejected = true;
+                    rejectionReason = BlueskyAuthenticationMetrics.CorrelationStateRejectionUnprotectFailed;
                 }
             }
 
@@ -323,19 +338,20 @@ public class BlueskySignInManager
                 BlueskyAuthenticationOptions.CorrelationCookie.Build(HttpContext, DateTimeOffset.UtcNow));
 
             // An expired or unreadable cookie has now been deleted, so it cannot be presented again.
-            if (correlationCookieRejected)
+            if (rejectionReason is not null)
             {
-                return null;
-            }
+                _metrics.CorrelationStateRejections.Add(
+                    1,
+                    new KeyValuePair<string, object?>(
+                        BlueskyAuthenticationMetrics.CorrelationStateRejectionReasonTagName,
+                        rejectionReason));
 
-            if (correlationId is null)
-            {
-                throw new InvalidOperationException("Missing or invalid correlation cookie.");
+                return null;
             }
         }
 
         // Login state is single use, so take it rather than reading it and removing it separately.
-        OAuthLoginState? loginState = await CorrelationCache.TakeOAuthLoginState(correlationId.Value).ConfigureAwait(false);
+        OAuthLoginState? loginState = await CorrelationCache.TakeOAuthLoginState(correlationId!.Value).ConfigureAwait(false);
 
         if (loginState is null)
         {
@@ -371,13 +387,15 @@ public class BlueskySignInManager
 
         correlationId = await SaveState(state, correlationId).ConfigureAwait(false);
 
-        string cookieValue = DataProtector.Protect(correlationId.Value.ToString(), correlationValidityPeriod);
+        DateTimeOffset correlationExpiry = DateTimeOffset.UtcNow.Add(correlationValidityPeriod);
+
+        string cookieValue = DataProtector.Protect(FormatCorrelationCookiePayload(correlationId.Value, correlationExpiry));
 
         CookieOptions cookieOptions = BlueskyAuthenticationOptions.CorrelationCookie.Build(HttpContext, DateTimeOffset.UtcNow);
 
         // CookieBuilder only sets an expiry when the application configured one, and the correlation cookie has no
         // value once the state it points at has aged out of the correlation cache.
-        cookieOptions.Expires ??= DateTimeOffset.UtcNow.Add(correlationValidityPeriod);
+        cookieOptions.Expires ??= correlationExpiry;
 
         // markCookieAsSecure may only raise the security of the cookie, never lower what the CookieBuilder asked for.
         cookieOptions.Secure = cookieOptions.Secure || markCookieAsSecure;
@@ -385,6 +403,37 @@ public class BlueskySignInManager
         HttpContext.Response.Cookies.Append(CorrelationCookieName, cookieValue, cookieOptions);
 
         return correlationId.Value;
+    }
+
+    private static string FormatCorrelationCookiePayload(Guid correlationId, DateTimeOffset expiration) =>
+        string.Create(CultureInfo.InvariantCulture, $"{correlationId:D}|{expiration.ToUnixTimeSeconds()}");
+
+    private static bool TryParseCorrelationCookiePayload(string payload, out Guid correlationId, out DateTimeOffset expiration)
+    {
+        correlationId = Guid.Empty;
+        expiration = default;
+
+        int separator = payload.IndexOf('|', StringComparison.Ordinal);
+
+        if (separator < 0 ||
+            !Guid.TryParseExact(payload.AsSpan(0, separator), "D", out correlationId) ||
+            !long.TryParse(payload.AsSpan(separator + 1), NumberStyles.Integer, CultureInfo.InvariantCulture, out long expiresAtUnixSeconds))
+        {
+            correlationId = Guid.Empty;
+            return false;
+        }
+
+        try
+        {
+            expiration = DateTimeOffset.FromUnixTimeSeconds(expiresAtUnixSeconds);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            correlationId = Guid.Empty;
+            return false;
+        }
+
+        return true;
     }
 
     /// <summary>

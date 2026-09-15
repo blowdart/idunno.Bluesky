@@ -213,8 +213,10 @@ Tagged with `reason`.
 
 | `reason` | Meaning |
 | --- | --- |
-| `expired_cookie` | The correlation cookie was readable but had expired. |
-| `unprotect_failed` | The correlation cookie could not be unprotected. |
+| `missing_cookie` | The callback carried no correlation cookie, so it could not be tied to a login this application started. |
+| `expired_cookie` | The correlation cookie was readable but had passed the expiry it was written with. |
+| `unprotect_failed` | The correlation cookie could not be unprotected. This also counts against `dataprotection.failures.total`. |
+| `malformed_cookie` | The correlation cookie was unprotected successfully but its contents could not be parsed. |
 | `state_not_found` | The cookie was readable but the login state it referred to was not in the state cache, either because it expired or because it had already been consumed. |
 
 ### Metric: idunno.bluesky.aspnet.authentication.tokenrefreshes.total
