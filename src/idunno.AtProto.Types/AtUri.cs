@@ -476,7 +476,14 @@ public sealed partial class AtUri : IEquatable<AtUri>
 
             if (pathSegments.Length > 2)
             {
-                throw new AtUriFormatException($"{s} has too many segments");
+                if (throwOnError)
+                {
+                    throw new AtUriFormatException($"{s} has too many segments");
+                }
+                else
+                {
+                    return false;
+                }
             }
 
             if (pathSegments.Length >= 1)

@@ -1,6 +1,8 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Reflection;
+
 namespace idunno.AtProto.Types.Test;
 
 public class RecordKeyTests
@@ -79,5 +81,25 @@ public class RecordKeyTests
         Assert.NotNull(rhs);
         Assert.Equal(lhs, rhs);
         Assert.True(lhs.Equals(rhs));
+    }
+
+    [Theory]
+    [InlineData("has spaces and $$$")]
+    [InlineData("alpha/beta")]
+    [InlineData(".")]
+    [InlineData("..")]
+    [InlineData("#invalid")]
+    public void RecordKeyConstructorThrowsRecordKeyFormatExceptionForInvalidValues(string value)
+    {
+        Assert.Throws<RecordKeyFormatException>(() => new RecordKey(value));
+    }
+
+    [Fact]
+    public void RecordKeyValueCannotBeSetOutsideTheConstructor()
+    {
+        PropertyInfo? valueProperty = typeof(RecordKey).GetProperty(nameof(RecordKey.Value));
+
+        Assert.NotNull(valueProperty);
+        Assert.Null(valueProperty.SetMethod);
     }
 }

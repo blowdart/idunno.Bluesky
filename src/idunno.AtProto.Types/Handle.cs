@@ -36,28 +36,25 @@ public sealed partial class Handle : AtIdentifier, IEquatable<Handle>
     [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "AT Proto standards normalize to lower case.")]
     private Handle(string s, bool validate)
     {
-        Value = string.Empty;
+        ArgumentException.ThrowIfNullOrWhiteSpace(s);
 
         // Normalize
         s = s.ToLowerInvariant();
 
-        if (validate)
+        if (validate && !Parse(s, true, out Handle? _))
         {
-            if (Parse(s, true, out Handle? _))
-            {
-                Value = s;
-            }
+            throw new ArgumentException($"\"{s}\" does not validate as a handle.", nameof(s));
         }
-        else
-        {
-            Value = s;
-        }
+
+        Value = s;
     }
 
     /// <summary>
     /// Creates a new instance of <see cref="Handle"/> from the specified string.
     /// </summary>
     /// <param name="s">The string to create a handle from.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="s"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> is empty or whitespace, or does not validate as a handle.</exception>
     /// <remarks>
     /// <para>Note that handles do not begin with an @ sign, that is just how they are typically displayed in applications.</para>
     /// </remarks>

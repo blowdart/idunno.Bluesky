@@ -108,10 +108,14 @@ public sealed partial class Nsid : IEquatable<Nsid>
     /// supplied in result will be overwritten.
     /// </param>
     /// <returns><see langword="true"/> if s was converted successfully; otherwise, <see langword="false"/>.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> is <see langword="null"/> or whitespace.</exception>
     public static bool TryParse(string s, out Nsid? result)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(s);
+        if (string.IsNullOrWhiteSpace(s))
+        {
+            result = null;
+            return false;
+        }
+
         return Parse(s, false, out result);
     }
 

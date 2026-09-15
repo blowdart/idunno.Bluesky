@@ -226,4 +226,21 @@ public class AtUriTests
         Assert.Equal("test.idunno.lexiconType", atUri.Collection);
         Assert.Equal("rkey", atUri.RecordKey);
     }
+
+    [Theory]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType/rkey/extra")]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType/rkey/extra/more")]
+    public void AtUriTryParseReturnsFalseWhenThereAreTooManySegments(string value)
+    {
+        Assert.False(AtUri.TryParse(value, out AtUri? actual));
+        Assert.Null(actual);
+    }
+
+    [Theory]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType/rkey/extra")]
+    [InlineData("at://did:plc:identifier/test.idunno.lexiconType/rkey/extra/more")]
+    public void AtUriConstructorThrowsAtUriFormatExceptionWhenThereAreTooManySegments(string value)
+    {
+        Assert.Throws<AtUriFormatException>(() => new AtUri(value));
+    }
 }

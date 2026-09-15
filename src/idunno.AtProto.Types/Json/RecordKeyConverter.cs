@@ -40,7 +40,7 @@ public sealed class RecordKeyConverter : JsonConverter<RecordKey>
         {
             throw new JsonException("Value is not a valid RecordKey.", e);
         }
-        catch (NsidFormatException e)
+        catch (RecordKeyFormatException e)
         {
             throw new JsonException("Value is not a valid RecordKey.", e);
         }

@@ -138,4 +138,40 @@ public class NsidTests
         Assert.Equal(domainAuthority, convertedNsid.Authority);
         Assert.Equal(name, convertedNsid.Name);
     }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void NsidTryParseReturnsFalseForNullEmptyOrWhitespace(string? value)
+    {
+        Assert.False(Nsid.TryParse(value!, out Nsid? actual));
+        Assert.Null(actual);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("com")]
+    [InlineData("com.example")]
+    [InlineData("com.example.foo.*")]
+    public void NsidTryParseReturnsFalseWhereTheConstructorThrows(string? value)
+    {
+        Assert.ThrowsAny<Exception>(() => new Nsid(value!));
+
+        Assert.False(Nsid.TryParse(value!, out Nsid? actual));
+        Assert.Null(actual);
+    }
+
+    [Theory]
+    [InlineData("app.bsky.feed.post")]
+    [InlineData("com.example.fooBar")]
+    public void NsidTryParseReturnsTrueForValidNsids(string value)
+    {
+        Assert.True(Nsid.TryParse(value, out Nsid? actual));
+
+        Assert.NotNull(actual);
+        Assert.Equal(value, actual.ToString());
+    }
 }
