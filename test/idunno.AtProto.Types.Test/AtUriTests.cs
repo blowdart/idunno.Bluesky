@@ -274,4 +274,17 @@ public class AtUriTests
         Assert.False(AtUri.TryParse(value, out AtUri? actual));
         Assert.Null(actual);
     }
+
+    [Fact]
+    public void AtUriConstructorReportsAUriThatIsTooLongAsTooLongEvenWhenItsCollectionIsAlsoInvalid()
+    {
+        // Both complaints are true of this value and both raise an AtUriFormatException, so only the message
+        // distinguishes them. The length check deliberately runs before the path segments are parsed, as the
+        // URI is rejected on length whatever its collection says.
+        string value = "at://did:plc:identifier/-test.idunno.lexiconType/" + new string('o', 8200);
+
+        AtUriFormatException actual = Assert.Throws<AtUriFormatException>(() => new AtUri(value));
+
+        Assert.Contains("is too long", actual.Message, StringComparison.Ordinal);
+    }
 }
