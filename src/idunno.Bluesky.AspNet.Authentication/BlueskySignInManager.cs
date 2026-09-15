@@ -29,6 +29,7 @@ public class BlueskySignInManager
     private readonly IHttpContextAccessor _contextAccessor;
     private readonly IHostEnvironment _env;
     private readonly IOptionsMonitor<BlueskyAuthenticationOptions> _authenticationOptionsMonitor;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     private string? _dataProtectorScheme;
 
@@ -46,6 +47,7 @@ public class BlueskySignInManager
     /// <param name="env">The <see cref="IHostEnvironment"/> for the application</param>
     /// <param name="logger">The <see cref="ILogger"/> used to log messages, warnings and errors</param>
     /// <param name="meterFactory">The <see cref="IMeterFactory"/> used to create metrics instruments</param>
+    /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> the agents it creates should make their requests through.</param>
     /// <exception cref="ArgumentNullException">Thrown when any of the parameters are <see langword="null" />.</exception>
     public BlueskySignInManager(
         IHttpContextAccessor contextAccessor,
@@ -53,17 +55,20 @@ public class BlueskySignInManager
         IOptionsMonitor<BlueskyAuthenticationOptions> authenticationOptionsAccessor,
         IHostEnvironment env,
         ILogger<BlueskySignInManager> logger,
-        IMeterFactory meterFactory)
+        IMeterFactory meterFactory,
+        IHttpClientFactory httpClientFactory)
     {
         ArgumentNullException.ThrowIfNull(contextAccessor);
         ArgumentNullException.ThrowIfNull(agentOptionsAccessor);
         ArgumentNullException.ThrowIfNull(agentOptionsAccessor.Value);
         ArgumentNullException.ThrowIfNull(agentOptionsAccessor.Value.OAuthOptions);
         ArgumentNullException.ThrowIfNull(authenticationOptionsAccessor);
+        ArgumentNullException.ThrowIfNull(httpClientFactory);
 
         _contextAccessor = contextAccessor;
         _authenticationOptionsMonitor = authenticationOptionsAccessor;
         _env = env;
+        _httpClientFactory = httpClientFactory;
 
         Logger = logger;
         BlueskyAgentOptions = agentOptionsAccessor.Value;
@@ -191,7 +196,7 @@ public class BlueskySignInManager
     {
         returnUri ??= CreateReturnUri();
 
-        using var agent = new BlueskyAgent(options: BlueskyAgentOptions);
+        using var agent = new BlueskyAgent(httpClientFactory: _httpClientFactory, options: BlueskyAgentOptions);
         OAuthClient oAuthClient = agent.CreateOAuthClient();
 
         Uri redirectUri = await agent.BuildOAuth2LoginUri(
@@ -481,7 +486,7 @@ public class BlueskySignInManager
             return new SignInResult(Succeeded: false, MissingCorrelationState: true);
         }
         
-        using var agent = new BlueskyAgent(options: BlueskyAgentOptions);
+        using var agent = new BlueskyAgent(httpClientFactory: _httpClientFactory, options: BlueskyAgentOptions);
         OAuthClient oAuthClient = agent.CreateOAuthClient();
         DPoPAccessCredentials? accessCredentials = await oAuthClient.ProcessOAuth2Response(
             correlationState,

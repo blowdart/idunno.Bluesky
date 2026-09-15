@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 
 using idunno.Bluesky.AspNet.Authentication;
 using idunno.Bluesky;
+using idunno.AtProto;
 using System.Diagnostics.CodeAnalysis;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
@@ -118,6 +119,8 @@ public static class BlueskyExtensions
         ArgumentNullException.ThrowIfNull(builder);
 
         builder.Services.AddBlueskyAgentOptions();
+        builder.Services.AddAtProtoHttpClient(provider =>
+            provider.GetRequiredService<IOptionsMonitor<BlueskyAgentOptions>>().CurrentValue.HttpClientOptions);
         builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<BlueskyAgentOptions>, PostConfigureBlueskyAgentOptions>());
         builder.Services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
         builder.Services.TryAddScoped<BlueskySignInManager, BlueskySignInManager>();
@@ -175,11 +178,14 @@ public static class BlueskyExtensions
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
         services.AddOptions<BlueskyAgentOptions>();
+        services.AddAtProtoHttpClient(provider =>
+            provider.GetRequiredService<IOptionsMonitor<BlueskyAgentOptions>>().CurrentValue.HttpClientOptions);
         services.AddSingleton(provider => new BlueskyAgentFactory(
             provider.GetRequiredService<IHttpContextAccessor>(),
             provider.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>(),
             provider.GetRequiredService<IOptionsMonitor<BlueskyAgentOptions>>(),
             provider.GetRequiredService<ILoggerFactory>(),
+            provider.GetRequiredService<IHttpClientFactory>(),
             authenticationScheme));
         services.AddScoped(provider => provider.GetRequiredService<BlueskyAgentFactory>().CreateAgent());
 

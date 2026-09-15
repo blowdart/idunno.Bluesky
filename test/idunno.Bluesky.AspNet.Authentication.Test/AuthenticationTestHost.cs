@@ -125,7 +125,8 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
     internal static async Task<AuthenticationTestHost> Create(
         IIdentityStore? identityStore = null,
         Action<BlueskyAuthenticationOptions>? configureOptions = null,
-        bool authenticateByDefault = true)
+        bool authenticateByDefault = true,
+        IHttpClientFactory? httpClientFactory = null)
     {
         PendingSignIn pendingSignIn = new();
 
@@ -163,6 +164,13 @@ internal sealed class AuthenticationTestHost : IAsyncDisposable
 
                         configureOptions?.Invoke(options);
                     });
+
+                    // Registered after AddBluesky so it replaces the SSRF protected client the package registers, which
+                    // would otherwise try to reach the real network when an agent revokes credentials.
+                    if (httpClientFactory is not null)
+                    {
+                        services.AddSingleton(httpClientFactory);
+                    }
                 })
                 .Configure(app =>
                 {

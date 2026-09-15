@@ -6,6 +6,13 @@
 
 #### idunno.AtProto
 
+* Added `IServiceCollection.AddAtProtoHttpClient()`, which registers the named `HttpClient` an agent constructed with an `IHttpClientFactory` resolves,
+  configured with the same SSRF protections, proxy and certificate revocation settings an agent applies when it builds its own `HttpClient`. Supplying
+  an `IHttpClientFactory` to an agent without this registration produces a client with none of those protections.
+* Added an `AtProtoJetstream` constructor which takes an `IHttpClientFactory`, so a jetstream can share an application's connection pool rather than
+  building a service provider and a `SocketsHttpHandler` of its own.
+* Added `AtProtoJetstreamBuilder.WithHttpClientFactory()` and `AtProtoJetstreamBuilder.ConfigureHttpClientOptions()`, so a jetstream built through the
+  builder can use an application's `IHttpClientFactory`, or configure the `HttpClient` it builds for itself.
 * Added `Agent.HasCredentials` which returns a flag indicating whether the agent has access credentials, regardless of whether the credentials are expired.
 * Added `AtProtoAgent.CredentialsUpdatedAsync`, an awaitable counterpart to the `CredentialsUpdated` event, of type
   `Func<CredentialsUpdatedEventArgs, CancellationToken, Task>?`. Unlike the event, the agent awaits this callback before continuing, so asynchronous
@@ -28,6 +35,11 @@
   The handler and transformer work together to authenticate users via Bluesky, and to transform their profile into claims for use in the application.
 
 ### Changed
+
+#### idunno.AtProto
+
+* `AtProtoJetstream` no longer builds a `ServiceCollection`, a `ServiceProvider` and a `SocketsHttpHandler` of its own when an `IHttpClientFactory` is
+  supplied, and now shares the single definition of the SSRF protected handler an agent uses rather than carrying a second copy of it.
 
 #### idunno.Bluesky
 
@@ -77,6 +89,17 @@
   `Func<AtProtoCredential, CancellationToken, Task>?`, mirroring the change in `idunno.AtProto`.
 
 ### Fixed
+
+#### idunno.AtProto
+
+* `AtProtoAgent.Logout()` now revokes OAuth credentials rather than always failing. The revocation credentials rejected the empty DPoP nonce every
+  revocation necessarily starts with, so an `ArgumentException` was thrown before any request was made to the authorization server, leaving access and
+  refresh tokens live until they expired.
+* The `AtProtoAgent` constructors which take an `IHttpClientFactory` now keep the `AtProtoAgentOptions` they are given. Previously the options were
+  discarded, so an agent created through dependency injection behaved as if no options had been supplied. Amongst other things this left `OAuthOptions`
+  unset, which made logging out of an OAuth session throw.
+* `AtProtoJetstreamBuilder.Build()` now passes the `IMeterFactory` given to `WithMeterFactory()` to the jetstream it builds. Previously it was
+  discarded, so jetstream metrics were published through the shared static meter instead of the application's meter factory.
 
 #### idunno.AtProto.Types
 

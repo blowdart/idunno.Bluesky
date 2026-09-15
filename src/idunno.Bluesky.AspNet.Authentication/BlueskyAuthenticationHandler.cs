@@ -50,6 +50,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
     /// <param name="meterFactory">The <see cref="IMeterFactory"/> to create meters from.</param>
     /// <param name="encoder">The <see cref="UrlEncoder"/>.</param>
     /// <param name="clock">The <see cref="ISystemClock"/>.</param>
+    /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> the agents it creates should make their requests through.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="options"/> is <see langword="null"/>.</exception>
     [Obsolete("ISystemClock is obsolete, use TimeProvider on AuthenticationSchemeOptions instead.")]
     [SuppressMessage("Info Code Smell", "S1133:Deprecated code should be removed", Justification = "Until ASP.NET Core removes this from SignInAuthenticationHandler it must stay.")]
@@ -59,11 +60,14 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         ILoggerFactory logger,
         IMeterFactory meterFactory,
         UrlEncoder encoder,
-        ISystemClock clock) : base(options, logger, encoder, clock)
+        ISystemClock clock,
+        IHttpClientFactory httpClientFactory) : base(options, logger, encoder, clock)
     {
         ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(httpClientFactory);
 
         BlueskyAgentOptionsMonitor = agentOptions;
+        HttpClientFactory = httpClientFactory;
         _metrics = new BlueskyAuthenticationMetrics(meterFactory);
     }
 
@@ -75,18 +79,22 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
     /// <param name="logger">The <see cref="ILoggerFactory"/> to create loggers from.</param>
     /// <param name="meterFactory">The <see cref="IMeterFactory"/> to create meters from.</param>
     /// <param name="encoder">The <see cref="UrlEncoder"/>.</param>
+    /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> the agents it creates should make their requests through.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="options"/> is <see langword="null"/>.</exception>
     public BlueskyAuthenticationHandler(
         IOptionsMonitor<BlueskyAuthenticationOptions> options,
         IOptionsMonitor<BlueskyAgentOptions> agentOptions,
         ILoggerFactory logger,
         IMeterFactory meterFactory,
-        UrlEncoder encoder)
+        UrlEncoder encoder,
+        IHttpClientFactory httpClientFactory)
         : base(options, logger, encoder)
     {
         ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(httpClientFactory);
 
         BlueskyAgentOptionsMonitor = agentOptions;
+        HttpClientFactory = httpClientFactory;
         _metrics = new BlueskyAuthenticationMetrics(meterFactory);
     }
 
@@ -113,6 +121,11 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         get { return (BlueskyAuthenticationEvents)base.Events!; }
         set { base.Events = value; }
     }
+
+    /// <summary>
+    /// Gets the <see cref="IHttpClientFactory"/> the agents this handler creates make their requests through.
+    /// </summary>
+    protected IHttpClientFactory HttpClientFactory { get; }
 
     /// <summary>
     /// Gets an <see cref="IOptionsMonitor{TOptions}"/> for the <see cref="BlueskyAgentOptions"/>.
@@ -500,7 +513,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
     /// <param name="currentUtc">The current UTC time to check the credential expiry against.</param>
     private bool HasUnexpiredCredentials(ClaimsIdentity identity, DateTimeOffset currentUtc)
     {
-        using BlueskyAgent agent = new(new ClaimsPrincipal(identity), BlueskyAgentOptions);
+        using BlueskyAgent agent = new(new ClaimsPrincipal(identity), HttpClientFactory, BlueskyAgentOptions);
 
         return agent.HasCredentials && (agent.Credentials.ExpiresOn - s_refreshClockSkew) >= currentUtc;
     }
@@ -551,7 +564,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
         try
         {
-            using BlueskyAgent agent = new(new ClaimsPrincipal(storedIdentity), BlueskyAgentOptions);
+            using BlueskyAgent agent = new(new ClaimsPrincipal(storedIdentity), HttpClientFactory, BlueskyAgentOptions);
 
             if (!agent.IsAuthenticated)
             {
@@ -647,7 +660,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         var hydratedTicket = new AuthenticationTicket(new ClaimsPrincipal(storedIdentity), ticket.Properties, ticket.AuthenticationScheme);
 
         // Now check the actual token from the store, and spin up an agent to check if the token is still valid
-        using (BlueskyAgent agent = new(hydratedTicket.Principal, BlueskyAgentOptions))
+        using (BlueskyAgent agent = new(hydratedTicket.Principal, HttpClientFactory, BlueskyAgentOptions))
         {
             if (agent.HasCredentials && (agent.Credentials.ExpiresOn - s_refreshClockSkew) < currentUtc )
             {
