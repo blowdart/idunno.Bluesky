@@ -142,6 +142,24 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
     /// <returns>The result of the authentication attempt.</returns>
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        AuthenticateResult result = await HandleAuthenticateCoreAsync().ConfigureAwait(false);
+
+        // A request with no cookie for this scheme is not an authentication attempt, and counting it would make the
+        // counter track request volume instead of the health of established sessions.
+        if (!result.None)
+        {
+            _metrics.AuthenticationOutcomes.Add(
+                1,
+                new KeyValuePair<string, object?>(
+                    BlueskyAuthenticationMetrics.AuthenticationResultTagName,
+                    AuthenticateResults.ReasonFor(result)));
+        }
+
+        return result;
+    }
+
+    private async Task<AuthenticateResult> HandleAuthenticateCoreAsync()
+    {
         AuthenticateResult result = await EnsureCookieTicket().ConfigureAwait(false);
         if (!result.Succeeded)
         {
@@ -271,7 +289,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
         await Events.SignedIn(signedInContext).ConfigureAwait(false);
 
-        _metrics.SigninsTotal.Add(1);
+        _metrics.SigninsSucceeded.Add(1);
 
         // Only honor the ReturnUrl query string parameter on the login path
         bool shouldHonorReturnUrlParameter = Options.LoginPath.HasValue && OriginalPath == Options.LoginPath;
@@ -327,6 +345,8 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         // Only honor the ReturnUrl query string parameter on the logout path
         bool shouldHonorReturnUrlParameter = Options.LogoutPath.HasValue && OriginalPath == Options.LogoutPath;
         await ApplyHeaders(shouldRedirect: true, shouldHonorReturnUrlParameter, context.Properties).ConfigureAwait(false);
+
+        _metrics.SignOuts.Add(1);
 
         Logger.AuthenticationSchemeSignedOut(Scheme.Name);
     }
@@ -546,8 +566,16 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         catch (Exception ex)
         {
             Logger.CredentialRevocationFailed(did, ex);
+            _metrics.CredentialRevocationFailures.Add(1);
         }
     }
+
+    private void RecordIdentityStoreMissAfterRefresh() =>
+        _metrics.IdentityStoreMisses.Add(
+            1,
+            new KeyValuePair<string, object?>(
+                BlueskyAuthenticationMetrics.IdentityStoreMissPhaseTagName,
+                BlueskyAuthenticationMetrics.IdentityStoreMissPhaseTokenRefresh));
 
     private static bool IsHostRelative(string path)
     {
@@ -597,6 +625,11 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
         if (storedIdentity == null)
         {
+            _metrics.IdentityStoreMisses.Add(
+                1,
+                new KeyValuePair<string, object?>(
+                    BlueskyAuthenticationMetrics.IdentityStoreMissPhaseTagName,
+                    BlueskyAuthenticationMetrics.IdentityStoreMissPhaseAuthentication));
             return AuthenticateResults.s_missingIdentityInStore;
         }
 
@@ -625,8 +658,14 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                     return AuthenticateResults.s_cancellationRequested;
                 }
 
+                // A refresh already being under way when the request arrived is ordinary queueing, whereas losing the
+                // race to start one means requests arrived closely enough together to contend for the lock.
+                string refreshWaitReason = BlueskyAuthenticationMetrics.TokenRefreshWaitReasonRefreshInProgress;
+
                 if (!await IdentityStore.IsRefreshing(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false))
                 {
+                    refreshWaitReason = BlueskyAuthenticationMetrics.TokenRefreshWaitReasonLockDenied;
+
                     string? refreshLockToken = await IdentityStore.StartRefresh(CurrentUserDid, cancellationToken: CancellationToken.None).ConfigureAwait(false);
 
                     if (refreshLockToken is not null)
@@ -647,7 +686,11 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                                     HasUnexpiredCredentials(concurrentlyRefreshedIdentity, currentUtc))
                                 {
                                     Logger.TokenRefreshFailedButStoreIsCurrent(refreshingFor);
-                                    _metrics.AccessTokensRefreshed.Add(1);
+                                    _metrics.AccessTokensRefreshed.Add(
+                                        1,
+                                        new KeyValuePair<string, object?>(
+                                            BlueskyAuthenticationMetrics.TokenRefreshOutcomeTagName,
+                                            BlueskyAuthenticationMetrics.TokenRefreshOutcomeConcurrent));
                                     hydratedTicket = new AuthenticationTicket(
                                         new ClaimsPrincipal(concurrentlyRefreshedIdentity), ticket.Properties, ticket.AuthenticationScheme);
                                     return AuthenticateResult.Success(hydratedTicket);
@@ -667,10 +710,15 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                                 ClaimsIdentity? updatedIdentity = await IdentityStore.GetIdentity(refreshingFor).ConfigureAwait(false);
                                 if (updatedIdentity == null)
                                 {
+                                    RecordIdentityStoreMissAfterRefresh();
                                     return AuthenticateResults.s_identityStoreRefreshMissing;
                                 }
 
-                                _metrics.AccessTokensRefreshed.Add(1);
+                                _metrics.AccessTokensRefreshed.Add(
+                                    1,
+                                    new KeyValuePair<string, object?>(
+                                        BlueskyAuthenticationMetrics.TokenRefreshOutcomeTagName,
+                                        BlueskyAuthenticationMetrics.TokenRefreshOutcomeSelf));
 
                                 hydratedTicket = new AuthenticationTicket(new ClaimsPrincipal(updatedIdentity), ticket.Properties, ticket.AuthenticationScheme);
                                 return AuthenticateResult.Success(hydratedTicket);
@@ -700,7 +748,11 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
                 long startTimestamp = Stopwatch.GetTimestamp();
                 try
                 {
-                    _metrics.AccessTokenRefreshWaits.Add(1);
+                    _metrics.AccessTokenRefreshWaits.Add(
+                        1,
+                        new KeyValuePair<string, object?>(
+                            BlueskyAuthenticationMetrics.TokenRefreshWaitReasonTagName,
+                            refreshWaitReason));
                     for (int refreshCheckCount = 0; refreshCheckCount < Options.MaxRefreshChecks; refreshCheckCount++)
                     {
                         if (Context.RequestAborted.IsCancellationRequested)
@@ -715,6 +767,7 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
 
                             if (refreshedIdentity is null)
                             {
+                                RecordIdentityStoreMissAfterRefresh();
                                 return AuthenticateResults.s_identityStoreRefreshMissing;
                             }
 

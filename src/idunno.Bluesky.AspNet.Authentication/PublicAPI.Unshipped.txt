@@ -1,4 +1,27 @@
 #nullable enable
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.AuthenticationResultTagName = "result" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.CorrelationStateRejectionExpiredCookie = "expired_cookie" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.CorrelationStateRejectionReasonTagName = "reason" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.CorrelationStateRejectionStateNotFound = "state_not_found" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.CorrelationStateRejectionUnprotectFailed = "unprotect_failed" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.IdentityStoreMissPhaseAuthentication = "authentication" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.IdentityStoreMissPhaseTagName = "phase" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.IdentityStoreMissPhaseTokenRefresh = "token_refresh" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.IdentityStoreOperationAdd = "add" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.IdentityStoreOperationGet = "get" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.IdentityStoreOperationRemove = "remove" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.IdentityStoreOperationTagName = "operation" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.IdentityStoreOperationUpdate = "update" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.TokenRefreshWaitReasonLockDenied = "lock_denied" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.TokenRefreshWaitReasonRefreshInProgress = "refresh_in_progress" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.TokenRefreshWaitReasonTagName = "reason" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.DataProtectionSourceCorrelationCookie = "correlation_cookie" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.DataProtectionSourceIdentityStore = "identity_store" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.DataProtectionSourceTagName = "source" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.SignInFailureReasonTagName = "reason" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.TokenRefreshOutcomeConcurrent = "concurrent" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.TokenRefreshOutcomeSelf = "self" -> string!
+const idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.TokenRefreshOutcomeTagName = "outcome" -> string!
 const idunno.Bluesky.AspNet.Authentication.Constants.CorrelationCookieName = "_idunno_bluesky_Correlation" -> string!
 const idunno.Bluesky.AspNet.Authentication.Constants.ReturnUrlKey = "_returnUrl" -> string!
 idunno.Bluesky.AspNet.Authentication.BlueskyAgentFactory
@@ -16,6 +39,23 @@ idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.Events.get -> 
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.Events.set -> void
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.BlueskyAuthenticationMetrics(System.Diagnostics.Metrics.IMeterFactory? meterFactory) -> void
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.AccessTokenRefreshWaitDuration.get -> System.Diagnostics.Metrics.Histogram<double>!
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.AccessTokenRefreshWaits.get -> System.Diagnostics.Metrics.Counter<long>!
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.AccessTokensRefreshFailures.get -> System.Diagnostics.Metrics.Counter<long>!
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.AccessTokensRefreshed.get -> System.Diagnostics.Metrics.Counter<long>!
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.DataProtectionFailures.get -> System.Diagnostics.Metrics.Counter<long>!
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.AuthenticationOutcomes.get -> System.Diagnostics.Metrics.Counter<long>!
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.CorrelationStateRejections.get -> System.Diagnostics.Metrics.Counter<long>!
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.CredentialRevocationFailures.get -> System.Diagnostics.Metrics.Counter<long>!
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.IdentityStoreEvictions.get -> System.Diagnostics.Metrics.Counter<long>!
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.IdentityStoreMisses.get -> System.Diagnostics.Metrics.Counter<long>!
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.IdentityStoreOperationDuration.get -> System.Diagnostics.Metrics.Histogram<double>!
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.ProfileCacheHits.get -> System.Diagnostics.Metrics.Counter<long>!
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.RecordIdentityStoreOperation(string! operation, long startTimestamp) -> void
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.SignOuts.get -> System.Diagnostics.Metrics.Counter<long>!
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.ProfileCacheMisses.get -> System.Diagnostics.Metrics.Counter<long>!
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.SigninsFailed.get -> System.Diagnostics.Metrics.Counter<long>!
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.SigninsSucceeded.get -> System.Diagnostics.Metrics.Counter<long>!
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.AccessDeniedPath.get -> Microsoft.AspNetCore.Http.PathString
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.AccessDeniedPath.set -> void

@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.Metrics;
 using System.Security.Claims;
 
 using idunno.AtProto;
@@ -8,6 +9,8 @@ using idunno.AtProto.Authentication;
 using idunno.Bluesky.AspNet.Authentication.Events;
 
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 
 namespace idunno.Bluesky.AspNet.Authentication.Test;
 
@@ -17,6 +20,111 @@ namespace idunno.Bluesky.AspNet.Authentication.Test;
 public abstract class IdentityStoreTests
 {
     protected abstract IIdentityStore CreateStore();
+
+    protected abstract IIdentityStore CreateStore(IMeterFactory meterFactory);
+
+    [Fact]
+    public async Task IdentityStoreOperationsAreTimedAndTaggedWithTheOperationTheyMeasure()
+    {
+        // Every authenticated request reads the store, so its latency is added to the application's. A single
+        // untagged duration would hide a slow write behind a fast read.
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        ServiceCollection serviceCollection = new();
+        serviceCollection.AddMetrics();
+        using ServiceProvider services = serviceCollection.BuildServiceProvider();
+
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+        var collector = new MetricCollector<double>(
+            meterFactory,
+            BlueskyAuthenticationMetrics.MeterName,
+            "idunno.bluesky.aspnet.authentication.identitystore.operations.duration");
+
+        IIdentityStore store = CreateStore(meterFactory);
+        Did did = TestData.NewDid();
+
+        await store.Add(TestData.ClaimsIdentity(did), cancellationToken);
+        await store.GetIdentity(did, cancellationToken);
+        await store.Update(TestData.ClaimsIdentity(did, accessToken: "updated"), cancellationToken);
+        await store.Remove(did, cancellationToken);
+
+        IReadOnlyList<CollectedMeasurement<double>> measurements = collector.GetMeasurementSnapshot();
+
+        // An update is a store in terms of what it does, so it would be easy to record it as an add and leave the two
+        // indistinguishable.
+        Assert.Equal(
+            [
+                BlueskyAuthenticationMetrics.IdentityStoreOperationAdd,
+                BlueskyAuthenticationMetrics.IdentityStoreOperationGet,
+                BlueskyAuthenticationMetrics.IdentityStoreOperationUpdate,
+                BlueskyAuthenticationMetrics.IdentityStoreOperationRemove,
+            ],
+            measurements.Select(measurement => measurement.Tags[BlueskyAuthenticationMetrics.IdentityStoreOperationTagName]));
+
+        Assert.All(measurements, measurement => Assert.InRange(measurement.Value, 0, 60));
+    }
+
+    [Fact]
+    public async Task AGetWhichFindsNothingIsStillTimed()
+    {
+        // A store which has started failing answers misses, so timing only the hits would hide it going slow.
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        ServiceCollection serviceCollection = new();
+        serviceCollection.AddMetrics();
+        using ServiceProvider services = serviceCollection.BuildServiceProvider();
+
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+        var collector = new MetricCollector<double>(
+            meterFactory,
+            BlueskyAuthenticationMetrics.MeterName,
+            "idunno.bluesky.aspnet.authentication.identitystore.operations.duration");
+
+        IIdentityStore store = CreateStore(meterFactory);
+
+        Assert.Null(await store.GetIdentity(TestData.NewDid(), cancellationToken));
+
+        CollectedMeasurement<double> measurement = Assert.Single(collector.GetMeasurementSnapshot());
+
+        Assert.Equal(
+            BlueskyAuthenticationMetrics.IdentityStoreOperationGet,
+            measurement.Tags[BlueskyAuthenticationMetrics.IdentityStoreOperationTagName]);
+    }
+
+    [Fact]
+    public async Task GetIdentityTagsAnUnprotectableEntryAsAnIdentityStoreFailure()
+    {
+        // Correlation cookie failures land on the same counter, so without the tag an operator cannot tell a rolled
+        // data protection key in the identity store from one in the sign-in path.
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        ServiceCollection serviceCollection = new();
+        serviceCollection.AddMetrics();
+        using ServiceProvider services = serviceCollection.BuildServiceProvider();
+
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+        var collector = new MetricCollector<long>(
+            meterFactory,
+            BlueskyAuthenticationMetrics.MeterName,
+            "idunno.bluesky.aspnet.authentication.dataprotection.failures.total");
+
+        IIdentityStore store = CreateStore(meterFactory);
+        Did did = TestData.NewDid();
+
+        store.Events = new DataProtectingIdentityStoreEvents(new EphemeralDataProtectionProvider());
+        await store.Add(TestData.ClaimsIdentity(did), cancellationToken);
+
+        store.Events = new DataProtectingIdentityStoreEvents(new EphemeralDataProtectionProvider());
+        Assert.Null(await store.GetIdentity(did, cancellationToken));
+
+        CollectedMeasurement<long> measurement = Assert.Single(collector.GetMeasurementSnapshot());
+
+        Assert.Equal(1, measurement.Value);
+        Assert.True(measurement.ContainsTags(BlueskyAuthenticationMetrics.DataProtectionSourceTagName));
+        Assert.Equal(
+            BlueskyAuthenticationMetrics.DataProtectionSourceIdentityStore,
+            measurement.Tags[BlueskyAuthenticationMetrics.DataProtectionSourceTagName]);
+    }
 
     [Fact]
     public async Task AddThenGetIdentityRoundTripsTheClaims()

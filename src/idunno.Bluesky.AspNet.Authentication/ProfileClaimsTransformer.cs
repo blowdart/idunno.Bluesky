@@ -147,6 +147,7 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
                 if (cachedProfile is not null)
                 {
                     Logger.TransformerCachedClaimsFound(agent.Did);
+                    _metrics.ProfileCacheHits.Add(1);
                     return SupplementClaimsPrincipal(principal, cachedProfile);
                 }
 

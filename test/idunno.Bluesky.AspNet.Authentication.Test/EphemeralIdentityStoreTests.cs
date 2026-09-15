@@ -1,15 +1,21 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics.Metrics;
+
 using idunno.AtProto;
 
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Logging.Abstractions;
-
 namespace idunno.Bluesky.AspNet.Authentication.Test;
 
 public class EphemeralIdentityStoreTests : IdentityStoreTests
 {
     protected override IIdentityStore CreateStore() => new EphemeralIdentityStore(NullLoggerFactory.Instance);
+
+    protected override IIdentityStore CreateStore(IMeterFactory meterFactory) =>
+        new EphemeralIdentityStore(NullLoggerFactory.Instance, meterFactory: meterFactory);
 
     [Theory]
     [InlineData(0)]
@@ -69,5 +75,41 @@ public class EphemeralIdentityStoreTests : IdentityStoreTests
         await store.EndRefresh(did, expiredToken, cancellationToken);
 
         Assert.True(await store.IsRefreshing(did, cancellationToken));
+    }
+
+    [Fact]
+    public async Task EvictionForCapacityIsCounted()
+    {
+        // The capacity warning is logged once for the lifetime of the process, so the counter is the only thing which
+        // shows how often the store is silently signing users out by evicting their identity.
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        ServiceCollection serviceCollection = new();
+        serviceCollection.AddMetrics();
+        using ServiceProvider services = serviceCollection.BuildServiceProvider();
+
+        IMeterFactory meterFactory = services.GetRequiredService<IMeterFactory>();
+        var collector = new MetricCollector<long>(
+            meterFactory,
+            BlueskyAuthenticationMetrics.MeterName,
+            "idunno.bluesky.aspnet.authentication.identitystore.evictions.total");
+
+        // The backing cache is static and its size limit is fixed by whichever store was constructed first, so the
+        // limit cannot be lowered here. Overfill it instead.
+        EphemeralIdentityStore store = new(NullLoggerFactory.Instance, meterFactory: meterFactory);
+
+        for (int identity = 0; identity < EphemeralIdentityStore.DefaultSizeLimit * 3; identity++)
+        {
+            await store.Add(TestData.ClaimsIdentity(TestData.NewDid()), cancellationToken);
+        }
+
+        // MemoryCache compacts on a thread pool thread once it is over capacity, so the eviction callbacks run after
+        // the call to Add which triggered them has returned.
+        using CancellationTokenSource compactionTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        compactionTimeout.CancelAfter(TimeSpan.FromSeconds(30));
+
+        await collector.WaitForMeasurementsAsync(1, compactionTimeout.Token);
+
+        Assert.All(collector.GetMeasurementSnapshot(), measurement => Assert.Equal(1, measurement.Value));
     }
 }

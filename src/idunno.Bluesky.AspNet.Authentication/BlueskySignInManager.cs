@@ -287,6 +287,11 @@ public class BlueskySignInManager
                     if (expiration < DateTimeOffset.UtcNow)
                     {
                         Logger.ExpiredCorrelationCookie();
+                        _metrics.CorrelationStateRejections.Add(
+                            1,
+                            new KeyValuePair<string, object?>(
+                                BlueskyAuthenticationMetrics.CorrelationStateRejectionReasonTagName,
+                                BlueskyAuthenticationMetrics.CorrelationStateRejectionExpiredCookie));
                         correlationCookieRejected = true;
                     }
                     else if (Guid.TryParse(unprotectedCookieValue, out Guid parsedGuid))
@@ -297,7 +302,16 @@ public class BlueskySignInManager
                 catch (CryptographicException ex)
                 {
                     Logger.ExceptionUnprotectingCorrelationCookie(ex);
-                    _metrics.DataProtectionFailures.Add(1);
+                    _metrics.DataProtectionFailures.Add(
+                        1,
+                        new KeyValuePair<string, object?>(
+                            BlueskyAuthenticationMetrics.DataProtectionSourceTagName,
+                            BlueskyAuthenticationMetrics.DataProtectionSourceCorrelationCookie));
+                    _metrics.CorrelationStateRejections.Add(
+                        1,
+                        new KeyValuePair<string, object?>(
+                            BlueskyAuthenticationMetrics.CorrelationStateRejectionReasonTagName,
+                            BlueskyAuthenticationMetrics.CorrelationStateRejectionUnprotectFailed));
                     correlationCookieRejected = true;
                 }
             }
@@ -321,7 +335,20 @@ public class BlueskySignInManager
         }
 
         // Login state is single use, so take it rather than reading it and removing it separately.
-        return await CorrelationCache.TakeOAuthLoginState(correlationId.Value).ConfigureAwait(false);
+        OAuthLoginState? loginState = await CorrelationCache.TakeOAuthLoginState(correlationId.Value).ConfigureAwait(false);
+
+        if (loginState is null)
+        {
+            // The cookie was readable, so the state it named either aged out of the correlation cache or has already
+            // been taken by an earlier callback carrying the same cookie.
+            _metrics.CorrelationStateRejections.Add(
+                1,
+                new KeyValuePair<string, object?>(
+                    BlueskyAuthenticationMetrics.CorrelationStateRejectionReasonTagName,
+                    BlueskyAuthenticationMetrics.CorrelationStateRejectionStateNotFound));
+        }
+
+        return loginState;
     }
 
     /// <summary>
@@ -391,7 +418,7 @@ public class BlueskySignInManager
             Logger.SignInFailedNoQueryString();
             _metrics.SigninsFailed.Add(
                 1,
-                new KeyValuePair<string, object?>("Reason", "NoQueryString"));
+                new KeyValuePair<string, object?>(BlueskyAuthenticationMetrics.SignInFailureReasonTagName, "NoQueryString"));
             return new SignInResult(Succeeded: false, MissingQueryString: true);
         }
 
@@ -401,7 +428,7 @@ public class BlueskySignInManager
             Logger.SignInFailedNoCorrelation();
             _metrics.SigninsFailed.Add(
                 1,
-                new KeyValuePair<string, object?>("Reason", "NoCorrelationState"));
+                new KeyValuePair<string, object?>(BlueskyAuthenticationMetrics.SignInFailureReasonTagName, "NoCorrelationState"));
             return new SignInResult(Succeeded: false, MissingCorrelationState: true);
         }
         
@@ -416,7 +443,7 @@ public class BlueskySignInManager
             Logger.SignInFailedOAuth2ProcessingFailed();
             _metrics.SigninsFailed.Add(
                 1,
-                new KeyValuePair<string, object?>("Reason", "OAuth2StateFailure"));
+                new KeyValuePair<string, object?>(BlueskyAuthenticationMetrics.SignInFailureReasonTagName, "OAuth2StateFailure"));
             return new SignInResult(Succeeded: false, ErrorProcessingOAuth2Response: true);
         }
 
@@ -432,7 +459,8 @@ public class BlueskySignInManager
                 IssuedUtc = DateTimeOffset.UtcNow
             }).ConfigureAwait(false);
 
-        _metrics.SigninsTotal.Add(1);
+        // HttpContext.SignInAsync above dispatches to BlueskyAuthenticationHandler.HandleSignInAsync, which counts the
+        // successful sign-in. Counting it here as well would double count every OAuth login.
 
         return new SignInResult(Succeeded: true, OAuthLoginState: correlationState);
     }
