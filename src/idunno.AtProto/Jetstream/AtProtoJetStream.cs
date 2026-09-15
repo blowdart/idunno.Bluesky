@@ -579,9 +579,11 @@ public class AtProtoJetstream : IDisposable
                 $"compress=true&");
         }
 
+        // The parameter is maxMessageSizeBytes, and it is the size of the message the server is willing to send, so it
+        // takes the maximum message size rather than the size of the blocks the message is read in.
         uriBuilder.Append(
             CultureInfo.InvariantCulture,
-            $"maximumMessageSizeBytes={Options.BufferSize}&");
+            $"maxMessageSizeBytes={Options.MaxMessageSize}&");
 
         if (uriBuilder[^1] == '&')
         {
@@ -769,7 +771,6 @@ public class AtProtoJetstream : IDisposable
     [SuppressMessage("Reliability", "CA2008:Do not create tasks without passing a TaskScheduler", Justification = "A scheduler can be configured on the TaskFactory in Options.")]
     private async Task ReceiveLoop(CancellationToken cancellationToken)
     {
-        byte[] buffer = new byte[Options.BufferSize];
         WebSocketMessageType expectedMessageType = Options.UseCompression ? WebSocketMessageType.Binary : WebSocketMessageType.Text;
 
         while (_client.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
@@ -803,7 +804,11 @@ public class AtProtoJetstream : IDisposable
                     try
                     {
                         Span<byte> bufferAsSpan = message.AsSpan(0, message.Length);
-                        receivedData = _decompressor!.Unwrap(bufferAsSpan).ToArray();
+
+                        // Unwrap defaults to allowing 2GB of decompressed output, so without a limit of our own the
+                        // maximum message size would only bound the compressed frame. A 24KB frame can declare, and
+                        // expand to, hundreds of megabytes, so the limit has to be applied to what comes out of it.
+                        receivedData = _decompressor!.Unwrap(bufferAsSpan, Options.MaxMessageSize).ToArray();
                     }
                     catch (ZstdException ex)
                     {
@@ -815,8 +820,8 @@ public class AtProtoJetstream : IDisposable
                 }
                 else
                 {
-                    receivedData = new byte[message.Length];
-                    Array.Copy(buffer, 0, receivedData, 0, message.Length);
+                    // ReceiveNextMessageAsync allocates the array it returns, so the message can be used as it is.
+                    receivedData = message;
                 }
 
                 string? messageAsString = default;
@@ -936,7 +941,9 @@ public class AtProtoJetstream : IDisposable
 
         OptionsUpdatePayload payload = new()
         {
-            MaxMessageSizeBytes = Options.BufferSize
+            // The server is being told the largest message it should send, which is the maximum message size rather
+            // than the size of the blocks that message is read in.
+            MaxMessageSizeBytes = Options.MaxMessageSize
         };
 
         if (_collections is not null && _collections.Count > 0)

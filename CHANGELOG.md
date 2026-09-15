@@ -115,6 +115,16 @@
 * Reading a response body no longer throws from `ArrayPool` when `MaximumResponseSize` is set above 1GB. The read buffer was doubled in `int`
   arithmetic, which overflowed to a negative length rather than stopping at `MaximumResponseSize`, so an over-large response threw instead of being
   reported as `ResponseTooLarge`.
+* A jetstream now limits how far a compressed message is allowed to expand. `JetstreamOptions.MaxMessageSize` was only applied to the compressed frame
+  as it arrived, and decompression was left at its own 2GB default, so a small frame could declare and expand to hundreds of megabytes. A 24KB frame
+  expanding to 768MB was enough to exhaust a client. The limit is now applied to the decompressed message, and a message which exceeds it is dropped in
+  the same way as one which cannot be decompressed.
+* A jetstream configured with `UseCompression` set to `false` now delivers the messages it receives. The receive loop copied each message out of an
+  empty buffer rather than out of the message it had just read, so every uncompressed message arrived as a run of zero bytes and failed to parse,
+  and a message larger than `JetstreamOptions.BufferSize` threw instead.
+* A jetstream now sends the maximum message size to the server under the name the server expects. The `maximumMessageSizeBytes` query string parameter
+  does not exist, the parameter is `maxMessageSizeBytes`, so the server applied no limit at all. The value sent is now `MaxMessageSize` rather than
+  `BufferSize`, which is the size of the blocks a message is read in rather than a limit on the message itself.
 
 #### idunno.AtProto.OAuthCallback
 
