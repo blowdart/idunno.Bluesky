@@ -39,9 +39,9 @@ public sealed class AtProtoJetstreamBuilder
     public IMeterFactory? MeterFactory { get; set; }
 
     /// <summary>
-    /// Gets or sets a flag indicating whether compression should be used with the stream.
+    /// Gets or sets a flag indicating whether compression should be used with the stream. Defaults to <see langword="true"/>.
     /// </summary>
-    public bool EnableCompression { get; set; }
+    public bool EnableCompression { get; set; } = true;
 
     /// <summary>
     /// Gets or sets the compression dictionary used by zst decompression when <see cref="EnableCompression"/> is <see langword="true"/>.
