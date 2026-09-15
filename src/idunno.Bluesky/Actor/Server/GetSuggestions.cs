@@ -63,7 +63,7 @@ public static partial class BlueskyServer
 
         AtProtoHttpResult<GetSuggestionsResponse> response = await request.Get(
             service,
-            $"/xrpc/app.bsky.actor.getSuggestions?cursor={cursor}&limit={limit}",
+            $"/xrpc/app.bsky.actor.getSuggestions?cursor={Uri.EscapeDataString(cursor ?? string.Empty)}&limit={limit}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,

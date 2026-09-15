@@ -65,7 +65,7 @@ public static partial class BlueskyServer
 
         AtProtoHttpResult<GetBookmarksResponse> response = await request.Get(
             service,
-            $"/xrpc/app.bsky.bookmark.getBookmarks?cursor={cursor}&limit={limit}",
+            $"/xrpc/app.bsky.bookmark.getBookmarks?cursor={Uri.EscapeDataString(cursor ?? string.Empty)}&limit={limit}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,
