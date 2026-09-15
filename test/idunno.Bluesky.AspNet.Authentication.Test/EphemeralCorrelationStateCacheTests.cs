@@ -76,6 +76,42 @@ public class EphemeralCorrelationStateCacheTests : CorrelationStateCacheTests
     }
 
     [Fact]
+    public async Task ADisposedCacheThrowsFromEveryOperationRatherThanUsingADisposedCache()
+    {
+        EphemeralCorrelationStateCache cache = new(NullLoggerFactory.Instance);
+
+        Guid correlationId = Guid.NewGuid();
+        await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
+
+        cache.Dispose();
+
+        List<Func<Task>> operations =
+        [
+            () => cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId)),
+            () => cache.GetOAuthLoginState(correlationId),
+            () => cache.TakeOAuthLoginState(correlationId),
+            () => cache.RemoveCorrelationState(correlationId),
+        ];
+
+        foreach (Func<Task> operation in operations)
+        {
+            ObjectDisposedException thrown = await Assert.ThrowsAsync<ObjectDisposedException>(operation);
+
+            Assert.Equal(typeof(EphemeralCorrelationStateCache).FullName, thrown.ObjectName);
+        }
+    }
+
+    [Fact]
+    public void DisposingTheCacheTwiceIsHarmless()
+    {
+        EphemeralCorrelationStateCache cache = new(NullLoggerFactory.Instance);
+
+        cache.Dispose();
+
+        Assert.Null(Xunit.Record.Exception(cache.Dispose));
+    }
+
+    [Fact]
     public async Task StateExpiresAfterItsTimeToLive()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;

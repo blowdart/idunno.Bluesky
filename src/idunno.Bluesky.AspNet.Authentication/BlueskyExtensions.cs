@@ -136,8 +136,20 @@ public static class BlueskyExtensions
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/>/</param>
     /// <returns>The service collection</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="services"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The <see cref="HttpClient"/> agents make their requests through is registered here as well, so that the
+    ///   transformer, which runs on every request, does not have to build a connection pool of its own each time.
+    /// </para>
+    /// </remarks>
     public static IServiceCollection AddBlueskyClaimsTransformer(this IServiceCollection services)
     {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddOptions<BlueskyAgentOptions>();
+        services.AddAtProtoHttpClient(provider =>
+            provider.GetRequiredService<IOptionsMonitor<BlueskyAgentOptions>>().CurrentValue.HttpClientOptions);
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<BlueskyClaimsTransformerOptions>, PostConfigureBlueskyClaimsTransformerOptions>());
         services.AddOptions<BlueskyClaimsTransformerOptions>();
         services.AddTransient<IClaimsTransformation, BlueskyClaimsTransformer>();

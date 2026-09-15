@@ -94,6 +94,9 @@ internal static partial class Logger
     [LoggerMessage(259, LogLevel.Warning, "The in memory correlation state cache reached its size limit of {sizeLimit} entries and has evicted some of them. Logins in flight when their state was evicted will fail at the callback. Use a distributed correlation state cache, or raise the size limit.")]
     public static partial void EphemeralCorrelationStateCacheCapacityReached(this ILogger logger, int sizeLimit);
 
+    [LoggerMessage(260, LogLevel.Warning, "The in memory profile cache reached its size limit of {sizeLimit} profiles and has evicted some of them. Profiles which were evicted will be fetched again on the next request for them. Use a distributed profile cache, or raise the size limit.")]
+    public static partial void EphemeralProfileCacheCapacityReached(this ILogger logger, int sizeLimit);
+
     [LoggerMessage(253, LogLevel.Debug, "Identity cache updated for {did}")]
     public static partial void CachedIdentityUpdated(this ILogger logger, Did did);
 
@@ -139,7 +142,7 @@ internal static partial class Logger
     [LoggerMessage(501, LogLevel.Warning, "Using an in-memory cache which is not suitable for production environments. A maximum of 1024 correlation states will be cached. States will not be persisted to storage.")]
     public static partial void UsingInMemoryCorrelationCacheWarning(this ILogger logger);
 
-    [LoggerMessage(502, LogLevel.Warning, "Using an in-memory cache which is not suitable for production environments. A maximum of 1024 profile entries will be cached. Profiles will not be persisted to storage.")]
-    public static partial void UsingInMemoryProfileCacheWarning(this ILogger logger);
+    [LoggerMessage(502, LogLevel.Warning, "Using an in-memory cache which is not suitable for production environments. A maximum of {sizeLimit} profile entries will be cached. Profiles will not be persisted to storage.")]
+    public static partial void UsingInMemoryProfileCacheWarning(this ILogger logger, int sizeLimit);
 
 }

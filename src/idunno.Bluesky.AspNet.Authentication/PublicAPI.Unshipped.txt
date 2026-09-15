@@ -100,7 +100,7 @@ idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.SlidingExpirat
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.TicketDataFormat.get -> Microsoft.AspNetCore.Authentication.ISecureDataFormat<Microsoft.AspNetCore.Authentication.AuthenticationTicket!>!
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions.TicketDataFormat.set -> void
 idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformer
-idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformer.BlueskyClaimsTransformer(Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory, Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions!>! options, Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.BlueskyAgentOptions!>! blueskyAgentOptions, Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions!>! blueskyAuthenticationOptions, System.Diagnostics.Metrics.IMeterFactory? meterFactory = null) -> void
+idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformer.BlueskyClaimsTransformer(Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory, Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions!>! options, Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.BlueskyAgentOptions!>! blueskyAgentOptions, Microsoft.Extensions.Options.IOptionsMonitor<idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationOptions!>! blueskyAuthenticationOptions, System.Diagnostics.Metrics.IMeterFactory? meterFactory = null, System.Net.Http.IHttpClientFactory? httpClientFactory = null) -> void
 idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformer.TransformAsync(System.Security.Claims.ClaimsPrincipal! principal) -> System.Threading.Tasks.Task<System.Security.Claims.ClaimsPrincipal!>!
 idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions
 idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformerOptions.BlueskyClaimsTransformerOptions() -> void
@@ -201,7 +201,9 @@ idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.StartRefresh(idunno.
 idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.Update(System.Security.Claims.ClaimsIdentity! identity, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 idunno.Bluesky.AspNet.Authentication.EphemeralProfileCache
 idunno.Bluesky.AspNet.Authentication.EphemeralProfileCache.Add(idunno.AtProto.Did! did, idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry! profile) -> System.Threading.Tasks.Task!
-idunno.Bluesky.AspNet.Authentication.EphemeralProfileCache.EphemeralProfileCache(Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory, System.TimeSpan? entryTimeToLive = null) -> void
+idunno.Bluesky.AspNet.Authentication.EphemeralProfileCache.EphemeralProfileCache(Microsoft.Extensions.Logging.ILoggerFactory! loggerFactory, System.TimeSpan? entryTimeToLive = null, int? sizeLimit = null) -> void
+idunno.Bluesky.AspNet.Authentication.EphemeralProfileCache.Dispose() -> void
+const idunno.Bluesky.AspNet.Authentication.EphemeralProfileCache.DefaultSizeLimit = 1024 -> int
 idunno.Bluesky.AspNet.Authentication.EphemeralProfileCache.GetCachedValue(idunno.AtProto.Did! did) -> System.Threading.Tasks.Task<idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry?>!
 idunno.Bluesky.AspNet.Authentication.Events.BlueskyAuthenticationEvents
 idunno.Bluesky.AspNet.Authentication.Events.BlueskyAuthenticationEvents.BlueskyAuthenticationEvents() -> void
@@ -345,6 +347,7 @@ static readonly idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationDefaul
 static readonly idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationDefaults.LogoutPath -> Microsoft.AspNetCore.Http.PathString
 static readonly idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationDefaults.ReturnUrlParameter -> string!
 virtual idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.FinishResponseAsync() -> System.Threading.Tasks.Task!
+override idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.InitializeHandlerAsync() -> System.Threading.Tasks.Task!
 virtual idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.Logger.get -> Microsoft.Extensions.Logging.ILogger!
 virtual idunno.Bluesky.AspNet.Authentication.BlueskySignInManager.Logger.init -> void
 virtual idunno.Bluesky.AspNet.Authentication.Events.BlueskyAuthenticationEvents.CheckSlidingExpiration(idunno.Bluesky.AspNet.Authentication.Events.BlueskySlidingExpirationContext! context) -> System.Threading.Tasks.Task!

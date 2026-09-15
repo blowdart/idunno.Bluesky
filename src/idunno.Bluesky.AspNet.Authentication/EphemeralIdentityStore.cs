@@ -143,9 +143,13 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
     /// <inheritdoc />
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="claimsIdentity"/> is <see langword="null" />./</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="claimsIdentity"/> does not have a DID claim, or the DID claim is invalid.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the store has been disposed.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is cancelled.</exception>
     public async Task Add(ClaimsIdentity claimsIdentity, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(claimsIdentity);
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        cancellationToken.ThrowIfCancellationRequested();
 
         long startTimestamp = Stopwatch.GetTimestamp();
 
@@ -158,8 +162,12 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
 
     /// <inheritdoc />
     /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is cancelled.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the store has been disposed.</exception>
     public async Task<ClaimsIdentity?> GetIdentity(Did did, CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        cancellationToken.ThrowIfCancellationRequested();
+
         long startTimestamp = Stopwatch.GetTimestamp();
 
         try
@@ -173,8 +181,13 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
     }
 
     /// <inheritdoc />
+    /// <exception cref="ObjectDisposedException">Thrown when the store has been disposed.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is cancelled.</exception>
     public Task Remove(Did did, CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        cancellationToken.ThrowIfCancellationRequested();
+
         long startTimestamp = Stopwatch.GetTimestamp();
 
         Cache.Remove($"{did}");
@@ -188,9 +201,13 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
     /// <inheritdoc />
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> is <see langword="null" />./</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="identity"/> does not have a DID claim, or the DID claim is invalid.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the store has been disposed.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is cancelled.</exception>
     public async Task Update(ClaimsIdentity identity, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(identity);
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        cancellationToken.ThrowIfCancellationRequested();
 
         long startTimestamp = Stopwatch.GetTimestamp();
 
@@ -246,27 +263,37 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
     }
 
     /// <inheritdoc />
-    public async Task<string?> StartRefresh(Did did, CancellationToken cancellationToken = default)
+    /// <exception cref="ObjectDisposedException">Thrown when the store has been disposed.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is cancelled.</exception>
+    public Task<string?> StartRefresh(Did did, CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        cancellationToken.ThrowIfCancellationRequested();
+
         lock (_refreshLock)
         {
             if (RefreshCache.Get($"{did}") is not null)
             {
                 Logger.StartRefreshDenied(did);
-                return null;
+                return Task.FromResult<string?>(null);
             }
 
             Logger.StartRefreshEntered(did);
 
             string refreshLockToken = Guid.NewGuid().ToString("N");
             RefreshCache.Set($"{did}", refreshLockToken, RefreshCacheMemoryOptions);
-            return refreshLockToken;
+            return Task.FromResult<string?>(refreshLockToken);
         }
     }
 
     /// <inheritdoc />
-    public async Task EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default)
+    /// <exception cref="ObjectDisposedException">Thrown when the store has been disposed.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is cancelled.</exception>
+    public Task EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        cancellationToken.ThrowIfCancellationRequested();
+
         lock (_refreshLock)
         {
             if (RefreshCache.Get($"{did}") is string currentToken &&
@@ -274,26 +301,34 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
             {
                 // The lock expired and someone else acquired it, so it is not ours to release.
                 Logger.EndRefreshLockNotOwned(did);
-                return;
+                return Task.CompletedTask;
             }
 
             RefreshCache.Remove($"{did}");
 
             Logger.EndRefreshFinished(did);
         }
+
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc />
-    public async Task<bool> IsRefreshing(Did did, CancellationToken cancellationToken = default)
+    /// <exception cref="ObjectDisposedException">Thrown when the store has been disposed.</exception>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is cancelled.</exception>
+    public Task<bool> IsRefreshing(Did did, CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        cancellationToken.ThrowIfCancellationRequested();
+
         lock (_refreshLock)
         {
             if (RefreshCache.Get($"{did}") is not null)
             {
-                return true;
+                return Task.FromResult(true);
             }
         }
-        return false;
+
+        return Task.FromResult(false);
     }
 
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A post eviction callback must not throw, as MemoryCache gives the exception nowhere to go")]
@@ -427,7 +462,8 @@ public class EphemeralIdentityStore : IIdentityStore, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private async Task<Did> Set(ClaimsIdentity claimsIdentity)    {
+    private async Task<Did> Set(ClaimsIdentity claimsIdentity)
+    {
         ArgumentNullException.ThrowIfNull(claimsIdentity);
 
         string? didAsString = (claimsIdentity.Claims?.FirstOrDefault(
