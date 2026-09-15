@@ -4,6 +4,8 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
+using System.Net;
+
 namespace idunno.AtProto.OAuthCallback;
 
 internal static partial class Logger
@@ -28,4 +30,16 @@ internal static partial class Logger
 
     [LoggerMessage(10, LogLevel.Error, "Internal listener is null, cancelling task")]
     internal static partial void ListenerIsNull(ILogger logger);
+
+    [LoggerMessage(11, LogLevel.Error, "Callback listener terminated unexpectedly")]
+    internal static partial void ListenerFaulted(ILogger logger, Exception exception);
+
+    [LoggerMessage(12, LogLevel.Debug, "Callback is already being awaited, returning the existing task")]
+    internal static partial void CallbackAlreadyAwaited(ILogger logger);
+
+    [LoggerMessage(13, LogLevel.Warning, "Timed out waiting for callback")]
+    internal static partial void CallbackTimedOut(ILogger logger);
+
+    [LoggerMessage(14, LogLevel.Error, "Rejected callback request from non loopback address {remoteAddress}")]
+    internal static partial void NonLoopbackRequestRejected(ILogger logger, IPAddress remoteAddress);
 }
