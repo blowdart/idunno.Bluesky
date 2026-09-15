@@ -59,6 +59,16 @@ public record JetstreamOptions
     /// Gets the maximum total message size, in bytes. Messages exceeding this limit will be rejected. Defaults to 1 MB.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is less than or equal to zero.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The limit applies to the message itself, so when <see cref="UseCompression"/> is <see langword="true"/> it bounds the
+    ///   decompressed message rather than the compressed frame it arrived in. A compressed frame can declare, and expand to, far
+    ///   more than it occupies on the wire, so bounding only what was received would place no limit on what is allocated.
+    /// </para>
+    /// <para>
+    ///   It is also sent to the server, which will not send a message larger than this.
+    /// </para>
+    /// </remarks>
     public int MaxMessageSize
     {
         get;

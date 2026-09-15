@@ -1,0 +1,262 @@
+// Copyright (c) Barry Dorrans. All rights reserved.
+// Licensed under the MIT License.
+
+using System.Collections.Concurrent;
+using System.Globalization;
+using System.Net;
+using System.Net.Sockets;
+using System.Net.WebSockets;
+using System.Text;
+
+using idunno.AtProto.Jetstream;
+using idunno.AtProto.Jetstream.Events;
+
+using ZstdSharp;
+
+namespace idunno.AtProto.Integration.Test;
+
+[ExcludeFromCodeCoverage]
+public class AtProtoJetstreamReceiveTests
+{
+    private const string Did = "did:plc:g6ylltenitt4tp27bpwalh7b";
+
+    private static string IdentityEvent(long sequence = 1, string padding = "") => $$"""
+        {
+          "did":"{{Did}}",
+          "time_us":1746663645473657,
+          "kind":"identity",
+          "identity": {
+            "did":"{{Did}}",
+            "handle":"miyakotubaki.bsky.social",
+            "seq":{{sequence}},
+            "time":"2025-05-08T00:20:44.859Z"},
+          "padding":"{{padding}}"
+        }
+        """;
+
+    [Fact]
+    public async Task AnUncompressedMessageIsDeliveredToRecordReceived()
+    {
+        using var server = new TestJetstreamServer();
+
+        await server.Start(async (webSocket, cancellationToken) =>
+        {
+            await SendText(webSocket, IdentityEvent(), cancellationToken);
+        });
+
+        AtJetstreamEvent received = await Receive(server, useCompression: false);
+
+        Assert.Equal(Did, received.Did);
+        Assert.Equal(JetStreamEventKind.Identity, received.Kind);
+    }
+
+    [Fact]
+    public async Task ACompressedMessageIsDeliveredToRecordReceived()
+    {
+        using var server = new TestJetstreamServer();
+
+        await server.Start(async (webSocket, cancellationToken) =>
+        {
+            await SendCompressed(webSocket, IdentityEvent(), cancellationToken);
+        });
+
+        AtJetstreamEvent received = await Receive(server, useCompression: true);
+
+        Assert.Equal(Did, received.Did);
+        Assert.Equal(JetStreamEventKind.Identity, received.Kind);
+    }
+
+    [Fact]
+    public async Task ACompressedMessageWhichExpandsBeyondTheMaximumMessageSizeIsDropped()
+    {
+        const int maximumMessageSize = 64 * 1024;
+
+        using var server = new TestJetstreamServer();
+
+        await server.Start(async (webSocket, cancellationToken) =>
+        {
+            // A small frame which expands to far more than the maximum message size. Without a limit on the
+            // decompressed output this is allocated in full, however large the sender declares it to be.
+            await SendCompressed(webSocket, IdentityEvent(sequence: 1, padding: new string('a', maximumMessageSize * 8)), cancellationToken);
+
+            // Sent afterwards so the assertion does not depend on waiting out a timeout. Messages are read from the
+            // socket in order, so by the time this one is delivered the first has already been handled or dropped.
+            await SendCompressed(webSocket, IdentityEvent(sequence: 2), cancellationToken);
+        });
+
+        ConcurrentQueue<string> messages = [];
+
+        AtJetstreamEvent received = await Receive(
+            server,
+            useCompression: true,
+            maximumMessageSize: maximumMessageSize,
+            onMessageReceived: messages.Enqueue);
+
+        AtJetstreamIdentityEvent identityEvent = Assert.IsType<AtJetstreamIdentityEvent>(received);
+
+        Assert.Equal(2U, identityEvent.Identity.Sequence);
+
+        // Records are parsed on the task factory, so which one is parsed first is a race. What is not a race is
+        // whether the over-large message was decompressed at all, which is what MessageReceived reports.
+        Assert.Single(messages);
+        Assert.True(
+            messages.Single().Length <= maximumMessageSize,
+            $"A message of {messages.Single().Length} bytes was decompressed, over the {maximumMessageSize} byte limit.");
+    }
+
+    [Fact]
+    public async Task TheMaximumMessageSizeIsSentToTheServer()
+    {
+        const int maximumMessageSize = 64 * 1024;
+
+        using var server = new TestJetstreamServer();
+
+        await server.Start(async (webSocket, cancellationToken) =>
+        {
+            await SendCompressed(webSocket, IdentityEvent(), cancellationToken);
+        });
+
+        _ = await Receive(server, useCompression: true, maximumMessageSize: maximumMessageSize);
+
+        Assert.NotNull(server.RequestQuery);
+
+        Assert.Contains(
+            string.Create(CultureInfo.InvariantCulture, $"maxMessageSizeBytes={maximumMessageSize}"),
+            server.RequestQuery,
+            StringComparison.Ordinal);
+    }
+
+    private static async Task<AtJetstreamEvent> Receive(
+        TestJetstreamServer server,
+        bool useCompression,
+        int maximumMessageSize = 1024 * 1024,
+        Action<string>? onMessageReceived = null)
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        TaskCompletionSource<AtJetstreamEvent> recordReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        using (var jetstream = new AtProtoJetstream(
+            uri: server.Uri,
+            options: new JetstreamOptions
+            {
+                UseCompression = useCompression,
+                MaxMessageSize = maximumMessageSize
+            }))
+        {
+            jetstream.RecordReceived += (sender, e) => recordReceived.TrySetResult(e.ParsedEvent);
+
+            if (onMessageReceived is not null)
+            {
+                jetstream.MessageReceived += (sender, e) => onMessageReceived(e.Message);
+            }
+
+            // The jetstream's own HttpClient applies SSRF protection, which a loopback test server cannot pass.
+            using (var httpClient = new HttpClient())
+            {
+                await jetstream.ConnectAsync(
+                    uri: server.Uri,
+                    cursor: null,
+                    httpClient: httpClient,
+                    cancellationToken: cancellationToken);
+
+                Assert.True(jetstream.IsConnected);
+
+                return await recordReceived.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+            }
+        }
+    }
+
+    private static async Task SendText(WebSocket webSocket, string message, CancellationToken cancellationToken)
+    {
+        await webSocket.SendAsync(
+            Encoding.UTF8.GetBytes(message),
+            WebSocketMessageType.Text,
+            endOfMessage: true,
+            cancellationToken);
+    }
+
+    private static async Task SendCompressed(WebSocket webSocket, string message, CancellationToken cancellationToken)
+    {
+        using var compressor = new Compressor();
+
+        byte[] compressed = compressor.Wrap(Encoding.UTF8.GetBytes(message)).ToArray();
+
+        await webSocket.SendAsync(
+            compressed,
+            WebSocketMessageType.Binary,
+            endOfMessage: true,
+            cancellationToken);
+    }
+
+    private sealed class TestJetstreamServer : IDisposable
+    {
+        private readonly HttpListener _listener = new();
+        private readonly CancellationTokenSource _cancellationTokenSource = new();
+
+        public TestJetstreamServer()
+        {
+            int port = FreePort();
+
+            _listener.Prefixes.Add(string.Create(CultureInfo.InvariantCulture, $"http://localhost:{port}/"));
+            Uri = new Uri(string.Create(CultureInfo.InvariantCulture, $"ws://localhost:{port}"));
+        }
+
+        public Uri Uri { get; }
+
+        public string? RequestQuery { get; private set; }
+
+        public Task Start(Func<WebSocket, CancellationToken, Task> onConnected)
+        {
+            _listener.Start();
+
+            _ = Task.Run(async () =>
+            {
+                HttpListenerContext context = await _listener.GetContextAsync();
+
+                RequestQuery = context.Request.Url?.Query;
+
+                HttpListenerWebSocketContext webSocketContext = await context.AcceptWebSocketAsync(subProtocol: null);
+
+                using (WebSocket webSocket = webSocketContext.WebSocket)
+                {
+                    await onConnected(webSocket, _cancellationTokenSource.Token);
+
+                    // Held open until the test disposes the server, as closing drops the connection under the client.
+                    try
+                    {
+                        await Task.Delay(Timeout.Infinite, _cancellationTokenSource.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                    }
+                }
+            }, _cancellationTokenSource.Token);
+
+            return Task.CompletedTask;
+        }
+
+        public void Dispose()
+        {
+            _cancellationTokenSource.Cancel();
+            _listener.Close();
+            _cancellationTokenSource.Dispose();
+        }
+
+        private static int FreePort()
+        {
+            var listener = new TcpListener(IPAddress.Loopback, 0);
+
+            listener.Start();
+
+            try
+            {
+                return ((IPEndPoint)listener.LocalEndpoint).Port;
+            }
+            finally
+            {
+                listener.Stop();
+            }
+        }
+    }
+}
