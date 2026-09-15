@@ -264,6 +264,11 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
             signInContext.Properties.IssuedUtc = issuedUtc;
         }
 
+        // The ticket carries its own expiry, which is what ReadCookieTicket enforces on the way back in. Without this
+        // the cookie is honoured for as long as the browser presents it, whatever ExpireTimeSpan says, because nothing
+        // else writes ExpiresUtc. This is set before the SigningIn event so a handler can still override it.
+        signInContext.Properties.ExpiresUtc ??= issuedUtc.Add(Options.ExpireTimeSpan);
+
         await Events.SigningIn(signInContext).ConfigureAwait(false);
 
         if (signInContext.Properties.IsPersistent)
@@ -362,6 +367,26 @@ public class BlueskyAuthenticationHandler : SignInAuthenticationHandler<BlueskyA
         _metrics.SignOuts.Add(1);
 
         Logger.AuthenticationSchemeSignedOut(Scheme.Name);
+    }
+
+    /// <summary>
+    /// Called when the handler is initialized for a request, to register the hook which re-issues the cookie when a
+    /// renewal has been requested.
+    /// </summary>
+    /// <returns>A task that represents the completion of the initialization.</returns>
+    /// <remarks>
+    /// <para>
+    ///   <see cref="FinishResponseAsync"/> has to run once the response is being sent, because a renewal can be asked
+    ///   for while authenticating a request, which happens long before anything else would write the cookie. Without
+    ///   this registration <see cref="BlueskyAuthenticationOptions.SlidingExpiration"/> and
+    ///   <see cref="Events.BlueskyValidatePrincipalContext.ShouldRenew"/> would have no effect.
+    /// </para>
+    /// </remarks>
+    protected override Task InitializeHandlerAsync()
+    {
+        Context.Response.OnStarting(FinishResponseAsync);
+
+        return Task.CompletedTask;
     }
 
     /// <summary>

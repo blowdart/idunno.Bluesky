@@ -38,6 +38,97 @@ public class EphemeralIdentityStoreTests : IdentityStoreTests
     }
 
     [Fact]
+    public async Task ADisposedStoreThrowsFromEveryOperationRatherThanUsingADisposedCache()
+    {
+        // MemoryCache throws on its own once disposed, but names itself when it does, which sends someone looking at
+        // the wrong lifetime. The guards here name the store.
+        EphemeralIdentityStore store = new(NullLoggerFactory.Instance);
+
+        Did did = TestData.NewDid();
+        await store.Add(TestData.ClaimsIdentity(did), TestContext.Current.CancellationToken);
+
+        store.Dispose();
+
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        List<Func<Task>> operations =
+        [
+            () => store.Add(TestData.ClaimsIdentity(did), cancellationToken),
+            () => store.GetIdentity(did, cancellationToken),
+            () => store.Remove(did, cancellationToken),
+            () => store.Update(TestData.ClaimsIdentity(did), cancellationToken),
+            () => store.StartRefresh(did, cancellationToken),
+            () => store.EndRefresh(did, "token", cancellationToken),
+            () => store.IsRefreshing(did, cancellationToken),
+        ];
+
+        foreach (Func<Task> operation in operations)
+        {
+            ObjectDisposedException thrown = await Assert.ThrowsAsync<ObjectDisposedException>(operation);
+
+            Assert.Equal(typeof(EphemeralIdentityStore).FullName, thrown.ObjectName);
+        }
+    }
+
+    [Fact]
+    public async Task ACancelledTokenIsHonouredByEveryOperationWhichAcceptsOne()
+    {
+        // Nothing here does real I/O, so without an explicit check a cancelled request would carry on writing to and
+        // reading from the store after the caller had given up on it.
+        using EphemeralIdentityStore store = new(NullLoggerFactory.Instance);
+
+        using CancellationTokenSource cancellationTokenSource = new();
+        await cancellationTokenSource.CancelAsync();
+
+        CancellationToken cancelled = cancellationTokenSource.Token;
+        Did did = TestData.NewDid();
+        ClaimsIdentity identity = TestData.ClaimsIdentity(did);
+
+        List<Func<Task>> operations =
+        [
+            () => store.Add(identity, cancelled),
+            () => store.GetIdentity(did, cancelled),
+            () => store.Remove(did, cancelled),
+            () => store.Update(identity, cancelled),
+            () => store.StartRefresh(did, cancelled),
+            () => store.EndRefresh(did, "token", cancelled),
+            () => store.IsRefreshing(did, cancelled),
+        ];
+
+        foreach (Func<Task> operation in operations)
+        {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(operation);
+        }
+    }
+
+    [Fact]
+    public void ADisposedStoreThrowsBeforeReturningItsTaskSoANonAwaitingCallerStillSees()
+    {
+        // The refresh lock methods are not async, so the guard fires eagerly. If they were async the exception would
+        // be parked in the returned Task and a caller which never awaits would carry on against a disposed store.
+        EphemeralIdentityStore store = new(NullLoggerFactory.Instance);
+
+        store.Dispose();
+
+        Did did = TestData.NewDid();
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        Assert.Throws<ObjectDisposedException>(() => { Task unawaited = store.StartRefresh(did, cancellationToken); });
+        Assert.Throws<ObjectDisposedException>(() => { Task unawaited = store.EndRefresh(did, "token", cancellationToken); });
+        Assert.Throws<ObjectDisposedException>(() => { Task unawaited = store.IsRefreshing(did, cancellationToken); });
+    }
+
+    [Fact]
+    public void DisposingTheStoreTwiceIsHarmless()
+    {
+        EphemeralIdentityStore store = new(NullLoggerFactory.Instance);
+
+        store.Dispose();
+
+        Assert.Null(Xunit.Record.Exception(store.Dispose));
+    }
+
+    [Fact]
     public async Task OnlyOneConcurrentCallerAcquiresTheRefreshLock()
     {
         // The ephemeral store holds the read and the write under a lock, so unlike the distributed store it can

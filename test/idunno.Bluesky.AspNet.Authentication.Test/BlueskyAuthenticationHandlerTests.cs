@@ -239,6 +239,97 @@ public class BlueskyAuthenticationHandlerTests
         Assert.True(response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.Redirect);
     }
 
+    [Fact]
+    public async Task ATicketSignedInWithNoExplicitExpiryIsStillExpiredByExpireTimeSpan()
+    {
+        // ExpireTimeSpan is the lifetime of the ticket inside the protected cookie, which is what makes a stolen
+        // cookie stop working. Nothing else writes ExpiresUtc, so without the handler defaulting it the cookie is
+        // honoured for as long as it is presented, however long ago it was issued.
+        await using AuthenticationTestHost host = await AuthenticationTestHost.Create(
+            configureOptions: options =>
+            {
+                options.ExpireTimeSpan = TimeSpan.FromSeconds(1);
+
+                // The identity store TTL follows ExpireTimeSpan by default, so without this the identity would age out
+                // too and the request would fail for that reason instead of the one under test.
+                options.IdentityStoreEntryTimeToLive = TimeSpan.FromDays(1);
+            });
+
+        Did did = TestData.NewDid();
+
+        // No expiresUtc, so the handler has to supply one from ExpireTimeSpan.
+        string cookie = await host.SignInAndCaptureCookie(TestData.AuthenticatedClaimsIdentity(did));
+
+        await Task.Delay(TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
+
+        MetricCollector<long> collector = AuthenticationOutcomeCollector(host);
+
+        using HttpResponseMessage response = await host.GetWithCookie("/test/authenticate", cookie);
+
+        Assert.Contains("succeeded=False", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
+        Assert.Equal("ticket_expired", OutcomeOf(collector));
+
+        // The identity is still cleared, so the credentials do not outlive the session they belonged to.
+        Assert.Null(await host.IdentityStore.GetIdentity(did, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ARenewalRequestedWhileValidatingThePrincipalReissuesTheCookie()
+    {
+        // ShouldRenew is only acted on when the response is being written, which needs FinishResponseAsync to be
+        // registered with Response.OnStarting. Without that registration the flag, and sliding expiration with it,
+        // silently does nothing.
+        await using AuthenticationTestHost host = await AuthenticationTestHost.Create(
+            configureOptions: options => options.Events.OnValidatePrincipal = context =>
+            {
+                context.ShouldRenew = true;
+                return Task.CompletedTask;
+            });
+
+        string cookie = await host.SignInAndCaptureCookie(
+            TestData.AuthenticatedClaimsIdentity(TestData.NewDid()),
+            expiresUtc: DateTimeOffset.UtcNow.AddDays(1));
+
+        using HttpResponseMessage response = await host.GetWithCookie("/test/authenticate", cookie);
+
+        Assert.Contains("succeeded=True", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
+        Assert.NotNull(AuthenticationTestHost.SetCookieHeader(response, AuthenticationTestHost.CookieName));
+    }
+
+    [Fact]
+    public async Task SlidingExpirationReissuesTheCookieOnceTheTicketIsPastItsHalfwayPoint()
+    {
+        await using AuthenticationTestHost host = await AuthenticationTestHost.Create();
+
+        // Issued now and expiring in four seconds, so after a wait of more than two the ticket is past halfway and
+        // should be renewed, while still being well inside its lifetime.
+        string cookie = await host.SignInAndCaptureCookie(
+            TestData.AuthenticatedClaimsIdentity(TestData.NewDid()),
+            expiresUtc: DateTimeOffset.UtcNow.AddSeconds(4));
+
+        await Task.Delay(TimeSpan.FromMilliseconds(2500), TestContext.Current.CancellationToken);
+
+        using HttpResponseMessage response = await host.GetWithCookie("/test/authenticate", cookie);
+
+        Assert.Contains("succeeded=True", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
+        Assert.NotNull(AuthenticationTestHost.SetCookieHeader(response, AuthenticationTestHost.CookieName));
+    }
+
+    [Fact]
+    public async Task SlidingExpirationDoesNotReissueTheCookieBeforeTheHalfwayPoint()
+    {
+        await using AuthenticationTestHost host = await AuthenticationTestHost.Create();
+
+        string cookie = await host.SignInAndCaptureCookie(
+            TestData.AuthenticatedClaimsIdentity(TestData.NewDid()),
+            expiresUtc: DateTimeOffset.UtcNow.AddDays(1));
+
+        using HttpResponseMessage response = await host.GetWithCookie("/test/authenticate", cookie);
+
+        Assert.Contains("succeeded=True", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
+        Assert.Null(AuthenticationTestHost.SetCookieHeader(response, AuthenticationTestHost.CookieName));
+    }
+
     [Theory]
     [InlineData("/signed-out", true)]
     [InlineData("https://evil.example/steal", false)]

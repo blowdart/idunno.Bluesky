@@ -27,6 +27,8 @@ public sealed class BlueskyClaimsTransformer : IClaimsTransformation
 {
     private readonly BlueskyAuthenticationMetrics _metrics;
 
+    private readonly IHttpClientFactory? _httpClientFactory;
+
     /// <summary>
     /// The type of the claim added to mark a principal as having already had its profile claims applied.
     /// </summary>
@@ -51,6 +53,9 @@ public sealed class BlueskyClaimsTransformer : IClaimsTransformation
     ///   credentials updated whilst retrieving the profile should be saved to.
     /// </param>
     /// <param name="meterFactory">The <see cref="IMeterFactory"/> to use for creating the underlying <see cref="Meter"/>.</param>
+    /// <param name="httpClientFactory">
+    ///   The <see cref="IHttpClientFactory"/> the agent which retrieves the profile should make its requests through.
+    /// </param>
     /// <exception cref="ArgumentNullException">
     ///   Thrown if <paramref name="options"/>, <paramref name="blueskyAgentOptions"/> or
     ///   <paramref name="blueskyAuthenticationOptions"/> is <see langword="null"/>.
@@ -60,7 +65,8 @@ public sealed class BlueskyClaimsTransformer : IClaimsTransformation
         IOptionsMonitor<BlueskyClaimsTransformerOptions> options,
         IOptionsMonitor<BlueskyAgentOptions> blueskyAgentOptions,
         IOptionsMonitor<BlueskyAuthenticationOptions> blueskyAuthenticationOptions,
-        IMeterFactory? meterFactory = null)
+        IMeterFactory? meterFactory = null,
+        IHttpClientFactory? httpClientFactory = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(blueskyAgentOptions);
@@ -74,6 +80,7 @@ public sealed class BlueskyClaimsTransformer : IClaimsTransformation
         AuthenticationOptions = blueskyAuthenticationOptions;
         Logger = loggerFactory.CreateLogger(GetType().FullName!);
 
+        _httpClientFactory = httpClientFactory;
         _metrics = new BlueskyAuthenticationMetrics(meterFactory);
     }
 
@@ -128,7 +135,29 @@ public sealed class BlueskyClaimsTransformer : IClaimsTransformation
             return principal;
         }
 
-        using (BlueskyAgent agent = new(principal, BlueskyAgentOptions?.CurrentValue))
+        // Matches the agent's own IsAuthenticated check, made here so that a principal whose credentials have expired
+        // costs nothing, and so the cache can be consulted before an agent is built.
+        if (dPoPAccessCredentials.ExpiresOn <= DateTimeOffset.UtcNow)
+        {
+            return principal;
+        }
+
+        Did did = dPoPAccessCredentials.Did;
+
+        // Checked before the agent is created, because constructing one is not free and the overwhelming majority of
+        // requests from a signed in user hit the cache.
+        ProfileCacheEntry? cachedProfile = await Cache.GetCachedValue(did).ConfigureAwait(false);
+
+        if (cachedProfile is not null)
+        {
+            Logger.TransformerCachedClaimsFound(did);
+            _metrics.ProfileCacheHits.Add(1);
+            return SupplementClaimsPrincipal(principal, cachedProfile);
+        }
+
+        _metrics.ProfileCacheMisses.Add(1);
+
+        using (BlueskyAgent agent = CreateAgent(principal))
         {
             // The agent makes authenticated calls, so its credentials can be updated underneath us, most commonly
             // by a DPoP nonce rotation. Without this any updated credentials would be discarded when the agent is
@@ -142,17 +171,6 @@ public sealed class BlueskyClaimsTransformer : IClaimsTransformation
 
             if (agent.IsAuthenticated)
             {
-                ProfileCacheEntry? cachedProfile = await Cache.GetCachedValue(agent.Did).ConfigureAwait(false);
-                
-                if (cachedProfile is not null)
-                {
-                    Logger.TransformerCachedClaimsFound(agent.Did);
-                    _metrics.ProfileCacheHits.Add(1);
-                    return SupplementClaimsPrincipal(principal, cachedProfile);
-                }
-
-                _metrics.ProfileCacheMisses.Add(1);
-
                 AtProtoHttpResult<ProfileViewDetailed> getProfileResult = await agent.GetProfile(agent.Did).ConfigureAwait(false);
 
                 if (getProfileResult.Succeeded)
@@ -173,6 +191,21 @@ public sealed class BlueskyClaimsTransformer : IClaimsTransformation
 
         return principal;
     }
+
+    /// <summary>
+    /// Creates the <see cref="BlueskyAgent"/> the profile is retrieved with.
+    /// </summary>
+    /// <param name="principal">The <see cref="ClaimsPrincipal"/> whose credentials the agent should use.</param>
+    /// <remarks>
+    /// <para>
+    ///   An agent created without an <see cref="IHttpClientFactory"/> builds a service provider, and so a connection
+    ///   pool, of its own. Claims transformation runs per request, so one is used when the application registered one.
+    /// </para>
+    /// </remarks>
+    private BlueskyAgent CreateAgent(ClaimsPrincipal principal) =>
+        _httpClientFactory is null
+            ? new BlueskyAgent(principal, BlueskyAgentOptions?.CurrentValue)
+            : new BlueskyAgent(principal, _httpClientFactory, BlueskyAgentOptions?.CurrentValue);
 
     /// <summary>
     /// Resolves the <see cref="IIdentityStore"/> configured for the authentication scheme the principal was issued by.

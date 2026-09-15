@@ -378,7 +378,8 @@ public abstract class BaseEmbeddedCardGenerator : IEmbeddedCardGenerator, IDispo
         }
     }
 
-    private static string SniffImageContentType(byte[] imageData)    {
+    private static string SniffImageContentType(byte[] imageData)
+    {
         // Simple content type sniffing based on file signatures (magic numbers)
         if (imageData.Length >= 4)
         {
