@@ -79,8 +79,7 @@
 
 * `TimestampIdentifier.Next()` no longer returns duplicate identifiers when called concurrently.
 * `Nsid.TryParse` now returns `false` for `null`, empty or whitespace input rather than throwing an `ArgumentException` or `ArgumentNullException`.
-* `RecordKey` values which are syntactically invalid now throw a `JsonException` when deserialized, rather than allowing a `RecordKeyFormatException`
-  to escape. 
+* `RecordKey` values which are syntactically invalid now throw a `JsonException` when deserialized, rather than allowing a `RecordKeyFormatException` to escape.
 * `Did.Method` now returns the correct method for DIDs containing more than three colon separated segments. Previously `did:web:example.com:user:alice`
   and `did:web:localhost:3000` reported a method of `INVALID`.
 * `new Handle(null)` now throws an `ArgumentNullException` rather than a `NullReferenceException`. This also applies to the implicit conversion from
