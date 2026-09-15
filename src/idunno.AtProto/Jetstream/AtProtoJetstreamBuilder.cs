@@ -55,6 +55,16 @@ public sealed class AtProtoJetstreamBuilder
     public int MaximumMessageSize { get; set; } = 8096;
 
     /// <summary>
+    /// Gets or sets the maximum total size of a message the jetstream will accept. Messages exceeding this limit are rejected.
+    /// </summary>
+    public int MaximumTotalMessageSize { get; set; } = WebSocketExtensions.DefaultMaxMessageSize;
+
+    /// <summary>
+    /// Gets or sets any <see cref="AtProto.WebSocketOptions"/> to set on the underlying client WebSocket.
+    /// </summary>
+    public WebSocketOptions? WebSocketOptions { get; set; }
+
+    /// <summary>
     /// Gets or sets a custom <see cref="TaskFactory"/> to use for background message parsing.
     /// </summary>
     public TaskFactory TaskFactory { get; set; } = new TaskFactory(TaskScheduler.Default);
@@ -184,6 +194,42 @@ public sealed class AtProtoJetstreamBuilder
     }
 
     /// <summary>
+    /// Configures the maximum total size of a message the <see cref="AtProtoJetstream"/> will accept.
+    /// </summary>
+    /// <param name="maximumTotalMessageSize">The maximum total size, in bytes, of a message the jetstream will accept.</param>
+    /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maximumTotalMessageSize"/> is equal to, or less than, zero.</exception>
+    /// <remarks>
+    /// <para>
+    ///   Messages larger than this are rejected rather than reassembled, so this is the ceiling on how much memory a single message can consume,
+    ///   whereas <see cref="SetMaximumMessageSize(int)"/> configures the size of each chunk read from the socket.
+    /// </para>
+    /// </remarks>
+    public AtProtoJetstreamBuilder SetMaximumTotalMessageSize(int maximumTotalMessageSize)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumTotalMessageSize);
+
+        MaximumTotalMessageSize = maximumTotalMessageSize;
+
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the <see cref="AtProto.WebSocketOptions"/> to apply to the underlying client WebSocket.
+    /// </summary>
+    /// <param name="webSocketOptions">The <see cref="AtProto.WebSocketOptions"/> to apply to the underlying client WebSocket.</param>
+    /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="webSocketOptions"/> is <see langword="null"/>.</exception>
+    public AtProtoJetstreamBuilder WithWebSocketOptions(WebSocketOptions webSocketOptions)
+    {
+        ArgumentNullException.ThrowIfNull(webSocketOptions);
+
+        WebSocketOptions = webSocketOptions;
+
+        return this;
+    }
+
+    /// <summary>
     /// Configures a filter for commit events to only raise events for the specified <paramref name="dids"/>.
     /// </summary>
     /// <param name="dids">The <see cref="Did"/>s to filter on.</param>
@@ -269,6 +315,7 @@ public sealed class AtProtoJetstreamBuilder
             UseCompression = EnableCompression,
             Dictionary = CompressionDictionary,
             BufferSize = MaximumMessageSize,
+            MaxMessageSize = MaximumTotalMessageSize,
             TaskFactory = TaskFactory,
         };
 
@@ -277,6 +324,7 @@ public sealed class AtProtoJetstreamBuilder
             return new AtProtoJetstream(
                 uri: Service,
                 options: options,
+                webSocketOptions: WebSocketOptions,
                 httpClientOptions: HttpClientOptions,
                 collections: CollectionsToFilterOn,
                 dids: DidsToFilterOn);
@@ -287,6 +335,7 @@ public sealed class AtProtoJetstreamBuilder
                 httpClientFactory: HttpClientFactory,
                 uri: Service,
                 options: options,
+                webSocketOptions: WebSocketOptions,
                 collections: CollectionsToFilterOn,
                 dids: DidsToFilterOn);
         }

@@ -13,6 +13,9 @@
   building a service provider and a `SocketsHttpHandler` of its own.
 * Added `AtProtoJetstreamBuilder.WithHttpClientFactory()` and `AtProtoJetstreamBuilder.ConfigureHttpClientOptions()`, so a jetstream built through the
   builder can use an application's `IHttpClientFactory`, or configure the `HttpClient` it builds for itself.
+* Added `AtProtoJetstreamBuilder.WithWebSocketOptions()` and `AtProtoJetstreamBuilder.SetMaximumTotalMessageSize()`. The `WebSocketOptions` the jetstream
+  constructor accepts, which carry the WebSocket proxy and keep-alive interval, and the maximum total message size, could not be expressed through the
+  builder at all, so a jetstream created by the builder always used the defaults for both.
 * Added `Agent.HasCredentials` which returns a flag indicating whether the agent has access credentials, regardless of whether the credentials are expired.
 * Added `AtProtoAgent.CredentialsUpdatedAsync`, an awaitable counterpart to the `CredentialsUpdated` event, of type
   `Func<CredentialsUpdatedEventArgs, CancellationToken, Task>?`. Unlike the event, the agent awaits this callback before continuing, so asynchronous

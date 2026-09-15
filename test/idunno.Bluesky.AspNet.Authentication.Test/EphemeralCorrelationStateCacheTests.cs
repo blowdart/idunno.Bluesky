@@ -22,6 +22,42 @@ public class EphemeralCorrelationStateCacheTests : CorrelationStateCacheTests
     }
 
     [Fact]
+    public async Task LoginStateAddedWhenTheCacheIsAtItsSizeLimitIsStoredRatherThanDiscarded()
+    {
+        // A size limited MemoryCache refuses the incoming entry when it is full rather than making room for it, and
+        // says nothing about having done so, which fails the login at the callback for no visible reason.
+        using EphemeralCorrelationStateCache cache = new(NullLoggerFactory.Instance, sizeLimit: 8);
+
+        for (int state = 0; state < 8; state++)
+        {
+            Guid filler = Guid.NewGuid();
+            await cache.AddOAuthLoginState(filler, TestData.LoginState(filler));
+        }
+
+        for (int state = 0; state < 8; state++)
+        {
+            Guid correlationId = Guid.NewGuid();
+
+            await cache.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
+
+            Assert.NotNull(await cache.GetOAuthLoginState(correlationId));
+        }
+    }
+
+    [Fact]
+    public async Task TwoCachesDoNotShareTheLoginStatesTheyHold()
+    {
+        using EphemeralCorrelationStateCache first = new(NullLoggerFactory.Instance);
+        using EphemeralCorrelationStateCache second = new(NullLoggerFactory.Instance);
+
+        Guid correlationId = Guid.NewGuid();
+        await first.AddOAuthLoginState(correlationId, TestData.LoginState(correlationId));
+
+        Assert.NotNull(await first.GetOAuthLoginState(correlationId));
+        Assert.Null(await second.GetOAuthLoginState(correlationId));
+    }
+
+    [Fact]
     public async Task OnlyOneConcurrentCallerTakesTheLoginState()
     {
         // The ephemeral cache holds the read and the removal under a lock, so unlike the distributed cache it can

@@ -101,3 +101,9 @@ idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.HttpClientOptions.get -> idunno
 idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.HttpClientOptions.set -> void
 idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.WithHttpClientFactory(System.Net.Http.IHttpClientFactory! httpClientFactory) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
 idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.ConfigureHttpClientOptions(System.Action<idunno.AtProto.HttpClientOptions!>! configure) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.MaximumTotalMessageSize.get -> int
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.MaximumTotalMessageSize.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.WebSocketOptions.get -> idunno.AtProto.WebSocketOptions?
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.WebSocketOptions.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.SetMaximumTotalMessageSize(int maximumTotalMessageSize) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.WithWebSocketOptions(idunno.AtProto.WebSocketOptions! webSocketOptions) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!

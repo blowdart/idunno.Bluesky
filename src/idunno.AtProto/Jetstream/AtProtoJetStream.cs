@@ -221,7 +221,7 @@ public class AtProtoJetstream : IDisposable
     /// </summary>
     protected internal JetstreamOptions Options { get; init; } = new JetstreamOptions();
 
-    private WebSocketOptions WebSocketOptions { get; init; } = new WebSocketOptions();
+    internal WebSocketOptions WebSocketOptions { get; init; } = new WebSocketOptions();
 
     /// <summary>
     /// Gets or sets a list of <see cref="Did"/>s to filter commit operations on.

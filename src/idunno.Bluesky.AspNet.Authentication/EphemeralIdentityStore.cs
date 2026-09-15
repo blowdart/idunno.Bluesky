@@ -37,30 +37,32 @@ namespace idunno.Bluesky.AspNet.Authentication;
 ///   <see cref="DataProtectingIdentityStoreEvents"/> configured so the stored credentials are encrypted at rest.
 /// </para>
 /// </remarks>
-public class EphemeralIdentityStore : IIdentityStore
+public class EphemeralIdentityStore : IIdentityStore, IDisposable
 {
     /// <summary>
     /// The number of identities the store holds before it starts evicting them.
     /// </summary>
     public const int DefaultSizeLimit = 1024;
 
+    // The proportion of the cache to discard when it is full, matching the MemoryCache default.
+    private const double CompactionPercentage = 0.05d;
+
     private static volatile bool s_warned;
     private static volatile bool s_capacityWarned;
 
-    private static MemoryCache? s_cache;
-    private static MemoryCache? s_refreshCache;
-    private static int s_configuredSizeLimit;
-
+    private readonly MemoryCache _cache;
+    private readonly MemoryCache _refreshCache;
+    private readonly int _sizeLimit;
     private readonly BlueskyAuthenticationMetrics _metrics;
+
+    private bool _disposed;
 
 #if NET9_0_OR_GREATER
     private static readonly Lock s_warnedLock = new ();
-    private static readonly Lock s_refreshLock = new ();
-    private static readonly Lock s_cacheLock = new ();
+    private readonly Lock _refreshLock = new ();
 #else
     private static readonly object s_warnedLock = new();
-    private static readonly object s_refreshLock = new();
-    private static readonly object s_cacheLock = new();
+    private readonly object _refreshLock = new();
 #endif
 
     /// <summary>
@@ -74,8 +76,8 @@ public class EphemeralIdentityStore : IIdentityStore
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="sizeLimit"/> is not greater than zero.</exception>
     /// <remarks>
     /// <para>
-    ///   The caches backing this store are static, so the first instance created fixes <paramref name="sizeLimit"/> for
-    ///   the lifetime of the process. A later instance asking for a different limit is warned that its value was ignored.
+    ///   Each instance holds its own identities, so an application configuring more than one authentication scheme gets a
+    ///   store, and a <paramref name="sizeLimit"/>, for each of them rather than one shared between them.
     /// </para>
     /// </remarks>
     [SuppressMessage("Major Code Smell", "S3010:Static fields should not be updated in constructors", Justification = "Used to ensure the emphermal warning is only logged once")]
@@ -90,7 +92,9 @@ public class EphemeralIdentityStore : IIdentityStore
 
         Logger = loggerFactory.CreateLogger<EphemeralIdentityStore>();
 
-        EnsureCaches(sizeLimit ?? DefaultSizeLimit, Logger);
+        _sizeLimit = sizeLimit ?? DefaultSizeLimit;
+        _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit });
+        _refreshCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit });
 
         _metrics = new BlueskyAuthenticationMetrics(meterFactory);
 
@@ -102,7 +106,7 @@ public class EphemeralIdentityStore : IIdentityStore
 
         // Eviction for capacity silently signs a user out, as their authentication cookie outlives the identity the
         // store was holding for them, so it needs to be reported rather than left to look like an expired login.
-        TokenCacheMemoryOptions.RegisterPostEvictionCallback(OnIdentityEvicted, new EvictionCallbackState(Logger, _metrics));
+        TokenCacheMemoryOptions.RegisterPostEvictionCallback(OnIdentityEvicted, new EvictionCallbackState(Logger, _metrics, _sizeLimit));
 
         RefreshCacheMemoryOptions = new MemoryCacheEntryOptions()
         {
@@ -123,9 +127,9 @@ public class EphemeralIdentityStore : IIdentityStore
         }
     }
 
-    private static MemoryCache Cache => s_cache!;
+    private MemoryCache Cache => _cache;
 
-    private static MemoryCache RefreshCache => s_refreshCache!;
+    private MemoryCache RefreshCache => _refreshCache;
 
     private MemoryCacheEntryOptions TokenCacheMemoryOptions { get; set; }
 
@@ -244,7 +248,7 @@ public class EphemeralIdentityStore : IIdentityStore
     /// <inheritdoc />
     public async Task<string?> StartRefresh(Did did, CancellationToken cancellationToken = default)
     {
-        lock (s_refreshLock)
+        lock (_refreshLock)
         {
             if (RefreshCache.Get($"{did}") is not null)
             {
@@ -263,7 +267,7 @@ public class EphemeralIdentityStore : IIdentityStore
     /// <inheritdoc />
     public async Task EndRefresh(Did did, string? refreshLockToken, CancellationToken cancellationToken = default)
     {
-        lock (s_refreshLock)
+        lock (_refreshLock)
         {
             if (RefreshCache.Get($"{did}") is string currentToken &&
                 !currentToken.Equals(refreshLockToken, StringComparison.Ordinal))
@@ -282,7 +286,7 @@ public class EphemeralIdentityStore : IIdentityStore
     /// <inheritdoc />
     public async Task<bool> IsRefreshing(Did did, CancellationToken cancellationToken = default)
     {
-        lock (s_refreshLock)
+        lock (_refreshLock)
         {
             if (RefreshCache.Get($"{did}") is not null)
             {
@@ -290,25 +294,6 @@ public class EphemeralIdentityStore : IIdentityStore
             }
         }
         return false;
-    }
-
-    private static void EnsureCaches(int sizeLimit, ILogger logger)
-    {
-        lock (s_cacheLock)
-        {
-            if (s_cache is null || s_refreshCache is null)
-            {
-                s_configuredSizeLimit = sizeLimit;
-
-                // Each cache gets its own options, otherwise the limit reads as though it were shared between them.
-                s_cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit });
-                s_refreshCache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit });
-            }
-            else if (s_configuredSizeLimit != sizeLimit)
-            {
-                logger.EphemeralStoreSizeLimitIgnored(nameof(EphemeralIdentityStore), sizeLimit, s_configuredSizeLimit);
-            }
-        }
     }
 
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A post eviction callback must not throw, as MemoryCache gives the exception nowhere to go")]
@@ -350,7 +335,7 @@ public class EphemeralIdentityStore : IIdentityStore
 
         try
         {
-            callbackState.Logger.EphemeralIdentityStoreCapacityReached(s_configuredSizeLimit);
+            callbackState.Logger.EphemeralIdentityStoreCapacityReached(callbackState.SizeLimit);
         }
         catch (Exception)
         {
@@ -359,7 +344,88 @@ public class EphemeralIdentityStore : IIdentityStore
         }
     }
 
-    private sealed record EvictionCallbackState(ILogger Logger, BlueskyAuthenticationMetrics Metrics);
+    private sealed record EvictionCallbackState(ILogger Logger, BlueskyAuthenticationMetrics Metrics, int SizeLimit);
+
+    /// <summary>
+    /// Stores <paramref name="identity"/> against <paramref name="did"/>, making room for it if the store is full.
+    /// </summary>
+    /// <param name="did">The <see cref="Did"/> to store <paramref name="identity"/> against.</param>
+    /// <param name="identity">The serialized identity to store.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the identity could not be stored.</exception>
+    /// <remarks>
+    /// <para>
+    ///   A size limited <see cref="MemoryCache"/> rejects an incoming entry when it is full rather than making room for
+    ///   it, only scheduling a compaction to run later, and reports nothing to the caller. Left alone that loses the
+    ///   write: a sign-in the user is never given, or refreshed credentials which are dropped after the refresh token
+    ///   which produced them has already been spent. The entry is checked, the cache compacted, and the write retried
+    ///   so the identity is either stored or the caller is told it was not.
+    /// </para>
+    /// </remarks>
+    private void StoreIdentity(Did did, byte[] identity)
+    {
+        string key = $"{did}";
+
+        DateTime expiresAfter = TokenCacheMemoryOptions.SlidingExpiration is TimeSpan slidingExpiration
+            ? DateTime.UtcNow.Add(slidingExpiration)
+            : DateTime.MaxValue;
+
+        Cache.Set(key, identity, TokenCacheMemoryOptions);
+
+        // A short lived entry can reach the end of its life between being written and being read back, which leaves it
+        // missing because it expired rather than because the cache had no room for it.
+        if (Cache.TryGetValue(key, out _) || DateTime.UtcNow >= expiresAfter)
+        {
+            return;
+        }
+
+        // Compact takes the proportion of the cache to remove, and truncates the count it works out from it, so a
+        // proportion which rounds down to nothing would leave the cache just as full as it is now. Asking for one and
+        // a half entries' worth guarantees at least one is removed however small the cache is.
+        int count = Cache.Count;
+        Cache.Compact(count > 0 ? Math.Max(CompactionPercentage, 1.5d / count) : CompactionPercentage);
+
+        Cache.Set(key, identity, TokenCacheMemoryOptions);
+
+        if (Cache.TryGetValue(key, out _) || DateTime.UtcNow >= expiresAfter)
+        {
+            return;
+        }
+
+        _metrics.IdentityStoreWriteFailures.Add(1);
+        Logger.IdentityCouldNotBeStored(did, _sizeLimit);
+
+        throw new InvalidOperationException(
+            $"The identity store is full at its size limit of {_sizeLimit} and could not make room for the identity.");
+    }
+
+    /// <summary>
+    /// Releases the unmanaged resources used by the store and, optionally, the managed resources.
+    /// </summary>
+    /// <param name="disposing"><see langword="true"/> to release both managed and unmanaged resources, otherwise <see langword="false"/>.</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (disposing)
+        {
+            _cache.Dispose();
+            _refreshCache.Dispose();
+        }
+
+        _disposed = true;
+    }
+
+    /// <summary>
+    /// Releases the resources used by the store, discarding every identity it holds.
+    /// </summary>
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
 
     private async Task<Did> Set(ClaimsIdentity claimsIdentity)    {
         ArgumentNullException.ThrowIfNull(claimsIdentity);
@@ -385,7 +451,7 @@ public class EphemeralIdentityStore : IIdentityStore
         IdentityStoreSettingContext context = new(claimsIdentityAsBytes);
         await Events.PreStoring(context).ConfigureAwait(false);
 
-        Cache.Set($"{did}", context.Identity.ToArray(), TokenCacheMemoryOptions);
+        StoreIdentity(did, context.Identity.ToArray());
 
         return did;
     }

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 
 using idunno.AtProto.Jetstream;
 
@@ -78,13 +79,54 @@ public class AtProtoJetstreamBuilderTests
             .WithCompressionDictionary(dictionary)
             .WithTaskFactory(taskFactory)
             .SetMaximumMessageSize(4096)
+            .SetMaximumTotalMessageSize(65536)
             .Build();
 
         Assert.False(jetstream.Options.UseCompression);
         Assert.Equal(dictionary, jetstream.Options.Dictionary);
         Assert.Same(taskFactory, jetstream.Options.TaskFactory);
         Assert.Equal(4096, jetstream.Options.BufferSize);
+        Assert.Equal(65536, jetstream.Options.MaxMessageSize);
     }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void BuildPassesTheWebSocketOptionsToTheJetstream(bool withHttpClientFactory)
+    {
+        WebProxy proxy = new("http://localhost:8866");
+        WebSocketOptions webSocketOptions = new()
+        {
+            Proxy = proxy,
+            KeepAliveInterval = TimeSpan.FromSeconds(42),
+        };
+
+        AtProtoJetstreamBuilder builder = AtProtoJetstreamBuilder.Create().WithWebSocketOptions(webSocketOptions);
+
+        if (withHttpClientFactory)
+        {
+            builder.WithHttpClientFactory(new RecordingHttpClientFactory());
+        }
+
+        using AtProtoJetstream jetstream = builder.Build();
+
+        Assert.Same(proxy, jetstream.WebSocketOptions.Proxy);
+        Assert.Equal(TimeSpan.FromSeconds(42), jetstream.WebSocketOptions.KeepAliveInterval);
+    }
+
+    [Fact]
+    public void WithWebSocketOptionsRejectsNull() =>
+        Assert.Throws<ArgumentNullException>(
+            "webSocketOptions",
+            () => AtProtoJetstreamBuilder.Create().WithWebSocketOptions(null!));
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void SetMaximumTotalMessageSizeRejectsSizesWhichAreNotPositive(int maximumTotalMessageSize) =>
+        Assert.Throws<ArgumentOutOfRangeException>(
+            "maximumTotalMessageSize",
+            () => AtProtoJetstreamBuilder.Create().SetMaximumTotalMessageSize(maximumTotalMessageSize));
 
     [Fact]
     public void WithHttpClientFactoryRejectsNull() =>

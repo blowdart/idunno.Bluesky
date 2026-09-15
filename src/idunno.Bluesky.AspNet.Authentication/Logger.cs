@@ -88,8 +88,8 @@ internal static partial class Logger
     [LoggerMessage(257, LogLevel.Warning, "The in memory identity store reached its size limit of {sizeLimit} identities and has evicted some of them. The users whose identities were evicted will be signed out even though their authentication cookies are still valid. Use a distributed identity store, or raise the size limit.")]
     public static partial void EphemeralIdentityStoreCapacityReached(this ILogger logger, int sizeLimit);
 
-    [LoggerMessage(258, LogLevel.Warning, "A size limit of {requestedSizeLimit} was requested for {storeName}, but its cache already exists with a limit of {configuredSizeLimit}. The cache is static, so the first limit configured wins and this one has been ignored.")]
-    public static partial void EphemeralStoreSizeLimitIgnored(this ILogger logger, string storeName, int requestedSizeLimit, int configuredSizeLimit);
+    [LoggerMessage(258, LogLevel.Error, "The identity for {did} could not be stored. The in memory identity store is full at its size limit of {sizeLimit} identities and could not make room for it.")]
+    public static partial void IdentityCouldNotBeStored(this ILogger logger, Did did, int sizeLimit);
 
     [LoggerMessage(259, LogLevel.Warning, "The in memory correlation state cache reached its size limit of {sizeLimit} entries and has evicted some of them. Logins in flight when their state was evicted will fail at the callback. Use a distributed correlation state cache, or raise the size limit.")]
     public static partial void EphemeralCorrelationStateCacheCapacityReached(this ILogger logger, int sizeLimit);
