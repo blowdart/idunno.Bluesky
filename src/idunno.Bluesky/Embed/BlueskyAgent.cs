@@ -37,6 +37,7 @@ partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 

@@ -14,6 +14,8 @@ public class AtProtoAgentOptions
 {
     private int _maximumWellKnownResponseSize = AtProtoServer.DefaultMaximumWellKnownResponseSize;
 
+    private int _maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize;
+
     /// <summary>
     /// Default configuration key.
     /// </summary>
@@ -125,6 +127,31 @@ public class AtProtoAgentOptions
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
             _maximumWellKnownResponseSize = value;
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the maximum number of bytes read from an XRPC response body. Defaults to <see cref="AtProtoHttpClient.DefaultMaximumResponseSize"/>.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is zero or negative.</exception>
+    /// <remarks>
+    /// <para>
+    ///   This is a backstop against a service returning a response large enough to exhaust the memory of the calling
+    ///   process. XRPC responses are JSON and are ordinarily orders of magnitude smaller than the default, so this
+    ///   only needs raising if you call an endpoint which legitimately returns a very large response.
+    /// </para>
+    /// <para>
+    ///   A response larger than this fails with an <see cref="AtErrorDetail"/> whose <see cref="AtErrorDetail.Error"/> is <c>ResponseTooLarge</c>.
+    /// </para>
+    /// </remarks>
+    public int MaximumResponseSize
+    {
+        get => _maximumResponseSize;
+
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            _maximumResponseSize = value;
         }
     }
 }

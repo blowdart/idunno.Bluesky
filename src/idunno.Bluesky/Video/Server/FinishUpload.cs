@@ -17,8 +17,8 @@ public static partial class BlueskyServer
     /// <summary>
     /// Finish an upload. This call is idempotent and safe to retry.
     /// On deduplication the returned completedJobId may differ from the <paramref name="jobId"/>;
-    /// Poll <see cref="GetJobStatus(string, Uri, HttpClient, ILoggerFactory?, CancellationToken)"/> with completedJobId.
-    /// Probe-based validation failures surface later as <see cref="JobState.Failed"/> from <see cref="GetJobStatus(string, Uri, HttpClient, ILoggerFactory?, CancellationToken)"/>,
+    /// Poll <see cref="GetJobStatus(string, Uri, HttpClient, ILoggerFactory?, int, CancellationToken)"/> with completedJobId.
+    /// Probe-based validation failures surface later as <see cref="JobState.Failed"/> from <see cref="GetJobStatus(string, Uri, HttpClient, ILoggerFactory?, int, CancellationToken)"/>,
     /// not as errors from this call.
     /// </summary>
     /// <param name="jobId">The job id of the upload to finish.</param>
@@ -26,6 +26,7 @@ public static partial class BlueskyServer
     /// <param name="serviceCredential">The credentials to use for the service.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="jobId"/> is <see langword="null"/> or whitespace.</exception>
@@ -43,6 +44,7 @@ public static partial class BlueskyServer
         ServiceCredential serviceCredential,
         HttpClient httpClient,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(jobId);
@@ -51,7 +53,7 @@ public static partial class BlueskyServer
         ArgumentNullException.ThrowIfNull(httpClient);
 
         // AppView proxy is not needed as we're hitting the video service directly.
-        BlueskyHttpClient<FinishUploadWireResponse> client = new(loggerFactory);
+        BlueskyHttpClient<FinishUploadWireResponse> client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<FinishUploadWireResponse> response = await client.Post(
                 service,

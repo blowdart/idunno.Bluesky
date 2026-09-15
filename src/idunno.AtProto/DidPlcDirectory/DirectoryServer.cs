@@ -104,6 +104,7 @@ internal static class DirectoryServer
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="directory"/>.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="meterFactory">An instance of <see cref="IMeterFactory"/> to use to create a meter.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     [UnconditionalSuppressMessage(
@@ -119,6 +120,7 @@ internal static class DirectoryServer
         HttpClient httpClient,
         ILoggerFactory? loggerFactory = default,
         IMeterFactory? meterFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         const string plcDidPrefix = "did:plc:"; // https://github.com/did-method-plc/did-method-plc
@@ -149,7 +151,7 @@ internal static class DirectoryServer
                     Logger.ResolvingPlcDid(logger, did, directory);
                     metrics.TotalRequests.Add(1, new KeyValuePair<string, object?>("did.type", "plc"));
 
-                    AtProtoHttpClient<DidDocument> request = new(serviceProxy: null, loggerFactory: loggerFactory, meterFactory: meterFactory);
+                    AtProtoHttpClient<DidDocument> request = new(serviceProxy: null, loggerFactory: loggerFactory, meterFactory: meterFactory) { MaximumResponseSize = maximumResponseSize };
 
                     AtProtoHttpResult<DidDocument> result = await request.Get(
                         directory,
@@ -181,7 +183,7 @@ internal static class DirectoryServer
                     Logger.ResolvingWebDid(logger, did, service);
                     metrics.TotalRequests.Add(1, new KeyValuePair<string, object?>("did.type", "web"));
 
-                    AtProtoHttpClient<DidDocument> request = new(serviceProxy: null, loggerFactory: loggerFactory, meterFactory: meterFactory);
+                    AtProtoHttpClient<DidDocument> request = new(serviceProxy: null, loggerFactory: loggerFactory, meterFactory: meterFactory) { MaximumResponseSize = maximumResponseSize };
 
                     AtProtoHttpResult<DidDocument> result = await request.Get(
                         service,

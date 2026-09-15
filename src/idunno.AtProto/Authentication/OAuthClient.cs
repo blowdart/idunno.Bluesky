@@ -69,6 +69,11 @@ public class OAuthClient
     public static IEnumerable<string> DefaultScopes => ["atproto"];
 
     /// <summary>
+    /// Gets the maximum number of bytes to read from an XRPC response body.
+    /// </summary>
+    internal int MaximumResponseSize { get; init; } = AtProtoHttpClient.DefaultMaximumResponseSize;
+
+    /// <summary>
     /// Gets or sets the state the needs to be held between starting the authorize request and the parsing the response
     /// </summary>
     /// <exception cref="ArgumentNullException">Thrown when setting to <see langword="null"/>.</exception>
@@ -332,7 +337,7 @@ public class OAuthClient
         using (var httpClient = new HttpClient(_innerFactoryHandler()))
         {
             _clientConfigurationHandler(httpClient);
-            serverDescriptionResult = await AtProtoServer.DescribeServer(_expectedService, httpClient, _loggerFactory, cancellationToken).ConfigureAwait(false);
+            serverDescriptionResult = await AtProtoServer.DescribeServer(_expectedService, httpClient, _loggerFactory, MaximumResponseSize, cancellationToken).ConfigureAwait(false);
         }
 
         if (!serverDescriptionResult.Succeeded)
@@ -532,7 +537,7 @@ public class OAuthClient
                 using (var httpClient = new HttpClient(handler))
                 {
                     _clientConfigurationHandler(httpClient);
-                    serverDescriptionResult = await AtProtoServer.DescribeServer(refreshCredential.Service, httpClient, _loggerFactory, cancellationToken).ConfigureAwait(false);
+                    serverDescriptionResult = await AtProtoServer.DescribeServer(refreshCredential.Service, httpClient, _loggerFactory, MaximumResponseSize, cancellationToken).ConfigureAwait(false);
                 }
 
                 if (!serverDescriptionResult.Succeeded)

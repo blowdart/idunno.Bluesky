@@ -198,7 +198,10 @@ public partial class AtProtoAgent
     /// <returns>The new <see cref="OAuthClient"/> instance.</returns>
     public OAuthClient CreateOAuthClient()
     {
-        return new OAuthClient(ConfigureHttpClient, OAuthProxyHttpMessageHandlerBuilder, LoggerFactory, Options?.OAuthOptions);
+        return new OAuthClient(ConfigureHttpClient, OAuthProxyHttpMessageHandlerBuilder, LoggerFactory, Options?.OAuthOptions)
+        {
+            MaximumResponseSize = MaximumResponseSize
+        };
     }
 
     /// <summary>
@@ -213,7 +216,8 @@ public partial class AtProtoAgent
 
         var oAuthClient = new OAuthClient(ConfigureHttpClient, OAuthProxyHttpMessageHandlerBuilder, LoggerFactory, Options?.OAuthOptions)
         {
-            State = state
+            State = state,
+            MaximumResponseSize = MaximumResponseSize
         };
 
         return oAuthClient;
@@ -538,6 +542,7 @@ public partial class AtProtoAgent
                 httpClient: HttpClient,
                 loggerFactory: LoggerFactory,
                 credentialsUpdated: InternalOnCredentialsUpdatedCallBack,
+                maximumResponseSize: MaximumResponseSize,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (serviceCredentialResult.Succeeded && serviceCredentialResult.Result.AccessJwt is not null)
@@ -596,7 +601,7 @@ public partial class AtProtoAgent
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentException.ThrowIfNullOrEmpty(accessCredentials.AccessJwt);
 
-        return await AtProtoServer.GetSession(accessCredentials, HttpClient, InternalOnCredentialsUpdatedCallBack, LoggerFactory, cancellationToken).ConfigureAwait(false);
+        return await AtProtoServer.GetSession(accessCredentials, HttpClient, InternalOnCredentialsUpdatedCallBack, LoggerFactory, MaximumResponseSize, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -781,6 +786,7 @@ public partial class AtProtoAgent
                     service,
                     httpClient: HttpClient,
                     loggerFactory: LoggerFactory,
+                    maximumResponseSize: MaximumResponseSize,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
             Logger.CreateSessionReturned(_logger, createSessionResult.StatusCode);
 
@@ -888,6 +894,7 @@ public partial class AtProtoAgent
                     service,
                     httpClient: HttpClient,
                     loggerFactory: LoggerFactory,
+                    maximumResponseSize: MaximumResponseSize,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
             Logger.CreateSessionReturned(_logger, createSessionResult.StatusCode);
 
@@ -1055,7 +1062,7 @@ public partial class AtProtoAgent
 
             StopTokenRefreshTimer();
 
-            AtProtoHttpClient<EmptyResponse> revokeRequest = new(LoggerFactory);
+            AtProtoHttpClient<EmptyResponse> revokeRequest = new(LoggerFactory) { MaximumResponseSize = MaximumResponseSize };
 
             DPoPRevokeCredentials dPoPRevokeCredentials = new(
                 accessCredentials.Service,
@@ -1165,7 +1172,7 @@ public partial class AtProtoAgent
             RefreshCredential refreshCredential = new(Credentials);
 
             AtProtoHttpResult<EmptyResponse> deleteSessionResult =
-                await AtProtoServer.DeleteSession(refreshCredential, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
+                await AtProtoServer.DeleteSession(refreshCredential, HttpClient, LoggerFactory, MaximumResponseSize, cancellationToken).ConfigureAwait(false);
 
             if (deleteSessionResult.Succeeded)
             {
@@ -1512,6 +1519,7 @@ public partial class AtProtoAgent
                         HttpClient,
                         credentialsUpdated: null,
                         loggerFactory: LoggerFactory,
+                        maximumResponseSize: MaximumResponseSize,
                         cancellationToken: cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception e)

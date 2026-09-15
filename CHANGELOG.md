@@ -9,9 +9,15 @@
 * Added `AtProtoAgentOptions.MaximumWellKnownResponseSize`, an optional `maximumWellKnownResponseSize` parameter on the `AtProtoServer.ResolveHandle()`
   and `Resolution.ResolveHandle()` overloads, and the `AtProtoServer.DefaultMaximumWellKnownResponseSize` constant, which configure the number of bytes
   read from a `/.well-known/atproto-did` response when resolving a handle. The default is 4KB.
-* Added `AtProtoHttpClient.MaximumResponseSize` and the `AtProtoHttpClient.DefaultMaximumResponseSize` constant, which cap the number of bytes read from
-  an XRPC response body. A response larger than the maximum fails with an `AtErrorDetail` whose `Error` is `ResponseTooLarge`. The default is 32MB.
-  `MaximumResponseSize` is process wide, and applies to every agent and every request.
+* Added `AtProtoAgentOptions.MaximumResponseSize`, an optional `maximumResponseSize` parameter on every `AtProtoServer` and `BlueskyServer` endpoint
+  method, and the `AtProtoHttpClient.DefaultMaximumResponseSize` constant, which cap the number of bytes read from an XRPC response body. A response
+  larger than the maximum fails with an `AtErrorDetail` whose `Error` is `ResponseTooLarge`. The default is 32MB. An agent applies its configured value
+  to every request it makes; the process wide `AtProtoHttpClient.MaximumResponseSize` static property added earlier in this release has been removed in
+  favour of the per agent option.
+* Added `DirectoryAgentOptions.MaximumResponseSize` and an optional `maximumResponseSize` parameter on the `DirectoryServer.ResolveDidDocument()`,
+  `Resolution.ResolveDidDocument()` and `Resolution.ResolvePds()` overloads, which cap the number of bytes read from a DID document response.
+  An `AtProtoAgent` applies its `MaximumResponseSize` to the DID documents it resolves. A `did:web` DID names the host its document is resolved
+  from, so that response is untrusted.
 * Added `IServiceCollection.AddAtProtoHttpClient()`, which registers the named `HttpClient` an agent constructed with an `IHttpClientFactory` resolves,
   configured with the same SSRF protections, proxy and certificate revocation settings an agent applies when it builds its own `HttpClient`. Supplying
   an `IHttpClientFactory` to an agent without this registration produces a client with none of those protections.

@@ -32,6 +32,7 @@ public static partial class BlueskyServer
     /// <param name="onCredentialsUpdated">Optional callback for when credentials are updated.</param>
     /// <param name="loggerFactory">Optional logger factory for logging.</param>
     /// <param name="subscribedLabelers">Optional list of subscribed labelers.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">Optional cancellation token.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when a required argument is <see langword="null" />.</exception>
@@ -52,6 +53,7 @@ public static partial class BlueskyServer
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(url);
@@ -65,7 +67,7 @@ public static partial class BlueskyServer
         string queryString = $"url={Uri.EscapeDataString(url.ToString())}&";
         queryString += string.Join("&", uris.Select(uri => $"uris={Uri.EscapeDataString(uri.ToString())}"));
 
-        BlueskyHttpClient<GetEmbedExternalResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetEmbedExternalResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<GetEmbedExternalResponse> response = await request.Get(
             service,

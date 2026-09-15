@@ -20,6 +20,7 @@ public sealed class DirectoryAgent : Agent
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<DirectoryAgent> _logger;
     private readonly IMeterFactory? _meterFactory;
+    private readonly int _maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize;
 
 
     /// <summary>
@@ -33,6 +34,7 @@ public sealed class DirectoryAgent : Agent
         {
             PlcDirectory = options.PlcDirectoryUri;
             _loggerFactory = options.LoggerFactory ?? NullLoggerFactory.Instance;
+            _maximumResponseSize = options.MaximumResponseSize;
         }
         else
         {
@@ -63,6 +65,7 @@ public sealed class DirectoryAgent : Agent
         {
             PlcDirectory = options.PlcDirectoryUri;
             _loggerFactory = options.LoggerFactory ?? NullLoggerFactory.Instance;
+            _maximumResponseSize = options.MaximumResponseSize;
         }
         else
         {
@@ -101,6 +104,7 @@ public sealed class DirectoryAgent : Agent
             httpClient: HttpClient,
             loggerFactory: _loggerFactory,
             meterFactory: _meterFactory,
+            maximumResponseSize: _maximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (!result.Succeeded)

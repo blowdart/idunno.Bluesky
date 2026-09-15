@@ -29,6 +29,7 @@ public partial class BlueskyAgent
             generatorUri,
             httpClient: HttpClient,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -61,6 +62,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -95,6 +97,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -133,6 +136,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -159,6 +163,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -187,6 +192,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -222,6 +228,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -254,6 +261,7 @@ public partial class BlueskyAgent
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -286,6 +294,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -318,6 +327,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -384,6 +394,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -633,6 +644,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -668,6 +680,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -694,6 +707,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -729,6 +743,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -788,6 +803,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -851,6 +867,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -914,6 +931,7 @@ public partial class BlueskyAgent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
             subscribedLabelers: subscribedLabelers,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }
