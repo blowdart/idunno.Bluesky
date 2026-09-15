@@ -278,6 +278,7 @@ const idunno.Bluesky.Chat.ConversationReadState.Unread = "unread" -> string!
 idunno.Bluesky.Chat.ConversationReadState
 idunno.Bluesky.BlueskyAgent.ListConversations(int? limit = null, string? cursor = null, string? readState = null, string? status = null, string? kind = null, string? lockStatus = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Conversations!>!>!
 static idunno.Bluesky.BlueskyServer.ListConversations(int? limit, string? cursor, string? readState, string? status, string? kind, string? lockStatus, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Conversations!>!>!
+static readonly idunno.Bluesky.Maximum.JoinLinkPreviewCodes -> int
 static readonly idunno.Bluesky.Maximum.ReactionLengthInBytes -> int
 *REMOVED*idunno.Bluesky.Chat.Group.JoinRequestConversationView.ConversationId.set -> void
 idunno.Bluesky.Chat.Group.JoinRequestConversationView.ConversationId.init -> void

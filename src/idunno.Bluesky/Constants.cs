@@ -142,6 +142,11 @@ public static class Maximum
     public static readonly int GroupNameLengthInGraphemes = 50;
 
     /// <summary>
+    /// The maximum number of group join link codes that previews can be requested for in a single call.
+    /// </summary>
+    public static readonly int JoinLinkPreviewCodes = 50;
+
+    /// <summary>
     /// The maximum number of messages in a message batch.
     /// </summary>
     public static readonly int BatchedMessages = 100;

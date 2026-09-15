@@ -51,6 +51,8 @@
 * Added `Chat.ConversationReadState`, and `Chat.ConversationKind.Direct` and `Chat.ConversationKind.Group`, holding the known values for the new
   `readState` and `kind` filters.
 * Added `Maximum.ReactionLengthInBytes`.
+* Added `Maximum.JoinLinkPreviewCodes`, which `GetJoinGroupLinkPreviews()` now validates against in place of a hardcoded `50` in each of its two
+  overloads.
 
 #### idunno.Bluesky.AspNet.Authentication
 
