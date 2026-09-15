@@ -46,6 +46,11 @@
   constant, which cap the number of bytes read from a page when generating an embedded card. The default is 1MB.
 * Added `Maximum.MessageLengthInGraphemes`, `Maximum.ConversationRequestsToList`, `Maximum.JoinRequestsToList`, `Maximum.GroupMembers`,
   `Maximum.GroupNameLengthInCharacters` and `Maximum.GroupNameLengthInGraphemes`, replacing the hard coded limits used by the chat endpoints.
+* Added `readState`, `status`, `kind` and `lockStatus` filter parameters to `BlueskyAgent.ListConversations()` and `BlueskyServer.ListConversations()`,
+  exposing the filters `chat.bsky.convo.listConvos` supports.
+* Added `Chat.ConversationReadState`, and `Chat.ConversationKind.Direct` and `Chat.ConversationKind.Group`, holding the known values for the new
+  `readState` and `kind` filters.
+* Added `Maximum.ReactionLengthInBytes`.
 
 #### idunno.Bluesky.AspNet.Authentication
 
@@ -96,6 +101,9 @@
   return a `PagedViewReadOnlyCollection<Chat.Group.JoinRequestView>` rather than a `PagedViewReadOnlyCollection<Chat.Group.JoinRequestConversationView>`.
   The `chat.bsky.group.listJoinRequests` endpoint takes one required `convoId` and returns `joinRequestView`, so the previous signature could not be
   called successfully.
+* `BlueskyServer.ListConversations()` now takes `readState`, `status`, `kind` and `lockStatus` parameters between `cursor` and `service`. Callers
+  passing the `service`, `accessCredentials` and `httpClient` arguments positionally will need to update. `BlueskyAgent.ListConversations()` takes the
+  same four filters as optional parameters, so only callers passing its `cancellationToken` positionally are affected.
 
 ### Fixed
 
@@ -227,6 +235,14 @@
   method on the agent.
 * `Chat.Group.JoinRequestConversationView` is no longer registered twice in the JSON source generation context, and its remaining registration no longer
   carries the type info property name of an unrelated type.
+* `ListConversations()` now returns the cursor the service sent, rather than always returning `null`. Paging conversations returned the first page
+  repeatedly, and a caller paging until the cursor was `null` never terminated. It was the only paged chat endpoint which did not return its cursor.
+* `ListConversations()` now validates `limit` before defaulting it, so a negative limit is rejected rather than replaced with 50, and no longer emits a
+  query string with a leading `&`.
+* `AddReaction()` now rejects a reaction longer than `Maximum.ReactionLengthInBytes` (64) UTF-8 bytes. A reaction is limited to one grapheme, but a
+  grapheme cluster has no upper bound on its encoded length, so the lexicon's `maxLength` was reachable and unenforced.
+* The `BlueskyAgent.SetConversationDeclaration(string, string)` overloads now check `IsAuthenticated` directly, matching the overload which takes a
+  declaration record. The exception they throw is unchanged; it was previously raised by the underlying `PutRecord()` call.
 
 ## 6.0.0 - 2026-09-05
 

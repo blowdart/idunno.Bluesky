@@ -60,6 +60,94 @@ public class ChatValidationTests
     [InlineData(0)]
     [InlineData(-1)]
     [InlineData(101)]
+    public async Task ListConversationsThrowsWhenTheLimitIsOutOfRange(int limit)
+    {
+        using HttpClient httpClient = new();
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => BlueskyServer.ListConversations(
+            limit: limit,
+            cursor: null,
+            readState: null,
+            status: null,
+            kind: null,
+            lockStatus: null,
+            service: s_service,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("readState")]
+    [InlineData("status")]
+    [InlineData("kind")]
+    [InlineData("lockStatus")]
+    public async Task ListConversationsThrowsWhenAFilterIsWhitespace(string filter)
+    {
+        using HttpClient httpClient = new();
+
+        ArgumentException exception = await Assert.ThrowsAsync<ArgumentException>(() => BlueskyServer.ListConversations(
+            limit: null,
+            cursor: null,
+            readState: filter == "readState" ? " " : null,
+            status: filter == "status" ? " " : null,
+            kind: filter == "kind" ? " " : null,
+            lockStatus: filter == "lockStatus" ? " " : null,
+            service: s_service,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+
+        Assert.Equal(filter, exception.ParamName);
+    }
+
+    [Fact]
+    public async Task AddReactionThrowsWhenASingleGraphemeExceedsTheMaximumNumberOfBytes()
+    {
+        using HttpClient httpClient = new();
+
+        // Ten emoji joined by zero width joiners form a single grapheme cluster of 67 UTF-8 bytes, so this passes the
+        // grapheme check and can only be rejected by the byte limit.
+        string value = string.Join('\u200d', Enumerable.Repeat("\U0001F468", 10));
+
+        Assert.Equal(1, value.GetGraphemeLength());
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(value) > Maximum.ReactionLengthInBytes);
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => BlueskyServer.AddReaction(
+            conversationId: "convoId",
+            messageId: "messageId",
+            value: value,
+            service: s_service,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task AddReactionAcceptsASingleGraphemeWithinTheMaximumNumberOfBytes()
+    {
+        using HttpClient httpClient = new();
+
+        string value = "\U0001F468\u200d\U0001F469\u200d\U0001F467\u200d\U0001F466";
+
+        Assert.Equal(1, value.GetGraphemeLength());
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(value) <= Maximum.ReactionLengthInBytes);
+
+        // The request is expected to fail against an unreachable service rather than be rejected by validation.
+        await Assert.ThrowsAsync<HttpRequestException>(() => BlueskyServer.AddReaction(
+            conversationId: "convoId",
+            messageId: "messageId",
+            value: value,
+            service: s_service,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(101)]
     public async Task ListJoinGroupRequestsThrowsWhenTheLimitIsOutOfRange(int limit)
     {
         using HttpClient httpClient = new();

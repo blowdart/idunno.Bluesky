@@ -239,4 +239,125 @@ public class ChatRequestTests
         JsonElement members = document.RootElement.GetProperty("members");
         Assert.Equal(2, members.GetArrayLength());
     }
+
+    [Fact]
+    public async Task ListConversationsReturnsTheCursorSentByTheServer()
+    {
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Path == "/xrpc/chat.bsky.convo.listConvos")
+            {
+                response.StatusCode = 200;
+                response.ContentType = "application/json";
+                await response.WriteAsync("""{"cursor":"page two","convos":[]}""");
+                return;
+            }
+
+            response.StatusCode = 404;
+        });
+
+        AtProtoHttpResult<Chat.Conversations> result =
+            await BlueskyServer.ListConversations(
+                limit: null,
+                cursor: null,
+                readState: null,
+                status: null,
+                kind: null,
+                lockStatus: null,
+                service: TestServerBuilder.DefaultUri,
+                accessCredentials: CreateCredentials(),
+                httpClient: testServer.CreateClient(),
+                cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal("page two", result.Result.Cursor);
+    }
+
+    [Fact]
+    public async Task ListConversationsSendsEveryFilterToTheServer()
+    {
+        string? actualQueryString = null;
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Path == "/xrpc/chat.bsky.convo.listConvos")
+            {
+                actualQueryString = request.QueryString.Value;
+                response.StatusCode = 200;
+                response.ContentType = "application/json";
+                await response.WriteAsync("""{"convos":[]}""");
+                return;
+            }
+
+            response.StatusCode = 404;
+        });
+
+        AtProtoHttpResult<Chat.Conversations> result =
+            await BlueskyServer.ListConversations(
+                limit: 25,
+                cursor: "page two",
+                readState: Chat.ConversationReadState.Unread,
+                status: Chat.ConversationStatus.Accepted,
+                kind: Chat.ConversationKind.Direct,
+                lockStatus: Chat.ConversationLockStatus.LockedPermanently,
+                service: TestServerBuilder.DefaultUri,
+                accessCredentials: CreateCredentials(),
+                httpClient: testServer.CreateClient(),
+                cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.NotNull(actualQueryString);
+        Assert.Contains("limit=25", actualQueryString, StringComparison.Ordinal);
+        Assert.Contains("cursor=page%20two", actualQueryString, StringComparison.Ordinal);
+        Assert.Contains("readState=unread", actualQueryString, StringComparison.Ordinal);
+        Assert.Contains("status=accepted", actualQueryString, StringComparison.Ordinal);
+        Assert.Contains("kind=direct", actualQueryString, StringComparison.Ordinal);
+        Assert.Contains("lockStatus=locked-permanently", actualQueryString, StringComparison.Ordinal);
+        Assert.DoesNotContain("?&", actualQueryString, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ListConversationsDoesNotSendAnEmptyQueryStringWhenNoParametersAreSpecified()
+    {
+        string? actualQueryString = null;
+
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            HttpRequest request = context.Request;
+            HttpResponse response = context.Response;
+
+            if (request.Path == "/xrpc/chat.bsky.convo.listConvos")
+            {
+                actualQueryString = request.QueryString.Value;
+                response.StatusCode = 200;
+                response.ContentType = "application/json";
+                await response.WriteAsync("""{"convos":[]}""");
+                return;
+            }
+
+            response.StatusCode = 404;
+        });
+
+        AtProtoHttpResult<Chat.Conversations> result =
+            await BlueskyServer.ListConversations(
+                limit: null,
+                cursor: null,
+                readState: null,
+                status: null,
+                kind: null,
+                lockStatus: null,
+                service: TestServerBuilder.DefaultUri,
+                accessCredentials: CreateCredentials(),
+                httpClient: testServer.CreateClient(),
+                cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.True(string.IsNullOrEmpty(actualQueryString));
+    }
 }

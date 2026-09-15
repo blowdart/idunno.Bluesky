@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Text;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
@@ -33,7 +34,7 @@ public static partial class BlueskyServer
     /// Thrown when any of <paramref name="conversationId"/>, <paramref name="messageId"/>, <paramref name="value"/>, <paramref name="accessCredentials"/>,
     /// <paramref name="service"/> or <paramref name="httpClient"/> is <see langword="null"/>.
     /// </exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> has a grapheme length that does not equal 1.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> has a grapheme length that does not equal 1, or is longer than <see cref="Maximum.ReactionLengthInBytes"/> UTF-8 bytes.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -57,6 +58,10 @@ public static partial class BlueskyServer
         ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
         ArgumentOutOfRangeException.ThrowIfNotEqual(value.GetGraphemeLength(), 1);
+
+        // A single grapheme cluster has no upper bound on its encoded length, so the lexicon's maxLength is checked separately
+        // rather than being implied by the grapheme check above.
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(Encoding.UTF8.GetByteCount(value), Maximum.ReactionLengthInBytes);
 
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(accessCredentials);

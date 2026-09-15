@@ -147,6 +147,18 @@ public static class Maximum
     public static readonly int BatchedMessages = 100;
 
     /// <summary>
+    /// The maximum number of UTF-8 bytes in a reaction to a direct message.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A reaction is limited to a single grapheme, but a single grapheme has no upper bound on its encoded length. A sequence of emoji
+    /// joined by zero width joiners is one grapheme cluster and can be arbitrarily long, so this limit is reachable independently of
+    /// the grapheme check.
+    /// </para>
+    /// </remarks>
+    public static readonly int ReactionLengthInBytes = 64;
+
+    /// <summary>
     /// The maximum number of bookmarks that can be returned from GetBookmarks.
     /// </summary>
     public static readonly int Bookmarks = 100;

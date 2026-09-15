@@ -30,6 +30,11 @@ public partial class BlueskyAgent
         ArgumentException.ThrowIfNullOrWhiteSpace(allowIncoming);
         ArgumentException.ThrowIfNullOrWhiteSpace(allowGroupInvites);
 
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
+
         return await SetConversationDeclaration(allowIncoming, allowGroupInvites, cancellationToken: default).ConfigureAwait(false);
     }
 
@@ -53,6 +58,11 @@ public partial class BlueskyAgent
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(allowIncoming);
         ArgumentException.ThrowIfNullOrWhiteSpace(allowGroupInvites);
+
+        if (!IsAuthenticated)
+        {
+            throw new AuthenticationRequiredException();
+        }
 
         var declaration = new Chat.Actor.Declaration(allowIncoming, allowGroupInvites);
 
