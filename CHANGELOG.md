@@ -76,15 +76,12 @@
 
 #### idunno.AtProto.Types
 
-* `TimestampIdentifier.Next()` no longer returns duplicate identifiers when called concurrently. The read of the last issued timestamp, the comparison
-  against the current time and the write back were spread across two separate locks, so concurrent callers could observe the same value and generate
-  identical TIDs. Generating 2,000 TIDs in parallel previously produced only 875 distinct values. The whole read-modify-write now happens under a
-  single lock. As TIDs are used as record keys, colliding values could overwrite an unrelated record.
+* `TimestampIdentifier.Next()` no longer returns duplicate identifiers when called concurrently.
 * `Nsid.TryParse` now returns `false` for `null`, empty or whitespace input rather than throwing an `ArgumentException` or `ArgumentNullException`.
 * `RecordKey` values which are syntactically invalid now throw a `JsonException` when deserialized, rather than allowing a `RecordKeyFormatException`
-  to escape. `RecordKeyConverter` caught `NsidFormatException`, which the `RecordKey` constructor never throws.
+  to escape. 
 * `Did.Method` now returns the correct method for DIDs containing more than three colon separated segments. Previously `did:web:example.com:user:alice`
-  and `did:web:localhost:3000` reported a method of `INVALID`. `Method` participates in `Did` equality, so such DIDs compared equal to each other.
+  and `did:web:localhost:3000` reported a method of `INVALID`.
 * `new Handle(null)` now throws an `ArgumentNullException` rather than a `NullReferenceException`. This also applies to the implicit conversion from
   `string` to `Handle`.
 * `Cid.ToString()` and `Cid.Value` no longer lower case CIDv0 identifiers. CIDv0 is base58btc encoded, whose alphabet is case sensitive, so case
