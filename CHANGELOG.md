@@ -6,6 +6,12 @@
 
 #### idunno.AtProto
 
+* Added `AtProtoAgentOptions.MaximumWellKnownResponseSize`, an optional `maximumWellKnownResponseSize` parameter on the `AtProtoServer.ResolveHandle()`
+  and `Resolution.ResolveHandle()` overloads, and the `AtProtoServer.DefaultMaximumWellKnownResponseSize` constant, which configure the number of bytes
+  read from a `/.well-known/atproto-did` response when resolving a handle. The default is 4KB.
+* Added `AtProtoHttpClient.MaximumResponseSize` and the `AtProtoHttpClient.DefaultMaximumResponseSize` constant, which cap the number of bytes read from
+  an XRPC response body. A response larger than the maximum fails with an `AtErrorDetail` whose `Error` is `ResponseTooLarge`. The default is 32MB.
+  `MaximumResponseSize` is process wide, and applies to every agent and every request.
 * Added `IServiceCollection.AddAtProtoHttpClient()`, which registers the named `HttpClient` an agent constructed with an `IHttpClientFactory` resolves,
   configured with the same SSRF protections, proxy and certificate revocation settings an agent applies when it builds its own `HttpClient`. Supplying
   an `IHttpClientFactory` to an agent without this registration produces a client with none of those protections.
@@ -30,6 +36,8 @@
 
 * Added `BlueskyAgent.UpdateProfile(Profile, Cid?, CancellationToken)` which allows updating a user's profile with an optional `Cid` parameter.
   The `Cid` is used to identify the specific version of the profile being updated, ensuring that updates are applied to the correct version and preventing conflicts.
+* Added an optional `maxPageSize` parameter to `BaseEmbeddedCardGenerator.GetPageContent()` and the `BaseEmbeddedCardGenerator.DefaultMaximumPageSize`
+  constant, which cap the number of bytes read from a page when generating an embedded card. The default is 1MB.
 
 #### idunno.Bluesky.AspNet.Authentication
 
@@ -91,6 +99,29 @@
   discarded, so jetstream metrics were published through the shared static meter instead of the application's meter factory.
 * A jetstream built by `AtProtoJetstreamBuilder` now uses compression by default, matching the default on `JetstreamOptions`. Previously building a
   jetstream, rather than constructing one, silently turned compression off unless `UseCompression(true)` was called.
+* The background token refresh timer now subscribes its elapsed handler exactly once. Previously every start of the timer added another subscription,
+  so the number of refreshes started by each tick doubled, with every one of them racing to exchange the same single use refresh token.
+* A failed background token refresh now restarts the refresh timer so the refresh is retried, and logs the failure. Previously the timer was left
+  stopped, so a single transient failure silently ended background refresh for the lifetime of the agent and the session was left to expire.
+* Credential refreshes are now serialized, and a refresh token which has already been exchanged is no longer presented a second time. Previously
+  concurrent refreshes each presented the same single use refresh token, which fails, and on servers which revoke a rotated token on reuse could end
+  the session.
+* The `Resolution` methods which take an `HttpClient` no longer dispose it. Previously a caller supplied client was disposed by the resolver, so any
+  further use of the caller's, typically shared, `HttpClient` threw an `ObjectDisposedException`.
+* The `Resolution` methods now make their requests through the same SSRF protected handler agents use. Previously they used an unprotected handler,
+  so resolving a handle could be used to make the process issue requests to loopback and private network addresses.
+* `Resolution.ResolvePds` and `AtProtoAgent.ResolvePds` now return `null`, rather than throwing a `NullReferenceException`, when the DID document
+  resolves but advertises no personal data server.
+* Resolving a handle through DNS now treats a handle with more than one `did=` text record as unresolvable, as the specification requires, rather
+  than arbitrarily using the last record returned. A text record which does not parse as a DID no longer abandons the whole DNS lookup.
+* Resolving a handle through `/.well-known/atproto-did` now streams the response and reads at most a configurable number of bytes from it, 4KB by default,
+  rather than buffering the whole body into memory, and trims the result.
+  Previously the response of a host named by the handle being resolved was read without limit, and a response with a trailing newline did not parse.
+* `AtProtoAgent.ResolveAuthorizationServer` now keeps any port on the personal data server `Uri` when it requests the protected resource metadata,
+  ignores advertised authorization servers which are not appropriately secured absolute URIs, and returns `null` instead of throwing when the
+  metadata contains no usable `authorization_servers` entry.
+* `AtProtoJetstream.ConnectAsync` now re-checks the state of the web socket inside its lock, so that concurrent connections cannot dispose a socket
+  another caller is about to connect.
 
 #### idunno.AtProto.Types
 
@@ -107,6 +138,13 @@
 * An invalid `RecordKey` now throws a `RecordKeyFormatException` rather than an `NsidFormatException`.
 * `AtUri` no longer validates the collection segment twice. The duplicate check meant a malformed collection could be reported by either of two code
   paths, only one of which produced an `AtUriFormatException`, leaving an `NsidFormatException` able to escape had the first check ever been changed.
+
+#### idunno.Bluesky
+
+* The embedded card generators no longer buffer an entire page or image into memory before applying their size limits. Both requests now complete as
+  soon as the response headers arrive, and the body is read with a bounded, streaming read. Previously the existing limits on `DownloadAndUploadImageBlob()`
+  were applied only after `HttpClient` had already buffered the whole body, so a hostile or misconfigured site could exhaust memory when a user posted a
+  link to it.
 
 
 ## 6.0.0 - 2026-09-05

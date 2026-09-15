@@ -108,6 +108,12 @@ internal static partial class Logger
     [LoggerMessage(47, LogLevel.Debug, "RefreshSessionIssuedCredentials succeeded for {did} on {service}")]
     internal static partial void RefreshOAuthIssuedCredentialsSucceeded(ILogger logger, Did did, Uri service);
 
+    [LoggerMessage(48, LogLevel.Debug, "Refresh token #{tokenHash} has already been exchanged by another caller, skipping refresh")]
+    internal static partial void RefreshTokenAlreadyExchanged(ILogger logger, string tokenHash);
+
+    [LoggerMessage(49, LogLevel.Error, "Background token refresh failed, the refresh timer has been restarted to retry in {retryIn}ms")]
+    internal static partial void BackgroundTokenRefreshFailed(ILogger logger, double retryIn, Exception? ex);
+
     // Resolution methods logging
     [LoggerMessage(50, LogLevel.Debug, "ResolveHandle called for {handle}")]
     internal static partial void ResolveHandleCalled(ILogger logger, string handle);
@@ -144,6 +150,9 @@ internal static partial class Logger
 
     [LoggerMessage(82, LogLevel.Error, "ResolveAuthorizationServer could not resolve for {pds}")]
     internal static partial void ResolveAuthorizationServerFailed(ILogger logger, Uri pds);
+
+    [LoggerMessage(83, LogLevel.Warning, "ResolveAuthorizationServer ignored the authorization server entry {serverUri} advertised by {pds} as it is not a valid, appropriately secured absolute uri")]
+    internal static partial void ResolveAuthorizationServerSkippedEntry(ILogger logger, Uri pds, string serverUri);
 
     // Repo Operations logging
     [LoggerMessage(90, LogLevel.Debug, "CreateRecord succeeded, created {uri} {cid} in {collection} on {service}")]
@@ -243,6 +252,9 @@ internal static partial class Logger
     [LoggerMessage(204, LogLevel.Error, "AtProtoHttpClient threw when deserializing the response from {method} call to {requestUri}")]
     internal static partial void AtProtoClientResponseDeserializationThrew(ILogger logger, Uri requestUri, HttpMethod method, Exception exception);
 
+    [LoggerMessage(206, LogLevel.Error, "AtProtoHttpClient rejected the response from {method} call to {requestUri} as it exceeded the maximum response size of {maximumResponseSize} bytes")]
+    internal static partial void AtProtoClientResponseTooLarge(ILogger logger, Uri requestUri, HttpMethod method, int maximumResponseSize);
+
     [LoggerMessage(205, LogLevel.Error, "DPoP nonce error encountered on {method} to {service} but no DPoP nonce header was found")]
     internal static partial void AtProtoClientEncounteredDPoPNonceErrorWithoutANonceHeader(ILogger logger, Uri service, HttpMethod method);
 
@@ -288,6 +300,15 @@ internal static partial class Logger
 
     [LoggerMessage(506, LogLevel.Error, "HTTP request for {handle} to {Uri} failed with HTTP status code of {statusCode}")]
     internal static partial void HttpHandleResolutionRequestFailed(ILogger logger, Handle handle, Uri uri, HttpStatusCode statusCode);
+
+    [LoggerMessage(507, LogLevel.Error, "DNS resolution for {handle} returned {recordCount} did text records in {txtRecord}, which is ambiguous, so {handle} cannot be resolved via DNS")]
+    internal static partial void MultipleDidTextRecordsFound(ILogger logger, Handle handle, string txtRecord, int recordCount);
+
+    [LoggerMessage(508, LogLevel.Error, "DNS record {txtRecord} for {handle} did not parse as a DID")]
+    internal static partial void DnsHandleResolutionParseFailed(ILogger logger, Handle handle, string txtRecord);
+
+    [LoggerMessage(509, LogLevel.Error, "HTTP request for {handle} to {Uri} returned more than {maximumLength} bytes")]
+    internal static partial void HttpHandleResolutionResponseTooLarge(ILogger logger, Handle handle, Uri uri, int maximumLength);
 
     // AtProtoServer auth logging
     [LoggerMessage(600, LogLevel.Debug, "Generated oauth login {loginUri} for {authority}, correlation {correlation}")]

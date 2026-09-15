@@ -12,6 +12,7 @@ namespace idunno.AtProto;
 /// </summary>
 public class AtProtoAgentOptions
 {
+    private int _maximumWellKnownResponseSize = AtProtoServer.DefaultMaximumWellKnownResponseSize;
 
     /// <summary>
     /// Default configuration key.
@@ -105,4 +106,25 @@ public class AtProtoAgentOptions
     /// <see langword="false"/> if you are using a debugging proxy which does not support CRLs.
     /// </para>
     public HttpClientOptions? HttpClientOptions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum number of bytes to read from a <c>/.well-known/atproto-did</c> response when resolving a handle.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is zero or negative.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The host a handle is resolved through is chosen by whoever owns the handle, so its response is untrusted and the
+    ///   amount read from it is limited. Raise this only if you need to resolve handles through a host which pads its response.
+    /// </para>
+    /// </remarks>
+    public int MaximumWellKnownResponseSize
+    {
+        get => _maximumWellKnownResponseSize;
+
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            _maximumWellKnownResponseSize = value;
+        }
+    }
 }

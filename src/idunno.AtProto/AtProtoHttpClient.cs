@@ -39,6 +39,35 @@ public class AtProtoHttpClient(
     IMeterFactory? meterFactory = null,
     IList<Func<AtErrorDetail?, AtErrorDetail?>>? errorMappers = null)
 {
+    /// <summary>
+    /// The default value of <see cref="MaximumResponseSize"/>, in bytes.
+    /// </summary>
+    public const int DefaultMaximumResponseSize = 32 * 1024 * 1024;
+
+    private static int s_maximumResponseSize = DefaultMaximumResponseSize;
+
+    /// <summary>
+    /// Gets or sets the maximum number of bytes read from an XRPC response body.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is zero or negative.</exception>
+    /// <remarks>
+    /// <para>
+    ///   This is a backstop against a service returning a response large enough to exhaust the memory of the calling
+    ///   process. XRPC responses are JSON and are ordinarily orders of magnitude smaller than the default, so this
+    ///   only needs raising if you call an endpoint which legitimately returns a very large response.
+    /// </para>
+    /// </remarks>
+    public static int MaximumResponseSize
+    {
+        get => Volatile.Read(ref s_maximumResponseSize);
+
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            Volatile.Write(ref s_maximumResponseSize, value);
+        }
+    }
+
     readonly SocketsHttpHandler _defaultClientHandler = SsrfSocketsHttpHandlerFactory.Create(
                         automaticDecompression: DecompressionMethods.All,
                         loggerFactory: loggerFactory);
@@ -1237,7 +1266,9 @@ public class AtProtoHttpClient<TResult> where TResult : class
             HttpMethod = request.Method
         };
 
-        string responseContent = await responseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        // Bounded and truncating: an error body is only used for diagnostics, so a partial one is better than
+        // allowing a service to dictate the allocation.
+        string responseContent = await HttpContentReader.ReadAsStringTruncating(responseMessage.Content, AtProtoHttpClient.MaximumResponseSize, cancellationToken).ConfigureAwait(false);
         errorDetail.RawContent = responseContent;
 
         if (responseMessage.Content.Headers.ContentType is not null &&
@@ -1570,7 +1601,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
                                 ));
                     }
 
-                    using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false))
+                    using (HttpResponseMessage httpResponseMessage = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false))
                     {
                         _metrics.ResponsesReceived.Add(1, new KeyValuePair<string, object?>("server", service.Host.ToString()));
 
@@ -1602,48 +1633,63 @@ public class AtProtoHttpClient<TResult> where TResult : class
                             {
                                 result.Result = new EmptyResponse() as TResult;
                             }
-                            else if (typeof(TResult) == typeof(string))
-                            {
-                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-                                result.Result = responseContent as TResult;
-                            }
-                            else if (typeof(TResult) == typeof(JsonNode))
-                            {
-                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
-                                result.Result = JsonNode.Parse(responseContent) as TResult;
-                            }
-                            else if (typeof(TResult) == typeof(JsonObject))
-                            {
-                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
-                                result.Result = JsonObject.Parse(responseContent) as TResult;
-                            }
-                            else if (typeof(TResult) == typeof(JsonDocument))
-                            {
-                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
-                                result.Result = JsonDocument.Parse(responseContent) as TResult;
-                            }
                             else
                             {
-                                string responseContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                                string? responseContent = await HttpContentReader.ReadAsString(
+                                    httpResponseMessage.Content,
+                                    AtProtoHttpClient.MaximumResponseSize,
+                                    cancellationToken).ConfigureAwait(false);
 
-                                try
+                                if (responseContent is null)
                                 {
-                                    result.Result = JsonSerializer.Deserialize<TResult>(
-                                        responseContent,
-                                        jsonSerializerOptions);
+                                    // The service returned more than we are willing to allocate, so the response cannot be used.
+                                    Logger.AtProtoClientResponseTooLarge(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, AtProtoHttpClient.MaximumResponseSize);
+
+                                    result.AtErrorDetail = new AtErrorDetail
+                                    {
+                                        Instance = httpRequestMessage.RequestUri,
+                                        HttpMethod = httpRequestMessage.Method,
+                                        Error = "ResponseTooLarge",
+                                        Message = $"The response exceeded the maximum of {AtProtoHttpClient.MaximumResponseSize} bytes."
+                                    };
+
+                                    return result;
                                 }
-                                catch (JsonException ex)
+
+                                if (typeof(TResult) == typeof(string))
                                 {
-                                    _metrics.DeserializationFailures.Add(
-                                        1,
-                                        new KeyValuePair<string, object?>("server", service.Host.ToString()),
-                                        new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint),
-                                        new KeyValuePair<string, object?>("http_method", httpMethod.ToString()),
-                                        new KeyValuePair<string, object?>("type", typeof(TResult).FullName));
-                                    Logger.AtProtoClientResponseDeserializationThrew(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, ex);
+                                    result.Result = responseContent as TResult;
+                                }
+                                else if (typeof(TResult) == typeof(JsonNode))
+                                {
+                                    result.Result = JsonNode.Parse(responseContent) as TResult;
+                                }
+                                else if (typeof(TResult) == typeof(JsonObject))
+                                {
+                                    result.Result = JsonObject.Parse(responseContent) as TResult;
+                                }
+                                else if (typeof(TResult) == typeof(JsonDocument))
+                                {
+                                    result.Result = JsonDocument.Parse(responseContent) as TResult;
+                                }
+                                else
+                                {
+                                    try
+                                    {
+                                        result.Result = JsonSerializer.Deserialize<TResult>(
+                                            responseContent,
+                                            jsonSerializerOptions);
+                                    }
+                                    catch (JsonException ex)
+                                    {
+                                        _metrics.DeserializationFailures.Add(
+                                            1,
+                                            new KeyValuePair<string, object?>("server", service.Host.ToString()),
+                                            new KeyValuePair<string, object?>("xrpc_endpoint", xrpcEndpoint),
+                                            new KeyValuePair<string, object?>("http_method", httpMethod.ToString()),
+                                            new KeyValuePair<string, object?>("type", typeof(TResult).FullName));
+                                        Logger.AtProtoClientResponseDeserializationThrew(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, ex);
+                                    }
                                 }
                             }
                         }
