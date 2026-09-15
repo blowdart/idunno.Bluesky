@@ -197,6 +197,7 @@ public class BlueskyAuthenticationMetrics
         nameof(AuthenticationOutcomes),
         nameof(IdentityStoreMisses),
         nameof(IdentityStoreEvictions),
+        nameof(IdentityStoreWriteFailures),
         nameof(IdentityStoreOperationDuration),
         nameof(CorrelationStateRejections)
         )]
@@ -272,6 +273,11 @@ public class BlueskyAuthenticationMetrics
             name: $"{MeterName.ToLowerInvariant()}.identitystore.evictions.total",
             description: "Total identities evicted from the identity store because it reached its size limit",
             unit: "{evictions}");
+
+        IdentityStoreWriteFailures = meter.CreateCounter<long>(
+            name: $"{MeterName.ToLowerInvariant()}.identitystore.writefailures.total",
+            description: "Total identities which could not be written to the identity store",
+            unit: "{failures}");
 
         IdentityStoreOperationDuration = meter.CreateHistogram<double>(
             name: $"{MeterName.ToLowerInvariant()}.identitystore.operations.duration",
@@ -434,6 +440,19 @@ public class BlueskyAuthenticationMetrics
     /// </para>
     /// </remarks>
     public Counter<long> IdentityStoreEvictions { get; private set; }
+
+    /// <summary>
+    /// Gets the counter of identities which could not be written to the identity store.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   A failed write loses a sign-in, or loses refreshed credentials after the refresh token which produced them has
+    ///   already been spent, so any value here means users are being signed out by the store rather than by their own
+    ///   actions. <see cref="EphemeralIdentityStore"/> raises this only when it is full and compacting it did not make
+    ///   room, which means its size limit is far too small for the number of users signing in.
+    /// </para>
+    /// </remarks>
+    public Counter<long> IdentityStoreWriteFailures { get; private set; }
 
     /// <summary>
     /// Gets the histogram of how long identity store operations took.

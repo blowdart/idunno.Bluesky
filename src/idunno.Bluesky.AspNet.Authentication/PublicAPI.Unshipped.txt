@@ -398,3 +398,6 @@ idunno.Bluesky.AspNet.Authentication.ICorrelationStateCache.TakeOAuthLoginState(
 virtual idunno.Bluesky.AspNet.Authentication.DistributedCacheCorrelationStateCache.TakeOAuthLoginState(System.Guid correlationId) -> System.Threading.Tasks.Task<idunno.AtProto.Authentication.OAuthLoginState?>!
 const idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformer.ProfileClaimsAppliedClaimType = "urn:bluesky:aspnet:profileclaimsapplied" -> string!
 idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationHandler.HttpClientFactory.get -> System.Net.Http.IHttpClientFactory!
+idunno.Bluesky.AspNet.Authentication.BlueskyAuthenticationMetrics.IdentityStoreWriteFailures.get -> System.Diagnostics.Metrics.Counter<long>!
+idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.Dispose() -> void
+virtual idunno.Bluesky.AspNet.Authentication.EphemeralIdentityStore.Dispose(bool disposing) -> void

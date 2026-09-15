@@ -14,24 +14,27 @@ using Microsoft.Extensions.Logging;
 
 namespace idunno.Bluesky.AspNet.Authentication;
 
-internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
+internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache, IDisposable
 {
     internal const int DefaultSizeLimit = 1024;
+
+    // The proportion of the cache to discard when it is full, matching the MemoryCache default.
+    private const double CompactionPercentage = 0.05d;
 
     private static volatile bool s_warned;
     private static volatile bool s_capacityWarned;
 
-    private static MemoryCache? s_cache;
-    private static int s_configuredSizeLimit;
+    private readonly MemoryCache _cache;
+    private readonly int _sizeLimit;
+
+    private bool _disposed;
 
 #if NET9_0_OR_GREATER
     private static readonly Lock s_warnedLock = new ();
-    private static readonly Lock s_takeLock = new ();
-    private static readonly Lock s_cacheLock = new ();
+    private readonly Lock _takeLock = new ();
 #else
     private static readonly object s_warnedLock = new();
-    private static readonly object s_takeLock = new();
-    private static readonly object s_cacheLock = new();
+    private readonly object _takeLock = new();
 #endif
 
     private static readonly TimeSpan s_defaultSlidingExpiration = new(0, 0, 15, 0);
@@ -47,7 +50,8 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
         Logger = loggerFactory.CreateLogger<EphemeralCorrelationStateCache>();
         EntryTTL = entryTimeToLive ?? s_defaultSlidingExpiration;
 
-        EnsureCache(sizeLimit ?? DefaultSizeLimit, Logger);
+        _sizeLimit = sizeLimit ?? DefaultSizeLimit;
+        _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = _sizeLimit });
 
         if (!s_warned)
         {
@@ -62,7 +66,7 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
         }
     }
 
-    private static MemoryCache Cache => s_cache!;
+    private MemoryCache Cache => _cache;
 
     private TimeSpan EntryTTL { get; } = new(0, 15, 0);
 
@@ -77,18 +81,44 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
     {
         ArgumentNullException.ThrowIfNull(state);
 
+        DateTime absoluteExpiration = DateTime.UtcNow.Add(EntryTTL);
+
         MemoryCacheEntryOptions cacheOptions = new MemoryCacheEntryOptions()
-            .SetAbsoluteExpiration(DateTime.UtcNow.Add(EntryTTL))
+            .SetAbsoluteExpiration(absoluteExpiration)
             .SetSize(1);
 
         // Eviction for capacity fails a login which is still in flight, so it needs to be reported rather than
         // looking like a user who took too long over the authorization server.
-        cacheOptions.RegisterPostEvictionCallback(OnStateEvicted, Logger);
+        cacheOptions.RegisterPostEvictionCallback(OnStateEvicted, new EvictionCallbackState(Logger, _sizeLimit));
 
         CorrelationStateSettingContext context = new(state.ToJson());
         await Events.PreStoring(context).ConfigureAwait(false);
 
-        Cache.Set($"{correlationId}", context.State, cacheOptions);
+        string key = $"{correlationId}";
+
+        Cache.Set(key, context.State, cacheOptions);
+
+        // A short lived entry can reach the end of its life between being written and being read back, which leaves it
+        // missing because it expired rather than because the cache had no room for it.
+        if (Cache.TryGetValue(key, out _) || DateTime.UtcNow >= absoluteExpiration)
+        {
+            return;
+        }
+
+        // A size limited MemoryCache rejects an incoming entry when it is full rather than making room for it, only
+        // scheduling a compaction to run later, so without this the state is silently dropped and the login fails at
+        // the callback. Compact takes the proportion of the cache to remove and truncates the count it works out from
+        // it, so asking for one and a half entries' worth guarantees at least one is removed however small it is.
+        int count = Cache.Count;
+        Cache.Compact(count > 0 ? Math.Max(CompactionPercentage, 1.5d / count) : CompactionPercentage);
+
+        Cache.Set(key, context.State, cacheOptions);
+
+        if (!Cache.TryGetValue(key, out _) && DateTime.UtcNow < absoluteExpiration)
+        {
+            throw new InvalidOperationException(
+                $"The correlation state cache is full at its size limit of {_sizeLimit} and could not make room for the login state.");
+        }
     }
 
     /// <inheritdoc/>
@@ -105,7 +135,7 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
         string? encodedState;
 
         // The read and the removal are held together so two concurrent callers cannot both be given the same state.
-        lock (s_takeLock)
+        lock (_takeLock)
         {
             encodedState = Cache.Get($"{correlationId}") as string;
             Cache.Remove($"{correlationId}");
@@ -114,26 +144,10 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
         return await Decode(encodedState).ConfigureAwait(false);
     }
 
-    private static void EnsureCache(int sizeLimit, ILogger logger)
-    {
-        lock (s_cacheLock)
-        {
-            if (s_cache is null)
-            {
-                s_configuredSizeLimit = sizeLimit;
-                s_cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit });
-            }
-            else if (s_configuredSizeLimit != sizeLimit)
-            {
-                logger.EphemeralStoreSizeLimitIgnored(nameof(EphemeralCorrelationStateCache), sizeLimit, s_configuredSizeLimit);
-            }
-        }
-    }
-
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A post eviction callback must not throw, as MemoryCache gives the exception nowhere to go")]
     private static void OnStateEvicted(object key, object? value, EvictionReason reason, object? state)
     {
-        if (reason != EvictionReason.Capacity || state is not ILogger logger || s_capacityWarned)
+        if (reason != EvictionReason.Capacity || state is not EvictionCallbackState callbackState || s_capacityWarned)
         {
             return;
         }
@@ -152,13 +166,26 @@ internal sealed class EphemeralCorrelationStateCache : ICorrelationStateCache
 
         try
         {
-            logger.EphemeralCorrelationStateCacheCapacityReached(s_configuredSizeLimit);
+            callbackState.Logger.EphemeralCorrelationStateCacheCapacityReached(callbackState.SizeLimit);
         }
         catch (Exception)
         {
             // Deliberately ignored. This runs on a thread pool thread after the entry has already gone, so there is
             // nothing to recover and nowhere for an exception to propagate to; a failed diagnostic must not crash the process.
         }
+    }
+
+    private sealed record EvictionCallbackState(ILogger Logger, int SizeLimit);
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _cache.Dispose();
+        _disposed = true;
     }
 
     private async Task<OAuthLoginState?> Decode(string? encodedState)    {
