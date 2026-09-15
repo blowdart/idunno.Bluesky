@@ -106,6 +106,28 @@
 * A jetstream built by `AtProtoJetstreamBuilder` now uses compression by default, matching the default on `JetstreamOptions`. Previously building a
   jetstream, rather than constructing one, silently turned compression off unless `UseCompression(true)` was called.
 
+#### idunno.AtProto.OAuthCallback
+
+* `CallbackServer` now binds Kestrel to the loopback adapter explicitly and ignores ambient configuration. `WebApplication.CreateBuilder()` reads
+  `appsettings.json` from the current working directory, environment variables and the command line, and a `Kestrel:Endpoints` section found there
+  replaced the loopback address the server configured, silently moving the server which receives OAuth authorization codes onto an externally
+  reachable interface whilst `CallbackServer.Uri` continued to report loopback. Host filtering did not contain this, as it only inspects the `Host`
+  header, which any client can set to `127.0.0.1`.
+* `CallbackServer.WaitForCallbackAsync()` now completes when the supplied `CancellationToken` is cancelled. Previously the timeout was implemented by
+  awaiting `Task.Delay(timeout, cancellationToken)`, which throws when the token is cancelled, so the code which cancelled the returned task was never
+  reached and the caller waited forever.
+* `CallbackServer.WaitForCallbackAsync()` no longer completes whilst the response to the callback is still being written, and no longer runs the
+  waiting caller's continuations on the request thread. A caller which did any blocking work when its callback arrived stalled the page the browser was
+  waiting on.
+* `CallbackServer` now surfaces a failure to start, rather than discarding the task returned by `RunAsync()`. If the port was taken between
+  `GetRandomUnusedPort()` returning it and the server binding to it the instance appeared to construct correctly but was dead, and callers waited for a
+  callback which could never arrive.
+* Disposing a `CallbackServer` now completes any pending `WaitForCallbackAsync()` task with an `ObjectDisposedException` instead of leaving it pending
+  forever, and calling `WaitForCallbackAsync()` on a disposed server now throws `ObjectDisposedException`.
+* `CallbackServer` now validates its `port` and `timeoutInSeconds` arguments. A `timeoutInSeconds` large enough to overflow the millisecond conversion
+  previously threw on a background thread where the exception could not be observed.
+* Repeated calls to `CallbackServer.WaitForCallbackAsync()` no longer start an additional timer for each call.
+
 #### idunno.AtProto.Types
 
 * `TimestampIdentifier.Next()` no longer returns duplicate identifiers when called concurrently.

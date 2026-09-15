@@ -295,6 +295,9 @@
     <Project Path="test/idunno.AtProto.Integration.Test/idunno.AtProto.Integration.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
+    <Project Path="test/idunno.AtProto.OAuthCallback.Test/idunno.AtProto.OAuthCallback.Test.csproj">
+      <Build Solution="CodeQL|*" Project="false" />
+    </Project>
     <Project Path="test/idunno.AtProto.Serialization.Test/idunno.AtProto.Serialization.Test.csproj">
       <Build Solution="CodeQL|*" Project="false" />
     </Project>
