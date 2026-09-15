@@ -90,7 +90,6 @@
   asynchronous credential persistence could not be awaited, and any work it started could be abandoned. Callers passing a lambda should change
   `credential => Save(credential)` to `(credential, cancellationToken) => SaveAsync(credential, cancellationToken)`.
 
-
 #### idunno.Bluesky
 
 * `RichText.LinkFacetFeature.Uri` has been changed from a `Uri` type to a `string` type as the Bluesky web app can create facets with illegal URIs. The constructor has also been updated to accept a `string` instead of a `Uri`.
