@@ -642,26 +642,7 @@ public partial class BlueskyAgent
             throw new AuthenticationRequiredException();
         }
 
-        Post post;
-        List<ThreadGateRule>? threadGateRules = null;
-        List<PostGateRule>? postGateRules = null;
-
-        lock (postBuilder)
-        {
-            post = postBuilder.ToPost();
-
-            // The post builder already did the work in taking the default gating preferences and applying them.
-
-            if (postBuilder.ThreadGateRules is not null)
-            {
-                threadGateRules = [.. postBuilder.ThreadGateRules];
-            }
-
-            if (postBuilder.PostGateRules is not null)
-            {
-                postGateRules = [.. postBuilder.PostGateRules];
-            }
-        }
+        Post post = postBuilder.ToPost(out List<ThreadGateRule>? threadGateRules, out List<PostGateRule>? postGateRules);
 
         return await CreatePost(
             post,

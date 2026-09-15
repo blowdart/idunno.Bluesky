@@ -65,7 +65,7 @@ public static partial class BlueskyServer
         BlueskyHttpClient<SearchActorsResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         AtProtoHttpResult<SearchActorsResponse> response = await request.Get(
             service,
-            $"/xrpc/app.bsky.actor.searchActors?q={Uri.EscapeDataString(q)}&limit={limit}&cursor={cursor}",
+            $"/xrpc/app.bsky.actor.searchActors?q={Uri.EscapeDataString(q)}&limit={limit}&cursor={Uri.EscapeDataString(cursor ?? string.Empty)}",
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,

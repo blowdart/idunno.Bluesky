@@ -147,6 +147,31 @@
 #### idunno.Bluesky
 
 * The embedded card generators no longer buffer an entire page or image into memory before applying their size limits.
+* `RichText.DefaultFacetExtractor` no longer extracts a mention from an `@` which is not preceded by the start of the text, whitespace or an opening
+  parenthesis. An email address in a post, such as `bob@example.com`, was extracted as a mention of the handle `example.com`, which silently mentioned
+  and notified whoever holds that handle. This also means that two mentions which are not separated, such as `@alice.example@bob.example`, are now
+  read as a single mention, matching the behaviour documented for Bluesky rich text.
+* `RichText.DefaultFacetExtractor` no longer abandons the rest of the text when it skips a tag. A tag which was only punctuation, such as `#!`, or one
+  longer than the maximum tag length, discarded every hash tag or cash tag which followed it in the post.
+* `RichText.DefaultFacetExtractor` now returns the correct byte range and tag value when a hash tag or cash tag is preceded by whitespace other than a
+  space, or by an opening parenthesis. Previously only a space was accounted for, so a tag following a tab or a newline produced a facet whose range
+  covered the preceding whitespace and whose value retained its `#` prefix, and `($AAPL)` produced a tag of `($AAPL`.
+* `RichText.DefaultFacetExtractor` now extracts a single letter cash tag which starts the post text, and throws an `ArgumentNullException` rather than a
+  `NullReferenceException` when the text it is given is `null`.
+* The regular expressions used by `RichText.DefaultFacetExtractor` now use a one second match timeout rather than five seconds.
+* `BlueskyAgent.Post(PostBuilder, CancellationToken)` now captures the post and its thread gate and post gate rules under the lock which `PostBuilder`
+  uses for its own state. It previously locked the `PostBuilder` instance itself, which is a different lock to the one the builder takes internally, so
+  the two were never mutually exclusive. A concurrent mutation could publish a post with gating, which controls who may reply to, embed or quote it,
+  that did not match the rules the caller configured.
+* `PostBuilder` now takes its lock when reading its state as well as when writing it. `ThreadGateRules`, `PostGateRules`, `Embed`, `DisableReplies`,
+  `HasText`, `HasImages`, `HasGalleryImages`, `HasTags`, `HasVideo` and `Equals()` read mutable state without synchronization, and `Text`, `WithText()`
+  and `EmbedRecord()` wrote it without synchronization even though the matching `Text` getter locked.
+* `PostBuilder.ExtractFacets()` no longer applies facets when the post text changed whilst extraction was running. Facet indexes are byte offsets into
+  the text they were extracted from, so applying them to different text produced facets covering the wrong range.
+* `TypeResolver.JsonTypeInfoResolvers` now returns a read only list. It previously returned the live list, allowing any caller to change how every
+  consumer in the process deserializes AT Protocol and Bluesky types.
+* The `cursor` parameter on `GetSuggestions()`, `SearchActors()` and `GetBookmarks()`, and the `id` parameter on `DeleteDraft()`, are now escaped before
+  being placed in the query string, matching the other paged endpoints.
 
 ## 6.0.0 - 2026-09-05
 

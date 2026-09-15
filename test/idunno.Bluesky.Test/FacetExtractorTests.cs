@@ -32,6 +32,12 @@ public class FacetExtractorTests
     [InlineData("# ", 0)]
     [InlineData("#sixtyFour0123456789012345678901234567890123456789012345678901234", 1)]
     [InlineData("#sixtyFive01234567890123456789012345678901234567890123456789012345", 0)]
+    // A tag that is skipped must not stop later tags from being extracted.
+    [InlineData("#! #realtag", 1)]
+    [InlineData("#sixtyFive01234567890123456789012345678901234567890123456789012345 #realtag", 1)]
+    // Any whitespace, not just a space, may precede a tag.
+    [InlineData("hello\n#world", 1)]
+    [InlineData("hello\t#world", 1)]
     public async Task HashTagsShouldCountCorrectly(string text, int expectedCount)
     {
         DefaultFacetExtractor extractor = new(MockResolver);
@@ -58,6 +64,10 @@ public class FacetExtractorTests
     [InlineData("$aapl $!msft", 1)]
     [InlineData("$aapl $!", 1)]
     [InlineData("$aapl $msft $abpww", 3)]
+    // A single letter ticker at the start of the text is still a cash tag.
+    [InlineData("$F", 1)]
+    // An opening parenthesis may precede a cash tag and must not become part of it.
+    [InlineData("buy ($AAPL) now", 1)]
     public async Task CashTagsShouldCountCorrectly(string text, int expectedCount)
     {
         DefaultFacetExtractor extractor = new(MockResolver);
@@ -92,6 +102,9 @@ public class FacetExtractorTests
     [InlineData(" ##tag ", 1, 6)]
     [InlineData("##tag!", 0, 5)]
     [InlineData(" ##tag!", 1, 6)]
+    // The facet must cover the tag only, never the whitespace the pattern consumed before it.
+    [InlineData("hello\n#world", 6, 12)]
+    [InlineData("hello\t#world", 6, 12)]
     public async Task HashTagsShouldPositionCorrectly(string text, int expectedStartPosition, int expectedEndPosition)
     {
         DefaultFacetExtractor extractor = new(MockResolver);
@@ -123,6 +136,9 @@ public class FacetExtractorTests
     [InlineData("  $aapl", 2, 7)]
     [InlineData("  $aapl ", 2, 7)]
     [InlineData("  $aapl  ", 2, 7)]
+    // The facet must cover the tag only, never the parenthesis the pattern consumed before it.
+    [InlineData("($AAPL)", 1, 6)]
+    [InlineData("buy ($AAPL) now", 5, 10)]
     public async Task CashTagsShouldPositionCorrectly(string text, int expectedStartPosition, int expectedEndPosition)
     {
         DefaultFacetExtractor extractor = new(MockResolver);
@@ -152,6 +168,9 @@ public class FacetExtractorTests
     [InlineData("#tag ", "tag")]
     [InlineData(" #tag", "tag")]
     [InlineData(" ##tag", "#tag")]
+    // The tag value must never include the whitespace the pattern consumed before it.
+    [InlineData("hello\n#world", "world")]
+    [InlineData("hello\t#world", "world")]
     public async Task HashTagsShouldExtractTheTagCorrectly(string text, string expectedTag)
     {
         DefaultFacetExtractor extractor = new(MockResolver);
@@ -175,7 +194,12 @@ public class FacetExtractorTests
     }
 
     [Theory]
+    // A cash tag keeps its $ prefix in the tag value, unlike a hash tag which has its # stripped.
+    // This is deliberate: Bluesky treats #tag and $tag as distinct tags.
     [InlineData("$money", "$money")]
+    // The tag value must never include the parenthesis the pattern consumed before it.
+    [InlineData("($AAPL)", "$AAPL")]
+    [InlineData("buy ($AAPL) now", "$AAPL")]
     public async Task CashTagsShouldExtractTheTagCorrectly(string text, string expectedTag)
     {
         DefaultFacetExtractor extractor = new(MockResolver);
@@ -289,7 +313,12 @@ public class FacetExtractorTests
     [InlineData("@ blowdart.me ", 0)]
     [InlineData(" @blowdart.me ", 1)]
     [InlineData("@blowdart.me @blowdart.me", 2)]
-    [InlineData("@blowdart.me@blowdart.me", 2)]
+    // A mention must be preceded by the start of the text, whitespace or an opening parenthesis,
+    // so the second handle here is not a mention. This is what stops an email address such as
+    // bob@example.com from being extracted as a mention of example.com.
+    [InlineData("@blowdart.me@blowdart.me", 1)]
+    [InlineData("bob@example.com", 0)]
+    [InlineData("mail me at bob@blowdart.me please", 0)]
     [InlineData("@blowdart.me @handle.invalid", 1)]
     [InlineData("@blowdart.me @handle.invalid @bot.idunno.blue", 2)]
     public async Task MentionsShouldCountCorrectly(string text, int expectedCount)
