@@ -452,9 +452,7 @@ public class FacetExtractorTests
     [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Mocking ResolveHandle() signature.")]
     [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Mocking ResolveHandle().")]
     [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Mocking ResolveHandle() signature.")]
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
     private async Task<Did?> MockResolver(string handle, CancellationToken cancellationToken = default)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
     {
         if (_resolutionResult.TryGetValue(handle, out Did? value))
         {
