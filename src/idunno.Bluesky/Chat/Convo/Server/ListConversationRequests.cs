@@ -31,7 +31,7 @@ public partial class BlueskyServer
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessCredentials"/>, or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="limit"/> is out of range.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is out of range.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -50,20 +50,31 @@ public partial class BlueskyServer
         int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
-        if (limit.HasValue)
-        {
-            ArgumentOutOfRangeException.ThrowIfZero(limit.Value);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(limit.Value, 100);
-        }
-
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        StringBuilder queryStringBuilder = new();
-        if (limit.HasValue)
+        if (limit is not null)
         {
-            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"limit={limit.Value}");
+            ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.ConversationRequestsToList);
+        }
+
+        StringBuilder queryStringBuilder = new();
+
+        if (cursor is not null)
+        {
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"cursor={Uri.EscapeDataString(cursor)}");
+        }
+
+        if (limit is not null)
+        {
+            if (queryStringBuilder.Length != 0)
+            {
+                queryStringBuilder.Append('&');
+            }
+
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"limit={limit}");
         }
 
         string queryString = queryStringBuilder.ToString();

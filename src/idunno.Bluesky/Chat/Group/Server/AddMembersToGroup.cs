@@ -26,7 +26,7 @@ public partial class BlueskyServer
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/> or <paramref name="members"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/>, <paramref name="members"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="members"/> is empty.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
@@ -48,14 +48,23 @@ public partial class BlueskyServer
     {
         ArgumentNullException.ThrowIfNull(conversationId);
         ArgumentNullException.ThrowIfNull(members);
-        ArgumentOutOfRangeException.ThrowIfZero(members.Count());
+
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(accessCredentials);
+        ArgumentNullException.ThrowIfNull(httpClient);
+
+        // Materialize the sequence so that it is only enumerated once; the caller may have supplied a
+        // deferred query or a single pass iterator, which would otherwise yield different results
+        // when counted and when serialized.
+        ICollection<Did> memberList = [.. members];
+        ArgumentOutOfRangeException.ThrowIfZero(memberList.Count);
 
         BlueskyHttpClient<AddMembersResponse> client = new(ChatProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<AddMembersResponse> response = await client.Post(
             service,
             "/xrpc/chat.bsky.group.addMembers",
-            new AddMembersRequest(conversationId, members),
+            new AddMembersRequest(conversationId, memberList),
             credentials: accessCredentials,
             httpClient: httpClient,
             jsonSerializerOptions: BlueskyJsonSerializerOptions,

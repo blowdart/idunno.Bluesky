@@ -138,7 +138,7 @@ namespace idunno.Bluesky;
 
 [JsonSerializable(typeof(Chat.ConversationViewBase), TypeInfoPropertyName = "ChatBSkyConvoViewBase")]
 [JsonSerializable(typeof(Chat.ConversationView), TypeInfoPropertyName = "ChatBSkyConvoView")]
-[JsonSerializable(typeof(Chat.Group.JoinRequestConversationView), TypeInfoPropertyName = "ChatBSkyConvoViewWithMessages")]
+[JsonSerializable(typeof(Chat.Group.JoinRequestConversationView), TypeInfoPropertyName = "ChatBSkyGroupJoinRequestConvoView")]
 
 [JsonSerializable(typeof(Chat.Convo.Model.AcceptConversationRequest))]
 [JsonSerializable(typeof(Chat.Convo.Model.AcceptConversationResponse))]
@@ -419,7 +419,6 @@ namespace idunno.Bluesky;
 [JsonSerializable(typeof(Chat.Group.JoinLinkPreviewViewBase))]
 [JsonSerializable(typeof(Chat.Group.JoinLinkView))]
 [JsonSerializable(typeof(Chat.Group.JoinLinkViewerState))]
-[JsonSerializable(typeof(Chat.Group.JoinRequestConversationView))]
 [JsonSerializable(typeof(Chat.Group.JoinRequestView))]
 [JsonSerializable(typeof(PagedViewReadOnlyCollection<Chat.Group.JoinRequestConversationView>))]
 [JsonSerializable(typeof(PagedViewReadOnlyCollection<Chat.Group.JoinRequestView>))]

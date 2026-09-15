@@ -26,6 +26,7 @@ public partial class BlueskyServer
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="code"/> is <see langword="null"/> or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -44,6 +45,10 @@ public partial class BlueskyServer
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(code);
+
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(accessCredentials);
+        ArgumentNullException.ThrowIfNull(httpClient);
 
         BlueskyHttpClient<RequestJoinResponse> client = new(ChatProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 

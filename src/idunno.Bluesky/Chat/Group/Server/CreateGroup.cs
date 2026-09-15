@@ -30,8 +30,8 @@ public partial class BlueskyServer
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="members"/> or <paramref name="name"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="members"/> is empty or contains more than 49 members, or when <paramref name="name"/> exceeds the maximum length.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="members"/>, <paramref name="name"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="members"/> is empty or exceeds the maximum number of members, or when <paramref name="name"/> exceeds the maximum length.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -52,10 +52,14 @@ public partial class BlueskyServer
     {
         ArgumentNullException.ThrowIfNull(members);
         ArgumentOutOfRangeException.ThrowIfZero(members.Count);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(members.Count, 10000);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(members.Count, Maximum.GroupMembers);
         ArgumentNullException.ThrowIfNull(name);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, 500);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetGraphemeLength(), 50);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, Maximum.GroupNameLengthInCharacters);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetGraphemeLength(), Maximum.GroupNameLengthInGraphemes);
+
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(accessCredentials);
+        ArgumentNullException.ThrowIfNull(httpClient);
 
         BlueskyHttpClient<CreateGroupResponse> client = new(ChatProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 

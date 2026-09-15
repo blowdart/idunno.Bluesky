@@ -13,10 +13,10 @@ internal record CreateGroupRequest
     {
         ArgumentNullException.ThrowIfNull(members);
         ArgumentOutOfRangeException.ThrowIfZero(members.Count);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(members.Count, 49);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(members.Count, Maximum.GroupMembers);
         ArgumentNullException.ThrowIfNull(name);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, 500);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetGraphemeLength(), 50);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, Maximum.GroupNameLengthInCharacters);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetGraphemeLength(), Maximum.GroupNameLengthInGraphemes);
 
         Members = members;
         Name = name;
