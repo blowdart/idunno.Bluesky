@@ -89,6 +89,8 @@
   unset, which made logging out of an OAuth session throw.
 * `AtProtoJetstreamBuilder.Build()` now passes the `IMeterFactory` given to `WithMeterFactory()` to the jetstream it builds. Previously it was
   discarded, so jetstream metrics were published through the shared static meter instead of the application's meter factory.
+* A jetstream built by `AtProtoJetstreamBuilder` now uses compression by default, matching the default on `JetstreamOptions`. Previously building a
+  jetstream, rather than constructing one, silently turned compression off unless `UseCompression(true)` was called.
 
 #### idunno.AtProto.Types
 

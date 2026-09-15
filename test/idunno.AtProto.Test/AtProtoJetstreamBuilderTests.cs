@@ -69,6 +69,17 @@ public class AtProtoJetstreamBuilderTests
     }
 
     [Fact]
+    public void ABuiltJetstreamUsesCompressionUnlessItIsTurnedOff()
+    {
+        // The builder used to leave compression off by default while JetstreamOptions turned it on, so building a
+        // jetstream rather than constructing one silently gave up compression.
+        using AtProtoJetstream jetstream = AtProtoJetstreamBuilder.Create().Build();
+
+        Assert.True(jetstream.Options.UseCompression);
+        Assert.Equal(new JetstreamOptions().UseCompression, jetstream.Options.UseCompression);
+    }
+
+    [Fact]
     public void BuildPassesTheRemainingOptionsToTheJetstream()
     {
         TaskFactory taskFactory = new(TaskScheduler.Default);
