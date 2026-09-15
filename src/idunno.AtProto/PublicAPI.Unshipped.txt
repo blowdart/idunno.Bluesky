@@ -148,3 +148,5 @@ static idunno.AtProto.ServiceCollectionExtensions.AddAtProtoHttpClient(this Micr
 static idunno.AtProto.ServiceCollectionExtensions.AddAtProtoHttpClient(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
 virtual idunno.AtProto.AtProtoAgent.InternalOnCredentialsUpdatedCallBack(idunno.AtProto.Authentication.AtProtoCredential! credentials, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 virtual idunno.AtProto.AtProtoAgent.OnCredentialsUpdatedAsync(idunno.AtProto.Events.CredentialsUpdatedEventArgs! e, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+idunno.AtProto.AtProtoHttpClient.OnResponseReceived.set -> void
+idunno.AtProto.AtProtoHttpClient.OnSendingRequest.set -> void

@@ -105,6 +105,16 @@
   discarded, so jetstream metrics were published through the shared static meter instead of the application's meter factory.
 * A jetstream built by `AtProtoJetstreamBuilder` now uses compression by default, matching the default on `JetstreamOptions`. Previously building a
   jetstream, rather than constructing one, silently turned compression off unless `UseCompression(true)` was called.
+* The response body is now buffered, up to `MaximumResponseSize` bytes, before an `OnResponseReceived` handler is called. Requests are made with
+  `HttpCompletionOption.ResponseHeadersRead`, so the handler was previously given an unbuffered network stream and a handler which read it allocated
+  whatever the service chose to send, bypassing `MaximumResponseSize` entirely. A response larger than the limit is now rejected as `ResponseTooLarge`
+  without the handler being called. Responses are not buffered when no handler has been attached.
+* `AtProtoHttpClient.OnSendingRequest` and `AtProtoHttpClient.OnResponseReceived` can now be set. Both were documented as settable but only had a
+  getter, so neither handler could be attached through the non-generic client at all. Setting either to `null` now throws an `ArgumentNullException`
+  rather than leaving the client in a state where sending a request would throw a `NullReferenceException`.
+* Reading a response body no longer throws from `ArrayPool` when `MaximumResponseSize` is set above 1GB. The read buffer was doubled in `int`
+  arithmetic, which overflowed to a negative length rather than stopping at `MaximumResponseSize`, so an over-large response threw instead of being
+  reported as `ResponseTooLarge`.
 
 #### idunno.AtProto.OAuthCallback
 

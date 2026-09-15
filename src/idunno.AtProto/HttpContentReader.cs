@@ -110,7 +110,9 @@ internal static class HttpContentReader
                 {
                     if (bytesRead == buffer.Length)
                     {
-                        byte[] grown = ArrayPool<byte>.Shared.Rent(Math.Min(buffer.Length * 2, maximumLength));
+                        // Grow through a long, as doubling a buffer larger than half of int.MaxValue would otherwise
+                        // overflow to a negative length and throw from Rent rather than stopping at maximumLength.
+                        byte[] grown = ArrayPool<byte>.Shared.Rent((int)Math.Min((long)buffer.Length * 2, maximumLength));
                         Buffer.BlockCopy(buffer, 0, grown, 0, bytesRead);
                         ArrayPool<byte>.Shared.Return(buffer);
                         buffer = grown;
