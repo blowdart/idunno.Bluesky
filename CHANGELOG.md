@@ -99,29 +99,6 @@
   discarded, so jetstream metrics were published through the shared static meter instead of the application's meter factory.
 * A jetstream built by `AtProtoJetstreamBuilder` now uses compression by default, matching the default on `JetstreamOptions`. Previously building a
   jetstream, rather than constructing one, silently turned compression off unless `UseCompression(true)` was called.
-* The background token refresh timer now subscribes its elapsed handler exactly once. Previously every start of the timer added another subscription,
-  so the number of refreshes started by each tick doubled, with every one of them racing to exchange the same single use refresh token.
-* A failed background token refresh now restarts the refresh timer so the refresh is retried, and logs the failure. Previously the timer was left
-  stopped, so a single transient failure silently ended background refresh for the lifetime of the agent and the session was left to expire.
-* Credential refreshes are now serialized, and a refresh token which has already been exchanged is no longer presented a second time. Previously
-  concurrent refreshes each presented the same single use refresh token, which fails, and on servers which revoke a rotated token on reuse could end
-  the session.
-* The `Resolution` methods which take an `HttpClient` no longer dispose it. Previously a caller supplied client was disposed by the resolver, so any
-  further use of the caller's, typically shared, `HttpClient` threw an `ObjectDisposedException`.
-* The `Resolution` methods now make their requests through the same SSRF protected handler agents use. Previously they used an unprotected handler,
-  so resolving a handle could be used to make the process issue requests to loopback and private network addresses.
-* `Resolution.ResolvePds` and `AtProtoAgent.ResolvePds` now return `null`, rather than throwing a `NullReferenceException`, when the DID document
-  resolves but advertises no personal data server.
-* Resolving a handle through DNS now treats a handle with more than one `did=` text record as unresolvable, as the specification requires, rather
-  than arbitrarily using the last record returned. A text record which does not parse as a DID no longer abandons the whole DNS lookup.
-* Resolving a handle through `/.well-known/atproto-did` now streams the response and reads at most a configurable number of bytes from it, 4KB by default,
-  rather than buffering the whole body into memory, and trims the result.
-  Previously the response of a host named by the handle being resolved was read without limit, and a response with a trailing newline did not parse.
-* `AtProtoAgent.ResolveAuthorizationServer` now keeps any port on the personal data server `Uri` when it requests the protected resource metadata,
-  ignores advertised authorization servers which are not appropriately secured absolute URIs, and returns `null` instead of throwing when the
-  metadata contains no usable `authorization_servers` entry.
-* `AtProtoJetstream.ConnectAsync` now re-checks the state of the web socket inside its lock, so that concurrent connections cannot dispose a socket
-  another caller is about to connect.
 
 #### idunno.AtProto.Types
 
