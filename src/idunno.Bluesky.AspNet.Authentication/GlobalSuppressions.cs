@@ -5,4 +5,4 @@
 
 using System.Diagnostics.CodeAnalysis;
 
-[assembly: SuppressMessage("Major Code Smell", "S1066:Mergeable \"if\" statements should be combined", Justification = "<Pending>", Scope = "member", Target = "~M:idunno.Bluesky.AspNet.Authentication.ProfileClaimsTransformer.SupplementClaimsPrincipal(System.Security.Claims.ClaimsPrincipal,idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry)~System.Security.Claims.ClaimsPrincipal")]
+[assembly: SuppressMessage("Major Code Smell", "S1066:Mergeable \"if\" statements should be combined", Justification = "<Pending>", Scope = "member", Target = "~M:idunno.Bluesky.AspNet.Authentication.BlueskyClaimsTransformer.SupplementClaimsPrincipal(System.Security.Claims.ClaimsPrincipal,idunno.Bluesky.AspNet.Authentication.ProfileCacheEntry)~System.Security.Claims.ClaimsPrincipal")]

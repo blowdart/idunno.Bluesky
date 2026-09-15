@@ -23,7 +23,7 @@ namespace idunno.Bluesky.AspNet.Authentication;
 /// <remarks>
 /// <para>This transformer requires the an access token issued with transition:generic scope.</para>
 /// </remarks>
-public sealed class ProfileClaimsTransformer: IClaimsTransformation
+public sealed class BlueskyClaimsTransformer : IClaimsTransformation
 {
     private readonly BlueskyAuthenticationMetrics _metrics;
 
@@ -41,10 +41,10 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
     public const string ProfileClaimsAppliedClaimType = "urn:bluesky:aspnet:profileclaimsapplied";
 
     /// <summary>
-    /// Create a new instance of <see cref="ProfileClaimsTransformer"/>
+    /// Create a new instance of <see cref="BlueskyClaimsTransformer"/>
     /// </summary>
     /// <param name="loggerFactory">The <see cref="LoggerFactory"/> to create loggers from.</param>
-    /// <param name="options">The <see cref="ProfileClaimsTransformerOptions"/> to configure the transformer.</param>
+    /// <param name="options">The <see cref="BlueskyClaimsTransformerOptions"/> to configure the transformer.</param>
     /// <param name="blueskyAgentOptions">The <see cref="Bluesky.BlueskyAgentOptions"/> to use for the agent retrieving the profile.</param>
     /// <param name="blueskyAuthenticationOptions">
     ///   The <see cref="BlueskyAuthenticationOptions"/> used to locate the <see cref="IIdentityStore"/> any
@@ -55,9 +55,9 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
     ///   Thrown if <paramref name="options"/>, <paramref name="blueskyAgentOptions"/> or
     ///   <paramref name="blueskyAuthenticationOptions"/> is <see langword="null"/>.
     /// </exception>
-    public ProfileClaimsTransformer(
+    public BlueskyClaimsTransformer(
         ILoggerFactory loggerFactory,
-        IOptionsMonitor<ProfileClaimsTransformerOptions> options,
+        IOptionsMonitor<BlueskyClaimsTransformerOptions> options,
         IOptionsMonitor<BlueskyAgentOptions> blueskyAgentOptions,
         IOptionsMonitor<BlueskyAuthenticationOptions> blueskyAuthenticationOptions,
         IMeterFactory? meterFactory = null)
@@ -82,7 +82,7 @@ public sealed class ProfileClaimsTransformer: IClaimsTransformation
     private IOptionsMonitor<BlueskyAuthenticationOptions> AuthenticationOptions { get; }
 
     [NotNull]
-    private IOptionsMonitor<ProfileClaimsTransformerOptions> Options { get; }
+    private IOptionsMonitor<BlueskyClaimsTransformerOptions> Options { get; }
 
     private IProfileCache Cache
     {

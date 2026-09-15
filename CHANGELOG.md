@@ -118,11 +118,7 @@
 
 #### idunno.Bluesky
 
-* The embedded card generators no longer buffer an entire page or image into memory before applying their size limits. Both requests now complete as
-  soon as the response headers arrive, and the body is read with a bounded, streaming read. Previously the existing limits on `DownloadAndUploadImageBlob()`
-  were applied only after `HttpClient` had already buffered the whole body, so a hostile or misconfigured site could exhaust memory when a user posted a
-  link to it.
-
+* The embedded card generators no longer buffer an entire page or image into memory before applying their size limits.
 
 ## 6.0.0 - 2026-09-05
 

@@ -7,10 +7,10 @@ using Microsoft.Extensions.Options;
 namespace idunno.Bluesky.AspNet.Authentication;
 
 /// <summary>
-/// Initializes a new instance of <see cref="PostConfigureProfileClaimsTransformerOptions"/> used to set default options..
+/// Initializes a new instance of <see cref="PostConfigureBlueskyClaimsTransformerOptions"/> used to set default options..
 /// </summary>
 /// <param name="loggerFactory">The <see cref="ILoggerFactory"/> used to create loggers.</param>
-public class PostConfigureProfileClaimsTransformerOptions(ILoggerFactory loggerFactory) : IPostConfigureOptions<ProfileClaimsTransformerOptions>
+public class PostConfigureBlueskyClaimsTransformerOptions(ILoggerFactory loggerFactory) : IPostConfigureOptions<BlueskyClaimsTransformerOptions>
 {
     /// <summary>
     /// Invoked to post configure a TOptions instance.
@@ -18,7 +18,7 @@ public class PostConfigureProfileClaimsTransformerOptions(ILoggerFactory loggerF
     /// <param name="name">The name of the options instance being configured.</param>
     /// <param name="options">The options instance to configure.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> or <paramref name="name"/> is <see langword="null"/></exception>
-    public void PostConfigure(string? name, ProfileClaimsTransformerOptions options)
+    public void PostConfigure(string? name, BlueskyClaimsTransformerOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
 

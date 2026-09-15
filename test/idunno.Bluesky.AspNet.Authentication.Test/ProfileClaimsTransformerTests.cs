@@ -16,20 +16,20 @@ namespace idunno.Bluesky.AspNet.Authentication.Test;
 
 public class ProfileClaimsTransformerTests
 {
-    private static ProfileClaimsTransformer CreateTransformer()
+    private static BlueskyClaimsTransformer CreateTransformer()
     {
         ServiceCollection services = new();
 
         services.AddLogging();
-        services.AddOptions<ProfileClaimsTransformerOptions>();
+        services.AddOptions<BlueskyClaimsTransformerOptions>();
         services.AddOptions<BlueskyAgentOptions>();
         services.AddOptions<BlueskyAuthenticationOptions>();
 
         ServiceProvider provider = services.BuildServiceProvider();
 
-        return new ProfileClaimsTransformer(
+        return new BlueskyClaimsTransformer(
             NullLoggerFactory.Instance,
-            provider.GetRequiredService<IOptionsMonitor<ProfileClaimsTransformerOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<BlueskyClaimsTransformerOptions>>(),
             provider.GetRequiredService<IOptionsMonitor<BlueskyAgentOptions>>(),
             provider.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>(),
             null);
@@ -38,7 +38,7 @@ public class ProfileClaimsTransformerTests
     [Fact]
     public async Task TransformThrowsWhenThePrincipalIsNull()
     {
-        ProfileClaimsTransformer transformer = CreateTransformer();
+        BlueskyClaimsTransformer transformer = CreateTransformer();
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => transformer.TransformAsync(null!));
     }
@@ -48,7 +48,7 @@ public class ProfileClaimsTransformerTests
     {
         // Claims transformation can run more than once for a request. Without the marker claim a principal would be
         // supplemented again on every run, accumulating a duplicate set of profile claims each time.
-        ProfileClaimsTransformer transformer = CreateTransformer();
+        BlueskyClaimsTransformer transformer = CreateTransformer();
 
         Did did = TestData.NewDid();
         ClaimsPrincipal principal = new(new ClaimsIdentity(
@@ -58,7 +58,7 @@ public class ProfileClaimsTransformerTests
                 new Claim(AtProtoClaims.RefreshToken, "refresh-token"),
                 new Claim(AtProtoClaims.DPoPProof, "proof"),
                 new Claim(AtProtoClaims.DPoPNonce, "nonce"),
-                new Claim(ProfileClaimsTransformer.ProfileClaimsAppliedClaimType, "true", ClaimValueTypes.Boolean),
+                new Claim(BlueskyClaimsTransformer.ProfileClaimsAppliedClaimType, "true", ClaimValueTypes.Boolean),
             ],
             "Bluesky"));
 
@@ -70,7 +70,7 @@ public class ProfileClaimsTransformerTests
     [Fact]
     public async Task APrincipalWithoutAtProtoCredentialsIsReturnedUnchanged()
     {
-        ProfileClaimsTransformer transformer = CreateTransformer();
+        BlueskyClaimsTransformer transformer = CreateTransformer();
 
         ClaimsPrincipal principal = new(new ClaimsIdentity(
             [new Claim(System.Security.Claims.ClaimTypes.Name, "someone")],
@@ -82,7 +82,7 @@ public class ProfileClaimsTransformerTests
     [Fact]
     public async Task AnUnauthenticatedPrincipalIsReturnedUnchanged()
     {
-        ProfileClaimsTransformer transformer = CreateTransformer();
+        BlueskyClaimsTransformer transformer = CreateTransformer();
 
         ClaimsPrincipal principal = new();
 
@@ -93,7 +93,7 @@ public class ProfileClaimsTransformerTests
     public void TheMarkerClaimTypeIsNamespaced()
     {
         // The marker travels in the principal, so it needs to be something an application will not collide with.
-        Assert.Equal("urn:bluesky:aspnet:profileclaimsapplied", ProfileClaimsTransformer.ProfileClaimsAppliedClaimType);
+        Assert.Equal("urn:bluesky:aspnet:profileclaimsapplied", BlueskyClaimsTransformer.ProfileClaimsAppliedClaimType);
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public class ProfileClaimsTransformerTests
 
         services.AddLogging();
         services.AddMetrics();
-        services.Configure<ProfileClaimsTransformerOptions>(options => options.Cache = new StubProfileCache());
+        services.Configure<BlueskyClaimsTransformerOptions>(options => options.Cache = new StubProfileCache());
         services.AddOptions<BlueskyAgentOptions>();
         services.AddOptions<BlueskyAuthenticationOptions>();
 
@@ -122,9 +122,9 @@ public class ProfileClaimsTransformerTests
             BlueskyAuthenticationMetrics.MeterName,
             "idunno.bluesky.aspnet.authentication.profilecache.misses.total");
 
-        ProfileClaimsTransformer transformer = new(
+        BlueskyClaimsTransformer transformer = new(
             NullLoggerFactory.Instance,
-            provider.GetRequiredService<IOptionsMonitor<ProfileClaimsTransformerOptions>>(),
+            provider.GetRequiredService<IOptionsMonitor<BlueskyClaimsTransformerOptions>>(),
             provider.GetRequiredService<IOptionsMonitor<BlueskyAgentOptions>>(),
             provider.GetRequiredService<IOptionsMonitor<BlueskyAuthenticationOptions>>(),
             meterFactory);
@@ -135,7 +135,7 @@ public class ProfileClaimsTransformerTests
             new ClaimsPrincipal(TestData.AuthenticatedClaimsIdentity(did)));
 
         // The cache answered, so the transformer supplemented the principal without going to the PDS.
-        Assert.True(result.HasClaim(claim => claim.Type == ProfileClaimsTransformer.ProfileClaimsAppliedClaimType));
+        Assert.True(result.HasClaim(claim => claim.Type == BlueskyClaimsTransformer.ProfileClaimsAppliedClaimType));
 
         Assert.Equal(1, Assert.Single(hits.GetMeasurementSnapshot()).Value);
         Assert.Empty(misses.GetMeasurementSnapshot());

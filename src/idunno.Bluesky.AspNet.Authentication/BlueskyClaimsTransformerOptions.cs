@@ -4,9 +4,9 @@
 namespace idunno.Bluesky.AspNet.Authentication;
 
 /// <summary>
-/// Contains options for the <see cref="ProfileClaimsTransformer"/>.
+/// Contains options for the <see cref="BlueskyClaimsTransformer"/>.
 /// </summary>
-public record ProfileClaimsTransformerOptions
+public record BlueskyClaimsTransformerOptions
 {
     /// <summary>
     /// The profile cache used to cache profile information during claims transformation. If not provided a default in-memory store will be used.

@@ -15,8 +15,8 @@ builder.Services
     });
 
 builder.Services
-    .AddProfileClaimsTransformer()
-    .AddTransient<IClaimsTransformation, ProfileClaimsTransformer>()
+    .AddBlueskyClaimsTransformer()
+    .AddTransient<IClaimsTransformation, BlueskyClaimsTransformer>()
     .AddBlueskyAgentFactory()
     .AddOpenTelemetry()
         .WithMetrics(metrics =>

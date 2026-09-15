@@ -132,15 +132,15 @@ public static class BlueskyExtensions
     }
 
     /// <summary>
-    /// Adds the <see cref="ProfileClaimsTransformer"/>.
+    /// Adds the <see cref="BlueskyClaimsTransformer"/>.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/>/</param>
     /// <returns>The service collection</returns>
-    public static IServiceCollection AddProfileClaimsTransformer(this IServiceCollection services)
+    public static IServiceCollection AddBlueskyClaimsTransformer(this IServiceCollection services)
     {
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<ProfileClaimsTransformerOptions>, PostConfigureProfileClaimsTransformerOptions>());
-        services.AddOptions<ProfileClaimsTransformerOptions>();
-        services.AddTransient<IClaimsTransformation, ProfileClaimsTransformer>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<BlueskyClaimsTransformerOptions>, PostConfigureBlueskyClaimsTransformerOptions>());
+        services.AddOptions<BlueskyClaimsTransformerOptions>();
+        services.AddTransient<IClaimsTransformation, BlueskyClaimsTransformer>();
 
         return services;
     }
