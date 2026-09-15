@@ -106,6 +106,81 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Registers the named <see cref="HttpClient"/> agents make their requests through.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the client to.</param>
+    /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="services"/> is <see langword="null"/>.</exception>
+    public static IServiceCollection AddAtProtoHttpClient(this IServiceCollection services)
+    {
+        return services.AddAtProtoHttpClient(httpClientOptions: null);
+    }
+
+    /// <summary>
+    /// Registers the named <see cref="HttpClient"/> agents make their requests through.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the client to.</param>
+    /// <param name="httpClientOptions">Any <see cref="HttpClientOptions"/> to configure the client with.</param>
+    /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="services"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   An agent created without an <see cref="IHttpClientFactory"/> builds a service provider of its own to create one
+    ///   from, which gives every agent its own connection pool. Long lived applications, in particular web applications
+    ///   which create an agent per request, should register the client once with this method and hand the resulting
+    ///   <see cref="IHttpClientFactory"/> to the agents they create.
+    /// </para>
+    /// </remarks>
+    public static IServiceCollection AddAtProtoHttpClient(
+        this IServiceCollection services,
+        HttpClientOptions? httpClientOptions)
+    {
+        return services.AddAtProtoHttpClient(_ => httpClientOptions);
+    }
+
+    /// <summary>
+    /// Registers the named <see cref="HttpClient"/> agents make their requests through, configured from services.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the client to.</param>
+    /// <param name="httpClientOptionsProvider">
+    ///   A function which returns the <see cref="HttpClientOptions"/> to configure the client with, for applications
+    ///   whose options are not known until the service provider has been built.
+    /// </param>
+    /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="services"/> or <paramref name="httpClientOptionsProvider"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The client is created through the same SSRF protected handler an agent builds for itself, so registering it
+    ///   cannot weaken the protections an agent relies on when it resolves a service it was told about by a DID
+    ///   document.
+    /// </para>
+    /// <para>
+    ///   <paramref name="httpClientOptionsProvider"/> is called when a handler is created rather than on every request,
+    ///   so a change to the options takes effect when the handler is next rotated rather than immediately.
+    /// </para>
+    /// </remarks>
+    public static IServiceCollection AddAtProtoHttpClient(
+        this IServiceCollection services,
+        Func<IServiceProvider, HttpClientOptions?> httpClientOptionsProvider)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(httpClientOptionsProvider);
+
+        services
+            .AddHttpClient(Agent.HttpClientName)
+            .ConfigureHttpClient((provider, client) =>
+            {
+                HttpClientOptions? httpClientOptions = httpClientOptionsProvider(provider);
+
+                Agent.InternalConfigureHttpClient(client, httpClientOptions?.HttpUserAgent, httpClientOptions?.Timeout);
+            })
+            .ConfigurePrimaryHttpMessageHandler(provider =>
+                Agent.CreateHttpMessageHandler(httpClientOptionsProvider(provider), provider.GetService<ILoggerFactory>()));
+
+        return services;
+    }
+
     private static void AddLoggerFactory(IServiceCollection services)
     {
         services.PostConfigure<AtProtoAgentOptions>(options =>

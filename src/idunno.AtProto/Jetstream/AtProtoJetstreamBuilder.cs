@@ -72,6 +72,19 @@ public sealed class AtProtoJetstreamBuilder
     public ICollection<Nsid>? CollectionsToFilterOn { get; set; }
 
     /// <summary>
+    /// Gets or sets the <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.
+    /// </summary>
+    /// <remarks>
+    /// <para>If an <see cref="IHttpClientFactory"/> is set then <see cref="HttpClientOptions"/> will be ignored.</para>
+    /// </remarks>
+    public IHttpClientFactory? HttpClientFactory { get; set; }
+
+    /// <summary>
+    /// Gets or sets the <see cref="AtProto.HttpClientOptions"/> for the jetstream.
+    /// </summary>
+    public HttpClientOptions? HttpClientOptions { get; set; }
+
+    /// <summary>
     /// Creates a new <see cref="AtProtoJetstreamBuilder"/>.
     /// </summary>
     /// <returns>A new <see cref="AtProtoJetstreamBuilder"/></returns>
@@ -197,22 +210,85 @@ public sealed class AtProtoJetstreamBuilder
     }
 
     /// <summary>
+    /// Sets the <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.
+    /// </summary>
+    /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use.</param>
+    /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClientFactory"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>If an <see cref="IHttpClientFactory"/> is set then <see cref="HttpClientOptions"/> will be ignored.</para>
+    /// <para>
+    ///   The factory has to have been configured with
+    ///   <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>. Any other
+    ///   registration produces a client without the SSRF protections a jetstream would otherwise apply for itself.
+    /// </para>
+    /// </remarks>
+    public AtProtoJetstreamBuilder WithHttpClientFactory(IHttpClientFactory httpClientFactory)
+    {
+        ArgumentNullException.ThrowIfNull(httpClientFactory);
+
+        HttpClientFactory = httpClientFactory;
+
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the <see cref="AtProto.HttpClientOptions"/> the jetstream will use when making HTTP requests.
+    /// </summary>
+    /// <param name="configure">An action to configure the <see cref="AtProto.HttpClientOptions"/> the jetstream will use when making HTTP requests.</param>
+    /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="configure"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    /// Setting <see cref="HttpClientOptions.CheckCertificateRevocationList"/> to <see langword="false" /> can introduce security vulnerabilities. Only set this value to
+    /// <see langword="false"/> if you are using a debugging proxy which does not support CRLs.
+    /// </para>
+    /// </remarks>
+    public AtProtoJetstreamBuilder ConfigureHttpClientOptions(Action<HttpClientOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+
+        HttpClientOptions configuredOptions = new();
+        configure(configuredOptions);
+
+        HttpClientOptions = configuredOptions;
+
+        return this;
+    }
+
+    /// <summary>
     /// Builds a new instance of <see cref="AtProtoJetstream"/>.
     /// </summary>
     /// <returns>A configured <see cref="AtProtoJetstream"/>.</returns>
     public AtProtoJetstream Build()
     {
-        return new AtProtoJetstream(
-            uri: Service,
-            options: new JetstreamOptions()
-            {
-                LoggerFactory = LoggerFactory,
-                UseCompression = EnableCompression,
-                Dictionary = CompressionDictionary,
-                BufferSize = MaximumMessageSize,
-                TaskFactory = TaskFactory,
-            },
-            collections: CollectionsToFilterOn,
-            dids: DidsToFilterOn);
+        JetstreamOptions options = new()
+        {
+            LoggerFactory = LoggerFactory,
+            MeterFactory = MeterFactory,
+            UseCompression = EnableCompression,
+            Dictionary = CompressionDictionary,
+            BufferSize = MaximumMessageSize,
+            TaskFactory = TaskFactory,
+        };
+
+        if (HttpClientFactory is null)
+        {
+            return new AtProtoJetstream(
+                uri: Service,
+                options: options,
+                httpClientOptions: HttpClientOptions,
+                collections: CollectionsToFilterOn,
+                dids: DidsToFilterOn);
+        }
+        else
+        {
+            return new AtProtoJetstream(
+                httpClientFactory: HttpClientFactory,
+                uri: Service,
+                options: options,
+                collections: CollectionsToFilterOn,
+                dids: DidsToFilterOn);
+        }
     }
 }

@@ -76,6 +76,16 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential
         }
     }
 
+    /// <summary>
+    /// Gets or sets a string representation of the DPoP nonce to use when signing requests.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Unlike the nonce on credentials issued by a token endpoint this may be empty. A revocation request is made to
+    ///   an authorization server the agent has not necessarily called before, which only supplies a nonce in response
+    ///   to the first request, so the first proof has to be signed without one.
+    /// </para>
+    /// </remarks>
     public string DPoPNonce
     {
         get
@@ -88,11 +98,9 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential
 
         set
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(value);
-
             lock (_lock)
             {
-                field = value;
+                field = value ?? string.Empty;
             }
         }
     }

@@ -91,3 +91,13 @@ static idunno.AtProto.Authentication.AtProtoCredential.TryCreate(System.Security
 static idunno.AtProto.Authentication.ClaimsExtensions.get_Did(System.Security.Claims.ClaimsPrincipal! principal) -> idunno.AtProto.Did?
 virtual idunno.AtProto.AtProtoAgent.InternalOnCredentialsUpdatedCallBack(idunno.AtProto.Authentication.AtProtoCredential! credentials, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 virtual idunno.AtProto.AtProtoAgent.OnCredentialsUpdatedAsync(idunno.AtProto.Events.CredentialsUpdatedEventArgs! e, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static idunno.AtProto.ServiceCollectionExtensions.AddAtProtoHttpClient(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static idunno.AtProto.ServiceCollectionExtensions.AddAtProtoHttpClient(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, idunno.AtProto.HttpClientOptions? httpClientOptions) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+static idunno.AtProto.ServiceCollectionExtensions.AddAtProtoHttpClient(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Func<System.IServiceProvider!, idunno.AtProto.HttpClientOptions?>! httpClientOptionsProvider) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+idunno.AtProto.Jetstream.AtProtoJetstream.AtProtoJetstream(System.Net.Http.IHttpClientFactory! httpClientFactory, System.Uri? uri = null, idunno.AtProto.Jetstream.JetstreamOptions? options = null, idunno.AtProto.WebSocketOptions? webSocketOptions = null, System.Collections.Generic.ICollection<idunno.AtProto.Nsid!>? collections = null, System.Collections.Generic.ICollection<idunno.AtProto.Did!>? dids = null) -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.HttpClientFactory.get -> System.Net.Http.IHttpClientFactory?
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.HttpClientFactory.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.HttpClientOptions.get -> idunno.AtProto.HttpClientOptions?
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.HttpClientOptions.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.WithHttpClientFactory(System.Net.Http.IHttpClientFactory! httpClientFactory) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.ConfigureHttpClientOptions(System.Action<idunno.AtProto.HttpClientOptions!>! configure) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!

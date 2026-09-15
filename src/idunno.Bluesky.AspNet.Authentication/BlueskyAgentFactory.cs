@@ -18,6 +18,7 @@ public sealed class BlueskyAgentFactory
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IOptionsMonitor<BlueskyAuthenticationOptions> _authenticationOptionsMonitor;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _authenticationScheme;
 
     /// <summary>
@@ -28,13 +29,15 @@ public sealed class BlueskyAgentFactory
     /// <param name="authenticationOptionsMonitor">The <see cref="IOptionsMonitor{BlueskyAuthenticationOptions}"/></param>
     /// <param name="agentOptionsMonitor">The <see cref="IOptionsMonitor{BlueskyAgentOptions}"/></param>
     /// <param name="loggerFactory">The <see cref="ILoggerFactory"/></param>
+    /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> the agents it creates should make their requests through.</param>
     /// <exception cref="ArgumentNullException">Thrown if any of the parameters are <see langword="null"/>.</exception>
     public BlueskyAgentFactory(
         IHttpContextAccessor contextAccessor,
         IOptionsMonitor<BlueskyAuthenticationOptions> authenticationOptionsMonitor,
         IOptionsMonitor<BlueskyAgentOptions> agentOptionsMonitor,
-        ILoggerFactory loggerFactory) :
-            this(contextAccessor, authenticationOptionsMonitor, agentOptionsMonitor, loggerFactory, BlueskyAuthenticationDefaults.AuthenticationScheme)
+        ILoggerFactory loggerFactory,
+        IHttpClientFactory httpClientFactory) :
+            this(contextAccessor, authenticationOptionsMonitor, agentOptionsMonitor, loggerFactory, httpClientFactory, BlueskyAuthenticationDefaults.AuthenticationScheme)
     {
     }
 
@@ -45,6 +48,7 @@ public sealed class BlueskyAgentFactory
     /// <param name="authenticationOptionsMonitor">The <see cref="IOptionsMonitor{BlueskyAuthenticationOptions}"/></param>
     /// <param name="agentOptionsMonitor">The <see cref="IOptionsMonitor{BlueskyAgentOptions}"/></param>
     /// <param name="loggerFactory">The <see cref="ILoggerFactory"/></param>
+    /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> the agents it creates should make their requests through.</param>
     /// <param name="authenticationScheme">
     ///   The name of the authentication scheme whose <see cref="BlueskyAuthenticationOptions"/> the factory should use when the current request has no
     ///   authenticated Bluesky user to take the scheme name from.
@@ -56,12 +60,14 @@ public sealed class BlueskyAgentFactory
         IOptionsMonitor<BlueskyAuthenticationOptions> authenticationOptionsMonitor,
         IOptionsMonitor<BlueskyAgentOptions> agentOptionsMonitor,
         ILoggerFactory loggerFactory,
+        IHttpClientFactory httpClientFactory,
         string authenticationScheme)
     {
         ArgumentNullException.ThrowIfNull(contextAccessor);
         ArgumentNullException.ThrowIfNull(authenticationOptionsMonitor);
         ArgumentNullException.ThrowIfNull(agentOptionsMonitor);
         ArgumentNullException.ThrowIfNull(loggerFactory);
+        ArgumentNullException.ThrowIfNull(httpClientFactory);
         ArgumentException.ThrowIfNullOrWhiteSpace(authenticationScheme);
 
         BlueskyAgentOptions = agentOptionsMonitor.CurrentValue;
@@ -70,6 +76,7 @@ public sealed class BlueskyAgentFactory
         _authenticationOptionsMonitor = authenticationOptionsMonitor;
         _authenticationScheme = authenticationScheme;
         _httpContextAccessor = contextAccessor;
+        _httpClientFactory = httpClientFactory;
     }
 
     internal BlueskyAgentOptions BlueskyAgentOptions { get; }
@@ -114,12 +121,12 @@ public sealed class BlueskyAgentFactory
             identity.IsAuthenticated &&
             identity.HasClaim(c => c.Type == AtProtoClaims.Did))
         {
-            agent = new BlueskyAgent(identity: identity, BlueskyAgentOptions);
+            agent = new BlueskyAgent(identity: identity, httpClientFactory: _httpClientFactory, options: BlueskyAgentOptions);
         }
         else
         {
             identity = null;
-            agent = new BlueskyAgent(options: BlueskyAgentOptions);
+            agent = new BlueskyAgent(httpClientFactory: _httpClientFactory, options: BlueskyAgentOptions);
         }
 
         // An identity issued by the authentication handler carries the name of the scheme which issued it as its authentication type,

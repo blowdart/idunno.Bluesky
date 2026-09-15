@@ -8,6 +8,7 @@ using idunno.AtProto;
 using idunno.AtProto.Authentication;
 
 using Duende.IdentityModel.OidcClient;
+using Duende.IdentityModel.OidcClient.DPoP;
 
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
@@ -42,7 +43,17 @@ internal static class TestData
     /// Builds a <see cref="System.Security.Claims.ClaimsIdentity"/> carrying unexpired DPoP credentials, of the shape
     /// a <see cref="idunno.Bluesky.BlueskyAgent"/> will consider authenticated.
     /// </summary>
-    internal static ClaimsIdentity AuthenticatedClaimsIdentity(Did did, string authenticationType = "Bluesky")
+    /// <param name="did">The <see cref="Did"/> the identity is for.</param>
+    /// <param name="authenticationType">The authentication type, which is the name of the scheme which issued the identity.</param>
+    /// <param name="signableProofKey">
+    ///   Whether the DPoP proof key should be a real JSON web key. A request which is actually sent has a DPoP proof
+    ///   signed with this key, so anything reaching the network needs one, but generating a key is expensive enough to
+    ///   be worth skipping for the tests which do not.
+    /// </param>
+    internal static ClaimsIdentity AuthenticatedClaimsIdentity(
+        Did did,
+        string authenticationType = "Bluesky",
+        bool signableProofKey = false)
     {
         // The service comes from the issuer of the DID claim, and the expiry from the access token, so both have to
         // be set for AtProtoCredential.TryCreate to produce credentials which have not expired.
@@ -51,7 +62,11 @@ internal static class TestData
             new Claim(AtProtoClaims.Did, did, ClaimValueTypes.String, "https://bsky.social"),
             new Claim(AtProtoClaims.AccessToken, Jwt(did), ClaimValueTypes.String, "https://bsky.social"),
             new Claim(AtProtoClaims.RefreshToken, Jwt(did), ClaimValueTypes.String, "https://bsky.social"),
-            new Claim(AtProtoClaims.DPoPProof, "proof-key", ClaimValueTypes.String, "https://bsky.social"),
+            new Claim(
+                AtProtoClaims.DPoPProof,
+                signableProofKey ? JsonWebKeys.CreateRsaJson() : "proof-key",
+                ClaimValueTypes.String,
+                "https://bsky.social"),
             new Claim(AtProtoClaims.DPoPNonce, "nonce", ClaimValueTypes.String, "https://bsky.social"),
         ];
 

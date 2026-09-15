@@ -84,6 +84,8 @@ public partial class AtProtoAgent : Agent
         OriginalService = service;
         Service = service;
 
+        Options = options;
+
         if (options is not null)
         {
             _enableTokenRefresh = options.EnableBackgroundTokenRefresh;
@@ -187,6 +189,8 @@ public partial class AtProtoAgent : Agent
             Service = credentials.Service;
             _credentials = credentials;
         }
+
+        Options = options;
 
         if (options is not null)
         {

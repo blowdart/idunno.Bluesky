@@ -58,7 +58,7 @@ public class AtProtoJetstream : IDisposable
 
     private ClientWebSocket _client;
 
-    private const string HttpClientName = "idunno.atproto.jetstream";
+    private const string HttpClientName = Agent.HttpClientName;
     internal HttpClientOptions? _httpClientOptions;
     private readonly ServiceProvider? _serviceProvider;
     private readonly HttpClient _httpClient;
@@ -74,13 +74,68 @@ public class AtProtoJetstream : IDisposable
     /// <param name="httpClientOptions">Any <see cref="HttpClientOptions"/> for the internal http client used to make HTTP requests.</param>
     /// <param name="collections">The <see cref="Nsid"/>s of any collection types to subscribe to. If <see langword="null"/> or empty all collection types will be subscribed to.</param>
     /// <param name="dids">Any <see cref="Did"/>s to subscribe to. If <see langword="null"/> or empty all dids will be subscribed to.</param>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overloaded to allow an application to supply its own IHttpClientFactory.")]
     public AtProtoJetstream(
         Uri? uri = null,
         JetstreamOptions? options = null,
         WebSocketOptions? webSocketOptions = null,
         HttpClientOptions? httpClientOptions = null,
         ICollection<Nsid>? collections = null,
-        ICollection<Did>? dids = null)
+        ICollection<Did>? dids = null) : this(
+            httpClientFactory: null,
+            httpClientOptions: httpClientOptions,
+            uri: uri,
+            options: options,
+            webSocketOptions: webSocketOptions,
+            collections: collections,
+            dids: dids)
+    {
+    }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="Jetstream"/> which creates its <see cref="HttpClient"/>s from the
+    /// specified <paramref name="httpClientFactory"/>.
+    /// </summary>
+    /// <param name="httpClientFactory">The <see cref="IHttpClientFactory"/> to use when creating <see cref="HttpClient"/>s.</param>
+    /// <param name="uri">The host uri to connection to. Defaults to wss://jetstream1.us-west.bsky.network/. Do not connect to untrusted jet stream servers.</param>
+    /// <param name="options">Any options to configure this instance of <see cref="AtProtoJetstream"/>.</param>
+    /// <param name="webSocketOptions">Any <see cref="AtProto.WebSocketOptions"/> to set on the underlying client WebSocket.</param>
+    /// <param name="collections">The <see cref="Nsid"/>s of any collection types to subscribe to. If <see langword="null"/> or empty all collection types will be subscribed to.</param>
+    /// <param name="dids">Any <see cref="Did"/>s to subscribe to. If <see langword="null"/> or empty all dids will be subscribed to.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClientFactory"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The <see cref="HttpClient"/> is taken from <paramref name="httpClientFactory"/> as it is, so the factory has to have been configured with
+    ///   <see cref="ServiceCollectionExtensions.AddAtProtoHttpClient(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>. Any other
+    ///   registration produces a client without the SSRF protections a jetstream would otherwise apply for itself.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overloaded to allow an application to supply its own IHttpClientFactory.")]
+    public AtProtoJetstream(
+        IHttpClientFactory httpClientFactory,
+        Uri? uri = null,
+        JetstreamOptions? options = null,
+        WebSocketOptions? webSocketOptions = null,
+        ICollection<Nsid>? collections = null,
+        ICollection<Did>? dids = null) : this(
+            httpClientFactory: httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory)),
+            httpClientOptions: null,
+            uri: uri,
+            options: options,
+            webSocketOptions: webSocketOptions,
+            collections: collections,
+            dids: dids)
+    {
+    }
+
+    private AtProtoJetstream(
+        IHttpClientFactory? httpClientFactory,
+        HttpClientOptions? httpClientOptions,
+        Uri? uri,
+        JetstreamOptions? options,
+        WebSocketOptions? webSocketOptions,
+        ICollection<Nsid>? collections,
+        ICollection<Did>? dids)
     {
         if (uri is not null)
         {
@@ -128,15 +183,25 @@ public class AtProtoJetstream : IDisposable
 
         _client = CreateWebSocketClient();
 
-        IServiceCollection services = new ServiceCollection();
         _httpClientOptions = httpClientOptions;
 
-        services
-            .AddHttpClient(HttpClientName, client => InternalConfigureHttpClient(client, _httpClientOptions?.HttpUserAgent, _httpClientOptions?.Timeout))
-            .ConfigurePrimaryHttpMessageHandler(() => CreateHttpMessageHandler(_httpClientOptions));
+        if (httpClientFactory is not null)
+        {
+            HttpClientFactory = httpClientFactory;
+        }
+        else
+        {
+            // Without a factory of its own an application has nowhere to configure this client, so the jetstream builds
+            // the same SSRF protected client an agent builds for itself rather than a second definition of one.
+            IServiceCollection services = new ServiceCollection();
 
-        _serviceProvider = services.BuildServiceProvider();
-        HttpClientFactory = _serviceProvider.GetService<IHttpClientFactory>()!;
+            services
+                .AddHttpClient(HttpClientName, client => Agent.InternalConfigureHttpClient(client, _httpClientOptions?.HttpUserAgent, _httpClientOptions?.Timeout))
+                .ConfigurePrimaryHttpMessageHandler(() => Agent.CreateHttpMessageHandler(_httpClientOptions, LoggerFactory));
+
+            _serviceProvider = services.BuildServiceProvider();
+            HttpClientFactory = _serviceProvider.GetService<IHttpClientFactory>()!;
+        }
 
         _httpClient = HttpClientFactory.CreateClient(HttpClientName);
     }
@@ -677,38 +742,6 @@ public class AtProtoJetstream : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private HttpMessageHandler CreateHttpMessageHandler(HttpClientOptions? httpClientOptions)
-    {
-        SslClientAuthenticationOptions? sslOptions = null;
-        bool checkCrl = true;
-
-        if (httpClientOptions is not null)
-        {
-            checkCrl = httpClientOptions.CheckCertificateRevocationList;
-        }
-
-        if (!checkCrl)
-        {
-            sslOptions = new SslClientAuthenticationOptions
-            {
-                CertificateRevocationCheckMode = X509RevocationMode.NoCheck
-            };
-        }
-
-        return httpClientOptions?.ProxyUri is not null
-            ? new ProxiedSsrfDelegatingHandler(
-                proxy: new WebProxy(httpClientOptions.ProxyUri),
-                connectTimeout: httpClientOptions?.Timeout,
-                automaticDecompression: DecompressionMethods.All,
-                sslOptions: sslOptions,
-                loggerFactory: LoggerFactory)
-            : SsrfSocketsHttpHandlerFactory.Create(
-                connectTimeout: httpClientOptions?.Timeout,
-                automaticDecompression: DecompressionMethods.All,
-                sslOptions: sslOptions,
-                loggerFactory: LoggerFactory);
-    }
-
     private ClientWebSocket CreateWebSocketClient()
     {
         var client = new ClientWebSocket();
@@ -1005,44 +1038,5 @@ public class AtProtoJetstream : IDisposable
         }
 
         return derivedEvent;
-    }
-
-    private static void InternalConfigureHttpClient(HttpClient client, string? httpUserAgent = null, TimeSpan? timeout = null)
-    {
-        ArgumentNullException.ThrowIfNull(client);
-
-        client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
-        client.DefaultRequestVersion = HttpVersion.Version20;
-
-        Assembly assembly = typeof(Agent).Assembly;
-        string? version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-
-        if (httpUserAgent is null)
-        {
-            if (string.IsNullOrEmpty(version))
-            {
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("idunno.AtProto");
-            }
-            else
-            {
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("idunno.AtProto/" + version);
-            }
-        }
-        else
-        {
-            client.DefaultRequestHeaders.UserAgent.ParseAdd(httpUserAgent);
-        }
-
-        client.DefaultRequestHeaders.Accept.Clear();
-        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(MediaTypeNames.Application.Json));
-
-        if (timeout is null)
-        {
-            client.Timeout = new(0, 5, 0);
-        }
-        else
-        {
-            client.Timeout = (TimeSpan)timeout;
-        }
     }
 }
