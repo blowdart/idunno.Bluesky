@@ -42,6 +42,8 @@ public class AtProtoJetstream : IDisposable
 
     private volatile bool _disposed;
 
+    private readonly SemaphoreSlim _connectSemaphore = new(1, 1);
+
     private const string SubscribeEndpoint = "/subscribe";
 
     private readonly JetstreamMetrics _metrics;
@@ -226,16 +228,30 @@ public class AtProtoJetstream : IDisposable
     /// <summary>
     /// Gets or sets a list of <see cref="Did"/>s to filter commit operations on.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when the value being set is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>If the jetstream is connected the updated filters are sent to the server in the background, so they may
+    /// not take effect until after the property has been set.</para>
+    /// </remarks>
     public IReadOnlyCollection<Did> DidFilter
     {
         get
         {
-            return _dids.AsReadOnly();
+            lock (_syncLock)
+            {
+                return _dids.AsReadOnly();
+            }
         }
 
         set
         {
-            _dids = [.. value];
+            ArgumentNullException.ThrowIfNull(value);
+
+            lock (_syncLock)
+            {
+                _dids = [.. value];
+            }
+
             SendOptionsUpdateMessage().FireAndForget();
         }
     }
@@ -243,16 +259,30 @@ public class AtProtoJetstream : IDisposable
     /// <summary>
     /// Gets or sets a list of <see cref="Nsid"/>s of collections to filter commit operations on.
     /// </summary>
+    /// <exception cref="ArgumentNullException">Thrown when the value being set is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>If the jetstream is connected the updated filters are sent to the server in the background, so they may
+    /// not take effect until after the property has been set.</para>
+    /// </remarks>
     public IReadOnlyCollection<Nsid> CollectionFilter
     {
         get
         {
-            return _collections.AsReadOnly();
+            lock (_syncLock)
+            {
+                return _collections.AsReadOnly();
+            }
         }
 
         set
         {
-            _collections = [.. value];
+            ArgumentNullException.ThrowIfNull(value);
+
+            lock (_syncLock)
+            {
+                _collections = [.. value];
+            }
+
             SendOptionsUpdateMessage().FireAndForget();
         }
     }
@@ -378,7 +408,6 @@ public class AtProtoJetstream : IDisposable
     /// <summary>
     /// Connect to the JetStream instance via a WebSocket connection.
     /// </summary>
-    [MemberNotNull(nameof(_client))]
     public async Task ConnectAsync()
     {
         await ConnectAsync(
@@ -392,7 +421,6 @@ public class AtProtoJetstream : IDisposable
     /// Connect to the JetStream instance via a WebSocket connection.
     /// </summary>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    [MemberNotNull(nameof(_client))]
     public async Task ConnectAsync(
         CancellationToken cancellationToken)
     {
@@ -408,7 +436,6 @@ public class AtProtoJetstream : IDisposable
     /// </summary>
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for any HTTP requests. If <see langword="null"/> a default configured HttpClient from the internal <see cref="IHttpClientFactory"/> will be used.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClient"/> is <see langword="null"/>.</exception>
-    [MemberNotNull(nameof(_client))]
     public async Task ConnectAsync(
         HttpClient httpClient)
     {
@@ -427,7 +454,6 @@ public class AtProtoJetstream : IDisposable
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for any HTTP requests. If <see langword="null"/> a default configured HttpClient from the internal <see cref="IHttpClientFactory"/> will be used.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpClient"/> is <see langword="null"/>.</exception>
-    [MemberNotNull(nameof(_client))]
     public async Task ConnectAsync(
         HttpClient httpClient,
         CancellationToken cancellationToken)
@@ -445,7 +471,6 @@ public class AtProtoJetstream : IDisposable
     /// Connect to the JetStream instance via a WebSocket connection.
     /// </summary>
     /// <param name="startFrom">A Unix microseconds timestamp cursor to begin playback from. A value of <see langword="null"/> results in live-tail operation.</param>
-    [MemberNotNull(nameof(_client))]
     public async Task ConnectAsync(
         DateTimeOffset startFrom)
     {
@@ -461,7 +486,6 @@ public class AtProtoJetstream : IDisposable
     /// </summary>
     /// <param name="startFrom">A Unix microseconds timestamp cursor to begin playback from. A value of <see langword="null"/> results in live-tail operation.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    [MemberNotNull(nameof(_client))]
     public async Task ConnectAsync(
         DateTimeOffset? startFrom,
         CancellationToken cancellationToken)
@@ -481,7 +505,6 @@ public class AtProtoJetstream : IDisposable
     /// <param name="uri">The URI of the jetstream server to connection to. Defaults to the URI passed during construction</param>
     /// <param name="startFrom">A Unix microseconds timestamp cursor to begin playback from. A value of <see langword="null"/> results in live-tail operation.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-    [MemberNotNull(nameof(_client))]
     public async Task ConnectAsync(
         Uri uri,
         DateTimeOffset? startFrom,
@@ -504,10 +527,37 @@ public class AtProtoJetstream : IDisposable
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for any HTTP requests. If <see langword="null"/> a default configured HttpClient from the internal <see cref="IHttpClientFactory"/> will be used.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <exception cref="Exception">Thrown when the underlying web socket throw an exception when connecting.</exception>
-    [MemberNotNull(nameof(_client))]
+    /// <exception cref="ObjectDisposedException">Thrown when the jetstream has been disposed.</exception>
+    /// <remarks>
+    /// <para>Connection attempts are serialised. A caller which arrives whilst another connection attempt is in
+    /// progress waits for it to complete, and returns without doing anything if it left the jetstream connected.</para>
+    /// </remarks>
+    public async Task ConnectAsync(
+        Uri? uri,
+        long? cursor,
+        HttpClient? httpClient,
+        CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        // Connecting cannot be done under a lock because it awaits, so it is serialised with a semaphore instead.
+        // Two callers which arrive together would otherwise both reach ClientWebSocket.ConnectAsync on the same
+        // socket, where the second throws, and could each start a receive loop reading the same socket.
+        await _connectSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            await ConnectInternalAsync(uri, cursor, httpClient, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _connectSemaphore.Release();
+        }
+    }
+
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Suppressing dispose exceptions on purpose.")]
     [SuppressMessage("Minor Code Smell", "S2486:Generic exceptions should not be ignored", Justification = "Suppressing dispose exceptions on purpose.")]
-    public async Task ConnectAsync(
+    private async Task ConnectInternalAsync(
         Uri? uri,
         long? cursor,
         HttpClient? httpClient,
@@ -544,6 +594,17 @@ public class AtProtoJetstream : IDisposable
         uri ??= _uri;
         _server = uri;
 
+        List<Nsid> collections;
+        List<Did> dids;
+
+        lock (_syncLock)
+        {
+            // The filters are copied under the lock, as a concurrent update to either of them would otherwise
+            // be enumerated as the query string is built.
+            collections = [.. _collections];
+            dids = [.. _dids];
+        }
+
         Uri endpoint = new(uri, SubscribeEndpoint);
 
         StringBuilder uriBuilder = new();
@@ -551,14 +612,14 @@ public class AtProtoJetstream : IDisposable
         uriBuilder.Append(endpoint);
         uriBuilder.Append('?');
 
-        foreach (Nsid collection in _collections)
+        foreach (Nsid collection in collections)
         {
             uriBuilder.Append(
                 CultureInfo.InvariantCulture,
                 $"wantedCollections={HttpUtility.UrlEncode(collection.ToString())}&");
         }
 
-        foreach (Did did in _dids)
+        foreach (Did did in dids)
         {
             uriBuilder.Append(
                 CultureInfo.InvariantCulture,
@@ -730,6 +791,7 @@ public class AtProtoJetstream : IDisposable
                 _httpClient.Dispose();
                 _decompressor?.Dispose();
                 _serviceProvider?.Dispose();
+                _connectSemaphore.Dispose();
             }
 
             _disposed = true;
@@ -788,8 +850,15 @@ public class AtProtoJetstream : IDisposable
                 {
                     await _client.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, cancellationToken: cancellationToken).ConfigureAwait(false);
                     JetStreamLogger.CloseMessageReceived(_logger);
-                    DisconnectedGracefully = false;
-                    continue;
+
+                    // The server asked to close and the close was completed by replying to it, which is as graceful as
+                    // a disconnection gets. The flag records how the connection ended, not which end ended it.
+                    DisconnectedGracefully = true;
+
+                    _metrics.ConnectionsClosed.Add(1, new KeyValuePair<string, object?>("server", _server?.ToString()));
+                    OnConnectionStateChanged(new ConnectionStateChangedEventArgs(_client.State));
+
+                    break;
                 }
 
                 if (webSocketReceiveResult.MessageType != expectedMessageType)
@@ -946,14 +1015,25 @@ public class AtProtoJetstream : IDisposable
             MaxMessageSizeBytes = Options.MaxMessageSize
         };
 
-        if (_collections is not null && _collections.Count > 0)
+        List<Nsid> collections;
+        List<Did> dids;
+
+        lock (_syncLock)
         {
-            payload.WantedCollections = [.. _collections];
+            // Both filters are copied under the lock so the server is sent a consistent pair, rather than one filter
+            // from before a concurrent update and one from after it.
+            collections = [.. _collections];
+            dids = [.. _dids];
         }
 
-        if (_dids is not null && _dids.Count > 0)
+        if (collections.Count > 0)
         {
-            payload.WantedDIDs = [.. _dids];
+            payload.WantedCollections = [.. collections];
+        }
+
+        if (dids.Count > 0)
+        {
+            payload.WantedDIDs = [.. dids];
         }
 
         OptionsUpdateMessage optionsUpdateMessage = new()
