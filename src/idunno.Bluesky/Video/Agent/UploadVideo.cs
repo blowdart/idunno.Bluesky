@@ -76,6 +76,7 @@ public partial class BlueskyAgent
                     serviceCredential: getServiceAuthResult.Result,
                     httpClient: HttpClient,
                     loggerFactory: LoggerFactory,
+                    maximumResponseSize: MaximumResponseSize,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
                 if (result.Succeeded)

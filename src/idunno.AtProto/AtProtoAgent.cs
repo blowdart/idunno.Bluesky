@@ -61,6 +61,7 @@ public partial class AtProtoAgent : Agent
                 new DirectoryAgentOptions()
                 {
                     PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
+                    MaximumResponseSize = options?.MaximumResponseSize ?? AtProtoHttpClient.DefaultMaximumResponseSize,
                     LoggerFactory = LoggerFactory,
                     HttpClientOptions = options?.HttpClientOptions
                 });
@@ -103,6 +104,7 @@ public partial class AtProtoAgent : Agent
             new DirectoryAgentOptions()
             {
                 PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
+                MaximumResponseSize = options?.MaximumResponseSize ?? AtProtoHttpClient.DefaultMaximumResponseSize,
                 LoggerFactory = LoggerFactory,
             });
     }
@@ -156,6 +158,7 @@ public partial class AtProtoAgent : Agent
                 new DirectoryAgentOptions()
                 {
                     PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
+                    MaximumResponseSize = options?.MaximumResponseSize ?? AtProtoHttpClient.DefaultMaximumResponseSize,
                     LoggerFactory = LoggerFactory,
                     HttpClientOptions = options?.HttpClientOptions
                 });
@@ -209,6 +212,7 @@ public partial class AtProtoAgent : Agent
             new DirectoryAgentOptions()
             {
                 PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
+                MaximumResponseSize = options?.MaximumResponseSize ?? AtProtoHttpClient.DefaultMaximumResponseSize,
                 LoggerFactory = LoggerFactory,
             });
     }
@@ -260,6 +264,7 @@ public partial class AtProtoAgent : Agent
                 new DirectoryAgentOptions()
                 {
                     PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
+                    MaximumResponseSize = options?.MaximumResponseSize ?? AtProtoHttpClient.DefaultMaximumResponseSize,
                     LoggerFactory = LoggerFactory,
                     HttpClientOptions = options?.HttpClientOptions
                 });
@@ -315,6 +320,7 @@ public partial class AtProtoAgent : Agent
                 new DirectoryAgentOptions()
                 {
                     PlcDirectoryUri = options?.PlcDirectoryServer ?? DirectoryAgent.s_defaultDirectoryServer,
+                    MaximumResponseSize = options?.MaximumResponseSize ?? AtProtoHttpClient.DefaultMaximumResponseSize,
                     LoggerFactory = LoggerFactory
                 });
     }
@@ -328,6 +334,12 @@ public partial class AtProtoAgent : Agent
     /// Gets the configuration options for the agent.
     /// </summary>
     protected internal AtProtoAgentOptions? Options { get; init; }
+
+    /// <summary>
+    /// Gets the maximum number of bytes to read from an XRPC response body, as configured by
+    /// <see cref="AtProtoAgentOptions.MaximumResponseSize"/>.
+    /// </summary>
+    protected internal int MaximumResponseSize => Options?.MaximumResponseSize ?? AtProtoHttpClient.DefaultMaximumResponseSize;
 
     /// <summary>
     /// Gets the <see cref="Uri"/> for the AT Proto service the agent is issuing requests against.
@@ -562,6 +574,7 @@ public partial class AtProtoAgent : Agent
             serviceProxy: serviceProxy,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (applyWritesResult.Succeeded)
@@ -629,6 +642,7 @@ public partial class AtProtoAgent : Agent
             serviceProxy: serviceProxy,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (result.Succeeded)
@@ -703,6 +717,7 @@ public partial class AtProtoAgent : Agent
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             jsonSerializerOptions: jsonSerializerOptions,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (result.Succeeded)
@@ -859,6 +874,7 @@ public partial class AtProtoAgent : Agent
                 serviceProxy: serviceProxy,
                 onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
+                maximumResponseSize: MaximumResponseSize,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (response.Succeeded)
@@ -953,6 +969,7 @@ public partial class AtProtoAgent : Agent
             serviceProxy: serviceProxy,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (result.Succeeded)
@@ -1033,6 +1050,7 @@ public partial class AtProtoAgent : Agent
             jsonSerializerOptions: jsonSerializerOptions,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (result.Succeeded)
@@ -1098,6 +1116,7 @@ public partial class AtProtoAgent : Agent
             serviceProxy: serviceProxy,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (result.Succeeded)
@@ -1166,6 +1185,7 @@ public partial class AtProtoAgent : Agent
             jsonSerializerOptions: jsonSerializerOptions,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (result.Succeeded)
@@ -1204,6 +1224,7 @@ public partial class AtProtoAgent : Agent
             service,
             HttpClient,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -1309,6 +1330,7 @@ public partial class AtProtoAgent : Agent
                 serviceProxy: serviceProxy,
                 onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
+                maximumResponseSize: MaximumResponseSize,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (!result.Succeeded)
@@ -1428,6 +1450,7 @@ public partial class AtProtoAgent : Agent
                 onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 jsonSerializerOptions: jsonSerializerOptions,
                 loggerFactory: LoggerFactory,
+                maximumResponseSize: MaximumResponseSize,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (!result.Succeeded)
@@ -1733,6 +1756,7 @@ public partial class AtProtoAgent : Agent
                 serviceProxy: serviceProxy,
                 onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
+                maximumResponseSize: MaximumResponseSize,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (!result.Succeeded)
@@ -1849,6 +1873,7 @@ public partial class AtProtoAgent : Agent
             httpClient: HttpClient,
             serviceProxy: serviceProxy,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (!result.Succeeded)
@@ -1971,6 +1996,7 @@ public partial class AtProtoAgent : Agent
             jsonSerializerOptions: jsonSerializerOptions,
             serviceProxy: serviceProxy,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (!result.Succeeded)
@@ -2043,6 +2069,7 @@ public partial class AtProtoAgent : Agent
                 serviceProxy: serviceProxy,
                 onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
+                maximumResponseSize: MaximumResponseSize,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         catch (HttpRequestException ex)
@@ -2101,6 +2128,7 @@ public partial class AtProtoAgent : Agent
                 serviceProxy: serviceProxy,
                 onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
                 loggerFactory: LoggerFactory,
+                maximumResponseSize: MaximumResponseSize,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         catch (HttpRequestException ex)
@@ -2154,6 +2182,7 @@ public partial class AtProtoAgent : Agent
             httpClient: HttpClient,
             onCredentialsUpdated: InternalOnCredentialsUpdatedCallBack,
             loggerFactory: LoggerFactory,
+            maximumResponseSize: MaximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 

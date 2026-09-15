@@ -38,6 +38,7 @@ public static partial class BlueskyServer
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClient" /> are <see langword="null"/>.</exception>
@@ -54,13 +55,14 @@ public static partial class BlueskyServer
         HttpClient httpClient,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(accessCredentials);
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        BlueskyHttpClient<GetAgeAssuranceStateResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetAgeAssuranceStateResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<GetAgeAssuranceStateResponse> response = await request.Get(
             service,
@@ -103,6 +105,7 @@ public static partial class BlueskyServer
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClient" /> are <see langword="null"/>.</exception>
@@ -124,6 +127,7 @@ public static partial class BlueskyServer
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         if (limit is not null)
@@ -152,7 +156,7 @@ public static partial class BlueskyServer
         string queryString = queryStringBuilder.ToString();
         queryString = queryString.TrimStart('&');
 
-        BlueskyHttpClient<GetPopularFeedGeneratorsResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetPopularFeedGeneratorsResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<GetPopularFeedGeneratorsResponse> response = await request.Get(
             service,
@@ -194,6 +198,7 @@ public static partial class BlueskyServer
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClient" /> are <see langword="null"/>.</exception>
@@ -213,6 +218,7 @@ public static partial class BlueskyServer
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         if (limit is not null)
@@ -231,7 +237,7 @@ public static partial class BlueskyServer
             queryString += $"limit={limit}";
         }
 
-        BlueskyHttpClient<GetSuggestedStarterPacksResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetSuggestedStarterPacksResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<GetSuggestedStarterPacksResponse> response = await request.Get(
             service,
@@ -273,6 +279,7 @@ public static partial class BlueskyServer
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClient" /> are <see langword="null"/>.</exception>
@@ -291,6 +298,7 @@ public static partial class BlueskyServer
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         StringBuilder queryStringBuilder = new();
@@ -315,7 +323,7 @@ public static partial class BlueskyServer
             queryString = queryStringBuilder.ToString();
         }
 
-        BlueskyHttpClient<GetTaggedSuggestionsResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetTaggedSuggestionsResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<GetTaggedSuggestionsResponse> response = await request.Get(
             service,
@@ -357,6 +365,7 @@ public static partial class BlueskyServer
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClient" /> are <see langword="null"/>.</exception>
@@ -376,6 +385,7 @@ public static partial class BlueskyServer
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         if (limit is not null)
@@ -401,7 +411,7 @@ public static partial class BlueskyServer
 
         queryString = queryString.TrimStart('&');
 
-        BlueskyHttpClient<GetTrendingTopicsResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetTrendingTopicsResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<GetTrendingTopicsResponse> response = await request.Get(
             service,
@@ -443,6 +453,7 @@ public static partial class BlueskyServer
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
     /// <param name="subscribedLabelers">An optional list of <see cref="Did"/>s of labelers to retrieve labels applied to the account.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> or <paramref name="httpClient" /> are <see langword="null"/>.</exception>
@@ -462,6 +473,7 @@ public static partial class BlueskyServer
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
         IEnumerable<Did>? subscribedLabelers = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         if (limit is not null)
@@ -480,7 +492,7 @@ public static partial class BlueskyServer
             queryString = $"limit={limit}";
         }
 
-        BlueskyHttpClient<GetTrendsResponse> request = new(AppViewProxy, loggerFactory);
+        BlueskyHttpClient<GetTrendsResponse> request = new(AppViewProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<GetTrendsResponse> response = await request.Get(
             service,

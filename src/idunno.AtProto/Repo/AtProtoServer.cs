@@ -61,6 +61,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -83,6 +84,7 @@ public static partial class AtProtoServer
         string? serviceProxy = null,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(operations);
@@ -140,11 +142,11 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<ApplyWritesResponse> response = await client.Post(
@@ -199,6 +201,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -222,6 +225,7 @@ public static partial class AtProtoServer
         string? serviceProxy = null,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(operations);
@@ -279,11 +283,11 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<ApplyWritesResponse> response = await client.Post(
@@ -339,6 +343,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
     /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -363,6 +368,7 @@ public static partial class AtProtoServer
         string? serviceProxy = null,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
         ArgumentNullException.ThrowIfNull(record);
@@ -385,11 +391,11 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<CreateRecordResponse> response = await client.Post(
@@ -445,6 +451,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
     /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -470,6 +477,7 @@ public static partial class AtProtoServer
         string? serviceProxy = null,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
         ArgumentNullException.ThrowIfNull(record);
@@ -494,11 +502,11 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<CreateRecordResponse> response = await client.Post(
@@ -553,6 +561,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -580,6 +589,7 @@ public static partial class AtProtoServer
         string? serviceProxy = null,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(repo);
@@ -600,11 +610,11 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<DeleteRecordResponse> response = await client.Post(
@@ -656,6 +666,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
     /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -674,6 +685,7 @@ public static partial class AtProtoServer
         string? serviceProxy = null,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
             where TRecord : AtProtoRecord
     {
@@ -705,6 +717,7 @@ public static partial class AtProtoServer
             serviceProxy: serviceProxy,
             onCredentialsUpdated: onCredentialsUpdated,
             loggerFactory: loggerFactory,
+            maximumResponseSize: maximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -732,6 +745,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
     /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -757,6 +771,7 @@ public static partial class AtProtoServer
         string? serviceProxy = null,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
         ArgumentNullException.ThrowIfNull(record);
@@ -783,11 +798,11 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<PutRecordResponse> response = await client.Post(
@@ -839,6 +854,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
     /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -858,6 +874,7 @@ public static partial class AtProtoServer
         string? serviceProxy = null,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
             where TRecord : AtProtoRecord
     {
@@ -889,6 +906,7 @@ public static partial class AtProtoServer
             onCredentialsUpdated: onCredentialsUpdated,
             loggerFactory: loggerFactory,
             jsonSerializerOptions: jsonSerializerOptions,
+            maximumResponseSize: maximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -917,6 +935,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy"><para>The service the PDS should proxy the call to, if any.</para></param>
     /// <param name="onCredentialsUpdated"><para>An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</para></param>
     /// <param name="loggerFactory"><para>An instance of <see cref="ILoggerFactory"/> to use to create a logger.</para></param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken"><para>A cancellation token that can be used by other objects or threads to receive notice of cancellation.</para></param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -943,6 +962,7 @@ public static partial class AtProtoServer
         string? serviceProxy = null,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
         ArgumentNullException.ThrowIfNull(record);
@@ -969,11 +989,11 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<PutRecordResponse> response = await client.Post(
@@ -1020,6 +1040,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -1040,6 +1061,7 @@ public static partial class AtProtoServer
         string? serviceProxy = null,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
         ArgumentNullException.ThrowIfNull(repo);
@@ -1057,11 +1079,11 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         string queryString = $"repo={Uri.EscapeDataString(repo.ToString())}&collection={Uri.EscapeDataString(collection.ToString())}&rkey={Uri.EscapeDataString(rKey.ToString())}";
@@ -1097,6 +1119,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -1118,6 +1141,7 @@ public static partial class AtProtoServer
         string? serviceProxy = null,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
         ArgumentNullException.ThrowIfNull(repo);
@@ -1135,11 +1159,11 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         string queryString = $"repo={Uri.EscapeDataString(repo.ToString())}&collection={Uri.EscapeDataString(collection.ToString())}&rkey={Uri.EscapeDataString(rKey.ToString())}";
@@ -1174,6 +1198,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -1197,6 +1222,7 @@ public static partial class AtProtoServer
         string? serviceProxy = null,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(repo);
@@ -1214,11 +1240,11 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         string queryString = $"repo={Uri.EscapeDataString(repo.ToString())}&collection={Uri.EscapeDataString(collection.ToString())}&rkey={Uri.EscapeDataString(rKey.ToString())}";
@@ -1255,6 +1281,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -1277,6 +1304,7 @@ public static partial class AtProtoServer
         string? serviceProxy = null,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
         ArgumentNullException.ThrowIfNull(repo);
@@ -1315,11 +1343,11 @@ public static partial class AtProtoServer
         AtProtoHttpClient<ListRecordsResponse> client;
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<ListRecordsResponse> response = await client.Get(
@@ -1389,6 +1417,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -1412,6 +1441,7 @@ public static partial class AtProtoServer
         string? serviceProxy = null,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default) where TRecord : AtProtoRecord
     {
         ArgumentNullException.ThrowIfNull(repo);
@@ -1450,11 +1480,11 @@ public static partial class AtProtoServer
         AtProtoHttpClient<ListRecordsResponse> client;
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<ListRecordsResponse> response = await client.Get(
@@ -1524,6 +1554,7 @@ public static partial class AtProtoServer
     /// <param name="serviceProxy">The service the PDS should proxy the call to, if any.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when any of <paramref name="blob"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.</exception>
@@ -1552,6 +1583,7 @@ public static partial class AtProtoServer
         string? serviceProxy = null,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(blob);
@@ -1581,11 +1613,11 @@ public static partial class AtProtoServer
 
         if (string.IsNullOrWhiteSpace(serviceProxy))
         {
-            client = new(loggerFactory);
+            client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
         else
         {
-            client = new(serviceProxy, loggerFactory);
+            client = new(serviceProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
         }
 
         AtProtoHttpResult<CreateBlobResponse> response =
@@ -1628,6 +1660,7 @@ public static partial class AtProtoServer
     /// <param name="service">The service to delete the record from.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">
@@ -1645,13 +1678,14 @@ public static partial class AtProtoServer
         Uri service,
         HttpClient httpClient,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(repo);
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(httpClient);
 
-        AtProtoHttpClient<RepoDescription> request = new(loggerFactory);
+        AtProtoHttpClient<RepoDescription> request = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<RepoDescription> result = await request.Get(
             service: service,

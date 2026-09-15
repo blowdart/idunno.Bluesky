@@ -17,6 +17,6 @@ public partial class AtProtoAgent : Agent
     {
         server ??= Service;
 
-        return await AtProtoServer.DescribeServer(server, HttpClient, LoggerFactory, cancellationToken).ConfigureAwait(false);
+        return await AtProtoServer.DescribeServer(server, HttpClient, LoggerFactory, MaximumResponseSize, cancellationToken).ConfigureAwait(false);
     }
 }

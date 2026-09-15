@@ -25,6 +25,7 @@ public static partial class BlueskyServer
     /// <param name="serviceCredential">AccessCredentials for service access used to authenticate against the <paramref name="service"/>.</param>
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="fileName"/> is <see langword="null"/> or empty, or when <paramref name="mimeType"/> is <see langword="null"/> or whitespace.</exception>
@@ -46,6 +47,7 @@ public static partial class BlueskyServer
         ServiceCredential serviceCredential,
         HttpClient httpClient,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(did);
@@ -64,7 +66,7 @@ public static partial class BlueskyServer
         ];
 
         // AppView proxy is not needed as we're hitting the video service directly.
-        BlueskyHttpClient<JobStatusWireFormat> client = new(loggerFactory);
+        BlueskyHttpClient<JobStatusWireFormat> client = new(loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<JobStatusWireFormat> response =
             await client.PostBlob(

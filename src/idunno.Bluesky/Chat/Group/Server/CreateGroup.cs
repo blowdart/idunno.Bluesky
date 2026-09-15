@@ -27,6 +27,7 @@ public partial class BlueskyServer
     /// <param name="httpClient">An <see cref="HttpClient"/> to use when making a request to the <paramref name="service"/>.</param>
     /// <param name="onCredentialsUpdated">An <see cref="Func{T1, T2, TResult}" /> to await if the credentials in the request need updating.</param>
     /// <param name="loggerFactory">An instance of <see cref="ILoggerFactory"/> to use to create a logger.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="members"/> or <paramref name="name"/> is <see langword="null"/>.</exception>
@@ -46,6 +47,7 @@ public partial class BlueskyServer
         HttpClient httpClient,
         Func<AtProtoCredential, CancellationToken, Task>? onCredentialsUpdated = null,
         ILoggerFactory? loggerFactory = default,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(members);
@@ -55,7 +57,7 @@ public partial class BlueskyServer
         ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, 500);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetGraphemeLength(), 50);
 
-        BlueskyHttpClient<CreateGroupResponse> client = new(ChatProxy, loggerFactory);
+        BlueskyHttpClient<CreateGroupResponse> client = new(ChatProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
         AtProtoHttpResult<CreateGroupResponse> response = await client.Post(
             service,

@@ -44,10 +44,8 @@ public class AtProtoHttpClient(
     /// </summary>
     public const int DefaultMaximumResponseSize = 32 * 1024 * 1024;
 
-    private static int s_maximumResponseSize = DefaultMaximumResponseSize;
-
     /// <summary>
-    /// Gets or sets the maximum number of bytes read from an XRPC response body.
+    /// Gets the maximum number of bytes read from an XRPC response body.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is zero or negative.</exception>
     /// <remarks>
@@ -57,37 +55,60 @@ public class AtProtoHttpClient(
     ///   only needs raising if you call an endpoint which legitimately returns a very large response.
     /// </para>
     /// </remarks>
-    public static int MaximumResponseSize
+    public int MaximumResponseSize
     {
-        get => Volatile.Read(ref s_maximumResponseSize);
+        get => _maximumResponseSize;
 
-        set
+        init
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
-            Volatile.Write(ref s_maximumResponseSize, value);
+            _maximumResponseSize = value;
         }
     }
+
+    private readonly int _maximumResponseSize = DefaultMaximumResponseSize;
 
     readonly SocketsHttpHandler _defaultClientHandler = SsrfSocketsHttpHandlerFactory.Create(
                         automaticDecompression: DecompressionMethods.All,
                         loggerFactory: loggerFactory);
 
-    private readonly AtProtoHttpClient<string> _internalAtProtoHttpClient = new(
-            serviceProxy: serviceProxy,
-            requestHeaders: null,
-            loggerFactory: loggerFactory,
-            meterFactory: meterFactory,
-            errorMappers: errorMappers);
+    private AtProtoHttpClient<string>? _internalAtProtoHttpClient;
+
+#if NET9_0_OR_GREATER
+    private readonly Lock _internalAtProtoHttpClientLock = new();
+#else
+    private readonly object _internalAtProtoHttpClientLock = new();
+#endif
+
+    private AtProtoHttpClient<string> InternalAtProtoHttpClient
+    {
+        get
+        {
+            // Cannot be a field initializer, as those run before the MaximumResponseSize init accessor.
+            lock (_internalAtProtoHttpClientLock)
+            {
+                return _internalAtProtoHttpClient ??= new(
+                    serviceProxy: serviceProxy,
+                    requestHeaders: null,
+                    loggerFactory: loggerFactory,
+                    meterFactory: meterFactory,
+                    errorMappers: errorMappers)
+                {
+                    MaximumResponseSize = MaximumResponseSize
+                };
+            }
+        }
+    }
 
     /// <summary>
     /// Gets or sets a function called when a request is about to be sent.
     /// </summary>
-    public Func<HttpRequestMessage, CancellationToken, Task> OnSendingRequest => _internalAtProtoHttpClient.OnSendingRequest;
+    public Func<HttpRequestMessage, CancellationToken, Task> OnSendingRequest => InternalAtProtoHttpClient.OnSendingRequest;
 
     /// <summary>
     /// Gets or sets a function called when a response has been received.
     /// </summary>
-    public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived => _internalAtProtoHttpClient.OnResponseReceived;
+    public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived => InternalAtProtoHttpClient.OnResponseReceived;
 
     /// <summary>
     /// Gets the collections of functions called to map any error returned from an API call to a more specific error.
@@ -137,7 +158,7 @@ public class AtProtoHttpClient(
             DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower,
         })
         {
-            return await _internalAtProtoHttpClient.Get(
+            return await InternalAtProtoHttpClient.Get(
                 service: service,
                 endpoint: endpoint,
                 credentials: credentials,
@@ -240,7 +261,7 @@ public class AtProtoHttpClient(
             DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
         })
         {
-            return await _internalAtProtoHttpClient.Post(
+            return await InternalAtProtoHttpClient.Post(
                 service: service,
                 endpoint: endpoint,
                 record: body,
@@ -319,6 +340,33 @@ public class AtProtoHttpClient<TResult> where TResult : class
     private readonly ICollection<NameValueHeaderValue>? _extraRequestHeaders;
 
     private readonly bool _suppressProxyHeaderCheck;
+
+    private readonly int _maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize;
+
+    /// <summary>
+    /// Gets the maximum number of bytes read from an XRPC response body.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is zero or negative.</exception>
+    /// <remarks>
+    /// <para>
+    ///   This is a backstop against a service returning a response large enough to exhaust the memory of the calling
+    ///   process. XRPC responses are JSON and are ordinarily orders of magnitude smaller than the default, so this
+    ///   only needs raising if you call an endpoint which legitimately returns a very large response.
+    /// </para>
+    /// <para>
+    ///   A response larger than this fails with an <see cref="AtErrorDetail"/> whose <see cref="AtErrorDetail.Error"/> is <c>ResponseTooLarge</c>.
+    /// </para>
+    /// </remarks>
+    public int MaximumResponseSize
+    {
+        get => _maximumResponseSize;
+
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            _maximumResponseSize = value;
+        }
+    }
 
     private readonly JsonSerializerOptions _jsonSerializationOptionsDefault = new(JsonSerializerDefaults.Web)
     {
@@ -1268,7 +1316,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
 
         // Bounded and truncating: an error body is only used for diagnostics, so a partial one is better than
         // allowing a service to dictate the allocation.
-        string responseContent = await HttpContentReader.ReadAsStringTruncating(responseMessage.Content, AtProtoHttpClient.MaximumResponseSize, cancellationToken).ConfigureAwait(false);
+        string responseContent = await HttpContentReader.ReadAsStringTruncating(responseMessage.Content, MaximumResponseSize, cancellationToken).ConfigureAwait(false);
         errorDetail.RawContent = responseContent;
 
         if (responseMessage.Content.Headers.ContentType is not null &&
@@ -1637,20 +1685,20 @@ public class AtProtoHttpClient<TResult> where TResult : class
                             {
                                 string? responseContent = await HttpContentReader.ReadAsString(
                                     httpResponseMessage.Content,
-                                    AtProtoHttpClient.MaximumResponseSize,
+                                    MaximumResponseSize,
                                     cancellationToken).ConfigureAwait(false);
 
                                 if (responseContent is null)
                                 {
                                     // The service returned more than we are willing to allocate, so the response cannot be used.
-                                    Logger.AtProtoClientResponseTooLarge(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, AtProtoHttpClient.MaximumResponseSize);
+                                    Logger.AtProtoClientResponseTooLarge(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, MaximumResponseSize);
 
                                     result.AtErrorDetail = new AtErrorDetail
                                     {
                                         Instance = httpRequestMessage.RequestUri,
                                         HttpMethod = httpRequestMessage.Method,
                                         Error = "ResponseTooLarge",
-                                        Message = $"The response exceeded the maximum of {AtProtoHttpClient.MaximumResponseSize} bytes."
+                                        Message = $"The response exceeded the maximum of {MaximumResponseSize} bytes."
                                     };
 
                                     return result;

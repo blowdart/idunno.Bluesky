@@ -113,15 +113,18 @@ public sealed class Resolution
     /// <param name="loggerFactory">An optional <see cref="LoggerFactory"/> to use to create a logger.</param>
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for HTTP requests.</param>
     /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is <see langword="null"/>.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the directory response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
     public static async Task<DidDocument?> ResolveDidDocument(
         Did did,
         Uri? plcDirectory = null,
         ILoggerFactory? loggerFactory = null,
         HttpClient? httpClient = null,
         TimeSpan? timeout = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(did);
@@ -143,6 +146,7 @@ public sealed class Resolution
                     directory: plcDirectory,
                     httpClient: lease.Client,
                     loggerFactory: loggerFactory,
+                    maximumResponseSize: maximumResponseSize,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (didDocumentResolutionResult.Succeeded)
@@ -166,16 +170,19 @@ public sealed class Resolution
     /// <param name="loggerFactory">An optional <see cref="LoggerFactory"/> to use to create a logger.</param>
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for HTTP requests.</param>
     /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is <see langword="null"/>.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the directory response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="handle"/> could not be resolved to a <see cref="Did"/>.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
     public static async Task<DidDocument?> ResolveDidDocument(
         Handle handle,
         Uri? plcDirectory = null,
         ILoggerFactory? loggerFactory = null,
         HttpClient? httpClient = null,
         TimeSpan? timeout = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(handle);
@@ -204,6 +211,7 @@ public sealed class Resolution
                     directory: plcDirectory,
                     httpClient: lease.Client,
                     loggerFactory: loggerFactory,
+                    maximumResponseSize: maximumResponseSize,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (didDocumentResolutionResult.Succeeded)
@@ -227,16 +235,19 @@ public sealed class Resolution
     /// <param name="loggerFactory">An optional <see cref="LoggerFactory"/> to use to create a logger.</param>
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for HTTP requests.</param>
     /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is <see langword="null"/>.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the directory response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="atIdentifier"/> is <see langword="null"/> or empty.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="atIdentifier"/> could not be resolved to a <see cref="Did"/> or a <see cref="Handle"/>.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
     public static async Task<DidDocument?> ResolveDidDocument(
         string atIdentifier,
         Uri? plcDirectory = null,
         ILoggerFactory? loggerFactory = null,
         HttpClient? httpClient = null,
         TimeSpan? timeout = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(atIdentifier);
@@ -251,6 +262,7 @@ public sealed class Resolution
                     loggerFactory: loggerFactory,
                     httpClient: httpClient,
                     timeout: timeout,
+                    maximumResponseSize: maximumResponseSize,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
             }
             else if (parsedAtIdentifier is Handle handle)
@@ -261,6 +273,7 @@ public sealed class Resolution
                     loggerFactory: loggerFactory,
                     httpClient: httpClient,
                     timeout: timeout,
+                    maximumResponseSize: maximumResponseSize,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
             }
             else
@@ -282,15 +295,18 @@ public sealed class Resolution
     /// <param name="loggerFactory">An optional <see cref="LoggerFactory"/> to use to create a logger.</param>
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for HTTP requests.</param>
     /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is <see langword="null"/>.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the directory response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="did"/> is <see langword="null"/>.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
     public static async Task<Uri?> ResolvePds(
         Did did,
         Uri? plcDirectory = null,
         ILoggerFactory? loggerFactory = null,
         HttpClient? httpClient = null,
         TimeSpan? timeout = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(did);
@@ -308,6 +324,7 @@ public sealed class Resolution
             loggerFactory: loggerFactory,
             httpClient: httpClient,
             timeout: timeout,
+            maximumResponseSize: maximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (didDocument is not null && didDocument.Services is not null)
@@ -331,16 +348,19 @@ public sealed class Resolution
     /// <param name="loggerFactory">An optional <see cref="LoggerFactory"/> to use to create a logger.</param>
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for HTTP requests.</param>
     /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is <see langword="null"/>.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the directory response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="handle"/> could not be resolved to a <see cref="Did"/>.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
     public static async Task<Uri?> ResolvePds(
         Handle handle,
         Uri? plcDirectory = null,
         ILoggerFactory? loggerFactory = null,
         HttpClient? httpClient = null,
         TimeSpan? timeout = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(handle);
@@ -358,6 +378,7 @@ public sealed class Resolution
             loggerFactory: loggerFactory,
             httpClient: httpClient,
             timeout: timeout,
+            maximumResponseSize: maximumResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -369,16 +390,19 @@ public sealed class Resolution
     /// <param name="loggerFactory">An optional <see cref="LoggerFactory"/> to use to create a logger.</param>
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for HTTP requests.</param>
     /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is <see langword="null"/>.</param>
+    /// <param name="maximumResponseSize">The maximum number of bytes to read from the directory response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="atIdentifier"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="atIdentifier"/> could not be resolved to a <see cref="Did"/> or <see cref="Handle"/>.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
     public static async Task<Uri?> ResolvePds(
         string atIdentifier,
         Uri? plcDirectory = null,
         ILoggerFactory? loggerFactory = null,
         HttpClient? httpClient = null,
         TimeSpan? timeout = null,
+        int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(atIdentifier);
@@ -393,6 +417,7 @@ public sealed class Resolution
                     loggerFactory: loggerFactory,
                     httpClient: httpClient,
                     timeout: timeout,
+                    maximumResponseSize: maximumResponseSize,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
             }
             else if (parsedAtIdentifier is Handle handle)
@@ -403,6 +428,7 @@ public sealed class Resolution
                     loggerFactory: loggerFactory,
                     httpClient: httpClient,
                     timeout: timeout,
+                    maximumResponseSize: maximumResponseSize,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
             }
             else
