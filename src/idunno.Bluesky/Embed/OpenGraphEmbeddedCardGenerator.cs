@@ -116,7 +116,7 @@ public partial class OpenGraphEmbeddedCardGenerator : BaseEmbeddedCardGenerator
             throw new ArgumentException("URI must be absolute.", nameof(uri));
         }
 
-        string? pageContent = await GetPageContent(uri, cancellationToken).ConfigureAwait(false);
+        string? pageContent = await GetPageContent(uri, cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (!string.IsNullOrEmpty(pageContent))
         {

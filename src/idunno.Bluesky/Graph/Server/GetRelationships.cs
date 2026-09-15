@@ -69,7 +69,7 @@ public static partial class BlueskyServer
         {
             if (other is Handle handle)
             {
-                Did? did = await AtProtoServer.ResolveHandle(handle, httpClient, loggerFactory, cancellationToken).ConfigureAwait(false);
+                Did? did = await AtProtoServer.ResolveHandle(handle, httpClient, loggerFactory, cancellationToken: cancellationToken).ConfigureAwait(false);
                 if (did is not null)
                 {
                     queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&others={Uri.EscapeDataString(did.ToString())}");

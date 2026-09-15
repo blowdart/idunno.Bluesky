@@ -26,14 +26,21 @@ public partial class AtProtoAgent
 {
 #if NET9_0_OR_GREATER
     private readonly Lock _credentialLock = new();
+    private readonly Lock _timerLock = new();
 #else
     private readonly object _credentialLock = new();
+    private readonly object _timerLock = new();
 #endif
+
+    private readonly SemaphoreSlim _credentialRefreshSemaphore = new(1, 1);
 
     private AccessCredentials? _credentials;
 
+    private string? _exchangedRefreshToken;
+
     internal readonly bool _enableTokenRefresh = true;
     private readonly TimeSpan _refreshAccessTokenInterval = new(1, 0, 0);
+    private readonly TimeSpan _backgroundRefreshRetryInterval = new(0, 1, 0);
     private System.Timers.Timer? _credentialRefreshTimer;
 
     /// <summary>
@@ -1285,21 +1292,39 @@ public partial class AtProtoAgent
 
         if (!cancellationToken.IsCancellationRequested)
         {
-            using (Stream responseStream = await HttpClient.GetStreamAsync(new Uri($"https://{pds.Host}/.well-known/oauth-protected-resource"), cancellationToken).ConfigureAwait(false))
+            // The PDS port, if any, must be preserved, otherwise discovery is performed against the wrong endpoint.
+            Uri protectedResourceMetadataUri = new UriBuilder(
+                Uri.UriSchemeHttps,
+                pds.Host,
+                pds.IsDefaultPort ? -1 : pds.Port,
+                "/.well-known/oauth-protected-resource").Uri;
+
+            bool allowInsecureProtocols = Options?.OAuthOptions?.ReturnUri is not null && Options.OAuthOptions.ReturnUri.Scheme == Uri.UriSchemeHttp;
+
+            using (Stream responseStream = await HttpClient.GetStreamAsync(protectedResourceMetadataUri, cancellationToken).ConfigureAwait(false))
             using (JsonDocument protectedResultMetadata = await JsonDocument.ParseAsync(responseStream, cancellationToken: cancellationToken).ConfigureAwait(false))
             {
-                if (!cancellationToken.IsCancellationRequested && protectedResultMetadata is not null)
+                if (!cancellationToken.IsCancellationRequested &&
+                    protectedResultMetadata is not null &&
+                    protectedResultMetadata.RootElement.TryGetProperty("authorization_servers", out JsonElement authorizationServers) &&
+                    authorizationServers.ValueKind == JsonValueKind.Array)
                 {
-                    JsonElement.ArrayEnumerator authorizationServers = protectedResultMetadata.RootElement.GetProperty("authorization_servers").EnumerateArray();
-
-                    if (!cancellationToken.IsCancellationRequested && authorizationServers.Any())
+                    foreach (JsonElement authorizationServerElement in authorizationServers.EnumerateArray())
                     {
-                        string serverUri = authorizationServers.First(s => !string.IsNullOrEmpty(s.GetString())).ToString();
+                        string? serverUri = authorizationServerElement.ValueKind == JsonValueKind.String ? authorizationServerElement.GetString() : null;
 
-                        if (!string.IsNullOrEmpty(serverUri))
+                        // The metadata comes from the PDS, so an entry which is not a usable, appropriately secured
+                        // absolute URI is skipped rather than being turned into an exception or an insecure endpoint.
+                        if (!string.IsNullOrEmpty(serverUri) &&
+                            Uri.TryCreate(serverUri, UriKind.Absolute, out Uri? candidateAuthorizationServer) &&
+                            (candidateAuthorizationServer.Scheme == Uri.UriSchemeHttps ||
+                             (allowInsecureProtocols && candidateAuthorizationServer.Scheme == Uri.UriSchemeHttp)))
                         {
-                            authorizationServer = new Uri(serverUri);
+                            authorizationServer = candidateAuthorizationServer;
+                            break;
                         }
+
+                        Logger.ResolveAuthorizationServerSkippedEntry(_logger, pds, serverUri ?? string.Empty);
                     }
                 }
             }
@@ -1343,7 +1368,6 @@ public partial class AtProtoAgent
         Service = accessCredentials.Service;
         Credentials = accessCredentials;
 
-        _credentialRefreshTimer ??= new();
         StartTokenRefreshTimer();
 
         OnAuthenticated(new AuthenticatedEventArgs(
@@ -1375,54 +1399,72 @@ public partial class AtProtoAgent
 
         string tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(refreshCredential.RefreshToken)));
 
-        using (_logger.BeginScope($"RefreshOAuthIssuedCredentials() with refresh token #{tokenHash}"))
+        CredentialsUpdatedEventArgs? credentialsUpdatedEventArgs = null;
+
+        await _credentialRefreshSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        try
         {
-            Logger.RefreshOAuthIssuedCredentialsCalled(_logger, refreshCredential.Service, tokenHash);
-
-            if (_credentialRefreshTimer is not null)
+            using (_logger.BeginScope($"RefreshOAuthIssuedCredentials() with refresh token #{tokenHash}"))
             {
+                Logger.RefreshOAuthIssuedCredentialsCalled(_logger, refreshCredential.Service, tokenHash);
+
+                if (HasRefreshTokenAlreadyBeenExchanged(refreshCredential.RefreshToken, tokenHash))
+                {
+                    return true;
+                }
+
                 StopTokenRefreshTimer();
+
+                // Get authorization server
+                Uri? authorizationServer = await ResolveAuthorizationServer(refreshCredential.Service, cancellationToken).ConfigureAwait(false) ??
+                    throw new ArgumentException($"Authorization server cannot be found for {refreshCredential.Service}", nameof(refreshCredential));
+
+                OAuthClient oAuthClient = CreateOAuthClient();
+
+                DPoPAccessCredentials? refreshedCredentials = await oAuthClient.RefreshCredentials(
+                    refreshCredential: refreshCredential,
+                    authority: authorizationServer,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                if (refreshedCredentials is null)
+                {
+                    return false;
+                }
+
+                if (!await ValidateJwtToken(refreshedCredentials.AccessJwt, refreshedCredentials.Did, refreshCredential.Service).ConfigureAwait(false))
+                {
+                    Logger.RefreshOAuthIssuedCredentialsTokenValidationFailed(_logger, refreshedCredentials.Did, refreshCredential.Service);
+
+                    throw new SecurityTokenValidationException("The issued access token could not be validated.");
+                }
+
+                Logger.RefreshOAuthIssuedCredentialsSucceeded(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
+
+                _exchangedRefreshToken = refreshCredential.RefreshToken;
+
+                Credentials = refreshedCredentials;
+
+                StartTokenRefreshTimer();
+
+                credentialsUpdatedEventArgs = new CredentialsUpdatedEventArgs(
+                    refreshedCredentials.Did,
+                    refreshedCredentials.Service,
+                    refreshedCredentials);
             }
-
-            // Get authorization server
-            Uri? authorizationServer = await ResolveAuthorizationServer(refreshCredential.Service, cancellationToken).ConfigureAwait(false) ??
-                throw new ArgumentException($"Authorization server cannot be found for {refreshCredential.Service}", nameof(refreshCredential));
-
-            OAuthClient oAuthClient = CreateOAuthClient();
-
-            DPoPAccessCredentials? refreshedCredentials = await oAuthClient.RefreshCredentials(
-                refreshCredential: refreshCredential,
-                authority: authorizationServer,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            if (refreshedCredentials is null)
-            {
-                return false;
-            }
-
-            if (!await ValidateJwtToken(refreshedCredentials.AccessJwt, refreshedCredentials.Did, refreshCredential.Service).ConfigureAwait(false))
-            {
-                Logger.RefreshOAuthIssuedCredentialsTokenValidationFailed(_logger, refreshedCredentials.Did, refreshCredential.Service);
-
-                throw new SecurityTokenValidationException("The issued access token could not be validated.");
-            }
-
-            Logger.RefreshOAuthIssuedCredentialsSucceeded(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
-
-            Credentials = refreshedCredentials;
-
-            _credentialRefreshTimer ??= new();
-            StartTokenRefreshTimer();
-
-            var credentialsUpdatedEventArgs = new CredentialsUpdatedEventArgs(
-                refreshedCredentials.Did,
-                refreshedCredentials.Service,
-                refreshedCredentials);
-
-            await OnCredentialsUpdatedAsync(credentialsUpdatedEventArgs, cancellationToken).ConfigureAwait(false);
-
-            return true;
         }
+        finally
+        {
+            _credentialRefreshSemaphore.Release();
+        }
+
+        // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
+        if (credentialsUpdatedEventArgs is not null)
+        {
+            await OnCredentialsUpdatedAsync(credentialsUpdatedEventArgs, cancellationToken).ConfigureAwait(false);
+        }
+
+        return true;
     }
 
     internal async Task<bool> RefreshSessionIssuedCredentials(RefreshCredential refreshCredential, CancellationToken cancellationToken = default)
@@ -1445,82 +1487,175 @@ public partial class AtProtoAgent
 
         string tokenHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(refreshCredential.RefreshToken)));
 
-        using (_logger.BeginScope($"RefreshSessionIssuedCredentials() with refresh token #{tokenHash}"))
+        CredentialsUpdatedEventArgs? credentialsUpdatedEventArgs = null;
+
+        await _credentialRefreshSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        try
         {
-            Logger.RefreshSessionIssuedCredentialsCalled(_logger, refreshCredential.Service, tokenHash);
-
-            if (_credentialRefreshTimer is not null)
+            using (_logger.BeginScope($"RefreshSessionIssuedCredentials() with refresh token #{tokenHash}"))
             {
+                Logger.RefreshSessionIssuedCredentialsCalled(_logger, refreshCredential.Service, tokenHash);
+
+                if (HasRefreshTokenAlreadyBeenExchanged(refreshCredential.RefreshToken, tokenHash))
+                {
+                    return true;
+                }
+
                 StopTokenRefreshTimer();
+
+                AtProtoHttpResult<Session> refreshSessionResult;
+                try
+                {
+                    refreshSessionResult = await AtProtoServer.RefreshSession(
+                        refreshCredential,
+                        HttpClient,
+                        credentialsUpdated: null,
+                        loggerFactory: LoggerFactory,
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    Logger.TokenRefreshApiThrew(_logger, e);
+                    throw;
+                }
+
+                if (!refreshSessionResult.Succeeded || refreshSessionResult.Result.AccessJwt is null || refreshSessionResult.Result.RefreshJwt is null)
+                {
+                    Logger.RefreshSessionApiCallFailed(_logger, refreshCredential.Service, tokenHash, refreshSessionResult.StatusCode);
+
+                    var tokenRefreshFailedEventArgs = new TokenRefreshFailedEventArgs(
+                        did: Did!,
+                        service: refreshCredential.Service,
+                        refreshCredential.RefreshToken,
+                        refreshSessionResult.StatusCode,
+                        refreshSessionResult.AtErrorDetail);
+
+                    OnTokenRefreshFailed(tokenRefreshFailedEventArgs);
+                    return false;
+                }
+
+                if (!await ValidateJwtToken(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.Did, refreshCredential.Service).ConfigureAwait(false))
+                {
+                    Logger.RefreshSessionIssuedCredentialsTokenValidationFailed(_logger, refreshSessionResult.Result.Did, refreshCredential.Service);
+
+                    throw new SecurityTokenValidationException("The issued access token could not be validated.");
+                }
+
+                AccessCredentials refreshedCredentials = new(
+                        refreshCredential.Service,
+                        refreshCredential.AuthenticationType,
+                        refreshSessionResult.Result.AccessJwt,
+                        refreshSessionResult.Result.RefreshJwt);
+
+                Logger.RefreshSessionIssuedCredentialsSucceeded(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
+
+                _exchangedRefreshToken = refreshCredential.RefreshToken;
+
+                Credentials = refreshedCredentials;
+
+                StartTokenRefreshTimer();
+
+                credentialsUpdatedEventArgs = new CredentialsUpdatedEventArgs(
+                    refreshedCredentials.Did,
+                    refreshedCredentials.Service,
+                    refreshedCredentials);
             }
+        }
+        finally
+        {
+            _credentialRefreshSemaphore.Release();
+        }
 
-            AtProtoHttpResult<Session> refreshSessionResult;
-            try
-            {
-                refreshSessionResult = await AtProtoServer.RefreshSession(
-                    refreshCredential,
-                    HttpClient,
-                    credentialsUpdated: null,
-                    loggerFactory: LoggerFactory,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                Logger.TokenRefreshApiThrew(_logger, e);
-                throw;
-            }
-
-            if (!refreshSessionResult.Succeeded || refreshSessionResult.Result.AccessJwt is null || refreshSessionResult.Result.RefreshJwt is null)
-            {
-                Logger.RefreshSessionApiCallFailed(_logger, refreshCredential.Service, tokenHash, refreshSessionResult.StatusCode);
-
-                var tokenRefreshFailedEventArgs = new TokenRefreshFailedEventArgs(
-                    did: Did!,
-                    service: refreshCredential.Service,
-                    refreshCredential.RefreshToken,
-                    refreshSessionResult.StatusCode,
-                    refreshSessionResult.AtErrorDetail);
-
-                OnTokenRefreshFailed(tokenRefreshFailedEventArgs);
-                return false;
-            }
-
-            if (!await ValidateJwtToken(refreshSessionResult.Result.AccessJwt, refreshSessionResult.Result.Did, refreshCredential.Service).ConfigureAwait(false))
-            {
-                Logger.RefreshSessionIssuedCredentialsTokenValidationFailed(_logger, refreshSessionResult.Result.Did, refreshCredential.Service);
-
-                throw new SecurityTokenValidationException("The issued access token could not be validated.");
-            }
-
-            AccessCredentials refreshedCredentials = new(
-                    refreshCredential.Service,
-                    refreshCredential.AuthenticationType,
-                    refreshSessionResult.Result.AccessJwt,
-                    refreshSessionResult.Result.RefreshJwt);
-
-            Logger.RefreshSessionIssuedCredentialsSucceeded(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
-
-            Credentials = refreshedCredentials;
-
-            _credentialRefreshTimer ??= new();
-            StartTokenRefreshTimer();
-
-            var credentialsUpdatedEventArgs = new CredentialsUpdatedEventArgs(
-                refreshedCredentials.Did,
-                refreshedCredentials.Service,
-                refreshedCredentials);
-
+        // Raised outside the refresh semaphore so that a handler which calls back into the agent cannot deadlock it.
+        if (credentialsUpdatedEventArgs is not null)
+        {
             await OnCredentialsUpdatedAsync(credentialsUpdatedEventArgs, cancellationToken).ConfigureAwait(false);
+        }
 
+        return true;
+    }
+
+    /// <summary>
+    /// Returns a flag indicating whether <paramref name="refreshToken"/> has already been exchanged for new credentials.
+    /// </summary>
+    /// <param name="refreshToken">The refresh token about to be presented to the server.</param>
+    /// <param name="tokenHash">The hash of <paramref name="refreshToken"/>, used for logging.</param>
+    /// <returns><see langword="true"/> if <paramref name="refreshToken"/> has already been exchanged, otherwise <see langword="false"/>.</returns>
+    /// <remarks>
+    /// <para>
+    ///   Refresh tokens are single use. When callers race to refresh the same credentials the loser of the race would otherwise
+    ///   present a token the winner has already spent, which fails and, on servers which revoke on reuse, can end the session.
+    /// </para>
+    /// </remarks>
+    private bool HasRefreshTokenAlreadyBeenExchanged(string refreshToken, string tokenHash)
+    {
+        if (_exchangedRefreshToken is not null && string.Equals(_exchangedRefreshToken, refreshToken, StringComparison.Ordinal))
+        {
+            Logger.RefreshTokenAlreadyExchanged(_logger, tokenHash);
             return true;
         }
+
+        return false;
     }
 
     private void RefreshTimerElapsed(object? sender, ElapsedEventArgs e)
     {
         Logger.BackgroundTokenRefreshFired(_logger);
 
-        RefreshCredentials().FireAndForget();
+        BackgroundRefreshCredentials().FireAndForget();
+    }
+
+    /// <summary>
+    /// Refreshes the agent credentials on behalf of the refresh timer, restarting the timer if the refresh does not succeed.
+    /// </summary>
+    /// <returns>The task object representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// <para>
+    ///   A failed refresh must not leave the timer stopped, otherwise a single transient failure silently ends background
+    ///   refresh for the lifetime of the agent and the session expires.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A background refresh must not let any failure escape unobserved, and every failure is retried and logged.")]
+    private async Task BackgroundRefreshCredentials()
+    {
+        bool refreshed = false;
+        Exception? exception = null;
+
+        try
+        {
+            refreshed = await RefreshCredentials().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            exception = ex;
+        }
+
+        if (!refreshed)
+        {
+            RestartTokenRefreshTimer(_backgroundRefreshRetryInterval, exception);
+        }
+    }
+
+    /// <summary>
+    /// Restarts the token refresh timer after a failed background refresh, so the refresh is retried.
+    /// </summary>
+    /// <param name="retryIn">The interval to wait before retrying.</param>
+    /// <param name="exception">The exception, if any, which caused the refresh to fail.</param>
+    private void RestartTokenRefreshTimer(TimeSpan retryIn, Exception? exception)
+    {
+        lock (_timerLock)
+        {
+            if (!_enableTokenRefresh || _credentialRefreshTimer is null || Credentials is not AccessCredentials)
+            {
+                return;
+            }
+
+            _credentialRefreshTimer.Interval = retryIn.TotalMilliseconds;
+            _credentialRefreshTimer.Start();
+
+            Logger.BackgroundTokenRefreshFailed(_logger, _credentialRefreshTimer.Interval, exception);
+        }
     }
 
     private void StartTokenRefreshTimer()
@@ -1532,7 +1667,7 @@ public partial class AtProtoAgent
             if (accessTokenExpiresIn.TotalSeconds < 60)
             {
                 // As we're about to expire, go refresh the token
-                RefreshCredentials().FireAndForget();
+                BackgroundRefreshCredentials().FireAndForget();
                 return;
             }
 
@@ -1542,10 +1677,18 @@ public partial class AtProtoAgent
                 refreshIn = accessTokenExpiresIn - new TimeSpan(0, 1, 0);
             }
 
-            if (_credentialRefreshTimer is not null)
+            lock (_timerLock)
             {
+                // The timer is created here, and only here, so that the Elapsed handler is subscribed exactly once.
+                // Subscribing on every start would leave the handler attached multiple times, and every tick would then
+                // start as many concurrent refreshes as there are subscriptions, each racing to spend the same refresh token.
+                if (_credentialRefreshTimer is null)
+                {
+                    _credentialRefreshTimer = new System.Timers.Timer();
+                    _credentialRefreshTimer.Elapsed += RefreshTimerElapsed;
+                }
+
                 _credentialRefreshTimer.Interval = refreshIn.TotalMilliseconds >= int.MaxValue ? int.MaxValue : refreshIn.TotalMilliseconds;
-                _credentialRefreshTimer.Elapsed += RefreshTimerElapsed;
                 _credentialRefreshTimer.Enabled = true;
                 _credentialRefreshTimer.Start();
 
@@ -1556,15 +1699,19 @@ public partial class AtProtoAgent
 
     private void StopTokenRefreshTimer(bool dispose = false)
     {
-        if (_credentialRefreshTimer is not null)
+        lock (_timerLock)
         {
-            _credentialRefreshTimer.Stop();
-            Logger.TokenRefreshTimerStopped(_logger);
-
-            if (dispose)
+            if (_credentialRefreshTimer is not null)
             {
-                _credentialRefreshTimer.Dispose();
-                _credentialRefreshTimer = null;
+                _credentialRefreshTimer.Stop();
+                Logger.TokenRefreshTimerStopped(_logger);
+
+                if (dispose)
+                {
+                    _credentialRefreshTimer.Elapsed -= RefreshTimerElapsed;
+                    _credentialRefreshTimer.Dispose();
+                    _credentialRefreshTimer = null;
+                }
             }
         }
     }

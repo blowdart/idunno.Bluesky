@@ -518,9 +518,11 @@ public class AtProtoJetstream : IDisposable
             return;
         }
 
-        if (_client is null || _client.State == WebSocketState.Aborted || _client.State == WebSocketState.Closed)
+        lock (_syncLock)
         {
-            lock (_syncLock)
+            // The state is re-checked inside the lock. Checking it outside only narrows the race, it does not remove it,
+            // and a caller which loses that race would otherwise have the socket it is about to connect disposed underneath it.
+            if (_client is null || _client.State == WebSocketState.Aborted || _client.State == WebSocketState.Closed)
             {
                 if (_client is not null)
                 {

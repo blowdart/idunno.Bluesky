@@ -6,6 +6,12 @@
 
 #### idunno.AtProto
 
+* Added `AtProtoAgentOptions.MaximumWellKnownResponseSize`, an optional `maximumWellKnownResponseSize` parameter on the `AtProtoServer.ResolveHandle()`
+  and `Resolution.ResolveHandle()` overloads, and the `AtProtoServer.DefaultMaximumWellKnownResponseSize` constant, which configure the number of bytes
+  read from a `/.well-known/atproto-did` response when resolving a handle. The default is 4KB.
+* Added `AtProtoHttpClient.MaximumResponseSize` and the `AtProtoHttpClient.DefaultMaximumResponseSize` constant, which cap the number of bytes read from
+  an XRPC response body. A response larger than the maximum fails with an `AtErrorDetail` whose `Error` is `ResponseTooLarge`. The default is 32MB.
+  `MaximumResponseSize` is process wide, and applies to every agent and every request.
 * Added `IServiceCollection.AddAtProtoHttpClient()`, which registers the named `HttpClient` an agent constructed with an `IHttpClientFactory` resolves,
   configured with the same SSRF protections, proxy and certificate revocation settings an agent applies when it builds its own `HttpClient`. Supplying
   an `IHttpClientFactory` to an agent without this registration produces a client with none of those protections.
@@ -30,6 +36,8 @@
 
 * Added `BlueskyAgent.UpdateProfile(Profile, Cid?, CancellationToken)` which allows updating a user's profile with an optional `Cid` parameter.
   The `Cid` is used to identify the specific version of the profile being updated, ensuring that updates are applied to the correct version and preventing conflicts.
+* Added an optional `maxPageSize` parameter to `BaseEmbeddedCardGenerator.GetPageContent()` and the `BaseEmbeddedCardGenerator.DefaultMaximumPageSize`
+  constant, which cap the number of bytes read from a page when generating an embedded card. The default is 1MB.
 
 #### idunno.Bluesky.AspNet.Authentication
 
@@ -107,6 +115,13 @@
 * An invalid `RecordKey` now throws a `RecordKeyFormatException` rather than an `NsidFormatException`.
 * `AtUri` no longer validates the collection segment twice. The duplicate check meant a malformed collection could be reported by either of two code
   paths, only one of which produced an `AtUriFormatException`, leaving an `NsidFormatException` able to escape had the first check ever been changed.
+
+#### idunno.Bluesky
+
+* The embedded card generators no longer buffer an entire page or image into memory before applying their size limits. Both requests now complete as
+  soon as the response headers arrive, and the body is read with a bounded, streaming read. Previously the existing limits on `DownloadAndUploadImageBlob()`
+  were applied only after `HttpClient` had already buffered the whole body, so a hostile or misconfigured site could exhaust memory when a user posted a
+  link to it.
 
 
 ## 6.0.0 - 2026-09-05

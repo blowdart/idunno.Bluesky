@@ -99,7 +99,7 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
         }
 
 
-        string? pageContent = await GetPageContent(uri, cancellationToken).ConfigureAwait(false);
+        string? pageContent = await GetPageContent(uri, cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (!string.IsNullOrEmpty(pageContent))
         {
@@ -166,7 +166,7 @@ public sealed partial class StandardSiteEmbeddedCardGenerator : OpenGraphEmbedde
                 Path = "/.well-known/site.standard.publication"
             };
 
-            publicationMetadata = await GetPageContent(publicationMetaDataPathBuilder.Uri, cancellationToken).ConfigureAwait(false);
+            publicationMetadata = await GetPageContent(publicationMetaDataPathBuilder.Uri, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         // If there is no publication metadata after trying embeds and the well-known path

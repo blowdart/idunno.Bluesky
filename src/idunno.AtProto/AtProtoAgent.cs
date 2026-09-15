@@ -360,13 +360,9 @@ public partial class AtProtoAgent : Agent
             TokenRefreshFailed = null;
             Unauthenticated = null;
 
-            if (_credentialRefreshTimer is not null)
-            {
-                _credentialRefreshTimer.Stop();
-                _credentialRefreshTimer.Enabled = false;
-                _credentialRefreshTimer.Dispose();
-                _credentialRefreshTimer = null;
-            }
+            StopTokenRefreshTimer(dispose: true);
+
+            _credentialRefreshSemaphore.Dispose();
 
             _directoryAgent.Dispose();
         }
@@ -397,6 +393,7 @@ public partial class AtProtoAgent : Agent
             handle,
             httpClient: HttpClient,
             loggerFactory: LoggerFactory,
+            maximumWellKnownResponseSize: Options?.MaximumWellKnownResponseSize ?? AtProtoServer.DefaultMaximumWellKnownResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (result is null)
@@ -478,7 +475,7 @@ public partial class AtProtoAgent : Agent
 
             if (didDocument is not null && didDocument.Services is not null)
             {
-                pds = didDocument.Services.FirstOrDefault(s => s.Id == @"#atproto_pds")!.ServiceEndpoint;
+                pds = didDocument.Services.FirstOrDefault(s => s.Id == @"#atproto_pds")?.ServiceEndpoint;
             }
         }
 

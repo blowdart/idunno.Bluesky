@@ -1,10 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Net;
-using System.Net.Http.Headers;
-using System.Net.Mime;
-using System.Reflection;
+using System.Diagnostics.CodeAnalysis;
 
 using idunno.DidPlcDirectory;
 
@@ -18,13 +15,6 @@ namespace idunno.AtProto;
 /// </summary>
 public sealed class Resolution
 {
-    private static readonly HttpClientHandler s_httpClientHandler = new()
-    {
-        AutomaticDecompression = DecompressionMethods.All,
-        AllowAutoRedirect = false,
-        UseCookies = false
-    };
-
     /// <summary>
     /// As we need to use the class only as a static container, prevent instantiation.
     /// We can't use static classes as they prevent the use of CreateLogger{T}.
@@ -40,29 +30,35 @@ public sealed class Resolution
     /// <param name="loggerFactory">An optional <see cref="LoggerFactory"/> to use to create a logger.</param>
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for HTTP requests.</param>
     /// <param name="timeout">An optional timeout for HTTP requests. This only takes effect if <paramref name="httpClient"/> is <see langword="null"/>.</param>
+    /// <param name="maximumWellKnownResponseSize">The maximum number of bytes to read from a <c>/.well-known/atproto-did</c> response.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maximumWellKnownResponseSize"/> is zero or negative.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
     public static async Task<Did?> ResolveHandle(
         string handle,
         ILoggerFactory? loggerFactory = null,
         HttpClient? httpClient = null,
         TimeSpan? timeout = null,
+        int maximumWellKnownResponseSize = AtProtoServer.DefaultMaximumWellKnownResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(handle);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumWellKnownResponseSize);
 
         loggerFactory ??= NullLoggerFactory.Instance;
         ILogger<Resolution> logger = loggerFactory.CreateLogger<Resolution>();
 
         Logger.ResolveHandleCalled(logger, handle);
 
-        using (HttpClient internalHttpClient = httpClient ?? BuildDefaultHttpClient(timeout))
+        using (HttpClientLease lease = new(httpClient, timeout))
         {
             Did? result = await AtProtoServer.ResolveHandle(
                 handle,
-                httpClient: httpClient ?? internalHttpClient,
+                httpClient: lease.Client,
                 loggerFactory: loggerFactory,
+                maximumWellKnownResponseSize: maximumWellKnownResponseSize,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             if (result is null)
@@ -85,14 +81,18 @@ public sealed class Resolution
     /// <param name="loggerFactory">An optional <see cref="LoggerFactory"/> to use to create a logger.</param>
     /// <param name="httpClient">An optional <see cref="HttpClient"/> to use for HTTP requests.</param>
     /// <param name="timeout">An optional timeout for HTTP requests.</param>
+    /// <param name="maximumWellKnownResponseSize">The maximum number of bytes to read from a <c>/.well-known/atproto-did</c> response.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentException">Thrown when <paramref name="handle"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maximumWellKnownResponseSize"/> is zero or negative.</exception>
+    [SuppressMessage("ApiDesign", "RS0026:Do not add multiple public overloads with optional parameters", Justification = "Overload with different first parameter type for convenience")]
     public static async Task<Did?> ResolveHandle(
         Handle handle,
         ILoggerFactory? loggerFactory = null,
         HttpClient? httpClient = null,
         TimeSpan? timeout = null,
+        int maximumWellKnownResponseSize = AtProtoServer.DefaultMaximumWellKnownResponseSize,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(handle);
@@ -101,6 +101,7 @@ public sealed class Resolution
             loggerFactory: loggerFactory,
             httpClient: httpClient,
             timeout: timeout,
+            maximumWellKnownResponseSize: maximumWellKnownResponseSize,
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
@@ -134,13 +135,13 @@ public sealed class Resolution
 
         DidDocument? didDocument = null;
 
-        using (HttpClient internalHttpClient = httpClient ?? BuildDefaultHttpClient(timeout))
+        using (HttpClientLease lease = new(httpClient, timeout))
         {
             AtProtoHttpResult<DidDocument> didDocumentResolutionResult = await
                 DirectoryServer.ResolveDidDocument(
                     did: did,
                     directory: plcDirectory,
-                    httpClient: httpClient ?? internalHttpClient,
+                    httpClient: lease.Client,
                     loggerFactory: loggerFactory,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -195,13 +196,13 @@ public sealed class Resolution
 
         DidDocument? didDocument = null;
 
-        using (HttpClient internalHttpClient = httpClient ?? BuildDefaultHttpClient(timeout))
+        using (HttpClientLease lease = new(httpClient, timeout))
         {
             AtProtoHttpResult<DidDocument> didDocumentResolutionResult = await
                 DirectoryServer.ResolveDidDocument(
                     did: did,
                     directory: plcDirectory,
-                    httpClient: httpClient ?? internalHttpClient,
+                    httpClient: lease.Client,
                     loggerFactory: loggerFactory,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
 
@@ -311,7 +312,7 @@ public sealed class Resolution
 
         if (didDocument is not null && didDocument.Services is not null)
         {
-            pds = didDocument.Services.FirstOrDefault(s => s.Id == @"#atproto_pds")!.ServiceEndpoint;
+            pds = didDocument.Services.FirstOrDefault(s => s.Id == @"#atproto_pds")?.ServiceEndpoint;
         }
 
         if (pds is null)
@@ -413,30 +414,5 @@ public sealed class Resolution
         {
             throw new ArgumentException("Could not parse AtIdentifier.", nameof(atIdentifier));
         }
-    }
-
-    private static HttpClient BuildDefaultHttpClient(TimeSpan? timeout)
-    {
-        HttpClient client = new(s_httpClientHandler, disposeHandler: false)
-        {
-            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower,
-            DefaultRequestVersion = HttpVersion.Version20
-        };
-
-        Assembly assembly = typeof(Agent).Assembly;
-        string? version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("idunno.AtProto/" + version);
-        client.DefaultRequestHeaders.Accept.Clear();
-        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(MediaTypeNames.Application.Json));
-        if (timeout is null)
-        {
-            client.Timeout = new(0, 5, 0);
-        }
-        else
-        {
-            client.Timeout = (TimeSpan)timeout;
-        }
-
-        return client;
     }
 }
