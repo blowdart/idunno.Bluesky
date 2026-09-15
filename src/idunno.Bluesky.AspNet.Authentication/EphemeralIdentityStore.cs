@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 using System.Security.Claims;
@@ -91,6 +92,8 @@ public class EphemeralIdentityStore : IIdentityStore
 
         EnsureCaches(sizeLimit ?? DefaultSizeLimit, Logger);
 
+        _metrics = new BlueskyAuthenticationMetrics(meterFactory);
+
         TokenCacheMemoryOptions = new MemoryCacheEntryOptions()
         {
             SlidingExpiration = entryTimeToLive ?? new(7, 0, 0, 0),
@@ -99,15 +102,13 @@ public class EphemeralIdentityStore : IIdentityStore
 
         // Eviction for capacity silently signs a user out, as their authentication cookie outlives the identity the
         // store was holding for them, so it needs to be reported rather than left to look like an expired login.
-        TokenCacheMemoryOptions.RegisterPostEvictionCallback(OnIdentityEvicted, Logger);
+        TokenCacheMemoryOptions.RegisterPostEvictionCallback(OnIdentityEvicted, new EvictionCallbackState(Logger, _metrics));
 
         RefreshCacheMemoryOptions = new MemoryCacheEntryOptions()
         {
             AbsoluteExpirationRelativeToNow = refreshLockExpiration ?? TimeSpan.FromSeconds(90),
             Size = 1
         };
-
-        _metrics = new BlueskyAuthenticationMetrics(meterFactory);
 
         if (!s_warned)
         {
@@ -142,15 +143,62 @@ public class EphemeralIdentityStore : IIdentityStore
     {
         ArgumentNullException.ThrowIfNull(claimsIdentity);
 
+        long startTimestamp = Stopwatch.GetTimestamp();
+
         Did did = await Set(claimsIdentity).ConfigureAwait(false);
+
+        _metrics.RecordIdentityStoreOperation(BlueskyAuthenticationMetrics.IdentityStoreOperationAdd, startTimestamp);
 
         Logger.IdentityAddedToCache(did);
     }
 
     /// <inheritdoc />
     /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is cancelled.</exception>
-    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Error handling needs to catch all exceptions")]
     public async Task<ClaimsIdentity?> GetIdentity(Did did, CancellationToken cancellationToken = default)
+    {
+        long startTimestamp = Stopwatch.GetTimestamp();
+
+        try
+        {
+            return await GetIdentityCore(did, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _metrics.RecordIdentityStoreOperation(BlueskyAuthenticationMetrics.IdentityStoreOperationGet, startTimestamp);
+        }
+    }
+
+    /// <inheritdoc />
+    public Task Remove(Did did, CancellationToken cancellationToken = default)
+    {
+        long startTimestamp = Stopwatch.GetTimestamp();
+
+        Cache.Remove($"{did}");
+
+        _metrics.RecordIdentityStoreOperation(BlueskyAuthenticationMetrics.IdentityStoreOperationRemove, startTimestamp);
+
+        Logger.CachedIdentityRemoved(did);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> is <see langword="null" />./</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="identity"/> does not have a DID claim, or the DID claim is invalid.</exception>
+    public async Task Update(ClaimsIdentity identity, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(identity);
+
+        long startTimestamp = Stopwatch.GetTimestamp();
+
+        Did did = await Set(identity).ConfigureAwait(false);
+
+        _metrics.RecordIdentityStoreOperation(BlueskyAuthenticationMetrics.IdentityStoreOperationUpdate, startTimestamp);
+
+        Logger.CachedIdentityUpdated(did);
+    }
+
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Error handling needs to catch all exceptions")]
+    private async Task<ClaimsIdentity?> GetIdentityCore(Did did, CancellationToken cancellationToken)
     {
         if (Cache.Get($"{did}") is not byte[] claimsIdentityAsBytes)
         {
@@ -179,7 +227,11 @@ public class EphemeralIdentityStore : IIdentityStore
             // The stored identity cannot be read, so remove it rather than leaving an entry every subsequent request will fail on.
             Cache.Remove($"{did}");
             Logger.CachedIdentityCouldNotBeUnprotected(did, ex);
-            _metrics.DataProtectionFailures.Add(1);
+            _metrics.DataProtectionFailures.Add(
+                1,
+                new KeyValuePair<string, object?>(
+                    BlueskyAuthenticationMetrics.DataProtectionSourceTagName,
+                    BlueskyAuthenticationMetrics.DataProtectionSourceIdentityStore));
             return null;
         }
         catch (Exception ex)
@@ -187,26 +239,6 @@ public class EphemeralIdentityStore : IIdentityStore
             Logger.CachedIdentityIsCorrupt(did, ex);
             return null;
         }
-    }
-
-    /// <inheritdoc />
-    public Task Remove(Did did, CancellationToken cancellationToken = default)
-    {
-        Cache.Remove($"{did}");
-        Logger.CachedIdentityRemoved(did);
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc />
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="identity"/> is <see langword="null" />./</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="identity"/> does not have a DID claim, or the DID claim is invalid.</exception>
-    public async Task Update(ClaimsIdentity identity, CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(identity);
-
-        Did did = await Set(identity).ConfigureAwait(false);
-
-        Logger.CachedIdentityUpdated(did);
     }
 
     /// <inheritdoc />
@@ -282,7 +314,24 @@ public class EphemeralIdentityStore : IIdentityStore
     [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "A post eviction callback must not throw, as MemoryCache gives the exception nowhere to go")]
     private static void OnIdentityEvicted(object key, object? value, EvictionReason reason, object? state)
     {
-        if (reason != EvictionReason.Capacity || state is not ILogger logger || s_capacityWarned)
+        if (reason != EvictionReason.Capacity || state is not EvictionCallbackState callbackState)
+        {
+            return;
+        }
+
+        try
+        {
+            // Unlike the warning below, every evicted identity is counted, so the rate at which the store is signing
+            // users out is visible rather than just the fact that it happened at least once.
+            callbackState.Metrics.IdentityStoreEvictions.Add(1);
+        }
+        catch (Exception)
+        {
+            // Deliberately ignored. This runs on a thread pool thread after the entry has already gone, so there is
+            // nothing to recover and nowhere for an exception to propagate to; a failed diagnostic must not crash the process.
+        }
+
+        if (s_capacityWarned)
         {
             return;
         }
@@ -301,7 +350,7 @@ public class EphemeralIdentityStore : IIdentityStore
 
         try
         {
-            logger.EphemeralIdentityStoreCapacityReached(s_configuredSizeLimit);
+            callbackState.Logger.EphemeralIdentityStoreCapacityReached(s_configuredSizeLimit);
         }
         catch (Exception)
         {
@@ -309,6 +358,8 @@ public class EphemeralIdentityStore : IIdentityStore
             // nothing to recover and nowhere for an exception to propagate to; a failed diagnostic must not crash the process.
         }
     }
+
+    private sealed record EvictionCallbackState(ILogger Logger, BlueskyAuthenticationMetrics Metrics);
 
     private async Task<Did> Set(ClaimsIdentity claimsIdentity)    {
         ArgumentNullException.ThrowIfNull(claimsIdentity);

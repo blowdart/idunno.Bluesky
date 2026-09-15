@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 using System.Security.Claims;
@@ -119,13 +120,24 @@ public class DistributedCacheIdentityStore : IIdentityStore
     {
         ArgumentNullException.ThrowIfNull(claimsIdentity);
 
+        long startTimestamp = Stopwatch.GetTimestamp();
+
+        Did did = await AddCore(claimsIdentity, nameof(claimsIdentity), cancellationToken).ConfigureAwait(false);
+
+        Metrics.RecordIdentityStoreOperation(BlueskyAuthenticationMetrics.IdentityStoreOperationAdd, startTimestamp);
+
+        Logger.IdentityAddedToCache(did);
+    }
+
+    private async Task<Did> AddCore(ClaimsIdentity claimsIdentity, string paramName, CancellationToken cancellationToken)
+    {
         string? didAsString = (claimsIdentity.Claims?.FirstOrDefault(
             x => x.Type.Equals(AtProtoClaims.Did, StringComparison.Ordinal))?.Value) ??
-            throw new ArgumentException("No DID claim found", nameof(claimsIdentity));
+            throw new ArgumentException("No DID claim found", paramName);
 
         if (!Did.TryParse(didAsString, out Did? did))
         {
-            throw new ArgumentException("DID claim was not a valid DID", nameof(claimsIdentity));
+            throw new ArgumentException("DID claim was not a valid DID", paramName);
         }
 
         byte[] claimsIdentityAsBytes;
@@ -143,13 +155,27 @@ public class DistributedCacheIdentityStore : IIdentityStore
 
         await Cache.SetAsync($"{ClaimsStorePrefix}{did}", claimsIdentityAsBytes, TokenCacheMemoryOptions, token: cancellationToken).ConfigureAwait(false);
 
-        Logger.IdentityAddedToCache(did);
+        return did;
     }
 
     /// <inheritdoc/>
     /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is cancelled.</exception>
-    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Error handling needs to catch all exceptions")]
     public async Task<ClaimsIdentity?> GetIdentity(Did did, CancellationToken cancellationToken = default)
+    {
+        long startTimestamp = Stopwatch.GetTimestamp();
+
+        try
+        {
+            return await GetIdentityCore(did, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            Metrics.RecordIdentityStoreOperation(BlueskyAuthenticationMetrics.IdentityStoreOperationGet, startTimestamp);
+        }
+    }
+
+    [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Error handling needs to catch all exceptions")]
+    private async Task<ClaimsIdentity?> GetIdentityCore(Did did, CancellationToken cancellationToken)
     {
         ClaimsIdentity? result = null;
 
@@ -183,7 +209,11 @@ public class DistributedCacheIdentityStore : IIdentityStore
             // The stored identity cannot be read, so remove it rather than leaving an entry every subsequent request will fail on.
             await Cache.RemoveAsync($"{ClaimsStorePrefix}{did}", token: cancellationToken).ConfigureAwait(false);
             Logger.CachedIdentityCouldNotBeUnprotected(did, ex);
-            Metrics.DataProtectionFailures.Add(1);
+            Metrics.DataProtectionFailures.Add(
+                1,
+                new KeyValuePair<string, object?>(
+                    BlueskyAuthenticationMetrics.DataProtectionSourceTagName,
+                    BlueskyAuthenticationMetrics.DataProtectionSourceIdentityStore));
             return null;
         }
         catch (Exception ex)
@@ -200,7 +230,12 @@ public class DistributedCacheIdentityStore : IIdentityStore
     /// <inheritdoc/>
     public async Task Remove(Did did, CancellationToken cancellationToken = default)
     {
+        long startTimestamp = Stopwatch.GetTimestamp();
+
         await Cache.RemoveAsync($"{ClaimsStorePrefix}{did}", token: cancellationToken).ConfigureAwait(false);
+
+        Metrics.RecordIdentityStoreOperation(BlueskyAuthenticationMetrics.IdentityStoreOperationRemove, startTimestamp);
+
         Logger.CachedIdentityRemoved(did);
     }
 
@@ -210,16 +245,15 @@ public class DistributedCacheIdentityStore : IIdentityStore
     public async Task Update(ClaimsIdentity identity, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(identity);
-        string? didAsString = (identity.Claims?.FirstOrDefault(
-            x => x.Type.Equals(AtProtoClaims.Did, StringComparison.Ordinal))?.Value) ??
-            throw new ArgumentException("No DID claim found", nameof(identity));
 
-        if (!Did.TryParse(didAsString, out Did? did))
-        {
-            throw new ArgumentException("DID claim was not a valid DID", nameof(identity));
-        }
+        long startTimestamp = Stopwatch.GetTimestamp();
 
-        await Add(identity, cancellationToken).ConfigureAwait(false);
+        // AddCore rather than Add, otherwise an update would also be timed as an add and the two operations could not
+        // be told apart.
+        Did did = await AddCore(identity, nameof(identity), cancellationToken).ConfigureAwait(false);
+
+        Metrics.RecordIdentityStoreOperation(BlueskyAuthenticationMetrics.IdentityStoreOperationUpdate, startTimestamp);
+
         Logger.CachedIdentityUpdated(did);
     }
 

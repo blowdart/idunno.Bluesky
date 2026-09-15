@@ -56,7 +56,6 @@ The `idunno.AtProto.AtProtoHttpClient` Meter reports measures from the `idunno.A
 | --- | --- | --- | --- |
 | `responses.total.deserialization_failure` | Counter&lt;long&gt; | Requests | Total number of responses that could not be deserialized from JSON by an instance of the `idunno.AtProto.AtProtoHttpClient`. |
 
-
 ### Metric: request.duration
 
 | Name | Instrument Type | Unit | Description |
@@ -64,6 +63,7 @@ The `idunno.AtProto.AtProtoHttpClient` Meter reports measures from the `idunno.A
 | `request.duration` | Histogram&lt;double&gt; | s | Duration of individual requests made by an instance of the `idunno.AtProto.AtProtoHttpClient`. |
 
 ### Metric: requests.total.xrpc_request
+
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
 | `requests.total.xrpc_request` | Counter&lt;long&gt; | Requests | Total number of xRPC requests made by an instance of the `idunno.AtProto.AtProtoHttpClient`, tagged with the xrpc_endpoint. |
@@ -125,65 +125,171 @@ The `idunno.AtProto.Jetstream` Meter reports measures from the `idunno.AtProto.J
 The `idunno.AtProto.Directory` Meter reports measures from the `idunno.DidPlcDirectory` service.
 
 ### Metric: idunno.atproto.directory.requests.total
+
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
 | `requests.total` | Counter&lt;long&gt; | Requests | Total number of requests made for DID documents.|
 
 ### Metric: idunno.atproto.directory.requests.total.failed
+
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
 | `requests.total.failed` | Counter&lt;long&gt; | Requests | Total number of requests made for DID documents that failed. |
 
 ### Metric: idunno.atproto.directory.requests.total.succeeded
+
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
 | `requests.total.succeeded` | Counter&lt;long&gt; | Requests | Total number of requests made for DID documents that succeeded. |
 
 ### Metric: idunno.atproto.directory.requests.duration
+
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
 | `requests.duration` | Histogram&lt;double&gt; | s | Duration of individual requests made for DID documents. |
 
 ## idunno.Bluesky.AspNet.Authentication
 
-The `idunno.Bluesky.AspNet.Authentication` Meter reports measures from the `idunno.Bluesky.AspNet.Authentication` components.
+The `idunno.Bluesky.AspNet.Authentication` Meter reports measures from the `idunno.Bluesky.AspNet.Authentication` components,
+the authentication handler, the sign-in manager, the profile claims transformer and the identity stores.
 
-### Metric: idunno.bluesky.aspnet.authentication.accesstokensrefreshed.total
+All instrument names are prefixed with `idunno.bluesky.aspnet.authentication.`, which is omitted from the tables below for brevity.
+
+### Metric: idunno.bluesky.aspnet.authentication.authentications.total
+
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `accesstokensrefreshed.total` | Counter&lt;long&gt; | Access Tokens | Total number of access tokens refreshed. |
+| `authentications.total` | Counter&lt;long&gt; | {authentications} | Total authentication attempts against a request carrying an authentication cookie. Requests with no authentication cookie are not counted, as they are not authentication attempts. |
 
-### Metric: idunno.bluesky.aspnet.authentication.accesstokensrefreshfailures.total
+Tagged with `result`, whose value is `success` when the request authenticated, or one of the following when it did not.
+
+| `result` | Meaning |
+| --- | --- |
+| `unprotect_ticket_failed` | The authentication cookie could not be unprotected. |
+| `did_missing_in_cookie` | The ticket carried no DID claim. |
+| `invalid_did_in_cookie` | The ticket carried a DID claim which is not a valid DID. |
+| `identity_missing_in_store` | The identity store no longer holds the identity the ticket points at. |
+| `ticket_expired` | The ticket expired and could not be renewed. |
+| `no_principal` | The ticket carried no principal. |
+| `token_refresh_failed` | The access token needed refreshing and the refresh failed. |
+| `identity_missing_after_refresh` | The identity vanished from the store while its token was being refreshed. |
+| `token_refresh_wait_expired` | The request gave up waiting for another request to finish refreshing the token. |
+| `request_cancelled` | The request was cancelled during authentication. |
+| `failure` | A catch-all for any other failure, including results substituted by an application event handler. |
+
+### Metric: idunno.bluesky.aspnet.authentication.signins.total.successful
+
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `tokenrefreshfailures.total` | Counter&lt;long&gt; | Access Tokens | Total number of access tokens refresh failures. |
+| `signins.total.successful` | Counter&lt;long&gt; | {signins} | Total successful sign-ins. |
 
-### Metric: idunno.bluesky.aspnet.authentication.accesstokenrefreshwaits.total
+### Metric: idunno.bluesky.aspnet.authentication.signins.total.failure
+
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `accesstokenrefreshwaits.total` | Counter&lt;long&gt; | Access Tokens | Total number of times the system waited for an access token to be refreshed. |
+| `signins.total.failure` | Counter&lt;long&gt; | {signins} | Total failed sign-ins. |
 
-### Metric: idunno.bluesky.aspnet.authentication.accesstokenrefreshwaits.duration
+Tagged with `reason`, one of `NoQueryString`, `NoCorrelationState` or `OAuth2StateFailure`.
+
+### Metric: idunno.bluesky.aspnet.authentication.signouts.total
+
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `accesstokenrefreshwaits.duration` | Histogram&lt;double&gt; | s | Duration of time the system waited for an access token to be refreshed. |
+| `signouts.total` | Counter&lt;long&gt; | {signouts} | Total sign-outs. |
 
-### Metric: idunno.bluesky.aspnet.authentication.dataprotectionfailures.total
+### Metric: idunno.bluesky.aspnet.authentication.credentialrevocations.failures.total
+
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `dataprotectionfailures.total` | Counter&lt;long&gt; | Failures | Total number of data protection failures. |
+| `credentialrevocations.failures.total` | Counter&lt;long&gt; | {failures} | Total failures revoking credentials at the PDS during sign-out. A non-zero value means tokens remain live at the PDS after the local session ended. |
 
-### Metric: idunno.bluesky.aspnet.authentication.profilecachemisses.total
+### Metric: idunno.bluesky.aspnet.authentication.correlationstate.rejections.total
+
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `profilecachemisses.total` | Counter&lt;long&gt; | Misses | Total number of profile cache misses. |
+| `correlationstate.rejections.total` | Counter&lt;long&gt; | {rejections} | Total OAuth correlation states rejected when processing a login callback. |
 
-### Metric: idunno.bluesky.aspnet.authentication.signins.total
+Tagged with `reason`.
+
+| `reason` | Meaning |
+| --- | --- |
+| `expired_cookie` | The correlation cookie was readable but had expired. |
+| `unprotect_failed` | The correlation cookie could not be unprotected. |
+| `state_not_found` | The cookie was readable but the login state it referred to was not in the state cache, either because it expired or because it had already been consumed. |
+
+### Metric: idunno.bluesky.aspnet.authentication.tokenrefreshes.total
+
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `signins.total` | Counter&lt;long&gt; | Sign-ins | Total number of sign-ins. |
+| `tokenrefreshes.total` | Counter&lt;long&gt; | {refreshes} | Total access tokens refreshed. |
 
-### Metric: idunno.bluesky.aspnet.authentication.signins.failed.total
+Tagged with `outcome`, either `self` when the request performed the refresh itself, or `concurrent` when it picked up a token refreshed by another request.
+
+### Metric: idunno.bluesky.aspnet.authentication.tokenrefreshfailures.total
+
 | Name | Instrument Type | Unit | Description |
 | --- | --- | --- | --- |
-| `signins.failed.total` | Counter&lt;long&gt; | Sign-ins | Total number of failed sign-ins. |
+| `tokenrefreshfailures.total` | Counter&lt;long&gt; | {refreshes} | Total access tokens refresh failures. |
+
+### Metric: idunno.bluesky.aspnet.authentication.tokenrefreshwaits.total
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `tokenrefreshwaits.total` | Counter&lt;long&gt; | {waits} | Total waits during token refresh as another refresh is in progress. |
+
+Tagged with `reason`, either `refresh_in_progress` for the ordinary case where the request queued behind a refresh it could see was running,
+or `lock_denied` where the request tried to take the refresh lock and lost the race. A rising proportion of `lock_denied` indicates lock contention
+rather than ordinary queueing.
+
+### Metric: idunno.bluesky.aspnet.authentication.tokenrefreshwaits.duration
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `tokenrefreshwaits.duration` | Histogram&lt;double&gt; | s | Duration of waits during token refresh as another refresh is in progress. |
+
+### Metric: idunno.bluesky.aspnet.authentication.identitystore.operations.duration
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `identitystore.operations.duration` | Histogram&lt;double&gt; | s | Duration of identity store operations. Every authenticated request reads from the identity store, so this is on the hot path for every request. |
+
+Tagged with `operation`, one of `add`, `get`, `remove` or `update`.
+
+### Metric: idunno.bluesky.aspnet.authentication.identitystore.misses.total
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `identitystore.misses.total` | Counter&lt;long&gt; | {misses} | Total identities which were not in the identity store when a request needed them. Each miss signs a user out. |
+
+Tagged with `phase`, either `authentication` when the identity was missing as the authentication cookie was read,
+or `token_refresh` when it disappeared while its access token was being refreshed.
+
+### Metric: idunno.bluesky.aspnet.authentication.identitystore.evictions.total
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `identitystore.evictions.total` | Counter&lt;long&gt; | {evictions} | Total identities evicted from the identity store because it reached its size limit. Only the `EphemeralIdentityStore` has a size limit. Evicting an identity silently signs that user out, so a non-zero value means the store is too small for the number of concurrent users. |
+
+> [!NOTE]
+> The matching capacity warning is logged only once for the lifetime of the process, so this counter is the only way to see how often
+> the `EphemeralIdentityStore` is evicting identities.
+
+### Metric: idunno.bluesky.aspnet.authentication.profilecache.hits.total
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `profilecache.hits.total` | Counter&lt;long&gt; | {hits} | Total profile cache hits. |
+
+### Metric: idunno.bluesky.aspnet.authentication.profilecache.misses.total
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `profilecache.misses.total` | Counter&lt;long&gt; | {misses} | Total profile cache misses. A miss makes a call out to the PDS, so the hit rate against these two counters is a measure of how much request latency the profile cache is saving. |
+
+### Metric: idunno.bluesky.aspnet.authentication.dataprotection.failures.total
+
+| Name | Instrument Type | Unit | Description |
+| --- | --- | --- | --- |
+| `dataprotection.failures.total` | Counter&lt;long&gt; | {failures} | Total data protection failures. A sustained rise usually means key ring rotation or a key ring which is not shared across every instance of a multi-instance deployment. |
+
+Tagged with `source`, either `correlation_cookie` or `identity_store`, identifying which payload could not be unprotected.
