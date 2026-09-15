@@ -49,22 +49,17 @@ public partial class BlueskyAgent
 
         MessageInput messageInput;
 
+        Embed.EmbeddedRecord? embed = embeddedPost is not null ? new Embed.EmbeddedRecord(embeddedPost) : null;
+
         if (!extractFacets)
         {
-            messageInput = new MessageInput(message);
+            messageInput = new MessageInput(message, embed: embed, replyTo: replyTo);
         }
         else
         {
             IList<Facet> facets = await FacetExtractor.ExtractFacets(message, cancellationToken).ConfigureAwait(false);
-            messageInput = new MessageInput(message, facets);
+            messageInput = new MessageInput(message, facets, embed: embed, replyTo: replyTo);
         }
-
-        if (embeddedPost is not null)
-        {
-            messageInput.Embed = new Embed.EmbeddedRecord(embeddedPost);
-        }
-
-        messageInput.ReplyTo = replyTo;
 
         return await BlueskyServer.SendMessage(
             conversationId,

@@ -104,6 +104,10 @@
 * `BlueskyServer.ListConversations()` now takes `readState`, `status`, `kind` and `lockStatus` parameters between `cursor` and `service`. Callers
   passing the `service`, `accessCredentials` and `httpClient` arguments positionally will need to update. `BlueskyAgent.ListConversations()` takes the
   same four filters as optional parameters, so only callers passing its `cancellationToken` positionally are affected.
+* The properties on `Chat.Group.JoinRequestView` and `Chat.Group.JoinRequestConversationView`, and the `Facets`, `Embed` and `ReplyTo` properties on
+  `Chat.MessageInput`, are now `init` only. They are populated when the object is created and describe a message which has been sent or a request which
+  has been made, so changing them afterwards altered an object the caller had already been given. Set them in an object initializer, or use a `with`
+  expression to derive a changed copy.
 
 ### Fixed
 
@@ -243,6 +247,9 @@
   grapheme cluster has no upper bound on its encoded length, so the lexicon's `maxLength` was reachable and unenforced.
 * The `BlueskyAgent.SetConversationDeclaration(string, string)` overloads now check `IsAuthenticated` directly, matching the overload which takes a
   declaration record. The exception they throw is unchanged; it was previously raised by the underlying `PutRecord()` call.
+* `Chat.MessageInput` no longer keeps a reference to the facet collection it is given. The constructor copied the collection but the `Facets` setter did
+  not, so a caller which assigned a `List<Facet>` and then changed it altered the message, and a facet range is a pair of byte offsets into text which
+  may no longer match.
 
 ## 6.0.0 - 2026-09-05
 

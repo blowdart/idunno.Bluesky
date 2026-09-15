@@ -279,3 +279,27 @@ idunno.Bluesky.Chat.ConversationReadState
 idunno.Bluesky.BlueskyAgent.ListConversations(int? limit = null, string? cursor = null, string? readState = null, string? status = null, string? kind = null, string? lockStatus = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Conversations!>!>!
 static idunno.Bluesky.BlueskyServer.ListConversations(int? limit, string? cursor, string? readState, string? status, string? kind, string? lockStatus, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.Chat.Conversations!>!>!
 static readonly idunno.Bluesky.Maximum.ReactionLengthInBytes -> int
+*REMOVED*idunno.Bluesky.Chat.Group.JoinRequestConversationView.ConversationId.set -> void
+idunno.Bluesky.Chat.Group.JoinRequestConversationView.ConversationId.init -> void
+*REMOVED*idunno.Bluesky.Chat.Group.JoinRequestConversationView.MemberCount.set -> void
+idunno.Bluesky.Chat.Group.JoinRequestConversationView.MemberCount.init -> void
+*REMOVED*idunno.Bluesky.Chat.Group.JoinRequestConversationView.MemberLimit.set -> void
+idunno.Bluesky.Chat.Group.JoinRequestConversationView.MemberLimit.init -> void
+*REMOVED*idunno.Bluesky.Chat.Group.JoinRequestConversationView.Name.set -> void
+idunno.Bluesky.Chat.Group.JoinRequestConversationView.Name.init -> void
+*REMOVED*idunno.Bluesky.Chat.Group.JoinRequestConversationView.Owner.set -> void
+idunno.Bluesky.Chat.Group.JoinRequestConversationView.Owner.init -> void
+*REMOVED*idunno.Bluesky.Chat.Group.JoinRequestConversationView.Viewer.set -> void
+idunno.Bluesky.Chat.Group.JoinRequestConversationView.Viewer.init -> void
+*REMOVED*idunno.Bluesky.Chat.Group.JoinRequestView.ConversationId.set -> void
+idunno.Bluesky.Chat.Group.JoinRequestView.ConversationId.init -> void
+*REMOVED*idunno.Bluesky.Chat.Group.JoinRequestView.RequestedAt.set -> void
+idunno.Bluesky.Chat.Group.JoinRequestView.RequestedAt.init -> void
+*REMOVED*idunno.Bluesky.Chat.Group.JoinRequestView.RequestedBy.set -> void
+idunno.Bluesky.Chat.Group.JoinRequestView.RequestedBy.init -> void
+*REMOVED*idunno.Bluesky.Chat.MessageInput.Embed.set -> void
+idunno.Bluesky.Chat.MessageInput.Embed.init -> void
+*REMOVED*idunno.Bluesky.Chat.MessageInput.Facets.set -> void
+idunno.Bluesky.Chat.MessageInput.Facets.init -> void
+*REMOVED*idunno.Bluesky.Chat.MessageInput.ReplyTo.set -> void
+idunno.Bluesky.Chat.MessageInput.ReplyTo.init -> void
