@@ -27,7 +27,7 @@ public sealed partial class RecordKey : IEquatable<RecordKey>
             }
             else
             {
-                throw new NsidFormatException($"{s} is not a valid nsid.");
+                throw new RecordKeyFormatException($"{s} is not a valid record key.");
             }
         }
         else
@@ -40,6 +40,9 @@ public sealed partial class RecordKey : IEquatable<RecordKey>
     /// Creates a new instance of <see cref="RecordKey"/> from the specified string.
     /// </summary>
     /// <param name="s">The string to create the <see cref="RecordKey"/> from.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="s"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="s"/> is empty or whitespace.</exception>
+    /// <exception cref="RecordKeyFormatException">Thrown when <paramref name="s"/> is not a valid record key.</exception>
     public RecordKey(string s) : this(s, true)
     {
     }
@@ -47,7 +50,7 @@ public sealed partial class RecordKey : IEquatable<RecordKey>
     /// <summary>
     /// Gets the value of this <see cref="RecordKey"/>.
     /// </summary>
-    public string Value { get; init; }
+    public string Value { get; }
 
     /// <summary>
     /// Gets a <see cref="RecordKey"/> where the value is self.

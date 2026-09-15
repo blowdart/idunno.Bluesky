@@ -35,10 +35,14 @@
 
 ### Breaking Changes
 
+#### idunno.AtProto.Types
+
+* `RecordKey.Value` is now read only. Previously it had an `init` accessor, which allowed object initializer syntax to replace a validated record key
+  with an arbitrary string, for example `new RecordKey("self") { Value = "../../../etc/passwd" }`.
+
 #### idunno.AtProto
 
-* Removed the `ReaderWriterLockSlim` property to avoid potential deadlocks. Any code that was using this property should be now use its own locking mechanism to avoid deadlocks.
-* `DPoPRevokeCredentials` no longer implement `IDisposable`.
+* Removed the `ReaderWriterLockSlim` property to avoid potential deadlocks. Any code that was using this property should be now use its own locking mechanism to avoid deadlocks.* `DPoPRevokeCredentials` no longer implement `IDisposable`.
 * The `onCredentialsUpdated` parameter on `AtProtoServer` and `AtProtoHttpClient` methods has changed from `Action<AtProtoCredential>?` to
   `Func<AtProtoCredential, CancellationToken, Task>?`, and the callback is now awaited. Previously the callback was invoked synchronously, which meant
   asynchronous credential persistence could not be awaited, and any work it started could be abandoned. Callers passing a lambda should change
@@ -72,9 +76,21 @@
 
 #### idunno.AtProto.Types
 
+* `TimestampIdentifier.Next()` no longer returns duplicate identifiers when called concurrently. The read of the last issued timestamp, the comparison
+  against the current time and the write back were spread across two separate locks, so concurrent callers could observe the same value and generate
+  identical TIDs. Generating 2,000 TIDs in parallel previously produced only 875 distinct values. The whole read-modify-write now happens under a
+  single lock. As TIDs are used as record keys, colliding values could overwrite an unrelated record.
+* `Nsid.TryParse` now returns `false` for `null`, empty or whitespace input rather than throwing an `ArgumentException` or `ArgumentNullException`.
+* `RecordKey` values which are syntactically invalid now throw a `JsonException` when deserialized, rather than allowing a `RecordKeyFormatException`
+  to escape. `RecordKeyConverter` caught `NsidFormatException`, which the `RecordKey` constructor never throws.
+* `Did.Method` now returns the correct method for DIDs containing more than three colon separated segments. Previously `did:web:example.com:user:alice`
+  and `did:web:localhost:3000` reported a method of `INVALID`. `Method` participates in `Did` equality, so such DIDs compared equal to each other.
+* `new Handle(null)` now throws an `ArgumentNullException` rather than a `NullReferenceException`. This also applies to the implicit conversion from
+  `string` to `Handle`.
 * `Cid.ToString()` and `Cid.Value` no longer lower case CIDv0 identifiers. CIDv0 is base58btc encoded, whose alphabet is case sensitive, so case
   normalizing it produced a different identifier which no longer parsed back into an equal `Cid`. The base32 used by CIDv1 is case insensitive and
   continues to be normalized to lower case.
+* An invalid `RecordKey` now throws a `RecordKeyFormatException` rather than an `NsidFormatException`.
 
 
 ## 6.0.0 - 2026-09-05

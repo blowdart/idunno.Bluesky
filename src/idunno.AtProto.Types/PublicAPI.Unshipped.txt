@@ -1,2 +1,3 @@
 #nullable enable
+*REMOVED*idunno.AtProto.RecordKey.Value.init -> void
 static idunno.AtProto.Cid.TryParse(string? s, out idunno.AtProto.Cid? result) -> bool

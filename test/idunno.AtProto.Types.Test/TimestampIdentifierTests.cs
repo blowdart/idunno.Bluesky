@@ -1,6 +1,7 @@
 // Copyright (c) Barry Dorrans. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Collections.Concurrent;
 using System.Text.Json.Serialization;
 
 namespace idunno.AtProto.Types.Test;
@@ -223,6 +224,41 @@ public class TimestampIdentifierTests
         Assert.True(beforeTid < now);
         Assert.True(now < afterTid);
         Assert.True(afterTid > now);
+    }
+
+    [Fact]
+    public void TimestampIdentifierNextReturnsUniqueValuesWhenCalledConcurrently()
+    {
+        const int iterations = 2000;
+
+        ConcurrentBag<string> generated = [];
+
+        Parallel.For(0, iterations, _ => generated.Add(TimestampIdentifier.Next().ToString()));
+
+        Assert.Equal(iterations, generated.Count);
+        Assert.Equal(iterations, generated.Distinct().Count());
+    }
+
+    [Fact]
+    public void TimestampIdentifierNextReturnsMonotonicallyIncreasingValuesWhenCalledSequentially()
+    {
+        const int iterations = 500;
+
+        List<TimestampIdentifier> generated = new(iterations);
+
+        for (int i = 0; i < iterations; i++)
+        {
+            generated.Add(TimestampIdentifier.Next());
+        }
+
+        Assert.Equal(iterations, generated.Distinct().Count());
+
+        for (int i = 1; i < iterations; i++)
+        {
+            Assert.True(
+                generated[i].CompareTo(generated[i - 1]) > 0,
+                $"{generated[i]} at index {i} does not sort after {generated[i - 1]} at index {i - 1}.");
+        }
     }
 }
 
