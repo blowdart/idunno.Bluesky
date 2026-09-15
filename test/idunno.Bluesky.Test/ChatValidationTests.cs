@@ -4,6 +4,7 @@
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
 using idunno.Bluesky.Chat;
+using idunno.Bluesky.RichText;
 
 namespace idunno.Bluesky.Test;
 
@@ -37,6 +38,32 @@ public class ChatValidationTests
         MessageInput message = new(text);
 
         Assert.Equal(text, message.Text);
+    }
+
+    [Fact]
+    public void MessageInputDoesNotAliasTheFacetCollectionPassedToItsConstructor()
+    {
+        List<Facet> facets = [new Facet(new ByteSlice(0, 5), [new TagFacetFeature("tag")])];
+
+        MessageInput message = new("some text", facets);
+
+        facets.Add(new Facet(new ByteSlice(6, 11), [new TagFacetFeature("other")]));
+
+        Assert.NotNull(message.Facets);
+        Assert.Single(message.Facets);
+    }
+
+    [Fact]
+    public void MessageInputDoesNotAliasTheFacetCollectionAssignedInAnObjectInitializer()
+    {
+        List<Facet> facets = [new Facet(new ByteSlice(0, 5), [new TagFacetFeature("tag")])];
+
+        MessageInput message = new("some text") { Facets = facets };
+
+        facets.Add(new Facet(new ByteSlice(6, 11), [new TagFacetFeature("other")]));
+
+        Assert.NotNull(message.Facets);
+        Assert.Single(message.Facets);
     }
 
     [Theory]

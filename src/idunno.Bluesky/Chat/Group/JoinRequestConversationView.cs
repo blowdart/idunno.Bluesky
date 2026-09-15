@@ -34,35 +34,35 @@ public sealed record JoinRequestConversationView : ConversationViewBase
     /// </summary>
     [JsonRequired]
     [JsonPropertyName("convoId")]
-    public string ConversationId { get; set; }
+    public string ConversationId { get; init; }
 
     /// <summary>
     /// Gets the name of the group.
     /// </summary>
     [JsonRequired]
-    public string Name { get; set; }
+    public string Name { get; init; }
 
     /// <summary>
     /// Gets the <see cref="ProfileViewBasic"/> of owner of the group.
     /// </summary>
     [JsonRequired]
-    public ProfileViewBasic Owner { get; set; }
+    public ProfileViewBasic Owner { get; init; }
 
     /// <summary>
     /// Gets the number of members in the group.
     /// </summary>
     [JsonRequired]
-    public int MemberCount { get; set; }
+    public int MemberCount { get; init; }
 
     /// <summary>
     /// Gets the maximum number of members allowed in the group.
     /// </summary>
     [JsonRequired]
-    public int MemberLimit { get; set; }
+    public int MemberLimit { get; init; }
 
     /// <summary>
     /// Gets the state of the viewer with respect to the join link for the group.
     /// </summary>
     [JsonRequired]
-    public JoinLinkViewerState Viewer { get; set; }
+    public JoinLinkViewerState Viewer { get; init; }
 }

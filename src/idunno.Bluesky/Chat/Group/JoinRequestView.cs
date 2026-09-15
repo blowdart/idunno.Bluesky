@@ -30,17 +30,17 @@ public sealed record JoinRequestView : View
     /// </summary>
     [JsonRequired]
     [JsonPropertyName("convoId")]
-    public string ConversationId { get; set; }
+    public string ConversationId { get; init; }
 
     /// <summary>
     /// Gets the profile of the user who requested to join the group.
     /// </summary>
     [JsonRequired]
-    public ProfileViewBasic RequestedBy { get; set; }
+    public ProfileViewBasic RequestedBy { get; init; }
 
     /// <summary>
     /// Gets the date and time when the join request was made.
     /// </summary>
     [JsonRequired]
-    public DateTimeOffset RequestedAt { get; set; }
+    public DateTimeOffset RequestedAt { get; init; }
 }

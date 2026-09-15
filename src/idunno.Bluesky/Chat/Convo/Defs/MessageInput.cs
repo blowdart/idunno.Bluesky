@@ -33,14 +33,7 @@ public sealed record MessageInput
         ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.MessageLengthInGraphemes);
         Text = text;
 
-        if (facets is not null)
-        {
-            Facets = new ReadOnlyCollection<Facet>(facets.ToList().AsReadOnly());
-        }
-        else
-        {
-            Facets = null;
-        }
+        Facets = facets is not null ? [.. facets] : null;
 
         Embed = embed;
         ReplyTo = replyTo;
@@ -54,23 +47,35 @@ public sealed record MessageInput
     public string Text { get; init; }
 
     /// <summary>
-    /// Gets or sets the rich text <see cref="Facet"/>s of the message, if any.
+    /// Gets the rich text <see cref="Facet"/>s of the message, if any.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A facet's range is a pair of byte offsets into <see cref="Text"/>, so facets are only meaningful alongside the text they were
+    /// extracted from. The value supplied is copied, so later changes to the collection passed in are not reflected here.
+    /// </para>
+    /// </remarks>
     [JsonInclude]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public IReadOnlyCollection<Facet>? Facets { get; set; }
+    public IReadOnlyCollection<Facet>? Facets
+    {
+        get => _facets;
+        init => _facets = value is not null ? new ReadOnlyCollection<Facet>([.. value]) : null;
+    }
 
     /// <summary>
-    /// Gets or sets the embedded record of the message, if any.
+    /// Gets the embedded record of the message, if any.
     /// </summary>
     [JsonInclude]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public EmbeddedBase? Embed { get; set; }
+    public EmbeddedBase? Embed { get; init; }
 
     /// <summary>
-    /// Gets or sets the message this message is replying to. The referenced message must be in the same conversation.
+    /// Gets the message this message is replying to. The referenced message must be in the same conversation.
     /// </summary>
     [JsonInclude]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public ReplyReference? ReplyTo { get; set; }
+    public ReplyReference? ReplyTo { get; init; }
+
+    private readonly IReadOnlyCollection<Facet>? _facets;
 }
