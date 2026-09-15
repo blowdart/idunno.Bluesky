@@ -106,6 +106,42 @@ public static class Maximum
     public static readonly int MessageLengthInCharacters = 10000;
 
     /// <summary>
+    /// The maximum number of graphemes in a direct message.
+    /// </summary>
+    public static readonly int MessageLengthInGraphemes = 1000;
+
+    /// <summary>
+    /// The maximum number of conversation requests to list.
+    /// </summary>
+    public static readonly int ConversationRequestsToList = 100;
+
+    /// <summary>
+    /// The maximum number of group join requests to list.
+    /// </summary>
+    public static readonly int JoinRequestsToList = 100;
+
+    /// <summary>
+    /// The maximum number of members that can be specified when creating a group conversation.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is the limit from the lexicon schema. Implementations may enforce a lower limit;
+    /// Bluesky currently supports up to 100 total members in a group conversation.
+    /// </para>
+    /// </remarks>
+    public static readonly int GroupMembers = 10000;
+
+    /// <summary>
+    /// The maximum number of characters in a group conversation name.
+    /// </summary>
+    public static readonly int GroupNameLengthInCharacters = 500;
+
+    /// <summary>
+    /// The maximum number of graphemes in a group conversation name.
+    /// </summary>
+    public static readonly int GroupNameLengthInGraphemes = 50;
+
+    /// <summary>
     /// The maximum number of messages in a message batch.
     /// </summary>
     public static readonly int BatchedMessages = 100;

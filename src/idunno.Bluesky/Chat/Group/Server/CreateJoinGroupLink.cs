@@ -27,7 +27,7 @@ public partial class BlueskyServer
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/> or <paramref name="joinRule"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/>, <paramref name="joinRule"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/> or <paramref name="joinRule"/> is empty.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
@@ -50,6 +50,10 @@ public partial class BlueskyServer
     {
         ArgumentException.ThrowIfNullOrEmpty(conversationId);
         ArgumentException.ThrowIfNullOrEmpty(joinRule);
+
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(accessCredentials);
+        ArgumentNullException.ThrowIfNull(httpClient);
 
         BlueskyHttpClient<CreateJoinLinkResponse> client = new(ChatProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 

@@ -26,7 +26,7 @@ public partial class BlueskyServer
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/> or <paramref name="name"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/>, <paramref name="name"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/> or <paramref name="name"/> is empty.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="name"/> exceeds the maximum allowed length.</exception>
     [UnconditionalSuppressMessage(
@@ -49,8 +49,12 @@ public partial class BlueskyServer
     {
         ArgumentNullException.ThrowIfNull(conversationId);
         ArgumentException.ThrowIfNullOrEmpty(name);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, 1280);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetGraphemeLength(), 128);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, Maximum.GroupNameLengthInCharacters);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetGraphemeLength(), Maximum.GroupNameLengthInGraphemes);
+
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(accessCredentials);
+        ArgumentNullException.ThrowIfNull(httpClient);
 
         BlueskyHttpClient<EditGroupResponse> client = new(ChatProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 

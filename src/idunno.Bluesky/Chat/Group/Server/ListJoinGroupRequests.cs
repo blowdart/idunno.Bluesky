@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Text;
 
 using idunno.AtProto;
 using idunno.AtProto.Authentication;
@@ -15,9 +17,10 @@ namespace idunno.Bluesky;
 public partial class BlueskyServer
 {
     /// <summary>
-    /// Lists a page of request as a <see cref="PagedViewReadOnlyCollection{JoinRequestView}"/> to join a group (via join link) the user owns. Shows the data from the owner's point of view.
+    /// Lists a page of requests as a <see cref="PagedViewReadOnlyCollection{JoinRequestView}"/> to join a group (via join link) the user owns. Shows the data from the owner's point of view.
     /// </summary>
-    /// <param name="conversationIds">The ids of the conversations to list join requests for.</param>
+    /// <param name="conversationId">The id of the conversation to list join requests for.</param>
+    /// <param name="limit">The maximum number of join requests to return. Must be between 1 and 100.</param>
     /// <param name="cursor">An optional cursor used for pagination.</param>
     /// <param name="service">The <see cref="Uri"/> of the service to call.</param>
     /// <param name="accessCredentials">The <see cref="AccessCredentials"/> used to authenticate to <paramref name="service"/>.</param>
@@ -27,8 +30,9 @@ public partial class BlueskyServer
     /// <param name="maximumResponseSize">The maximum number of bytes to read from the response body.</param>
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationIds"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="conversationIds"/> is empty or contains more than 100 items.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="conversationId"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="conversationId"/> is empty.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="limit"/> is out of range.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -36,8 +40,9 @@ public partial class BlueskyServer
     [UnconditionalSuppressMessage("AOT",
         "IL3050:Calling members annotated with 'RequiresDynamicCodeAttribute' may break functionality when AOT compiling.",
         Justification = "All types are preserved in the JsonSerializerOptions call to Post().")]
-    public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<JoinRequestConversationView>>> ListJoinGroupRequests(
-        ICollection<string> conversationIds,
+    public static async Task<AtProtoHttpResult<PagedViewReadOnlyCollection<JoinRequestView>>> ListJoinGroupRequests(
+        string conversationId,
+        int? limit,
         string? cursor,
         Uri service,
         AccessCredentials accessCredentials,
@@ -47,16 +52,32 @@ public partial class BlueskyServer
         int maximumResponseSize = AtProtoHttpClient.DefaultMaximumResponseSize,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(conversationIds);
-        ArgumentOutOfRangeException.ThrowIfZero(conversationIds.Count);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(conversationIds.Count, 100);
+        ArgumentException.ThrowIfNullOrEmpty(conversationId);
 
-        string queryString = string.Join("&", conversationIds.Select(id => $"convoId={Uri.EscapeDataString(id)}"));
+        ArgumentNullException.ThrowIfNull(service);
+        ArgumentNullException.ThrowIfNull(accessCredentials);
+        ArgumentNullException.ThrowIfNull(httpClient);
+
+        if (limit is not null)
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan((int)limit, 1);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan((int)limit, Maximum.JoinRequestsToList);
+        }
+
+        StringBuilder queryStringBuilder = new();
+        queryStringBuilder.Append(CultureInfo.InvariantCulture, $"convoId={Uri.EscapeDataString(conversationId)}");
 
         if (cursor is not null)
         {
-            queryString += $"&cursor={Uri.EscapeDataString(cursor)}";
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&cursor={Uri.EscapeDataString(cursor)}");
         }
+
+        if (limit is not null)
+        {
+            queryStringBuilder.Append(CultureInfo.InvariantCulture, $"&limit={limit}");
+        }
+
+        string queryString = queryStringBuilder.ToString();
 
         BlueskyHttpClient<ListJoinRequestsResponse> client = new(ChatProxy, loggerFactory) { MaximumResponseSize = maximumResponseSize };
 
@@ -70,17 +91,17 @@ public partial class BlueskyServer
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Flatten into collection
-        PagedViewReadOnlyCollection<JoinRequestConversationView> result;
+        PagedViewReadOnlyCollection<JoinRequestView> result;
         if (response.Result is not null)
         {
-            result = new PagedViewReadOnlyCollection<JoinRequestConversationView>(response.Result.Requests, response.Result.Cursor);
+            result = new PagedViewReadOnlyCollection<JoinRequestView>(response.Result.Requests, response.Result.Cursor);
         }
         else
         {
-            result = new PagedViewReadOnlyCollection<JoinRequestConversationView>();
+            result = new PagedViewReadOnlyCollection<JoinRequestView>();
         }
 
-        return new AtProtoHttpResult<PagedViewReadOnlyCollection<JoinRequestConversationView>>(
+        return new AtProtoHttpResult<PagedViewReadOnlyCollection<JoinRequestView>>(
             result: result,
             statusCode: response.StatusCode,
             httpResponseHeaders: response.HttpResponseHeaders,

@@ -26,7 +26,11 @@ public partial class BlueskyAgent
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
         ArgumentNullException.ThrowIfNull(members);
-        ArgumentOutOfRangeException.ThrowIfZero(members.Count());
+
+        // Materialize the sequence so that it is only enumerated once, as the caller may have supplied a
+        // deferred query or a single pass iterator.
+        ICollection<Did> memberList = [.. members];
+        ArgumentOutOfRangeException.ThrowIfZero(memberList.Count);
 
         if (!IsAuthenticated)
         {
@@ -35,7 +39,7 @@ public partial class BlueskyAgent
 
         return await BlueskyServer.AddMembersToGroup(
             conversationId: conversationId,
-            members: members,
+            members: memberList,
             service: Service,
             accessCredentials: Credentials,
             httpClient: HttpClient,

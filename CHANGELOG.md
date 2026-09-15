@@ -44,6 +44,8 @@
   The `Cid` is used to identify the specific version of the profile being updated, ensuring that updates are applied to the correct version and preventing conflicts.
 * Added an optional `maxPageSize` parameter to `BaseEmbeddedCardGenerator.GetPageContent()` and the `BaseEmbeddedCardGenerator.DefaultMaximumPageSize`
   constant, which cap the number of bytes read from a page when generating an embedded card. The default is 1MB.
+* Added `Maximum.MessageLengthInGraphemes`, `Maximum.ConversationRequestsToList`, `Maximum.JoinRequestsToList`, `Maximum.GroupMembers`,
+  `Maximum.GroupNameLengthInCharacters` and `Maximum.GroupNameLengthInGraphemes`, replacing the hard coded limits used by the chat endpoints.
 
 #### idunno.Bluesky.AspNet.Authentication
 
@@ -90,6 +92,10 @@
 * `Embed.EmbeddedExternal` constructors have been simplifed to a single constructor, which has defaults for all optional parameters.
 * The `onCredentialsUpdated` parameter on `BlueskyServer` methods has changed from `Action<AtProtoCredential>?` to
   `Func<AtProtoCredential, CancellationToken, Task>?`, mirroring the change in `idunno.AtProto`.
+* `BlueskyAgent.ListJoinGroupRequests()` and `BlueskyServer.ListJoinGroupRequests()` now take a single `conversationId` and an optional `limit`, and
+  return a `PagedViewReadOnlyCollection<Chat.Group.JoinRequestView>` rather than a `PagedViewReadOnlyCollection<Chat.Group.JoinRequestConversationView>`.
+  The `chat.bsky.group.listJoinRequests` endpoint takes one required `convoId` and returns `joinRequestView`, so the previous signature could not be
+  called successfully.
 
 ### Fixed
 
@@ -203,6 +209,24 @@
   consumer in the process deserializes AT Protocol and Bluesky types.
 * The `cursor` parameter on `GetSuggestions()`, `SearchActors()` and `GetBookmarks()`, and the `id` parameter on `DeleteDraft()`, are now escaped before
   being placed in the query string, matching the other paged endpoints.
+* `ListConversationRequests()` now sends the `cursor` it is given to the server. It was accepted and documented, but never placed in the query string, so
+  every page after the first repeated the first page and a caller paging until the returned cursor was `null` never terminated.
+* `ListJoinGroupRequests()` now deserializes the join requests the server returns. It expected `chat.bsky.group.defs#joinRequestConvoView` where
+  `chat.bsky.group.listJoinRequests` returns `chat.bsky.group.defs#joinRequestView`, so every successful response threw a `JsonException`.
+* `Chat.MessageInput` now rejects text longer than `Maximum.MessageLengthInGraphemes` (1,000) as well as text longer than
+  `Maximum.MessageLengthInCharacters`, matching the `chat.bsky.convo.defs#messageInput` lexicon and the other text fields in the library.
+* `EditGroup()` now limits a group name to `Maximum.GroupNameLengthInCharacters` (500) and `Maximum.GroupNameLengthInGraphemes` (50), matching the
+  `chat.bsky.group.editGroup` lexicon and `CreateGroup()`. It previously allowed names two and a half times longer than the server accepts.
+* `CreateGroup()` no longer throws from inside an internal request type when it is given more than 49 members. The agent and server validated the member
+  count against the schema limit, then the request object applied a lower limit of its own, so a call both public layers accepted could still fail.
+* `AddMembersToGroup()` now enumerates the members it is given exactly once. The sequence was counted and then enumerated again when the request was
+  serialized, so a deferred query or a single pass iterator could be sent with different members to those that were validated, or with none at all.
+* The `BlueskyServer` methods for group conversations now validate `service`, `accessCredentials` and `httpClient`, matching the other chat methods.
+  Without the `accessCredentials` check an unauthenticated request was sent to the service rather than the call failing.
+* `BlueskyAgent.GetJoinGroupLinkPreviews()` now throws `AuthenticationRequiredException` when the agent is not authenticated, matching every other chat
+  method on the agent.
+* `Chat.Group.JoinRequestConversationView` is no longer registered twice in the JSON source generation context, and its remaining registration no longer
+  carries the type info property name of an unrelated type.
 
 ## 6.0.0 - 2026-09-05
 

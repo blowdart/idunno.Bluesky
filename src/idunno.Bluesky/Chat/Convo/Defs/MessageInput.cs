@@ -4,6 +4,7 @@
 using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 
+using idunno.AtProto;
 using idunno.Bluesky.Embed;
 using idunno.Bluesky.RichText;
 
@@ -29,6 +30,7 @@ public sealed record MessageInput
     {
         ArgumentNullException.ThrowIfNull(text);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.MessageLengthInCharacters);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.MessageLengthInGraphemes);
         Text = text;
 
         if (facets is not null)

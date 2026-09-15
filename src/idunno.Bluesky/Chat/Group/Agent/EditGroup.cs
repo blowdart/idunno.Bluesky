@@ -26,8 +26,8 @@ public partial class BlueskyAgent
     {
         ArgumentNullException.ThrowIfNull(conversationId);
         ArgumentException.ThrowIfNullOrEmpty(name);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, 1280);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetGraphemeLength(), 128);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, Maximum.GroupNameLengthInCharacters);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetGraphemeLength(), Maximum.GroupNameLengthInGraphemes);
 
         if (!IsAuthenticated)
         {

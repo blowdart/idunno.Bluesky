@@ -20,7 +20,7 @@ public partial class BlueskyAgent
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="members"/> or <paramref name="name"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="members"/> is empty or contains more than 49 members, or when <paramref name="name"/> exceeds the maximum length.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="members"/> is empty or exceeds the maximum number of members, or when <paramref name="name"/> exceeds the maximum length.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the current agent is not authenticated.</exception>
     public async Task<AtProtoHttpResult<CreateGroupResponse>> CreateGroup(
         ICollection<Did> members,
@@ -29,10 +29,10 @@ public partial class BlueskyAgent
     {
         ArgumentNullException.ThrowIfNull(members);
         ArgumentOutOfRangeException.ThrowIfZero(members.Count);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(members.Count, 10000);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(members.Count, Maximum.GroupMembers);
         ArgumentNullException.ThrowIfNull(name);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, 500);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetGraphemeLength(), 50);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.Length, Maximum.GroupNameLengthInCharacters);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(name.GetGraphemeLength(), Maximum.GroupNameLengthInGraphemes);
 
         if (!IsAuthenticated)
         {
