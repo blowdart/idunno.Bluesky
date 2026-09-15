@@ -147,7 +147,7 @@ public sealed class Cid : IEquatable<Cid>
     /// Returns a string that represents the current <see cref="Cid"/> object.
     /// </summary>
     /// <returns>A string representation of the current <see cref="Cid"/>.</returns>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "AT Proto normalizes the base32 used by CIDv1 to lower case.")]
+    [SuppressMessage("Globalization", "CA1308:Normalize strings to uppercase", Justification = "AT Proto normalizes the base32 used by CIDv1 to lower case.")]
     public override string ToString()
     {
         if (Version == 0)
