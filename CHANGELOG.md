@@ -64,20 +64,6 @@
   asynchronous credential persistence could not be awaited, and any work it started could be abandoned. Callers passing a lambda should change
   `credential => Save(credential)` to `(credential, cancellationToken) => SaveAsync(credential, cancellationToken)`.
 
-#### idunno.Bluesky.AspNet.Authentication
-
-* `IIdentityStore.StartRefresh` has changed from `Task<bool>` to `Task<string?>`, returning a token identifying the caller's ownership of the refresh
-  lock, or `null` if the lock could not be acquired. `IIdentityStore.EndRefresh` takes that token as a new second parameter and must only release the
-  lock if it still matches, so that a caller whose lock expired mid refresh cannot release a lock another caller has since acquired. Custom identity
-  stores need updating, and implementations must acquire the lock atomically.
-* `ProfileClaimsTransformer`'s constructor takes an additional `IOptionsMonitor<BlueskyAuthenticationOptions>` parameter, used to locate the
-  `IIdentityStore` updated credentials are saved to. The transformer is resolved from dependency injection, so applications registering it with
-  `AddProfileClaimsTransformer()` need no changes.
-* `IIdentityStore.OnCredentialsUpdated` has changed from `void OnCredentialsUpdated(object? sender, CredentialsUpdatedEventArgs e)` to
-  `Task OnCredentialsUpdated(CredentialsUpdatedEventArgs e, CancellationToken cancellationToken = default)`, and is now hooked up to the agent's
-  `CredentialsUpdatedAsync` callback rather than its `CredentialsUpdated` event. The previous implementation discarded the task returned by the
-  store update, so a failure to persist rotated credentials was silently ignored. As AT Proto refresh tokens are single use, a dropped update
-  would leave the stored credentials stale and unusable, signing the user out on their next request.
 
 #### idunno.Bluesky
 
