@@ -15,4 +15,13 @@ namespace idunno.Bluesky.Chat;
 [JsonDerivedType(typeof(GroupConversation), typeDiscriminator: "chat.bsky.convo.defs#groupConvo")]
 public abstract record ConversationKind
 {
+    /// <summary>
+    /// The value used to identify a conversation between two actors when filtering conversations by kind.
+    /// </summary>
+    public const string Direct = "direct";
+
+    /// <summary>
+    /// The value used to identify a conversation between three or more actors when filtering conversations by kind.
+    /// </summary>
+    public const string Group = "group";
 }
