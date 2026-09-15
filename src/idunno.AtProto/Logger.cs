@@ -357,6 +357,9 @@ internal static partial class Logger
     [LoggerMessage(1000, LogLevel.Error, "Received a message size ({messageSize}) larger than the configured maximum message size ({maximumMessageSize}).")]
     internal static partial void ReceivedMessageTooLarge(ILogger logger, int messageSize, int maximumMessageSize);
 
+    [LoggerMessage(1001, LogLevel.Error, "Received more than {maximumConsecutiveEmptyFragments} consecutive empty fragments whilst reading a message.")]
+    internal static partial void ReceivedTooManyEmptyFragments(ILogger logger, int maximumConsecutiveEmptyFragments);
+
     [LoggerMessage(1100, LogLevel.Error, "{uri} is unsafe")]
     internal static partial void UnsafeUri(ILogger logger, Uri uri);
 

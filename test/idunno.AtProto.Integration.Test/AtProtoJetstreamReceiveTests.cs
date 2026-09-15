@@ -126,6 +126,176 @@ public class AtProtoJetstreamReceiveTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task AServerInitiatedCloseIsRecordedAsAGracefulDisconnection()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        using var server = new TestJetstreamServer();
+
+        await server.Start(async (webSocket, serverCancellationToken) =>
+        {
+            await SendText(webSocket, IdentityEvent(), serverCancellationToken);
+            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Server disconnect", serverCancellationToken);
+        });
+
+        TaskCompletionSource closed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        using (var jetstream = new AtProtoJetstream(
+            uri: server.Uri,
+            options: new JetstreamOptions { UseCompression = false }))
+        {
+            jetstream.ConnectionStateChanged += (sender, e) =>
+            {
+                if (e.State == WebSocketState.Closed)
+                {
+                    closed.TrySetResult();
+                }
+            };
+
+            using (var httpClient = new HttpClient())
+            {
+                await jetstream.ConnectAsync(
+                    uri: server.Uri,
+                    cursor: null,
+                    httpClient: httpClient,
+                    cancellationToken: cancellationToken);
+
+                await closed.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+
+                Assert.Equal(WebSocketState.Closed, jetstream.State);
+                Assert.True(jetstream.DisconnectedGracefully);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ConcurrentConnectionAttemptsProduceASingleConnection()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        using var server = new TestJetstreamServer
+        {
+            // Holds the first connection attempt open long enough for the others to be made whilst it is in flight.
+            AcceptDelay = TimeSpan.FromSeconds(1)
+        };
+
+        await server.Start(async (webSocket, serverCancellationToken) =>
+        {
+            await SendText(webSocket, IdentityEvent(), serverCancellationToken);
+        });
+
+        ConcurrentQueue<string> messages = [];
+
+        using (var jetstream = new AtProtoJetstream(
+            uri: server.Uri,
+            options: new JetstreamOptions { UseCompression = false }))
+        {
+            jetstream.MessageReceived += (sender, e) => messages.Enqueue(e.Message);
+
+            TaskCompletionSource recordReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            jetstream.RecordReceived += (sender, e) => recordReceived.TrySetResult();
+
+            using (var httpClient = new HttpClient())
+            {
+                Task[] connections =
+                [
+                    .. Enumerable.Range(0, 4).Select(_ => Task.Run(
+                        async () => await jetstream.ConnectAsync(
+                            uri: server.Uri,
+                            cursor: null,
+                            httpClient: httpClient,
+                            cancellationToken: cancellationToken),
+                        cancellationToken))
+                ];
+
+                await Task.WhenAll(connections).WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+
+                Assert.True(jetstream.IsConnected);
+
+                await recordReceived.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+
+                Assert.Equal(1, server.ConnectionCount);
+
+                // One connection carrying one message, read by one receive loop, delivers the message once.
+                Assert.Single(messages);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task AMessageMadeUpOfEmptyFragmentsIsAbandoned()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+
+        using var server = new TestJetstreamServer();
+
+        await server.Start(async (webSocket, serverCancellationToken) =>
+        {
+            // An empty fragment adds nothing to the message being assembled, so the maximum message size can never
+            // bring this to an end. Only a limit on the fragments themselves can.
+            for (int i = 0; i < 100; i++)
+            {
+                await webSocket.SendAsync(
+                    Array.Empty<byte>(),
+                    WebSocketMessageType.Text,
+                    endOfMessage: false,
+                    serverCancellationToken);
+            }
+
+            await webSocket.SendAsync(
+                Array.Empty<byte>(),
+                WebSocketMessageType.Text,
+                endOfMessage: true,
+                serverCancellationToken);
+
+            await SendText(webSocket, IdentityEvent(sequence: 2), serverCancellationToken);
+        });
+
+        ConcurrentQueue<string> faults = [];
+
+        TaskCompletionSource<AtJetstreamEvent> recordReceived = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        using (var jetstream = new AtProtoJetstream(
+            uri: server.Uri,
+            options: new JetstreamOptions { UseCompression = false }))
+        {
+            jetstream.FaultRaised += (sender, e) => faults.Enqueue(e.Fault);
+            jetstream.RecordReceived += (sender, e) => recordReceived.TrySetResult(e.ParsedEvent);
+
+            using (var httpClient = new HttpClient())
+            {
+                await jetstream.ConnectAsync(
+                    uri: server.Uri,
+                    cursor: null,
+                    httpClient: httpClient,
+                    cancellationToken: cancellationToken);
+
+                AtJetstreamEvent received = await recordReceived.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
+
+                // The jetstream carried on and read the message which followed the abandoned one.
+                AtJetstreamIdentityEvent identityEvent = Assert.IsType<AtJetstreamIdentityEvent>(received);
+                Assert.Equal(2U, identityEvent.Identity.Sequence);
+
+                Assert.Contains(faults, fault => fault.Contains("empty fragments", StringComparison.Ordinal));
+            }
+        }
+    }
+
+    [Fact]
+    public void SettingAFilterToNullThrows()
+    {
+        using var jetstream = new AtProtoJetstream();
+
+        ArgumentNullException didFilterException = Assert.Throws<ArgumentNullException>(() => jetstream.DidFilter = null!);
+        ArgumentNullException collectionFilterException = Assert.Throws<ArgumentNullException>(() => jetstream.CollectionFilter = null!);
+
+        // The parameter name is checked because a null slips through to the copy of the value and throws from there
+        // too, naming whichever parameter the copy happened to use rather than the value which was set.
+        Assert.Equal("value", didFilterException.ParamName);
+        Assert.Equal("value", collectionFilterException.ParamName);
+    }
+
     private static async Task<AtJetstreamEvent> Receive(
         TestJetstreamServer server,
         bool useCompression,
@@ -193,6 +363,7 @@ public class AtProtoJetstreamReceiveTests
     {
         private readonly HttpListener _listener = new();
         private readonly CancellationTokenSource _cancellationTokenSource = new();
+        private int _connectionCount;
 
         public TestJetstreamServer()
         {
@@ -206,30 +377,58 @@ public class AtProtoJetstreamReceiveTests
 
         public string? RequestQuery { get; private set; }
 
+        /// <summary>
+        /// The number of web socket connections the server has accepted.
+        /// </summary>
+        public int ConnectionCount => _connectionCount;
+
+        /// <summary>
+        /// How long to wait before accepting a connection, to keep a connection attempt in flight whilst another is made.
+        /// </summary>
+        public TimeSpan AcceptDelay { get; set; } = TimeSpan.Zero;
+
         public Task Start(Func<WebSocket, CancellationToken, Task> onConnected)
         {
             _listener.Start();
 
             _ = Task.Run(async () =>
             {
-                HttpListenerContext context = await _listener.GetContextAsync();
-
-                RequestQuery = context.Request.Url?.Query;
-
-                HttpListenerWebSocketContext webSocketContext = await context.AcceptWebSocketAsync(subProtocol: null);
-
-                using (WebSocket webSocket = webSocketContext.WebSocket)
+                while (!_cancellationTokenSource.IsCancellationRequested)
                 {
-                    await onConnected(webSocket, _cancellationTokenSource.Token);
+                    HttpListenerContext context = await _listener.GetContextAsync();
 
-                    // Held open until the test disposes the server, as closing drops the connection under the client.
-                    try
+                    RequestQuery = context.Request.Url?.Query;
+
+                    if (AcceptDelay > TimeSpan.Zero)
                     {
-                        await Task.Delay(Timeout.Infinite, _cancellationTokenSource.Token);
+                        await Task.Delay(AcceptDelay, _cancellationTokenSource.Token);
                     }
-                    catch (OperationCanceledException)
+
+                    HttpListenerWebSocketContext webSocketContext = await context.AcceptWebSocketAsync(subProtocol: null);
+
+                    // Every connection is counted, but only the first is sent anything, so a test can tell a second
+                    // connection apart from the first by what arrives on it as well as by the count.
+                    bool first = Interlocked.Increment(ref _connectionCount) == 1;
+
+                    _ = Task.Run(async () =>
                     {
-                    }
+                        using (WebSocket webSocket = webSocketContext.WebSocket)
+                        {
+                            if (first)
+                            {
+                                await onConnected(webSocket, _cancellationTokenSource.Token);
+                            }
+
+                            // Held open until the test disposes the server, as closing drops the connection under the client.
+                            try
+                            {
+                                await Task.Delay(Timeout.Infinite, _cancellationTokenSource.Token);
+                            }
+                            catch (OperationCanceledException)
+                            {
+                            }
+                        }
+                    }, _cancellationTokenSource.Token);
                 }
             }, _cancellationTokenSource.Token);
 

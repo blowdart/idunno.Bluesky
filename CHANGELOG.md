@@ -125,6 +125,17 @@
 * A jetstream now sends the maximum message size to the server under the name the server expects. The `maximumMessageSizeBytes` query string parameter
   does not exist, the parameter is `maxMessageSizeBytes`, so the server applied no limit at all. The value sent is now `MaxMessageSize` rather than
   `BufferSize`, which is the size of the blocks a message is read in rather than a limit on the message itself.
+* Reading a message from a web socket now gives up on a message made up of empty fragments. An empty fragment adds nothing to the message being
+  assembled, so the maximum message size could never bring the read to an end, and a peer which sent them endlessly held the read loop for as long as
+  it cared to. A message which closes part way through is now abandoned as well, rather than being handed to the caller as if it had ended there.
+* `AtProtoJetstream.DisconnectedGracefully` is now `true` when the server closed the connection and the jetstream completed the close by replying to
+  it. Previously it was set to `false`, which is the value for a connection which was dropped, so the two could not be told apart.
+* `AtProtoJetstream.ConnectAsync()` now serialises connection attempts. Callers which arrived together both reached the underlying web socket's
+  connect, where the second threw, and could each start a receive loop reading the same socket. A caller which arrives whilst a connection attempt is
+  in progress now waits for it, and returns without doing anything if it left the jetstream connected.
+* `AtProtoJetstream.DidFilter` and `AtProtoJetstream.CollectionFilter` now throw `ArgumentNullException` when set to `null`, are updated under a lock,
+  and are copied under that lock when the filters are sent to the server, so the server is sent a consistent pair of filters rather than one from
+  before a concurrent update and one from after it.
 
 #### idunno.AtProto.OAuthCallback
 

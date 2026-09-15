@@ -15,6 +15,16 @@ internal static class WebSocketExtensions
     internal const int DefaultMaxMessageSize = 1048576;
 
     /// <summary>
+    /// The maximum number of consecutive empty, non-final fragments to tolerate before abandoning a message.
+    /// </summary>
+    /// <remarks>
+    /// <para>An empty fragment adds nothing to the message being assembled, so the maximum message size can never
+    /// stop a peer which sends them endlessly. Without a limit of its own the read loop would run for as long as
+    /// the peer cared to keep sending.</para>
+    /// </remarks>
+    private const int MaximumConsecutiveEmptyFragments = 16;
+
+    /// <summary>
     /// Reads blocks from the specified <paramref name="webSocket"/>, until an end of message is encountered,
     /// or the web socket is no longer open, and returns the final <see cref="WebSocketReceiveResult"/>
     /// and a byte array containing the read message.
@@ -44,9 +54,30 @@ internal static class WebSocketExtensions
 
         using (MemoryStream ms = new())
         {
+            int consecutiveEmptyFragments = 0;
+
             do
             {
                 receiveResult = await webSocket.ReceiveAsync(buffer, cancellationToken).ConfigureAwait(false);
+
+                if (receiveResult.Count == 0 && !receiveResult.EndOfMessage)
+                {
+                    consecutiveEmptyFragments++;
+
+                    if (consecutiveEmptyFragments > MaximumConsecutiveEmptyFragments)
+                    {
+                        if (logger is not null)
+                        {
+                            Logger.ReceivedTooManyEmptyFragments(logger, MaximumConsecutiveEmptyFragments);
+                        }
+
+                        throw new WebSocketException(WebSocketError.InvalidMessageType, $"Message contained more than {MaximumConsecutiveEmptyFragments} consecutive empty fragments.");
+                    }
+                }
+                else
+                {
+                    consecutiveEmptyFragments = 0;
+                }
 
                 if (ms.Length + receiveResult.Count > maxMessageSize)
                 {
@@ -62,6 +93,14 @@ internal static class WebSocketExtensions
                     buffer.AsMemory(buffer.Offset, receiveResult.Count),
                     cancellationToken: cancellationToken).ConfigureAwait(false);
             } while (!receiveResult.EndOfMessage && webSocket.State == WebSocketState.Open);
+
+            if (!receiveResult.EndOfMessage)
+            {
+                // The socket closed part way through a message. What has been read is a fragment of a message rather
+                // than a message, so returning it would hand the caller something it cannot parse and no way to tell
+                // that apart from a message which really did end there.
+                throw new WebSocketException(WebSocketError.InvalidState, "The web socket closed before the end of the message was reached.");
+            }
 
             await ms.FlushAsync(cancellationToken).ConfigureAwait(false);
             ms.Seek(0, SeekOrigin.Begin);
