@@ -94,21 +94,75 @@ public class AtProtoHttpClient(
                     meterFactory: meterFactory,
                     errorMappers: errorMappers)
                 {
-                    MaximumResponseSize = MaximumResponseSize
+                    MaximumResponseSize = MaximumResponseSize,
+                    OnSendingRequest = _onSendingRequest,
+                    OnResponseReceived = _onResponseReceived
                 };
             }
         }
     }
 
+    private Func<HttpRequestMessage, CancellationToken, Task> _onSendingRequest = AtProtoHttpClientDefaults.OnSendingRequest;
+
+    private Func<HttpResponseMessage, CancellationToken, Task> _onResponseReceived = AtProtoHttpClientDefaults.OnResponseReceived;
+
     /// <summary>
     /// Gets or sets a function called when a request is about to be sent.
     /// </summary>
-    public Func<HttpRequestMessage, CancellationToken, Task> OnSendingRequest => InternalAtProtoHttpClient.OnSendingRequest;
+    /// <exception cref="ArgumentNullException">Thrown when the value is <see langword="null"/>.</exception>
+    public Func<HttpRequestMessage, CancellationToken, Task> OnSendingRequest
+    {
+        get => _onSendingRequest;
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            // Held locally rather than set through InternalAtProtoHttpClient, as doing that would create the inner client
+            // before an object initializer had the chance to run the MaximumResponseSize init accessor.
+            lock (_internalAtProtoHttpClientLock)
+            {
+                _onSendingRequest = value;
+
+                if (_internalAtProtoHttpClient is not null)
+                {
+                    _internalAtProtoHttpClient.OnSendingRequest = value;
+                }
+            }
+        }
+    }
 
     /// <summary>
     /// Gets or sets a function called when a response has been received.
     /// </summary>
-    public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived => InternalAtProtoHttpClient.OnResponseReceived;
+    /// <exception cref="ArgumentNullException">Thrown when the value is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The response body is buffered, up to <see cref="MaximumResponseSize"/> bytes, before the function is called, so that
+    ///   reading it cannot allocate without limit. A response larger than that limit is rejected and the function is not called.
+    /// </para>
+    /// </remarks>
+    public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived
+    {
+        get => _onResponseReceived;
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            // Held locally rather than set through InternalAtProtoHttpClient, as doing that would create the inner client
+            // before an object initializer had the chance to run the MaximumResponseSize init accessor.
+            lock (_internalAtProtoHttpClientLock)
+            {
+                _onResponseReceived = value;
+
+                if (_internalAtProtoHttpClient is not null)
+                {
+                    _internalAtProtoHttpClient.OnResponseReceived = value;
+                }
+            }
+        }
+    }
 
     /// <summary>
     /// Gets the collections of functions called to map any error returned from an API call to a more specific error.
@@ -620,15 +674,55 @@ public class AtProtoHttpClient<TResult> where TResult : class
         }
     }
 
+    private Func<HttpRequestMessage, CancellationToken, Task> _onSendingRequest = AtProtoHttpClientDefaults.OnSendingRequest;
+
+    private Func<HttpResponseMessage, CancellationToken, Task> _onResponseReceived = AtProtoHttpClientDefaults.OnResponseReceived;
+
     /// <summary>
     /// Gets or sets a function called when a request is about to be sent.
     /// </summary>
-    public Func<HttpRequestMessage, CancellationToken, Task> OnSendingRequest { get; set; } = (requestMessage, cancellationToken) => Task.CompletedTask;
+    /// <exception cref="ArgumentNullException">Thrown when the value is <see langword="null"/>.</exception>
+    public Func<HttpRequestMessage, CancellationToken, Task> OnSendingRequest
+    {
+        get => _onSendingRequest;
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _onSendingRequest = value;
+        }
+    }
 
     /// <summary>
     /// Gets or sets a function called when a response has been received.
     /// </summary>
-    public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived { get; set; } = (responseMessage, cancellationToken) => Task.CompletedTask;
+    /// <exception cref="ArgumentNullException">Thrown when the value is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The response body is buffered, up to <see cref="MaximumResponseSize"/> bytes, before the function is called, so that
+    ///   reading it cannot allocate without limit. A response larger than that limit is rejected and the function is not called.
+    /// </para>
+    /// </remarks>
+    public Func<HttpResponseMessage, CancellationToken, Task> OnResponseReceived
+    {
+        get => _onResponseReceived;
+
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            _onResponseReceived = value;
+        }
+    }
+
+    /// <summary>
+    /// Gets a flag indicating whether an <see cref="OnResponseReceived"/> handler has been attached.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Used to avoid buffering the response body when nothing is going to read it before the bounded read does.
+    /// </para>
+    /// </remarks>
+    private bool HasOnResponseReceivedHandler => !ReferenceEquals(_onResponseReceived, AtProtoHttpClientDefaults.OnResponseReceived);
 
     /// <summary>
     /// Gets the collections of functions called to map any error returned from an API call to a more specific error.
@@ -1618,10 +1712,7 @@ public class AtProtoHttpClient<TResult> where TResult : class
                     }
                 }
 
-                if (OnSendingRequest is not null)
-                {
-                    await OnSendingRequest(httpRequestMessage, cancellationToken).ConfigureAwait(false);
-                }
+                await OnSendingRequest(httpRequestMessage, cancellationToken).ConfigureAwait(false);
 
                 try
                 {
@@ -1653,11 +1744,6 @@ public class AtProtoHttpClient<TResult> where TResult : class
                     {
                         _metrics.ResponsesReceived.Add(1, new KeyValuePair<string, object?>("server", service.Host.ToString()));
 
-                        if (OnResponseReceived is not null)
-                        {
-                            await OnResponseReceived(httpResponseMessage, cancellationToken).ConfigureAwait(false);
-                        }
-
                         AtProtoHttpResult<TResult> result = new()
                         {
                             StatusCode = httpResponseMessage.StatusCode,
@@ -1665,6 +1751,41 @@ public class AtProtoHttpClient<TResult> where TResult : class
                         };
 
                         await RaiseCredentialsUpdatedOnDPoPNonceChange(credentials, httpRequestMessage, httpResponseMessage, onCredentialsUpdated, cancellationToken).ConfigureAwait(false);
+
+                        if (HasOnResponseReceivedHandler)
+                        {
+                            // The request was made with ResponseHeadersRead, so the body has not been read yet and the handler would
+                            // otherwise be handed an unbuffered network stream. A handler which read that stream would allocate
+                            // whatever the service chose to send, bypassing MaximumResponseSize entirely, so buffer under the limit
+                            // first. The buffered body is replayed to the bounded read below, so nothing is read from the wire twice.
+                            try
+                            {
+#if NET9_0_OR_GREATER
+                                await httpResponseMessage.Content.LoadIntoBufferAsync(MaximumResponseSize, cancellationToken).ConfigureAwait(false);
+#else
+                                // The overload which takes a CancellationToken was only added in .NET 9.
+                                await httpResponseMessage.Content.LoadIntoBufferAsync(MaximumResponseSize).ConfigureAwait(false);
+#endif
+                            }
+                            catch (HttpRequestException)
+                            {
+                                // The service returned more than we are willing to allocate, so the response cannot be used and
+                                // must not be handed to the handler.
+                                Logger.AtProtoClientResponseTooLarge(_logger, httpRequestMessage.RequestUri!, httpRequestMessage.Method, MaximumResponseSize);
+
+                                result.AtErrorDetail = new AtErrorDetail
+                                {
+                                    Instance = httpRequestMessage.RequestUri,
+                                    HttpMethod = httpRequestMessage.Method,
+                                    Error = "ResponseTooLarge",
+                                    Message = $"The response exceeded the maximum of {MaximumResponseSize} bytes."
+                                };
+
+                                return result;
+                            }
+
+                            await OnResponseReceived(httpResponseMessage, cancellationToken).ConfigureAwait(false);
+                        }
 
                         if (httpResponseMessage.IsSuccessStatusCode)
                         {

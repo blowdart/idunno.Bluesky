@@ -119,6 +119,117 @@ public class AtProtoHttpClientResponseBoundsTests
         Assert.Equal("test", result.Result.Value.TestValue);
     }
 
+    [Fact]
+    public void AnOnResponseReceivedHandlerCanBeAttached()
+    {
+        Func<HttpResponseMessage, CancellationToken, Task> handler = (responseMessage, cancellationToken) => Task.CompletedTask;
+
+        var client = new AtProtoHttpClient
+        {
+            MaximumResponseSize = 1024,
+            OnResponseReceived = handler
+        };
+
+        Assert.Same(handler, client.OnResponseReceived);
+        Assert.Equal(1024, client.MaximumResponseSize);
+    }
+
+    [Fact]
+    public void AnOnSendingRequestHandlerCanBeAttached()
+    {
+        Func<HttpRequestMessage, CancellationToken, Task> handler = (requestMessage, cancellationToken) => Task.CompletedTask;
+
+        var client = new AtProtoHttpClient
+        {
+            OnSendingRequest = handler
+        };
+
+        Assert.Same(handler, client.OnSendingRequest);
+    }
+
+    [Fact]
+    public void ANullHandlerThrows()
+    {
+        var client = new AtProtoHttpClient();
+
+        Assert.Throws<ArgumentNullException>(() => client.OnResponseReceived = null!);
+        Assert.Throws<ArgumentNullException>(() => client.OnSendingRequest = null!);
+    }
+
+    [Fact]
+    public async Task AnOnResponseReceivedHandlerIsGivenABufferedBody()
+    {
+        string? bodySeenByHandler = null;
+
+        AtProtoHttpResult<string> result = await Get(
+            responseBody: ValidRecord,
+            maximumResponseSize: 4096,
+            onResponseReceived: async (responseMessage, cancellationToken) =>
+            {
+                bodySeenByHandler = await responseMessage.Content.ReadAsStringAsync(cancellationToken);
+            });
+
+        Assert.Equal(ValidRecord, bodySeenByHandler);
+
+        // Reading the body in the handler must not stop the client reading it afterwards.
+        Assert.True(result.Succeeded);
+        Assert.Equal(ValidRecord, result.Result);
+    }
+
+    [Fact]
+    public async Task AnOnResponseReceivedHandlerIsNotCalledForAnOverLargeResponse()
+    {
+        const int maximumResponseSize = 256;
+
+        bool handlerCalled = false;
+
+        AtProtoHttpResult<string> result = await Get(
+            responseBody: "{\"padding\":\"" + new string(' ', maximumResponseSize * 4) + "\"}",
+            maximumResponseSize: maximumResponseSize,
+            onResponseReceived: (responseMessage, cancellationToken) =>
+            {
+                handlerCalled = true;
+                return Task.CompletedTask;
+            });
+
+        Assert.False(handlerCalled);
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Result);
+        Assert.NotNull(result.AtErrorDetail);
+        Assert.Equal("ResponseTooLarge", result.AtErrorDetail.Error);
+    }
+
+    private static async Task<AtProtoHttpResult<string>> Get(
+        string responseBody,
+        int maximumResponseSize,
+        Func<HttpResponseMessage, CancellationToken, Task> onResponseReceived)
+    {
+        TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            HttpResponse response = context.Response;
+            response.ContentType = "application/json";
+            await response.WriteAsync(responseBody, context.RequestAborted);
+        });
+
+        // Deliberately set the handler before MaximumResponseSize, as the client must not create its inner client
+        // until the init accessor for MaximumResponseSize has run.
+        var client = new AtProtoHttpClient
+        {
+            OnResponseReceived = onResponseReceived,
+            MaximumResponseSize = maximumResponseSize
+        };
+
+        using (HttpClient httpClient = testServer.CreateClient())
+        {
+            return await client.Get(
+                service: TestServerBuilder.DefaultUri,
+                endpoint: $"/xrpc/com.atproto.repo.getRecord?repo={Repo}&collection={Collection}&rkey={RKey}",
+                httpClient: httpClient,
+                cancellationToken: TestContext.Current.CancellationToken);
+        }
+    }
+
     private static async Task<AtProtoHttpResult<AtProtoRepositoryRecord<TestRecord>>> GetRecord()
     {
         TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
