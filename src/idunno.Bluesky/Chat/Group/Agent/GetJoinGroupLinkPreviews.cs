@@ -16,7 +16,7 @@ public partial class BlueskyAgent
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="codes"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="codes"/> is empty.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="codes"/> contains more than 50 items.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="codes"/> contains more than <see cref="Maximum.JoinLinkPreviewCodes"/> items.</exception>
     /// <exception cref="AuthenticationRequiredException">Thrown when the user is not authenticated.</exception>
     public async Task<AtProtoHttpResult<GetJoinLinkPreviewsResponse>> GetJoinGroupLinkPreviews(
         ICollection<string> codes,
@@ -24,7 +24,7 @@ public partial class BlueskyAgent
     {
         ArgumentNullException.ThrowIfNull(codes);
         ArgumentOutOfRangeException.ThrowIfZero(codes.Count);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(codes.Count, 50);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(codes.Count, Maximum.JoinLinkPreviewCodes);
 
         if (!IsAuthenticated)
         {

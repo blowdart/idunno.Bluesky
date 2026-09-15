@@ -27,7 +27,7 @@ public partial class BlueskyServer
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="codes"/>, <paramref name="service"/>, <paramref name="accessCredentials"/> or <paramref name="httpClient"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="codes"/> is empty.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="codes"/> contains more than 50 items.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="codes"/> contains more than <see cref="Maximum.JoinLinkPreviewCodes"/> items.</exception>
     [UnconditionalSuppressMessage(
         "Trimming",
         "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code",
@@ -47,7 +47,7 @@ public partial class BlueskyServer
     {
         ArgumentNullException.ThrowIfNull(codes);
         ArgumentOutOfRangeException.ThrowIfZero(codes.Count);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(codes.Count, 50);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(codes.Count, Maximum.JoinLinkPreviewCodes);
 
         string queryString = string.Join("&", codes.Select(code => $"codes={Uri.EscapeDataString(code)}"));
 

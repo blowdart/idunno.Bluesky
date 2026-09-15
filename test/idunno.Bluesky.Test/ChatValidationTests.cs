@@ -260,6 +260,36 @@ public class ChatValidationTests
             cancellationToken: TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    public async Task GetJoinGroupLinkPreviewsThrowsWhenTheCodeCountExceedsTheMaximum()
+    {
+        using HttpClient httpClient = new();
+        List<string> codes = [.. Enumerable.Range(0, Maximum.JoinLinkPreviewCodes + 1).Select(i => $"code{i}")];
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => BlueskyServer.GetJoinGroupLinkPreviews(
+            codes: codes,
+            service: s_service,
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetJoinGroupLinkPreviewsAcceptsTheMaximumNumberOfCodes()
+    {
+        using HttpClient httpClient = new();
+        List<string> codes = [.. Enumerable.Range(0, Maximum.JoinLinkPreviewCodes).Select(i => $"code{i}")];
+
+        Exception? exception = await Xunit.Record.ExceptionAsync(() => BlueskyServer.GetJoinGroupLinkPreviews(
+            codes: codes,
+            service: new Uri("https://localhost:1"),
+            accessCredentials: CreateCredentials(),
+            httpClient: httpClient,
+            cancellationToken: TestContext.Current.CancellationToken));
+
+        Assert.IsNotType<ArgumentOutOfRangeException>(exception);
+    }
+
     public static TheoryData<string, Func<Uri, AccessCredentials, HttpClient, CancellationToken, Task>> GroupServerCalls()
     {
         return new TheoryData<string, Func<Uri, AccessCredentials, HttpClient, CancellationToken, Task>>
