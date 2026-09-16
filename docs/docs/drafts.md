@@ -74,11 +74,13 @@ If you want links and mentions in the draft to be parsed from the draft text set
 
 Draft posts allow a much greater post length than an actual post, to allow storing a larger text that can later be refined
 into smaller posts. If you attempt to Post a draft which contains a draft post which is too large a `DraftException` will be thrown.
-You can validate the length by checking the character length against
-`Maximum.PostLengthInCharacters` and the grapheme length of the post against `Maximum.PostLengthInGraphemes`. For example,
+You can validate the length by checking the UTF-8 byte length against
+`Maximum.PostLengthInBytes` and the grapheme length of the post against `Maximum.PostLengthInGraphemes`. The lexicon counts
+a post length limit in UTF-8 bytes, not in characters, so use `Encoding.UTF8.GetByteCount()` rather than `string.Length`.
+For example,
 
 ```c#
-if (draftPost.Text.Length > Maximum.PostLengthInCharacters ||
+if (Encoding.UTF8.GetByteCount(draftPost.Text) > Maximum.PostLengthInBytes ||
     draftPost.Text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
 {
     // Inform the user that they need to split the draft into

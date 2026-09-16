@@ -148,10 +148,10 @@
     <value>Post text cannot be longer than {0} graphemes.</value>
   </data>
   <data name="PostTextExceedsMaxLengths" xml:space="preserve">
-    <value>Cannot have a length greater than {0} characters, or {1} graphemes.</value>
+    <value>Cannot have a length greater than {0} UTF-8 bytes, or {1} graphemes.</value>
   </data>
   <data name="PostTextExceedsMaxLengthValidationError" xml:space="preserve">
-    <value>Post text cannot be longer than {0} characters.</value>
+    <value>Post text cannot be longer than {0} UTF-8 bytes.</value>
   </data>
   <data name="ReplyReferencesDoNotPointToPostRecord" xml:space="preserve">
     <value>The Parent and/or Root references do not point to an 'app.bsky.feed.post' record(s)</value>

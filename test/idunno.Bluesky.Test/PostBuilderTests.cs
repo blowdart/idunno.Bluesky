@@ -326,9 +326,9 @@ public class PostBuilderTests
     }
 
     [Fact]
-    public void ConstructorThrowsWhenAnTooLongTagInCharactersIsPassed()
+    public void ConstructorThrowsWhenAnTooLongTagInBytesIsPassed()
     {
-        List<string> tags = [new('x', Maximum.TagLengthInCharacters + 1)];
+        List<string> tags = [new('x', Maximum.TagLengthInBytes + 1)];
 
         ArgumentOutOfRangeException caughtException = Assert.Throws<ArgumentOutOfRangeException>(() => new PostBuilder("text", tags: tags));
 

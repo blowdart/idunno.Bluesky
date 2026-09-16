@@ -29,7 +29,7 @@ public sealed record MessageInput
     public MessageInput(string text, ICollection<Facet>? facets = null, EmbeddedRecord? embed = null, ReplyReference? replyTo = null)
     {
         ArgumentNullException.ThrowIfNull(text);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.MessageLengthInCharacters);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetUtf8Length(), Maximum.MessageLengthInBytes);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.MessageLengthInGraphemes);
         Text = text;
 

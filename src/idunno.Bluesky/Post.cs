@@ -72,11 +72,11 @@ public record class Post : BlueskyTimestampedRecord
             throw new ArgumentNullException(nameof(text));
         }
 
-        if (!string.IsNullOrEmpty(text) && (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
+        if (!string.IsNullOrEmpty(text) && (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(text),
-                $"text cannot have be longer than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
+                $"text cannot be longer than {Maximum.PostLengthInBytes} UTF-8 bytes, or {Maximum.PostLengthInGraphemes} graphemes.");
         }
 
         Text = text;
@@ -296,11 +296,11 @@ public record class Post : BlueskyTimestampedRecord
             }
         }
 
-        if (!string.IsNullOrEmpty(text) && (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
+        if (!string.IsNullOrEmpty(text) && (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(text),
-                $"text cannot have be longer than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
+                $"text cannot be longer than {Maximum.PostLengthInBytes} UTF-8 bytes, or {Maximum.PostLengthInGraphemes} graphemes.");
         }
         Text = text;
     }
@@ -497,9 +497,9 @@ public record class Post : BlueskyTimestampedRecord
                     throw new ArgumentException($"Tag[{position}] is null or empty", nameof(tags));
                 }
 
-                if (tag.Length > Maximum.TagLengthInCharacters || tag.GetGraphemeLength() > Maximum.TagLengthInGraphemes)
+                if (tag.GetUtf8Length() > Maximum.TagLengthInBytes || tag.GetGraphemeLength() > Maximum.TagLengthInGraphemes)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(tags), $"Tag[{position}] is longer than {Maximum.TagLengthInCharacters} characters or {Maximum.TagLengthInGraphemes} graphemes");
+                    throw new ArgumentOutOfRangeException(nameof(tags), $"Tag[{position}] is longer than {Maximum.TagLengthInBytes} UTF-8 bytes or {Maximum.TagLengthInGraphemes} graphemes");
                 }
                 position++;
             }

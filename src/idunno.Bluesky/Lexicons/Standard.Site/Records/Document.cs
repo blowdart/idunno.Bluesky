@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 
 using idunno.AtProto;
 using idunno.AtProto.Repo;
+using idunno.Bluesky;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace Standard.Site;
@@ -433,7 +434,7 @@ public record Document<T> : AtProtoRecord where T : class
         set
         {
             ArgumentException.ThrowIfNullOrEmpty(value);
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, 1280);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), 1280);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetGraphemeLength(), 128);
 
             field = value;
@@ -453,7 +454,7 @@ public record Document<T> : AtProtoRecord where T : class
         {
             if (value is not null)
             {
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(value.Length, 3000);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetUtf8Length(), 3000);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(value.GetGraphemeLength(), 300);
             }
 

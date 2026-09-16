@@ -113,14 +113,17 @@ public sealed partial class DefaultFacetExtractor : IFacetExtractor
                 continue;
             }
 
-            // Max tag length is 64.
-            // Hash prefix is still present so need to account for that.
-            if (extractedTag.GetUtf8Length() > 65)
+            // The facet feature value excludes the hash prefix, so the lexicon limits apply to the text after it.
+            // These mirror the validation in TagFacetFeature, so an over-long tag is skipped rather than throwing.
+            string tagValue = extractedTag[1..];
+
+            if (tagValue.GetUtf8Length() > Maximum.TagLengthInBytes ||
+                tagValue.GetGraphemeLength() > Maximum.TagLengthInGraphemes)
             {
                 continue;
             }
 
-            TagFacetFeature tagFacetFeature = new(extractedTag[1..]);
+            TagFacetFeature tagFacetFeature = new(tagValue);
 
             ByteSlice index = new(text.GetUtf8BytePosition(tagGroup.Index), text.GetUtf8BytePosition(tagGroup.Index + extractedTag.Length));
             hashTags.Add(new Facet(index, [tagFacetFeature]));

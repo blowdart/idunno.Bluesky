@@ -190,15 +190,15 @@ public class ChatValidationTests
     }
 
     [Fact]
-    public async Task EditGroupThrowsWhenTheNameExceedsTheMaximumNumberOfCharacters()
+    public async Task EditGroupThrowsWhenTheNameExceedsTheMaximumNumberOfBytes()
     {
         using HttpClient httpClient = new();
 
-        // A ZWJ family emoji is a single grapheme but eleven UTF-16 characters, so this name stays
-        // within the grapheme limit whilst exceeding the character limit.
+        // A ZWJ family emoji is a single grapheme but twenty five UTF-8 bytes, so this name stays
+        // within the grapheme limit whilst exceeding the byte limit.
         string name = string.Concat(Enumerable.Repeat("\U0001F468\u200D\U0001F469\u200D\U0001F467\u200D\U0001F466", Maximum.GroupNameLengthInGraphemes));
 
-        Assert.True(name.Length > Maximum.GroupNameLengthInCharacters);
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(name) > Maximum.GroupNameLengthInBytes);
         Assert.True(name.GetGraphemeLength() <= Maximum.GroupNameLengthInGraphemes);
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => BlueskyServer.EditGroup(

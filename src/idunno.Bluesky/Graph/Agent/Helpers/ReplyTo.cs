@@ -29,8 +29,8 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(text);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.PostLengthInCharacters);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.PostLengthInCharacters);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetUtf8Length(), Maximum.PostLengthInBytes);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.PostLengthInGraphemes);
 
         ArgumentNullException.ThrowIfNull(parent);
 
@@ -74,8 +74,8 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(text);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.PostLengthInCharacters);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.PostLengthInCharacters);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetUtf8Length(), Maximum.PostLengthInBytes);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.PostLengthInGraphemes);
 
         ArgumentNullException.ThrowIfNull(parent);
         ArgumentNullException.ThrowIfNull(image);
@@ -87,7 +87,7 @@ public partial class BlueskyAgent
             foreach (string tag in tags)
             {
                 ArgumentException.ThrowIfNullOrEmpty(tag);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }
         }
@@ -134,8 +134,8 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(text);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.PostLengthInCharacters);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.PostLengthInCharacters);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetUtf8Length(), Maximum.PostLengthInBytes);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.PostLengthInGraphemes);
         ArgumentNullException.ThrowIfNull(parent);
         ArgumentNullException.ThrowIfNull(images);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(images.Count, Maximum.ImagesInPost);
@@ -147,7 +147,7 @@ public partial class BlueskyAgent
             foreach (string tag in tags)
             {
                 ArgumentException.ThrowIfNullOrEmpty(tag);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }
         }
@@ -175,8 +175,8 @@ public partial class BlueskyAgent
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(text);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.PostLengthInCharacters);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.PostLengthInCharacters);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetUtf8Length(), Maximum.PostLengthInBytes);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.PostLengthInGraphemes);
         ArgumentNullException.ThrowIfNull(parent);
 
         if (images != null)
@@ -191,7 +191,7 @@ public partial class BlueskyAgent
             foreach (string tag in tags)
             {
                 ArgumentException.ThrowIfNullOrEmpty(tag);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }
         }
