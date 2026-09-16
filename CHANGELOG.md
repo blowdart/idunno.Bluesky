@@ -125,6 +125,9 @@
 
 #### idunno.AtProto
 
+* `DPoPAccessCredentials` and `DPoPRefreshCredential` now read their token once when signing a request, so the DPoP proof and the authorization header always carry the same token.
+* `DPoPRefreshCredential` now stores an absent DPoP nonce as an empty string rather than leaving the non-nullable `DPoPNonce` property returning `null`.
+* `DPoPRevokeCredentials` now throws an `ArgumentNullException` rather than a `NullReferenceException` when constructed with `null`.
 * OAuth access token validation now matches `atproto` as a discrete entry in the `scope` claim rather than as a substring.
 * OAuth access token validation now throws an `OAuthException` rather than an `ArgumentException` when the token has no `scope` claim.
 * OAuth access token validation no longer throws an `ArgumentOutOfRangeException` in time zones east of UTC when the token has no `nbf` or `exp` claim.

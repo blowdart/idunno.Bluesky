@@ -26,11 +26,17 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
     /// <param name="service">The <see cref="Uri"/> of the service the credentials were issued from.</param>
     /// <param name="refreshToken">A string representation of the JWT to use when a new access token is required.</param>
     /// <param name="dPoPProofKey">The string representation of the DPoP proof key to use when signing requests.</param>
-    /// <param name="dPoPNonce">The string representation of the DPoP nonce to use when signing requests.</param>
+    /// <param name="dPoPNonce">The string representation of the DPoP nonce to use when signing requests, if one is known.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="service"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="refreshToken"/> or <paramref name="dPoPProofKey"/> is <see langword="null"/> or whitespace.
     /// </exception>
+    /// <remarks>
+    /// <para>
+    ///   The <paramref name="dPoPNonce"/> may be <see langword="null"/> or empty, in which case it is stored as an empty string.
+    ///   See <see cref="DPoPNonce"/>.
+    /// </para>
+    /// </remarks>
     public DPoPRefreshCredential(Uri service, string refreshToken, string dPoPProofKey, string dPoPNonce) : base(service, AuthenticationType.OAuth, refreshToken)
     {
         ArgumentNullException.ThrowIfNull(service);
@@ -38,7 +44,7 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
         ArgumentException.ThrowIfNullOrEmpty(dPoPProofKey);
 
         _dPoPProofKey = dPoPProofKey;
-        _dPoPNonce = dPoPNonce;
+        _dPoPNonce = dPoPNonce ?? string.Empty;
     }
 
     /// <summary>
@@ -80,9 +86,15 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
     }
 
     /// <summary>
-    /// Gets a string representation of the DPoP nonce to use when signing requests.
+    /// Gets or sets a string representation of the DPoP nonce to use when signing requests.
     /// </summary>
-    /// <exception cref="ArgumentException">Thrown when setting the value and the value is <see langword="null"/> or whitespace.</exception>
+    /// <remarks>
+    /// <para>
+    ///   This may be empty. A refresh request is made to an authorization server which only supplies a nonce in
+    ///   response to the first request, so the first proof has to be signed without one. Setting this to
+    ///   <see langword="null"/> stores an empty string.
+    /// </para>
+    /// </remarks>
     public string DPoPNonce
     {
         get
@@ -95,12 +107,9 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
 
         set
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(value);
-
             lock (_lock)
             {
-
-                _dPoPNonce = value;
+                _dPoPNonce = value ?? string.Empty;
             }
         }
     }
@@ -110,24 +119,32 @@ public sealed class DPoPRefreshCredential : RefreshCredential, IDPoPBoundCredent
     /// </summary>
     /// <param name="httpRequestMessage">The <see cref="HttpRequestMessage"/> to add authentication headers to.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpRequestMessage"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The <see cref="RefreshCredential.RefreshToken">refresh token</see> is read once so that the proof token's <c>ath</c>
+    ///   claim and the token presented in the authorization header are always bound to the same value.
+    /// </para>
+    /// </remarks>
     public override void SetAuthenticationHeaders(HttpRequestMessage httpRequestMessage)
     {
         ArgumentNullException.ThrowIfNull(httpRequestMessage);
 
         lock (_lock)
         {
+            string refreshToken = RefreshToken;
+
             DPoPProofRequest dPoPProofRequest = new()
             {
-                AccessToken = RefreshToken,
-                DPoPNonce = DPoPNonce,
+                AccessToken = refreshToken,
+                DPoPNonce = _dPoPNonce,
                 Method = httpRequestMessage.Method.ToString(),
                 Url = httpRequestMessage.GetDPoPUrl()
             };
 
-            DefaultDPoPProofTokenFactory factory = new(DPoPProofKey);
+            DefaultDPoPProofTokenFactory factory = new(_dPoPProofKey);
             DPoPProof proofToken = factory.CreateProofToken(dPoPProofRequest);
 
-            httpRequestMessage.SetDPoPToken(RefreshToken, proofToken.ProofToken);
+            httpRequestMessage.SetDPoPToken(refreshToken, proofToken.ProofToken);
         }
     }
 }
