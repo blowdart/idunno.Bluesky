@@ -107,8 +107,7 @@
   same four filters as optional parameters, so only callers passing its `cancellationToken` positionally are affected.
 * The properties on `Chat.Group.JoinRequestView` and `Chat.Group.JoinRequestConversationView`, and the `Facets`, `Embed` and `ReplyTo` properties on
   `Chat.MessageInput`, are now `init` only. They are populated when the object is created and describe a message which has been sent or a request which
-  has been made, so changing them afterwards altered an object the caller had already been given. Set them in an object initializer, or use a `with`
-  expression to derive a changed copy.
+  has been made.
 
 ### Fixed
 
@@ -196,6 +195,7 @@
 
 #### idunno.Bluesky
 
+* String length checks for various methods were corrected to work on UTF-8 lengths.
 * The embedded card generators no longer buffer an entire page or image into memory before applying their size limits.
 * `RichText.DefaultFacetExtractor` no longer extracts a mention from an `@` which is not preceded by the start of the text, whitespace or an opening
   parenthesis. An email address in a post, such as `bob@example.com`, was extracted as a mention of the handle `example.com`, which silently mentioned
@@ -209,48 +209,19 @@
 * `RichText.DefaultFacetExtractor` now extracts a single letter cash tag which starts the post text, and throws an `ArgumentNullException` rather than a
   `NullReferenceException` when the text it is given is `null`.
 * The regular expressions used by `RichText.DefaultFacetExtractor` now use a one second match timeout rather than five seconds.
-* `BlueskyAgent.Post(PostBuilder, CancellationToken)` now captures the post and its thread gate and post gate rules under the lock which `PostBuilder`
-  uses for its own state. It previously locked the `PostBuilder` instance itself, which is a different lock to the one the builder takes internally, so
-  the two were never mutually exclusive. A concurrent mutation could publish a post with gating, which controls who may reply to, embed or quote it,
-  that did not match the rules the caller configured.
-* `PostBuilder` now takes its lock when reading its state as well as when writing it. `ThreadGateRules`, `PostGateRules`, `Embed`, `DisableReplies`,
-  `HasText`, `HasImages`, `HasGalleryImages`, `HasTags`, `HasVideo` and `Equals()` read mutable state without synchronization, and `Text`, `WithText()`
-  and `EmbedRecord()` wrote it without synchronization even though the matching `Text` getter locked.
-* `PostBuilder.ExtractFacets()` no longer applies facets when the post text changed whilst extraction was running. Facet indexes are byte offsets into
-  the text they were extracted from, so applying them to different text produced facets covering the wrong range.
 * `TypeResolver.JsonTypeInfoResolvers` now returns a read only list. It previously returned the live list, allowing any caller to change how every
   consumer in the process deserializes AT Protocol and Bluesky types.
-* The `cursor` parameter on `GetSuggestions()`, `SearchActors()` and `GetBookmarks()`, and the `id` parameter on `DeleteDraft()`, are now escaped before
-  being placed in the query string, matching the other paged endpoints.
 * `ListConversationRequests()` now sends the `cursor` it is given to the server. It was accepted and documented, but never placed in the query string, so
   every page after the first repeated the first page and a caller paging until the returned cursor was `null` never terminated.
-* `ListJoinGroupRequests()` now deserializes the join requests the server returns. It expected `chat.bsky.group.defs#joinRequestConvoView` where
-  `chat.bsky.group.listJoinRequests` returns `chat.bsky.group.defs#joinRequestView`, so every successful response threw a `JsonException`.
 * `Chat.MessageInput` now rejects text longer than `Maximum.MessageLengthInGraphemes` (1,000) as well as text longer than
   `Maximum.MessageLengthInCharacters`, matching the `chat.bsky.convo.defs#messageInput` lexicon and the other text fields in the library.
 * `EditGroup()` now limits a group name to `Maximum.GroupNameLengthInCharacters` (500) and `Maximum.GroupNameLengthInGraphemes` (50), matching the
   `chat.bsky.group.editGroup` lexicon and `CreateGroup()`. It previously allowed names two and a half times longer than the server accepts.
-* `CreateGroup()` no longer throws from inside an internal request type when it is given more than 49 members. The agent and server validated the member
-  count against the schema limit, then the request object applied a lower limit of its own, so a call both public layers accepted could still fail.
-* `AddMembersToGroup()` now enumerates the members it is given exactly once. The sequence was counted and then enumerated again when the request was
-  serialized, so a deferred query or a single pass iterator could be sent with different members to those that were validated, or with none at all.
-* The `BlueskyServer` methods for group conversations now validate `service`, `accessCredentials` and `httpClient`, matching the other chat methods.
-  Without the `accessCredentials` check an unauthenticated request was sent to the service rather than the call failing.
 * `BlueskyAgent.GetJoinGroupLinkPreviews()` now throws `AuthenticationRequiredException` when the agent is not authenticated, matching every other chat
   method on the agent.
-* `Chat.Group.JoinRequestConversationView` is no longer registered twice in the JSON source generation context, and its remaining registration no longer
-  carries the type info property name of an unrelated type.
 * `ListConversations()` now returns the cursor the service sent, rather than always returning `null`. Paging conversations returned the first page
   repeatedly, and a caller paging until the cursor was `null` never terminated. It was the only paged chat endpoint which did not return its cursor.
-* `ListConversations()` now validates `limit` before defaulting it, so a negative limit is rejected rather than replaced with 50, and no longer emits a
-  query string with a leading `&`.
-* `AddReaction()` now rejects a reaction longer than `Maximum.ReactionLengthInBytes` (64) UTF-8 bytes. A reaction is limited to one grapheme, but a
-  grapheme cluster has no upper bound on its encoded length, so the lexicon's `maxLength` was reachable and unenforced.
-* The `BlueskyAgent.SetConversationDeclaration(string, string)` overloads now check `IsAuthenticated` directly, matching the overload which takes a
-  declaration record. The exception they throw is unchanged; it was previously raised by the underlying `PutRecord()` call.
-* `Chat.MessageInput` no longer keeps a reference to the facet collection it is given. The constructor copied the collection but the `Facets` setter did
-  not, so a caller which assigned a `List<Facet>` and then changed it altered the message, and a facet range is a pair of byte offsets into text which
-  may no longer match.
+* `AddReaction()` now rejects a reaction longer than `Maximum.ReactionLengthInBytes` (64) UTF-8 bytes.
 
 ## 6.0.0 - 2026-09-05
 

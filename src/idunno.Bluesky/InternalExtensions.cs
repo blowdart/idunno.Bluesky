@@ -7,23 +7,6 @@ namespace idunno.Bluesky;
 
 internal static class InternalExtensions
 {
-    static readonly Encoding s_utf8 = Encoding.UTF8;
-
-    /// <summary>
-    /// Gets the length of the string if it was encoded as a UTF8 byte array.
-    /// </summary>
-    /// <param name="s">The string whose utf8 length to calculate.</param>
-    /// <returns>The length of the string if it was encoded as a UTF8 byte array.</returns>
-    public static int GetUtf8Length(this string s)
-    {
-        if (string.IsNullOrEmpty(s))
-        {
-            return 0;
-        }
-
-        return s_utf8.GetByteCount(s);
-    }
-
     /// <summary>
     /// Gets the UTF8 index position of <paramref name="index"/> in <paramref name="s"/>.
     /// </summary>
