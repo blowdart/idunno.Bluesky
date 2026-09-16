@@ -37,7 +37,9 @@ public static partial class AtProtoServer
     /// Thrown when any of <paramref name="labelerDid"/>, <paramref name="subject"/>, <paramref name="reportType"/>, <paramref name="service"/> 
     /// <paramref name="accessCredentials"/> or <paramref name="httpClient"/> are <see langword="null"/>.
     /// </exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="reason"/> is not <see langword="null"/> and is &gt; 20000 characters.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="reason"/> is not <see langword="null"/> and is longer than 20000 UTF-8 bytes or 2000 graphemes.
+    /// </exception>
     /// <remarks>
     /// <para>
     ///     Clients should not send reports to Labelers which do not match the subject and report type metadata in their declaration record.
@@ -74,7 +76,8 @@ public static partial class AtProtoServer
 
         if (reason is not null)
         {
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.Length, 20000);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.GetUtf8Length(), 20000);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(reason.GetGraphemeLength(), 2000);
         }
 
         string atProtoProxy = $"{labelerDid}#atproto_labeler";
