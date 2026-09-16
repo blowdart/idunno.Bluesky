@@ -41,7 +41,7 @@ public partial class BlueskyAgent
             foreach (string tag in tags)
             {
                 ArgumentException.ThrowIfNullOrEmpty(tag);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }
         }
@@ -88,7 +88,7 @@ public partial class BlueskyAgent
             foreach (string tag in tags)
             {
                 ArgumentException.ThrowIfNullOrEmpty(tag);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }
         }
@@ -127,9 +127,9 @@ public partial class BlueskyAgent
         ArgumentNullException.ThrowIfNull(strongReference);
         ArgumentNullException.ThrowIfNull(text);
 
-        if (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
+        if (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
         {
-            throw new ArgumentOutOfRangeException(nameof(text), $"text cannot have be longer than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
+            throw new ArgumentOutOfRangeException(nameof(text), $"text cannot be longer than {Maximum.PostLengthInBytes} UTF-8 bytes, or {Maximum.PostLengthInGraphemes} graphemes.");
         }
 
         if (images is not null && images.Count > Maximum.ImagesInPost)
@@ -149,7 +149,7 @@ public partial class BlueskyAgent
             foreach (string tag in tags)
             {
                 ArgumentException.ThrowIfNullOrEmpty(tag);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }
         }
@@ -201,7 +201,7 @@ public partial class BlueskyAgent
             foreach (string tag in tags)
             {
                 ArgumentException.ThrowIfNullOrEmpty(tag);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }
         }
@@ -263,7 +263,7 @@ public partial class BlueskyAgent
             foreach (string tag in tags)
             {
                 ArgumentException.ThrowIfNullOrEmpty(tag);
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
             }
         }

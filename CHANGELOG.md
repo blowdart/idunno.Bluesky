@@ -45,7 +45,7 @@
 * Added an optional `maxPageSize` parameter to `BaseEmbeddedCardGenerator.GetPageContent()` and the `BaseEmbeddedCardGenerator.DefaultMaximumPageSize`
   constant, which cap the number of bytes read from a page when generating an embedded card. The default is 1MB.
 * Added `Maximum.MessageLengthInGraphemes`, `Maximum.ConversationRequestsToList`, `Maximum.JoinRequestsToList`, `Maximum.GroupMembers`,
-  `Maximum.GroupNameLengthInCharacters` and `Maximum.GroupNameLengthInGraphemes`, replacing the hard coded limits used by the chat endpoints.
+  `Maximum.GroupNameLengthInBytes` and `Maximum.GroupNameLengthInGraphemes`, replacing the hard coded limits used by the chat endpoints.
 * Added `readState`, `status`, `kind` and `lockStatus` filter parameters to `BlueskyAgent.ListConversations()` and `BlueskyServer.ListConversations()`,
   exposing the filters `chat.bsky.convo.listConvos` supports.
 * Added `Chat.ConversationReadState`, and `Chat.ConversationKind.Direct` and `Chat.ConversationKind.Group`, holding the known values for the new
@@ -92,6 +92,15 @@
 
 #### idunno.Bluesky
 
+* The `Maximum` constants which carry a lexicon `maxLength` have been renamed to end in `InBytes`, because a lexicon `maxLength` is counted in UTF-8
+  bytes rather than in characters. `PostLengthInCharacters`, `TagLengthInCharacters`, `MessageLengthInCharacters` and `DraftTextLengthInCharacters`
+  become `PostLengthInBytes`, `TagLengthInBytes`, `MessageLengthInBytes` and `DraftTextLengthInBytes`, and `DisplayNameLength`, `DescriptionLength`
+  and `PronounLength` become `DisplayNameLengthInBytes`, `DescriptionLengthInBytes` and `PronounLengthInBytes`. Their values are unchanged.
+* Post text, tags, direct messages, group names, draft text, profile display names, descriptions and pronouns are now measured in UTF-8 bytes when
+  validated against those limits, rather than with `string.Length`. A UTF-8 byte count is always greater than or equal to the number of UTF-16
+  characters in the same string, so the previous check was too permissive and never too strict: text which the PDS would reject could pass local
+  validation and fail at the server instead. Text which was accepted before and is within the real limit is still accepted. Non-ASCII text close to a
+  limit may now be rejected locally, which is the limit the server was always applying.
 * `RichText.LinkFacetFeature.Uri` has been changed from a `Uri` type to a `string` type as the Bluesky web app can create facets with illegal URIs. The constructor has also been updated to accept a `string` instead of a `Uri`.
 * `Embed.External.Properties.Uri` has been changed from a `Uri` type to a `string` type as the Bluesky web app can create facets with illegal URIs. The constructor has also been updated to accept a `string` instead of a `Uri`.
 * `Embed.EmbeddedExternal` has been updated to only accept a `string` for its `uri` constructor parameter instead of a `Uri` type, as the Bluesky web app can create facets with illegal URIs.
@@ -196,6 +205,13 @@
 
 #### idunno.Bluesky
 
+* `BlueskyAgent.ReplyTo()` compared the grapheme count of the reply text against the maximum number of UTF-8 bytes rather than the maximum number of
+  graphemes. As the byte limit is ten times the grapheme limit the grapheme check could effectively never fail, so a reply of between 301 and 3000
+  graphemes passed validation and was then rejected by the PDS.
+* `RichText.DefaultFacetExtractor` no longer skips a valid hash tag whose UTF-8 encoding is longer than its character count. The extractor compared
+  the UTF-8 length of the tag, including its `#` prefix, against the 64 grapheme tag limit, so a non-ASCII tag well within the lexicon limits, such as
+  a tag of 22 or more CJK characters, was silently dropped from the extracted facets. Tags are now measured against the byte and grapheme limits
+  separately, matching the validation in `RichText.TagFacetFeature`.
 * The embedded card generators no longer buffer an entire page or image into memory before applying their size limits.
 * `RichText.DefaultFacetExtractor` no longer extracts a mention from an `@` which is not preceded by the start of the text, whitespace or an opening
   parenthesis. An email address in a post, such as `bob@example.com`, was extracted as a mention of the handle `example.com`, which silently mentioned
@@ -227,8 +243,8 @@
 * `ListJoinGroupRequests()` now deserializes the join requests the server returns. It expected `chat.bsky.group.defs#joinRequestConvoView` where
   `chat.bsky.group.listJoinRequests` returns `chat.bsky.group.defs#joinRequestView`, so every successful response threw a `JsonException`.
 * `Chat.MessageInput` now rejects text longer than `Maximum.MessageLengthInGraphemes` (1,000) as well as text longer than
-  `Maximum.MessageLengthInCharacters`, matching the `chat.bsky.convo.defs#messageInput` lexicon and the other text fields in the library.
-* `EditGroup()` now limits a group name to `Maximum.GroupNameLengthInCharacters` (500) and `Maximum.GroupNameLengthInGraphemes` (50), matching the
+  `Maximum.MessageLengthInBytes`, matching the `chat.bsky.convo.defs#messageInput` lexicon and the other text fields in the library.
+* `EditGroup()` now limits a group name to `Maximum.GroupNameLengthInBytes` (500) and `Maximum.GroupNameLengthInGraphemes` (50), matching the
   `chat.bsky.group.editGroup` lexicon and `CreateGroup()`. It previously allowed names two and a half times longer than the server accepts.
 * `CreateGroup()` no longer throws from inside an internal request type when it is given more than 49 members. The agent and server validated the member
   count against the schema limit, then the request object applied a lower limit of its own, so a call both public layers accepted could still fail.

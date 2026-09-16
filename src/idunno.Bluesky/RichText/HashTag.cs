@@ -20,12 +20,12 @@ public record HashTag : PostBuilderFacetFeature
     public HashTag(string tag)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tag);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
         Tag = tag;
 
         string tagAsHashTagText = $"#{tag}";
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(tagAsHashTagText.Length, Maximum.TagLengthInCharacters);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(tagAsHashTagText.GetUtf8Length(), Maximum.TagLengthInBytes);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(tagAsHashTagText.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
         Text = tagAsHashTagText;
     }
@@ -44,9 +44,9 @@ public record HashTag : PostBuilderFacetFeature
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tag);
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
-        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.TagLengthInCharacters);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetUtf8Length(), Maximum.TagLengthInBytes);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.TagLengthInGraphemes);
         Tag = tag;
         Text = text;
