@@ -36,11 +36,29 @@ public partial class AtProtoAgent
 
     private AccessCredentials? _credentials;
 
-    private string? _exchangedRefreshToken;
+    /// <summary>
+    /// The number of recently exchanged refresh tokens remembered by <see cref="HasRefreshTokenAlreadyBeenExchanged(string, string)"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   Remembering only the most recently exchanged token would let a caller holding an older credential present a
+    ///   token which has already been spent, which is exactly what the check exists to prevent.
+    /// </para>
+    /// </remarks>
+    private const int MaximumRememberedRefreshTokens = 4;
+
+    private readonly Queue<string> _exchangedRefreshTokens = new(MaximumRememberedRefreshTokens);
+
+#if NET9_0_OR_GREATER
+    private readonly Lock _exchangedRefreshTokenLock = new();
+#else
+    private readonly object _exchangedRefreshTokenLock = new();
+#endif
 
     internal readonly bool _enableTokenRefresh = true;
     private readonly TimeSpan _refreshAccessTokenInterval = new(1, 0, 0);
     private readonly TimeSpan _backgroundRefreshRetryInterval = new(0, 1, 0);
+
     private System.Timers.Timer? _credentialRefreshTimer;
 
     /// <summary>
@@ -825,6 +843,7 @@ public partial class AtProtoAgent
                 Logger.CreateSessionFailed(_logger, createSessionResult.StatusCode);
 
                 StopTokenRefreshTimer();
+                ForgetExchangedRefreshTokens();
                 Credentials = null;
 
                 return new AtProtoHttpResult<bool>
@@ -933,6 +952,7 @@ public partial class AtProtoAgent
                 Logger.CreateSessionFailed(_logger, createSessionResult.StatusCode);
 
                 StopTokenRefreshTimer();
+                ForgetExchangedRefreshTokens();
                 Credentials = null;
 
                 return new AtProtoHttpResult<bool>
@@ -1154,6 +1174,7 @@ public partial class AtProtoAgent
 
             var unauthenticatedEventArgs = new UnauthenticatedEventArgs(Credentials.Did, Credentials.Service);
 
+            ForgetExchangedRefreshTokens();
             Credentials = null;
             OnUnauthenticated(unauthenticatedEventArgs);
         }
@@ -1178,12 +1199,14 @@ public partial class AtProtoAgent
             {
                 var unauthenticatedEventArgs = new UnauthenticatedEventArgs(Credentials.Did, Credentials.Service);
 
+                ForgetExchangedRefreshTokens();
                 Credentials = null;
                 OnUnauthenticated(unauthenticatedEventArgs);
             }
             else
             {
                 Logger.LogoutFailed(_logger, Credentials.Did, Credentials.Service, deleteSessionResult.StatusCode);
+                ForgetExchangedRefreshTokens();
                 Credentials = null;
                 throw new LogoutException()
                 {
@@ -1448,7 +1471,7 @@ public partial class AtProtoAgent
 
                 Logger.RefreshOAuthIssuedCredentialsSucceeded(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
 
-                _exchangedRefreshToken = refreshCredential.RefreshToken;
+                RememberExchangedRefreshToken(refreshCredential.RefreshToken);
 
                 Credentials = refreshedCredentials;
 
@@ -1558,7 +1581,7 @@ public partial class AtProtoAgent
 
                 Logger.RefreshSessionIssuedCredentialsSucceeded(_logger, refreshedCredentials.Did, refreshedCredentials.Service);
 
-                _exchangedRefreshToken = refreshCredential.RefreshToken;
+                RememberExchangedRefreshToken(refreshCredential.RefreshToken);
 
                 Credentials = refreshedCredentials;
 
@@ -1598,13 +1621,45 @@ public partial class AtProtoAgent
     /// </remarks>
     private bool HasRefreshTokenAlreadyBeenExchanged(string refreshToken, string tokenHash)
     {
-        if (_exchangedRefreshToken is not null && string.Equals(_exchangedRefreshToken, refreshToken, StringComparison.Ordinal))
+        lock (_exchangedRefreshTokenLock)
         {
-            Logger.RefreshTokenAlreadyExchanged(_logger, tokenHash);
-            return true;
+            if (!_exchangedRefreshTokens.Contains(refreshToken, StringComparer.Ordinal))
+            {
+                return false;
+            }
         }
 
-        return false;
+        Logger.RefreshTokenAlreadyExchanged(_logger, tokenHash);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Records that <paramref name="refreshToken"/> has been exchanged, so it is not presented again.
+    /// </summary>
+    /// <param name="refreshToken">The refresh token which has just been exchanged.</param>
+    private void RememberExchangedRefreshToken(string refreshToken)
+    {
+        lock (_exchangedRefreshTokenLock)
+        {
+            _exchangedRefreshTokens.Enqueue(refreshToken);
+
+            while (_exchangedRefreshTokens.Count > MaximumRememberedRefreshTokens)
+            {
+                _exchangedRefreshTokens.Dequeue();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Forgets every remembered refresh token, so spent tokens are not retained once the session they belong to has ended.
+    /// </summary>
+    private void ForgetExchangedRefreshTokens()
+    {
+        lock (_exchangedRefreshTokenLock)
+        {
+            _exchangedRefreshTokens.Clear();
+        }
     }
 
     private void RefreshTimerElapsed(object? sender, ElapsedEventArgs e)
@@ -1650,19 +1705,50 @@ public partial class AtProtoAgent
     /// </summary>
     /// <param name="retryIn">The interval to wait before retrying.</param>
     /// <param name="exception">The exception, if any, which caused the refresh to fail.</param>
+    /// <remarks>
+    /// <para>
+    ///   The timer is created if it does not already exist. A refresh which runs before the timer has been created,
+    ///   which is what happens when the access token issued at login is already close to expiry, would otherwise have
+    ///   nothing to restart and background refresh would never run again.
+    /// </para>
+    /// </remarks>
     private void RestartTokenRefreshTimer(TimeSpan retryIn, Exception? exception)
     {
         lock (_timerLock)
         {
-            if (!_enableTokenRefresh || _credentialRefreshTimer is null || Credentials is not AccessCredentials)
+            if (!_enableTokenRefresh || _disposed || Credentials is not AccessCredentials)
             {
                 return;
             }
 
+            EnsureTokenRefreshTimer();
+
             _credentialRefreshTimer.Interval = retryIn.TotalMilliseconds;
+            _credentialRefreshTimer.Enabled = true;
             _credentialRefreshTimer.Start();
 
             Logger.BackgroundTokenRefreshFailed(_logger, _credentialRefreshTimer.Interval, exception);
+        }
+    }
+
+    /// <summary>
+    /// Creates the token refresh timer if it does not already exist.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   The timer is created here, and only here, so that the Elapsed handler is subscribed exactly once. Subscribing on
+    ///   every start would leave the handler attached multiple times, and every tick would then start as many concurrent
+    ///   refreshes as there are subscriptions, each racing to spend the same refresh token.
+    /// </para>
+    /// <para>Callers must hold <see cref="_timerLock"/>.</para>
+    /// </remarks>
+    [MemberNotNull(nameof(_credentialRefreshTimer))]
+    private void EnsureTokenRefreshTimer()
+    {
+        if (_credentialRefreshTimer is null)
+        {
+            _credentialRefreshTimer = new System.Timers.Timer();
+            _credentialRefreshTimer.Elapsed += RefreshTimerElapsed;
         }
     }
 
@@ -1688,14 +1774,12 @@ public partial class AtProtoAgent
 
             lock (_timerLock)
             {
-                // The timer is created here, and only here, so that the Elapsed handler is subscribed exactly once.
-                // Subscribing on every start would leave the handler attached multiple times, and every tick would then
-                // start as many concurrent refreshes as there are subscriptions, each racing to spend the same refresh token.
-                if (_credentialRefreshTimer is null)
+                if (_disposed)
                 {
-                    _credentialRefreshTimer = new System.Timers.Timer();
-                    _credentialRefreshTimer.Elapsed += RefreshTimerElapsed;
+                    return;
                 }
+
+                EnsureTokenRefreshTimer();
 
                 _credentialRefreshTimer.Interval = refreshIn.TotalMilliseconds >= int.MaxValue ? int.MaxValue : refreshIn.TotalMilliseconds;
                 _credentialRefreshTimer.Enabled = true;
