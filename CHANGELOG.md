@@ -227,6 +227,7 @@
 
 #### idunno.Bluesky
 
+* `BlueskyAgent.SendMessage()` now rejects an over-long message before extracting facets from it, rather than after scanning it and resolving every handle it mentions.
 * `RichText.DefaultFacetExtractor` now resolves each distinct handle mentioned in a piece of text at most once. A handle mentioned more than once, or
   one which does not resolve, caused a separate network round trip for every time it appeared.
 * String length checks for various methods were corrected to work on UTF-8 lengths.
