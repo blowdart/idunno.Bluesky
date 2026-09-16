@@ -45,7 +45,7 @@
 * Added an optional `maxPageSize` parameter to `BaseEmbeddedCardGenerator.GetPageContent()` and the `BaseEmbeddedCardGenerator.DefaultMaximumPageSize`
   constant, which cap the number of bytes read from a page when generating an embedded card. The default is 1MB.
 * Added `Maximum.MessageLengthInGraphemes`, `Maximum.ConversationRequestsToList`, `Maximum.JoinRequestsToList`, `Maximum.GroupMembers`,
-  `Maximum.GroupNameLengthInCharacters` and `Maximum.GroupNameLengthInGraphemes`, replacing the hard coded limits used by the chat endpoints.
+  `Maximum.GroupNameLengthInBytes` and `Maximum.GroupNameLengthInGraphemes`, replacing the hard coded limits used by the chat endpoints.
 * Added `readState`, `status`, `kind` and `lockStatus` filter parameters to `BlueskyAgent.ListConversations()` and `BlueskyServer.ListConversations()`,
   exposing the filters `chat.bsky.convo.listConvos` supports.
 * Added `Chat.ConversationReadState`, and `Chat.ConversationKind.Direct` and `Chat.ConversationKind.Group`, holding the known values for the new
@@ -92,6 +92,15 @@
 
 #### idunno.Bluesky
 
+* The `Maximum` constants which carry a lexicon `maxLength` have been renamed to end in `InBytes`, because a lexicon `maxLength` is counted in UTF-8
+  bytes rather than in characters. `PostLengthInCharacters`, `TagLengthInCharacters`, `MessageLengthInCharacters` and `DraftTextLengthInCharacters`
+  become `PostLengthInBytes`, `TagLengthInBytes`, `MessageLengthInBytes` and `DraftTextLengthInBytes`, and `DisplayNameLength`, `DescriptionLength`
+  and `PronounLength` become `DisplayNameLengthInBytes`, `DescriptionLengthInBytes` and `PronounLengthInBytes`. Their values are unchanged.
+* Post text, tags, direct messages, group names, draft text, profile display names, descriptions and pronouns are now measured in UTF-8 bytes when
+  validated against those limits, rather than with `string.Length`. A UTF-8 byte count is always greater than or equal to the number of UTF-16
+  characters in the same string, so the previous check was too permissive and never too strict: text which the PDS would reject could pass local
+  validation and fail at the server instead. Text which was accepted before and is within the real limit is still accepted. Non-ASCII text close to a
+  limit may now be rejected locally, which is the limit the server was always applying.
 * `RichText.LinkFacetFeature.Uri` has been changed from a `Uri` type to a `string` type as the Bluesky web app can create facets with illegal URIs. The constructor has also been updated to accept a `string` instead of a `Uri`.
 * `Embed.External.Properties.Uri` has been changed from a `Uri` type to a `string` type as the Bluesky web app can create facets with illegal URIs. The constructor has also been updated to accept a `string` instead of a `Uri`.
 * `Embed.EmbeddedExternal` has been updated to only accept a `string` for its `uri` constructor parameter instead of a `Uri` type, as the Bluesky web app can create facets with illegal URIs.
@@ -214,8 +223,8 @@
 * `ListConversationRequests()` now sends the `cursor` it is given to the server. It was accepted and documented, but never placed in the query string, so
   every page after the first repeated the first page and a caller paging until the returned cursor was `null` never terminated.
 * `Chat.MessageInput` now rejects text longer than `Maximum.MessageLengthInGraphemes` (1,000) as well as text longer than
-  `Maximum.MessageLengthInCharacters`, matching the `chat.bsky.convo.defs#messageInput` lexicon and the other text fields in the library.
-* `EditGroup()` now limits a group name to `Maximum.GroupNameLengthInCharacters` (500) and `Maximum.GroupNameLengthInGraphemes` (50), matching the
+  `Maximum.MessageLengthInBytes`, matching the `chat.bsky.convo.defs#messageInput` lexicon and the other text fields in the library.
+* `EditGroup()` now limits a group name to `Maximum.GroupNameLengthInBytes` (500) and `Maximum.GroupNameLengthInGraphemes` (50), matching the
   `chat.bsky.group.editGroup` lexicon and `CreateGroup()`. It previously allowed names two and a half times longer than the server accepts.
 * `BlueskyAgent.GetJoinGroupLinkPreviews()` now throws `AuthenticationRequiredException` when the agent is not authenticated, matching every other chat
   method on the agent.

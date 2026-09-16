@@ -269,7 +269,7 @@ idunno.Bluesky.BlueskyAgent.ListJoinGroupRequests(string! conversationId, int? l
 static idunno.Bluesky.BlueskyServer.ListJoinGroupRequests(string! conversationId, int? limit, string? cursor, System.Uri! service, idunno.AtProto.Authentication.AccessCredentials! accessCredentials, System.Net.Http.HttpClient! httpClient, System.Func<idunno.AtProto.Authentication.AtProtoCredential!, System.Threading.CancellationToken, System.Threading.Tasks.Task!>? onCredentialsUpdated = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, int maximumResponseSize = 33554432, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.AtProtoHttpResult<idunno.Bluesky.PagedViewReadOnlyCollection<idunno.Bluesky.Chat.Group.JoinRequestView!>!>!>!
 static readonly idunno.Bluesky.Maximum.ConversationRequestsToList -> int
 static readonly idunno.Bluesky.Maximum.GroupMembers -> int
-static readonly idunno.Bluesky.Maximum.GroupNameLengthInCharacters -> int
+static readonly idunno.Bluesky.Maximum.GroupNameLengthInBytes -> int
 static readonly idunno.Bluesky.Maximum.GroupNameLengthInGraphemes -> int
 static readonly idunno.Bluesky.Maximum.JoinRequestsToList -> int
 static readonly idunno.Bluesky.Maximum.MessageLengthInGraphemes -> int
@@ -306,3 +306,17 @@ idunno.Bluesky.Chat.MessageInput.Embed.init -> void
 idunno.Bluesky.Chat.MessageInput.Facets.init -> void
 *REMOVED*idunno.Bluesky.Chat.MessageInput.ReplyTo.set -> void
 idunno.Bluesky.Chat.MessageInput.ReplyTo.init -> void
+*REMOVED*static readonly idunno.Bluesky.Maximum.PostLengthInCharacters -> int
+*REMOVED*static readonly idunno.Bluesky.Maximum.TagLengthInCharacters -> int
+*REMOVED*static readonly idunno.Bluesky.Maximum.MessageLengthInCharacters -> int
+*REMOVED*static readonly idunno.Bluesky.Maximum.DraftTextLengthInCharacters -> int
+static readonly idunno.Bluesky.Maximum.PostLengthInBytes -> int
+static readonly idunno.Bluesky.Maximum.TagLengthInBytes -> int
+static readonly idunno.Bluesky.Maximum.MessageLengthInBytes -> int
+static readonly idunno.Bluesky.Maximum.DraftTextLengthInBytes -> int
+*REMOVED*static readonly idunno.Bluesky.Maximum.PronounLength -> int
+*REMOVED*static readonly idunno.Bluesky.Maximum.DisplayNameLength -> int
+*REMOVED*static readonly idunno.Bluesky.Maximum.DescriptionLength -> int
+static readonly idunno.Bluesky.Maximum.PronounLengthInBytes -> int
+static readonly idunno.Bluesky.Maximum.DisplayNameLengthInBytes -> int
+static readonly idunno.Bluesky.Maximum.DescriptionLengthInBytes -> int

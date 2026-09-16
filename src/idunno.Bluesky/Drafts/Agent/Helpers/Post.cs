@@ -66,7 +66,7 @@ public partial class BlueskyAgent
                     continue;
                 }
 
-                if (draftPost.Text is not null && (draftPost.Text.Length > Maximum.PostLengthInCharacters || draftPost.Text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
+                if (draftPost.Text is not null && (draftPost.Text.GetUtf8Length() > Maximum.PostLengthInBytes || draftPost.Text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
                 {
                     throw new DraftException($"Draft text in DraftPost[{validationOffset}] is too long for a real post.");
                 }

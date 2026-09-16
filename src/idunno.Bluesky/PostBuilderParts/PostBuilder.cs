@@ -124,11 +124,11 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
                     string.Format(null, s_postTextExceedsMaxLengthInGraphemesValidationError, Maximum.PostLengthInGraphemes));
             }
 
-            if (text.Length > Maximum.PostLengthInCharacters)
+            if (text.GetUtf8Length() > Maximum.PostLengthInBytes)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(text),
-                    string.Format(null, s_postTextExceedsMaxLengthValidationError, Maximum.PostLengthInCharacters));
+                    string.Format(null, s_postTextExceedsMaxLengthValidationError, Maximum.PostLengthInBytes));
             }
         }
 
@@ -165,7 +165,7 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
             {
 #pragma warning disable S3236 // Caller information arguments should not be provided explicitly
                 ArgumentException.ThrowIfNullOrEmpty(tag, nameof(tags));
-                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.Length, Maximum.TagLengthInCharacters, nameof(tags));
+                ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetUtf8Length(), Maximum.TagLengthInBytes, nameof(tags));
                 ArgumentOutOfRangeException.ThrowIfGreaterThan(tag.GetGraphemeLength(), Maximum.TagLengthInGraphemes, nameof(tags));
 #pragma warning restore S3236 // Caller information arguments should not be provided explicitly
             }
@@ -340,11 +340,11 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
     }
 
     /// <summary>
-    /// Gets the maximum capacity of characters allowed in the record text of this instance
+    /// Gets the maximum capacity, in UTF-8 bytes, allowed in the record text of this instance
     /// </summary>
     [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Matching StringBuilder property.")]
     [SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static", Justification = "Matching StringBuilder property.")]
-    public int MaxCapacity => Maximum.PostLengthInCharacters;
+    public int MaxCapacity => Maximum.PostLengthInBytes;
 
     /// <summary>
     /// Gets the maximum capacity of graphemes allowed in the record text of this instance
@@ -385,11 +385,11 @@ public sealed partial class PostBuilder : IEquatable<PostBuilder>
         {
             if (value is not null)
             {
-                if (value.Length > Maximum.PostLengthInCharacters || value.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
+                if (value.GetUtf8Length() > Maximum.PostLengthInBytes || value.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
                 {
                     throw new ArgumentOutOfRangeException(
                         nameof(value),
-                        $"text cannot have be longer than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
+                        $"text cannot be longer than {Maximum.PostLengthInBytes} UTF-8 bytes, or {Maximum.PostLengthInGraphemes} graphemes.");
                 }
 
                 lock (_syncLock)

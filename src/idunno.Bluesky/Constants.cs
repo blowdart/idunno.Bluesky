@@ -31,9 +31,16 @@ public static class DefaultServiceUris
 public static class Maximum
 {
     /// <summary>
-    /// The maximum length for a post, in characters.
+    /// The maximum length for a post, in UTF-8 bytes.
     /// </summary>
-    public static readonly int PostLengthInCharacters = 3000;
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>. Text outside the ASCII range encodes to more bytes than it has characters, so a post
+    /// can exceed this limit while remaining within <see cref="PostLengthInGraphemes"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int PostLengthInBytes = 3000;
 
     /// <summary>
     /// The maximum length for a post, in graphemes.
@@ -51,9 +58,15 @@ public static class Maximum
     public static readonly int ExternalTagsInPost = 8;
 
     /// <summary>
-    /// The maximum length of an tag, in characters.
+    /// The maximum length of a tag, in UTF-8 bytes.
     /// </summary>
-    public static readonly int TagLengthInCharacters = 640;
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int TagLengthInBytes = 640;
 
     /// <summary>
     /// The maximum length of an tag, in graphemes.
@@ -101,9 +114,15 @@ public static class Maximum
     public static readonly int MessagesToList = 100;
 
     /// <summary>
-    /// The maximum number of characters in a direct message.
+    /// The maximum number of UTF-8 bytes in a direct message.
     /// </summary>
-    public static readonly int MessageLengthInCharacters = 10000;
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int MessageLengthInBytes = 10000;
 
     /// <summary>
     /// The maximum number of graphemes in a direct message.
@@ -132,9 +151,15 @@ public static class Maximum
     public static readonly int GroupMembers = 10000;
 
     /// <summary>
-    /// The maximum number of characters in a group conversation name.
+    /// The maximum number of UTF-8 bytes in a group conversation name.
     /// </summary>
-    public static readonly int GroupNameLengthInCharacters = 500;
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int GroupNameLengthInBytes = 500;
 
     /// <summary>
     /// The maximum number of graphemes in a group conversation name.
@@ -204,9 +229,15 @@ public static class Maximum
     public static readonly int Trends = 25;
 
     /// <summary>
-    /// The maximum length of a profile pronoun.
+    /// The maximum length of a profile pronoun, in UTF-8 bytes.
     /// </summary>
-    public static readonly int PronounLength = 2560;
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int PronounLengthInBytes = 2560;
 
     /// <summary>
     /// The maximum length of a profile pronoun, in graphemes.
@@ -214,9 +245,15 @@ public static class Maximum
     public static readonly int PronounLengthInGraphemes = 256;
 
     /// <summary>
-    /// The maximum length of a profile display name.
+    /// The maximum length of a profile display name, in UTF-8 bytes.
     /// </summary>
-    public static readonly int DisplayNameLength = 640;
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int DisplayNameLengthInBytes = 640;
 
     /// <summary>
     /// The maximum length of a profile display name, in graphemes.
@@ -224,9 +261,15 @@ public static class Maximum
     public static readonly int DisplayNameLengthInGraphemes = 64;
 
     /// <summary>
-    /// The maximum length of a profile description.
+    /// The maximum length of a profile description, in UTF-8 bytes.
     /// </summary>
-    public static readonly int DescriptionLength = 2560;
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int DescriptionLengthInBytes = 2560;
 
     /// <summary>
     /// The maximum length of a profile description, in graphemes.
@@ -239,9 +282,15 @@ public static class Maximum
     public static readonly int ListedDrafts = 100;
 
     /// <summary>
-    /// The maximum length of text in an individual draft.
+    /// The maximum length of text in an individual draft, in UTF-8 bytes.
     /// </summary>
-    public static readonly int DraftTextLengthInCharacters = 10000;
+    /// <remarks>
+    /// <para>
+    /// The lexicon expresses this limit in UTF-8 bytes, which is not the same as the number of characters in a
+    /// <see cref="string"/>.
+    /// </para>
+    /// </remarks>
+    public static readonly int DraftTextLengthInBytes = 10000;
 
     /// <summary>
     /// The maximum length of text in an individual draft, in graphemes.

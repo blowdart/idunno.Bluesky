@@ -32,6 +32,13 @@ public class FacetExtractorTests
     [InlineData("# ", 0)]
     [InlineData("#sixtyFour0123456789012345678901234567890123456789012345678901234", 1)]
     [InlineData("#sixtyFive01234567890123456789012345678901234567890123456789012345", 0)]
+    // A tag within the grapheme limit whose UTF-8 encoding is longer than its character count is still a valid
+    // tag. Thirty CJK characters are thirty graphemes but ninety UTF-8 bytes.
+    [InlineData("#田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田", 1)]
+    // Sixty five CJK characters exceed the grapheme limit, so they are still skipped.
+    [InlineData("#田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田田", 0)]
+    // Twenty six family emoji are twenty six graphemes but six hundred and fifty UTF-8 bytes, which exceeds the byte limit.
+    [InlineData("#👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦", 0)]
     // A tag that is skipped must not stop later tags from being extracted.
     [InlineData("#! #realtag", 1)]
     [InlineData("#sixtyFive01234567890123456789012345678901234567890123456789012345 #realtag", 1)]
@@ -452,9 +459,7 @@ public class FacetExtractorTests
     [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Mocking ResolveHandle() signature.")]
     [SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Mocking ResolveHandle().")]
     [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Mocking ResolveHandle() signature.")]
-#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
     private async Task<Did?> MockResolver(string handle, CancellationToken cancellationToken = default)
-#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
     {
         if (_resolutionResult.TryGetValue(handle, out Did? value))
         {

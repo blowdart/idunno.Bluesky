@@ -97,11 +97,11 @@ public partial class BlueskyAgent
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
 
-        if (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
+        if (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(text),
-                $"text cannot have a be longer than than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
+                $"text cannot be longer than {Maximum.PostLengthInBytes} UTF-8 bytes, or {Maximum.PostLengthInGraphemes} graphemes.");
         }
 
         if (!IsAuthenticated)
@@ -167,11 +167,11 @@ public partial class BlueskyAgent
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
 
-        if (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
+        if (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(text),
-                $"text cannot have a be longer than than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
+                $"text cannot be longer than {Maximum.PostLengthInBytes} UTF-8 bytes, or {Maximum.PostLengthInGraphemes} graphemes.");
         }
 
         if (!IsAuthenticated)
@@ -239,11 +239,11 @@ public partial class BlueskyAgent
 
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
 
-        if (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
+        if (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(text),
-                $"text cannot have a be longer than than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
+                $"text cannot be longer than {Maximum.PostLengthInBytes} UTF-8 bytes, or {Maximum.PostLengthInGraphemes} graphemes.");
         }
 
         if (images != null)
@@ -351,9 +351,9 @@ public partial class BlueskyAgent
         ArgumentNullException.ThrowIfNull(video);
 
         if (text is not null &&
-            (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
+            (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes))
         {
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.Length, Maximum.PostLengthInCharacters);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetUtf8Length(), Maximum.PostLengthInBytes);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(text.GetGraphemeLength(), Maximum.PostLengthInGraphemes);
         }
 
@@ -487,11 +487,11 @@ public partial class BlueskyAgent
         ArgumentNullException.ThrowIfNull(text);
         ArgumentNullException.ThrowIfNull(externalCard);
 
-        if (text.Length > Maximum.PostLengthInCharacters || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
+        if (text.GetUtf8Length() > Maximum.PostLengthInBytes || text.GetGraphemeLength() > Maximum.PostLengthInGraphemes)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(text),
-                $"text cannot have a be longer than than {Maximum.PostLengthInCharacters} characters, or {Maximum.PostLengthInGraphemes} graphemes.");
+                $"text cannot be longer than {Maximum.PostLengthInBytes} UTF-8 bytes, or {Maximum.PostLengthInGraphemes} graphemes.");
         }
 
         if (!IsAuthenticated)
