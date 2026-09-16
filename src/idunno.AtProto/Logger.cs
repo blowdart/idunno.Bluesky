@@ -333,7 +333,7 @@ internal static partial class Logger
     internal static partial void OAuthTokenDoesNotContainAtProtoScope(ILogger logger, Guid correlation);
 
     [LoggerMessage(606, LogLevel.Error, "OAuth login access token issuer {actual} did not match the expected {expected}, correlation {correlation}")]
-    internal static partial void OAuthTokenHasMismatchedAuthority(ILogger logger, Uri expected, Uri actual, Guid correlation);
+    internal static partial void OAuthTokenHasMismatchedAuthority(ILogger logger, Uri actual, Uri expected, Guid correlation);
 
     [LoggerMessage(610, LogLevel.Debug, "OAuthClient refresh called for token issued by {service} against authority {authority}")]
     internal static partial void OAuthClientRefreshCalled(ILogger logger, Uri service, Uri authority);

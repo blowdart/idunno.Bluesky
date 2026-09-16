@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Security.Claims;
 
 using Duende.IdentityModel.Client;
 using Duende.IdentityModel.OidcClient;
@@ -282,6 +283,11 @@ public class OAuthClient
             throw new OAuthException("Internal _expectedService is null");
         }
 
+        if (_expectedAuthority is null)
+        {
+            throw new OAuthException("Internal _expectedAuthority is null");
+        }
+
         if (_oidcClient is null)
         {
             OidcClientOptions oidcClientOptions = BuildOidcClientOptions(clientId, null, scopes);
@@ -304,33 +310,7 @@ public class OAuthClient
 
         JsonWebToken accessToken = new(loginResult.AccessToken);
 
-        if (DateTimeOffset.UtcNow < new DateTimeOffset(accessToken.ValidFrom))
-        {
-            throw new OAuthException("Issued token is not yet valid.");
-        }
-
-        if (DateTimeOffset.UtcNow > new DateTimeOffset(accessToken.ValidTo))
-        {
-            throw new OAuthException("Issued token has already expired.");
-        }
-
-        if (accessToken.Audiences is null || !accessToken.Audiences.Any())
-        {
-            throw new OAuthException("Issued token does not contain aud.");
-        }
-
-        if (!accessToken.GetClaim("scope").ToString().Contains("atproto", StringComparison.Ordinal))
-        {
-            Logger.OAuthTokenDoesNotContainAtProtoScope(_logger, _correlationId);
-            throw new OAuthException("Issued token does not contain atproto in scope.");
-        }
-
-        Uri issuer = new(accessToken.Issuer);
-        if (!issuer.Equals(_expectedAuthority))
-        {
-            Logger.OAuthTokenHasMismatchedAuthority(_logger, issuer, _expectedAuthority!, _correlationId);
-            throw new OAuthException("Unexpected access token issuer");
-        }
+        ValidateAccessToken(accessToken, _expectedAuthority, _correlationId);
 
         AtProtoHttpResult<ServerDescription> serverDescriptionResult;
 
@@ -504,33 +484,7 @@ public class OAuthClient
             {
                 JsonWebToken accessToken = new(refreshResult.AccessToken);
 
-                if (DateTimeOffset.UtcNow < new DateTimeOffset(accessToken.ValidFrom))
-                {
-                    throw new OAuthException("Issued token is not yet valid.");
-                }
-
-                if (DateTimeOffset.UtcNow > new DateTimeOffset(accessToken.ValidTo))
-                {
-                    throw new OAuthException("Issued token has already expired.");
-                }
-
-                if (accessToken.Audiences is null || !accessToken.Audiences.Any())
-                {
-                    throw new OAuthException("Issued token does not contain aud.");
-                }
-
-                if (!accessToken.GetClaim("scope").ToString().Contains("atproto", StringComparison.Ordinal))
-                {
-                    Logger.OAuthTokenDoesNotContainAtProtoScope(_logger, _correlationId);
-                    throw new OAuthException("Issued token does not contain atproto in scope.");
-                }
-
-                Uri issuer = new(accessToken.Issuer);
-                if (!issuer.Equals(authority))
-                {
-                    Logger.OAuthTokenHasMismatchedAuthority(_logger, issuer, _expectedAuthority!, _correlationId);
-                    throw new OAuthException("Unexpected access token issuer");
-                }
+                ValidateAccessToken(accessToken, authority, correlationId);
 
                 AtProtoHttpResult<ServerDescription> serverDescriptionResult;
                 using (HttpMessageHandler handler = _innerFactoryHandler())
@@ -542,7 +496,7 @@ public class OAuthClient
 
                 if (!serverDescriptionResult.Succeeded)
                 {
-                    throw new OAuthException($"Could not get service description for {_expectedService}");
+                    throw new OAuthException($"Could not get service description for {refreshCredential.Service}");
                 }
                 else if (!accessToken.Audiences.Contains(serverDescriptionResult.Result.Did.ToString()))
                 {
@@ -551,15 +505,6 @@ public class OAuthClient
                 else if (serverDescriptionResult.HttpResponseHeaders is null)
                 {
                     throw new OAuthException("DescribeServer() returned no headers");
-                }
-
-                if (!serverDescriptionResult.Succeeded)
-                {
-                    throw new OAuthException($"Could not get service description for {_expectedService}");
-                }
-                else if (!accessToken.Audiences.Contains(serverDescriptionResult.Result.Did.ToString()))
-                {
-                    throw new OAuthException($"Access token audience did not contain {serverDescriptionResult.Result.Did}");
                 }
 
                 Logger.OAuthClientRefreshSucceeded(_logger, authority);
@@ -599,6 +544,89 @@ public class OAuthClient
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
             Process.Start("open", uri.ToString());
+        }
+    }
+
+    /// <summary>
+    /// Converts a token lifetime <see cref="DateTime"/> to a <see cref="DateTimeOffset"/> in UTC.
+    /// </summary>
+    /// <param name="value">The <see cref="DateTime"/> to convert.</param>
+    /// <returns>
+    /// The <paramref name="value"/> as a UTC <see cref="DateTimeOffset"/>, or <see langword="null"/> if the
+    /// claim the <paramref name="value"/> came from was not present on the token.
+    /// </returns>
+    /// <remarks>
+    /// <para>
+    /// <see cref="JsonWebToken.ValidFrom"/> and <see cref="JsonWebToken.ValidTo"/> return
+    /// <see cref="DateTime.MinValue"/> with an unspecified kind when the nbf or exp claim is absent.
+    /// <see cref="DateTimeOffset"/> interprets an unspecified kind as a local time, and converting
+    /// <see cref="DateTime.MinValue"/> from a local time east of UTC underflows, so an absent claim is
+    /// detected before any conversion is attempted.
+    /// </para>
+    /// </remarks>
+    internal static DateTimeOffset? ToUtcDateTimeOffset(DateTime value)
+    {
+        if (value == DateTime.MinValue)
+        {
+            return null;
+        }
+
+        return new DateTimeOffset(DateTime.SpecifyKind(value, DateTimeKind.Utc));
+    }
+
+    /// <summary>
+    /// Validates the claims in an access token issued by an authorization server.
+    /// </summary>
+    /// <param name="accessToken">The access token to validate.</param>
+    /// <param name="expectedAuthority">The authority the token is expected to have been issued by.</param>
+    /// <param name="correlationId">The correlation identifier used in logging to tie requests and responses together.</param>
+    /// <exception cref="OAuthException">Thrown when validation of <paramref name="accessToken"/> fails.</exception>
+    internal void ValidateAccessToken(JsonWebToken accessToken, Uri expectedAuthority, Guid correlationId)
+    {
+        TimeSpan clockSkew = _options?.ClockSkew ?? OAuthOptions.DefaultClockSkew;
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+
+        DateTimeOffset? validFrom = ToUtcDateTimeOffset(accessToken.ValidFrom);
+        DateTimeOffset? validTo = ToUtcDateTimeOffset(accessToken.ValidTo);
+
+        if (validFrom is not null && now + clockSkew < validFrom)
+        {
+            throw new OAuthException("Issued token is not yet valid.");
+        }
+
+        if (validTo is null)
+        {
+            throw new OAuthException("Issued token does not contain exp.");
+        }
+
+        if (now - clockSkew > validTo)
+        {
+            throw new OAuthException("Issued token has already expired.");
+        }
+
+        if (accessToken.Audiences is null || !accessToken.Audiences.Any())
+        {
+            throw new OAuthException("Issued token does not contain aud.");
+        }
+
+        // The scope claim is a space delimited list, so it is compared entry by entry rather than as a
+        // substring, which would also accept scopes that merely contain "atproto", such as "notatproto".
+        if (!accessToken.TryGetClaim("scope", out Claim? scopeClaim) ||
+            !scopeClaim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Contains("atproto", StringComparer.Ordinal))
+        {
+            Logger.OAuthTokenDoesNotContainAtProtoScope(_logger, correlationId);
+            throw new OAuthException("Issued token does not contain atproto in scope.");
+        }
+
+        if (!Uri.TryCreate(accessToken.Issuer, UriKind.Absolute, out Uri? issuer))
+        {
+            throw new OAuthException("Issued token does not contain a valid iss.");
+        }
+
+        if (!issuer.Equals(expectedAuthority))
+        {
+            Logger.OAuthTokenHasMismatchedAuthority(_logger, issuer, expectedAuthority, correlationId);
+            throw new OAuthException("Unexpected access token issuer");
         }
     }
 

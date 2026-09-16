@@ -125,6 +125,12 @@
 
 #### idunno.AtProto
 
+* OAuth access token validation now matches `atproto` as a discrete entry in the `scope` claim rather than as a substring.
+* OAuth access token validation now throws an `OAuthException` rather than an `ArgumentException` when the token has no `scope` claim.
+* OAuth access token validation no longer throws an `ArgumentOutOfRangeException` in time zones east of UTC when the token has no `nbf` or `exp` claim.
+* OAuth access token lifetimes are now validated with a clock skew allowance, configurable through the new `OAuthOptions.ClockSkew` property.
+* The log message written when an OAuth access token has an unexpected issuer no longer reports the actual and expected authorities the wrong way around.
+* `OAuthLoginState.GetHashCode()` now derives the hash code from the contents of `ExtraProperties`, matching `Equals()`.
 * `did:web` DIDs are now resolved only when they meet the restrictions AT Protocol places on the method.
 * `ResolvePds()` now rejects an `#atproto_pds` service endpoint which is neither `https`, nor `http` to a loopback address.
 * The background credential refresh timer no longer throws an `ArgumentException` when an access token expires in exactly sixty seconds. The refresh

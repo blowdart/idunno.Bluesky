@@ -109,6 +109,9 @@ public sealed class OAuthLoginState : IEquatable<OAuthLoginState>
     /// <summary>
     /// Gets or sets the DPoP proof key which was used to sign the token request.
     /// </summary>
+    /// <remarks>
+    /// <para>This is the private key for the login flow and must be protected accordingly.</para>
+    /// </remarks>
     [JsonInclude]
     public string ProofKey { get; set; }
 
@@ -173,6 +176,12 @@ public sealed class OAuthLoginState : IEquatable<OAuthLoginState>
     /// <param name="state">The <see cref="OAuthLoginState"/> to convert to json.</param>
     /// <returns>A string containing the <paramref name="state"/> as json.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="state"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    /// The returned json contains the <see cref="ProofKey"/> and the <see cref="CodeVerifier"/> and must be
+    /// protected in transit and at rest.
+    /// </para>
+    /// </remarks>
     public static string ToJson(OAuthLoginState state)
     {
         ArgumentNullException.ThrowIfNull(state);
@@ -195,6 +204,12 @@ public sealed class OAuthLoginState : IEquatable<OAuthLoginState>
     /// Converts this instance of <see cref="OAuthLoginState"/> to a JSON string.
     /// </summary>
     /// <returns>A string containing this instance of <see cref="OAuthLoginState"/> as json.</returns>
+    /// <remarks>
+    /// <para>
+    /// The returned json contains the <see cref="ProofKey"/> and the <see cref="CodeVerifier"/> and must be
+    /// protected in transit and at rest.
+    /// </para>
+    /// </remarks>
     public string ToJson()
     {
         return ToJson(this);
@@ -228,19 +243,36 @@ public sealed class OAuthLoginState : IEquatable<OAuthLoginState>
     /// Returns the hash code for this <see cref="OAuthLoginState"/>.
     /// </summary>
     /// <returns>The hash code for this <see cref="OAuthLoginState"/>.</returns>
-    public override int GetHashCode() => (
-        CodeVerifier,
-        CorrelationId,
-        RedirectUri,
-        Error,
-        ErrorDescription,
-        ExpectedAuthority,
-        ExpectedService,
-        ProofKey,
-        RedirectUri,
-        StartUrl,
-        State,
-        ExtraProperties).GetHashCode();
+    public override int GetHashCode()
+    {
+        HashCode hash = new();
+
+        hash.Add(CodeVerifier, StringComparer.Ordinal);
+        hash.Add(CorrelationId);
+        hash.Add(RedirectUri, StringComparer.Ordinal);
+        hash.Add(Error, StringComparer.Ordinal);
+        hash.Add(ErrorDescription, StringComparer.Ordinal);
+        hash.Add(ExpectedAuthority, StringComparer.Ordinal);
+        hash.Add(ExpectedService, StringComparer.Ordinal);
+        hash.Add(ProofKey, StringComparer.Ordinal);
+        hash.Add(StartUrl, StringComparer.Ordinal);
+        hash.Add(State, StringComparer.Ordinal);
+
+        // Equals() compares ExtraProperties by its contents, so the hash code must be calculated from
+        // its contents too, rather than from the dictionary's reference based hash code.
+        if (ExtraProperties is not null)
+        {
+            hash.Add(ExtraProperties.Count);
+
+            foreach (KeyValuePair<string, string> extraProperty in ExtraProperties.OrderBy(kvp => kvp.Key, StringComparer.Ordinal))
+            {
+                hash.Add(extraProperty.Key, StringComparer.Ordinal);
+                hash.Add(extraProperty.Value, StringComparer.Ordinal);
+            }
+        }
+
+        return hash.ToHashCode();
+    }
 
     /// <summary>
     /// Indicates where an object is equal to this <see cref="OAuthLoginState"/>."/>
