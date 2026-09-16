@@ -24,11 +24,15 @@ const libraries = [
     }
 ];
 
-fs.rmSync(outputDirectory, { recursive: true, force: true });
+fs.mkdirSync(outputDirectory, { recursive: true });
 
 for (const library of libraries) {
     const sourceDirectory = path.join(nodeModulesDirectory, library.name);
     const destinationDirectory = path.join(outputDirectory, library.name);
+
+    // Only the directories this script owns are removed. Removing the whole of wwwroot/lib would take anything else
+    // which happened to be there with it.
+    fs.rmSync(destinationDirectory, { recursive: true, force: true });
 
     for (const file of library.files) {
         const source = path.join(sourceDirectory, file);
