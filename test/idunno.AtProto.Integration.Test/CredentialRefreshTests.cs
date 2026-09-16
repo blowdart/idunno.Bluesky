@@ -88,6 +88,82 @@ public class CredentialRefreshTests
     }
 
     [Fact]
+    public async Task AFailedRefreshOfANearExpiryTokenIssuedAtLoginStillSchedulesARetry()
+    {
+        RefreshTestServer refreshTestServer = new(this)
+        {
+            // Short enough that StartTokenRefreshTimer refreshes immediately instead of creating the timer.
+            AccessJwtLifetime = TimeSpan.FromSeconds(30),
+            FailRefresh = true
+        };
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            // Login kicks the immediate refresh off in the background, so wait for it to have been attempted and failed.
+            while (refreshTestServer.RefreshAttemptCount == 0)
+            {
+                await Task.Delay(25, TestContext.Current.CancellationToken);
+            }
+
+            await Task.Delay(250, TestContext.Current.CancellationToken);
+
+            // The timer does not exist yet on this path, so the retry has nothing to restart unless one is created.
+            System.Timers.Timer? timer = GetRefreshTimer(agent);
+
+            Assert.NotNull(timer);
+            Assert.True(timer.Enabled);
+        }
+    }
+
+    [Fact]
+    public async Task ARefreshTokenSpentSeveralRefreshesAgoIsStillNotPresentedAgain()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            AccessCredentials originalCredentials = agent.Credentials!;
+
+            Assert.True(await agent.RefreshCredentials(originalCredentials, TestContext.Current.CancellationToken));
+            Assert.Equal(1, refreshTestServer.RefreshCount);
+
+            for (int i = 0; i < 2; i++)
+            {
+                Assert.True(await agent.RefreshCredentials(TestContext.Current.CancellationToken));
+            }
+
+            Assert.Equal(3, refreshTestServer.RefreshCount);
+
+            // Remembering only the most recently spent token would let this stale credential present a spent token.
+            Assert.True(await agent.RefreshCredentials(originalCredentials, TestContext.Current.CancellationToken));
+            Assert.Equal(3, refreshTestServer.RefreshCount);
+        }
+    }
+
+    [Fact]
+    public async Task LoggingOutForgetsEveryRememberedRefreshToken()
+    {
+        RefreshTestServer refreshTestServer = new(this);
+
+        using (AtProtoAgent agent = CreateAgent(refreshTestServer))
+        {
+            await Login(agent);
+
+            Assert.True(await agent.RefreshCredentials(TestContext.Current.CancellationToken));
+            Assert.NotEmpty(GetExchangedRefreshTokens(agent));
+
+            await agent.Logout(TestContext.Current.CancellationToken);
+
+            // A spent refresh token must not outlive the session it belonged to.
+            Assert.Empty(GetExchangedRefreshTokens(agent));
+        }
+    }
+
+    [Fact]
     public async Task ARefreshTokenWhichHasAlreadyBeenExchangedIsNotPresentedAgain()
     {
         RefreshTestServer refreshTestServer = new(this);
@@ -152,6 +228,13 @@ public class CredentialRefreshTests
             ?.GetValue(agent);
     }
 
+    private static IEnumerable<string> GetExchangedRefreshTokens(AtProtoAgent agent)
+    {
+        return (Queue<string>)typeof(AtProtoAgent)
+            .GetField("_exchangedRefreshTokens", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(agent)!;
+    }
+
     private static async Task InvokeBackgroundRefresh(AtProtoAgent agent)
     {
         MethodInfo backgroundRefresh = typeof(AtProtoAgent).GetMethod(
@@ -191,6 +274,7 @@ public class CredentialRefreshTests
     private sealed class RefreshTestServer
     {
         private int _refreshCount;
+        private int _refreshAttemptCount;
         private int _tokenSerialNumber;
 
         internal RefreshTestServer(CredentialRefreshTests test)
@@ -202,7 +286,11 @@ public class CredentialRefreshTests
 
         internal bool FailRefresh { get; set; }
 
+        internal TimeSpan AccessJwtLifetime { get; set; } = TimeSpan.FromMinutes(15);
+
         internal int RefreshCount => Volatile.Read(ref _refreshCount);
+
+        internal int RefreshAttemptCount => Volatile.Read(ref _refreshAttemptCount);
 
         private async Task Handle(CredentialRefreshTests test, HttpContext context)
         {
@@ -236,10 +324,12 @@ public class CredentialRefreshTests
             {
                 if (FailRefresh)
                 {
+                    Interlocked.Increment(ref _refreshAttemptCount);
                     response.StatusCode = 400;
                     return;
                 }
 
+                Interlocked.Increment(ref _refreshAttemptCount);
                 Interlocked.Increment(ref _refreshCount);
 
                 response.StatusCode = 200;
@@ -254,6 +344,11 @@ public class CredentialRefreshTests
                         active: true,
                         status: null),
                     test._jsonSerializerOptions);
+            }
+            else if (request.Path == "/xrpc/com.atproto.server.deleteSession" && request.Method == HttpMethod.Post.Method)
+            {
+                response.StatusCode = 200;
+                await response.WriteAsJsonAsync(new EmptyResponse(), test._jsonSerializerOptions);
             }
             else if (request.Path == "/xrpc/com.atproto.server.getSession")
             {
@@ -277,7 +372,7 @@ public class CredentialRefreshTests
             }
         }
 
-        private static string CreateAccessJwt() => JwtBuilder.CreateJwt(new Did(ExpectedDid), $"did:web:{DomainName}");
+        private string CreateAccessJwt() => JwtBuilder.CreateJwt(new Did(ExpectedDid), $"did:web:{DomainName}", expiresIn: AccessJwtLifetime);
 
         private string NextRefreshToken() => $"refreshToken{Interlocked.Increment(ref _tokenSerialNumber)}";
     }

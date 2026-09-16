@@ -374,6 +374,8 @@ public partial class AtProtoAgent : Agent
 
             StopTokenRefreshTimer(dispose: true);
 
+            ForgetExchangedRefreshTokens();
+
             _credentialRefreshSemaphore.Dispose();
 
             _directoryAgent.Dispose();

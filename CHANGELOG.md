@@ -125,6 +125,9 @@
 
 #### idunno.AtProto
 
+* A failed background credential refresh now schedules a retry even when the refresh timer had not been created yet, which previously ended background refresh for the lifetime of the agent.
+* The refresh token replay check now remembers the last few exchanged tokens rather than only the most recent one.
+* Exchanged refresh tokens are now forgotten when the session ends, so they are not retained for the lifetime of the agent.
 * `DPoPAccessCredentials` and `DPoPRefreshCredential` now read their token once when signing a request, so the DPoP proof and the authorization header always carry the same token.
 * `DPoPRefreshCredential` now stores an absent DPoP nonce as an empty string rather than leaving the non-nullable `DPoPNonce` property returning `null`.
 * `DPoPRevokeCredentials` now throws an `ArgumentNullException` rather than a `NullReferenceException` when constructed with `null`.
