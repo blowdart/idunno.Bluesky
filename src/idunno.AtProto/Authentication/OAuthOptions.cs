@@ -20,6 +20,11 @@ public sealed class OAuthOptions
     public const string AtProtoOAuth = "OAuth";
 
     /// <summary>
+    /// The default clock skew allowed when validating the lifetime of an issued token.
+    /// </summary>
+    public static readonly TimeSpan DefaultClockSkew = TimeSpan.FromMinutes(5);
+
+    /// <summary>
     /// Creates a new instance of <see cref="OAuthOptions"/>.
     /// </summary>
     public OAuthOptions()
@@ -66,6 +71,28 @@ public sealed class OAuthOptions
     /// Gets or sets the <see cref="Uri"/> the OAuth server should call back to when it has authenticated the user.
     /// </summary>
     public Uri? ReturnUri { get; set; } = default!;
+
+    /// <summary>
+    /// Gets or sets the clock skew allowed when validating the lifetime of an issued token.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when setting to a negative <see cref="TimeSpan"/>.</exception>
+    /// <remarks>
+    /// <para>
+    /// Defaults to <see cref="DefaultClockSkew"/>. Set to <see cref="TimeSpan.Zero"/> to require that the
+    /// clocks of the local machine and the authorization server agree exactly.
+    /// </para>
+    /// </remarks>
+    public TimeSpan ClockSkew
+    {
+        get;
+
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(value, TimeSpan.Zero);
+
+            field = value;
+        }
+    } = DefaultClockSkew;
 
     /// <summary>
     /// Gets or sets the list of permissions to request.
