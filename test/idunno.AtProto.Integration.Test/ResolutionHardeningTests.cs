@@ -106,6 +106,32 @@ public class ResolutionHardeningTests
         }
     }
 
+    [Theory]
+    [InlineData(16)]
+    [InlineData(32)]
+    public async Task ResolveDidDocumentForAHandleHonoursTheConfiguredWellKnownResponseSize(int maximumWellKnownResponseSize)
+    {
+        Handle handle = new(TestServerBuilder.DefaultDomainName);
+
+        // Comfortably under the default well known maximum, but over the one the caller asks for.
+        string response = "did:plc:" + new string('a', maximumWellKnownResponseSize * 2);
+
+        using TestServer testServer = TestServerBuilder.CreateServer(TestServerBuilder.DefaultUri, async context =>
+        {
+            context.Response.StatusCode = 200;
+            context.Response.ContentType = "text/plain";
+            await context.Response.WriteAsync(response);
+        });
+
+        using HttpClient httpClient = testServer.CreateClient();
+
+        await Assert.ThrowsAsync<ArgumentException>(async () => await Resolution.ResolveDidDocument(
+            handle,
+            httpClient: httpClient,
+            maximumWellKnownResponseSize: maximumWellKnownResponseSize,
+            cancellationToken: TestContext.Current.CancellationToken));
+    }
+
     [Fact]
     public async Task ResolveHandleDoesNotBufferAnOverLongWellKnownResponseIntoMemory()
     {

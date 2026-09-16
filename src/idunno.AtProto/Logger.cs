@@ -130,6 +130,21 @@ internal static partial class Logger
     [LoggerMessage(54, LogLevel.Debug, "ResolveHandle HTTP request for {handle} to {didUri} threw an exception")]
     internal static partial void ErrorResolvingHandleViaHttp(ILogger logger, Handle handle, Uri didUri, Exception ex);
 
+    [LoggerMessage(55, LogLevel.Debug, "VerifyHandle called for {handle} and {did}")]
+    internal static partial void VerifyHandleCalled(ILogger logger, Handle handle, Did did);
+
+    [LoggerMessage(56, LogLevel.Debug, "ResolveVerifiedHandle called for {did}")]
+    internal static partial void ResolveVerifiedHandleCalled(ILogger logger, Did did);
+
+    [LoggerMessage(57, LogLevel.Warning, "The DID document for {did} does not declare {handle} in alsoKnownAs")]
+    internal static partial void HandleNotDeclaredByDidDocument(ILogger logger, Handle handle, Did did);
+
+    [LoggerMessage(58, LogLevel.Warning, "{handle} resolved to {resolvedDid}, which does not match the expected {did}")]
+    internal static partial void HandleDidNotResolveToDid(ILogger logger, Handle handle, Did did, Did? resolvedDid);
+
+    [LoggerMessage(59, LogLevel.Debug, "{handle} and {did} were verified to resolve to each other")]
+    internal static partial void HandleVerified(ILogger logger, Handle handle, Did did);
+
     [LoggerMessage(60, LogLevel.Debug, "ResolveDidDocument called for {did}")]
     internal static partial void ResolveDidDocumentCalled(ILogger logger, Did did);
 
