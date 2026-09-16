@@ -70,17 +70,17 @@ public sealed partial class AtUri : IEquatable<AtUri>
     /// This will always be "at" for a valid AtUri.
     /// </summary>
     /// <value>The normalized scheme component for this <see cref="AtUri"/>.</value>
-    public string Scheme { get; internal set; } = string.Empty;
+    public string Scheme { get; } = string.Empty;
 
     /// <summary>
     /// Gets the <see cref="AtIdentifier"/> from this <see cref="AtUri"/>.
     /// </summary>
-    public AtIdentifier Authority { get; internal set; }
+    public AtIdentifier Authority { get; }
 
     /// <summary>
     /// Gets the absolute path for this <see cref="AtUri"/>, if it contains an absolute path, otherwise <see langword="null"/>.
     /// </summary>
-    public string? AbsolutePath { get; internal set; }
+    public string? AbsolutePath { get; }
 
     /// <summary>
     /// Gets the <see cref="AtIdentifier"/> from this <see cref="AtUri"/> if the AtUri contains a repo (authority).
@@ -92,13 +92,13 @@ public sealed partial class AtUri : IEquatable<AtUri>
     /// Returns the collection segment of the <see cref="AtUri"/> or <see langword="null"/> if the <see cref="AtUri"/> does not contain a collection.
     /// </summary>
     [JsonIgnore]
-    public Nsid? Collection { get; internal set; }
+    public Nsid? Collection { get; }
 
     /// <summary>
     /// Returns the record key of the AT URI or <see langword="null"/> if the URI does not contain one.
     /// </summary>
     [JsonIgnore]
-    public RecordKey? RecordKey { get; internal set; }
+    public RecordKey? RecordKey { get; }
 
     /// <summary>
     /// Returns the hash code for this <see cref="AtUri"/>.
@@ -260,6 +260,19 @@ public sealed partial class AtUri : IEquatable<AtUri>
 
         result = null;
 
+        // Check the length before doing any scanning, splitting or matching over the string.
+        if (s.Length > 8 * 1024)
+        {
+            if (throwOnError)
+            {
+                throw new AtUriFormatException($"{s} is too long.");
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         if (!s.StartsWith(ProtocolAndSeparator, StringComparison.InvariantCulture))
         {
             if (throwOnError)
@@ -310,7 +323,7 @@ public sealed partial class AtUri : IEquatable<AtUri>
 
         string[] uriParts = s.Split('/');
 
-        if (uriParts.Length >= 3 && (uriParts[0] != "at:" || uriParts[1].Length != 0))
+        if (uriParts.Length < 3 || uriParts[0] != "at:" || uriParts[1].Length != 0)
         {
             if (throwOnError)
             {
@@ -384,18 +397,6 @@ public sealed partial class AtUri : IEquatable<AtUri>
             if (throwOnError)
             {
                 throw new AtUriFormatException($"{s} is not a valid AT URI.");
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        if (s.Length > 8 * 1024)
-        {
-            if (throwOnError)
-            {
-                throw new AtUriFormatException($"{s} is too long.");
             }
             else
             {

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
@@ -16,6 +17,9 @@ namespace idunno.AtProto;
 [JsonConverter(typeof(Json.CidConverter))]
 public sealed class Cid : IEquatable<Cid>
 {
+    // The multiformats unsigned-varint specification limits values to 9 bytes / 63 bits.
+    private const int MaximumVarIntLength = 9;
+
     /// <summary>
     /// Creates a new instance of a <see cref="Cid"/> class using the specified parameters.
     /// </summary>
@@ -112,11 +116,25 @@ public sealed class Cid : IEquatable<Cid>
     /// <param name="version">The Cid version.</param>
     /// <param name="codec">The codec used to encode the hash.</param>
     /// <param name="hash">The hash value(s).</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="hash"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="hash"/> is empty, or when <paramref name="version"/> is not 0 or 1.
+    /// </exception>
     public Cid(byte version, ulong codec, byte[] hash)
     {
+        ArgumentNullException.ThrowIfNull(hash);
+        ArgumentOutOfRangeException.ThrowIfZero(hash.Length);
+
+        if (version is not 0 and not 1)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(version),
+                string.Create(CultureInfo.InvariantCulture, $"Version {version} is unsupported."));
+        }
+
         Version = version;
         Codec = codec;
-        Hash = hash;
+        Hash = (byte[])hash.Clone();
     }
 
     /// <summary>
@@ -289,21 +307,41 @@ public sealed class Cid : IEquatable<Cid>
     {
         Span<byte> span = new(bytes);
 
+        if (span.IsEmpty)
+        {
+            throw new ArgumentException("Value contains no data.", nameof(bytes));
+        }
+
         byte version = span[0];
 
         if (version == 0)
         {
-            return (version, 0x70, span[1..].ToArray());
+            Span<byte> multihash = span[1..];
+
+            if (multihash.IsEmpty)
+            {
+                throw new ArgumentException("Value contains no multihash.", nameof(bytes));
+            }
+
+            return (version, 0x70, multihash.ToArray());
         }
         else if (version == 1)
         {
             (ulong codec, int codecLength) = DecodeVarInt(span[1..]);
 
-            return new(version, codec, span[(1 + codecLength)..].ToArray());
+            Span<byte> multihash = span[(1 + codecLength)..];
+
+            if (multihash.IsEmpty)
+            {
+                throw new ArgumentException("Value contains no multihash.", nameof(bytes));
+            }
+
+            return new(version, codec, multihash.ToArray());
         }
         else
         {
-            throw new ArgumentException($"Version {BitConverter.ToString(new byte[version])} is unsupported");
+            throw new ArgumentException(
+                string.Create(CultureInfo.InvariantCulture, $"Version {version} is unsupported."), nameof(bytes));
         }
     }
 
@@ -329,18 +367,25 @@ public sealed class Cid : IEquatable<Cid>
 
         foreach (byte b in bytes)
         {
+            if (length == MaximumVarIntLength)
+            {
+                throw new ArgumentException(
+                    string.Create(CultureInfo.InvariantCulture, $"Varint is longer than the maximum of {MaximumVarIntLength} bytes."),
+                    nameof(bytes));
+            }
+
             length++;
             value |= (ulong)(b & 0x7F) << shift;
 
             if ((b & 0x80) == 0)
             {
-                break;
+                return (value, length);
             }
 
             shift += 7;
         }
 
-        return (value, length);
+        throw new ArgumentException("Varint is truncated.", nameof(bytes));
     }
 
     /// <summary>

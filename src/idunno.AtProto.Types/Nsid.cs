@@ -213,6 +213,18 @@ public sealed partial class Nsid : IEquatable<Nsid>
             }
         }
 
+        if (s.Length > 253 + 1 + 63)
+        {
+            if (throwOnError)
+            {
+                throw new NsidFormatException($"{s} is too long.");
+            }
+            else
+            {
+                return false;
+            }
+        }
+
         if (!s_validationRegex().IsMatch(s))
         {
             if (throwOnError)
@@ -230,18 +242,6 @@ public sealed partial class Nsid : IEquatable<Nsid>
             if (throwOnError)
             {
                 throw new NsidFormatException($"{s} is not a valid nsid.");
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        if (s.Length > 253 + 1 + 63)
-        {
-            if (throwOnError)
-            {
-                throw new NsidFormatException($"{s} is too long.");
             }
             else
             {

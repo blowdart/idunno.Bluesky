@@ -213,6 +213,12 @@
 * An invalid `RecordKey` now throws a `RecordKeyFormatException` rather than an `NsidFormatException`.
 * `AtUri` no longer validates the collection segment twice. The duplicate check meant a malformed collection could be reported by either of two code
   paths, only one of which produced an `AtUriFormatException`, leaving an `NsidFormatException` able to escape had the first check ever been changed.
+* `TimestampIdentifier.Next()` now generates a clock identifier over the full 10 bit range required by the specification, rather than only 5 bits.
+* `TimestampIdentifier` now rejects hyphenated identifiers rather than trimming the hyphens and accepting them.
+* `Cid` now rejects truncated, over-long and missing multihash byte sequences rather than producing a `Cid` with an empty hash.
+* `Cid` now reports the offending version number when a CID version is unsupported.
+* `Cid(byte, ulong, byte[])` now validates its arguments and takes a copy of the supplied hash.
+* `AtUri` and `Nsid` now check the length of their input before scanning, splitting or matching it.
 
 #### idunno.Bluesky
 
