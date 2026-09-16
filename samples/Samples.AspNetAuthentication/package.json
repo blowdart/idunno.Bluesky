@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "node /scripts/copy-client-libraries.js"
+  },
+  "dependencies": {
+    "bootstrap": "5.3.3",
+    "jquery": "3.7.1",
+    "jquery-validation": "1.21.0",
+    "jquery-validation-unobtrusive": "3.2.12"
+  }
+}

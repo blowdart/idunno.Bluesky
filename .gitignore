@@ -46,8 +46,9 @@ bld/
 # Visual Studio 2015/2017 cache/options directory
 .vs/
 
-# Exclude created libman restored files
+# Exclude created client library files
 **/wwwroot/lib/
+**/node_modules/
 
 # Visual Studio 2017 auto generated files
 Generated\ Files/
