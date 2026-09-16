@@ -142,6 +142,9 @@ internal static partial class Logger
     [LoggerMessage(71, LogLevel.Error, "ResolvePdsFailed failed for {did}")]
     internal static partial void ResolvePdsFailed(ILogger logger, Did did);
 
+    [LoggerMessage(72, LogLevel.Error, "ResolvePds rejected the unsupported service endpoint {serviceEndpoint} for {did}")]
+    internal static partial void UnsupportedPdsUri(ILogger logger, Did did, Uri serviceEndpoint);
+
     [LoggerMessage(80, LogLevel.Debug, "ResolveAuthorizationServer called for {pds}")]
     internal static partial void ResolveAuthorizationServerCalled(ILogger logger, Uri pds);
 

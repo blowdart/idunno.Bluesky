@@ -189,6 +189,11 @@ public sealed partial class DefaultFacetExtractor : IFacetExtractor
         List<Facet> mentions = [];
         MatchCollection matches = s_MentionRegex().Matches(text);
 
+        // The same handle can be mentioned more than once in a single piece of text, and resolving a handle is a
+        // network call, so every distinct handle is resolved at most once. Handles which do not resolve are recorded
+        // too, otherwise a handle which does not exist would be looked up again for each time it appears.
+        Dictionary<string, Did?> resolvedHandles = new(StringComparer.OrdinalIgnoreCase);
+
         foreach (Match match in matches)
         {
             // Group 1 excludes any leading whitespace or opening parenthesis the pattern consumed.
@@ -198,7 +203,11 @@ public sealed partial class DefaultFacetExtractor : IFacetExtractor
 
             if (Handle.TryParse(handle, out _))
             {
-                Did? did = await resolveHandle(handle, cancellationToken).ConfigureAwait(false);
+                if (!resolvedHandles.TryGetValue(handle, out Did? did))
+                {
+                    did = await resolveHandle(handle, cancellationToken).ConfigureAwait(false);
+                    resolvedHandles[handle] = did;
+                }
 
                 if (did is not null)
                 {
