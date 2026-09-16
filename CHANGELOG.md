@@ -89,6 +89,7 @@
 
 #### idunno.AtProto
 
+* Renamed `AtProtoJetstreamBuilder.MaximumMessageSize` to `ReadBufferSize` and `AtProtoJetstreamBuilder.SetMaximumMessageSize()` to `SetReadBufferSize()`, as they configure the size of each block read from the web socket rather than a limit on a message. Use `SetMaximumTotalMessageSize()` to limit how large a message may be.
 * `AtProtoJetstream.ConnectAsync()` now throws `WebSocketException` when a connection cannot be made, instead of returning normally.
 * `AtProtoJetstreamBuilder.WithCompressionDictionary()`, `WithTaskFactory()` and the `FilterTo()` overloads now throw `ArgumentNullException` when passed `null`.
 * A cancelled request now throws `OperationCanceledException` instead of returning a result with a status code of `OK`.

@@ -56,7 +56,7 @@ public sealed class AtProtoJetstreamBuilder
     /// <para>This is the size of the buffer a single read fills, not a limit on anything. Use <see cref="MaximumTotalMessageSize"/>
     /// to limit how large a message may be.</para>
     /// </remarks>
-    public int MaximumMessageSize { get; set; } = 8096;
+    public int ReadBufferSize { get; set; } = 8096;
 
     /// <summary>
     /// Gets or sets the maximum total size of a message the jetstream will accept. Messages exceeding this limit are rejected.
@@ -199,9 +199,9 @@ public sealed class AtProtoJetstreamBuilder
     /// <summary>
     /// Configures the size, in bytes, of each block the <see cref="AtProtoJetstream"/> reads from the web socket.
     /// </summary>
-    /// <param name="maximumMessageSize">The size, in bytes, of each block read from the web socket.</param>
+    /// <param name="readBufferSize">The size, in bytes, of each block read from the web socket.</param>
     /// <returns>The same instance of <see cref="AtProtoJetstreamBuilder"/> for chaining.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maximumMessageSize"/> is equal to, or less than, zero.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="readBufferSize"/> is equal to, or less than, zero.</exception>
     /// <remarks>
     /// <para>
     ///   This is the size of the buffer a single read fills, not a limit on anything. A message larger than this is read in several
@@ -209,11 +209,11 @@ public sealed class AtProtoJetstreamBuilder
     ///   for that.
     /// </para>
     /// </remarks>
-    public AtProtoJetstreamBuilder SetMaximumMessageSize(int maximumMessageSize)
+    public AtProtoJetstreamBuilder SetReadBufferSize(int readBufferSize)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumMessageSize);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(readBufferSize);
 
-        MaximumMessageSize = maximumMessageSize;
+        ReadBufferSize = readBufferSize;
 
         return this;
     }
@@ -227,7 +227,7 @@ public sealed class AtProtoJetstreamBuilder
     /// <remarks>
     /// <para>
     ///   Messages larger than this are rejected rather than reassembled, so this is the ceiling on how much memory a single message can consume,
-    ///   whereas <see cref="SetMaximumMessageSize(int)"/> configures the size of each chunk read from the socket.
+    ///   whereas <see cref="SetReadBufferSize(int)"/> configures the size of each chunk read from the socket.
     /// </para>
     /// </remarks>
     public AtProtoJetstreamBuilder SetMaximumTotalMessageSize(int maximumTotalMessageSize)
@@ -360,7 +360,7 @@ public sealed class AtProtoJetstreamBuilder
             MeterFactory = MeterFactory,
             UseCompression = EnableCompression,
             Dictionary = CompressionDictionary,
-            BufferSize = MaximumMessageSize,
+            BufferSize = ReadBufferSize,
             MaxMessageSize = MaximumTotalMessageSize,
             TaskFactory = TaskFactory,
             CloseTimeout = CloseTimeout,
