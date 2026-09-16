@@ -3,7 +3,6 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
-using System.Net.Mime;
 using System.Net.Sockets;
 
 using Microsoft.AspNetCore.Builder;
@@ -17,8 +16,13 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace idunno.AtProto.OAuthCallback;
 
 /// <summary>
-/// Implements a web server running on localhost which responds to OAuth return POSTs.
+/// Implements a web server running on the loopback adapter which handles the redirect an OAuth
+/// authorization server makes at the end of an authorization flow.
 /// </summary>
+/// <remarks>
+/// <para>Only <c>GET</c> requests are accepted, as described in RFC 8252 section 7.3. Any other
+/// method receives a <see cref="HttpStatusCode.MethodNotAllowed"/> response.</para>
+/// </remarks>
 public sealed class CallbackServer : IAsyncDisposable
 {
     private const int DefaultTimeout = 60 * 5; // 5 minutes
@@ -26,6 +30,10 @@ public sealed class CallbackServer : IAsyncDisposable
     private const int MaximumTimeout = 60 * 60 * 24; // 24 hours
 
     private const int MaximumPortNumber = 65535;
+
+    // Declaring the character set keeps the browser from sniffing an encoding for a page which may
+    // contain a caller supplied SuccessBody.
+    private const string HtmlContentType = "text/html; charset=utf-8";
 
     private readonly ILogger<CallbackServer> _logger;
 
@@ -45,6 +53,7 @@ public sealed class CallbackServer : IAsyncDisposable
     private CancellationTokenSource? _timeoutCancellationSource;
     private CancellationTokenRegistration _timeoutRegistration;
     private CancellationToken _callerCancellationToken;
+    private bool _callbackAwaited;
     private bool _disposed;
 
     private WebApplication? _listener;
@@ -89,7 +98,18 @@ public sealed class CallbackServer : IAsyncDisposable
         // configuration cannot influence where this server listens.
         builder.Configuration.Sources.Clear();
 
-        builder.WebHost.ConfigureKestrel(kestrelOptions => kestrelOptions.Listen(IPAddress.Loopback, port));
+        builder.WebHost.ConfigureKestrel(kestrelOptions =>
+        {
+            kestrelOptions.Listen(IPAddress.Loopback, port);
+
+            // RFC 8252 section 7.3 calls for both loopback families to be supported, because a redirect
+            // URI written as http://localhost resolves to ::1 on many machines. The bind is conditional
+            // so a machine with IPv6 disabled does not fail to start the server at all.
+            if (Socket.OSSupportsIPv6)
+            {
+                kestrelOptions.Listen(IPAddress.IPv6Loopback, port);
+            }
+        });
 
         if (loggerFactory is not null)
         {
@@ -98,11 +118,23 @@ public sealed class CallbackServer : IAsyncDisposable
 
         builder.Services.AddHostFiltering(options =>
         {
-            options.AllowedHosts = [IPAddress.Loopback.ToString()];
+            options.AllowedHosts = [IPAddress.Loopback.ToString(), "localhost", $"[{IPAddress.IPv6Loopback}]"];
             options.AllowEmptyHosts = false;
         });
 
         _listener = builder.Build();
+
+        // The request this server answers carries the OAuth authorization code in its query string, so
+        // the whole URL is a secret. Referrer-Policy stops it being handed to a third party through the
+        // Referer header of any resource a caller supplied SuccessBody or ResponseStyleSheet references,
+        // and Cache-Control keeps it out of the browser cache and any intermediary.
+        _listener.Use(static async (context, next) =>
+        {
+            context.Response.Headers["Referrer-Policy"] = "no-referrer";
+            context.Response.Headers.CacheControl = "no-store";
+
+            await next(context).ConfigureAwait(false);
+        });
 
         _listener.MapShortCircuit(404, "robots.txt", "favicon.ico");
 
@@ -129,6 +161,17 @@ public sealed class CallbackServer : IAsyncDisposable
                 }
             },
             this,
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+
+        // A listener fault, and disposal without a callback ever being awaited, both complete _source
+        // with an exception. Nothing observes that exception when the caller never called
+        // WaitForCallbackAsync, which surfaces later as a TaskScheduler.UnobservedTaskException in the
+        // hosting application. Reading Exception here marks it observed without taking it away from a
+        // caller who does await the task.
+        _ = _source.Task.ContinueWith(
+            static faulted => _ = faulted.Exception,
             CancellationToken.None,
             TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
             TaskScheduler.Default);
@@ -190,12 +233,17 @@ public sealed class CallbackServer : IAsyncDisposable
                 return _source.Task;
             }
 
-            if (_timeoutRegistration != default)
+            if (_callbackAwaited)
             {
                 Logger.CallbackAlreadyAwaited(_logger);
 
                 return _source.Task;
             }
+
+            // A dedicated flag rather than "_timeoutRegistration != default", because registering on a
+            // token that is already cancelled runs the callback inline and hands back a default
+            // registration, which would let a second call re-arm and leak the first timeout source.
+            _callbackAwaited = true;
 
             // Registering on a linked source rather than awaiting Task.Delay means cancellation of
             // cancellationToken actually completes _source. Awaiting the delay would throw instead,
@@ -330,7 +378,7 @@ public sealed class CallbackServer : IAsyncDisposable
         try
         {
             context.Response.StatusCode = (int)HttpStatusCode.OK;
-            context.Response.ContentType = MediaTypeNames.Text.Html;
+            context.Response.ContentType = HtmlContentType;
             await context.Response.WriteAsync("<html>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
             await context.Response.WriteAsync("<head>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
             if (!string.IsNullOrEmpty(SuccessTitle))
@@ -352,7 +400,7 @@ public sealed class CallbackServer : IAsyncDisposable
         catch
         {
             context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-            context.Response.ContentType = MediaTypeNames.Text.Html;
+            context.Response.ContentType = HtmlContentType;
             await context.Response.WriteAsync("<h1>Invalid request.</h1>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
             await context.Response.Body.FlushAsync(cancellationToken: context.RequestAborted).ConfigureAwait(false);
         }
@@ -373,7 +421,7 @@ public sealed class CallbackServer : IAsyncDisposable
         Logger.BadRequest(_logger, context.Request.Path);
 
         context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-        context.Response.ContentType = MediaTypeNames.Text.Html;
+        context.Response.ContentType = HtmlContentType;
         await context.Response.WriteAsync("<h1>Invalid request.</h1>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
         await context.Response.Body.FlushAsync(cancellationToken: context.RequestAborted).ConfigureAwait(false);
     }
@@ -383,7 +431,7 @@ public sealed class CallbackServer : IAsyncDisposable
         Logger.MethodNotAllowed(_logger, context.Request.Path);
 
         context.Response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
-        context.Response.ContentType = MediaTypeNames.Text.Html;
+        context.Response.ContentType = HtmlContentType;
         await context.Response.WriteAsync("<h1>Method Not Allowed.</h1>", cancellationToken: context.RequestAborted).ConfigureAwait(false);
         await context.Response.Body.FlushAsync(cancellationToken: context.RequestAborted).ConfigureAwait(false);
     }

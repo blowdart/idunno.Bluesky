@@ -197,6 +197,11 @@
 * `CallbackServer` now validates its `port` and `timeoutInSeconds` arguments. A `timeoutInSeconds` large enough to overflow the millisecond conversion
   previously threw on a background thread where the exception could not be observed.
 * Repeated calls to `CallbackServer.WaitForCallbackAsync()` no longer start an additional timer for each call.
+* `CallbackServer` now sends `Referrer-Policy: no-referrer` and `Cache-Control: no-store` with every response, keeping the authorization code in the callback URL out of `Referer` headers and browser caches.
+* `CallbackServer` responses now declare `charset=utf-8` rather than leaving the encoding to the browser.
+* Repeated calls to `CallbackServer.WaitForCallbackAsync()` no longer leak a `CancellationTokenSource` when the supplied `CancellationToken` was already cancelled.
+* Disposing a `CallbackServer` without ever calling `WaitForCallbackAsync()` no longer raises a `TaskScheduler.UnobservedTaskException`.
+* `CallbackServer` now listens on, and accepts requests addressed to, the IPv6 loopback address and `localhost` as well as `127.0.0.1`.
 
 #### idunno.AtProto.Types
 
