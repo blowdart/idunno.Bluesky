@@ -6,6 +6,7 @@
 
 #### idunno.AtProto
 
+* Added `JetstreamOptions.CloseTimeout` and `AtProtoJetstreamBuilder.SetCloseTimeout()`, which bound how long a jetstream waits for a server to answer a close handshake before aborting the connection. The default is 30 seconds.
 * Added `Resolution.VerifyHandle()` and `Resolution.ResolveVerifiedHandle()`, which check that a handle and a DID resolve to each other.
 * Added an optional `maximumWellKnownResponseSize` parameter to the `Resolution.ResolveDidDocument()` and `Resolution.ResolvePds()` overloads which resolve a handle.
 * Added `StringExtensions.GetUtf8Length()`, which returns the length of a string when encoded as UTF-8 bytes. AT Protocol lexicons count their
@@ -88,6 +89,8 @@
 
 #### idunno.AtProto
 
+* `AtProtoJetstream.ConnectAsync()` now throws `WebSocketException` when a connection cannot be made, instead of returning normally.
+* `AtProtoJetstreamBuilder.WithCompressionDictionary()`, `WithTaskFactory()` and the `FilterTo()` overloads now throw `ArgumentNullException` when passed `null`.
 * A cancelled request now throws `OperationCanceledException` instead of returning a result with a status code of `OK`.
 * Removed the `ReaderWriterLockSlim` property in `Credentials` to avoid potential deadlocks. Any custom credentials using this property should now use its own locking mechanism to avoid deadlocks.
 * `DPoPRevokeCredentials` no longer implement `IDisposable`.
@@ -128,6 +131,12 @@
 
 #### idunno.AtProto
 
+* `AtProtoJetstream` connection state change events are now raised outside the lock which guards its filters and outside the semaphore which serialises connections, so a handler which sets a filter or reconnects no longer deadlocks.
+* `AtProtoJetstream.CloseAsync()` now abandons the close handshake once `JetstreamOptions.CloseTimeout` expires, instead of waiting indefinitely for a server which never answers it.
+* `AtProtoJetstream` now truncates a message to 1024 characters before logging it, instead of writing the whole of a remote message to the log.
+* `AtProtoJetstream` no longer throws when an event names a payload it does not carry.
+* `AtProtoJetstream` no longer counts a single connection failure twice in its `total_connections_failed` metric.
+* `AtProtoJetstream` no longer throws `ObjectDisposedException` from its connection semaphore when it is disposed during a connection attempt.
 * An `HttpContent` request body supplied by the caller is no longer disposed by the client, and is buffered so that it survives a DPoP nonce retry.
 * A failed background credential refresh now schedules a retry even when the refresh timer had not been created yet, which previously ended background refresh for the lifetime of the agent.
 * The refresh token replay check now remembers the last few exchanged tokens rather than only the most recent one.

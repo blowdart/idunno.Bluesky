@@ -156,3 +156,8 @@ idunno.AtProto.Authentication.OAuthOptions.ClockSkew.set -> void
 static readonly idunno.AtProto.Authentication.OAuthOptions.DefaultClockSkew -> System.TimeSpan
 static idunno.AtProto.Resolution.ResolveVerifiedHandle(idunno.AtProto.Did! did, System.Uri? plcDirectory = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Net.Http.HttpClient? httpClient = null, System.TimeSpan? timeout = null, int maximumResponseSize = 33554432, int maximumWellKnownResponseSize = 4096, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<idunno.AtProto.Handle!>!
 static idunno.AtProto.Resolution.VerifyHandle(idunno.AtProto.Handle! handle, idunno.AtProto.Did! did, System.Uri? plcDirectory = null, Microsoft.Extensions.Logging.ILoggerFactory? loggerFactory = null, System.Net.Http.HttpClient? httpClient = null, System.TimeSpan? timeout = null, int maximumResponseSize = 33554432, int maximumWellKnownResponseSize = 4096, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<bool>!
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.CloseTimeout.get -> System.TimeSpan
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.CloseTimeout.set -> void
+idunno.AtProto.Jetstream.AtProtoJetstreamBuilder.SetCloseTimeout(System.TimeSpan closeTimeout) -> idunno.AtProto.Jetstream.AtProtoJetstreamBuilder!
+idunno.AtProto.Jetstream.JetstreamOptions.CloseTimeout.get -> System.TimeSpan
+idunno.AtProto.Jetstream.JetstreamOptions.CloseTimeout.init -> void

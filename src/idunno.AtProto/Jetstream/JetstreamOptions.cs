@@ -40,9 +40,15 @@ public record JetstreamOptions
     public TaskFactory TaskFactory { get; init; } = new TaskFactory(TaskScheduler.Default);
 
     /// <summary>
-    /// Gets the maximum size of messages to receive, in bytes. Defaults to 8096 bytes (8 KB).
+    /// Gets the size, in bytes, of each block read from the web socket. Defaults to 8096 bytes (8 KB).
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is less than or equal to zero.</exception>
+    /// <remarks>
+    /// <para>
+    ///   This is the size of the buffer a single read fills, not a limit on anything. A message larger than this is read in
+    ///   several blocks and reassembled. The limit on how large a message may be is <see cref="MaxMessageSize"/>.
+    /// </para>
+    /// </remarks>
     public int BufferSize
     {
         get;
@@ -80,4 +86,27 @@ public record JetstreamOptions
             field = value;
         }
     } = WebSocketExtensions.DefaultMaxMessageSize;
+
+    /// <summary>
+    /// Gets how long to wait for a server to answer a close handshake before the connection is aborted instead. Defaults to 30 seconds.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is less than or equal to zero.</exception>
+    /// <remarks>
+    /// <para>
+    ///   A graceful close is only complete once the server has replied to it, so without a deadline a server which never replies
+    ///   holds the caller of <see cref="AtProtoJetstream.CloseAsync(System.Net.WebSockets.WebSocketCloseStatus, string, CancellationToken)"/>
+    ///   for as long as it cares to.
+    /// </para>
+    /// </remarks>
+    public TimeSpan CloseTimeout
+    {
+        get;
+
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(value, TimeSpan.Zero);
+
+            field = value;
+        }
+    } = TimeSpan.FromSeconds(30);
 }
