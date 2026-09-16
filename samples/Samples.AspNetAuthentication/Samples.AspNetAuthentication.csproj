@@ -4,10 +4,31 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!--
+      Samples are marked as not publishable in samples\Directory.Build.props, which stops the publish pipeline creating
+      the publish directory. This is the only sample built with the web SDK, whose web.config transform runs after
+      publish without checking whether the project is publishable, and so fails with an unhandled
+      DirectoryNotFoundException rather than the silent no-op every other sample gives.
+    -->
+    <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
   </PropertyGroup>
 
-  <Target Name="NpmBuild" BeforeTargets="Build">
-    <Exec Command="npm install --no-audit --no-fund" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  <!--
+    Both steps are incremental against real files rather than stamps, so deleting node_modules or wwwroot/lib is enough
+    to make the next build recreate them. npm ci is used rather than npm install so the committed lock file is the only
+    thing which decides the versions, and install scripts are not run because none of these packages need them.
+  -->
+  <Target Name="NpmInstall"
+          Inputs="package.json;package-lock.json"
+          Outputs="node_modules\.package-lock.json">
+    <Exec Command="npm ci --no-audit --no-fund --ignore-scripts" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
+  <Target Name="NpmBuild"
+          DependsOnTargets="NpmInstall"
+          BeforeTargets="Build"
+          Inputs="package.json;package-lock.json;scripts\copy-client-libraries.js"
+          Outputs="wwwroot\lib\jquery\dist\jquery.min.js">
     <Exec Command="npm run build" WorkingDirectory="$(MSBuildProjectDirectory)" />
   </Target>
 

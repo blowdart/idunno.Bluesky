@@ -50,6 +50,15 @@ updates:
         - System.IdentityModel.Tokens.Jwt
         - Microsoft.IdentityModel.JsonWebTokens
 
+- package-ecosystem: npm
+  directory: "/samples/Samples.AspNetAuthentication"
+  schedule:
+    interval: daily
+  # Disable update notifications, except for security updates, to match the nuget feed above.
+  open-pull-requests-limit: 0
+  cooldown:
+    default-days: 7
+
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:

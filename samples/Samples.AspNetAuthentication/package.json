@@ -1,7 +1,14 @@
 {
+  "name": "samples-aspnetauthentication",
+  "version": "1.0.0",
   "private": true,
+  "description": "Client library restore for the idunno.Bluesky ASP.NET authentication sample.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "build": "node /scripts/copy-client-libraries.js"
+    "build": "node scripts/copy-client-libraries.js"
   },
   "dependencies": {
     "bootstrap": "5.3.3",
