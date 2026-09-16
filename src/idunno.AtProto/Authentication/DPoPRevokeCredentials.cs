@@ -25,10 +25,10 @@ internal class DPoPRevokeCredentials : AtProtoCredential, IDPoPBoundCredential
         Token = token;
     }
 
-    public DPoPRevokeCredentials(DPoPAccessCredentials accessCredentials) : base(accessCredentials.Service, AuthenticationType.OAuth)
+    public DPoPRevokeCredentials(DPoPAccessCredentials accessCredentials) : base(
+        accessCredentials != null ? accessCredentials.Service : throw new ArgumentNullException(nameof(accessCredentials)),
+        AuthenticationType.OAuth)
     {
-        ArgumentNullException.ThrowIfNull(accessCredentials);
-
         DPoPProofKey = accessCredentials.DPoPProofKey;
         DPoPNonce = accessCredentials.DPoPNonce;
         Token = accessCredentials.AccessJwt;

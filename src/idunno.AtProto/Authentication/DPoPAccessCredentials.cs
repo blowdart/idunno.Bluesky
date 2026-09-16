@@ -100,39 +100,32 @@ public sealed class DPoPAccessCredentials : AccessCredentials, IDPoPBoundCredent
     /// </summary>
     /// <param name="httpRequestMessage">The <see cref="HttpRequestMessage"/> to add authentication headers to.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="httpRequestMessage"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    ///   The <see cref="AccessCredentials.AccessJwt">access token</see> is read once so that the proof token's <c>ath</c>
+    ///   claim and the token presented in the authorization header are always bound to the same value.
+    /// </para>
+    /// </remarks>
     public override void SetAuthenticationHeaders(HttpRequestMessage httpRequestMessage)
     {
         ArgumentNullException.ThrowIfNull(httpRequestMessage);
 
         lock (_lock)
         {
+            string accessJwt = AccessJwt;
+
             DPoPProofRequest dPoPProofRequest = new()
             {
-                AccessToken = AccessJwt,
-                DPoPNonce = DPoPNonce,
+                AccessToken = accessJwt,
+                DPoPNonce = _dPoPNonce,
                 Method = httpRequestMessage.Method.ToString(),
                 Url = httpRequestMessage.GetDPoPUrl()
             };
 
-            DefaultDPoPProofTokenFactory factory = new(DPoPProofKey);
+            DefaultDPoPProofTokenFactory factory = new(_dPoPProofKey);
             DPoPProof proofToken = factory.CreateProofToken(dPoPProofRequest);
 
-            httpRequestMessage.SetDPoPToken(AccessJwt, proofToken.ProofToken);
-        }
-    }
-
-    internal void Update(DPoPAccessCredentials dPoPAccessCredentials)
-    {
-        ArgumentNullException.ThrowIfNull(dPoPAccessCredentials);
-        ArgumentException.ThrowIfNullOrWhiteSpace(dPoPAccessCredentials.AccessJwt);
-        ArgumentException.ThrowIfNullOrWhiteSpace(dPoPAccessCredentials.RefreshToken);
-        ArgumentException.ThrowIfNullOrWhiteSpace(dPoPAccessCredentials.DPoPProofKey);
-
-        lock (_lock)
-        {
-            Update(dPoPAccessCredentials as AccessCredentials);
-            _dPoPProofKey = dPoPAccessCredentials.DPoPProofKey;
-            _dPoPNonce = dPoPAccessCredentials.DPoPNonce;
+            httpRequestMessage.SetDPoPToken(accessJwt, proofToken.ProofToken);
         }
     }
 }

@@ -92,20 +92,6 @@ public class AccessCredentials : RefreshCredential, IAccessCredential
         httpRequestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", AccessJwt);
     }
 
-    internal void Update(AccessCredentials accessCredentials)
-    {
-        ArgumentNullException.ThrowIfNull(accessCredentials);
-        ArgumentException.ThrowIfNullOrWhiteSpace(accessCredentials.AccessJwt);
-        ArgumentException.ThrowIfNullOrWhiteSpace(accessCredentials.RefreshToken);
-
-        lock (_lock)
-        {
-            AccessJwt = accessCredentials.AccessJwt;
-            RefreshToken = accessCredentials.RefreshToken;
-            ExtractJwtProperties(_accessToken);
-        }
-    }
-
     /// <summary>
     /// Extracts the DID and expiration date from the specified jwt and sets the <see cref="Did"/> and <see cref="ExpiresOn"/> properties.
     /// </summary>
