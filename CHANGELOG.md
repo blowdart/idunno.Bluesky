@@ -6,6 +6,9 @@
 
 #### idunno.AtProto
 
+* Added `StringExtensions.GetUtf8Length()`, which returns the length of a string when encoded as UTF-8 bytes. AT Protocol lexicons count their
+  `maxLength` constraints in UTF-8 bytes rather than in UTF-16 characters, so use this rather than `string.Length` when validating a value against a
+  `maxLength` limit. It sits alongside the existing `GetGraphemeLength()`, which covers the matching `maxGraphemes` constraint.
 * Added `AtProtoAgentOptions.MaximumWellKnownResponseSize`, an optional `maximumWellKnownResponseSize` parameter on the `AtProtoServer.ResolveHandle()`
   and `Resolution.ResolveHandle()` overloads, and the `AtProtoServer.DefaultMaximumWellKnownResponseSize` constant, which configure the number of bytes
   read from a `/.well-known/atproto-did` response when resolving a handle. The default is 4KB.
@@ -122,6 +125,11 @@
 
 #### idunno.AtProto
 
+* `Label`, `SelfLabel` and `CreateModerationReport()` now measure their lexicon `maxLength` limits in UTF-8 bytes rather than in UTF-16 characters,
+  matching `com.atproto.label.defs` and `com.atproto.moderation.createReport`. A UTF-8 byte count is never smaller than the UTF-16 character count, so
+  the previous checks were too permissive for non-ASCII values and accepted text the server rejects.
+* `CreateModerationReport()` now also rejects a `reason` longer than 2,000 graphemes, the `maxGraphemes` limit in
+  `com.atproto.moderation.createReport`, which was never checked.
 * `AtProtoAgent.Logout()` now revokes OAuth credentials rather than always failing. The revocation credentials rejected the empty DPoP nonce every
   revocation necessarily starts with, so an `ArgumentException` was thrown before any request was made to the authorization server, leaving access and
   refresh tokens live until they expired.

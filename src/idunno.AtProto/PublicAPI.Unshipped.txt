@@ -150,3 +150,4 @@ virtual idunno.AtProto.AtProtoAgent.InternalOnCredentialsUpdatedCallBack(idunno.
 virtual idunno.AtProto.AtProtoAgent.OnCredentialsUpdatedAsync(idunno.AtProto.Events.CredentialsUpdatedEventArgs! e, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 idunno.AtProto.AtProtoHttpClient.OnResponseReceived.set -> void
 idunno.AtProto.AtProtoHttpClient.OnSendingRequest.set -> void
+static idunno.AtProto.StringExtensions.GetUtf8Length(this string! s) -> int
