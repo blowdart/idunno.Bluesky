@@ -47,6 +47,12 @@ public sealed partial class DefaultFacetExtractor : IFacetExtractor
     /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
     /// <returns>The task object representing the asynchronous operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="text"/> is <see langword="null"/>.</exception>
+    /// <exception cref="RegexMatchTimeoutException">Thrown if matching a pattern against <paramref name="text"/> exceeds the one second match timeout.</exception>
+    /// <remarks>
+    /// <para>Every distinct handle mentioned in <paramref name="text"/> is resolved, which is typically a network
+    /// call, so the work this does grows with the length of <paramref name="text"/>. Callers which accept text from
+    /// elsewhere should apply their own length limit before calling this.</para>
+    /// </remarks>
     public async Task<IList<Facet>> ExtractFacets(string text, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(text);
